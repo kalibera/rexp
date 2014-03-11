@@ -1221,9 +1221,9 @@ static void WriteBC1(SEXP s, SEXP ref_table, SEXP reps, R_outpstream_t stream)
 {
     int i, n;
     SEXP code, consts;
-    PROTECT(code = R_bcDecode(BCODE_CODE(s)));
-    WriteItem(code, ref_table, stream);
     consts = BCODE_CONSTS(s);
+    PROTECT(code = R_bcDecode(BCODE_CODE(s), consts));
+    WriteItem(code, ref_table, stream);
     n = LENGTH(consts);
     OutInteger(stream, n);
     for (i = 0; i < n; i++) {
@@ -1837,10 +1837,12 @@ static SEXP ReadBC1(SEXP ref_table, SEXP reps, R_inpstream_t stream)
     R_ReadItemDepth++;
     SETCAR(s, ReadItem(ref_table, stream)); /* code */
     R_ReadItemDepth--;
-    SETCAR(s, R_bcEncode(CAR(s)));
-    SETCDR(s, ReadBCConsts(ref_table, reps, stream)); /* consts */
+    SEXP constants;
+    PROTECT(constants = ReadBCConsts(ref_table, reps, stream));
+    SETCAR(s, R_bcEncode(CAR(s), constants));
+    SETCDR(s, constants ); /* consts */
     SET_TAG(s, R_NilValue); /* expr */
-    UNPROTECT(1);
+    UNPROTECT(2);
     return s;
 }
 
