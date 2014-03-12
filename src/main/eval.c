@@ -3801,9 +3801,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	    NEXT(); \
 	} \
 	if (cell != R_NilValue && ! IS_ACTIVE_BINDING(cell)) { \
-	    value = CAR(cell); \
-	    if (TYPEOF(value) != SYMSXP) {	\
-		if (TYPEOF(value) == PROMSXP) {		\
+	    if (type != SYMSXP) {	\
+		if (type == PROMSXP) {		\
 		    SEXP pv = PRVALUE(value);		\
 		    if (pv == R_UnboundValue) {		\
 			SEXP symbol = VECTOR_ELT(constants, sidx);	\
