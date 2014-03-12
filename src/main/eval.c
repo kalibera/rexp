@@ -3072,6 +3072,7 @@ enum {
   DUP2ND_OP,
   SWITCH_OP,
   RETURNJMP_OP,
+  MAKEGETVARPROM_OP,  
   STARTVECSUBSET_OP,
   STARTMATSUBSET_OP,
   STARTSETVECSUBSET_OP,
@@ -4748,6 +4749,26 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
 	NEXT();
       }
+    OP(MAKEGETVARPROM, 2, CONSTOP(1), LABELOP(0)):
+      {
+        /* this instruction is not used for ..n and ... */
+	if (ftype == BUILTINSXP) {
+	    SKIP_OP();
+	    int sidx = GETOP();
+	    SEXP symbol = VECTOR_ELT(constants, sidx);
+	    value = getvar(symbol, rho, FALSE, FALSE, vcache, sidx);
+	    PUSHCALLARG(value);
+        } else if (ftype != SPECIALSXP) {
+            SEXP code = GETCONSTOP();
+            SKIP_OP();
+            value = mkPROMISE(code, rho);
+	    PUSHCALLARG(value);        
+        } else {
+            SKIP_OP();
+            SKIP_OP();
+        }
+        NEXT(); 
+      }      
     OP(DOMISSING, 0, CONSTOP(0), LABELOP(0)):
       {
 	if (ftype != SPECIALSXP)

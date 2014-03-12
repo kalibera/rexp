@@ -672,7 +672,7 @@ else if (typeof(a) == "promise")
 
 A general non-constant argument expression is compiled to a separate
 byte code object which is stored in the constant pool.  The compiler
-then emits a [[MAKEPROM]] instruction that uses the stored code
+then emits a [[MAKEPROM]] (or [[MAKEGETVARPROM]]) instruction that uses the stored code
 object. Promises are not needed for literal constant arguments as
 these are self-evaluating.  Within the current implementation both the
 evaluation process and use of [[substitute]] will work properly if
@@ -687,7 +687,12 @@ properly.  These promises could be created as evaluated promises,
 though it is not clean how much this would gain.
 <<compile a general argument>>=
 else {
-    if (is.symbol(a) || typeof(a) == "language") {
+    if (is.symbol(a) && !is.ddsym(a) && a != "...") {
+        ci <- cb$putconst(genCode(a, pcntxt))
+        cj <- cb$putconst(a)
+        cb$putcode(MAKEGETVARPROM.OP, ci, cj)
+    }
+    else if (typeof(a) == "language") {
         ci <- cb$putconst(genCode(a, pcntxt))
         cb$putcode(MAKEPROM.OP, ci)
     }
@@ -5197,6 +5202,7 @@ SWAP.OP <- 100
 DUP2ND.OP <- 101
 SWITCH.OP <- 102
 RETURNJMP.OP <- 103
+MAKEGETVARPROM.OP <- 104
 @ 
 
 \subsection{Instruction argument counts and names}
@@ -5305,7 +5311,8 @@ GETTER_CALL.OP = 1,
 SWAP.OP = 0,
 DUP2ND.OP = 0,
 SWITCH.OP = 4,
-RETURNJMP.OP = 0
+RETURNJMP.OP = 0,
+MAKEGETVARPROM.OP = 2
 )
 @ 
 
