@@ -3824,12 +3824,65 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
     BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));		\
     NEXT();								\
 } while (0)
+
+/* FIXME: It would be nice to avoid some copy-paste from DO_GETVAR */
+#define DO_GETVAR_PUSHCALLARG(dd,keepmiss) do { \
+    int sidx = GETOP(); \
+    if (!dd && smallcache) { \
+	SEXP cell = GET_SMALLCACHE_BINDING_CELL(vcache, sidx); \
+	/* try fast handling of REALSXP, INTSXP, LGLSXP */ \
+	/* (cell won't be R_NilValue or an active binding) */ \
+	value = CAR(cell); \
+	int type = TYPEOF(value); \
+	switch(type) { \
+	case REALSXP: \
+	case INTSXP: \
+	case LGLSXP: \
+	    /* may be ok to skip this test: */ \
+	    if (NAMED(value) == 0) \
+		SET_NAMED(value, 1); \
+	    R_Visible = TRUE; \
+	    PUSHCALLARG(value); \
+	    NEXT(); \
+	} \
+	if (cell != R_NilValue && ! IS_ACTIVE_BINDING(cell)) { \
+	    if (type != SYMSXP) {	\
+		if (type == PROMSXP) {		\
+		    SEXP pv = PRVALUE(value);		\
+		    if (pv == R_UnboundValue) {		\
+			SEXP symbol = VECTOR_ELT(constants, sidx);	\
+			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
+		    }							\
+		    else value = pv;					\
+		}							\
+		else if (NAMED(value) == 0)				\
+		    SET_NAMED(value, 1);				\
+		R_Visible = TRUE;					\
+		PUSHCALLARG(value);						\
+		NEXT();							\
+	    }								\
+	}								\
+    }									\
+    SEXP symbol = VECTOR_ELT(constants, sidx);				\
+    R_Visible = TRUE;							\
+    PUSHCALLARG(getvar(symbol, rho, dd, keepmiss, vcache, sidx));		\
+    NEXT();								\
+} while (0)
 #else
 #define DO_GETVAR(dd,keepmiss) do { \
   int sidx = GETOP(); \
   SEXP symbol = VECTOR_ELT(constants, sidx); \
   R_Visible = TRUE; \
   BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));	\
+  NEXT(); \
+} while (0)
+
+/* FIXME: It would be nice to avoid some copy-paste from DO_GETVAR */
+#define DO_GETVAR_PUSHCALLARG(dd,keepmiss) do { \
+  int sidx = GETOP(); \
+  SEXP symbol = VECTOR_ELT(constants, sidx); \
+  R_Visible = TRUE; \
+  PUSHCALLARG(getvar(symbol, rho, dd, keepmiss, vcache, sidx));	\
   NEXT(); \
 } while (0)
 #endif
@@ -4754,10 +4807,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
         /* this instruction is not used for ..n and ... */
 	if (ftype == BUILTINSXP) {
 	    SKIP_OP();
-	    int sidx = GETOP();
-	    SEXP symbol = VECTOR_ELT(constants, sidx);
-	    value = getvar(symbol, rho, FALSE, FALSE, vcache, sidx);
-	    PUSHCALLARG(value);
+	    DO_GETVAR_PUSHCALLARG(FALSE, FALSE);
         } else if (ftype != SPECIALSXP) {
             SEXP code = GETCONSTOP();
             SKIP_OP();
