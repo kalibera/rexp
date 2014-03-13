@@ -20,6 +20,9 @@
 # Editor backup files
 *~
 
+# Scratch space
+/tmp/
+
 # R build files
 *.d
 Makedeps
