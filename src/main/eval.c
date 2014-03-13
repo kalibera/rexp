@@ -4802,19 +4802,16 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
 	NEXT();
       }
-    OP(MAKEGETVARPROM, 2, CONSTOP(1), LABELOP(0)):
+    OP(MAKEGETVARPROM, 1, CONSTOP(0), LABELOP(0)):
       {
         /* this instruction is not used for ..n and ... */
 	if (ftype == BUILTINSXP) {
-	    SKIP_OP();
 	    DO_GETVAR_PUSHCALLARG(FALSE, FALSE);
         } else if (ftype != SPECIALSXP) {
-            SEXP code = GETCONSTOP();
-            SKIP_OP();
-            value = mkPROMISE(code, rho);
+            SEXP symbol = VECTOR_ELT(constants, GETOP());
+            value = mkPROMISE(symbol, rho);
 	    PUSHCALLARG(value);        
         } else {
-            SKIP_OP();
             SKIP_OP();
         }
         NEXT(); 

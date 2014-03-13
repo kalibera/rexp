@@ -610,7 +610,7 @@ SWAP.OP = 0,
 DUP2ND.OP = 0,
 SWITCH.OP = 4,
 RETURNJMP.OP = 0,
-MAKEGETVARPROM.OP = 2
+MAKEGETVARPROM.OP = 1
 )
 
 Opcodes.names <- names(Opcodes.argc)
@@ -996,12 +996,11 @@ cmpCallArgs <- function(args, cb, cntxt) {
             cntxt$stop(gettext("cannot compile promise literals in code"),
                        cntxt)
         else {
-            if (is.symbol(a) && !is.ddsym(a) && a != "...") {
-                ci <- cb$putconst(genCode(a, pcntxt))
-                cj <- cb$putconst(a)
-                cb$putcode(MAKEGETVARPROM.OP, ci, cj)
+            if (FALSE && is.symbol(a) && !is.ddsym(a) && a != "...") {
+                ci <- cb$putconst(a)
+                cb$putcode(MAKEGETVARPROM.OP, ci)
             }
-            else if (typeof(a) == "language") {
+            else if (is.symbol(a) || typeof(a) == "language") {
                 ci <- cb$putconst(genCode(a, pcntxt))
                 cb$putcode(MAKEPROM.OP, ci)
             }

@@ -688,9 +688,8 @@ though it is not clean how much this would gain.
 <<compile a general argument>>=
 else {
     if (is.symbol(a) && !is.ddsym(a) && a != "...") {
-        ci <- cb$putconst(genCode(a, pcntxt))
-        cj <- cb$putconst(a)
-        cb$putcode(MAKEGETVARPROM.OP, ci, cj)
+        ci <- cb$putconst(a)
+        cb$putcode(MAKEGETVARPROM.OP, ci)
     }
     else if (typeof(a) == "language") {
         ci <- cb$putconst(genCode(a, pcntxt))
@@ -5312,7 +5311,7 @@ SWAP.OP = 0,
 DUP2ND.OP = 0,
 SWITCH.OP = 4,
 RETURNJMP.OP = 0,
-MAKEGETVARPROM.OP = 2
+MAKEGETVARPROM.OP = 1
 )
 @ 
 
