@@ -4807,6 +4807,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
         /* this instruction is not used for ..n and ... */
 	if (ftype == BUILTINSXP) {
 	    DO_GETVAR_PUSHCALLARG(FALSE, FALSE);
+	    /* not reached */
         } else if (ftype != SPECIALSXP) {
             SEXP symbol = VECTOR_ELT(constants, GETOP());
             value = mkPROMISE(symbol, rho);
@@ -5749,22 +5750,32 @@ SEXP attribute_hidden do_putconst(SEXP call, SEXP op, SEXP args, SEXP env)
 
 SEXP attribute_hidden do_getconst(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP constBuf, ans;
-    int i, n;
+    SEXP constBuf, varnameBuf, ans;
+    int i, constCount, varnameCount;
 
     checkArity(op, args);
-    constBuf = CAR(args);
-    n = asInteger(CADR(args));
+    varnameBuf = CAR(args); args = CDR(args);
+    varnameCount = asInteger(CAR(args)); args = CDR(args);
+    constBuf = CAR(args); args = CDR(args);
+    constCount = asInteger(CAR(args));
+
+    if (TYPEOF(varnameBuf) != VECSXP)
+	error(_("varname buffer must be a generic vector"));
+    if (varnameCount < 0 || varnameCount > LENGTH(varnameBuf))
+	error(_("bad varname count %d (varname buf length is %d)"), varnameCount, varnameBuf);
 
     if (TYPEOF(constBuf) != VECSXP)
 	error(_("constant buffer must be a generic vector"));
-    if (n < 0 || n > LENGTH(constBuf))
-	error(_("bad constant count"));
+    if (constCount < 0 || constCount > LENGTH(constBuf))
+	error(_("bad constant count %d (constant buf length is %d)"), constCount, constBuf);
 
-    ans = allocVector(VECSXP, n);
-    for (i = 0; i < n; i++)
-	SET_VECTOR_ELT(ans, i, VECTOR_ELT(constBuf, i));
-
+    PROTECT(ans = allocVector(VECSXP, varnameCount + constCount + 1));
+    for (i = 0; i < varnameCount; i++)
+	SET_VECTOR_ELT(ans, i, VECTOR_ELT(varnameBuf, i));
+    for (i = 0; i < constCount; i++)
+	SET_VECTOR_ELT(ans, i + varnameCount, VECTOR_ELT(constBuf, i));
+    SET_VECTOR_ELT(ans, constCount + varnameCount, ScalarInteger(varnameCount)); 
+    UNPROTECT(1);
     return ans;
 }
 

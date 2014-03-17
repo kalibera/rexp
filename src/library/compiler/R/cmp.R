@@ -746,15 +746,30 @@ make.codeBuf <- function(expr) {
         i <- .Internal(putconst(constBuf, constCount, x))
         if (i == constCount)
             constCount <<- constCount + 1
+        as.integer(-i)
+    }
+
+    varnameBuf <- vector("list", 1)
+    varnameCount <- 0
+    putvarname <- function(x) {
+        if (varnameCount == length(varnameBuf))
+            varnameBuf <<- .Internal(growconst(varnameBuf))
+        i <- .Internal(putconst(varnameBuf, varnameCount, x))
+        if (i == varnameCount)
+            varnameCount <<- varnameCount + 1
         i
     }
-    getconst <- function()
-        .Internal(getconst(constBuf, constCount))
+
+    getconst <- function() {
+        .Internal(getconst(varnameBuf, varnameCount, constBuf, constCount))
+    }
+
+
     idx <- 0
     labels <- vector("list")
     makelabel <- function() { idx <<- idx + 1; paste0("L", idx) }
     putlabel <- function(name) labels[[name]] <<- codeCount
-    patchlabels <- function() {
+    patchlabelsAndConstants <- function() {
         offset <- function(lbl) {
             if (is.null(labels[[lbl]]))
                 stop(gettextf("no offset recorded for label \"%s\"", lbl),
@@ -763,9 +778,11 @@ make.codeBuf <- function(expr) {
         }
         for (i in 1 : codeCount) {
             v <- codeBuf[[i]]
-            if (is.character(v))
+            if (is.integer(v) && v < 0) {
+                codeBuf[[i]] <<- (-v) + varnameCount
+            } else if (is.character(v)) {
                 codeBuf[[i]] <<- offset(v)
-            else if (typeof(v) == "list") {
+            } else if (typeof(v) == "list") {
                 off <- as.integer(lapply(v, offset))
                 ci <- putconst(off)
                 codeBuf[[i]] <<- ci
@@ -776,15 +793,16 @@ make.codeBuf <- function(expr) {
                const = getconst,
                putcode = putcode,
                putconst = putconst,
+               putvarname = putvarname,
                makelabel = makelabel,
                putlabel = putlabel,
-               patchlabels = patchlabels)
+               patchlabelsAndConstants = patchlabelsAndConstants)
     cb$putconst(expr) ## insert expression as first constant.
     cb
 }
 
 codeBufCode <- function(cb) {
-    cb$patchlabels()
+    cb$patchlabelsAndConstants()
     .Internal(mkCode(cb$code(), cb$const()))
 }
 
@@ -918,7 +936,7 @@ cmpSym <- function(sym, cb, cntxt, missingOK = FALSE) {
     else {
         if (! findVar(sym, cntxt))
             notifyUndefVar(sym, cntxt)
-        ci <- cb$putconst(sym)
+        ci <- cb$putvarname(sym)
         if (missingOK)
             cb$putcode(GETVAR_MISSOK.OP, ci)
         else
@@ -996,11 +1014,11 @@ cmpCallArgs <- function(args, cb, cntxt) {
             cntxt$stop(gettext("cannot compile promise literals in code"),
                        cntxt)
         else {
-            if (FALSE && is.symbol(a) && !is.ddsym(a) && a != "...") {
-                ci <- cb$putconst(a)
+            if (is.symbol(a) && !is.ddsym(a) && a != "...") {
+                ci <- cb$putvarname(a)
                 cb$putcode(MAKEGETVARPROM.OP, ci)
             }
-            else if (is.symbol(a) || typeof(a) == "language") {
+            else if (typeof(a) == "language") {
                 ci <- cb$putconst(genCode(a, pcntxt))
                 cb$putcode(MAKEPROM.OP, ci)
             }
@@ -1445,7 +1463,7 @@ checkAssign <- function(e, cntxt) {
 cmpSymbolAssign <- function(symbol, value, superAssign, cb, cntxt) {
     ncntxt <- make.nonTailCallContext(cntxt)
     cmp(value, cb, ncntxt)
-    ci <- cb$putconst(symbol)
+    ci <- cb$putvarname(symbol)
     if (superAssign)
         cb$putcode(SETVAR2.OP, ci)
     else
@@ -1470,7 +1488,7 @@ cmpComplexAssign <- function(symbol, lhs, value, superAssign, cb, cntxt) {
     }
     ncntxt <- make.nonTailCallContext(cntxt)
     cmp(value, cb, ncntxt)
-    csi <- cb$putconst(symbol)
+    csi <- cb$putvarname(symbol)
     cb$putcode(startOP, csi)
 
     ncntxt <- make.argContext(cntxt)
@@ -1770,7 +1788,7 @@ setInlineHandler("for", function(e, cb, cntxt) {
     }
     ncntxt <- make.nonTailCallContext(cntxt)
     cmp(seq, cb, ncntxt)
-    ci <- cb$putconst(sym)
+    ci <- cb$putvarname(sym)
     callidx <- cb$putconst(e)
     if (checkSkipLoopCntxt(body, cntxt))
         cmpForBody(callidx, body, ci, cb, cntxt)
