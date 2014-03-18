@@ -1014,11 +1014,12 @@ cmpCallArgs <- function(args, cb, cntxt) {
             cntxt$stop(gettext("cannot compile promise literals in code"),
                        cntxt)
         else {
-            if (is.symbol(a) && !is.ddsym(a) && a != "...") {
+            isSym <- is.symbol(a)
+            if (isSym && !is.ddsym(a) && a != "...") {
                 ci <- cb$putvarname(a)
                 cb$putcode(MAKEGETVARPROM.OP, ci)
             }
-            else if (typeof(a) == "language") {
+            else if (isSym || typeof(a) == "language") {
                 ci <- cb$putconst(genCode(a, pcntxt))
                 cb$putcode(MAKEPROM.OP, ci)
             }
