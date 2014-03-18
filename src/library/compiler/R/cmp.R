@@ -789,7 +789,7 @@ make.codeBuf <- function(expr) {
             } else if (typeof(v) == "list") {
                 off <- as.integer(lapply(v, offset))
                 ci <- putconst(off)
-                codeBuf[[i]] <<- ci
+                codeBuf[[i]] <<- as.integer((-ci) + varnameCount)
             } else if (v < 0) {
                 codeBuf[[i]] <<- as.integer((-v) + varnameCount)
             }
