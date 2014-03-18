@@ -3620,6 +3620,14 @@ static R_INLINE SEXP BINDING_VALUE(SEXP loc)
    approach wastes some space.  This could be avoided by grouping the
    symbols at the beginning of the constant pool and recording the
    number.
+   
+   TK: I've implemented this. The first element of the constant pool is
+   still the expression (function body).  Following are symbols guessed to
+   be local variables (which includes all symbols that may be referenced by
+   instructions that use the cache).  Following are other constants.  The
+   last element of the constant pool is the number of symbols guessed to be
+   local variables.  The cache size is this number + 1 (the first element of
+   the cache left unused).
 
    Bindings recorded may become invalid if user code removes a
    variable.  The code in envir.c has been modified to insert
@@ -4464,6 +4472,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 #ifdef USE_BINDING_CACHE
   if (useCache) {
       R_len_t n = LENGTH(constants);
+      /*  n >= 2 must hold */
+      
+      n = asInteger(VECTOR_ELT(constants, n - 1)) + 1; 
+      /* +1 is for the first entry which is the expression/function body */
+      
 # ifdef CACHE_MAX
       if (n > CACHE_MAX) {
 	  n = CACHE_MAX;
@@ -5367,6 +5380,19 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
     BCODE *pc;
     int *ipc, i, j, k, nargs, n, m, v;
     unsigned map;
+
+    /* check integrity of constant pool */
+    
+    n = LENGTH(constants);
+    if (n < 2) {
+      error(_("Invalid constants length: %d"), n);
+    } 
+
+    m = asInteger(VECTOR_ELT(constants, n - 1));
+    if (m < 0 || m > n - 2) {
+      error(_("Invalid number of variable names %d declared to be in the constant pool of length %d.\n"), m, n);
+    }
+    
 
     m = (sizeof(BCODE) + sizeof(int) - 1) / sizeof(int);
 
