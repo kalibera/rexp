@@ -764,7 +764,8 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
     SEXP packsym, funsym, call, fcall, val;
 
     packsym = install("compiler");
-    funsym = install("tryCmpfun");
+/*    funsym = install("tryCmpfun");  CTK - make the errors visible to simplify debugging of the compiler */
+    funsym = install("cmpfun");
 
     PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
     PROTECT(call = lang2(fcall, fun));
@@ -5402,7 +5403,7 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
                 k = i + j + 1;
                 if (map&1) {
                     if (pc[k].i < 0 || pc[k].i >= length(constants)) {
-                      error(" index %d out of bounds %d", pc[k].i, length(constants));
+                      error("index %d out of bounds %d", pc[k].i, length(constants));
                     }
                     pc[k].sexp = VECTOR_ELT(constants, pc[k].i);
                 }
@@ -5750,10 +5751,11 @@ SEXP attribute_hidden do_putconst(SEXP call, SEXP op, SEXP args, SEXP env)
 
 SEXP attribute_hidden do_getconst(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP constBuf, varnameBuf, ans;
-    int i, constCount, varnameCount;
+    SEXP theExpression, constBuf, varnameBuf, ans;
+    int i, j, constCount, varnameCount;
 
     checkArity(op, args);
+    theExpression = CAR(args); args = CDR(args);
     varnameBuf = CAR(args); args = CDR(args);
     varnameCount = asInteger(CAR(args)); args = CDR(args);
     constBuf = CAR(args); args = CDR(args);
@@ -5769,12 +5771,14 @@ SEXP attribute_hidden do_getconst(SEXP call, SEXP op, SEXP args, SEXP env)
     if (constCount < 0 || constCount > LENGTH(constBuf))
 	error(_("bad constant count %d (constant buf length is %d)"), constCount, constBuf);
 
-    PROTECT(ans = allocVector(VECSXP, varnameCount + constCount + 1));
+    PROTECT(ans = allocVector(VECSXP, varnameCount + constCount + 2));
+    j = 0;
+    SET_VECTOR_ELT(ans, j++, theExpression);
     for (i = 0; i < varnameCount; i++)
-	SET_VECTOR_ELT(ans, i, VECTOR_ELT(varnameBuf, i));
+	SET_VECTOR_ELT(ans, j++, VECTOR_ELT(varnameBuf, i));
     for (i = 0; i < constCount; i++)
-	SET_VECTOR_ELT(ans, i + varnameCount, VECTOR_ELT(constBuf, i));
-    SET_VECTOR_ELT(ans, constCount + varnameCount, ScalarInteger(varnameCount)); 
+	SET_VECTOR_ELT(ans, j++, VECTOR_ELT(constBuf, i));
+    SET_VECTOR_ELT(ans, j++, ScalarInteger(varnameCount)); 
     UNPROTECT(1);
     return ans;
 }

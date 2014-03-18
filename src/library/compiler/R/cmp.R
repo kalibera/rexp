@@ -746,7 +746,13 @@ make.codeBuf <- function(expr) {
         i <- .Internal(putconst(constBuf, constCount, x))
         if (i == constCount)
             constCount <<- constCount + 1
-        as.integer(-i)
+        -(i + 1L) ## +1L is for the expression that has to be first
+    }
+
+    ## inserts the expression as the first constant (at index 0)
+    putexpr <- function(x) {
+        theExpression <<- x   
+        0L
     }
 
     varnameBuf <- vector("list", 1)
@@ -757,11 +763,11 @@ make.codeBuf <- function(expr) {
         i <- .Internal(putconst(varnameBuf, varnameCount, x))
         if (i == varnameCount)
             varnameCount <<- varnameCount + 1
-        i
+        i + 1L ## 1L is for the expression which has to be first
     }
 
     getconst <- function() {
-        .Internal(getconst(varnameBuf, varnameCount, constBuf, constCount))
+        .Internal(getconst(theExpression, varnameBuf, varnameCount, constBuf, constCount))
     }
 
 
@@ -778,14 +784,14 @@ make.codeBuf <- function(expr) {
         }
         for (i in 1 : codeCount) {
             v <- codeBuf[[i]]
-            if (is.integer(v) && v < 0) {
-                codeBuf[[i]] <<- (-v) + varnameCount
-            } else if (is.character(v)) {
+            if (is.character(v)) {
                 codeBuf[[i]] <<- offset(v)
             } else if (typeof(v) == "list") {
                 off <- as.integer(lapply(v, offset))
                 ci <- putconst(off)
                 codeBuf[[i]] <<- ci
+            } else if (v < 0) {
+                codeBuf[[i]] <<- as.integer((-v) + varnameCount)
             }
         }
     }
@@ -794,10 +800,11 @@ make.codeBuf <- function(expr) {
                putcode = putcode,
                putconst = putconst,
                putvarname = putvarname,
+               putexpr = putexpr,
                makelabel = makelabel,
                putlabel = putlabel,
                patchlabelsAndConstants = patchlabelsAndConstants)
-    cb$putconst(expr) ## insert expression as first constant.
+    cb$putexpr(expr) ## insert expression as first constant.
     cb
 }
 
@@ -1019,7 +1026,7 @@ cmpCallArgs <- function(args, cb, cntxt) {
                 ci <- cb$putvarname(a)
                 cb$putcode(MAKEGETVARPROM.OP, ci)
             }
-            else if (isSym || typeof(a) == "language") {
+            else if (typeof(a) == "language" || isSym) {
                 ci <- cb$putconst(genCode(a, pcntxt))
                 cb$putcode(MAKEPROM.OP, ci)
             }
