@@ -5403,7 +5403,7 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
                 k = i + j + 1;
                 if (map&1) {
                     if (pc[k].i < 0 || pc[k].i >= length(constants)) {
-                      error("index %d out of bounds %d", pc[k].i, length(constants));
+                      error("bcEncode: constant pool index %d out of bounds %d at code index %d", pc[k].i, length(constants), i);
                     }
                     pc[k].sexp = VECTOR_ELT(constants, pc[k].i);
                 }
@@ -5417,7 +5417,7 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
                 k = i + j + 1;
                 if (map&1) {
                     if (pc[k].i < 0 || pc[k].i >= n) {
-                      error("label instruction index %d out of bounds %d", pc[k].i, n);
+                      error("bcEncode: label instruction index %d out of bounds %d", pc[k].i, n);
                     }
                     pc[k].label = pc + pc[k].i;
                 }                
