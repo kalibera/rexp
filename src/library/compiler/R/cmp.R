@@ -749,6 +749,7 @@ make.codeBuf <- function(expr) {
         -(i + 1L) ## +1L is for the expression that has to be first
     }
 
+    theExpression <- NULL
     ## inserts the expression as the first constant (at index 0)
     putexpr <- function(x) {
         theExpression <<- x   
