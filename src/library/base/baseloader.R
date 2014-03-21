@@ -120,3 +120,7 @@ local({
         lapply(routines[[i]],
                function(sym) assign(paste0(".C_", sym$name), sym, envir = .BaseNamespaceEnv))
 })
+
+force(.ArgsEnv)
+force(.GenericArgsEnv)
+invisible(NULL)
