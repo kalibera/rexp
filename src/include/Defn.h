@@ -295,6 +295,14 @@ extern int putenv(char *string);
 /* These are the built-in R functions. */
 typedef SEXP (*CCODE)(SEXP, SEXP, SEXP, SEXP);
 
+typedef union {
+  SEXP (*args0) (SEXP call, SEXP op, SEXP rho);
+  SEXP (*args1) (SEXP call, SEXP op, SEXP arg1, SEXP rho);
+  SEXP (*args2) (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP rho);
+  SEXP (*args3) (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP arg3, SEXP rho);
+  void *ptr;
+} EARG_CCODE;
+
 /* Information for Deparsing Expressions */
 typedef enum {
     PP_INVALID  =  0,
@@ -352,6 +360,7 @@ typedef struct {
 typedef struct {
     char   *name;    /* print name */
     CCODE  cfun;     /* c-code address */
+    EARG_CCODE  eargcfun;  /* c-code address for a version that takes individual arguments */ 
     int	   code;     /* offset within c-code */
     int	   eval;     /* evaluate args? */
     int	   arity;    /* function arity */
@@ -367,6 +376,11 @@ typedef struct {
 #define PRIMOFFSET(x)	((x)->u.primsxp.offset)
 #define SET_PRIMOFFSET(x,v)	(((x)->u.primsxp.offset)=(v))
 #define PRIMFUN(x)	(R_FunTab[(x)->u.primsxp.offset].cfun)
+#define PRIMEARGFUN(x)	(R_FunTab[(x)->u.primsxp.offset].eargcfun)
+#define PRIMEARGFUN0(x)	(PRIMEARGFUN(x).args0)
+#define PRIMEARGFUN1(x)	(PRIMEARGFUN(x).args1)
+#define PRIMEARGFUN2(x)	(PRIMEARGFUN(x).args2)
+#define PRIMEARGFUN3(x)	(PRIMEARGFUN(x).args3)
 #define PRIMNAME(x)	(R_FunTab[(x)->u.primsxp.offset].name)
 #define PRIMVAL(x)	(R_FunTab[(x)->u.primsxp.offset].code)
 #define PRIMARITY(x)	(R_FunTab[(x)->u.primsxp.offset].arity)

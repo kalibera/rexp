@@ -36,6 +36,7 @@
 #define ARGUSED(x) LEVELS(x)
 
 static SEXP bcEval(SEXP, SEXP, Rboolean);
+static int findOp(void *addr);
 
 /* BC_PROILFING needs to be defined here and in registration.c */
 /*#define BC_PROFILING*/
@@ -3073,7 +3074,17 @@ enum {
   DUP2ND_OP,
   SWITCH_OP,
   RETURNJMP_OP,
-  MAKEGETVARPROM_OP,  
+  MAKEGETVARPROM_OP,
+  PUSHNULLEARG_OP,
+  PUSHTRUEEARG_OP,
+  PUSHFALSEEARG_OP,
+  PUSHCONSTEARG_OP,
+  CALLBUILTINEARG0_OP,
+  CALLBUILTINEARG1_OP,
+  CALLBUILTINEARG2_OP,
+  CALLBUILTINEARG3_OP,    
+  GETINTLBUILTINEARG_OP,  
+  PUSHEARG_OP,  
   STARTVECSUBSET_OP,
   STARTMATSUBSET_OP,
   STARTSETVECSUBSET_OP,
@@ -3534,33 +3545,38 @@ SEXP R_ClosureExpr(SEXP p)
 {
     return bytecodeExpr(BODY(p));
 }
-
+#define DUMPSTATE() dumpInterpreterState(codebase, pc, LENGTH(BCODE_CODE(body)) - 1, oldntop, R_BCNodeStackTop)
 
 #ifdef THREADED_CODE
 
 #ifdef RESOLVE_CONST_OP
   #ifdef DIRECT_LABELS
     typedef union bcode { void *v; int i; SEXP sexp; union bcode* label;} BCODE;
-    static struct { void *addr; int argc; unsigned sexpmap; unsigned labelmap; } opinfo[OPCOUNT];
+    static struct { void *addr; int argc; unsigned sexpmap; unsigned labelmap; char *instname; } opinfo[OPCOUNT];
   #else
     typedef union { void *v; int i; SEXP sexp;} BCODE;
-    static struct { void *addr; int argc; unsigned sexpmap; } opinfo[OPCOUNT];
+    static struct { void *addr; int argc; unsigned sexpmap; char *instname; } opinfo[OPCOUNT];
   #endif
 #else /* not RESOLVE_CONST_OP */
   typedef union { void *v; int i; } BCODE;
-  static struct { void *addr; int argc; } opinfo[OPCOUNT];
+  static struct { void *addr; int argc; char* instname; } opinfo[OPCOUNT];
 #endif
+
+//#define DEBUG_INST(name) fprintf(stderr, "DEBUG: Added instruction %s (%d) argc=%d instname=%s\n", #name, name##_OP, opinfo[name##_OP].argc, opinfo[name##_OP].instname)
+#define DEBUG_INST(name)
 
 #define OP(name,n,cmask,lmask) \
   case name##_OP: opinfo[name##_OP].addr = (__extension__ &&op_##name); \
     SETCONSTMAP(opinfo[name##_OP].sexpmap, cmask); \
     SETLABELMAP(opinfo[name##_OP].labelmap, lmask); \
     opinfo[name##_OP].argc = (n); \
+    opinfo[name##_OP].instname = #name; \
+    DEBUG_INST(name); \
     goto loop; \
     op_##name
 
 #define BEGIN_MACHINE  NEXT(); init: { loop: switch(which++)
-#define LASTOP } value = R_NilValue; goto done
+#define LASTOP } value = R_NilValue; if (which != OPCOUNT + 1) error("some instructions are not implemented"); goto done
 #define INITIALIZE_MACHINE() if (body == NULL) goto init
 
 #define NEXT() (__extension__ ({goto *(*pc++).v;}))
@@ -3904,6 +3920,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
   else SETCDR(GETSTACK(-1), __cell__); \
   SETSTACK(-1, __cell__);	       \
 } while (0)
+
+#define PUSHCALLEARG(v) BCNPUSH(v)
 
 static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
 {
@@ -4422,6 +4440,56 @@ static R_INLINE SEXP BUMPREFCNT(SEXP x)
     return x;
 }
 
+
+static void c_inspect(SEXP x) {
+
+  do_inspect(NULL, NULL, CONS(x, R_NilValue), NULL);
+
+}
+
+static void dumpInterpreterState(BCODE *codebase, BCODE *codeCurrent, int codeLength, R_bcstack_t* nodeStackBase, R_bcstack_t *nodeStackTop) {
+    int i;
+    
+    printf("-------------------------------- NODE STACK --------------------------------------------\n");
+    printf("Node stack dump (stack top = %p, stack base = %p):\n", nodeStackTop, nodeStackBase);
+    i = 0;
+    while(nodeStackTop != nodeStackBase) {
+        nodeStackTop --;
+        i--;
+        printf("==== [%d] at %p is %p: ", i, nodeStackTop, *nodeStackTop);
+        c_inspect(*nodeStackTop);
+    }
+    
+    printf("-------------------------------- CODE --------------------------------------------------\n");
+    printf("Instruction dump (code base = %p, pc = %p, codeLength = %d):\n", codebase, codeCurrent, codeLength);
+    BCODE *pc = codebase + 1;
+    i = 1;
+    for(i = 1; i <= codeLength;) {
+        int op;
+        void *opAddr = pc->v;
+        for (op = 0; op < OPCOUNT; op++) {
+	    if (opinfo[op].addr == opAddr) {
+                break;
+            }
+        }
+        if (op == OPCOUNT) {
+            printf("==== %3d: UNKNOWN INSTRUCTION (%p)\n", i, opAddr);
+            break;
+        }
+        char *name = opinfo[op].instname;
+        int nargs = opinfo[op].argc;
+        printf("==== %3d: %s (%d) + %d arguments", i, name, op, nargs);
+        if (pc == codeCurrent) {
+            printf(" <^^^^^^^^^^^^^^^^^^^^^^^^^^^ PC is at previous instruction >\n");
+        } else { 
+            printf("\n");
+        }
+        i += nargs + 1;
+        pc += nargs + 1;
+    }
+    printf("----------------------------------------------------------------------------------------\n");
+}
+
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
   SEXP value, constants;
@@ -4787,6 +4855,19 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	R_BCNodeStackTop += 3;
 	NEXT();
       }
+    OP(GETINTLBUILTINEARG, 1, CONSTOP(1), LABELOP(0)):
+      {
+	/* get the function */
+	SEXP symbol = GETCONSTOP();
+	value = INTERNAL(symbol);
+	if (TYPEOF(value) != BUILTINSXP)
+	  error(_("there is no .Internal function '%s'"),
+		CHAR(PRINTNAME(symbol)));
+
+	ftype = TYPEOF(value);
+	BCNPUSH(value);
+	NEXT();
+      }      
     OP(CHECKFUN, 0, CONSTOP(0), LABELOP(0)):
       {
 	/* check then the value on the stack is a function */
@@ -4874,6 +4955,16 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(PUSHNULLARG, 0, CONSTOP(0), LABELOP(0)): PUSHCALLARG(R_NilValue); NEXT();
     OP(PUSHTRUEARG, 0, CONSTOP(0), LABELOP(0)): PUSHCALLARG(BUMPREFCNT(mkTrue())); NEXT();
     OP(PUSHFALSEARG, 0, CONSTOP(0), LABELOP(0)): PUSHCALLARG(BUMPREFCNT(mkFalse())); NEXT();
+    OP(PUSHEARG, 0, CONSTOP(0), LABELOP(0)): PUSHCALLEARG(BCNPOP()); NEXT();
+    /**** for now PUSHCONST, PUSHTRUE, and PUSHFALSE duplicate/allocate to
+	  be defensive against bad package C code */
+    OP(PUSHCONSTEARG, 1, CONSTOP(1), LABELOP(0)):
+      value = GETCONSTOP();
+      PUSHCALLEARG(BUMPREFCNT(duplicate(value)));
+      NEXT();
+    OP(PUSHNULLEARG, 0, CONSTOP(0), LABELOP(0)): PUSHCALLEARG(R_NilValue); NEXT();
+    OP(PUSHTRUEEARG, 0, CONSTOP(0), LABELOP(0)): PUSHCALLEARG(BUMPREFCNT(mkTrue())); NEXT();
+    OP(PUSHFALSEEARG, 0, CONSTOP(0), LABELOP(0)): PUSHCALLEARG(BUMPREFCNT(mkFalse())); NEXT();
     OP(CALL, 1, CONSTOP(1), LABELOP(0)):
       {
 	SEXP fun = GETSTACK(-3);
@@ -4912,7 +5003,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int flag;
 	const void *vmax = vmaxget();
 	if (TYPEOF(fun) != BUILTINSXP)
-	  error(_("not a BUILTIN function"));
+	  error(_("not a BUILTIN function (CALLBUILTIN)"));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
 	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
@@ -4930,6 +5021,120 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	R_BCNodeStackTop -= 2;
+	SETSTACK(-1, value);
+	NEXT();
+      }
+    OP(CALLBUILTINEARG0, 1, CONSTOP(1), LABELOP(0)):
+      {
+	SEXP fun = GETSTACK(-1);
+	SEXP call = GETCONSTOP();
+	int flag;
+	const void *vmax = vmaxget();
+	if (TYPEOF(fun) != BUILTINSXP)
+	  error(_("not a BUILTIN function (CALLBUILTINEARG0)"));
+	flag = PRIMPRINT(fun);
+	R_Visible = flag != 1;
+	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
+	    RCNTXT cntxt;
+	    SEXP oldref = R_Srcref;
+	    begincontext(&cntxt, CTXT_BUILTIN, call,
+			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
+	    R_Srcref = NULL;
+	    value = PRIMEARGFUN0(fun) (call, fun, rho);
+	    R_Srcref = oldref;
+	    endcontext(&cntxt);
+	} else {
+            value = PRIMEARGFUN0(fun) (call, fun, rho);
+	}
+	if (flag < 2) R_Visible = flag != 1;
+	vmaxset(vmax);
+	SETSTACK(-1, value);
+	NEXT();
+      }
+    OP(CALLBUILTINEARG1, 1, CONSTOP(1), LABELOP(0)):
+      {
+	SEXP fun = GETSTACK(-2);
+	SEXP call = GETCONSTOP();
+	int flag;
+	const void *vmax = vmaxget();
+	if (TYPEOF(fun) != BUILTINSXP)
+	  error(_("not a BUILTIN function (CALLBUILTINEARG1)"));
+	flag = PRIMPRINT(fun);
+	R_Visible = flag != 1;
+	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
+	    RCNTXT cntxt;
+	    SEXP oldref = R_Srcref;
+	    begincontext(&cntxt, CTXT_BUILTIN, call,
+			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
+	    R_Srcref = NULL;
+	    value = PRIMEARGFUN1(fun) (call, fun, GETSTACK(-1), rho);
+	    R_Srcref = oldref;
+	    endcontext(&cntxt);
+	} else {
+	    value = PRIMEARGFUN1(fun) (call, fun, GETSTACK(-1), rho);
+	}
+	if (flag < 2) R_Visible = flag != 1;
+	vmaxset(vmax);
+	R_BCNodeStackTop -= 1;
+	SETSTACK(-1, value);
+	NEXT();
+      }      
+    OP(CALLBUILTINEARG2, 1, CONSTOP(1), LABELOP(0)):
+      {
+	SEXP fun = GETSTACK(-3);
+	SEXP call = GETCONSTOP();
+	int flag;
+	const void *vmax = vmaxget();
+	if (TYPEOF(fun) != BUILTINSXP)
+	  error(_("not a BUILTIN function (CALLBUILTINEARG2)"));
+	flag = PRIMPRINT(fun);
+	R_Visible = flag != 1;
+	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
+	    RCNTXT cntxt;
+	    SEXP oldref = R_Srcref;
+	    begincontext(&cntxt, CTXT_BUILTIN, call,
+			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
+	    R_Srcref = NULL;
+	    value = PRIMEARGFUN2(fun) (call, fun, GETSTACK(-2), GETSTACK(-1), rho);
+	    R_Srcref = oldref;
+	    endcontext(&cntxt);
+	} else {
+	    value = PRIMEARGFUN2(fun) (call, fun, GETSTACK(-2), GETSTACK(-1), rho);
+	}
+	if (flag < 2) R_Visible = flag != 1;
+	vmaxset(vmax);
+	R_BCNodeStackTop -= 2;
+	SETSTACK(-1, value);
+	NEXT();
+      }            
+    OP(CALLBUILTINEARG3, 1, CONSTOP(1), LABELOP(0)):
+      {
+	SEXP fun = GETSTACK(-4);
+	SEXP call = GETCONSTOP();
+	int flag;
+	const void *vmax = vmaxget();
+	if (TYPEOF(fun) != BUILTINSXP) {
+	  fprintf(stderr, "Dumping state...\n");
+	  DUMPSTATE();
+	  error(_("not a BUILTIN function (CALLBUILTINEARG3)"));
+	}
+	flag = PRIMPRINT(fun);
+	R_Visible = flag != 1;
+	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
+	    RCNTXT cntxt;
+	    SEXP oldref = R_Srcref;
+	    begincontext(&cntxt, CTXT_BUILTIN, call,
+			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
+	    R_Srcref = NULL;
+	    value = PRIMEARGFUN3(fun) (call, fun, GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho);
+	    R_Srcref = oldref;
+	    endcontext(&cntxt);
+	} else {
+	    value = PRIMEARGFUN3(fun) (call, fun, GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho);
+	}
+	if (flag < 2) R_Visible = flag != 1;
+	vmaxset(vmax);
+	R_BCNodeStackTop -= 3;
 	SETSTACK(-1, value);
 	NEXT();
       }
@@ -5381,6 +5586,7 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
     int *ipc, i, j, k, nargs, n, m, v;
     unsigned map;
 
+    
     /* check integrity of constant pool */
     
     n = LENGTH(constants);
@@ -5392,7 +5598,6 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
     if (m < 0 || m > n - 2) {
       error(_("Invalid number of variable names %d declared to be in the constant pool of length %d.\n"), m, n);
     }
-    
 
     m = (sizeof(BCODE) + sizeof(int) - 1) / sizeof(int);
 
@@ -5411,6 +5616,31 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
 	code = allocVector(INTSXP, m * n);
 	pc = (BCODE *) INTEGER(code);
 
+	/* disassembly (debugging */
+        /* FIXME: it would be nice to move this into a separate function and run it only in case of error encountered. */
+        /* FIXME: it would be nice to have a nicer disassembler which will also understand at least some of the constants */
+        if (FALSE) {
+            fprintf(stderr, "bcEncode: debug disassembly\n");
+            for(i = 1; i < n;) {
+                int op = ipc[i];
+                if (op <0 || op >= OPCOUNT) {
+                    fprintf(stderr, "%d: invalid instruction %d (opcount is %d)", i, ipc[i], OPCOUNT);
+                    break;
+                } else {
+                    char *name = opinfo[op].instname;
+                    nargs = opinfo[op].argc;
+            
+                    fprintf(stderr, "%d: %s (%d)", i, name, op);
+                    for (j = 0; j < nargs; j++) {
+                        fprintf(stderr, " %d", ipc[j]);
+                    }
+                    i += nargs + 1;
+                }
+                fprintf(stderr, "\n");
+            }
+            fprintf(stderr, "constant pool size: %d\n", length(constants));
+        }
+
 	for (i = 0; i < n; i++) pc[i].i = ipc[i];
 
 	/* install the current version number */
@@ -5418,8 +5648,9 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
 
 	for (i = 1; i < n;) {
 	    int op = pc[i].i;
-	    if (op < 0 || op >= OPCOUNT)
-		error("unknown instruction code");
+	    if (op < 0 || op >= OPCOUNT) {
+		error("bcEncode: unknown instruction code %d", op);
+            }
 	    pc[i].v = opinfo[op].addr;
 	    nargs = opinfo[op].argc;
 	    
@@ -5429,7 +5660,8 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
                 k = i + j + 1;
                 if (map&1) {
                     if (pc[k].i < 0 || pc[k].i >= length(constants)) {
-                      error("bcEncode: constant pool index %d out of bounds %d at code index %d", pc[k].i, length(constants), i);
+                        error("bcEncode: constant pool index %d out of bounds %d at code index %d (instruction %d = %s)", 
+                            pc[k].i, length(constants), i, op, opinfo[op].instname);
                     }
                     pc[k].sexp = VECTOR_ELT(constants, pc[k].i);
                 }
@@ -5443,7 +5675,8 @@ SEXP R_bcEncode(SEXP bytes, SEXP constants)
                 k = i + j + 1;
                 if (map&1) {
                     if (pc[k].i < 0 || pc[k].i >= n) {
-                      error("bcEncode: label instruction index %d out of bounds %d", pc[k].i, n);
+                      error("bcEncode: label instruction index %d out of bounds %d (instruction %d = %s)", 
+                          pc[k].i, n, op, opinfo[op].instname);
                     }
                     pc[k].label = pc + pc[k].i;
                 }                
@@ -5911,4 +6144,45 @@ SEXP attribute_hidden do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rh
 	    R_num_math_threads = R_max_num_math_threads;
     }
     return ScalarInteger(old);
+}
+
+SEXP attribute_hidden do_supportsearg(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    checkArity(op, args);
+    SEXP prim = CAR(args);
+
+    SEXP sym;
+    if (TYPEOF(prim) == CHARSXP) {
+        if (LENGTH(prim) != 1 )
+	    error(_("invalid length of '%s' argument"), "prim");
+        sym = install(CHAR(prim));
+    } else if (TYPEOF(prim) == SYMSXP) {
+        sym = prim;
+    } else {
+        error(_("invalid type of '%s' argument"), "prim");
+    }
+
+    SEXP value = INTERNAL(sym);
+    if (TYPEOF(value) == PROMSXP) {
+        PROTECT(value);
+        value = forcePromise(value);
+        SET_NAMED(value, 2);
+        UNPROTECT(1);
+    }    
+    if (TYPEOF(value) != BUILTINSXP) {
+//        printf("%s does not support earg because its type is %s\n", CHAR(PRINTNAME(sym)), type2char(TYPEOF(value)));
+        return ScalarInteger(-1);
+    }
+    int arity = PRIMARITY(value);
+    if (arity == -1) { 
+//        printf("%s does not support earg because its arity is -1\n", CHAR(PRINTNAME(sym)));
+        return ScalarInteger(-1);
+    }
+    EARG_CCODE fun = PRIMEARGFUN(value);
+    if (fun.ptr == NULL) {
+//        printf("%s does not support earg because its earg do functions is NULL\n", CHAR(PRINTNAME(sym)));
+        return ScalarInteger(-1);
+    }
+    return ScalarInteger(arity);
+    
 }

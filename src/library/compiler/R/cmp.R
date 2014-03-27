@@ -610,7 +610,17 @@ SWAP.OP = 0,
 DUP2ND.OP = 0,
 SWITCH.OP = 4,
 RETURNJMP.OP = 0,
-MAKEGETVARPROM.OP = 1
+MAKEGETVARPROM.OP = 1,
+PUSHNULLEARG.OP = 0,
+PUSHTRUEEARG.OP = 0,
+PUSHFALSEEARG.OP = 0,
+PUSHCONSTEARG.OP = 1,
+CALLBUILTINEARG0.OP = 1,
+CALLBUILTINEARG1.OP = 1,
+CALLBUILTINEARG2.OP = 1,
+CALLBUILTINEARG3.OP = 1,
+GETINTLBUILTINEARG.OP = 1,
+PUSHEARG.OP = 0
 )
 
 Opcodes.names <- names(Opcodes.argc)
@@ -720,6 +730,16 @@ DUP2ND.OP <- 101
 SWITCH.OP <- 102
 RETURNJMP.OP <- 103
 MAKEGETVARPROM.OP <- 104
+PUSHNULLEARG.OP <- 105
+PUSHTRUEEARG.OP <- 106
+PUSHFALSEEARG.OP <- 107
+PUSHCONSTEARG.OP <- 108
+CALLBUILTINEARG0.OP <- 109
+CALLBUILTINEARG1.OP <- 110
+CALLBUILTINEARG2.OP <- 111
+CALLBUILTINEARG3.OP <- 112
+GETINTLBUILTINEARG.OP <- 113
+PUSHEARG.OP <- 114
 
 
 ##
@@ -1048,6 +1068,24 @@ cmpConstArg <- function(a, cb, cntxt) {
     else {
         ci <- cb$putconst(a)
         cb$putcode(PUSHCONSTARG.OP, ci)
+    }
+}
+
+cmpConstBuiltinArg <- function(a, cb, cntxt, explicitArgs) {
+
+    if (explicitArgs == -1) {
+      cmpConstArg(a, cb, cntxt)
+    } else {
+      if (identical(a, NULL))
+        cb$putcode(PUSHNULLEARG.OP)
+      else if (identical(a, TRUE))
+        cb$putcode(PUSHTRUEEARG.OP)
+      else if (identical(a, FALSE))
+        cb$putcode(PUSHFALSEEARG.OP)
+      else {
+          ci <- cb$putconst(a)
+          cb$putcode(PUSHCONSTEARG.OP, ci)
+      }
     }
 }
 
@@ -1968,7 +2006,34 @@ setInlineHandler("(", function(e, cb, cntxt) {
 ## Inline handlers for general BUILTIN and SPECIAL functions
 ##
 
-cmpBuiltin <- function(e, cb, cntxt, internal = FALSE) {
+
+explicitCALLBUILTIN <- c(CALLBUILTINEARG0.OP, CALLBUILTINEARG1.OP, CALLBUILTINEARG2.OP, CALLBUILTINEARG3.OP)
+getCallBuiltinInstruction <- function(explicitArgs) {
+    
+  if (explicitArgs == -1) {
+    CALLBUILTIN.OP
+  } else {
+    explicitCALLBUILTIN[explicitArgs + 1]
+  }
+}
+
+getGetIntlBuiltinInstruction <- function(explicitArgs) {
+  if (explicitArgs == -1) {
+    GETINTLBUILTIN.OP  
+  } else {
+    GETINTLBUILTINEARG.OP 
+  }
+}
+
+getPushArgInstruction <- function(explicitArgs) {
+  if (explicitArgs == -1) {
+    PUSHARG.OP
+  } else {
+    PUSHEARG.OP
+  }
+}
+
+cmpBuiltin <- function(e, cb, cntxt, internal = FALSE, explicitArgs = -1) {
     fun <- e[[1]]
     args <- e[-1]
     names <- names(args)
@@ -1977,18 +2042,18 @@ cmpBuiltin <- function(e, cb, cntxt, internal = FALSE) {
     else {
         ci <- cb$putconst(fun)
         if (internal)
-            cb$putcode(GETINTLBUILTIN.OP, ci)
+            cb$putcode(getGetIntlBuiltinInstruction(explicitArgs), ci)
         else
             cb$putcode(GETBUILTIN.OP, ci)
-        cmpBuiltinArgs(args, names, cb, cntxt)
+        cmpBuiltinArgs(args, names, cb, cntxt, FALSE, explicitArgs)
         ci <- cb$putconst(e)
-        cb$putcode(CALLBUILTIN.OP, ci)
+        cb$putcode(getCallBuiltinInstruction(explicitArgs), ci)
         if (cntxt$tailcall) cb$putcode(RETURN.OP)
         TRUE
     }
 }
 
-cmpBuiltinArgs <- function(args, names, cb, cntxt, missingOK = FALSE) {
+cmpBuiltinArgs <- function(args, names, cb, cntxt, missingOK = FALSE, explicitArgs = -1) {
     ncntxt <- make.argContext(cntxt)
     for (i in seq_along(args)) {
         a <- args[[i]]
@@ -2013,18 +2078,25 @@ cmpBuiltinArgs <- function(args, names, cb, cntxt, missingOK = FALSE) {
                 ca <- constantFold(a, cntxt)
                 if (is.null(ca)) {
                     cmpSym(a, cb, ncntxt, missingOK)
-                    cb$putcode(PUSHARG.OP)
+                    cb$putcode(getPushArgInstruction(explicitArgs))
                 }
                 else
-                    cmpConstArg(ca$value, cb, cntxt)
+                    cmpConstBuiltinArg(ca$value, cb, cntxt, explicitArgs)
             }
             else if (typeof(a) == "language") {
                 cmp(a, cb, ncntxt)
-                cb$putcode(PUSHARG.OP)
+                cb$putcode(getPushArgInstruction(explicitArgs))
             }
             else
-                cmpConstArg(a, cb, cntxt)
-            cmpTag(n, cb)
+                cmpConstBuiltinArg(a, cb, cntxt, explicitArgs)
+
+            if (explicitArgs == -1) {
+              cmpTag(n, cb)
+            } else {
+              if (! is.null(n) && n != "") {
+                cntxt$stop(gettext("names are not possible with explicit arguments"), cntxt)
+              }
+            }
         }
     }
 }
@@ -2043,8 +2115,10 @@ cmpSpecial <- function(e, cb, cntxt) {
 setInlineHandler(".Internal", function(e, cb, cntxt) {
     ee <- e[[2]]
     sym <- ee[[1]]
-    if (.Internal(is.builtin.internal(sym)))
-        cmpBuiltin(ee, cb, cntxt, internal = TRUE)
+    if (.Internal(is.builtin.internal(sym))) {
+        cmpBuiltin(ee, cb, cntxt, internal = TRUE, explicitArgs = .Internal(supports.earg(sym)))
+#        cmpBuiltin(ee, cb, cntxt, internal = TRUE, explicitArgs = -1)
+    }
     else
         cmpSpecial(e, cb, cntxt)
 })
