@@ -3924,6 +3924,33 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 
 #define PUSHCALLEARG(v) BCNPUSH(v)
 
+#define EARG_CALLBUILTIN(nargs, PRIMCALL) do { \
+  SEXP fun = GETSTACK(-1-nargs); \
+  SEXP call = GETCONSTOP(); \
+  int flag; \
+  const void *vmax = vmaxget(); \
+  if (TYPEOF(fun) != BUILTINSXP) \
+    error(_("not a BUILTIN function (CALLBUILTINEARG)")); \
+  flag = PRIMPRINT(fun); \
+  R_Visible = flag != 1; \
+  if (R_Profiling && IS_TRUE_BUILTIN(fun)) { \
+    RCNTXT cntxt; \
+    SEXP oldref = R_Srcref; \
+    begincontext(&cntxt, CTXT_BUILTIN, call,R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue); \
+    R_Srcref = NULL; \
+    value = PRIMCALL; \
+    R_Srcref = oldref; \
+    endcontext(&cntxt); \
+  } else { \
+    value = PRIMCALL; \
+  } \
+  if (flag < 2) R_Visible = flag != 1; \
+  vmaxset(vmax); \
+  R_BCNodeStackTop -= nargs; \
+  SETSTACK(-1, value); \
+  NEXT(); \
+} while(0)
+
 static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
 {
   RCNTXT cntxt;
@@ -5025,151 +5052,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SETSTACK(-1, value);
 	NEXT();
       }
-    OP(CALLBUILTINEARG0, 1, CONSTOP(1), LABELOP(0)):
-      {
-	SEXP fun = GETSTACK(-1);
-	SEXP call = GETCONSTOP();
-	int flag;
-	const void *vmax = vmaxget();
-	if (TYPEOF(fun) != BUILTINSXP)
-	  error(_("not a BUILTIN function (CALLBUILTINEARG0)"));
-	flag = PRIMPRINT(fun);
-	R_Visible = flag != 1;
-	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
-	    RCNTXT cntxt;
-	    SEXP oldref = R_Srcref;
-	    begincontext(&cntxt, CTXT_BUILTIN, call,
-			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
-	    R_Srcref = NULL;
-	    value = PRIMEARGFUN0(fun) (call, fun, rho);
-	    R_Srcref = oldref;
-	    endcontext(&cntxt);
-	} else {
-            value = PRIMEARGFUN0(fun) (call, fun, rho);
-	}
-	if (flag < 2) R_Visible = flag != 1;
-	vmaxset(vmax);
-	SETSTACK(-1, value);
-	NEXT();
-      }
-    OP(CALLBUILTINEARG1, 1, CONSTOP(1), LABELOP(0)):
-      {
-	SEXP fun = GETSTACK(-2);
-	SEXP call = GETCONSTOP();
-	int flag;
-	const void *vmax = vmaxget();
-	if (TYPEOF(fun) != BUILTINSXP)
-	  error(_("not a BUILTIN function (CALLBUILTINEARG1)"));
-	flag = PRIMPRINT(fun);
-	R_Visible = flag != 1;
-	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
-	    RCNTXT cntxt;
-	    SEXP oldref = R_Srcref;
-	    begincontext(&cntxt, CTXT_BUILTIN, call,
-			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
-	    R_Srcref = NULL;
-	    value = PRIMEARGFUN1(fun) (call, fun, GETSTACK(-1), rho);
-	    R_Srcref = oldref;
-	    endcontext(&cntxt);
-	} else {
-	    value = PRIMEARGFUN1(fun) (call, fun, GETSTACK(-1), rho);
-	}
-	if (flag < 2) R_Visible = flag != 1;
-	vmaxset(vmax);
-	R_BCNodeStackTop -= 1;
-	SETSTACK(-1, value);
-	NEXT();
-      }      
-    OP(CALLBUILTINEARG2, 1, CONSTOP(1), LABELOP(0)):
-      {
-	SEXP fun = GETSTACK(-3);
-	SEXP call = GETCONSTOP();
-	int flag;
-	const void *vmax = vmaxget();
-	if (TYPEOF(fun) != BUILTINSXP)
-	  error(_("not a BUILTIN function (CALLBUILTINEARG2)"));
-	flag = PRIMPRINT(fun);
-	R_Visible = flag != 1;
-	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
-	    RCNTXT cntxt;
-	    SEXP oldref = R_Srcref;
-	    begincontext(&cntxt, CTXT_BUILTIN, call,
-			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
-	    R_Srcref = NULL;
-	    value = PRIMEARGFUN2(fun) (call, fun, GETSTACK(-2), GETSTACK(-1), rho);
-	    R_Srcref = oldref;
-	    endcontext(&cntxt);
-	} else {
-	    value = PRIMEARGFUN2(fun) (call, fun, GETSTACK(-2), GETSTACK(-1), rho);
-	}
-	if (flag < 2) R_Visible = flag != 1;
-	vmaxset(vmax);
-	R_BCNodeStackTop -= 2;
-	SETSTACK(-1, value);
-	NEXT();
-      }            
-    OP(CALLBUILTINEARG3, 1, CONSTOP(1), LABELOP(0)):
-      {
-	SEXP fun = GETSTACK(-4);
-	SEXP call = GETCONSTOP();
-	int flag;
-	const void *vmax = vmaxget();
-	if (TYPEOF(fun) != BUILTINSXP) {
-	  fprintf(stderr, "Dumping state...\n");
-	  DUMPSTATE();
-	  error(_("not a BUILTIN function (CALLBUILTINEARG3)"));
-	}
-	flag = PRIMPRINT(fun);
-	R_Visible = flag != 1;
-	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
-	    RCNTXT cntxt;
-	    SEXP oldref = R_Srcref;
-	    begincontext(&cntxt, CTXT_BUILTIN, call,
-			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
-	    R_Srcref = NULL;
-	    value = PRIMEARGFUN3(fun) (call, fun, GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho);
-	    R_Srcref = oldref;
-	    endcontext(&cntxt);
-	} else {
-	    value = PRIMEARGFUN3(fun) (call, fun, GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho);
-	}
-	if (flag < 2) R_Visible = flag != 1;
-	vmaxset(vmax);
-	R_BCNodeStackTop -= 3;
-	SETSTACK(-1, value);
-	NEXT();
-      }
-    OP(CALLBUILTINEARG4, 1, CONSTOP(1), LABELOP(0)): /* Fixme - how to do this without copy-paste? */
-      {
-	SEXP fun = GETSTACK(-5);
-	SEXP call = GETCONSTOP();
-	int flag;
-	const void *vmax = vmaxget();
-	if (TYPEOF(fun) != BUILTINSXP) {
-	  fprintf(stderr, "Dumping state...\n");
-	  DUMPSTATE();
-	  error(_("not a BUILTIN function (CALLBUILTINEARG3)"));
-	}
-	flag = PRIMPRINT(fun);
-	R_Visible = flag != 1;
-	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
-	    RCNTXT cntxt;
-	    SEXP oldref = R_Srcref;
-	    begincontext(&cntxt, CTXT_BUILTIN, call,
-			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
-	    R_Srcref = NULL;
-	    value = PRIMEARGFUN4(fun) (call, fun, GETSTACK(-4), GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho);
-	    R_Srcref = oldref;
-	    endcontext(&cntxt);
-	} else {
-	    value = PRIMEARGFUN4(fun) (call, fun, GETSTACK(-4), GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho);
-	}
-	if (flag < 2) R_Visible = flag != 1;
-	vmaxset(vmax);
-	R_BCNodeStackTop -= 4;
-	SETSTACK(-1, value);
-	NEXT();
-      }      
+    OP(CALLBUILTINEARG0, 1, CONSTOP(1), LABELOP(0)): EARG_CALLBUILTIN(0, PRIMEARGFUN0(fun) (call, fun, rho));
+    OP(CALLBUILTINEARG1, 1, CONSTOP(1), LABELOP(0)): EARG_CALLBUILTIN(1, PRIMEARGFUN1(fun) (call, fun, GETSTACK(-1), rho));
+    OP(CALLBUILTINEARG2, 1, CONSTOP(1), LABELOP(0)): EARG_CALLBUILTIN(2, PRIMEARGFUN2(fun) (call, fun, GETSTACK(-2), GETSTACK(-1), rho));
+    OP(CALLBUILTINEARG3, 1, CONSTOP(1), LABELOP(0)): EARG_CALLBUILTIN(3, PRIMEARGFUN3(fun) (call, fun, GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho)); 
+    OP(CALLBUILTINEARG4, 1, CONSTOP(1), LABELOP(0)): EARG_CALLBUILTIN(4, PRIMEARGFUN4(fun) (call, fun, GETSTACK(-4), GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho));
     OP(CALLSPECIAL, 1, CONSTOP(1), LABELOP(0)):
       {
 	SEXP call = GETCONSTOP();
