@@ -1753,7 +1753,13 @@ Rcomplex asComplex(SEXP x)
 SEXP attribute_hidden do_typeof(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    return ScalarString(type2str(TYPEOF(CAR(args))));
+    return do_earg_typeof(call, op, CAR(args), rho);
+}
+
+
+SEXP attribute_hidden do_earg_typeof(SEXP call, SEXP op, SEXP arg, SEXP rho)
+{
+    return ScalarString(type2str(TYPEOF(arg)));
 }
 
 /* Define many of the <primitive> "is.xxx" functions :
@@ -1926,17 +1932,22 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
  * It seems to make more sense to check for a dim attribute.
  */
 
-SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    return do_earg_isvector(call, op, CAR(args), CADR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_isvector(SEXP call, SEXP op, SEXP argx, SEXP argmode, SEXP rho)
 {
     SEXP ans, a, x;
     const char *stype;
 
-    checkArity(op, args);
-    x = CAR(args);
-    if (!isString(CADR(args)) || LENGTH(CADR(args)) != 1)
+    
+    x = argx;
+    if (!isString(argmode) || LENGTH(argmode) != 1)
 	errorcall_return(call, R_MSG_mode);
 
-    stype = CHAR(STRING_ELT(CADR(args), 0)); /* ASCII */
+    stype = CHAR(STRING_ELT(argmode, 0)); /* ASCII */
 
     /* "name" and "symbol" are synonymous */
     if (streql(stype, "name"))
@@ -1959,8 +1970,8 @@ SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 	LOGICAL(ans)[0] = 0;
 
     /* We allow a "names" attribute on any vector. */
-    if (LOGICAL(ans)[0] && ATTRIB(CAR(args)) != R_NilValue) {
-	a = ATTRIB(CAR(args));
+    if (LOGICAL(ans)[0] && ATTRIB(argx) != R_NilValue) {
+	a = ATTRIB(argx);
 	while(a != R_NilValue) {
 	    if (TAG(a) != R_NamesSymbol) {
 		LOGICAL(ans)[0] = 0;

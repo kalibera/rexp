@@ -590,7 +590,7 @@ FUNTAB R_FunTab[] =
 {"is.finite",	do_isfinite, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"is.infinite",	do_isinfinite, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"is.vector",	do_isvector, NULL,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.vector",	do_isvector, {.args2 = do_earg_isvector},	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Miscellaneous */
 
@@ -682,7 +682,7 @@ FUNTAB R_FunTab[] =
 {"dyn.load",	do_dynload, NULL,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"dyn.unload",	do_dynunload, NULL,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"ls",		do_ls, NULL,		1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"typeof",	do_typeof, NULL,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"typeof",	do_typeof, {.args1 = do_earg_typeof},	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"eval",	do_eval, NULL,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.parent",	do_sys, NULL,		1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.call",	do_sys, NULL,		2,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -721,7 +721,7 @@ FUNTAB R_FunTab[] =
 {"sink",	do_sink, NULL,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"sink.number",	do_sinknumber, NULL,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rapply",	do_rapply, NULL,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
-{"islistfactor",do_islistfactor, NULL,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"islistfactor",do_islistfactor, {.args2 = do_earg_islistfactor} ,0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"colSums",	do_colsum, NULL,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"colMeans",	do_colsum, NULL,	1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"rowSums",	do_colsum, NULL,	2,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
