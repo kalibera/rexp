@@ -914,9 +914,13 @@ SEXP attribute_hidden do_inherits(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
-    return inherits3(/* x = */ CAR(args),
-		     /* what = */ CADR(args),
-		     /* which = */ CADDR(args));
+    return do_earg_inherits(call, op, CAR(args), CADR(args), CADDR(args), env);
+}
+
+SEXP attribute_hidden do_earg_inherits(SEXP call, SEXP op, SEXP argx, SEXP argwhat, SEXP argwhich, SEXP env)
+{
+
+    return inherits3( argx, argwhat, argwhich );
 }
 
 
