@@ -950,7 +950,12 @@ SEXP attribute_hidden do_earg_match(SEXP call, SEXP op, SEXP argx, SEXP argtable
  * Empty strings are unmatched                        BDR 2000/2/16
  */
 
-SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
+    return do_earg_pmatch(call, op, CAR(args), CADR(args), CADDR(args), CADDDR(args), env);
+}
+
+SEXP attribute_hidden do_earg_pmatch(SEXP call, SEXP op, SEXP argx, SEXP argtable, SEXP argnomatch, SEXP argduplicatesok, SEXP env)
 {
     SEXP ans, input, target;
     int mtch, n_target, mtch_count, dups_ok, no_match;
@@ -960,13 +965,13 @@ SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean no_dups;
     Rboolean useBytes = FALSE, useUTF8 = FALSE;
 
-    checkArity(op, args);
-    input = CAR(args);
+    
+    input = argx;
     R_xlen_t n_input = XLENGTH(input);
-    target = CADR(args);
+    target = argtable;
     n_target = LENGTH(target); // not allowed to be long
-    no_match = asInteger(CADDR(args));
-    dups_ok = asLogical(CADDDR(args));
+    no_match = asInteger(argnomatch);
+    dups_ok = asLogical(argduplicatesok);
     if (dups_ok == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "duplicates.ok");
     no_dups = !dups_ok;

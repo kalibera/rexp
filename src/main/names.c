@@ -251,7 +251,7 @@ FUNTAB R_FunTab[] =
 {"pmax",	do_pmin, NULL,	1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which.max",	do_first_min, NULL,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"match",	do_match, {.args4 = do_earg_match},	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
-{"pmatch",	do_pmatch, NULL,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"pmatch",	do_pmatch, {.args4 = do_earg_pmatch},	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"charmatch",	do_charmatch, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"match.call",	do_matchcall, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"crossprod",	do_matprod, NULL,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	  0}},

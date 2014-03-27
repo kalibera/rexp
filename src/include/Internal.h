@@ -285,6 +285,7 @@ SEXP do_parse(SEXP, SEXP, SEXP, SEXP);
 SEXP do_paste(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pathexpand(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pmatch(SEXP, SEXP, SEXP, SEXP);
+SEXP do_earg_pmatch(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_pmin(SEXP, SEXP, SEXP, SEXP);
 SEXP do_polyroot(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pos2env(SEXP, SEXP, SEXP, SEXP);
