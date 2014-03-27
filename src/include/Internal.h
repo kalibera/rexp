@@ -252,6 +252,7 @@ SEXP do_makeunique(SEXP, SEXP, SEXP, SEXP);
 SEXP do_makevector(SEXP, SEXP, SEXP, SEXP);
 SEXP do_mapply(SEXP, SEXP, SEXP, SEXP);
 SEXP do_match(SEXP, SEXP, SEXP, SEXP);
+SEXP do_earg_match(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_matchcall(SEXP, SEXP, SEXP, SEXP);
 SEXP do_matprod(SEXP, SEXP, SEXP, SEXP);
 SEXP do_Math2(SEXP, SEXP, SEXP, SEXP);

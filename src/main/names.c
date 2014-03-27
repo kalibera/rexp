@@ -250,7 +250,7 @@ FUNTAB R_FunTab[] =
 {"pmin",	do_pmin, NULL,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pmax",	do_pmin, NULL,	1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which.max",	do_first_min, NULL,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"match",	do_match, NULL,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"match",	do_match, {.args4 = do_earg_match},	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"pmatch",	do_pmatch, NULL,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"charmatch",	do_charmatch, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"match.call",	do_matchcall, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
@@ -788,7 +788,7 @@ FUNTAB R_FunTab[] =
 
 
 /* Objects */
-{"inherits",	do_inherits, do_earg_inherits,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"inherits",	do_inherits, {.args3 = do_earg_inherits},	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"UseMethod",	do_usemethod, NULL,	0,     200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"NextMethod",	do_nextmethod, NULL,	0,     210,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"standardGeneric",do_standardGeneric, NULL,0, 201,	-1,	{PP_FUNCALL, PREC_FN,	0}},

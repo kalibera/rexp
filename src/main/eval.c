@@ -3082,9 +3082,10 @@ enum {
   CALLBUILTINEARG0_OP,
   CALLBUILTINEARG1_OP,
   CALLBUILTINEARG2_OP,
-  CALLBUILTINEARG3_OP,    
-  GETINTLBUILTINEARG_OP,  
-  PUSHEARG_OP,  
+  CALLBUILTINEARG3_OP,
+  CALLBUILTINEARG4_OP,
+  GETINTLBUILTINEARG_OP,
+  PUSHEARG_OP,
   STARTVECSUBSET_OP,
   STARTMATSUBSET_OP,
   STARTSETVECSUBSET_OP,
@@ -5138,6 +5139,37 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SETSTACK(-1, value);
 	NEXT();
       }
+    OP(CALLBUILTINEARG4, 1, CONSTOP(1), LABELOP(0)): /* Fixme - how to do this without copy-paste? */
+      {
+	SEXP fun = GETSTACK(-5);
+	SEXP call = GETCONSTOP();
+	int flag;
+	const void *vmax = vmaxget();
+	if (TYPEOF(fun) != BUILTINSXP) {
+	  fprintf(stderr, "Dumping state...\n");
+	  DUMPSTATE();
+	  error(_("not a BUILTIN function (CALLBUILTINEARG3)"));
+	}
+	flag = PRIMPRINT(fun);
+	R_Visible = flag != 1;
+	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
+	    RCNTXT cntxt;
+	    SEXP oldref = R_Srcref;
+	    begincontext(&cntxt, CTXT_BUILTIN, call,
+			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
+	    R_Srcref = NULL;
+	    value = PRIMEARGFUN4(fun) (call, fun, GETSTACK(-4), GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho);
+	    R_Srcref = oldref;
+	    endcontext(&cntxt);
+	} else {
+	    value = PRIMEARGFUN4(fun) (call, fun, GETSTACK(-4), GETSTACK(-3), GETSTACK(-2), GETSTACK(-1), rho);
+	}
+	if (flag < 2) R_Visible = flag != 1;
+	vmaxset(vmax);
+	R_BCNodeStackTop -= 4;
+	SETSTACK(-1, value);
+	NEXT();
+      }      
     OP(CALLSPECIAL, 1, CONSTOP(1), LABELOP(0)):
       {
 	SEXP call = GETCONSTOP();

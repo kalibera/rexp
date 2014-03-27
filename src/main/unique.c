@@ -917,18 +917,23 @@ SEXP attribute_hidden do_match(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
-    if ((!isVector(CAR(args)) && !isNull(CAR(args)))
-	|| (!isVector(CADR(args)) && !isNull(CADR(args))))
+    return do_earg_match(call, op, CAR(args), CADR(args), CADDR(args), CADDDR(args), env);
+}
+
+SEXP attribute_hidden do_earg_match(SEXP call, SEXP op, SEXP argx, SEXP argtable, SEXP argnomatch, SEXP argincomparables, SEXP env)
+{
+    if ((!isVector(argx) && !isNull(argx))
+	|| (!isVector(argtable) && !isNull(argtable)))
 	error(_("'match' requires vector arguments"));
 
-    int nomatch = asInteger(CADDR(args));
-    SEXP incomp = CADDDR(args);
+    int nomatch = asInteger(argnomatch);
+    SEXP incomp = argincomparables;
 
     if(length(incomp) && /* S has FALSE to mean empty */
        !(isLogical(incomp) && length(incomp) == 1 && LOGICAL(incomp)[0] == 0))
-	return match5(CADR(args), CAR(args), nomatch, incomp, env);
+	return match5(argtable, argx, nomatch, incomp, env);
     else
-	return matchE(CADR(args), CAR(args), nomatch, env);
+	return matchE(argtable, argx, nomatch, env);
 }
 
 /* pmatch and charmatch return integer positions, so cannot be used
