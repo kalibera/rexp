@@ -787,16 +787,20 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(3);
     return(ans);
 }
-
+
+SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho) {
+  
+    checkArity(op, args);
+    return do_earg_first_min(call, op, CAR(args), rho);
+}
 /* which.min(x) : The index (starting at 1), of the first min(x) in x */
-SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_earg_first_min(SEXP call, SEXP op, SEXP argx, SEXP rho)
 {
     SEXP sx, ans;
     double s, *r;
     int i, n, indx;
 
-    checkArity(op, args);
-    PROTECT(sx = coerceVector(CAR(args), REALSXP));
+    PROTECT(sx = coerceVector(argx, REALSXP));
     if (!isNumeric(sx))
 	error(_("non-numeric argument"));
     r = REAL(sx);

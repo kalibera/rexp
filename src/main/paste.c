@@ -49,7 +49,17 @@ static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 /* Note that NA_STRING is not handled separately here.  This is
    deliberate -- see ?paste -- and implicitly coerces it to "NA"
 */
-SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env) {
+
+    checkArity(op, args);
+    return do_earg_paste(call, op, CAR(args), CADR(args), (PRIMVAL(op) == 0) ? CADDR(args) : R_NilValue, env);
+}
+
+SEXP attribute_hidden do_earg_paste0(SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env) {
+    return do_earg_paste(call, op, arg1, arg2, R_NilValue, env);
+}
+
+SEXP attribute_hidden do_earg_paste(SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP arg3, SEXP env)
 {
     SEXP ans, collapse, sep, x;
     int sepw, u_sepw, ienc;
@@ -61,21 +71,19 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	use_sep = (PRIMVAL(op) == 0);
     const void *vmax;
 
-    checkArity(op, args);
-
     /* We use formatting and so we must initialize printing. */
 
     PrintDefaults();
 
     /* Check the arguments */
 
-    x = CAR(args);
+    x = arg1;
     if (!isVectorList(x))
 	error(_("invalid first argument"));
     nx = xlength(x);
 
     if(use_sep) { /* paste(..., sep, .) */
-	sep = CADR(args);
+	sep = arg2;
 	if (!isString(sep) || LENGTH(sep) <= 0 || STRING_ELT(sep, 0) == NA_STRING)
 	    error(_("invalid separator"));
 	sep = STRING_ELT(sep, 0);
@@ -85,10 +93,10 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	sepKnown = ENC_KNOWN(sep) > 0;
 	sepUTF8 = IS_UTF8(sep);
 	sepBytes = IS_BYTES(sep);
-	collapse = CADDR(args);
+	collapse = arg3;
     } else { /* paste0(..., .) */
 	u_sepw = sepw = 0; sep = R_NilValue;/* -Wall */
-	collapse = CADR(args);
+	collapse = arg2;
     }
     if (!isNull(collapse))
 	if(!isString(collapse) || LENGTH(collapse) <= 0 ||
