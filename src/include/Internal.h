@@ -114,6 +114,7 @@ SEXP do_debug(SEXP, SEXP, SEXP, SEXP);
 SEXP do_devAskNewPage(SEXP, SEXP, SEXP, SEXP);
 SEXP do_delayed(SEXP, SEXP, SEXP, SEXP);
 SEXP do_deparse(SEXP, SEXP, SEXP, SEXP);
+SEXP do_earg_deparse(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_detach(SEXP,SEXP,SEXP,SEXP);
 SEXP do_dfltStop(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dfltWarn(SEXP, SEXP, SEXP, SEXP);

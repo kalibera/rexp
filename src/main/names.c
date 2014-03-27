@@ -663,7 +663,7 @@ FUNTAB R_FunTab[] =
 {"loadFromConn2",do_loadFromConn2, NULL,0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"serializeToConn",	do_serializeToConn, NULL,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"unserializeFromConn",	do_unserializeFromConn, NULL,	0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"deparse",	do_deparse, NULL,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"deparse",	do_deparse, {.args5 = do_earg_deparse},	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"dput",	do_dput, NULL,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"dump",	do_dump, NULL,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"quit",	do_quit, NULL,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
