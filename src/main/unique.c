@@ -1293,17 +1293,19 @@ static SEXP subDots(SEXP rho)
     return rval;
 }
 
+SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op,args);
+    RETURN_EARG3(do_earg_matchcall, call, op, args, env);
+}
 
-SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_earg_matchcall(SEXP call, SEXP op, SEXP arg_definition, SEXP arg_call, SEXP arg_expand_dots, SEXP env)
 {
     SEXP formals, actuals, rlist;
     SEXP funcall, f, b, rval, sysp, t1, t2, tail;
     RCNTXT *cptr;
-    int expdots;
+    int expdots;    
 
-    checkArity(op,args);
-
-    funcall = CADR(args);
+    funcall = arg_call;
 
     if (TYPEOF(funcall) == EXPRSXP)
 	funcall = VECTOR_ELT(funcall, 0);
@@ -1314,7 +1316,7 @@ SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Get the function definition */
     sysp = R_GlobalContext->sysparent;
 
-    if (TYPEOF(CAR(args)) == NILSXP) {
+    if (TYPEOF(arg_definition) == NILSXP) {
 	/* Get the env that the function containing */
 	/* matchcall was called from. */
 	cptr = R_GlobalContext;
@@ -1367,14 +1369,14 @@ SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     else {
 	/* It must be a closure! */
-	PROTECT(b = CAR(args));
+	PROTECT(b = arg_definition);
 	if (TYPEOF(b) != CLOSXP)
 	    error(_("invalid '%s' argument"), "definition");
     }
 
     /* Do we expand ... ? */
 
-    expdots = asLogical(CAR(CDDR(args)));
+    expdots = asLogical(arg_expand_dots);
     if (expdots == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "expand.dots");
 

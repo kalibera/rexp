@@ -57,14 +57,19 @@ SEXP GetColNames(SEXP dimnames)
 	return R_NilValue;
 }
 
-SEXP attribute_hidden do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG7(do_earg_matrix, call, op, args, rho);
+}
+
+SEXP attribute_hidden do_earg_matrix(SEXP call, SEXP op, SEXP arg_vals, SEXP arg_snr, SEXP arg_snc, SEXP arg_byrow, 
+    SEXP arg_dimnames, SEXP arg_miss_nr, SEXP arg_miss_nc, SEXP rho)
 {
     SEXP vals, ans, snr, snc, dimnames;
     int nr = 1, nc = 1, byrow, miss_nr, miss_nc;
     R_xlen_t lendat;
 
-    checkArity(op, args);
-    vals = CAR(args); args = CDR(args);
+    vals = arg_vals;
     switch(TYPEOF(vals)) {
 	case LGLSXP:
 	case INTSXP:
@@ -80,15 +85,14 @@ SEXP attribute_hidden do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 		type2char(TYPEOF(vals)));
     }
     lendat = XLENGTH(vals);
-    snr = CAR(args); args = CDR(args);
-    snc = CAR(args); args = CDR(args);
-    byrow = asLogical(CAR(args)); args = CDR(args);
+    snr = arg_snr;
+    snc = arg_snc;
+    byrow = asLogical(arg_byrow);
     if (byrow == NA_INTEGER)
 	error(_("invalid '%s' argument"), "byrow");
-    dimnames = CAR(args);
-    args = CDR(args);
-    miss_nr = asLogical(CAR(args)); args = CDR(args);
-    miss_nc = asLogical(CAR(args));
+    dimnames = arg_dimnames;
+    miss_nr = asLogical(arg_miss_nr);
+    miss_nc = asLogical(arg_miss_nc);
 
     if (!miss_nr) {
 	if (!isNumeric(snr)) error(_("non-numeric matrix extent"));

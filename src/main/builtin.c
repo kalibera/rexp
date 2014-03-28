@@ -237,11 +237,16 @@ SEXP attribute_hidden do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
+SEXP attribute_hidden do_formals(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP)
-	return duplicate(FORMALS(CAR(args)));
+    return do_earg_formals(call, op, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_formals(SEXP call, SEXP op, SEXP arg_fun, SEXP rho)
+{
+    
+    if (TYPEOF(arg_fun) == CLOSXP)
+	return duplicate(FORMALS(arg_fun));
     else
 	return R_NilValue;
 }

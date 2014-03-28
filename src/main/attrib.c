@@ -209,12 +209,18 @@ SEXP do_earg_shortRowNames(SEXP call, SEXP op, SEXP arg_x, SEXP arg_type, SEXP e
     return ans;
 }
 
+attribute_hidden
+SEXP do_copyDFattr(SEXP call, SEXP op, SEXP args, SEXP env) {
+
+    checkArity(op, args);
+    RETURN_EARG2(do_earg_copyDFattr, call, op, args, env);
+}
+
 /* This is allowed to change 'out' */
 attribute_hidden
-SEXP do_copyDFattr(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_earg_copyDFattr(SEXP call, SEXP op, SEXP arg_in, SEXP arg_out, SEXP env)
 {
-    checkArity(op, args);
-    SEXP in = CAR(args), out = CADR(args);
+    SEXP in = arg_in, out = arg_out;
     SET_ATTRIB(out, shallow_duplicate(ATTRIB(in)));
     IS_S4_OBJECT(in) ?  SET_S4_OBJECT(out) : UNSET_S4_OBJECT(out);
     SET_OBJECT(out, OBJECT(in));

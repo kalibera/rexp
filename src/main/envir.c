@@ -2517,23 +2517,27 @@ BuiltinValues(int all, int intern, SEXP values, int *indx)
     }
 }
 
-SEXP attribute_hidden do_ls(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_ls(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG2(do_earg_ls, call, op, args, rho);
+}
+
+SEXP attribute_hidden do_earg_ls(SEXP call, SEXP op, SEXP arg_env, SEXP arg_all, SEXP rho)
 {
     SEXP env;
     int all;
-    checkArity(op, args);
 
-    if(IS_USER_DATABASE(CAR(args))) {
+    if(IS_USER_DATABASE(arg_env)) {
 	R_ObjectTable *tb = (R_ObjectTable*)
-	    R_ExternalPtrAddr(HASHTAB(CAR(args)));
+	    R_ExternalPtrAddr(HASHTAB(arg_env));
 	return(tb->objects(tb));
     }
 
-    env = CAR(args);
+    env = arg_env;
 
     /* if (env == R_BaseNamespace) env = R_BaseEnv; */
 
-    all = asLogical(CADR(args));
+    all = asLogical(arg_all);
     if (all == NA_LOGICAL) all = 0;
 
     return R_lsInternal(env, all);
@@ -3333,11 +3337,16 @@ SEXP attribute_hidden do_unregNS(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_getRegNS(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_getRegNS(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    return do_earg_getRegNS(call, op, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_getRegNS(SEXP call, SEXP op, SEXP arg_x, SEXP rho)
 {
     SEXP name, val;
-    checkArity(op, args);
-    name = checkNSname(call, CAR(args));
+    
+    name = checkNSname(call, arg_x);
     val = findVarInFrame(R_NamespaceRegistry, name);
     if (val == R_UnboundValue)
 	return R_NilValue;
