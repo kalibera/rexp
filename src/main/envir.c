@@ -1596,27 +1596,32 @@ void gsetVar(SEXP symbol, SEXP value, SEXP rho)
   do_assign : .Internal(assign(x, value, envir, inherits))
 
 */
-SEXP attribute_hidden do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_assign(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG4(do_earg_assign, call, op, args, rho);
+}
+
+SEXP attribute_hidden do_earg_assign(SEXP call, SEXP op, SEXP arg_x, SEXP arg_value, SEXP arg_envir, SEXP arg_inherits, SEXP rho)
 {
     SEXP name=R_NilValue, val, aenv;
     int ginherits = 0;
-    checkArity(op, args);
+    
 
-    if (!isString(CAR(args)) || length(CAR(args)) == 0)
+    if (!isString(arg_x) || length(arg_x) == 0)
 	error(_("invalid first argument"));
     else {
-	if (length(CAR(args)) > 1)
+	if (length(arg_x) > 1)
 	    warning(_("only the first element is used as variable name"));
-	name = installTrChar(STRING_ELT(CAR(args), 0));
+	name = installTrChar(STRING_ELT(arg_x, 0));
     }
-    PROTECT(val = CADR(args));
-    aenv = CADDR(args);
+    PROTECT(val = arg_value);
+    aenv = arg_envir;
     if (TYPEOF(aenv) == NILSXP)
 	error(_("use of NULL environment is defunct"));
     if (TYPEOF(aenv) != ENVSXP &&
 	TYPEOF((aenv = simple_as_environment(aenv))) != ENVSXP)
 	error(_("invalid '%s' argument"), "envir");
-    ginherits = asLogical(CADDDR(args));
+    ginherits = asLogical(arg_inherits);
     if (ginherits == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "inherits");
     if (ginherits)
@@ -1782,34 +1787,39 @@ SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 */
 
 
-SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG4(do_earg_get, call, op, args, rho);
+}
+
+SEXP attribute_hidden do_earg_get(SEXP call, SEXP op, SEXP arg_x, SEXP arg_envir, SEXP arg_mode, SEXP arg_inherits, SEXP rho)
 {
     SEXP rval, genv, t1 = R_NilValue;
     SEXPTYPE gmode;
     int ginherits = 0, where;
-    checkArity(op, args);
+    
 
     /* The first arg is the object name */
     /* It must be present and a non-empty string */
 
-    if (!isValidStringF(CAR(args)))
+    if (!isValidStringF(arg_x))
 	error(_("invalid first argument"));
     else
-	t1 = installTrChar(STRING_ELT(CAR(args), 0));
+	t1 = installTrChar(STRING_ELT(arg_x, 0));
 
     /* envir :	originally, the "where=" argument */
 
-    if (TYPEOF(CADR(args)) == REALSXP || TYPEOF(CADR(args)) == INTSXP) {
-	where = asInteger(CADR(args));
+    if (TYPEOF(arg_envir) == REALSXP || TYPEOF(arg_envir) == INTSXP) {
+	where = asInteger(arg_envir);
 	genv = R_sysframe(where, R_GlobalContext);
     }
-    else if (TYPEOF(CADR(args)) == NILSXP) {
+    else if (TYPEOF(arg_envir) == NILSXP) {
 	error(_("use of NULL environment is defunct"));
 	genv = R_NilValue;  /* -Wall */
     }
-    else if (TYPEOF(CADR(args)) == ENVSXP)
-	genv = CADR(args);
-    else if(TYPEOF((genv = simple_as_environment(CADR(args)))) != ENVSXP) {
+    else if (TYPEOF(arg_envir) == ENVSXP)
+	genv = arg_envir;
+    else if(TYPEOF((genv = simple_as_environment(arg_envir))) != ENVSXP) {
 	error(_("invalid '%s' argument"), "envir");
 	genv = R_NilValue;  /* -Wall */
     }
@@ -1820,17 +1830,17 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
        storage.mode.
     */
 
-    if (isString(CADDR(args))) {
-	if (!strcmp(CHAR(STRING_ELT(CAR(CDDR(args)), 0)), "function")) /* ASCII */
+    if (isString(arg_mode)) {
+	if (!strcmp(CHAR(STRING_ELT(arg_mode, 0)), "function")) /* ASCII */
 	    gmode = FUNSXP;
 	else
-	    gmode = str2type(CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
+	    gmode = str2type(CHAR(STRING_ELT(arg_mode, 0))); /* ASCII */
     } else {
 	error(_("invalid '%s' argument"), "mode");
 	gmode = FUNSXP;/* -Wall */
     }
 
-    ginherits = asLogical(CADDDR(args));
+    ginherits = asLogical(arg_inherits);
     if (ginherits == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "inherits");
 
@@ -1848,7 +1858,7 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    else
 		error(_("object '%s' of mode '%s' was not found"),
 		      CHAR(PRINTNAME(t1)),
-		      CHAR(STRING_ELT(CAR(CDDR(args)), 0))); /* ASCII */
+		      CHAR(STRING_ELT(arg_mode, 0))); /* ASCII */
 	}
 
 	/* We need to evaluate if it is a promise */
