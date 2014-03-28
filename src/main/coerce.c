@@ -1934,7 +1934,7 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    return do_earg_isvector(call, op, CAR(args), CADR(args), rho);
+    RETURN_EARG2(do_earg_isvector, call, op, args, rho);
 }
 
 SEXP attribute_hidden do_earg_isvector(SEXP call, SEXP op, SEXP argx, SEXP argmode, SEXP rho)

@@ -22,6 +22,7 @@
 #include <config.h>
 #endif
 #include <Defn.h>
+#include <Internal.h>
 /* -> Rinternals.h which exports R_compute_identical() */
 
 /* Implementation of identical(x, y) */
@@ -40,28 +41,47 @@ static Rboolean neWithNaN(double x, double y, ne_strictness_type str);
 
 
 /* .Internal(identical(..)) */
-SEXP attribute_hidden do_identical(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_identical(SEXP call, SEXP op, SEXP args, SEXP env) {
+
+    int nargs = length(args);
+
+    /* avoid problems with earlier (and future) versions captured in S4
+    methods: but this should be fixed where it is caused, in 'methods'! 
+    checkArity(op, args); */
+    
+    if (nargs >= 7) {
+        RETURN_EARG7(do_earg_identical, call, op, args, env);
+    }
+
+    if (nargs == 6) {
+        RETURN_EARG7_6ARGS(do_earg_identical, call, op, args, env);
+    }
+    
+    if (nargs == 5) {
+        RETURN_EARG7_5ARGS(do_earg_identical, call, op, args, env);    
+    }    
+    
+    /* nargs < 5 */
+    error("%d arguments passed to .Internal(%s) which requires %d",
+        length(args), PRIMNAME(op), PRIMARITY(op));
+}
+
+
+SEXP attribute_hidden do_earg_identical(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y, SEXP arg_num_eq, SEXP arg_single_na, 
+    SEXP arg_attrib_as_set, SEXP arg_ignore_bytecode, SEXP arg_ignore_environment, SEXP env)
 {
     int num_eq = 1, single_NA = 1, attr_as_set = 1, ignore_bytecode = 1, 
-	ignore_env = 0, nargs = length(args), flags;
-    /* avoid problems with earlier (and future) versions captured in S4
-       methods: but this should be fixed where it is caused, in
-       'methods'!
+	ignore_env = 0, flags;
 
-       checkArity(op, args); */
-    if (nargs < 5)
-	error("%d arguments passed to .Internal(%s) which requires %d",
-	      length(args), PRIMNAME(op), PRIMARITY(op));
-
-    SEXP x = CAR(args); args = CDR(args);
-    SEXP y = CAR(args); args = CDR(args);
-    num_eq = asLogical(CAR(args)); args = CDR(args);
-    single_NA = asLogical(CAR(args)); args = CDR(args);
-    attr_as_set = asLogical(CAR(args)); args = CDR(args);
-    if (nargs >= 6) 
-	ignore_bytecode = asLogical(CAR(args));
-    if (nargs >= 7) 
-	ignore_env = asLogical(CADR(args));
+    SEXP x = arg_x;
+    SEXP y = arg_y;
+    num_eq = asLogical(arg_num_eq);
+    single_NA = asLogical(arg_single_na);
+    attr_as_set = asLogical(arg_attrib_as_set);
+    if (arg_ignore_bytecode != NULL) 
+	ignore_bytecode = asLogical(arg_ignore_bytecode);
+    if (arg_ignore_environment != NULL) 
+	ignore_env = asLogical(arg_ignore_environment);
 
     if(num_eq == NA_LOGICAL) error(_("invalid '%s' value"), "num.eq");
     if(single_NA == NA_LOGICAL) error(_("invalid '%s' value"), "single.NA");

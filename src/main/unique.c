@@ -917,7 +917,7 @@ SEXP attribute_hidden do_match(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
-    return do_earg_match(call, op, CAR(args), CADR(args), CADDR(args), CADDDR(args), env);
+    RETURN_EARG4(do_earg_match, call, op, args, env);
 }
 
 SEXP attribute_hidden do_earg_match(SEXP call, SEXP op, SEXP argx, SEXP argtable, SEXP argnomatch, SEXP argincomparables, SEXP env)
@@ -952,7 +952,7 @@ SEXP attribute_hidden do_earg_match(SEXP call, SEXP op, SEXP argx, SEXP argtable
 
 SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env) {
     checkArity(op, args);
-    return do_earg_pmatch(call, op, CAR(args), CADR(args), CADDR(args), CADDDR(args), env);
+    RETURN_EARG4(do_earg_pmatch, call, op, args, env);
 }
 
 SEXP attribute_hidden do_earg_pmatch(SEXP call, SEXP op, SEXP argx, SEXP argtable, SEXP argnomatch, SEXP argduplicatesok, SEXP env)

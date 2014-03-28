@@ -302,6 +302,8 @@ typedef union {
   SEXP (*args3) (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP arg3, SEXP rho);
   SEXP (*args4) (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP rho);
   SEXP (*args5) (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5, SEXP rho);
+  SEXP (*args6) (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5, SEXP arg6, SEXP rho);
+  SEXP (*args7) (SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5, SEXP arg6, SEXP arg7, SEXP rho);  
   void *ptr;
 } EARG_CCODE;
 
@@ -385,6 +387,8 @@ typedef struct {
 #define PRIMEARGFUN3(x)	(PRIMEARGFUN(x).args3)
 #define PRIMEARGFUN4(x)	(PRIMEARGFUN(x).args4)
 #define PRIMEARGFUN5(x)	(PRIMEARGFUN(x).args5)
+#define PRIMEARGFUN6(x)	(PRIMEARGFUN(x).args6)
+#define PRIMEARGFUN7(x)	(PRIMEARGFUN(x).args7)
 #define PRIMNAME(x)	(R_FunTab[(x)->u.primsxp.offset].name)
 #define PRIMVAL(x)	(R_FunTab[(x)->u.primsxp.offset].code)
 #define PRIMARITY(x)	(R_FunTab[(x)->u.primsxp.offset].arity)

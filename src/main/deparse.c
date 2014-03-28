@@ -144,7 +144,7 @@ static void deparse2(SEXP, SEXP, LocalParseData *);
 
 SEXP attribute_hidden do_deparse(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    return do_earg_deparse(call, op, CAR(args), CADR(args), CADDR(args), CADDDR(args), CAD4R(args), rho);
+    RETURN_EARG5(do_earg_deparse,call, op, args, rho);
 }
 
 SEXP attribute_hidden do_earg_deparse(SEXP call, SEXP op, SEXP argexpr, SEXP argwidthcutoff, SEXP argbacktick, SEXP argcontrol, SEXP argnlines, SEXP rho)

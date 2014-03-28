@@ -52,11 +52,15 @@ static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env) {
 
     checkArity(op, args);
-    return do_earg_paste(call, op, CAR(args), CADR(args), (PRIMVAL(op) == 0) ? CADDR(args) : R_NilValue, env);
+    if (PRIMVAL(op) == 0) {
+        RETURN_EARG3(do_earg_paste, call, op, args, env);
+    } else {
+        RETURN_EARG3_2ARGS(do_earg_paste, call, op, args, env);
+    }
 }
 
 SEXP attribute_hidden do_earg_paste0(SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP env) {
-    return do_earg_paste(call, op, arg1, arg2, R_NilValue, env);
+    return do_earg_paste(call, op, arg1, arg2, NULL, env);
 }
 
 SEXP attribute_hidden do_earg_paste(SEXP call, SEXP op, SEXP arg1, SEXP arg2, SEXP arg3, SEXP env)

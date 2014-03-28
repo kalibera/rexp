@@ -696,3 +696,11 @@ INLINE_FUN SEXP R_FixupRHS(SEXP x, SEXP y)
     return y;
 }
 #endif /* R_INLINES_H_ */
+
+/* Fixme: with GCC only, this could be changed into a macro using a compound statement */
+INLINE_FUN SEXP argShift(SEXP *argsp) {
+    fprintf(stderr, "argShift, argsp = %p, *argsp = %p, CAR(*argsp) = %p, CDR(*argsp) = %p\n", argsp, *argsp, CAR(*argsp), CDR(*argsp));
+    SEXP res = CAR(*argsp);
+    *argsp = CDR(*argsp);
+    return res;
+}

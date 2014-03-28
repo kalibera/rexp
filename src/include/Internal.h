@@ -204,6 +204,7 @@ SEXP do_hcl(SEXP, SEXP, SEXP, SEXP);
 SEXP do_iconv(SEXP, SEXP, SEXP, SEXP);
 SEXP do_ICUset(SEXP, SEXP, SEXP, SEXP);
 SEXP do_identical(SEXP, SEXP, SEXP, SEXP);
+SEXP do_earg_identical(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_if(SEXP, SEXP, SEXP, SEXP);
 SEXP do_inherits(SEXP, SEXP, SEXP, SEXP);
 SEXP do_earg_inherits(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);

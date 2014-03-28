@@ -621,6 +621,8 @@ CALLBUILTINEARG2.OP = 1,
 CALLBUILTINEARG3.OP = 1,
 CALLBUILTINEARG4.OP = 1,
 CALLBUILTINEARG5.OP = 1,
+CALLBUILTINEARG6.OP = 1,
+CALLBUILTINEARG7.OP = 1,
 GETINTLBUILTINEARG.OP = 1,
 PUSHEARG.OP = 0
 )
@@ -742,8 +744,10 @@ CALLBUILTINEARG2.OP <- 111
 CALLBUILTINEARG3.OP <- 112
 CALLBUILTINEARG4.OP <- 113
 CALLBUILTINEARG5.OP <- 114
-GETINTLBUILTINEARG.OP <- 115
-PUSHEARG.OP <- 116
+CALLBUILTINEARG6.OP <- 115
+CALLBUILTINEARG7.OP <- 116
+GETINTLBUILTINEARG.OP <- 117
+PUSHEARG.OP <- 118
 
 
 ##
@@ -2011,7 +2015,7 @@ setInlineHandler("(", function(e, cb, cntxt) {
 ##
 
 
-explicitCALLBUILTIN <- c(CALLBUILTINEARG0.OP, CALLBUILTINEARG1.OP, CALLBUILTINEARG2.OP, CALLBUILTINEARG3.OP, CALLBUILTINEARG4.OP, CALLBUILTINEARG5.OP)
+explicitCALLBUILTIN <- c(CALLBUILTINEARG0.OP, CALLBUILTINEARG1.OP, CALLBUILTINEARG2.OP, CALLBUILTINEARG3.OP, CALLBUILTINEARG4.OP, CALLBUILTINEARG5.OP, CALLBUILTINEARG6.OP, CALLBUILTINEARG7.OP)
 getCallBuiltinInstruction <- function(explicitArgs) {
     
   if (explicitArgs == -1) {
@@ -2040,6 +2044,12 @@ getPushArgInstruction <- function(explicitArgs) {
 cmpBuiltin <- function(e, cb, cntxt, internal = FALSE, explicitArgs = -1) {
     fun <- e[[1]]
     args <- e[-1]
+    if (explicitArgs != -1 && explicitArgs != length(args)) {
+        if (!suppressAll(cntxt)) {
+            cntxt$warn(gettext("Explicit argument passing is not used because the call has non-standard arity"))
+        }
+        explicitArgs = -1
+    }
     names <- names(args)
     if (dots.or.missing(args))
         FALSE

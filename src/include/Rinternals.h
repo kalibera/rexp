@@ -393,6 +393,114 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
   __x__->sxpinfo.gp = __other_flags__ | __v__; \
 } while (0)
 
+/* Calling do_ functions with explicit arguments */
+
+#define ARGSHIFT(a)	argShift(&(a)) /* WARNING: do not use in function arguments! */
+
+#define RETURN_EARG1(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); \
+  return (func) (call, op, __a1, env); \
+} while(0)
+
+#define RETURN_EARG2(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); \
+  return (func) (call, op, __a1, __a2, env); \
+} while(0)
+
+#define RETURN_EARG3(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); __args = CDR(__args); \
+  SEXP __a3 = CAR(__args); \
+  return (func) (call, op, __a1, __a2, __a3, env); \
+} while(0)
+
+#define RETURN_EARG3_2ARGS(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); \
+  SEXP __a3 = NULL; \
+  return (func) (call, op, __a1, __a2, __a3, env); \
+} while(0)
+
+#define RETURN_EARG4(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); __args = CDR(__args); \
+  SEXP __a3 = CAR(__args); __args = CDR(__args); \
+  SEXP __a4 = CAR(__args); \
+  return (func) (call, op, __a1, __a2, __a3, __a4, env); \
+} while(0)
+
+#define RETURN_EARG4_3ARGS(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); __args = CDR(__args); \
+  SEXP __a3 = CAR(__args); \
+  SEXP __a4 = NULL; \
+  return (func) (call, op, __a1, __a2, __a3, __a4, env); \
+} while(0)
+
+#define RETURN_EARG5(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); __args = CDR(__args); \
+  SEXP __a3 = CAR(__args); __args = CDR(__args); \
+  SEXP __a4 = CAR(__args); __args = CDR(__args); \
+  SEXP __a5 = CAR(__args); \
+  return (func) (call, op, __a1, __a2, __a3, __a4, __a5, env); \
+} while(0)
+
+#define RETURN_EARG6(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); __args = CDR(__args); \
+  SEXP __a3 = CAR(__args); __args = CDR(__args); \
+  SEXP __a4 = CAR(__args); __args = CDR(__args); \
+  SEXP __a5 = CAR(__args); __args = CDR(__args); \
+  SEXP __a6 = CAR(__args); \
+  return (func) (call, op, __a1, __a2, __a3, __a4, __a5, __a6, env); \
+} while(0)
+
+#define RETURN_EARG7(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); __args = CDR(__args); \
+  SEXP __a3 = CAR(__args); __args = CDR(__args); \
+  SEXP __a4 = CAR(__args); __args = CDR(__args); \
+  SEXP __a5 = CAR(__args); __args = CDR(__args); \
+  SEXP __a6 = CAR(__args); __args = CDR(__args); \
+  SEXP __a7 = CAR(__args); \
+  return (func) (call, op, __a1, __a2, __a3, __a4, __a5, __a6, __a7, env); \
+} while(0)
+
+#define RETURN_EARG7_5ARGS(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); __args = CDR(__args); \
+  SEXP __a3 = CAR(__args); __args = CDR(__args); \
+  SEXP __a4 = CAR(__args); __args = CDR(__args); \
+  SEXP __a5 = CAR(__args); \
+  SEXP __a6 = NULL; \
+  SEXP __a7 = NULL; \
+  return (func) (call, op, __a1, __a2, __a3, __a4, __a5, __a6, __a7, env); \
+} while(0)
+
+#define RETURN_EARG7_6ARGS(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); __args = CDR(__args); \
+  SEXP __a3 = CAR(__args); __args = CDR(__args); \
+  SEXP __a4 = CAR(__args); __args = CDR(__args); \
+  SEXP __a5 = CAR(__args); __args = CDR(__args); \
+  SEXP __a6 = CAR(__args); \
+  SEXP __a7 = NULL; \
+  return (func) (call, op, __a1, __a2, __a3, __a4, __a5, __a6, __a7, env); \
+} while(0)
+
 /* Closure Access Macros */
 #define FORMALS(x)	((x)->u.closxp.formals)
 #define BODY(x)		((x)->u.closxp.body)
@@ -1036,6 +1144,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define any_duplicated		Rf_any_duplicated
 #define any_duplicated3		Rf_any_duplicated3
 #define applyClosure		Rf_applyClosure
+#define argShift		Rf_argShift
 #define arraySubscript		Rf_arraySubscript
 #define asChar			Rf_asChar
 #define asCharacterFactor	Rf_asCharacterFactor
@@ -1193,6 +1302,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
    It is *essential* that these do not appear in any other header file,
    with or without the Rf_ prefix.
 */
+SEXP     Rf_argShift(SEXP *);
 Rboolean Rf_conformable(SEXP, SEXP);
 SEXP	 Rf_elt(SEXP, int);
 Rboolean Rf_inherits(SEXP, const char *);

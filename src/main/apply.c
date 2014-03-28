@@ -330,7 +330,7 @@ static Rboolean islistfactor(SEXP X)
 
 SEXP attribute_hidden do_islistfactor(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    return do_earg_islistfactor(call, op, CAR(args), CADR(args), rho);
+    RETURN_EARG2(do_earg_islistfactor, call, op, args, rho);
 }
 
 SEXP attribute_hidden do_earg_islistfactor(SEXP call, SEXP op, SEXP argx, SEXP argrecursive, SEXP rho)
