@@ -266,14 +266,19 @@ SEXP attribute_hidden do_bodyCode(SEXP call, SEXP op, SEXP args, SEXP rho)
 #define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) : arg)
 
 
-SEXP attribute_hidden do_envir(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
+SEXP attribute_hidden do_envir(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP)
-	return CLOENV(CAR(args));
-    else if (CAR(args) == R_NilValue)
+    return do_earg_envir(call, op, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_envir(SEXP call, SEXP op, SEXP arg_fun, SEXP rho)
+{
+    
+    if (TYPEOF(arg_fun) == CLOSXP)
+	return CLOENV(arg_fun);
+    else if (arg_fun == R_NilValue)
 	return R_GlobalContext->sysparent;
-    else return getAttrib(CAR(args), R_DotEnvSymbol);
+    else return getAttrib(arg_fun, R_DotEnvSymbol);
 }
 
 SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -734,17 +739,23 @@ SEXP attribute_hidden do_expression(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-/* vector(mode="logical", length=0) */
-SEXP attribute_hidden do_makevector(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* vector(mode="logical", length=0) */ 
+
+SEXP attribute_hidden do_makevector(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG2(do_earg_makevector, call, op, args, rho);
+}
+
+SEXP attribute_hidden do_earg_makevector(SEXP call, SEXP op, SEXP arg_mode, SEXP arg_length, SEXP rho)
 {
     R_xlen_t len;
     SEXP s;
     SEXPTYPE mode;
-    checkArity(op, args);
-    if (length(CADR(args)) != 1) error(_("invalid '%s' argument"), "length");
-    len = asVecSize(CADR(args));
+    
+    if (length(arg_length) != 1) error(_("invalid '%s' argument"), "length");
+    len = asVecSize(arg_length);
     if (len < 0) error(_("invalid '%s' argument"), "length");
-    s = coerceVector(CAR(args), STRSXP);
+    s = coerceVector(arg_mode, STRSXP);
     if (length(s) != 1) error(_("invalid '%s' argument"), "mode");
     mode = str2type(CHAR(STRING_ELT(s, 0))); /* ASCII */
     if (mode == -1 && streql(CHAR(STRING_ELT(s, 0)), "double"))

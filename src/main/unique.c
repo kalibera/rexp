@@ -656,18 +656,31 @@ R_xlen_t any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
   .Internal(unique(x))	          [op=1]
    .Internal(anyDuplicated(x))    [op=2]
 */
-SEXP attribute_hidden do_duplicated(SEXP call, SEXP op, SEXP args, SEXP env)
+
+SEXP attribute_hidden do_duplicated(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
+    
+    if (PRIMVAL(op) <= 1) {
+        RETURN_EARG4(do_earg_duplicated, call, op, args, env);
+    }
+    RETURN_EARG4_3ARGS(do_earg_duplicated, call, op, args, env);
+}
+
+SEXP attribute_hidden do_earg_anyDuplicated(SEXP call, SEXP op, SEXP arg_x, SEXP arg_incomp, SEXP arg_fromLast, SEXP env) {
+    return do_earg_duplicated(call, op, arg_x, arg_incomp, arg_fromLast, NULL, env);
+}
+
+SEXP attribute_hidden do_earg_duplicated(SEXP call, SEXP op, SEXP arg_x, SEXP arg_incomp, SEXP arg_fromLast, SEXP arg_nmax, SEXP env)
 {
     SEXP x, incomp, dup, ans;
     int fromLast, nmax = NA_INTEGER;
     R_xlen_t i, k, n;
-
-    checkArity(op, args);
-    x = CAR(args);
-    incomp = CADR(args);
-    if (length(CADDR(args)) < 1)
+    
+    x = arg_x;
+    incomp = arg_incomp;
+    if (length(arg_fromLast) < 1)
 	error(_("'fromLast' must be length 1"));
-    fromLast = asLogical(CADDR(args));
+    fromLast = asLogical(arg_fromLast);
     if (fromLast == NA_LOGICAL)
 	error(_("'fromLast' must be TRUE or FALSE"));
 
@@ -685,7 +698,7 @@ SEXP attribute_hidden do_duplicated(SEXP call, SEXP op, SEXP args, SEXP env)
 	       (PRIMVAL(op) == 1 ? "unique" : /* 2 */ "anyDuplicated")));
     }
     if (PRIMVAL(op) <= 1) {
-	nmax = asInteger(CADDDR(args));
+	nmax = asInteger(arg_nmax);
 	if (nmax != NA_INTEGER && nmax <= 0)
 	    error(_("'nmax' must be positive"));
     }

@@ -181,16 +181,22 @@ SEXP getAttrib(SEXP vec, SEXP name)
 }
 
 attribute_hidden
-SEXP do_shortRowNames(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP do_shortRowNames(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
+    RETURN_EARG2(do_earg_shortRowNames, call, op, args, env);
+}
+
+attribute_hidden
+SEXP do_earg_shortRowNames(SEXP call, SEXP op, SEXP arg_x, SEXP arg_type, SEXP env)
 {
     /* return  n if the data frame 'vec' has c(NA, n) rownames;
      *	       nrow(.) otherwise;  note that data frames with nrow(.) == 0
      *		have no row.names.
      ==> is also used in dim.data.frame() */
 
-    checkArity(op, args);
-    SEXP s = getAttrib0(CAR(args), R_RowNamesSymbol), ans = s;
-    int type = asInteger(CADR(args));
+    
+    SEXP s = getAttrib0(arg_x, R_RowNamesSymbol), ans = s;
+    int type = asInteger(arg_type);
 
     if( type < 0 || type > 2)
 	error(_("invalid '%s' argument"), "type");

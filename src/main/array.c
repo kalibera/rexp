@@ -388,13 +388,17 @@ SEXP DropDims(SEXP x)
     return x;
 }
 
-SEXP attribute_hidden do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_drop(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    return do_earg_drop(call, op, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_drop(SEXP call, SEXP op, SEXP arg_x, SEXP rho)
 {
     SEXP x, xdims;
     int i, n, shorten;
-
-    checkArity(op, args);
-    x = CAR(args);
+    
+    x = arg_x;
     if ((xdims = getAttrib(x, R_DimSymbol)) != R_NilValue) {
 	n = LENGTH(xdims);
 	shorten = 0;
@@ -638,23 +642,35 @@ static void tccrossprod(Rcomplex *x, int nrx, int ncx,
     }
 }
 
+SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho) {
 
-/* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2) */
-SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    int ldx, ldy, nrx, ncx, nry, ncy, mode;
-    SEXP x = CAR(args), y = CADR(args), xdims, ydims, ans;
-    Rboolean sym;
+    if (PRIMVAL(op) != 0) { /* crossprod or tcrossprod */ 
+        RETURN_EARG2(do_earg_matprod, call, op, args, rho);
+    }
+  
+    /* %*% */
+  
+    SEXP x = CAR(args), y = CADR(args);
 
-    if (PRIMVAL(op) == 0 && /* %*% is primitive, the others are .Internal() */
-       (IS_S4_OBJECT(x) || IS_S4_OBJECT(y))
-       && R_has_methods(op)) {
+    /* %*% is primitive, the others are .Internal() */
+    if ((IS_S4_OBJECT(x) || IS_S4_OBJECT(y)) && R_has_methods(op)) {
 	SEXP s, value;
 	/* Remove argument names to ensure positional matching */
 	for(s = args; s != R_NilValue; s = CDR(s)) SET_TAG(s, R_NilValue);
 	value = R_possible_dispatch(call, op, args, rho, FALSE);
 	if (value) return value;
     }
+    
+    return do_earg_matprod(call, op, x, y, rho);
+}
+
+
+/* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2) */
+SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y, SEXP rho)
+{
+    int ldx, ldy, nrx, ncx, nry, ncy, mode;
+    SEXP x = arg_x, y = arg_y, xdims, ydims, ans;
+    Rboolean sym;
 
     sym = isNull(y);
     if (sym && (PRIMVAL(op) > 0)) y = x;
@@ -760,25 +776,25 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("non-conformable arguments"));
     }
 
-    if (isComplex(CAR(args)) || isComplex(CADR(args)))
+    if (isComplex(x) || isComplex(y))
 	mode = CPLXSXP;
     else
 	mode = REALSXP;
-    SETCAR(args, coerceVector(CAR(args), mode));
-    SETCADR(args, coerceVector(CADR(args), mode));
+    x = coerceVector(x, mode);
+    y = coerceVector(y, mode);
 
     if (PRIMVAL(op) == 0) {			/* op == 0 : matprod() */
 
 	PROTECT(ans = allocMatrix(mode, nrx, ncy));
 	if (mode == CPLXSXP)
-	    cmatprod(COMPLEX(CAR(args)), nrx, ncx,
-		     COMPLEX(CADR(args)), nry, ncy, COMPLEX(ans));
+	    cmatprod(COMPLEX(x), nrx, ncx,
+		     COMPLEX(y), nry, ncy, COMPLEX(ans));
 	else
-	    matprod(REAL(CAR(args)), nrx, ncx,
-		    REAL(CADR(args)), nry, ncy, REAL(ans));
+	    matprod(REAL(x), nrx, ncx,
+		    REAL(y), nry, ncy, REAL(ans));
 
-	PROTECT(xdims = getAttrib(CAR(args), R_DimNamesSymbol));
-	PROTECT(ydims = getAttrib(CADR(args), R_DimNamesSymbol));
+	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
+	PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -832,24 +848,24 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(ans = allocMatrix(mode, ncx, ncy));
 	if (mode == CPLXSXP)
 	    if(sym)
-		ccrossprod(COMPLEX(CAR(args)), nrx, ncx,
-			   COMPLEX(CAR(args)), nry, ncy, COMPLEX(ans));
+		ccrossprod(COMPLEX(x), nrx, ncx,
+			   COMPLEX(x), nry, ncy, COMPLEX(ans));
 	    else
-		ccrossprod(COMPLEX(CAR(args)), nrx, ncx,
-			   COMPLEX(CADR(args)), nry, ncy, COMPLEX(ans));
+		ccrossprod(COMPLEX(x), nrx, ncx,
+			   COMPLEX(y), nry, ncy, COMPLEX(ans));
 	else {
 	    if(sym)
-		symcrossprod(REAL(CAR(args)), nrx, ncx, REAL(ans));
+		symcrossprod(REAL(x), nrx, ncx, REAL(ans));
 	    else
-		crossprod(REAL(CAR(args)), nrx, ncx,
-			  REAL(CADR(args)), nry, ncy, REAL(ans));
+		crossprod(REAL(x), nrx, ncx,
+			  REAL(y), nry, ncy, REAL(ans));
 	}
 
-	PROTECT(xdims = getAttrib(CAR(args), R_DimNamesSymbol));
+	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
 	if (sym)
 	    PROTECT(ydims = xdims);
 	else
-	    PROTECT(ydims = getAttrib(CADR(args), R_DimNamesSymbol));
+	    PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -877,24 +893,24 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(ans = allocMatrix(mode, nrx, nry));
 	if (mode == CPLXSXP)
 	    if(sym)
-		tccrossprod(COMPLEX(CAR(args)), nrx, ncx,
-			    COMPLEX(CAR(args)), nry, ncy, COMPLEX(ans));
+		tccrossprod(COMPLEX(x), nrx, ncx,
+			    COMPLEX(x), nry, ncy, COMPLEX(ans));
 	    else
-		tccrossprod(COMPLEX(CAR(args)), nrx, ncx,
-			    COMPLEX(CADR(args)), nry, ncy, COMPLEX(ans));
+		tccrossprod(COMPLEX(x), nrx, ncx,
+			    COMPLEX(y), nry, ncy, COMPLEX(ans));
 	else {
 	    if(sym)
-		symtcrossprod(REAL(CAR(args)), nrx, ncx, REAL(ans));
+		symtcrossprod(REAL(x), nrx, ncx, REAL(ans));
 	    else
-		tcrossprod(REAL(CAR(args)), nrx, ncx,
-			   REAL(CADR(args)), nry, ncy, REAL(ans));
+		tcrossprod(REAL(x), nrx, ncx,
+			   REAL(y), nry, ncy, REAL(ans));
 	}
 
-	PROTECT(xdims = getAttrib(CAR(args), R_DimNamesSymbol));
+	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
 	if (sym)
 	    PROTECT(ydims = xdims);
 	else
-	    PROTECT(ydims = getAttrib(CADR(args), R_DimNamesSymbol));
+	    PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -935,15 +951,19 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 #undef YDIMS_ET_CETERA
 
-SEXP attribute_hidden do_transpose(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_transpose(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    return do_earg_transpose(call, op, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_transpose(SEXP call, SEXP op, SEXP arg_x, SEXP rho)
 {
     SEXP a, r, dims, dimnames, dimnamesnames = R_NilValue,
 	ndimnamesnames, rnames, cnames;
     int ldim, ncol = 0, nrow = 0;
     R_xlen_t len = 0;
 
-    checkArity(op, args);
-    a = CAR(args);
+    a = arg_x;
 
     if (isVector(a)) {
 	dims = getAttrib(a, R_DimSymbol);
