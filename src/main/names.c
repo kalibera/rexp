@@ -735,7 +735,7 @@ FUNTAB R_FunTab[] =
 {"capabilities",do_capabilities, NULL,0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"capabilitiesX11",do_capabilitiesX11, NULL,0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"new.env",	do_newenv, NULL,	0,	11,     3,      {PP_FUNCALL, PREC_FN,	0}},
-{"parent.env",  do_parentenv, NULL,   0,	11,     1,      {PP_FUNCALL, PREC_FN,	0}},
+{"parent.env",  do_parentenv, {.args1 = do_earg_parentenv},   0,	11,     1,      {PP_FUNCALL, PREC_FN,	0}},
 {"parent.env<-",do_parentenvgets, NULL, 0,	11,     2,      {PP_FUNCALL, PREC_LEFT,	1}},
 {"l10n_info",	do_l10n_info, NULL,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"Cstack_info", do_Cstack_info, NULL,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
@@ -874,7 +874,7 @@ FUNTAB R_FunTab[] =
 {"bindingIsActive", do_bndIsActive, NULL,	0, 11,	2,      {PP_FUNCALL, PREC_FN,	0}},
 /* looks like mkUnbound is unused in base R */
 {"mkUnbound",	do_mkUnbound, NULL,		0, 111,	1,      {PP_FUNCALL, PREC_FN,	0}},
-{"isNamespaceEnv",do_isNSEnv, NULL,		0, 11,	1,      {PP_FUNCALL, PREC_FN,	0}},
+{"isNamespaceEnv",do_isNSEnv, {.args1 = do_earg_isNSEnv},		0, 11,	1,      {PP_FUNCALL, PREC_FN,	0}},
 {"registerNamespace",do_regNS, NULL,		0, 11,	2,      {PP_FUNCALL, PREC_FN,	0}},
 {"unregisterNamespace",do_unregNS, NULL,	0, 11,  1,      {PP_FUNCALL, PREC_FN,	0}},
 {"getRegisteredNamespace",do_getRegNS, NULL,	0, 11,  1,      {PP_FUNCALL, PREC_FN,	0}},

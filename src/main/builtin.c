@@ -342,10 +342,15 @@ SEXP attribute_hidden do_newenv(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden do_parentenv(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
+SEXP attribute_hidden do_parentenv(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    SEXP arg = CAR(args);
+    return do_earg_parentenv(call, op, CAR(args), rho);
+
+}
+
+SEXP attribute_hidden do_earg_parentenv(SEXP call, SEXP op, SEXP arg_env, SEXP rho)
+{    
+    SEXP arg = arg_env;
 
     if( !isEnvironment(arg)  &&
 	!isEnvironment((arg = simple_as_environment(arg))))

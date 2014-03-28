@@ -3245,10 +3245,14 @@ Rboolean R_IsNamespaceEnv(SEXP rho)
     else return FALSE;
 }
 
-SEXP attribute_hidden do_isNSEnv(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
+SEXP attribute_hidden do_isNSEnv(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    return R_IsNamespaceEnv(CAR(args)) ? mkTrue() : mkFalse();
+    return do_earg_isNSEnv(call, op, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_isNSEnv(SEXP call, SEXP op, SEXP arg_env, SEXP rho)
+{
+    return R_IsNamespaceEnv(arg_env) ? mkTrue() : mkFalse();
 }
 
 SEXP R_NamespaceEnvSpec(SEXP rho)
