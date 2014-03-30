@@ -466,18 +466,22 @@ static R_INLINE double ru()
 /* do_sample - probability sampling with/without replacement.
    .Internal(sample(n, size, replace, prob))
 */
-SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG4(do_earg_sample, call, op, args, rho);
+}
+
+SEXP attribute_hidden do_earg_sample(SEXP call, SEXP op, SEXP arg_n, SEXP arg_size, SEXP arg_replace, SEXP arg_prob, SEXP rho)
 {
     SEXP x, y, sn, sk, prob, sreplace;
 
-    checkArity(op, args);
-    sn = CAR(args); args = CDR(args);
-    sk = CAR(args); args = CDR(args); /* size */
-    sreplace = CAR(args); args = CDR(args);
+    sn = arg_n;
+    sk = arg_size;
+    sreplace = arg_replace;
     if(length(sreplace) != 1)
 	 error(_("invalid '%s' argument"), "replace");
     int replace = asLogical(sreplace);
-    prob = CAR(args);
+    prob = arg_prob;
     if (replace == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "replace");
     GetRNGstate();

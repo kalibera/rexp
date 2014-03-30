@@ -5904,22 +5904,25 @@ SEXP attribute_hidden do_growconst(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_putconst(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_putconst(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
+    RETURN_EARG3(do_earg_putconst, call, op, args, env);
+}
+
+SEXP attribute_hidden do_earg_putconst(SEXP call, SEXP op, SEXP arg_constBuf, SEXP arg_constCount, SEXP arg_x, SEXP env)
 {
     SEXP constBuf, x;
     int i, constCount;
 
-    checkArity(op, args);
-
-    constBuf = CAR(args);
+    constBuf = arg_constBuf;
     if (TYPEOF(constBuf) != VECSXP)
 	error(_("constant buffer must be a generic vector"));
 
-    constCount = asInteger(CADR(args));
+    constCount = asInteger(arg_constCount);
     if (constCount < 0 || constCount >= LENGTH(constBuf))
 	error("bad constCount value");
 
-    x = CADDR(args);
+    x = arg_x;
 
     /* check for a match and return index if one is found */
     for (i = 0; i < constCount; i++) {

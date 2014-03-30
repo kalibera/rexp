@@ -2440,12 +2440,17 @@ SEXP attribute_hidden do_stdin(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_stdout(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_stdout(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
+    return do_earg_stdout(call, op, env);
+}
+
+SEXP attribute_hidden do_earg_stdout(SEXP call, SEXP op, SEXP env)
 {
     SEXP ans, class;
     Rconnection con = getConnection(R_OutputCon);
 
-    checkArity(op, args);
+    
     PROTECT(ans = ScalarInteger(R_OutputCon));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar(con->class));

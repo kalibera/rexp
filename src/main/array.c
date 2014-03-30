@@ -1105,14 +1105,18 @@ SEXP attribute_hidden do_earg_transpose(SEXP call, SEXP op, SEXP arg_x, SEXP rho
 	lj += iip[itmp] * stride[itmp];
 
 /* aperm (a, perm, resize = TRUE) */
-SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG3(do_earg_aperm, call, op, args, rho);
+}
+
+/* aperm (a, perm, resize = TRUE) */
+SEXP attribute_hidden do_earg_aperm(SEXP call, SEXP op, SEXP arg_a, SEXP arg_perm, SEXP arg_resize, SEXP rho)
 {
     SEXP a, perm, r, dimsa, dimsr, dna;
     int i, j, n, itmp;
 
-    checkArity(op, args);
-
-    a = CAR(args);
+    a = arg_a;
     if (!isArray(a))
 	error(_("invalid first argument, must be an array"));
 
@@ -1123,7 +1127,7 @@ SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* check the permutation */
 
     int *pp = (int *) R_alloc((size_t) n, sizeof(int));
-    perm = CADR(args);
+    perm = arg_perm;
     if (length(perm) == 0) {
 	for (i = 0; i < n; i++) pp[i] = n-1-i;
     } else {
@@ -1237,7 +1241,7 @@ SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     /* handle the resize */
-    int resize = asLogical(CADDR(args));
+    int resize = asLogical(arg_resize);
     if (resize == NA_LOGICAL) error(_("'resize' must be TRUE or FALSE"));
     setAttrib(r, R_DimSymbol, resize ? dimsr : dimsa);
 
@@ -1551,15 +1555,19 @@ SEXP attribute_hidden do_earg_array(SEXP call, SEXP op, SEXP arg_data, SEXP arg_
     return ans;
 }
 
-SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG3(do_earg_diag, call, op, args, rho);
+}
+
+SEXP attribute_hidden do_earg_diag(SEXP call, SEXP op, SEXP arg_x, SEXP arg_n, SEXP arg_ncol, SEXP rho)
 {
     SEXP ans, x, snr, snc;
     int nr = 1, nc = 1, nprotect = 1;
 
-    checkArity(op, args);
-    x = CAR(args);
-    snr = CADR(args);
-    snc = CADDR(args);
+    x = arg_x;
+    snr = arg_n;
+    snc = arg_ncol;
     nr = asInteger(snr);
     if (nr == NA_INTEGER)
 	error(_("invalid 'nrow' value (too large or NA)"));

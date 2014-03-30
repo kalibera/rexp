@@ -223,7 +223,7 @@ FUNTAB R_FunTab[] =
 {"complex",	do_complex, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"matrix",	do_matrix, {.args7 = do_earg_matrix},	0,	11,	7,	{PP_FUNCALL, PREC_FN,	0}},
 {"array",	do_array, {.args3 = do_earg_array},	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"diag",	do_diag, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"diag",	do_diag, {.args3 = do_earg_diag},	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"backsolve",	do_backsolve, NULL,	0,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"max.col",	do_maxcol, NULL,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"row",		do_rowscols, NULL,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -471,7 +471,7 @@ FUNTAB R_FunTab[] =
 
 {"rhyper",	do_random3, NULL,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"sample",	do_sample, NULL,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"sample",	do_sample, {.args4 = do_earg_sample},	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"sample2",	do_sample2, NULL,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"RNGkind",	do_RNGkind, NULL,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
@@ -512,7 +512,7 @@ FUNTAB R_FunTab[] =
 {"file.path",	do_filepath, NULL,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"format",	do_format, NULL,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	0}},
 {"format.info",	do_formatinfo, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"cat",		do_cat, NULL,		0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
+{"cat",		do_cat, {.args6 = do_earg_cat},		0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
 {"do.call",	do_docall, NULL,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* String Manipulation */
@@ -707,7 +707,7 @@ FUNTAB R_FunTab[] =
 {"rank",	do_rank, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"scan",	do_scan, NULL,	0,	11,	19,	{PP_FUNCALL, PREC_FN,	0}},
 {"t.default",	do_transpose, NULL,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"aperm",	do_aperm, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"aperm",	do_aperm, {.args3 = do_earg_aperm},	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"builtins",	do_builtins, NULL,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"args",	do_args, NULL,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"formals",	do_formals, {.args1 = do_earg_formals},	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -810,7 +810,7 @@ FUNTAB R_FunTab[] =
 {"load.from.file", do_loadfile, NULL, 0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
 {"save.to.file", do_savefile, NULL,   0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
 {"growconst", do_growconst, NULL,     0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
-{"putconst", do_putconst, NULL,       0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
+{"putconst", do_putconst, {.args3 = do_earg_putconst},       0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
 {"getconst", do_getconst, NULL,       0,      11,     5,      {PP_FUNCALL, PREC_FN, 0}},
 {"enableJIT",    do_enablejit, NULL,  0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
 {"compilePKGS", do_compilepkgs, NULL, 0,      11,     1,      {PP_FUNCALL, PREC_FN, 0}},
@@ -820,7 +820,7 @@ FUNTAB R_FunTab[] =
 
 /* Connections */
 {"stdin",	do_stdin, NULL,	0,      11,     0,      {PP_FUNCALL, PREC_FN,	0}},
-{"stdout",	do_stdout, NULL,	0,      11,     0,      {PP_FUNCALL, PREC_FN,	0}},
+{"stdout",	do_stdout, {.args0 = do_earg_stdout},	0,      11,     0,      {PP_FUNCALL, PREC_FN,	0}},
 {"stderr",	do_stderr, NULL,	0,      11,     0,      {PP_FUNCALL, PREC_FN,	0}},
 {"isatty",	do_isatty, NULL,	0,      11,     1,      {PP_FUNCALL, PREC_FN,	0}},
 {"readLines",	do_readLines, NULL,	0,      11,     6,      {PP_FUNCALL, PREC_FN,	0}},

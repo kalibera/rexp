@@ -511,7 +511,13 @@ static void cat_cleanup(void *data)
 #endif
 }
 
-SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* .Internal(cat(list(...), file, sep, fill, labels, append)) */
+SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG6(do_earg_cat, call, op, args, rho);    
+}
+
+SEXP attribute_hidden do_earg_cat(SEXP call, SEXP op, SEXP arg_objs, SEXP arg_file, SEXP arg_sep, SEXP arg_fill, SEXP arg_labels, SEXP arg_append, SEXP rho)
 {
     cat_info ci;
     RCNTXT cntxt;
@@ -523,30 +529,24 @@ SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
     char buf[512];
     const char *p = "";
 
-    checkArity(op, args);
-
     /* Use standard printing defaults */
     PrintDefaults();
 
-    objs = CAR(args);
-    args = CDR(args);
-
-    file = CAR(args);
+    objs = arg_objs;
+    file = arg_file;
     ifile = asInteger(file);
     con = getConnection(ifile);
     if(!con->canwrite) /* if it is not open, we may not know yet */
 	error(_("cannot write to this connection"));
-    args = CDR(args);
 
-    sepr = CAR(args);
+    sepr = arg_sep;
     if (!isString(sepr))
 	error(_("invalid '%s' specification"), "sep");
     nlsep = 0;
     for (i = 0; i < LENGTH(sepr); i++)
 	if (strstr(CHAR(STRING_ELT(sepr, i)), "\n")) nlsep = 1; /* ASCII */
-    args = CDR(args);
 
-    fill = CAR(args);
+    fill = arg_fill;
     if ((!isNumeric(fill) && !isLogical(fill)) || (length(fill) != 1))
 	error(_("invalid '%s' argument"), "fill");
     if (isLogical(fill)) {
@@ -560,15 +560,13 @@ SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
 	warning(_("non-positive 'fill' argument will be ignored"));
 	pwidth = INT_MAX;
     }
-    args = CDR(args);
 
-    labs = CAR(args);
+    labs = arg_labels;
     if (!isString(labs) && labs != R_NilValue)
 	error(_("invalid '%s' argument"), "labels");
     lablen = length(labs);
-    args = CDR(args);
 
-    append = asLogical(CAR(args));
+    append = asLogical(arg_append);
     if (append == NA_LOGICAL)
 	error(_("invalid '%s' specification"), "append");
 
