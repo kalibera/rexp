@@ -313,25 +313,27 @@ void revsort(double *a, int *ib, int n)
     }
 }
 
+SEXP attribute_hidden do_sort(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG2(do_earg_sort, call, op, args, rho);    
+}
 
-SEXP attribute_hidden do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_earg_sort(SEXP call, SEXP op, SEXP arg_x, SEXP arg_decreasing, SEXP rho)
 {
     SEXP ans;
     Rboolean decreasing;
 
-    checkArity(op, args);
-
-    decreasing = asLogical(CADR(args));
+    decreasing = asLogical(arg_decreasing);
     if(decreasing == NA_LOGICAL)
 	error(_("'decreasing' must be TRUE or FALSE"));
-    if(CAR(args) == R_NilValue) return R_NilValue;
-    if(!isVectorAtomic(CAR(args)))
+    if(arg_x == R_NilValue) return R_NilValue;
+    if(!isVectorAtomic(arg_x))
 	error(_("only atomic vectors can be sorted"));
-    if(TYPEOF(CAR(args)) == RAWSXP)
+    if(TYPEOF(arg_x) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
     /* we need consistent behaviour here, including dropping attibutes,
        so as from 2.3.0 we always duplicate. */
-    PROTECT(ans = duplicate(CAR(args)));
+    PROTECT(ans = duplicate(arg_x));
     SET_ATTRIB(ans, R_NilValue);  /* this is never called with names */
     SET_OBJECT(ans, 0);		  /* we may have just stripped off the class */
     sortVector(ans, decreasing);

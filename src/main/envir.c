@@ -3354,9 +3354,14 @@ SEXP attribute_hidden do_earg_getRegNS(SEXP call, SEXP op, SEXP arg_x, SEXP rho)
 	return val;
 }
 
-SEXP attribute_hidden do_getNSRegistry(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
+SEXP attribute_hidden do_getNSRegistry(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
+    return do_earg_getNSRegistry(call, op, rho);
+}
+
+
+SEXP attribute_hidden do_earg_getNSRegistry(SEXP call, SEXP op, SEXP rho)
+{
     return R_NamespaceRegistry;
 }
 

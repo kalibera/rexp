@@ -66,20 +66,22 @@ R_xlen_t asVecSize(SEXP x)
     return -999;  /* which gives error in the caller */
 }
 
-SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG4(do_earg_delayed, call, op, args, rho);
+}
+
+SEXP attribute_hidden do_earg_delayed(SEXP call, SEXP op, SEXP arg_x, SEXP arg_value, SEXP arg_eval_env, SEXP arg_assign_env, SEXP rho)
 {
     SEXP name = R_NilValue /* -Wall */, expr, eenv, aenv;
-    checkArity(op, args);
+    
 
-    if (!isString(CAR(args)) || length(CAR(args)) == 0)
+    if (!isString(arg_x) || length(arg_x) == 0)
 	error(_("invalid first argument"));
     else
-	name = installTrChar(STRING_ELT(CAR(args), 0));
-    args = CDR(args);
-    expr = CAR(args);
-
-    args = CDR(args);
-    eenv = CAR(args);
+	name = installTrChar(STRING_ELT(arg_x, 0));
+    expr = arg_value;
+    eenv = arg_eval_env;
     if (isNull(eenv)) {
 	error(_("use of NULL environment is defunct"));
 	eenv = R_BaseEnv;
@@ -87,8 +89,7 @@ SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isEnvironment(eenv))
 	errorcall(call, _("invalid '%s' argument"), "eval.env");
 
-    args = CDR(args);
-    aenv = CAR(args);
+    aenv = arg_assign_env;
     if (isNull(aenv)) {
 	error(_("use of NULL environment is defunct"));
 	aenv = R_BaseEnv;
@@ -322,16 +323,18 @@ SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
  *
  * @return a newly created environment()
  */
-SEXP attribute_hidden do_newenv(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_newenv(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG3(do_earg_newenv, call, op, args, rho);
+}
+ 
+SEXP attribute_hidden do_earg_newenv(SEXP call, SEXP op, SEXP arg_hash, SEXP arg_parent, SEXP arg_size, SEXP rho)
 {
     SEXP enclos, size, ans;
     int hash;
 
-    checkArity(op, args);
-
-    hash = asInteger(CAR(args));
-    args = CDR(args);
-    enclos = CAR(args);
+    hash = asInteger(arg_hash);
+    enclos = arg_parent;
     if (isNull(enclos)) {
 	error(_("use of NULL environment is defunct"));
 	enclos = R_BaseEnv;
@@ -341,8 +344,7 @@ SEXP attribute_hidden do_newenv(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("'enclos' must be an environment"));
 
     if( hash ) {
-	args = CDR(args);
-	PROTECT(size = coerceVector(CAR(args), INTSXP));
+	PROTECT(size = coerceVector(arg_size, INTSXP));
 	if (INTEGER(size)[0] == NA_INTEGER)
 	    INTEGER(size)[0] = 0; /* so it will use the internal default */
 	ans = R_NewHashedEnv(enclos, size);

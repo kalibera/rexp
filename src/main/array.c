@@ -1443,13 +1443,19 @@ SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
 */
 
 /* array(data, dim, dimnames) */
-SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    RETURN_EARG3(do_earg_array, call, op, args, rho);
+}
+
+/* array(data, dim, dimnames) */
+SEXP attribute_hidden do_earg_array(SEXP call, SEXP op, SEXP arg_data, SEXP arg_dim, SEXP arg_dimnames, SEXP rho)
 {
     SEXP vals, ans, dims, dimnames;
     R_xlen_t lendat, i, nans;
 
-    checkArity(op, args);
-    vals = CAR(args);
+    
+    vals = arg_data;
     /* at least NULL can get here */
     switch(TYPEOF(vals)) {
 	case LGLSXP:
@@ -1466,8 +1472,8 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
 		type2char(TYPEOF(vals)));
     }
     lendat = XLENGTH(vals);
-    dims = CADR(args);
-    dimnames = CADDR(args);
+    dims = arg_dim;
+    dimnames = arg_dimnames;
     PROTECT(dims = coerceVector(dims, INTSXP));
     int nd = LENGTH(dims);
     if (nd == 0) error(_("'dims' cannot be of length 0"));
