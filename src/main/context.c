@@ -571,13 +571,23 @@ SEXP attribute_hidden do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* We don't want to count the closure that do_sys is contained in, so the */
 /* indexing is adjusted to handle this. */
 
-SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    if (length(args) == 1) {
+        return do_earg_sys(call, op, CAR(args), rho);
+    } else {
+        return do_earg_sys(call, op, NULL, rho);
+    }
+}
+
+SEXP attribute_hidden do_earg_sys(SEXP call, SEXP op, SEXP arg_n, SEXP rho)
 {
+    /* CTK, FIXME: Could do_sys have arity 1 in names.c and not -1 ? */
     int i, n  = -1, nframe;
     SEXP rval, t;
     RCNTXT *cptr;
 
-    checkArity(op, args);
+    
     /* first find the context that sys.xxx needs to be evaluated in */
     cptr = R_GlobalContext;
     t = cptr->sysparent;
@@ -588,7 +598,7 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
 	cptr = cptr->nextcontext;
     }
 
-    if (length(args) == 1) n = asInteger(CAR(args));
+    if (arg_n != NULL) n = asInteger(arg_n);
 
     switch (PRIMVAL(op)) {
     case 1: /* parent */
@@ -647,16 +657,20 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 }
 
-SEXP attribute_hidden do_parentframe(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_parentframe(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    /* CTK, FIXME: do_parentframe should have arity 1 set in names.c */
+    
+    return do_earg_parentframe(call, op, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_parentframe(SEXP call, SEXP op, SEXP arg_n, SEXP rho)
 {
     int n;
     SEXP t;
     RCNTXT *cptr;
 
-    checkArity(op, args);
-    t = CAR(args);
-    n = asInteger(t);
-
+    n = asInteger(arg_n);
     if(n == NA_INTEGER || n < 1 )
 	error(_("invalid '%s' value"), "n");
 
