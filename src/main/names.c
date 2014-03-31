@@ -739,7 +739,8 @@ FUNTAB R_FunTab[] =
 {"parent.env<-",do_parentenvgets, NULL, 0,	11,     2,      {PP_FUNCALL, PREC_LEFT,	1}},
 {"l10n_info",	do_l10n_info, NULL,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"Cstack_info", do_Cstack_info, NULL,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
-{"supports.earg", do_supportsearg, NULL,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"internal.supports.earg", do_internal_supports_earg, NULL,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"true.builtin.supports.earg", do_true_builtin_supports_earg, NULL,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Functions To Interact with the Operating System */
 

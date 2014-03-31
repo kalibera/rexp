@@ -623,6 +623,7 @@ CALLBUILTINEARG4.OP = 1,
 CALLBUILTINEARG5.OP = 1,
 CALLBUILTINEARG6.OP = 1,
 CALLBUILTINEARG7.OP = 1,
+GETBUILTINEARG.OP = 1,
 GETINTLBUILTINEARG.OP = 1,
 PUSHEARG.OP = 0
 )
@@ -746,8 +747,9 @@ CALLBUILTINEARG4.OP <- 113
 CALLBUILTINEARG5.OP <- 114
 CALLBUILTINEARG6.OP <- 115
 CALLBUILTINEARG7.OP <- 116
-GETINTLBUILTINEARG.OP <- 117
-PUSHEARG.OP <- 118
+GETBUILTINEARG.OP <- 117
+GETINTLBUILTINEARG.OP <- 118
+PUSHEARG.OP <- 119
 
 
 ##
@@ -2033,6 +2035,14 @@ getGetIntlBuiltinInstruction <- function(explicitArgs) {
   }
 }
 
+getGetBuiltinInstruction <- function(explicitArgs) {
+  if (explicitArgs == -1) {
+    GETBUILTIN.OP  
+  } else {
+    GETBUILTINEARG.OP 
+  }
+}
+
 getPushArgInstruction <- function(explicitArgs) {
   if (explicitArgs == -1) {
     PUSHARG.OP
@@ -2041,12 +2051,16 @@ getPushArgInstruction <- function(explicitArgs) {
   }
 }
 
+cmpTrueBuiltin <- function(e, cb, cntxt) {
+    cmpBuiltin(e, cb, cntxt, FALSE, .Internal(true.builtin.supports.earg(e[[1]])))
+}
+
 cmpBuiltin <- function(e, cb, cntxt, internal = FALSE, explicitArgs = -1) {
     fun <- e[[1]]
     args <- e[-1]
     if (explicitArgs != -1 && explicitArgs != length(args)) {
         if (!suppressAll(cntxt)) {
-            cntxt$warn(gettext("Explicit argument passing is not used because the call has non-standard arity"))
+            cntxt$warn(gettext("Explicit argument passing is not used because the call to", fun, "has non-standard arity"))
         }
         explicitArgs = -1
     }
@@ -2058,7 +2072,7 @@ cmpBuiltin <- function(e, cb, cntxt, internal = FALSE, explicitArgs = -1) {
         if (internal)
             cb$putcode(getGetIntlBuiltinInstruction(explicitArgs), ci)
         else
-            cb$putcode(GETBUILTIN.OP, ci)
+            cb$putcode(getGetBuiltinInstruction(explicitArgs), ci)
         cmpBuiltinArgs(args, names, cb, cntxt, FALSE, explicitArgs)
         ci <- cb$putconst(e)
         cb$putcode(getCallBuiltinInstruction(explicitArgs), ci)
@@ -2130,11 +2144,12 @@ setInlineHandler(".Internal", function(e, cb, cntxt) {
     ee <- e[[2]]
     sym <- ee[[1]]
     if (.Internal(is.builtin.internal(sym))) {
-        cmpBuiltin(ee, cb, cntxt, internal = TRUE, explicitArgs = .Internal(supports.earg(sym)))
+        cmpBuiltin(ee, cb, cntxt, internal = TRUE, explicitArgs = .Internal(internal.supports.earg(sym)))
 #        cmpBuiltin(ee, cb, cntxt, internal = TRUE, explicitArgs = -1)
     }
-    else
+    else {
         cmpSpecial(e, cb, cntxt)
+    }
 })
 
 
@@ -2280,7 +2295,7 @@ local({
             setInlineHandler(s, cmpSpecial)
     for (b in basevars[types == "builtin"])
         if (! haveInlineHandler(b, "base"))
-            setInlineHandler(b, cmpBuiltin)
+            setInlineHandler(b, cmpTrueBuiltin)
 })
 
 

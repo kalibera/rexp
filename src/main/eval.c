@@ -3087,6 +3087,7 @@ enum {
   CALLBUILTINEARG5_OP,
   CALLBUILTINEARG6_OP,
   CALLBUILTINEARG7_OP,
+  GETBUILTINEARG_OP,
   GETINTLBUILTINEARG_OP,
   PUSHEARG_OP,
   STARTVECSUBSET_OP,
@@ -4868,6 +4869,19 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	R_BCNodeStackTop += 3;
 	NEXT();
       }
+    OP(GETBUILTINEARG, 1, CONSTOP(1), LABELOP(0)):
+      {
+	/* get the function */
+	SEXP symbol = GETCONSTOP();
+	value = getPrimitive(symbol, BUILTINSXP);
+	if (RTRACE(value)) {
+	  Rprintf("trace: ");
+	  PrintValue(symbol);
+	}
+	ftype = TYPEOF(value);
+	BCNPUSH(value);
+	NEXT();
+      }
     OP(GETINTLBUILTIN, 1, CONSTOP(1), LABELOP(0)):
       {
 	/* get the function */
@@ -4898,7 +4912,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	ftype = TYPEOF(value);
 	BCNPUSH(value);
 	NEXT();
-      }      
+      }
     OP(CHECKFUN, 0, CONSTOP(0), LABELOP(0)):
       {
 	/* check then the value on the stack is a function */
@@ -6074,7 +6088,10 @@ SEXP attribute_hidden do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rh
     return ScalarInteger(old);
 }
 
-SEXP attribute_hidden do_supportsearg(SEXP call, SEXP op, SEXP args, SEXP rho)
+/* checks if an .Internal function supports explicit args, and if so, how many args are supported */
+/* returns -1 if not supported (or not an .Internal), otherwise the number of args */
+
+SEXP attribute_hidden do_internal_supports_earg(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
     SEXP prim = CAR(args);
@@ -6089,28 +6106,74 @@ SEXP attribute_hidden do_supportsearg(SEXP call, SEXP op, SEXP args, SEXP rho)
     } else {
         error(_("invalid type of '%s' argument"), "prim");
     }
-
+    
     SEXP value = INTERNAL(sym);
-    if (TYPEOF(value) == PROMSXP) {
-        PROTECT(value);
-        value = forcePromise(value);
-        SET_NAMED(value, 2);
-        UNPROTECT(1);
-    }    
+       
     if (TYPEOF(value) != BUILTINSXP) {
-//        printf("%s does not support earg because its type is %s\n", CHAR(PRINTNAME(sym)), type2char(TYPEOF(value)));
+//        printf("internal.supports.earg: %s does not support earg because its type is %s\n", CHAR(PRINTNAME(sym)), type2char(TYPEOF(value)));
         return ScalarInteger(-1);
     }
     int arity = PRIMARITY(value);
     if (arity == -1) { 
-//        printf("%s does not support earg because its arity is -1\n", CHAR(PRINTNAME(sym)));
+//        printf("internal.supports.earg: %s does not support earg because its arity is -1\n", CHAR(PRINTNAME(sym)));
         return ScalarInteger(-1);
     }
     EARG_CCODE fun = PRIMEARGFUN(value);
     if (fun.ptr == NULL) {
-//        printf("%s does not support earg because its earg do functions is NULL\n", CHAR(PRINTNAME(sym)));
+//        printf("internal.supports.earg: %s does not support earg because its earg do function is NULL\n", CHAR(PRINTNAME(sym)));
         return ScalarInteger(-1);
     }
     return ScalarInteger(arity);
+}
+
+
+/* checks if a true builtin (builtin which is not .Internal) supports explicit args, and if so, how many args are supported */
+/* returns -1 if not supported (or not a true builtin), otherwise the number of args */
+
+SEXP attribute_hidden do_true_builtin_supports_earg(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    checkArity(op, args);
+    SEXP prim = CAR(args);
+
+    SEXP sym;
+    if (TYPEOF(prim) == CHARSXP) {
+        if (LENGTH(prim) != 1 )
+	    error(_("invalid length of '%s' argument"), "prim");
+        sym = install(CHAR(prim));
+    } else if (TYPEOF(prim) == SYMSXP) {
+        sym = prim;
+    } else {
+        error(_("invalid type of '%s' argument"), "prim");
+    }
     
+    SEXP value = INTERNAL(sym);
+    if (TYPEOF(value) == BUILTINSXP) {
+//        printf("true.builtin.supports.earg: %s does not support earg because it is an .Internal\n", CHAR(PRINTNAME(sym)));
+        return ScalarInteger(-1);
+    }
+    
+    SEXP symvalue = SYMVALUE(sym);
+    
+    if (TYPEOF(symvalue) == PROMSXP) {
+        PROTECT(symvalue);
+        symvalue = forcePromise(symvalue);
+        SET_NAMED(symvalue, 2);
+        UNPROTECT(1);
+    } 
+       
+    if (TYPEOF(symvalue) != BUILTINSXP) {
+//        printf("true.builtin.supports.earg: %s does not support earg because its type is %s (not a builtin, or overridden)\n", CHAR(PRINTNAME(sym)), type2char(TYPEOF(symvalue)));
+        return ScalarInteger(-1);
+    }
+    int arity = PRIMARITY(symvalue);
+    if (arity == -1) { 
+//        printf("true.builtin.supports.earg: %s does not support earg because its arity is -1\n", CHAR(PRINTNAME(sym)));
+        return ScalarInteger(-1);
+    }
+    EARG_CCODE fun = PRIMEARGFUN(symvalue);
+    if (fun.ptr == NULL) {
+//        printf("true.builtin.supports.earg: %s does not support earg because its earg do function is NULL\n", CHAR(PRINTNAME(sym)));
+        return ScalarInteger(-1);
+    }
+    return ScalarInteger(arity);
 }
