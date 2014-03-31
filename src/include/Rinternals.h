@@ -418,6 +418,14 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
   return (func) (call, op, __a1, __a2, __a3, env); \
 } while(0)
 
+#define RETURN_EARG3_WITH_ARGS(func, call, op, args, env) do { \
+  SEXP __args = args; \
+  SEXP __a1 = CAR(__args); __args = CDR(__args); \
+  SEXP __a2 = CAR(__args); __args = CDR(__args); \
+  SEXP __a3 = CAR(__args); \
+  return (func) (call, op, __args, __a1, __a2, __a3, env); \
+} while(0)
+
 #define RETURN_EARG3_2ARGS(func, call, op, args, env) do { \
   SEXP __args = args; \
   SEXP __a1 = CAR(__args); __args = CDR(__args); \
@@ -503,7 +511,7 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 #define BUILD_1ARGS(args, arg1) ((args) == NULL ? CONS_NR(arg1, R_NilValue) : (args))
 #define BUILD_2ARGS(args, arg1, arg2) ((args) == NULL ? CONS_NR(arg1, CONS_NR(arg2, R_NilValue)) : (args))
-
+#define BUILD_3ARGS(args, arg1, arg2, arg3) ((args) == NULL ? CONS_NR(arg1, CONS_NR(arg2, CONS_NR(arg3, R_NilValue))) : (args))
 
 /* Closure Access Macros */
 #define FORMALS(x)	((x)->u.closxp.formals)

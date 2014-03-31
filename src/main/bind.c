@@ -846,8 +846,7 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 } /* do_c */
 
-
-SEXP attribute_hidden do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_unlist_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEXP arg_recursive, SEXP arg_use_names, SEXP env)
 {
     SEXP ans, t;
     int mode;
@@ -856,20 +855,19 @@ SEXP attribute_hidden do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     struct NameData nameData;
 
 /*    data.deparse_level = 1; */
-    checkArity(op, args);
-
+    
     /* Attempt method dispatch. */
 
-    if (DispatchOrEval(call, op, "unlist", args, env, &ans, 0, 1))
+    if (isObject(arg_x) && DispatchOrEval(call, op, "unlist", BUILD_3ARGS(args, arg_x, arg_recursive, arg_use_names), env, &ans, 0, 1))
 	return(ans);
 
     /* Method dispatch has failed; run the default code. */
     /* By default we recurse, but this can be over-ridden */
     /* by an optional "recursive" argument. */
 
-    PROTECT(args = CAR(ans));
-    int recurse = asLogical(CADR(ans));
-    int usenames = asLogical(CADDR(ans));
+    SEXP x = arg_x;
+    int recurse = asLogical(arg_recursive);
+    int usenames = asLogical(arg_use_names);
     int lenient = TRUE; // was (implicitly!) FALSE  up to R 3.0.1
 
     /* Determine the type of the returned value. */
@@ -880,18 +878,18 @@ SEXP attribute_hidden do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     data.ans_length = 0;
     data.ans_nnames = 0;
 
-    if (isNewList(args)) {
-	n = xlength(args);
-	if (usenames && getAttrib(args, R_NamesSymbol) != R_NilValue)
+    if (isNewList(x)) {
+	n = xlength(x);
+	if (usenames && getAttrib(x, R_NamesSymbol) != R_NilValue)
 	    data.ans_nnames = 1;
 	for (i = 0; i < n; i++) {
 	    if (usenames && !data.ans_nnames)
-		data.ans_nnames = HasNames(VECTOR_ELT(args, i));
-	    AnswerType(VECTOR_ELT(args, i), recurse, usenames, &data, call);
+		data.ans_nnames = HasNames(VECTOR_ELT(x, i));
+	    AnswerType(VECTOR_ELT(x, i), recurse, usenames, &data, call);
 	}
     }
-    else if (isList(args)) {
-	for (t = args; t != R_NilValue; t = CDR(t)) {
+    else if (isList(x)) {
+	for (t = x; t != R_NilValue; t = CDR(t)) {
 	    if (usenames && !data.ans_nnames) {
 		if (!isNull(TAG(t))) data.ans_nnames = 1;
 		else data.ans_nnames = HasNames(CAR(t));
@@ -900,8 +898,7 @@ SEXP attribute_hidden do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
     else {
-	UNPROTECT(1);
-	if (lenient || isVector(args)) return args;
+	if (lenient || isVector(x)) return x;
 	else error(_("argument not a list"));
     }
 
@@ -925,55 +922,55 @@ SEXP attribute_hidden do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = allocVector(mode, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
-    t = args;
+    t = x;
 
     if (mode == VECSXP || mode == EXPRSXP) {
 	if (!recurse) {
 	    for (i = 0; i < n; i++)
-		ListAnswer(VECTOR_ELT(args, i), 0, &data, call);
+		ListAnswer(VECTOR_ELT(x, i), 0, &data, call);
 	}
-	else ListAnswer(args, recurse, &data, call);
+	else ListAnswer(x, recurse, &data, call);
 	data.ans_length = xlength(ans);
     }
     else if (mode == STRSXP)
-	StringAnswer(args, &data, call);
+	StringAnswer(x, &data, call);
     else if (mode == CPLXSXP)
-	ComplexAnswer(args, &data, call);
+	ComplexAnswer(x, &data, call);
     else if (mode == REALSXP)
-	RealAnswer(args, &data, call);
+	RealAnswer(x, &data, call);
     else if (mode == RAWSXP)
-	RawAnswer(args, &data, call);
+	RawAnswer(x, &data, call);
     else if (mode == LGLSXP)
-	LogicalAnswer(args, &data, call);
+	LogicalAnswer(x, &data, call);
     else /* integer */
-	IntegerAnswer(args, &data, call);
-    args = t;
+	IntegerAnswer(x, &data, call);
+    x = t;
 
     /* Build and attach the names attribute for the returned object. */
 
     if (data.ans_nnames && data.ans_length > 0) {
 	PROTECT(data.ans_names = allocVector(STRSXP, data.ans_length));
 	if (!recurse) {
-	    if (TYPEOF(args) == VECSXP) {
-		SEXP names = getAttrib(args, R_NamesSymbol);
+	    if (TYPEOF(x) == VECSXP) {
+		SEXP names = getAttrib(x, R_NamesSymbol);
 		data.ans_nnames = 0;
 		nameData.seqno = 0;
 		nameData.firstpos = 0;
 		nameData.count = 0;
 		for (i = 0; i < n; i++) {
-		    NewExtractNames(VECTOR_ELT(args, i), R_NilValue,
+		    NewExtractNames(VECTOR_ELT(x, i), R_NilValue,
 				    ItemName(names, i), recurse, &data, &nameData);
 		}
 	    }
-	    else if (TYPEOF(args) == LISTSXP) {
+	    else if (TYPEOF(x) == LISTSXP) {
 		data.ans_nnames = 0;
 		nameData.seqno = 0;
 		nameData.firstpos = 0;
 		nameData.count = 0;
-		while (args != R_NilValue) {
-		    NewExtractNames(CAR(args), R_NilValue,
-				    TAG(args), recurse, &data, &nameData);
-		    args = CDR(args);
+		while (x != R_NilValue) {
+		    NewExtractNames(CAR(x), R_NilValue,
+				    TAG(x), recurse, &data, &nameData);
+		    x = CDR(x);
 		}
 	    }
 	}
@@ -982,15 +979,27 @@ SEXP attribute_hidden do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
 	    nameData.seqno = 0;
 	    nameData.firstpos = 0;
 	    nameData.count = 0;
-	    NewExtractNames(args, R_NilValue, R_NilValue, recurse, &data, &nameData);
+	    NewExtractNames(x, R_NilValue, R_NilValue, recurse, &data, &nameData);
 	}
 	setAttrib(ans, R_NamesSymbol, data.ans_names);
 	UNPROTECT(1);
     }
-    UNPROTECT(2);
+    UNPROTECT(1);
     R_FreeStringBufferL(&cbuff);
     return ans;
 } /* do_unlist */
+
+SEXP attribute_hidden do_unlist(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
+    /* CTK, FIXME: missing check1arg? */
+    
+    RETURN_EARG3_WITH_ARGS(do_unlist_main, call, op, args, env);
+}
+
+SEXP attribute_hidden do_earg_unlist(SEXP call, SEXP op, SEXP arg_x, SEXP arg_recursive, SEXP arg_use_names, SEXP env) {
+    return do_unlist_main(call, op, NULL, arg_x, arg_recursive, arg_use_names, env);
+}
+
 
 
 /* cbind(deparse.level, ...) and rbind(deparse.level, ...) : */

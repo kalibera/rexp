@@ -228,7 +228,7 @@ FUNTAB R_FunTab[] =
 {"max.col",	do_maxcol, NULL,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"row",		do_rowscols, NULL,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"col",		do_rowscols, NULL,	2,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"unlist",	do_unlist, NULL,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"unlist",	do_unlist, {.args3 = do_earg_unlist},	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"cbind",	do_bind, NULL,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind, NULL,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"drop",	do_drop, {.args1 = do_earg_drop},	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
