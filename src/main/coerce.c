@@ -1765,16 +1765,15 @@ SEXP attribute_hidden do_earg_typeof(SEXP call, SEXP op, SEXP arg, SEXP rho)
 /* Define many of the <primitive> "is.xxx" functions :
    Note that  isNull, isNumeric, etc are defined in util.c or Rinlinedfuns.h
 */
-SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_is_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEXP rho)
 {
     SEXP ans;
-    checkArity(op, args);
-    check1arg(args, call, "x");
+    SEXP x = arg_x;
 
     /* These are all builtins, so we do not need to worry about
        evaluating arguments in DispatchOrEval */
     if(PRIMVAL(op) >= 100 && PRIMVAL(op) < 200 &&
-       isObject(CAR(args))) {
+       isObject(x)) {
 	/* This used CHAR(PRINTNAME(CAR(call))), but that is not
 	   necessarily correct, e.g. when called from lapply() */
 	const char *nm;
@@ -1784,7 +1783,7 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case 102: nm = "is.array"; break;
 	default: nm = ""; /* -Wall */
 	}
-	if(DispatchOrEval(call, op, nm, args, rho, &ans, 0, 1))
+	if(DispatchOrEval(call, op, nm, BUILD_1ARGS(args, arg_x), rho, &ans, 0, 1))
 	    return(ans);
     }
 
@@ -1792,80 +1791,80 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     switch (PRIMVAL(op)) {
     case NILSXP:	/* is.null */
-	LOGICAL(ans)[0] = isNull(CAR(args));
+	LOGICAL(ans)[0] = isNull(x);
 	break;
     case LGLSXP:	/* is.logical */
-	LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == LGLSXP);
+	LOGICAL(ans)[0] = (TYPEOF(x) == LGLSXP);
 	break;
     case INTSXP:	/* is.integer */
-	LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == INTSXP)
-	    && !inherits(CAR(args), "factor");
+	LOGICAL(ans)[0] = (TYPEOF(x) == INTSXP)
+	    && !inherits(x, "factor");
 	break;
     case REALSXP:	/* is.double */
-	LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == REALSXP);
+	LOGICAL(ans)[0] = (TYPEOF(x) == REALSXP);
 	break;
     case CPLXSXP:	/* is.complex */
-	LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == CPLXSXP);
+	LOGICAL(ans)[0] = (TYPEOF(x) == CPLXSXP);
 	break;
     case STRSXP:	/* is.character */
-	LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == STRSXP);
+	LOGICAL(ans)[0] = (TYPEOF(x) == STRSXP);
 	break;
     case SYMSXP:	/* is.symbol === is.name */
-	if(IS_S4_OBJECT(CAR(args)) && (TYPEOF(CAR(args)) == S4SXP)) {
-	    SEXP dot_xData = R_getS4DataSlot(CAR(args), SYMSXP);
+	if(IS_S4_OBJECT(x) && (TYPEOF(x) == S4SXP)) {
+	    SEXP dot_xData = R_getS4DataSlot(x, SYMSXP);
 	    LOGICAL(ans)[0] = (TYPEOF(dot_xData) == SYMSXP);
 	}
 	else
-	    LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == SYMSXP);
+	    LOGICAL(ans)[0] = (TYPEOF(x) == SYMSXP);
 	break;
     case ENVSXP:	/* is.environment */
-	if(IS_S4_OBJECT(CAR(args)) && (TYPEOF(CAR(args)) == S4SXP)) {
-	    SEXP dot_xData = R_getS4DataSlot(CAR(args), ENVSXP);
+	if(IS_S4_OBJECT(x) && (TYPEOF(x) == S4SXP)) {
+	    SEXP dot_xData = R_getS4DataSlot(x, ENVSXP);
 	    LOGICAL(ans)[0] = (TYPEOF(dot_xData) == ENVSXP);
 	}
 	else
-	    LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == ENVSXP);
+	    LOGICAL(ans)[0] = (TYPEOF(x) == ENVSXP);
 	break;
     case VECSXP:	/* is.list */
-	LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == VECSXP ||
-			   TYPEOF(CAR(args)) == LISTSXP);
+	LOGICAL(ans)[0] = (TYPEOF(x) == VECSXP ||
+			   TYPEOF(x) == LISTSXP);
 	break;
     case LISTSXP:	/* is.pairlist */
-	LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == LISTSXP ||
-			   TYPEOF(CAR(args)) == NILSXP);/* pairlist() -> NULL */
+	LOGICAL(ans)[0] = (TYPEOF(x) == LISTSXP ||
+			   TYPEOF(x) == NILSXP);/* pairlist() -> NULL */
 	break;
     case EXPRSXP:	/* is.expression */
-	LOGICAL(ans)[0] = TYPEOF(CAR(args)) == EXPRSXP;
+	LOGICAL(ans)[0] = TYPEOF(x) == EXPRSXP;
 	break;
     case RAWSXP:	/* is.raw */
-	LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == RAWSXP);
+	LOGICAL(ans)[0] = (TYPEOF(x) == RAWSXP);
 	break;
 
     case 50:		/* is.object */
-	LOGICAL(ans)[0] = OBJECT(CAR(args));
+	LOGICAL(ans)[0] = OBJECT(x);
 	break;
     case 51:		/* isS4 */
-	LOGICAL(ans)[0] = IS_S4_OBJECT(CAR(args)) != 0;
+	LOGICAL(ans)[0] = IS_S4_OBJECT(x) != 0;
 	break;
 /* no longer used: is.data.frame is R code
     case 80:
-	LOGICAL(ans)[0] = isFrame(CAR(args));
+	LOGICAL(ans)[0] = isFrame(x);
 	break;
 */
 
     case 100:		/* is.numeric */
-	LOGICAL(ans)[0] = isNumeric(CAR(args)) &&
-	    !isLogical(CAR(args));  /* isNumeric excludes factors */
+	LOGICAL(ans)[0] = isNumeric(x) &&
+	    !isLogical(x);  /* isNumeric excludes factors */
 	break;
     case 101:		/* is.matrix */
-	LOGICAL(ans)[0] = isMatrix(CAR(args));
+	LOGICAL(ans)[0] = isMatrix(x);
 	break;
     case 102:		/* is.array */
-	LOGICAL(ans)[0] = isArray(CAR(args));
+	LOGICAL(ans)[0] = isArray(x);
 	break;
 
     case 200:		/* is.atomic */
-	switch(TYPEOF(CAR(args))) {
+	switch(TYPEOF(x)) {
 	case NILSXP:
 	    /* NULL is atomic (S compatibly), but not in isVectorAtomic(.) */
 	case CHARSXP:
@@ -1883,7 +1882,7 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	break;
     case 201:		/* is.recursive */
-	switch(TYPEOF(CAR(args))) {
+	switch(TYPEOF(x)) {
 	case VECSXP:
 	case LISTSXP:
 	case CLOSXP:
@@ -1907,15 +1906,15 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	break;
 
     case 300:		/* is.call */
-	LOGICAL(ans)[0] = TYPEOF(CAR(args)) == LANGSXP;
+	LOGICAL(ans)[0] = TYPEOF(x) == LANGSXP;
 	break;
     case 301:		/* is.language */
-	LOGICAL(ans)[0] = (TYPEOF(CAR(args)) == SYMSXP ||
-			   TYPEOF(CAR(args)) == LANGSXP ||
-			   TYPEOF(CAR(args)) == EXPRSXP);
+	LOGICAL(ans)[0] = (TYPEOF(x) == SYMSXP ||
+			   TYPEOF(x) == LANGSXP ||
+			   TYPEOF(x) == EXPRSXP);
 	break;
     case 302:		/* is.function */
-	LOGICAL(ans)[0] = isFunction(CAR(args));
+	LOGICAL(ans)[0] = isFunction(x);
 	break;
 
     case 999:		/* is.single */
@@ -1926,6 +1925,18 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
     UNPROTECT(1);
     return (ans);
 }
+
+SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    check1arg(args, call, "x");
+    
+    return do_is_main(call, op, args, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_is(SEXP call, SEXP op, SEXP arg_x, SEXP rho) {
+    return do_is_main(call, op, NULL, arg_x, rho);
+}
+
 
 /* What should is.vector do ?
  * In S, if an object has no attributes it is a vector, otherwise it isn't.

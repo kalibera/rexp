@@ -233,6 +233,7 @@ SEXP do_intToBits(SEXP, SEXP, SEXP, SEXP);
 SEXP do_invisible(SEXP, SEXP, SEXP, SEXP);
 SEXP do_invokeRestart(SEXP, SEXP, SEXP, SEXP);
 SEXP do_is(SEXP, SEXP, SEXP, SEXP);
+SEXP do_earg_is(SEXP, SEXP, SEXP, SEXP);
 SEXP do_isatty(SEXP, SEXP, SEXP, SEXP);
 SEXP do_isfinite(SEXP, SEXP, SEXP, SEXP);
 SEXP do_isinfinite(SEXP, SEXP, SEXP, SEXP);
