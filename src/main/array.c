@@ -418,31 +418,39 @@ SEXP attribute_hidden do_earg_drop(SEXP call, SEXP op, SEXP arg_x, SEXP rho)
 
 /* Length of Primitive Objects */
 
-SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    checkArity(op, args);
-    check1arg(args, call, "x");
+SEXP attribute_hidden do_length_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEXP rho) {
 
-    SEXP x = CAR(args), ans;
-
-    if (isObject(x) &&
-       DispatchOrEval(call, op, "length", args, rho, &ans, 0, 1)) {
-	if (length(ans) == 1 && TYPEOF(ans) == REALSXP) {
-	    double d = REAL(ans)[0];
-	    if (R_FINITE(d) && d >= 0. && d <= INT_MAX && floor(d) == d)
-		return coerceVector(ans, INTSXP);
-	}
-	return(ans);
+    SEXP x = arg_x;
+    SEXP ans;
+    
+    if (isObject(x) && DispatchOrEval(call, op, "length", BUILD_1ARGS(args, x), rho, &ans, 0, 1)) {
+        if (length(ans) == 1 && TYPEOF(ans) == REALSXP) {
+            double d = REAL(ans)[0];
+            if (R_FINITE(d) && d >= 0. && d <= INT_MAX && floor(d) == d) {
+                return coerceVector(ans, INTSXP);
+            }
+        }
+        return(ans);
     }
-
 #ifdef LONG_VECTOR_SUPPORT
     // or use IS_LONG_VEC
     R_xlen_t len = xlength(x);
     if (len > INT_MAX) return ScalarReal((double) len);
 #endif
-    return ScalarInteger(length(x));
+    return ScalarInteger(length(x));    
 }
 
+SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    check1arg(args, call, "x");
+
+    return do_length_main(call, op, args, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_length(SEXP call, SEXP op, SEXP arg_x, SEXP rho) {
+
+    return do_length_main(call, op, NULL, arg_x, rho);
+}
 
 SEXP attribute_hidden do_rowscols(SEXP call, SEXP op, SEXP args, SEXP rho)
 {

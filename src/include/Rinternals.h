@@ -501,6 +501,8 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
   return (func) (call, op, __a1, __a2, __a3, __a4, __a5, __a6, __a7, env); \
 } while(0)
 
+#define BUILD_1ARGS(args, x) ((args) == NULL ? CONS_NR(x, R_NilValue) : (args))
+
 /* Closure Access Macros */
 #define FORMALS(x)	((x)->u.closxp.formals)
 #define BODY(x)		((x)->u.closxp.body)

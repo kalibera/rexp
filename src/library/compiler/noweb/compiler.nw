@@ -2003,8 +2003,25 @@ getPushArgInstruction <- function(explicitArgs) {
   }
 }
 
+any.names <- function(args) {
+    names <- names(args)
+    for (i in 1:length(names)) {
+        if (length(names[[i]]) != 0) {
+            return(TRUE)
+	}
+    }
+    return(FALSE)
+}
+
 cmpTrueBuiltin <- function(e, cb, cntxt) {
-    cmpBuiltin(e, cb, cntxt, FALSE, .Internal(true.builtin.supports.earg(e[[1]])))
+    explicitArgs = .Internal(true.builtin.supports.earg(e[[1]]))
+    if (explicitArgs != -1) {
+	if (any.names(e[-1])) {
+	    cntxt$warn(gettext("Explicit argument passing is not used because the call to", e[[1]], "has names"))
+	    explicitArgs = -1
+	}
+    }
+    cmpBuiltin(e, cb, cntxt, FALSE, explicitArgs)
 }
 
 cmpBuiltin <- function(e, cb, cntxt, internal = FALSE, explicitArgs = -1) {

@@ -195,7 +195,7 @@ FUNTAB R_FunTab[] =
 
 /* Primitives */
 
-{"length",	do_length, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"length",	do_length, {.args1 = do_earg_length},	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"length<-",	do_lengthgets, NULL,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"c",/* bind.c:*/do_c, NULL,		0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"oldClass",	do_class, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
