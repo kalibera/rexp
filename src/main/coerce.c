@@ -1984,23 +1984,21 @@ SEXP attribute_hidden do_earg_isvector(SEXP call, SEXP op, SEXP argx, SEXP argmo
     return (ans);
 }
 
-SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden do_isna_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEXP rho)
 {
     SEXP ans, dims, names, x;
     R_xlen_t i, n;
 
-    checkArity(op, args);
-    check1arg(args, call, "x");
-
-    if (DispatchOrEval(call, op, "is.na", args, rho, &ans, 1, 1))
+    x = arg_x;
+    if (isObject(x) && DispatchOrEval(call, op, "is.na", BUILD_1ARGS(args, arg_x), rho, &ans, 1, 1))
 	return(ans);
-    PROTECT(args = ans);
+
 #ifdef stringent_is
-    if (!isList(CAR(args)) && !isVector(CAR(args)))
+    if (!isList(x) && !isVector(x))
 	errorcall_return(call, "is.na " R_MSG_list_vec);
 
 #endif
-    x = CAR(args);
+
     n = xlength(x);
     PROTECT(ans = allocVector(LGLSXP, n));
     if (isVector(x)) {
@@ -2093,9 +2091,20 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (isVector(x))
 	UNPROTECT(2);
     UNPROTECT(1);
-    UNPROTECT(1); /*ans*/
     return ans;
 }
+
+SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    check1arg(args, call, "x");
+    
+    return do_isna_main(call, op, args, CAR(args), rho);
+}
+
+SEXP attribute_hidden do_earg_isna(SEXP call, SEXP op, SEXP arg_x, SEXP rho) {
+    return do_isna_main(call, op, NULL, arg_x, rho);
+}
+
 
 static Rboolean anyNA(SEXP x, SEXP env)
 /* Original code:

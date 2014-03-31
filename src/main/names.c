@@ -585,7 +585,7 @@ FUNTAB R_FunTab[] =
 
 {"is.single",	do_is, NULL,		999,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
-{"is.na",	do_isna, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"is.na",	do_isna, {.args1 = do_earg_isna},	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"is.nan",	do_isnan, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"is.finite",	do_isfinite, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"is.infinite",	do_isinfinite, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},

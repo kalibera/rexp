@@ -239,6 +239,7 @@ SEXP do_islistfactor(SEXP, SEXP, SEXP, SEXP);
 SEXP do_earg_islistfactor(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_isloaded(SEXP, SEXP, SEXP, SEXP);
 SEXP do_isna(SEXP, SEXP, SEXP, SEXP);
+SEXP do_earg_isna(SEXP, SEXP, SEXP, SEXP);
 SEXP do_isnan(SEXP, SEXP, SEXP, SEXP);
 SEXP do_isunsorted(SEXP, SEXP, SEXP, SEXP);
 SEXP do_isvector(SEXP, SEXP, SEXP, SEXP);

@@ -683,7 +683,10 @@ SEXP attribute_hidden do_earg_matprod_star(SEXP call, SEXP op, SEXP arg_x, SEXP 
 	value = R_possible_dispatch(call, op, BUILD_2ARGS(NULL, arg_x, arg_y), rho, FALSE);
 	if (value) return value;
     }
-    
+    /* CTK, FIXME: note that %*% does not honor the argument names, calling it e.g. 
+       `%*%`(y=1:3, x=matrix(1:9, nrow=3))  will yield y%*%x, x%*%y 
+       
+       (and this was also the case of the original code */
     return do_earg_matprod(call, op, arg_x, arg_y, rho);
 }
 
