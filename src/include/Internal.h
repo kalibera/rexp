@@ -280,6 +280,7 @@ SEXP do_matchcall(SEXP, SEXP, SEXP, SEXP);
 SEXP do_earg_matchcall(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_matprod(SEXP, SEXP, SEXP, SEXP);
 SEXP do_earg_matprod(SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP do_earg_matprod_star(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_Math2(SEXP, SEXP, SEXP, SEXP);
 SEXP do_matrix(SEXP, SEXP, SEXP, SEXP);
 SEXP do_earg_matrix(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);

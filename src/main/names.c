@@ -165,7 +165,7 @@ FUNTAB R_FunTab[] =
 {"^",		do_arith, NULL,	POWOP,	1,	2,	{PP_BINARY2, PREC_POWER,  1}},
 {"%%",		do_arith, NULL,	MODOP,	1,	2,	{PP_BINARY2, PREC_PERCENT,0}},
 {"%/%",		do_arith, NULL,	IDIVOP,	1,	2,	{PP_BINARY2, PREC_PERCENT,0}},
-{"%*%",		do_matprod, NULL,	0,	1,	2,	{PP_BINARY,  PREC_PERCENT,0}},
+{"%*%",		do_matprod, {.args2 = do_earg_matprod_star},	0,	1,	2,	{PP_BINARY,  PREC_PERCENT,0}},
 
 {"==",		do_relop, NULL,	EQOP,	1,	2,	{PP_BINARY,  PREC_COMPARE,0}},
 {"!=",		do_relop, NULL,	NEOP,	1,	2,	{PP_BINARY,  PREC_COMPARE,0}},

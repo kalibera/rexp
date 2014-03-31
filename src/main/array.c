@@ -676,6 +676,16 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho) {
     return do_earg_matprod(call, op, x, y, rho);
 }
 
+SEXP attribute_hidden do_earg_matprod_star(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y, SEXP rho) {
+
+    if ((IS_S4_OBJECT(arg_x) || IS_S4_OBJECT(arg_y)) && R_has_methods(op)) {
+	SEXP value;
+	value = R_possible_dispatch(call, op, BUILD_2ARGS(NULL, arg_x, arg_y), rho, FALSE);
+	if (value) return value;
+    }
+    
+    return do_earg_matprod(call, op, arg_x, arg_y, rho);
+}
 
 /* "%*%" (op = 0), crossprod (op = 1) or tcrossprod (op = 2) */
 SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y, SEXP rho)
