@@ -129,6 +129,7 @@ SEXP do_dfltWarn(SEXP, SEXP, SEXP, SEXP);
 SEXP do_diag(SEXP, SEXP, SEXP, SEXP);
 SEXP do_earg_diag(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_dim(SEXP, SEXP, SEXP, SEXP);
+SEXP do_earg_dim(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dimgets(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dimnames(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dimnamesgets(SEXP, SEXP, SEXP, SEXP);

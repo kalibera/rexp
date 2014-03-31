@@ -1030,17 +1030,25 @@ SEXP attribute_hidden do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_dim_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEXP env)
 {
     SEXP ans;
+
+    SEXP x = arg_x;
+    if (isObject(x) && DispatchOrEval(call, op, "dim", BUILD_1ARGS(args, x), env, &ans, 0, 1))
+	return(ans);
+    return getAttrib(x, R_DimSymbol);
+}
+
+SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env) {
     checkArity(op, args);
     check1arg(args, call, "x");
-    if (DispatchOrEval(call, op, "dim", args, env, &ans, 0, 1))
-	return(ans);
-    PROTECT(args = ans);
-    ans = getAttrib(CAR(args), R_DimSymbol);
-    UNPROTECT(1);
-    return ans;
+    
+    return do_dim_main(call, op, args, CAR(args), env);
+}
+
+SEXP attribute_hidden do_earg_dim(SEXP call, SEXP op, SEXP arg_x, SEXP env) {
+    return do_dim_main(call, op, NULL, arg_x, env);
 }
 
 SEXP attribute_hidden do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)

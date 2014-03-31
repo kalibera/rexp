@@ -208,7 +208,7 @@ FUNTAB R_FunTab[] =
 {"names<-",	do_namesgets, NULL,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"dimnames",	do_dimnames, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dimnames<-",	do_dimnamesgets, NULL,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"dim",		do_dim, NULL,		0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"dim",		do_dim, {.args1 = do_earg_dim},		0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dim<-",	do_dimgets, NULL,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"attributes",	do_attributes, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"attributes<-",do_attributesgets, NULL,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
