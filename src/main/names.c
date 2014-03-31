@@ -204,7 +204,7 @@ FUNTAB R_FunTab[] =
 {".cache_class",	R_do_data_class, NULL,	1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"class<-",	R_do_set_class, NULL,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"unclass",	do_unclass, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"names",	do_names, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"names",	do_names, {.args1 = do_earg_names},	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"names<-",	do_namesgets, NULL,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"dimnames",	do_dimnames, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dimnames<-",	do_dimnamesgets, NULL,0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},

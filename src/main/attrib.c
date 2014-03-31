@@ -882,21 +882,30 @@ SEXP namesgets(SEXP vec, SEXP val)
     return vec;
 }
 
-SEXP attribute_hidden do_names(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_names_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEXP env)
 {
     SEXP ans;
+    SEXP x = arg_x;
+
+    if (isObject(x) && DispatchOrEval(call, op, "names", BUILD_1ARGS(args, x), env, &ans, 0, 1))
+	return(ans);
+
+    if (isVector(x) || isList(x) || isLanguage(x) || IS_S4_OBJECT(x))
+	return getAttrib(x, R_NamesSymbol);
+
+    return R_NilValue;
+}
+
+SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env) {
     checkArity(op, args);
     check1arg(args, call, "x");
-    if (DispatchOrEval(call, op, "names", args, env, &ans, 0, 1))
-	return(ans);
-    PROTECT(args = ans);
-    ans = CAR(args);
-    if (isVector(ans) || isList(ans) || isLanguage(ans) ||
-	IS_S4_OBJECT(ans))
-	ans = getAttrib(ans, R_NamesSymbol);
-    else ans =  R_NilValue;
-    UNPROTECT(1);
-    return ans;
+    
+    return do_names_main(call, op, args, CAR(args), env);
+}
+
+SEXP do_earg_names(SEXP call, SEXP op, SEXP arg_x, SEXP env) {
+
+    return do_names_main(call, op, NULL, arg_x, env);
 }
 
 SEXP attribute_hidden do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
