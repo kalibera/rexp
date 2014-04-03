@@ -43,7 +43,7 @@
 #endif
 
 #include "Defn.h"
-
+#include <Internal.h>
 
 /* used in subscript.c and subassign.c */
 Rboolean NonNullStringMatch(SEXP s, SEXP t)
@@ -389,4 +389,133 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
     }
     UNPROTECT(1);
     return(actuals);
+}
+
+/* 
+   A specialized version of matchArgs, which can be used when the supplied
+   arguments do not contain any names.
+  
+   In addition to matchArgs, this specialized version also sets the tags of
+   the resulting actuals and creates the resulting environment.  Also, it
+   provides promises for default values if applicable.  And it enables
+   reference counting.
+   
+   The supplied arguments are re-used and modified (including links, tags,
+   possibly values).  This function is expected to be called with the
+   supplied arguments that have disabled reference counting.
+   
+   Returns the new environment.
+   Returns the actuals in output parameter outActuals.
+   Supplied do not have to be protected when calling this function.
+*/
+   
+SEXP attribute_hidden matchUnnamedArgsCreateEnv(SEXP formals, SEXP supplied, SEXP call, SEXP rho, SEXP* outActuals)
+{
+    SEXP f, s;    
+    SEXP newrho = PROTECT(NewEnvironmentNR(rho));
+    SEXP prevS = R_NilValue;
+    SEXP actuals = PROTECT(supplied);
+    
+    /* maybe not necessary in some cases */
+    
+    for (f = formals, s = supplied ; f != R_NilValue ; f = CDR(f), prevS = s, s = CDR(s)) {
+        
+        if (TAG(f) == R_DotsSymbol) {
+            /* pack all arguments into ... */
+            
+            SEXP dots = CONS_NR(R_MissingArg, R_NilValue);
+            SET_TAG(dots, R_DotsSymbol);
+            if (prevS == R_NilValue) {
+                UNPROTECT(1); /* old actuals */
+                PROTECT(actuals = dots);
+            } else {
+                SETCDR(prevS, dots);
+                ENABLE_REFCNT(prevS); /* dots are part of a protected list */
+            }
+            if (s != R_NilValue) {
+                SET_TYPEOF(s, DOTSXP);
+                SETCAR(dots, s);
+                s = R_NilValue;
+            }
+            prevS = dots;
+            f = CDR(f);
+            if (f == R_NilValue) {
+                break;
+            }
+            /* falls through into s == R_NilValue case */
+        }
+            
+        if (s == R_NilValue) {
+            /* fewer supplied arguments than formals */
+            
+            SEXP ds;
+            for(; f != R_NilValue ; f = CDR(f), prevS = ds) { 
+                ds = CONS_NR(R_MissingArg, R_NilValue);
+                SET_TAG(ds, TAG(f));
+                if (prevS == R_NilValue) {
+                    UNPROTECT(1); /* old actuals */
+                    PROTECT(actuals = ds);
+                } else {
+                    SETCDR(prevS, ds);
+                    ENABLE_REFCNT(prevS); /* ds is part of a protected list */
+                }
+                SEXP fdefault = CAR(f);
+                if (fdefault != R_MissingArg) {
+                    SET_MISSING(ds, 2);
+                    SETCAR(ds, mkPROMISE(fdefault, newrho));
+                } else {
+                    SET_MISSING(ds, 1);
+                }
+            }
+            break;
+        }
+        
+        /* normal case, the next supplied arg is available */
+        
+        SET_TAG(s, TAG(f));
+        if (CAR(s) == R_MissingArg) {
+            SEXP fdefault = CAR(f);
+            if (fdefault != R_MissingArg) {
+                SET_MISSING(s, 2);
+                SETCAR(s, mkPROMISE(fdefault, newrho));
+            } else {
+                SET_MISSING(s, 1);
+            }
+        }
+        if (prevS != R_NilValue) {
+            ENABLE_REFCNT(prevS);
+        }
+    }
+
+    if (s != R_NilValue) {
+        /* some arguments are not used */
+        SEXP unusedForError = PROTECT(s);
+        SETCDR(prevS, R_NilValue); /* make sure they're not in the new environment */
+            
+        /* show bad arguments in call without evaluating them */
+        for (; s != R_NilValue; s = CDR(s)) {
+            SEXP carS = CAR(s);
+            if (TYPEOF(carS) == PROMSXP) {
+                SETCAR(s, PREXPR(carS));
+            }
+        }
+        errorcall(call /* R_GlobalContext->call */,
+	   ngettext("unused argument %s",
+	     "unused arguments %s",
+	     (unsigned long) length(unusedForError)),
+	     CHAR(STRING_ELT(deparse1line(unusedForError, 0), 0)) + 4);
+                  /* '+ 4' is to remove 'list' from 'list(badTag1,...)' */
+        UNPROTECT(1);
+    }
+        
+    if (prevS != R_NilValue) {
+        ENABLE_REFCNT(prevS);
+    }
+    
+    SET_FRAME(newrho, actuals);
+    ENABLE_REFCNT(newrho);
+    UNPROTECT(2); /* newrho, actuals */
+    
+    *outActuals = actuals;
+    return(newrho);
 }

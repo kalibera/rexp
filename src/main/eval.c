@@ -902,36 +902,62 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 	contains the matched pairs.  Ideally this environment sould be
 	hashed.  */
 
-    PROTECT(actuals = matchArgs(formals, arglist, call));
-    PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
-
-    /* Turn on reference counting for the binding cells so local
-       assignments arguments increment REFCNT values */
-    for (a = actuals; a != R_NilValue; a = CDR(a))
-	ENABLE_REFCNT(a);
-
-    /*  Use the default code for unbound formals.  FIXME: It looks like
-	this code should preceed the building of the environment so that
-	this will also go into the hash table.  */
-
-    /* This piece of code is destructively modifying the actuals list,
-       which is now also the list of bindings in the frame of newrho.
-       This is one place where internal structure of environment
-       bindings leaks out of envir.c.  It should be rewritten
-       eventually so as not to break encapsulation of the internal
-       environment layout.  We can live with it for now since it only
-       happens immediately after the environment creation.  LT */
-
-    f = formals;
-    a = actuals;
-    while (f != R_NilValue) {
-	if (CAR(a) == R_MissingArg && CAR(f) != R_MissingArg) {
-	    SETCAR(a, mkPROMISE(CAR(f), newrho));
-	    SET_MISSING(a, 2);
-	}
-	f = CDR(f);
-	a = CDR(a);
+	    /* calculate the length of arglist and check if any names are specified at all */
+    int nargs = 0;
+    int seenNames = 0;
+    for(a = arglist; a != R_NilValue; a = CDR(a), nargs++) {
+        if (!seenNames && TAG(a) != R_NilValue) {
+            seenNames = 1;
+        }
     }
+    
+    if (!seenNames) {
+    
+        /* we need to copy the arguments because the original is saved as promargs into context and 
+           is needed for object dispatch, recall, browser, etc */
+        SEXP arglistCopy = allocList(nargs);
+        SEXP s,t;
+        for (t = arglistCopy, s = arglist; t != R_NilValue; s = CDR(s), t = CDR(t)) {
+            SETCAR(t, CAR(s)); 
+            SET_TAG(t, TAG(s));
+        }
+        
+        newrho = matchUnnamedArgsCreateEnv(formals, arglistCopy, call, savedrho, &actuals);
+        PROTECT(newrho);
+        PROTECT(actuals);
+
+    } else {
+        PROTECT(actuals = matchArgs(formals, arglist, call));
+        PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
+  
+        /* Turn on reference counting for the binding cells so local
+           assignments arguments increment REFCNT values */
+        for (a = actuals; a != R_NilValue; a = CDR(a))
+  	  ENABLE_REFCNT(a);
+
+        /*  Use the default code for unbound formals.  FIXME: It looks like
+	    this code should preceed the building of the environment so that
+	    this will also go into the hash table.  */
+
+        /* This piece of code is destructively modifying the actuals list,
+           which is now also the list of bindings in the frame of newrho.
+           This is one place where internal structure of environment
+           bindings leaks out of envir.c.  It should be rewritten
+           eventually so as not to break encapsulation of the internal
+           environment layout.  We can live with it for now since it only
+           happens immediately after the environment creation.  LT */
+
+        f = formals;
+        a = actuals;
+        while (f != R_NilValue) {
+            if (CAR(a) == R_MissingArg && CAR(f) != R_MissingArg) {
+	        SETCAR(a, mkPROMISE(CAR(f), newrho));
+	        SET_MISSING(a, 2);
+            }
+            f = CDR(f);
+            a = CDR(a);
+        }
+    } 
 
     if (R_envHasNoSpecialSymbols(newrho))
 	SET_NO_SPECIAL_SYMBOLS(newrho);
@@ -1022,7 +1048,6 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     {
 	SEXP R_NewHashTable(int);
 	SEXP R_HashFrame(SEXP);
-	int nargs = length(arglist);
 	HASHTAB(newrho) = R_NewHashTable(nargs);
 	newrho = R_HashFrame(newrho);
     }

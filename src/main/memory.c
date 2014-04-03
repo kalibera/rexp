@@ -2298,6 +2298,35 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     return (newrho);
 }
 
+/* disables reference counting on new environment, does not set any values */
+SEXP NewEnvironmentNR(SEXP rho)
+{
+    SEXP v, n, newrho;
+
+    if (FORCE_GC || NO_FREE_NODES()) {
+	PROTECT(rho);
+	R_gc_internal(0);
+	UNPROTECT(1);
+	if (NO_FREE_NODES())
+	    mem_err_cons();
+    }
+    GET_FREE_NODE(newrho);
+#if VALGRIND_LEVEL > 2
+    VALGRIND_MAKE_WRITABLE(&ATTRIB(newrho), sizeof(void *));
+    VALGRIND_MAKE_WRITABLE(&(newrho->u), 3*(sizeof(void *)));
+    VALGRIND_MAKE_WRITABLE(newrho,3);
+#endif
+    newrho->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    INIT_REFCNT(newrho);
+    DISABLE_REFCNT(newrho);
+    TYPEOF(newrho) = ENVSXP;
+    FRAME(newrho) = R_NilValue;
+    ENCLOS(newrho) = CHK(rho);
+    HASHTAB(newrho) = R_NilValue;
+    ATTRIB(newrho) = R_NilValue;
+    return (newrho);
+}
+
 /* mkPROMISE is defined directly do avoid the need to protect its arguments
    unless a GC will actually occur. */
 SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
