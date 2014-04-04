@@ -416,8 +416,6 @@ SEXP attribute_hidden matchUnnamedArgsCreateEnv(SEXP formals, SEXP supplied, SEX
     SEXP prevS = R_NilValue;
     SEXP actuals = PROTECT(supplied);
     
-    /* maybe not necessary in some cases */
-    
     for (f = formals, s = supplied ; f != R_NilValue ; f = CDR(f), prevS = s, s = CDR(s)) {
         
         if (TAG(f) == R_DotsSymbol) {
@@ -439,15 +437,11 @@ SEXP attribute_hidden matchUnnamedArgsCreateEnv(SEXP formals, SEXP supplied, SEX
             }
             prevS = dots;
             f = CDR(f);
-            if (f == R_NilValue) {
-                break;
-            }
             /* falls through into s == R_NilValue case */
         }
             
         if (s == R_NilValue) {
             /* fewer supplied arguments than formals */
-            
             SEXP ds;
             for(; f != R_NilValue ; f = CDR(f), prevS = ds) { 
                 ds = CONS_NR(R_MissingArg, R_NilValue);
