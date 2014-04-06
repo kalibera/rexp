@@ -412,9 +412,9 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
 SEXP attribute_hidden matchUnnamedArgsCreateEnv(SEXP formals, SEXP supplied, SEXP call, SEXP rho, SEXP* outActuals)
 {
     SEXP f, s;    
+    SEXP actuals = PROTECT(supplied);
     SEXP newrho = PROTECT(NewEnvironmentNR(rho));
     SEXP prevS = R_NilValue;
-    SEXP actuals = PROTECT(supplied);
     
     for (f = formals, s = supplied ; f != R_NilValue ; f = CDR(f), prevS = s, s = CDR(s)) {
         
