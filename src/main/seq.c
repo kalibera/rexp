@@ -581,9 +581,10 @@ done:
 /* This is a primitive SPECIALSXP with internal argument matching */
 SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, x, ap, times = R_NilValue /* -Wall */;
-    int each = 1, nprotect = 4;
+    SEXP ans, x, times = R_NilValue /* -Wall */;
+    int each = 1, nprotect = 3;
     R_xlen_t i, lx, len = NA_INTEGER, nt;
+    static SEXP do_rep_formals = NULL;
 
     /* includes factors, POSIX[cl]t, Date */
     if (DispatchOrEval(call, op, "rep", args, rho, &ans, 0, 0))
@@ -596,14 +597,16 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
        so we manage the argument matching ourselves.  We pretend this is
        rep(x, times, length.out, each, ...)
     */
-    PROTECT(ap = CONS(R_NilValue,
-		      list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue)));
-    SET_TAG(ap, install("x"));
-    SET_TAG(CDR(ap), install("times"));
-    SET_TAG(CDDR(ap), install("length.out"));
-    SET_TAG(CDR(CDDR(ap)), install("each"));
-    SET_TAG(CDDR(CDDR(ap)), R_DotsSymbol);
-    PROTECT(args = matchArgs(ap, args, call));
+    if (do_rep_formals == NULL) {
+        do_rep_formals = CONS(R_NilValue, list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue));
+        R_PreserveObject(do_rep_formals);
+        SET_TAG(do_rep_formals, install("x"));
+        SET_TAG(CDR(do_rep_formals), install("times"));
+        SET_TAG(CDDR(do_rep_formals), install("length.out"));
+        SET_TAG(CDR(CDDR(do_rep_formals)), install("each"));
+        SET_TAG(CDDR(CDDR(do_rep_formals)), R_DotsSymbol);
+    }
+    PROTECT(args = matchArgs(do_rep_formals, args, call));
 
     x = CAR(args);
     /* supported in R 2.15.x */
@@ -709,10 +712,11 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* to match seq.default */
 SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans = R_NilValue /* -Wall */, ap, tmp, from, to, by, len, along;
+    SEXP ans = R_NilValue /* -Wall */, tmp, from, to, by, len, along;
     int nargs = length(args), lf;
     Rboolean One = nargs == 1;
     R_xlen_t i, lout = NA_INTEGER;
+    static SEXP do_seq_formals = NULL;    
 
     if (DispatchOrEval(call, op, "seq", args, rho, &ans, 0, 1))
 	return(ans);
@@ -721,18 +725,19 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
        We pretend this is
        seq(from, to, by, length.out, along.with, ...)
     */
-    PROTECT(ap = CONS(R_NilValue,
-		      CONS(R_NilValue,
-			   list4(R_NilValue, R_NilValue, R_NilValue,
-				 R_NilValue))));
-    tmp = ap;
-    SET_TAG(tmp, install("from")); tmp = CDR(tmp);
-    SET_TAG(tmp, install("to")); tmp = CDR(tmp);
-    SET_TAG(tmp, install("by")); tmp = CDR(tmp);
-    SET_TAG(tmp, install("length.out")); tmp = CDR(tmp);
-    SET_TAG(tmp, install("along.with")); tmp = CDR(tmp);
-    SET_TAG(tmp, R_DotsSymbol);
-    PROTECT(args = matchArgs(ap, args, call));
+    if (do_seq_formals == NULL) {
+        do_seq_formals = CONS(R_NilValue, CONS(R_NilValue, list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue)));
+        R_PreserveObject(do_seq_formals);
+        tmp = do_seq_formals;
+        SET_TAG(tmp, install("from")); tmp = CDR(tmp);
+        SET_TAG(tmp, install("to")); tmp = CDR(tmp);
+        SET_TAG(tmp, install("by")); tmp = CDR(tmp);
+        SET_TAG(tmp, install("length.out")); tmp = CDR(tmp);
+        SET_TAG(tmp, install("along.with")); tmp = CDR(tmp);
+        SET_TAG(tmp, R_DotsSymbol);
+    }
+    
+    PROTECT(args = matchArgs(do_seq_formals, args, call));
 
     from = CAR(args); args = CDR(args);
     to = CAR(args); args = CDR(args);
@@ -913,7 +918,7 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("too many arguments"));
 
 done:
-    UNPROTECT(2);
+    UNPROTECT(1);
     return ans;
 }
 

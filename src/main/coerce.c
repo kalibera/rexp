@@ -2582,13 +2582,17 @@ SEXP attribute_hidden substituteList(SEXP el, SEXP rho)
 /* This is a primitive SPECIALSXP */
 SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ap, argList, env, s, t;
+    SEXP argList, env, s, t;
+    static SEXP do_substitute_formals = NULL;
 
     /* argument matching */
-    PROTECT(ap = list2(R_NilValue, R_NilValue));
-    SET_TAG(ap,  install("expr"));
-    SET_TAG(CDR(ap), install("env"));
-    PROTECT(argList = matchArgs(ap, args, call));
+    if (do_substitute_formals == NULL) {
+        do_substitute_formals = list2(R_NilValue, R_NilValue);
+        R_PreserveObject(do_substitute_formals);
+        SET_TAG(do_substitute_formals,  install("expr"));
+        SET_TAG(CDR(do_substitute_formals), install("env"));
+    }
+    PROTECT(argList = matchArgs(do_substitute_formals, args, call));
 
     /* set up the environment for substitution */
     if (CADR(argList) == R_MissingArg)
@@ -2607,7 +2611,7 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(env);
     PROTECT(t = CONS(duplicate(CAR(argList)), R_NilValue));
     s = substituteList(t, env);
-    UNPROTECT(4);
+    UNPROTECT(3);
     return CAR(s);
 }
 
