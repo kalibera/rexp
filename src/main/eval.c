@@ -2236,9 +2236,9 @@ R_INLINE SEXP allocatePromargsCell(SEXP tag, SEXP value) {
     R_PromargsStackTop = top + 1;
     SEXP s = top;
     
-    CAR(s) = value;
+    CAR(s) = value; /* ? refcnt */
     CDR(s) = R_NilValue;
-    TAG(s) = tag;
+    TAG(s) = tag; /* ? refcnt */
     s->sxpinfo = R_NilValue->sxpinfo; /* FIXME: avoid dereference? */
     TYPEOF(s) = LISTSXP;
     ATTRIB(s) = R_NilValue;
@@ -4017,8 +4017,9 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 } while (0)
 #endif
 
-//#define PUSHCALLARG(v) PUSHCALLARG_CELL(CONS_NR(v, R_NilValue))
-#define PUSHCALLARG(v) PUSHCALLARG_CELL(allocatePromargsCellNoTag(v))
+//#define CREATE_CALLARG_CELL(v) CONS_NR(v, R_NilValue)
+#define CREATE_CALLARG_CELL(v) allocatePromargsCellNoTag(v)
+#define PUSHCALLARG(v) PUSHCALLARG_CELL(CREATE_CALLARG_CELL(v))
 
 #define PUSHCALLARG_CELL(c) do { \
   SEXP __cell__ = (c); \
@@ -5081,7 +5082,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	      SEXP val, cell;
 	      if (ftype == BUILTINSXP) val = eval(CAR(h), rho);
 	      else val = mkPROMISE(CAR(h), rho);
-	      cell = CONS_NR(val, R_NilValue);
+	      cell = CREATE_CALLARG_CELL(val);
 	      PUSHCALLARG_CELL(cell);
 	      if (TAG(h) != R_NilValue) SET_TAG(cell, CreateTag(TAG(h)));
 	    }
