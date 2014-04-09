@@ -2686,7 +2686,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    SEXP value, argValue;
 	    /* create a promise to pass down to applyClosure  */
 	    if(!argsevald) {
-		argValue = promiseArgs(args, rho);
+		argValue = promiseArgsStack(args, rho);
 		SET_PRVALUE(CAR(argValue), x);
 	    } else argValue = args;
 	    PROTECT(argValue); nprotect++;
@@ -2726,7 +2726,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	if (pt == NULL || strcmp(pt,".default")) {
 	    RCNTXT cntxt;
 	    SEXP pargs, rho1;
-	    PROTECT(pargs = promiseArgs(args, rho)); nprotect++;
+	    PROTECT(pargs = promiseArgsStack(args, rho)); nprotect++;
 	    /* The context set up here is needed because of the way
 	       usemethod() is written.  DispatchGroup() repeats some
 	       internal usemethod() code and avoids the need for a
@@ -3003,7 +3003,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     /* out to a closure we need to wrap them in promises so that */
     /* they get duplicated and things like missing/substitute work. */
 
-    PROTECT(s = promiseArgs(CDR(call), rho));
+    PROTECT(s = promiseArgsStack(CDR(call), rho));
     if (length(s) != length(args))
 	error(_("dispatch error in group dispatch"));
     for (m = s ; m != R_NilValue ; m = CDR(m), args = CDR(args) ) {
@@ -4017,8 +4017,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 } while (0)
 #endif
 
-#define PUSHCALLARG(v) PUSHCALLARG_CELL(CONS_NR(v, R_NilValue))
-//#define PUSHCALLARG(v) allocatePromargsCellNoTag(v)
+//#define PUSHCALLARG(v) PUSHCALLARG_CELL(CONS_NR(v, R_NilValue))
+#define PUSHCALLARG(v) PUSHCALLARG_CELL(allocatePromargsCellNoTag(v))
 
 #define PUSHCALLARG_CELL(c) do { \
   SEXP __cell__ = (c); \
@@ -4063,7 +4063,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   int dispatched = FALSE;
   SEXP op = SYMVALUE(install(generic)); /**** avoid this */
 
-  PROTECT(pargs = promiseArgs(CDR(call), rho));
+  PROTECT(pargs = promiseArgsStack(CDR(call), rho));
   SET_PRVALUE(CAR(pargs), x);
 
   /**** Minimal hack to try to handle the S4 case.  If we do the check

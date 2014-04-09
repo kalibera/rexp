@@ -103,8 +103,9 @@ extern void *Rm_realloc(void * p, size_t n);
 static int gc_reporting = 0;
 static int gc_count = 0;
 
-/* #define PAS_ZEROING */	/* to speed up crashes in case of code errors */
+/* #define PAS_ZEROING	*/ /* to speed up crashes in case of code errors */
 /* #define PAS_DEBUGGING */
+/* #define PAS_INFO */ /* just print info about malloc / free for promargs stack */
 
 #define PAS_KEEPBLOCKS 1	/* how many unused stack blocks to keep during GC */
 
@@ -112,6 +113,11 @@ static int gc_count = 0;
 #define	PASNEXT(x)	CDR((x))   /* meta-data for next promargs stack block */
 
 static SEXPREC* promargs_stack_first = NULL;
+
+#ifdef PAS_INFO /* only for getpid, not that important */
+ #include <sys/types.h>
+ #include <unistd.h>
+#endif
 
 /* These are used in profiling to separete out time in GC */
 static Rboolean R_in_gc = TRUE;
@@ -491,6 +497,7 @@ static int NodeClassSize[NUM_SMALL_NODE_CLASSES] = { 0, 1, 2, 4, 6, 8, 16 };
 #define NODE_IS_OLDER(x, y) \
   (NODE_IS_MARKED(x) && \
    (! NODE_IS_MARKED(y) || NODE_GENERATION(x) > NODE_GENERATION(y)))
+
 
 static int num_old_gens_to_collect = 0;
 static int gen_gc_counts[NUM_OLD_GENERATIONS + 1];
@@ -1137,8 +1144,11 @@ static void old_to_new(SEXP x, SEXP y)
 #define FIX_REFCNT(x, old, new) do {} while (0)
 #endif
 
+/* FIXME: can we find a better way? */
+#define NODE_IS_ON_HEAP(x) ( NEXT_NODE(x) != NULL )
+
 #define CHECK_OLD_TO_NEW(x,y) do { \
-  if (NODE_IS_OLDER(CHK(x), CHK(y))) old_to_new(x,y);  } while (0)
+  if (NODE_IS_ON_HEAP(x) && NODE_IS_OLDER(CHK(x), CHK(y))) old_to_new(x,y);  } while (0)
 
 
 /* Node Sorting.  SortNodes attempts to improve locality of reference
@@ -2005,10 +2015,6 @@ static void mem_err_malloc(R_size_t size)
 #define PP_REDZONE_SIZE 1000L
 static int R_StandardPPStackSize, R_RealPPStackSize;
 
-
-
-
-
 void dumpPromargStack() {
   fprintf(stderr, "Promargs stack dump ==================================\n");
   fprintf(stderr, "Base = %p, Top = %p, End = %p\n", R_PromargsStackBase, R_PromargsStackTop, R_PromargsStackEnd);
@@ -2071,6 +2077,9 @@ void expandPromargsStack() {
     fprintf(stderr, "Failed to allocate promargs stack of size %lu\n", allocSize);
     R_Suicide("couldn't allocate promargs stack");
   }
+#ifdef PAS_INFO  
+  fprintf(stderr, "INFO [%d]: Allocated %lu bytes for promargs stack\n", getpid(), allocSize);
+#endif  
 
 #ifdef PAS_ZEROING
   bzero(header, allocSize);
@@ -2116,7 +2125,6 @@ void cleanupPromargsStack() {
   bzero(R_PromargsStackTop, (R_PromargsStackEnd - R_PromargsStackTop) * sizeof(SEXPREC));
 #endif  
 
-
   /* keep some currently unused blocks */
   SEXPREC *prevBase = R_PromargsStackBase;
   SEXPREC *base = PASNEXT(prevBase - 1);
@@ -2136,17 +2144,21 @@ void cleanupPromargsStack() {
   /* remove remaining blocks */
   if (base != NULL) {
     PASNEXT(prevBase - 1) = NULL;  /* unlink the remaining stack blocks */
-    
     do {
       SEXPREC *h = base - 1;
       base = PASNEXT(h);
 
-#ifdef PAS_ZEROING
+#if defined(PAS_ZEROING) || defined(PAS_INFO)
       size_t allocSize = (PASEND(h) - h) * sizeof(SEXPREC);
+#endif
+      
+#ifdef PAS_ZEROING
       bzero(h, allocSize);
 #endif
-
       free(h);
+#ifdef PAS_INFO      
+      fprintf(stderr, "INFO [%d]: Freed %lu bytes of promargs stack (cleaned size %lu)\n", getpid(), allocSize, allocSize / sizeof(SEXPREC));
+#endif
     } while( base != NULL );
   }
 

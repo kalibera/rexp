@@ -498,7 +498,7 @@ typedef struct RPRSTACK {
 
 /* Promargs stack */
 
-#define R_PROMARGSSTACKINITSIZE 10000
+#define R_PROMARGSSTACKINITSIZE 4096
 extern0 SEXPREC *R_PromargsStackBase, *R_PromargsStackEnd, *R_PromargsStackTop;
 
 void switchPromargsStack(SEXPREC *, SEXPREC *, SEXPREC *);
