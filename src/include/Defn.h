@@ -496,6 +496,13 @@ typedef struct RPRSTACK {
     struct RPRSTACK *next;
 } RPRSTACK;
 
+/* Promargs stack */
+
+#define R_PROMARGSSTACKINITSIZE 10000
+extern0 SEXPREC *R_PromargsStackBase, *R_PromargsStackEnd, *R_PromargsStackTop;
+
+void switchPromargsStack(SEXPREC *, SEXPREC *, SEXPREC *);
+
 /* Evaluation Context Structure */
 typedef struct RCNTXT {
     struct RCNTXT *nextcontext;	/* The next context up the chain */
@@ -520,6 +527,9 @@ typedef struct RCNTXT {
 #ifdef BC_INT_STACK
     IStackval *intstack;
 #endif
+    SEXPREC *promargsstackbase;
+    SEXPREC *promargsstacktop;
+    SEXPREC *promargsstackend;    /* could be computed from base */
     SEXP srcref;	        /* The source line in effect */
     int browserfinish;     /* should browser finish this context without stopping */
 } RCNTXT, *context;
@@ -910,6 +920,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define PrintVersionString    	Rf_PrintVersionString
 # define PrintWarnings		Rf_PrintWarnings
 # define promiseArgs		Rf_promiseArgs
+# define promiseArgsStack	Rf_promiseArgsStack
 # define RealFromComplex	Rf_RealFromComplex
 # define RealFromInteger	Rf_RealFromInteger
 # define RealFromLogical	Rf_RealFromLogical
@@ -1102,6 +1113,10 @@ void process_site_Renviron(void);
 void process_system_Renviron(void);
 void process_user_Renviron(void);
 SEXP promiseArgs(SEXP, SEXP);
+SEXP promiseArgsStack(SEXP, SEXP);
+SEXP allocatePromargsCell(SEXP tag, SEXP value);
+SEXP allocatePromargsCellNoTag(SEXP value);
+void expandPromargsStack();
 void Rcons_vprintf(const char *, va_list);
 SEXP R_data_class(SEXP , Rboolean);
 SEXP R_data_class2(SEXP);
@@ -1130,6 +1145,7 @@ void ssort(SEXP*,int);
 int StrToInternal(const char *);
 SEXP strmat2intmat(SEXP, SEXP, SEXP);
 SEXP substituteList(SEXP, SEXP);
+
 Rboolean tsConform(SEXP,SEXP);
 SEXP tspgets(SEXP, SEXP);
 SEXP type2symbol(SEXPTYPE);

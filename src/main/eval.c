@@ -672,7 +672,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 	}
 	else if (TYPEOF(op) == CLOSXP) {
-	    PROTECT(tmp = promiseArgs(CDR(e), rho));
+	    PROTECT(tmp = promiseArgsStack(CDR(e), rho));
 	    tmp = applyClosure(e, op, tmp, rho, R_BaseEnv);
 	    UNPROTECT(1);
 	}
@@ -2224,6 +2224,36 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
     return head;
 }
 
+R_INLINE SEXP allocatePromargsCell(SEXP tag, SEXP value) {
+    SEXPREC *top = R_PromargsStackTop;
+    
+    if (top == R_PromargsStackEnd) {
+        /* double the stack */
+        expandPromargsStack();
+        top = R_PromargsStackTop;
+    }
+    
+    R_PromargsStackTop = top + 1;
+    SEXP s = top;
+    
+    CAR(s) = value;
+    CDR(s) = R_NilValue;
+    TAG(s) = tag;
+    s->sxpinfo = R_NilValue->sxpinfo; /* FIXME: avoid dereference? */
+    TYPEOF(s) = LISTSXP;
+    ATTRIB(s) = R_NilValue;
+    s->gengc_next_node = NULL; /* unused! */
+    s->gengc_prev_node = NULL; /* unused! */
+    MARK(s) = 1; /* the GC should leave this alone */
+    
+    /* FIXME: what to do about REFCNT? */
+    
+    return s;
+}
+
+R_INLINE SEXP allocatePromargsCellNoTag(SEXP value) {
+    return allocatePromargsCell(R_NilValue, value);
+}
 
 /* Create a promise to evaluate each argument.	Although this is most */
 /* naturally attacked with a recursive algorithm, we use the iterative */
@@ -2275,6 +2305,51 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	el = CDR(el);
     }
     UNPROTECT(1);
+    return CDR(ans);
+}
+
+SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
+{
+    SEXP ans, h, tail;
+
+    /* FIXME: can be rewritten to avoid allocating the first cell */
+    ans = tail = allocatePromargsCell(R_NilValue, R_NilValue);
+
+    while(el != R_NilValue) {
+
+	/* If we have a ... symbol, we look to see what it is bound to.
+	 * If its binding is Null (i.e. zero length)
+	 * we just ignore it and return the cdr with all its
+	 * expressions promised; if it is bound to a ... list
+	 * of promises, we repromise all the promises and then splice
+	 * the list of resulting values into the return value.
+	 * Anything else bound to a ... symbol is an error
+	 */
+
+	/* Is this double promise mechanism really needed? */
+
+	if (CAR(el) == R_DotsSymbol) {
+	    h = findVar(CAR(el), rho);
+	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
+		while (h != R_NilValue) {
+		    SETCDR(tail, allocatePromargsCell(TAG(h), mkPROMISE(CAR(h), rho)));
+		    tail = CDR(tail);
+		    h = CDR(h);
+		}
+	    }
+	    else if (h != R_MissingArg)
+		error(_("'...' used in an incorrect context"));
+	}
+	else if (CAR(el) == R_MissingArg) {
+	    SETCDR(tail, allocatePromargsCell(TAG(el), R_MissingArg));
+	    tail = CDR(tail);
+	}
+	else {
+	    SETCDR(tail, allocatePromargsCell(TAG(el), mkPROMISE(CAR(el), rho)));
+	    tail = CDR(tail);
+	}
+	el = CDR(el);
+    }
     return CDR(ans);
 }
 
@@ -3943,6 +4018,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 #endif
 
 #define PUSHCALLARG(v) PUSHCALLARG_CELL(CONS_NR(v, R_NilValue))
+//#define PUSHCALLARG(v) allocatePromargsCellNoTag(v)
 
 #define PUSHCALLARG_CELL(c) do { \
   SEXP __cell__ = (c); \

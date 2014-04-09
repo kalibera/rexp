@@ -103,6 +103,16 @@ extern void *Rm_realloc(void * p, size_t n);
 static int gc_reporting = 0;
 static int gc_count = 0;
 
+/* #define PAS_ZEROING */	/* to speed up crashes in case of code errors */
+/* #define PAS_DEBUGGING */
+
+#define PAS_KEEPBLOCKS 1	/* how many unused stack blocks to keep during GC */
+
+#define	PASEND(x)	CAR((x))   /* *StackEnd for this promargs stack block */
+#define	PASNEXT(x)	CDR((x))   /* meta-data for next promargs stack block */
+
+static SEXPREC* promargs_stack_first = NULL;
+
 /* These are used in profiling to separete out time in GC */
 static Rboolean R_in_gc = TRUE;
 int R_gc_running() { return R_in_gc; }
@@ -1465,7 +1475,6 @@ SEXP attribute_hidden do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 
 /* The Generational Collector. */
-
 #define PROCESS_NODES() do { \
     while (forwarded_nodes != NULL) { \
 	s = forwarded_nodes; \
@@ -1606,13 +1615,42 @@ static void RunGenCollect(R_size_t size_needed)
 
     FORWARD_NODE(R_PreciousList);
 
-    for (i = 0; i < R_PPStackTop; i++)	   /* Protected pointers */
-	FORWARD_NODE(R_PPStack[i]);
+    for (i = 0; i < R_PPStackTop; i++) {	   /* Protected pointers */
+        /* FIXME: Can ignore pointers to promargs stack here, but they are marked anyway */
+  	FORWARD_NODE(R_PPStack[i]);
+    }
 
     FORWARD_NODE(R_VStack);		   /* R_alloc stack */
 
     for (SEXP *sp = R_BCNodeStackBase; sp < R_BCNodeStackTop; sp++)
 	FORWARD_NODE(*sp);
+
+	/* promargs stacks */
+	
+    SEXPREC *pasbase = promargs_stack_first;
+    SEXPREC *pasheader;
+    SEXPREC *pasend;
+    
+    while (pasbase != NULL) {
+      pasheader = pasbase - 1;
+      pasend = PASEND(pasheader);
+      
+      if (R_PromargsStackTop >= pasbase && R_PromargsStackTop <= pasend) {
+        /* the last block with live data */
+        for (SEXPREC *sp = R_PromargsStackBase; sp < R_PromargsStackTop; sp++) {
+          FORWARD_NODE(TAG(sp));
+          FORWARD_NODE(CAR(sp));
+        }
+        break;
+      }	
+      
+      /* not the last block, scan all of it */
+      for (SEXPREC *sp = pasbase; sp < pasend; sp++) {
+        FORWARD_NODE(TAG(sp));
+  	FORWARD_NODE(CAR(sp));
+      }	
+      pasbase = PASNEXT(pasheader);
+    }
 
     /* main processing loop */
     PROCESS_NODES();
@@ -1967,6 +2005,176 @@ static void mem_err_malloc(R_size_t size)
 #define PP_REDZONE_SIZE 1000L
 static int R_StandardPPStackSize, R_RealPPStackSize;
 
+
+
+
+
+void dumpPromargStack() {
+  fprintf(stderr, "Promargs stack dump ==================================\n");
+  fprintf(stderr, "Base = %p, Top = %p, End = %p\n", R_PromargsStackBase, R_PromargsStackTop, R_PromargsStackEnd);
+  fprintf(stderr, "stack blocks:\n");
+  
+  SEXPREC *b;
+  for (b = promargs_stack_first; b != NULL; b = PASNEXT(b - 1)) {
+    SEXPREC *header = b - 1;
+    SEXPREC *end = PASEND(header);
+    fprintf(stderr, "\tbase = %p end = %p (size = %lu)", b, end, (end - b));
+    if (R_PromargsStackTop >= b  && R_PromargsStackTop <= end) {
+      fprintf(stderr, "  < CURRENTLY ACTIVE >\n");
+    } else {
+      fprintf(stderr, "\n");
+    }
+  }
+}
+
+void expandPromargsStack() {
+
+#ifdef PAS_DEBUGGING
+  fprintf(stderr, "Expanding promargs stack...\n");
+  dumpPromargStack();
+#endif  
+  
+  int first = (promargs_stack_first == NULL);
+
+  if (!first) {
+    SEXPREC *curHeader = R_PromargsStackBase - 1;
+    if (PASNEXT(curHeader) != NULL) {
+      /* there is one more stack block, already allocated */
+      
+      R_PromargsStackBase = PASNEXT(curHeader);
+      R_PromargsStackEnd = PASEND(R_PromargsStackBase - 1);
+      R_PromargsStackTop = R_PromargsStackBase;
+      
+#ifdef PAS_ZEROING
+      bzero(R_PromargsStackBase, (R_PromargsStackEnd - R_PromargsStackBase) * sizeof(SEXPREC));
+#endif
+
+#ifdef PAS_DEBUGGING
+      fprintf(stderr, "Expanded promargs stack (1)\n");
+      dumpPromargStack();
+#endif      
+      return;
+    }
+  }
+
+  size_t wantedSize;
+  if (first) {
+    wantedSize = R_PROMARGSSTACKINITSIZE;
+  } else {
+    wantedSize = 2 * (R_PromargsStackEnd - R_PromargsStackBase);
+  }
+
+  /* allocate a new stack block */
+  size_t allocSize = (wantedSize + 1) * sizeof(SEXPREC);
+  SEXPREC *header = (SEXPREC *) malloc(allocSize);  /* +1 for the meta-data */
+  if (header == NULL) {
+    fprintf(stderr, "Failed to allocate promargs stack of size %lu\n", allocSize);
+    R_Suicide("couldn't allocate promargs stack");
+  }
+
+#ifdef PAS_ZEROING
+  bzero(header, allocSize);
+#endif
+  
+  SEXPREC *base = header + 1;
+  SEXPREC *end = base + wantedSize;
+  PASEND(header) = end;
+  PASNEXT(header) = NULL;
+  
+  /* link the new block in */
+  if (first) {
+    promargs_stack_first = base;
+  } else {
+    SEXPREC *prevHeader = R_PromargsStackBase - 1;  
+    PASNEXT(prevHeader) = base;
+  }
+
+  R_PromargsStackBase = base;
+  R_PromargsStackTop = base;
+  R_PromargsStackEnd = end;
+  
+#ifdef PAS_DEBUGGING  
+  fprintf(stderr, "Expanded promargs stack (2)\n");
+  dumpPromargStack();
+#endif  
+
+}
+
+/* free unused promargs stack blocks and zero unallocated stack memory */
+void cleanupPromargsStack() {
+
+#ifdef PAS_DEBUGGING
+  fprintf(stderr, "Cleaning up promargs stack...\n");
+  dumpPromargStack();
+#endif  
+
+  if (promargs_stack_first == NULL) {
+    return;
+  }
+  
+#ifdef PAS_ZEROING
+  bzero(R_PromargsStackTop, (R_PromargsStackEnd - R_PromargsStackTop) * sizeof(SEXPREC));
+#endif  
+
+
+  /* keep some currently unused blocks */
+  SEXPREC *prevBase = R_PromargsStackBase;
+  SEXPREC *base = PASNEXT(prevBase - 1);
+  int i;
+  
+  for(int i = 0; i < PAS_KEEPBLOCKS && base != NULL; i++) {
+
+#ifdef PAS_ZEROING
+    size_t zeroSize = (PASEND(base - 1) - base) * sizeof(SEXPREC);
+    bzero(base, zeroSize);
+#endif  
+  
+    prevBase = base;
+    base = PASNEXT(prevBase - 1);
+  }
+  
+  /* remove remaining blocks */
+  if (base != NULL) {
+    PASNEXT(prevBase - 1) = NULL;  /* unlink the remaining stack blocks */
+    
+    do {
+      SEXPREC *h = base - 1;
+      base = PASNEXT(h);
+
+#ifdef PAS_ZEROING
+      size_t allocSize = (PASEND(h) - h) * sizeof(SEXPREC);
+      bzero(h, allocSize);
+#endif
+
+      free(h);
+    } while( base != NULL );
+  }
+
+#ifdef PAS_DEBUGGING  
+  fprintf(stderr, "Cleaned up promargs stack (2)\n");
+  dumpPromargStack();
+#endif  
+
+}
+
+void switchPromargsStack(SEXPREC *base, SEXPREC *top, SEXPREC *end) {
+
+#ifdef PAS_ZEROING
+  /* this is slow */
+  cleanupPromargsStack();
+#endif  
+
+  R_PromargsStackBase = base;
+  R_PromargsStackTop = top;
+  R_PromargsStackEnd = end;
+  
+#ifdef PAS_ZEROING
+  /* this is slow */
+  cleanupPromargsStack();
+#endif  
+}
+
+
 void attribute_hidden InitMemory()
 {
     int i;
@@ -2048,6 +2256,8 @@ void attribute_hidden InitMemory()
     R_BCIntStackTop = R_BCIntStackBase;
     R_BCIntStackEnd = R_BCIntStackBase + R_BCINTSTACKSIZE;
 #endif
+
+    expandPromargsStack(); /* allocates initial promargs stack */
 
     R_weak_refs = R_NilValue;
 
@@ -2802,6 +3012,7 @@ static void R_gc_internal(R_size_t size_needed)
     BEGIN_SUSPEND_INTERRUPTS {
 	R_in_gc = TRUE;
 	gc_start_timing();
+	cleanupPromargsStack();
 	RunGenCollect(size_needed);
 	gc_end_timing();
 	R_in_gc = FALSE;

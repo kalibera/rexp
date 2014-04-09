@@ -61,6 +61,9 @@
  R_BCNodeStackBase
  R_BCNodeStackEnd
  R_BCNodeStackTop
+ R_PromargsStackBase
+ R_PromargsStackEnd
+ R_PromargsStackTop
  R_BrowseLevel
  R_BrowseLines
  R_BrowserLastCommand

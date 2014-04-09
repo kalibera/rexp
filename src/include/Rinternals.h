@@ -1405,7 +1405,6 @@ SEXP R_FixupRHS(SEXP x, SEXP y);
     } while (FALSE)
 #endif
 
-
 #ifdef __cplusplus
 }
 #endif
