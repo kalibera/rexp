@@ -103,7 +103,7 @@ extern void *Rm_realloc(void * p, size_t n);
 static int gc_reporting = 0;
 static int gc_count = 0;
 
-/* #define PAS_ZEROING	*/ /* to speed up crashes in case of code errors */
+/* #define PAS_ZEROING	 */ /* to speed up crashes in case of code errors */
 /* #define PAS_DEBUGGING */
 /* #define PAS_INFO */ /* just print info about malloc / free for promargs stack */
 
@@ -2184,6 +2184,32 @@ void switchPromargsStack(SEXPREC *base, SEXPREC *top, SEXPREC *end) {
   /* this is slow */
   cleanupPromargsStack();
 #endif  
+}
+
+/* slow version */
+void releasePromargs(SEXPREC *newTop) {
+
+  SEXPREC *base;
+  int passedCurrentBlock = 0;
+  for (base = promargs_stack_first; base != NULL && !passedCurrentBlock; base = PASNEXT(base - 1)) {
+    SEXPREC *header = base - 1;
+    SEXPREC *end = PASEND(header);
+    
+    passedCurrentBlock = (base == R_PromargsStackBase);
+    if (POINTER_IN_RANGE(base, newTop, end)) {
+      if (passedCurrentBlock && newTop > R_PromargsStackTop) {
+        R_Suicide("Attempt to release promargs above current stack top.");
+      }
+      R_PromargsStackBase = base;
+      R_PromargsStackTop = newTop;
+      R_PromargsStackEnd = end;
+      return ;
+    }
+  }
+  
+  if (newTop != R_NilValue) {
+    R_Suicide("Did not find promargs value on promargs stacks.");
+  }
 }
 
 

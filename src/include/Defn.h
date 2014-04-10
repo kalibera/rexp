@@ -502,6 +502,18 @@ typedef struct RPRSTACK {
 extern0 SEXPREC *R_PromargsStackBase, *R_PromargsStackEnd, *R_PromargsStackTop;
 
 void switchPromargsStack(SEXPREC *, SEXPREC *, SEXPREC *);
+void releasePromargs(SEXPREC *);
+
+#define POINTER_IN_RANGE(start, x, end) ((uintptr_t) x - (uintptr_t)start <= (uintptr_t) end - (uintptr_t)start)
+#define RELEASE_PROMARGS(x) do { \
+  if (x == R_NilValue) { \
+  } else if (POINTER_IN_RANGE(R_PromargsStackBase, x, R_PromargsStackEnd)) { \
+    R_PromargsStackTop = x; \
+  } else { \
+    releasePromargs(x); \
+  } \
+  x = NULL; \
+} while(0)
 
 /* Evaluation Context Structure */
 typedef struct RCNTXT {

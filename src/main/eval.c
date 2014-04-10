@@ -672,9 +672,11 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 	}
 	else if (TYPEOF(op) == CLOSXP) {
-	    PROTECT(tmp = promiseArgsStack(CDR(e), rho));
-	    tmp = applyClosure(e, op, tmp, rho, R_BaseEnv);
+	    SEXP pargs;
+	    PROTECT(pargs = promiseArgsStack(CDR(e), rho));
+	    tmp = applyClosure(e, op, pargs, rho, R_BaseEnv);
 	    UNPROTECT(1);
+	    RELEASE_PROMARGS(pargs);
 	}
 	else
 	    error(_("attempt to apply non-function"));
@@ -2684,9 +2686,10 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	/* Try for formal method. */
 	if(IS_S4_OBJECT(x) && R_has_methods(op)) {
 	    SEXP value, argValue;
+	    SEXP pargs = NULL;
 	    /* create a promise to pass down to applyClosure  */
 	    if(!argsevald) {
-		argValue = promiseArgsStack(args, rho);
+		argValue = pargs = promiseArgsStack(args, rho);
 		SET_PRVALUE(CAR(argValue), x);
 	    } else argValue = args;
 	    PROTECT(argValue); nprotect++;
@@ -2695,6 +2698,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    if(value) {
 		*ans = value;
 		UNPROTECT(nprotect);
+		if (pargs != NULL) {
+		    RELEASE_PROMARGS(pargs);
+		}
 		return 1;
 	    }
 	    else {
@@ -2716,6 +2722,9 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 		nprotect++;
 		args = argValue;
 		argsevald = 1;
+	    }
+	    if (pargs != NULL) {
+	        RELEASE_PROMARGS(pargs);
 	    }
 	}
 	if (TYPEOF(CAR(call)) == SYMSXP)
@@ -2749,10 +2758,12 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    {
 		endcontext(&cntxt);
 		UNPROTECT(nprotect);
+		RELEASE_PROMARGS(pargs);
 		return 1;
 	    }
 	    endcontext(&cntxt);
 	    DECREMENT_REFCNT(x);
+	    RELEASE_PROMARGS(pargs);
 	}
     }
     if(!argsevald) {
@@ -3014,6 +3025,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     *ans = applyClosure(t, lsxp, s, rho, newrho);
     UNPROTECT(5);
+    RELEASE_PROMARGS(s);
     return 1;
 }
 
@@ -4076,6 +4088,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
     if (val) {
       *pv = val;
       UNPROTECT(1);
+      RELEASE_PROMARGS(pargs);
       return TRUE;
     }
   }
@@ -4087,6 +4100,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
     dispatched = TRUE;
   endcontext(&cntxt);
   UNPROTECT(2);
+  RELEASE_PROMARGS(pargs);
   if (! dispatched) DECREMENT_REFCNT(x);
   return dispatched;
 }
@@ -5134,6 +5148,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  break;
 	case CLOSXP:
 	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  RELEASE_PROMARGS(args);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -5488,6 +5503,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SETCAR(args, prom);
 	  /* make the call */
 	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  RELEASE_PROMARGS(args);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -5530,6 +5546,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SETCAR(args, prom);
 	  /* make the call */
 	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  RELEASE_PROMARGS(args);
 	  break;
 	default: error(_("bad function"));
 	}
