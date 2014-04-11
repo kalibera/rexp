@@ -1650,6 +1650,7 @@ static void RunGenCollect(R_size_t size_needed)
         for (SEXPREC *sp = R_PromargsStackBase; sp < R_PromargsStackTop; sp++) {
           FORWARD_NODE(TAG(sp));
           FORWARD_NODE(CAR(sp));
+          FORWARD_NODE(CDR(sp)); /* be robust against heap-cells appearing in promargs list */
         }
         break;
       }	
@@ -1658,6 +1659,7 @@ static void RunGenCollect(R_size_t size_needed)
       for (SEXPREC *sp = pasbase; sp < pasend; sp++) {
         FORWARD_NODE(TAG(sp));
   	FORWARD_NODE(CAR(sp));
+  	FORWARD_NODE(CDR(sp)); /* be robust against heap-cells appearing in promargs list */
       }	
       pasbase = PASNEXT(pasheader);
     }
