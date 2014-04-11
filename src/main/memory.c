@@ -103,6 +103,8 @@ extern void *Rm_realloc(void * p, size_t n);
 static int gc_reporting = 0;
 static int gc_count = 0;
 
+#ifdef USE_PROMARGS_STACK
+
 /* #define PAS_ZEROING	 */ /* to speed up crashes in case of code errors */
 /* #define PAS_DEBUGGING */
 /* #define PAS_INFO */ /* just print info about malloc / free for promargs stack */
@@ -118,6 +120,8 @@ static SEXPREC* promargs_stack_first = NULL;
  #include <sys/types.h>
  #include <unistd.h>
 #endif
+
+#endif /* USE_PROMARGS_STACK */
 
 /* These are used in profiling to separete out time in GC */
 static Rboolean R_in_gc = TRUE;
@@ -1635,6 +1639,7 @@ static void RunGenCollect(R_size_t size_needed)
     for (SEXP *sp = R_BCNodeStackBase; sp < R_BCNodeStackTop; sp++)
 	FORWARD_NODE(*sp);
 
+#ifdef USE_PROMARGS_STACK
 	/* promargs stacks */
 	
     SEXPREC *pasbase = promargs_stack_first;
@@ -1663,6 +1668,7 @@ static void RunGenCollect(R_size_t size_needed)
       }	
       pasbase = PASNEXT(pasheader);
     }
+#endif /* USE_PROMARGS_STACK */    
 
     /* main processing loop */
     PROCESS_NODES();
@@ -2017,6 +2023,8 @@ static void mem_err_malloc(R_size_t size)
 #define PP_REDZONE_SIZE 1000L
 static int R_StandardPPStackSize, R_RealPPStackSize;
 
+#ifdef USE_PROMARGS_STACK
+
 void dumpPromargStack() {
   fprintf(stderr, "Promargs stack dump ==================================\n");
   fprintf(stderr, "Base = %p, Top = %p, End = %p\n", R_PromargsStackBase, R_PromargsStackTop, R_PromargsStackEnd);
@@ -2214,6 +2222,7 @@ void releasePromargs(SEXPREC *newTop) {
   }
 }
 
+#endif /* USE_PROMARGS_STACK */
 
 void attribute_hidden InitMemory()
 {
@@ -2297,7 +2306,9 @@ void attribute_hidden InitMemory()
     R_BCIntStackEnd = R_BCIntStackBase + R_BCINTSTACKSIZE;
 #endif
 
+#ifdef USE_PROMARGS_STACK
     expandPromargsStack(); /* allocates initial promargs stack */
+#endif    
 
     R_weak_refs = R_NilValue;
 
@@ -3052,7 +3063,9 @@ static void R_gc_internal(R_size_t size_needed)
     BEGIN_SUSPEND_INTERRUPTS {
 	R_in_gc = TRUE;
 	gc_start_timing();
+#ifdef USE_PROMARGS_STACK	
 	cleanupPromargsStack();
+#endif	
 	RunGenCollect(size_needed);
 	gc_end_timing();
 	R_in_gc = FALSE;

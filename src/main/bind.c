@@ -1041,7 +1041,7 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
      *	  drop through to the default code.
      */
 
-    PROTECT(args = promiseArgsStack(args, env));
+    PROTECT(args = PROMISE_ARGS(args, env));
 
     generic = ((PRIMVAL(op) == 1) ? "cbind" : "rbind");
     klass = "";
@@ -1085,9 +1085,10 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     if (method != R_NilValue) {
 	PROTECT(method);
-	args = applyClosure(call, method, args, env, R_BaseEnv);
+	SEXP res = applyClosure(call, method, args, env, R_BaseEnv);
 	UNPROTECT(2);
-	return args;
+	RELEASE_PROMARGS(args);
+	return res;
     }
 
     /* Dispatch based on class membership has failed. */
@@ -1139,6 +1140,7 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
 	a = cbind(call, args, mode, rho, deparse_level);
     else
 	a = rbind(call, args, mode, rho, deparse_level);
+    /* FIXME: can release promargs? could they have leaked? */
     UNPROTECT(1);
     return a;
 }

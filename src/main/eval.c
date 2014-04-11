@@ -673,7 +673,7 @@ SEXP eval(SEXP e, SEXP rho)
 	}
 	else if (TYPEOF(op) == CLOSXP) {
 	    SEXP pargs;
-	    PROTECT(pargs = promiseArgsStack(CDR(e), rho));
+	    PROTECT(pargs = PROMISE_ARGS(CDR(e), rho));
 	    tmp = applyClosure(e, op, pargs, rho, R_BaseEnv);
 	    UNPROTECT(1);
 	    RELEASE_PROMARGS(pargs);
@@ -2226,6 +2226,8 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
     return head;
 }
 
+#ifdef USE_PROMARGS_STACK
+
 R_INLINE SEXP allocatePromargsCell(SEXP tag, SEXP value) {
     SEXPREC *top = R_PromargsStackTop;
     
@@ -2256,6 +2258,8 @@ R_INLINE SEXP allocatePromargsCell(SEXP tag, SEXP value) {
 R_INLINE SEXP allocatePromargsCellNoTag(SEXP value) {
     return allocatePromargsCell(R_NilValue, value);
 }
+
+#endif /* USE_PROMARGS_STACK */
 
 /* Create a promise to evaluate each argument.	Although this is most */
 /* naturally attacked with a recursive algorithm, we use the iterative */
@@ -2310,6 +2314,8 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
     return CDR(ans);
 }
 
+#ifdef USE_PROMARGS_STACK
+
 SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 {
     SEXP ans, h, tail;
@@ -2355,6 +2361,7 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
     return CDR(ans);
 }
 
+#endif /* USE_PROMARGS_STACK */
 
 /* Check that each formal is a symbol */
 
@@ -2689,7 +2696,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    SEXP pargs = NULL;
 	    /* create a promise to pass down to applyClosure  */
 	    if(!argsevald) {
-		argValue = pargs = promiseArgsStack(args, rho);
+		argValue = pargs = PROMISE_ARGS(args, rho);
 		SET_PRVALUE(CAR(argValue), x);
 	    } else argValue = args;
 	    PROTECT(argValue); nprotect++;
@@ -2735,7 +2742,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	if (pt == NULL || strcmp(pt,".default")) {
 	    RCNTXT cntxt;
 	    SEXP pargs, rho1;
-	    PROTECT(pargs = promiseArgsStack(args, rho)); nprotect++;
+	    PROTECT(pargs = PROMISE_ARGS(args, rho)); nprotect++;
 	    /* The context set up here is needed because of the way
 	       usemethod() is written.  DispatchGroup() repeats some
 	       internal usemethod() code and avoids the need for a
@@ -3014,7 +3021,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     /* out to a closure we need to wrap them in promises so that */
     /* they get duplicated and things like missing/substitute work. */
 
-    PROTECT(s = promiseArgsStack(CDR(call), rho));
+    PROTECT(s = PROMISE_ARGS(CDR(call), rho));
     if (length(s) != length(args))
 	error(_("dispatch error in group dispatch"));
     for (m = s ; m != R_NilValue ; m = CDR(m), args = CDR(args) ) {
@@ -4029,8 +4036,15 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 } while (0)
 #endif
 
-//#define CREATE_CALLARG_CELL(v) CONS_NR(v, R_NilValue)
-#define CREATE_CALLARG_CELL(v) allocatePromargsCellNoTag(v)
+#ifdef USE_PROMARGS_STACK
+  /* BUILTINS could possibly leak their arguments/promargs */
+  #define CREATE_CALLARG_CELL(v) ((ftype == BUILTINSXP) ? CONS_NR(v,R_NilValue) : allocatePromargsCellNoTag(v))
+
+#else /* not USE_PROMARGS_STACK */
+  #define CREATE_CALLARG_CELL(v) CONS_NR(v, R_NilValue)
+
+#endif
+
 #define PUSHCALLARG(v) PUSHCALLARG_CELL(CREATE_CALLARG_CELL(v))
 
 #define PUSHCALLARG_CELL(c) do { \
@@ -4076,7 +4090,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   int dispatched = FALSE;
   SEXP op = SYMVALUE(install(generic)); /**** avoid this */
 
-  PROTECT(pargs = promiseArgsStack(CDR(call), rho));
+  PROTECT(pargs = PROMISE_ARGS(CDR(call), rho));
   SET_PRVALUE(CAR(pargs), x);
 
   /**** Minimal hack to try to handle the S4 case.  If we do the check

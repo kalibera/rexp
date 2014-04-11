@@ -1474,12 +1474,13 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	if(isFunction(value)) {
 	    /* found a method, call it with promised args */
 	    if(!promisedArgs) {
-		PROTECT(s = promiseArgsStack(CDR(call), rho));
+		PROTECT(s = PROMISE_ARGS(CDR(call), rho));
 		if (length(s) != length(args)) error(_("dispatch error"));
 		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 		    SET_PRVALUE(CAR(b), CAR(a));
 		value =  applyClosure(call, value, s, rho, R_BaseEnv);
 		UNPROTECT(1);
+		RELEASE_PROMARGS(s);
 		return value;
 	    } else
 		return applyClosure(call, value, args, rho, R_BaseEnv);
@@ -1493,12 +1494,13 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
     /* To do:  arrange for the setting to be restored in case of an
        error in method search */
     if(!promisedArgs) {
-	PROTECT(s = promiseArgsStack(CDR(call), rho));
+	PROTECT(s = PROMISE_ARGS(CDR(call), rho));
 	if (length(s) != length(args)) error(_("dispatch error"));
 	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 	    SET_PRVALUE(CAR(b), CAR(a));
 	value = applyClosure(call, fundef, s, rho, R_BaseEnv);
 	UNPROTECT(1);
+	RELEASE_PROMARGS(s);
     } else
 	value = applyClosure(call, fundef, args, rho, R_BaseEnv);
     prim_methods[offset] = current;

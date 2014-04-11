@@ -130,7 +130,9 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
 	    c->cend = NULL; /* prevent recursion */
 	    R_HandlerStack = c->handlerstack;
 	    R_RestartStack = c->restartstack;
+#ifdef USE_PROMARGS_STACK	    
 	    switchPromargsStack(c->promargsstackbase, c->promargsstacktop, c->promargsstackend);
+#endif	    
 	    cend(c->cenddata);
 	}
 	if (c->cloenv != R_NilValue && c->conexit != R_NilValue) {
@@ -138,7 +140,9 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
 	    c->conexit = R_NilValue; /* prevent recursion */
 	    R_HandlerStack = c->handlerstack;
 	    R_RestartStack = c->restartstack;
+#ifdef USE_PROMARGS_STACK	    
 	    switchPromargsStack(c->promargsstackbase, c->promargsstacktop, c->promargsstackend);	    
+#endif	    
 	    PROTECT(s);
 	    /* Since these are run before any jumps rather than after
 	       jumping to the context where the exit handler was set
@@ -184,7 +188,9 @@ void attribute_hidden R_restore_globals(RCNTXT *cptr)
 #ifdef BC_INT_STACK
     R_BCIntStackTop = cptr->intstack;
 #endif
+#ifdef USE_PROMARGS_STACK
     switchPromargsStack(cptr->promargsstackbase, cptr->promargsstacktop, cptr->promargsstackend);    
+#endif    
     R_Srcref = cptr->srcref;
 }
 
@@ -243,9 +249,11 @@ void begincontext(RCNTXT * cptr, int flags,
 #ifdef BC_INT_STACK
     cptr->intstack = R_BCIntStackTop;
 #endif
+#ifdef USE_PROMARGS_STACK
     cptr->promargsstackbase = R_PromargsStackBase;
     cptr->promargsstacktop = R_PromargsStackTop;
     cptr->promargsstackend = R_PromargsStackEnd;
+#endif    
     cptr->srcref = R_Srcref;    
     cptr->browserfinish = R_GlobalContext->browserfinish;
     cptr->nextcontext = R_GlobalContext;
@@ -260,7 +268,9 @@ void endcontext(RCNTXT * cptr)
 {
     R_HandlerStack = cptr->handlerstack;
     R_RestartStack = cptr->restartstack;
+#ifdef USE_PROMARGS_STACK    
     switchPromargsStack(cptr->promargsstackbase, cptr->promargsstacktop, cptr->promargsstackend);    
+#endif    
     if (cptr->cloenv != R_NilValue && cptr->conexit != R_NilValue ) {
 	SEXP s = cptr->conexit;
 	Rboolean savevis = R_Visible;

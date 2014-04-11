@@ -126,7 +126,7 @@ extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 # define ENC_KNOWN(x) ((x)->sxpinfo.gp & (LATIN1_MASK | UTF8_MASK))
 # define SET_CACHED(x) (((x)->sxpinfo.gp) |= CACHED_MASK)
 # define IS_CACHED(x) (((x)->sxpinfo.gp) & CACHED_MASK)
-#else
+#else /* not USE_RINTERNALS */
 /* Needed only for write-barrier testing */
 int IS_BYTES(SEXP x);
 void SET_BYTES(SEXP x);
@@ -450,7 +450,39 @@ typedef struct {
 #define UNSET_NO_SPECIAL_SYMBOLS(b) ((b)->sxpinfo.gp &= (~SPECIAL_SYMBOL_MASK))
 #define NO_SPECIAL_SYMBOLS(b) ((b)->sxpinfo.gp & SPECIAL_SYMBOL_MASK)
 
-#else /* USE_RINTERNALS */
+/* Promargs stack */
+
+//#define USE_PROMARGS_STACK
+
+#ifdef USE_PROMARGS_STACK
+  /* required USE_RINTERNALS for SEXPREC */
+#define R_PROMARGSSTACKINITSIZE 4096
+extern0 SEXPREC *R_PromargsStackBase, *R_PromargsStackEnd, *R_PromargsStackTop;
+
+void switchPromargsStack(SEXPREC *, SEXPREC *, SEXPREC *);
+void releasePromargs(SEXPREC *);
+
+#define POINTER_IN_RANGE(start, x, end) ((uintptr_t) x - (uintptr_t)start <= (uintptr_t) end - (uintptr_t)start)
+#define PROMISE_ARGS promiseArgsStack
+#define RELEASE_PROMARGS(x) do { \
+  if (x == R_NilValue) { \
+  } else if (POINTER_IN_RANGE(R_PromargsStackBase, x, R_PromargsStackEnd)) { \
+    R_PromargsStackTop = x; \
+  } else { \
+    releasePromargs(x); \
+  } \
+  x = NULL; \
+} while(0)
+
+#else /* not USE_PROMARGS_STACK */
+
+#define PROMISE_ARGS promiseArgs
+#define RELEASE_PROMARGS(x)
+
+#endif
+
+
+#else /* not USE_RINTERNALS */
 
 typedef struct VECREC *VECP;
 int (PRIMOFFSET)(SEXP x);
@@ -484,10 +516,13 @@ Rboolean (NO_SPECIAL_SYMBOLS)(SEXP b);
 
 #endif /* USE_RINTERNALS */
 
+
+
 typedef SEXP R_bcstack_t;
 #ifdef BC_INT_STACK
 typedef union { void *p; int i; } IStackval;
 #endif
+
 
 #ifdef R_USE_SIGNALS
 /* Stack entry for pending promises */
@@ -496,24 +531,6 @@ typedef struct RPRSTACK {
     struct RPRSTACK *next;
 } RPRSTACK;
 
-/* Promargs stack */
-
-#define R_PROMARGSSTACKINITSIZE 4096
-extern0 SEXPREC *R_PromargsStackBase, *R_PromargsStackEnd, *R_PromargsStackTop;
-
-void switchPromargsStack(SEXPREC *, SEXPREC *, SEXPREC *);
-void releasePromargs(SEXPREC *);
-
-#define POINTER_IN_RANGE(start, x, end) ((uintptr_t) x - (uintptr_t)start <= (uintptr_t) end - (uintptr_t)start)
-#define RELEASE_PROMARGS(x) do { \
-  if (x == R_NilValue) { \
-  } else if (POINTER_IN_RANGE(R_PromargsStackBase, x, R_PromargsStackEnd)) { \
-    R_PromargsStackTop = x; \
-  } else { \
-    releasePromargs(x); \
-  } \
-  x = NULL; \
-} while(0)
 
 /* Evaluation Context Structure */
 typedef struct RCNTXT {
@@ -587,7 +604,7 @@ BUI   0 0 0 0 0 0 0 1 = 64
 #define IS_RESTART_BIT_SET(flags) ((flags) & CTXT_RESTART)
 #define SET_RESTART_BIT_ON(flags) (flags |= CTXT_RESTART)
 #define SET_RESTART_BIT_OFF(flags) (flags &= ~CTXT_RESTART)
-#endif
+#endif /* USE_SIGNALS */
 
 /* Miscellaneous Definitions */
 #define streql(s, t)	(!strcmp((s), (t)))
@@ -1126,6 +1143,7 @@ void process_system_Renviron(void);
 void process_user_Renviron(void);
 SEXP promiseArgs(SEXP, SEXP);
 SEXP promiseArgsStack(SEXP, SEXP);
+
 SEXP allocatePromargsCell(SEXP tag, SEXP value);
 SEXP allocatePromargsCellNoTag(SEXP value);
 void expandPromargsStack();
