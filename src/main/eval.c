@@ -4652,6 +4652,32 @@ static void dumpInterpreterState(BCODE *codebase, BCODE *codeCurrent, int codeLe
     printf("----------------------------------------------------------------------------------------\n");
 }
 
+void inspectArgs(SEXP args) {
+    int nargs = 0;
+    int ndots = 0;
+    int nnamed = 0;
+    int nmissing = 0;
+    int maxnamed = 0;
+    char *lastname = "";
+    
+    SEXP a;
+    for(a = args; a != R_NilValue; a = CDR(a)) {
+        SEXP cara = CAR(a);
+        nargs++;
+        if (cara == R_DotsSymbol) {
+            ndots++;
+        } else if (cara == R_MissingArg) {
+            nmissing++;
+        } else if (TAG(a) != R_NilValue) {
+            nnamed++;
+            maxnamed = nargs;
+            lastname = CHAR(PRINTNAME(TAG(a)));
+        }
+    }
+    fprintf(stderr, "CCALL nargs=%d ndots=%d nnamed=%d maxnamed=%d lastname=%s nmissing=%d\n", nargs, ndots, nnamed, maxnamed, lastname, nmissing);
+    
+}
+
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
   SEXP value, constants;
@@ -5161,6 +5187,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
+//	  inspectArgs(CDR(call));
 	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
 	  RELEASE_PROMARGS(args);
 	  break;
