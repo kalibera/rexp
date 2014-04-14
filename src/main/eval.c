@@ -3209,6 +3209,9 @@ enum {
   GETBUILTINEARG_OP,
   GETINTLBUILTINEARG_OP,
   PUSHEARG_OP,
+  MAKEPROMEARG_OP,
+  MAKEGETVARPROMEARG_OP,
+  CALLEARG_OP,
   STARTVECSUBSET_OP,
   STARTMATSUBSET_OP,
   STARTSETVECSUBSET_OP,
@@ -3342,6 +3345,8 @@ DIRECT_LABELS only work with THREADED_CODE
 Currently, labels for the switch statement are always indirect
 */
 
+#define GETINTOP() ((*pc++).i)
+
 #define DIRECT_LABELS
 
 #ifdef DIRECT_LABELS
@@ -3362,7 +3367,7 @@ Currently, labels for the switch statement are always indirect
 
 #else /* not DIRECT_LABELS */
 
-#define GETLABELOP() ((*pc++).i)
+#define GETLABELOP GETINTOP
 #define SETLABELMAP(lhs, m)
 #define LABEL_TYPE int
 #define PC_FOR_LABEL(l) (codebase + l)
@@ -3921,121 +3926,6 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
     return value;
 }
 
-#define INLINE_GETVAR
-#ifdef INLINE_GETVAR
-/* Try to handle the most common case as efficiently as possible.  If
-   smallcache is true then a modulus operation on the index is not
-   needed, nor is a check that a non-null value corresponds to the
-   requested symbol. The symbol from the constant pool is also usually
-   not needed. The test TYPOF(value) != SYMBOL rules out R_MissingArg
-   and R_UnboundValue as these are implemented s symbols.  It also
-   rules other symbols, but as those are rare they are handled by the
-   getvar() call. */
-#define DO_GETVAR(dd,keepmiss) do { \
-    int sidx = GETOP(); \
-    if (!dd && smallcache) { \
-	SEXP cell = GET_SMALLCACHE_BINDING_CELL(vcache, sidx); \
-	/* try fast handling of REALSXP, INTSXP, LGLSXP */ \
-	/* (cell won't be R_NilValue or an active binding) */ \
-	value = CAR(cell); \
-	int type = TYPEOF(value); \
-	switch(type) { \
-	case REALSXP: \
-	case INTSXP: \
-	case LGLSXP: \
-	    /* may be ok to skip this test: */ \
-	    if (NAMED(value) == 0) \
-		SET_NAMED(value, 1); \
-	    R_Visible = TRUE; \
-	    BCNPUSH(value); \
-	    NEXT(); \
-	} \
-	if (cell != R_NilValue && ! IS_ACTIVE_BINDING(cell)) { \
-	    if (type != SYMSXP) {	\
-		if (type == PROMSXP) {		\
-		    SEXP pv = PRVALUE(value);		\
-		    if (pv == R_UnboundValue) {		\
-			SEXP symbol = VECTOR_ELT(constants, sidx);	\
-			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
-		    }							\
-		    else value = pv;					\
-		}							\
-		else if (NAMED(value) == 0)				\
-		    SET_NAMED(value, 1);				\
-		R_Visible = TRUE;					\
-		BCNPUSH(value);						\
-		NEXT();							\
-	    }								\
-	}								\
-    }									\
-    SEXP symbol = VECTOR_ELT(constants, sidx);				\
-    R_Visible = TRUE;							\
-    BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));		\
-    NEXT();								\
-} while (0)
-
-/* FIXME: It would be nice to avoid some copy-paste from DO_GETVAR */
-#define DO_GETVAR_PUSHCALLARG(dd,keepmiss) do { \
-    int sidx = GETOP(); \
-    if (!dd && smallcache) { \
-	SEXP cell = GET_SMALLCACHE_BINDING_CELL(vcache, sidx); \
-	/* try fast handling of REALSXP, INTSXP, LGLSXP */ \
-	/* (cell won't be R_NilValue or an active binding) */ \
-	value = CAR(cell); \
-	int type = TYPEOF(value); \
-	switch(type) { \
-	case REALSXP: \
-	case INTSXP: \
-	case LGLSXP: \
-	    /* may be ok to skip this test: */ \
-	    if (NAMED(value) == 0) \
-		SET_NAMED(value, 1); \
-	    R_Visible = TRUE; \
-	    PUSHCALLARG(value); \
-	    NEXT(); \
-	} \
-	if (cell != R_NilValue && ! IS_ACTIVE_BINDING(cell)) { \
-	    if (type != SYMSXP) {	\
-		if (type == PROMSXP) {		\
-		    SEXP pv = PRVALUE(value);		\
-		    if (pv == R_UnboundValue) {		\
-			SEXP symbol = VECTOR_ELT(constants, sidx);	\
-			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
-		    }							\
-		    else value = pv;					\
-		}							\
-		else if (NAMED(value) == 0)				\
-		    SET_NAMED(value, 1);				\
-		R_Visible = TRUE;					\
-		PUSHCALLARG(value);						\
-		NEXT();							\
-	    }								\
-	}								\
-    }									\
-    SEXP symbol = VECTOR_ELT(constants, sidx);				\
-    R_Visible = TRUE;							\
-    PUSHCALLARG(getvar(symbol, rho, dd, keepmiss, vcache, sidx));		\
-    NEXT();								\
-} while (0)
-#else
-#define DO_GETVAR(dd,keepmiss) do { \
-  int sidx = GETOP(); \
-  SEXP symbol = VECTOR_ELT(constants, sidx); \
-  R_Visible = TRUE; \
-  BCNPUSH(getvar(symbol, rho, dd, keepmiss, vcache, sidx));	\
-  NEXT(); \
-} while (0)
-
-/* FIXME: It would be nice to avoid some copy-paste from DO_GETVAR */
-#define DO_GETVAR_PUSHCALLARG(dd,keepmiss) do { \
-  int sidx = GETOP(); \
-  SEXP symbol = VECTOR_ELT(constants, sidx); \
-  R_Visible = TRUE; \
-  PUSHCALLARG(getvar(symbol, rho, dd, keepmiss, vcache, sidx));	\
-  NEXT(); \
-} while (0)
-#endif
-
 #ifdef USE_PROMARGS_STACK
   /* BUILTINS could possibly leak their arguments/promargs */
   #define CREATE_CALLARG_CELL(v) ((ftype == BUILTINSXP) ? CONS_NR(v,R_NilValue) : allocatePromargsCellNoTag(v))
@@ -4055,6 +3945,76 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 } while (0)
 
 #define PUSHCALLEARG(v) BCNPUSH(v)
+
+
+#define INLINE_GETVAR
+#ifdef INLINE_GETVAR
+/* Try to handle the most common case as efficiently as possible.  If
+   smallcache is true then a modulus operation on the index is not
+   needed, nor is a check that a non-null value corresponds to the
+   requested symbol. The symbol from the constant pool is also usually
+   not needed. The test TYPOF(value) != SYMBOL rules out R_MissingArg
+   and R_UnboundValue as these are implemented s symbols.  It also
+   rules other symbols, but as those are rare they are handled by the
+   getvar() call. */
+#define DO_GETVAR_COMMON(dd,keepmiss,__fn_result) do { \
+    int sidx = GETOP(); \
+    if (!dd && smallcache) { \
+	SEXP cell = GET_SMALLCACHE_BINDING_CELL(vcache, sidx); \
+	/* try fast handling of REALSXP, INTSXP, LGLSXP */ \
+	/* (cell won't be R_NilValue or an active binding) */ \
+	value = CAR(cell); \
+	int type = TYPEOF(value); \
+	switch(type) { \
+	case REALSXP: \
+	case INTSXP: \
+	case LGLSXP: \
+	    /* may be ok to skip this test: */ \
+	    if (NAMED(value) == 0) \
+		SET_NAMED(value, 1); \
+	    R_Visible = TRUE; \
+	    __fn_result(value); \
+	    NEXT(); \
+	} \
+	if (cell != R_NilValue && ! IS_ACTIVE_BINDING(cell)) { \
+	    if (type != SYMSXP) {	\
+		if (type == PROMSXP) {		\
+		    SEXP pv = PRVALUE(value);		\
+		    if (pv == R_UnboundValue) {		\
+			SEXP symbol = VECTOR_ELT(constants, sidx);	\
+			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
+		    }							\
+		    else value = pv;					\
+		}							\
+		else if (NAMED(value) == 0)				\
+		    SET_NAMED(value, 1);				\
+		R_Visible = TRUE;					\
+		__fn_result(value);						\
+		NEXT();							\
+	    }								\
+	}								\
+    }									\
+    SEXP symbol = VECTOR_ELT(constants, sidx);				\
+    R_Visible = TRUE;							\
+    __fn_result(getvar(symbol, rho, dd, keepmiss, vcache, sidx));		\
+    NEXT();								\
+} while (0)
+
+#else /* not INLINE_GETVAR */
+
+#define DO_GETVAR_COMMON(dd,keepmiss,__fn_result) do { \
+  int sidx = GETOP(); \
+  SEXP symbol = VECTOR_ELT(constants, sidx); \
+  R_Visible = TRUE; \
+  __fn_result(getvar(symbol, rho, dd, keepmiss, vcache, sidx));	\
+  NEXT(); \
+} while (0)
+
+#endif
+
+#define DO_GETVAR(dd, keepmiss) DO_GETVAR_COMMON(dd, keepmiss, BCNPUSH)
+#define DO_GETVAR_PUSHCALLARG(dd, keepmiss) DO_GETVAR_COMMON(dd, keepmiss, PUSHCALLARG)
+#define DO_GETVAR_PUSHCALLEARG(dd, keepmiss) DO_GETVAR_COMMON(dd, keepmiss, PUSHCALLEARG)
 
 #define EARG_CALLBUILTIN(nargs, PRIMCALL) do { \
   SEXP fun = GETSTACK(-1-nargs); \
@@ -4082,6 +4042,40 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
   SETSTACK(-1, value); \
   NEXT(); \
 } while(0)
+
+#define DO_GETFUN_COMMON(GETVALUE_ACTION, STACKINIT_ACTION) do { \
+  /* get the function */ \
+  SEXP symbol = GETCONSTOP(); \
+  GETVALUE_ACTION; \
+  if(RTRACE(value)) { \
+    Rprintf("trace: "); \
+    PrintValue(symbol); \
+  } \
+ \
+  /* initialize the function type register */ \
+  ftype = TYPEOF(value); \
+ \
+  /* the original version here would push space for creating the argument list. */ \
+  STACKINIT_ACTION; \
+  NEXT(); \
+} while(0);
+
+#define DEFAULT_STACKINIT_ACTION() do { \
+  /* push the function, and push space for creating the argument list. */ \
+  BCNSTACKCHECK(3); \
+  SETSTACK(0, value); \
+  SETSTACK(1, R_NilValue); \
+  SETSTACK(2, R_NilValue); \
+  R_BCNodeStackTop += 3; \
+} while(0);
+
+#define GETSYMFUN_GETVALUE_ACTION() do { \
+  value = SYMVALUE(symbol); \
+  if (TYPEOF(value) == PROMSXP) { \
+    value = forcePromise(value); \
+    SET_NAMED(value, 2); \
+  } \
+} while(0);
 
 static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
 {
@@ -4658,7 +4652,7 @@ void inspectArgs(SEXP args) {
     int nnamed = 0;
     int nmissing = 0;
     int maxnamed = 0;
-    char *lastname = "";
+    const char *lastname = "";
     
     SEXP a;
     for(a = args; a != R_NilValue; a = CDR(a)) {
@@ -4942,89 +4936,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
 	NEXT();
       }
-    OP(GETFUN, 1, CONSTOP(1), LABELOP(0)):
-      {
-	/* get the function */
-	SEXP symbol = GETCONSTOP();
-	value = findFun(symbol, rho);
-	if(RTRACE(value)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
-	}
-
-	/* initialize the function type register, push the function, and
-	   push space for creating the argument list. */
-	ftype = TYPEOF(value);
-	BCNSTACKCHECK(3);
-	SETSTACK(0, value);
-	SETSTACK(1, R_NilValue);
-	SETSTACK(2, R_NilValue);
-	R_BCNodeStackTop += 3;
-	NEXT();
-      }
-    OP(GETGLOBFUN, 1, CONSTOP(1), LABELOP(0)):
-      {
-	/* get the function */
-	SEXP symbol = GETCONSTOP();
-	value = findFun(symbol, R_GlobalEnv);
-	if(RTRACE(value)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
-	}
-
-	/* initialize the function type register, push the function, and
-	   push space for creating the argument list. */
-	ftype = TYPEOF(value);
-	BCNSTACKCHECK(3);
-	SETSTACK(0, value);
-	SETSTACK(1, R_NilValue);
-	SETSTACK(2, R_NilValue);
-	R_BCNodeStackTop += 3;
-	NEXT();
-      }
-    OP(GETSYMFUN, 1, CONSTOP(1), LABELOP(0)):
-      {
-	/* get the function */
-	SEXP symbol = GETCONSTOP();
-	value = SYMVALUE(symbol);
-	if (TYPEOF(value) == PROMSXP) {
-	    value = forcePromise(value);
-	    SET_NAMED(value, 2);
-	}
-	if(RTRACE(value)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
-	}
-
-	/* initialize the function type register, push the function, and
-	   push space for creating the argument list. */
-	ftype = TYPEOF(value);
-	BCNSTACKCHECK(3);
-	SETSTACK(0, value);
-	SETSTACK(1, R_NilValue);
-	SETSTACK(2, R_NilValue);
-	R_BCNodeStackTop += 3;
-	NEXT();
-      }
-    OP(GETBUILTIN, 1, CONSTOP(1), LABELOP(0)):
-      {
-	/* get the function */
-	SEXP symbol = GETCONSTOP();
-	value = getPrimitive(symbol, BUILTINSXP);
-	if (RTRACE(value)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
-	}
-
-	/* push the function and push space for creating the argument list. */
-	ftype = TYPEOF(value);
-	BCNSTACKCHECK(3);
-	SETSTACK(0, value);
-	SETSTACK(1, R_NilValue);
-	SETSTACK(2, R_NilValue);
-	R_BCNodeStackTop += 3;
-	NEXT();
-      }
+    OP(GETFUN, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = findFun(symbol, rho), DEFAULT_STACKINIT_ACTION() );
+    OP(GETGLOBFUN, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = findFun(symbol, R_GlobalEnv), DEFAULT_STACKINIT_ACTION() );
+    OP(GETSYMFUN, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETSYMFUN_GETVALUE_ACTION(), DEFAULT_STACKINIT_ACTION() );
+    OP(GETBUILTIN, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), DEFAULT_STACKINIT_ACTION() );
     OP(GETBUILTINEARG, 1, CONSTOP(1), LABELOP(0)):
       {
 	/* get the function */
@@ -5098,6 +5013,18 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
 	NEXT();
       }
+    OP(MAKEPROMEARG, 1, CONSTOP(1), LABELOP(0)):
+      {
+	SEXP code = GETCONSTOP();
+	if (ftype != SPECIALSXP) {
+	  if (ftype == BUILTINSXP)
+	      value = bcEval(code, rho, TRUE);
+	  else
+	    value = mkPROMISE(code, rho);
+	  PUSHCALLEARG(value);
+	}
+	NEXT();
+      }      
     OP(MAKEGETVARPROM, 1, CONSTOP(0), LABELOP(0)):
       {
         /* this instruction is not used for ..n and ... */
@@ -5108,6 +5035,21 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
             SEXP symbol = VECTOR_ELT(constants, GETOP());
             value = mkPROMISE(symbol, rho);
 	    PUSHCALLARG(value);        
+        } else {
+            SKIP_OP();
+        }
+        NEXT(); 
+      }
+    OP(MAKEGETVARPROMEARG, 1, CONSTOP(0), LABELOP(0)):
+      {
+        /* this instruction is not used for ..n and ... */
+	if (ftype == BUILTINSXP) {
+	    DO_GETVAR_PUSHCALLEARG(FALSE, FALSE);
+	    /* not reached */
+        } else if (ftype != SPECIALSXP) {
+            SEXP symbol = VECTOR_ELT(constants, GETOP());
+            value = mkPROMISE(symbol, rho);
+	    PUSHCALLEARG(value);        
         } else {
             SKIP_OP();
         }
@@ -5198,6 +5140,14 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	ftype = 0;
 	NEXT();
       }
+    OP(CALLEARG, 2, CONSTOP(1), LABELOP(0)):
+      {
+	SEXP call = GETCONSTOP();
+	int nargs = GETINTOP();
+	error("CALLEARG not yet implemented");
+
+	NEXT();
+      }      
     OP(CALLBUILTIN, 1, CONSTOP(1), LABELOP(0)):
       {
 	SEXP fun = GETSTACK(-3);
