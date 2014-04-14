@@ -3206,8 +3206,22 @@ enum {
   CALLBUILTINEARG5_OP,
   CALLBUILTINEARG6_OP,
   CALLBUILTINEARG7_OP,
-  GETBUILTINEARG_OP,
-  GETINTLBUILTINEARG_OP,
+  GETBUILTINEARG0_OP,
+  GETBUILTINEARG1_OP,
+  GETBUILTINEARG2_OP,
+  GETBUILTINEARG3_OP,
+  GETBUILTINEARG4_OP,
+  GETBUILTINEARG5_OP,
+  GETBUILTINEARG6_OP,
+  GETBUILTINEARG7_OP,
+  GETINTLBUILTINEARG0_OP,
+  GETINTLBUILTINEARG1_OP,
+  GETINTLBUILTINEARG2_OP,
+  GETINTLBUILTINEARG3_OP,
+  GETINTLBUILTINEARG4_OP,
+  GETINTLBUILTINEARG5_OP,
+  GETINTLBUILTINEARG6_OP,
+  GETINTLBUILTINEARG7_OP,  
   PUSHEARG_OP,
   MAKEPROMEARG_OP,
   MAKEGETVARPROMEARG_OP,
@@ -3601,6 +3615,13 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   R_BCNodeStackTop = __ntop__; \
 } while (0)
 
+#define BCNPUSH_NOCHECK(v) do { \
+  SEXP __value__ = (v); \
+  R_bcstack_t *__ntop__ = R_BCNodeStackTop; \
+  *__ntop__ = __value__; \
+  R_BCNodeStackTop = __ntop__ + 1; \
+} while (0)
+
 #define BCNDUP() do { \
     R_bcstack_t *__ntop__ = R_BCNodeStackTop + 1; \
     if (__ntop__ > R_BCNodeStackEnd) nodeStackOverflow(); \
@@ -3944,8 +3965,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
   SETSTACK(-1, __cell__);	       \
 } while (0)
 
-#define PUSHCALLEARG(v) BCNPUSH(v)
-
+#define PUSHCALLEARG(v) BCNPUSH_NOCHECK(v)
 
 #define INLINE_GETVAR
 #ifdef INLINE_GETVAR
@@ -4060,22 +4080,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
   NEXT(); \
 } while(0);
 
-#define DEFAULT_STACKINIT_ACTION() do { \
-  /* push the function, and push space for creating the argument list. */ \
-  BCNSTACKCHECK(3); \
-  SETSTACK(0, value); \
-  SETSTACK(1, R_NilValue); \
-  SETSTACK(2, R_NilValue); \
-  R_BCNodeStackTop += 3; \
-} while(0);
-
-#define GETSYMFUN_GETVALUE_ACTION() do { \
-  value = SYMVALUE(symbol); \
-  if (TYPEOF(value) == PROMSXP) { \
-    value = forcePromise(value); \
-    SET_NAMED(value, 2); \
-  } \
-} while(0);
+                                   
 
 static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
 {
@@ -4936,54 +4941,62 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
 	NEXT();
       }
+
+#define DEFAULT_STACKINIT_ACTION() do { \
+  /* push the function, and push space for creating the argument list. */ \
+  BCNSTACKCHECK(3); \
+  SETSTACK(0, value); \
+  SETSTACK(1, R_NilValue); \
+  SETSTACK(2, R_NilValue); \
+  R_BCNodeStackTop += 3; \
+} while(0);
+
+#define GETSYMFUN_GETVALUE_ACTION() do { \
+  value = SYMVALUE(symbol); \
+  if (TYPEOF(value) == PROMSXP) { \
+    value = forcePromise(value); \
+    SET_NAMED(value, 2); \
+  } \
+} while(0);
+
+#define GETINTLBUILTIN_GETVALUE_ACTION() do { \
+  value = INTERNAL(symbol); \
+  if (TYPEOF(value) != BUILTINSXP) \
+    error(_("there is no .Internal function '%s'"), \
+      CHAR(PRINTNAME(symbol))); \
+} while(0);
+
     OP(GETFUN, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = findFun(symbol, rho), DEFAULT_STACKINIT_ACTION() );
     OP(GETGLOBFUN, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = findFun(symbol, R_GlobalEnv), DEFAULT_STACKINIT_ACTION() );
     OP(GETSYMFUN, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETSYMFUN_GETVALUE_ACTION(), DEFAULT_STACKINIT_ACTION() );
     OP(GETBUILTIN, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), DEFAULT_STACKINIT_ACTION() );
-    OP(GETBUILTINEARG, 1, CONSTOP(1), LABELOP(0)):
-      {
-	/* get the function */
-	SEXP symbol = GETCONSTOP();
-	value = getPrimitive(symbol, BUILTINSXP);
-	if (RTRACE(value)) {
-	  Rprintf("trace: ");
-	  PrintValue(symbol);
-	}
-	ftype = TYPEOF(value);
-	BCNPUSH(value);
-	NEXT();
-      }
-    OP(GETINTLBUILTIN, 1, CONSTOP(1), LABELOP(0)):
-      {
-	/* get the function */
-	SEXP symbol = GETCONSTOP();
-	value = INTERNAL(symbol);
-	if (TYPEOF(value) != BUILTINSXP)
-	  error(_("there is no .Internal function '%s'"),
-		CHAR(PRINTNAME(symbol)));
+    OP(GETINTLBUILTIN, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETINTLBUILTIN_GETVALUE_ACTION(), DEFAULT_STACKINIT_ACTION() );
+    
+#define EARG_STACKINIT_ACTION(nargs) do { \
+  /* push the function and check there is enough space on stack for arguments */ \
+  BCNSTACKCHECK(nargs + 1); \
+  SETSTACK(0, value); \
+  R_BCNodeStackTop ++; \
+} while(0);    
+    
+    OP(GETBUILTINEARG0, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), EARG_STACKINIT_ACTION(0) );
+    OP(GETBUILTINEARG1, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), EARG_STACKINIT_ACTION(1) );
+    OP(GETBUILTINEARG2, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), EARG_STACKINIT_ACTION(2) );
+    OP(GETBUILTINEARG3, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), EARG_STACKINIT_ACTION(3) );
+    OP(GETBUILTINEARG4, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), EARG_STACKINIT_ACTION(4) );
+    OP(GETBUILTINEARG5, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), EARG_STACKINIT_ACTION(5) );
+    OP(GETBUILTINEARG6, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), EARG_STACKINIT_ACTION(6) );
+    OP(GETBUILTINEARG7, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( value = getPrimitive(symbol, BUILTINSXP), EARG_STACKINIT_ACTION(7) );
+    
+    OP(GETINTLBUILTINEARG0, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETINTLBUILTIN_GETVALUE_ACTION(), EARG_STACKINIT_ACTION(0) );
+    OP(GETINTLBUILTINEARG1, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETINTLBUILTIN_GETVALUE_ACTION(), EARG_STACKINIT_ACTION(1) );
+    OP(GETINTLBUILTINEARG2, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETINTLBUILTIN_GETVALUE_ACTION(), EARG_STACKINIT_ACTION(2) );
+    OP(GETINTLBUILTINEARG3, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETINTLBUILTIN_GETVALUE_ACTION(), EARG_STACKINIT_ACTION(3) );
+    OP(GETINTLBUILTINEARG4, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETINTLBUILTIN_GETVALUE_ACTION(), EARG_STACKINIT_ACTION(4) );
+    OP(GETINTLBUILTINEARG5, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETINTLBUILTIN_GETVALUE_ACTION(), EARG_STACKINIT_ACTION(5) );
+    OP(GETINTLBUILTINEARG6, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETINTLBUILTIN_GETVALUE_ACTION(), EARG_STACKINIT_ACTION(6) );
+    OP(GETINTLBUILTINEARG7, 1, CONSTOP(1), LABELOP(0)): DO_GETFUN_COMMON( GETINTLBUILTIN_GETVALUE_ACTION(), EARG_STACKINIT_ACTION(7) );    
 
-	/* push the function and push space for creating the argument list. */
-	ftype = TYPEOF(value);
-	BCNSTACKCHECK(3);
-	SETSTACK(0, value);
-	SETSTACK(1, R_NilValue);
-	SETSTACK(2, R_NilValue);
-	R_BCNodeStackTop += 3;
-	NEXT();
-      }
-    OP(GETINTLBUILTINEARG, 1, CONSTOP(1), LABELOP(0)):
-      {
-	/* get the function */
-	SEXP symbol = GETCONSTOP();
-	value = INTERNAL(symbol);
-	if (TYPEOF(value) != BUILTINSXP)
-	  error(_("there is no .Internal function '%s'"),
-		CHAR(PRINTNAME(symbol)));
-
-	ftype = TYPEOF(value);
-	BCNPUSH(value);
-	NEXT();
-      }
     OP(CHECKFUN, 0, CONSTOP(0), LABELOP(0)):
       {
 	/* check then the value on the stack is a function */
