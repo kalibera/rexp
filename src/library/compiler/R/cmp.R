@@ -642,7 +642,9 @@ GETINTLBUILTINEARG7.OP = 1,
 PUSHEARG.OP = 0,
 MAKEPROMEARG.OP = 1,
 MAKEGETVARPROMEARG.OP = 1,
-CALLEARG.OP = 2
+CALLEARG.OP = 2,
+GETFUNEARG.OP = 2,
+CHECKFUNEARG.OP = 1
 )
 
 Opcodes.names <- names(Opcodes.argc)
@@ -784,6 +786,8 @@ PUSHEARG.OP <- 133
 MAKEPROMEARG.OP <- 134
 MAKEGETVARPROMEARG.OP <- 135
 CALLEARG.OP <- 136
+GETFUNEARG.OP <- 137
+CHECKFUNEARG.OP <- 138
 
 
 ##
@@ -1045,26 +1049,55 @@ cmpCall <- function(call, cb, cntxt) {
     }
 }
 
+
+determineCallExplicitArgs <- function(args) {
+  if (any.names(args) || dots.or.missing(args)) {
+    -1
+  } else {
+    length(args)
+  }
+}
+
 cmpCallSymFun <- function(fun, args, call, cb, cntxt) {
+    explicitArgs = determineCallExplicitArgs(args)
     ci <- cb$putconst(fun)
-    cb$putcode(GETFUN.OP, ci)
-    cmpCallArgs(args, cb, cntxt)
+    if (explicitArgs == -1) {
+      cb$putcode(GETFUN.OP, ci)
+    } else {
+      cb$putcode(GETFUNEARG.OP, ci, explicitArgs)
+    }
+    
+    cmpCallArgs(args, cb, cntxt, explicitArgs)
     ci <- cb$putconst(call)
-    cb$putcode(CALL.OP, ci)
+    if (explicitArgs == -1) {
+      cb$putcode(CALL.OP, ci)
+    } else {
+      cb$putcode(CALLEARG.OP, ci, explicitArgs)
+    }
     if (cntxt$tailcall) cb$putcode(RETURN.OP)
 }
 
 cmpCallExprFun <- function(fun, args, call, cb, cntxt) {
+    explicitArgs = determineCallExplicitArgs(args)
     ncntxt <- make.nonTailCallContext(cntxt)
     cmp(fun, cb, ncntxt)
-    cb$putcode(CHECKFUN.OP)
-    cmpCallArgs(args, cb, cntxt)
+    if (explicitArgs == -1) {
+      cb$putcode(CHECKFUN.OP)
+    } else {
+      cb$putcode(CHECKFUNEARG.OP, explicitArgs)
+    }
+    
+    cmpCallArgs(args, cb, cntxt, explicitArgs)
     ci <- cb$putconst(call)
-    cb$putcode(CALL.OP, ci)
+    if (explicitArgs == -1) {
+      cb$putcode(CALL.OP, ci)
+    } else {
+      cb$putcode(CALLEARG.OP, ci, explicitArgs)
+    }
     if (cntxt$tailcall) cb$putcode(RETURN.OP)
 }
 
-cmpCallArgs <- function(args, cb, cntxt) {
+cmpCallArgs <- function(args, cb, cntxt, explicitArgs = -1) {
     names <- names(args)
     pcntxt <- make.promiseContext(cntxt)
     for (i in seq_along(args)) {
@@ -1089,14 +1122,22 @@ cmpCallArgs <- function(args, cb, cntxt) {
             isSym <- is.symbol(a)
             if (isSym && !is.ddsym(a) && a != "...") {
                 ci <- cb$putvarname(a)
-                cb$putcode(MAKEGETVARPROM.OP, ci)
+                if (explicitArgs == -1) {
+                  cb$putcode(MAKEGETVARPROM.OP, ci)
+                } else {
+                  cb$putcode(MAKEGETVARPROMEARG.OP, ci)
+                }
             }
             else if (typeof(a) == "language" || isSym) {
                 ci <- cb$putconst(genCode(a, pcntxt))
-                cb$putcode(MAKEPROM.OP, ci)
+                if (explicitArgs == -1) {
+                  cb$putcode(MAKEPROM.OP, ci)
+                } else {
+                  cb$putcode(MAKEPROMEARG.OP, ci)
+                }
             }
             else
-                cmpConstArg(a, cb, cntxt)
+                cmpConstArgOrEarg(a, cb, cntxt, explicitArgs)
             cmpTag(n, cb)
         }
     }
@@ -1115,7 +1156,7 @@ cmpConstArg <- function(a, cb, cntxt) {
     }
 }
 
-cmpConstBuiltinArg <- function(a, cb, cntxt, explicitArgs) {
+cmpConstArgOrEarg <- function(a, cb, cntxt, explicitArgs) {
 
     if (explicitArgs == -1) {
       cmpConstArg(a, cb, cntxt)
@@ -2163,14 +2204,14 @@ cmpBuiltinArgs <- function(args, names, cb, cntxt, missingOK = FALSE, explicitAr
                     cb$putcode(getPushArgInstruction(explicitArgs))
                 }
                 else
-                    cmpConstBuiltinArg(ca$value, cb, cntxt, explicitArgs)
+                    cmpConstArgOrEarg(ca$value, cb, cntxt, explicitArgs)
             }
             else if (typeof(a) == "language") {
                 cmp(a, cb, ncntxt)
                 cb$putcode(getPushArgInstruction(explicitArgs))
             }
             else
-                cmpConstBuiltinArg(a, cb, cntxt, explicitArgs)
+                cmpConstArgOrEarg(a, cb, cntxt, explicitArgs)
 
             if (explicitArgs == -1) {
               cmpTag(n, cb)

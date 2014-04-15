@@ -2363,6 +2363,25 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 
 #endif /* USE_PROMARGS_STACK */
 
+/* Builds promargs cells from what is on the stack (last would be typically
+ * a pointer to the last argument on the node stack).  This is for
+ * positional calls only. */
+
+R_INLINE SEXP buildPositionalPromargs(int nargs, SEXP *last) {
+    if (nargs == 0) {
+        return R_NilValue;
+    }
+    SEXP pargs = CONS_NR(*last, R_NilValue);
+    SEXP *src = last;
+    int i;
+    for(i = nargs - 1; i > 0; i--) {
+        src = src - 1;
+        
+        pargs = CONS_NR(*src, pargs); /* fixme - the ast interpreter uses CONS but the bc interpreter uses CONS_NR */
+    }
+    return pargs;    
+}
+
 /* Check that each formal is a symbol */
 
 /* used in coerce.c */
@@ -3226,6 +3245,8 @@ enum {
   MAKEPROMEARG_OP,
   MAKEGETVARPROMEARG_OP,
   CALLEARG_OP,
+  GETFUNEARG_OP,
+  CHECKFUNEARG_OP,
   STARTVECSUBSET_OP,
   STARTMATSUBSET_OP,
   STARTSETVECSUBSET_OP,
@@ -4622,7 +4643,7 @@ static void dumpInterpreterState(BCODE *codebase, BCODE *codeCurrent, int codeLe
     }
     
     printf("-------------------------------- CODE --------------------------------------------------\n");
-    printf("Instruction dump (code base = %p, pc = %p, codeLength = %d):\n", codebase, codeCurrent, codeLength);
+    printf("Instruction dump (code base = %p, pc = %p, codeLength = %d, code end = %p):\n", codebase, codeCurrent, codeLength, codebase + codeLength);
     BCODE *pc = codebase + 1;
     i = 1;
     for(i = 1; i <= codeLength;) {
@@ -4639,7 +4660,7 @@ static void dumpInterpreterState(BCODE *codebase, BCODE *codeCurrent, int codeLe
         }
         char *name = opinfo[op].instname;
         int nargs = opinfo[op].argc;
-        printf("==== %3d: %s (%d) + %d arguments", i, name, op, nargs);
+        printf("==== %3d [%p]: %s (%d) + %d arguments", i, pc, name, op, nargs);
         if (pc == codeCurrent) {
             printf(" <^^^^^^^^^^^^^^^^^^^^^^^^^^^ PC is at previous instruction >\n");
         } else { 
@@ -5014,6 +5035,42 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	R_BCNodeStackTop += 2;
 	NEXT();
       }
+    OP(CHECKFUNEARG, 1, CONSTOP(0), LABELOP(0)):
+      {
+        int nargs = GETINTOP();
+	/* check then the value on the stack is a function */
+	value = GETSTACK(-1);
+	if (TYPEOF(value) != CLOSXP && TYPEOF(value) != BUILTINSXP &&
+	    TYPEOF(value) != SPECIALSXP)
+	  error(_("attempt to apply non-function"));
+
+	/* initialize the function type register, and push space for
+	   creating the argument list. */
+	ftype = TYPEOF(value);
+	
+	BCNSTACKCHECK(nargs);
+	NEXT();
+      }      
+    OP(GETFUNEARG, 2, CONSTOP(1), LABELOP(0)): 
+      {
+        /* get the function */
+        SEXP symbol = GETCONSTOP();
+        int nargs = GETINTOP(); /* FIXME: turn into register so that it is not popped twice, once here and once in the call ? */
+        value = findFun(symbol, rho);
+        if(RTRACE(value)) {
+            Rprintf("trace: ");
+            PrintValue(symbol);
+        }
+
+        /* initialize the function type register */
+        ftype = TYPEOF(value);
+
+        BCNSTACKCHECK(1 + nargs);
+        SETSTACK(0, value);
+        R_BCNodeStackTop += 1;
+        
+        NEXT();
+      }
     OP(MAKEPROM, 1, CONSTOP(1), LABELOP(0)):
       {
 	SEXP code = GETCONSTOP();
@@ -5134,6 +5191,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  R_Visible = flag != 1;
 	  value = PRIMFUN(fun) (call, fun, args, rho);
 	  if (flag < 2) R_Visible = flag != 1;
+	  RELEASE_PROMARGS(args);
 	  break;
 	case SPECIALSXP:
 	  flag = PRIMPRINT(fun);
@@ -5157,10 +5215,45 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	SEXP call = GETCONSTOP();
 	int nargs = GETINTOP();
-	error("CALLEARG not yet implemented");
+	SEXP fun; 
+	SEXP args; 
 
+	int flag;
+	switch(ftype) {
+        case BUILTINSXP:
+          fun = GETSTACK(-1-nargs);
+          args = PROTECT(buildPositionalPromargs(nargs, R_BCNodeStackTop-1));
+	  checkForMissings(args, call);
+	  flag = PRIMPRINT(fun);
+	  R_Visible = flag != 1;
+	  value = PRIMFUN(fun) (call, fun, args, rho);
+	  if (flag < 2) R_Visible = flag != 1;
+	  RELEASE_PROMARGS(args);
+          UNPROTECT(1);	  
+  	  R_BCNodeStackTop -= nargs;
+	  break;
+	case SPECIALSXP:
+          fun = GETSTACK(-1);
+	  flag = PRIMPRINT(fun);
+	  R_Visible = flag != 1;
+	  value = PRIMFUN(fun) (call, fun, CDR(call), rho);
+	  if (flag < 2) R_Visible = flag != 1;
+	  /* note: there are no args stored on the node stack */
+	  break;
+	case CLOSXP:
+          fun = GETSTACK(-1-nargs);
+          args = PROTECT(buildPositionalPromargs(nargs, R_BCNodeStackTop-1));
+	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  RELEASE_PROMARGS(args);
+          UNPROTECT(1);
+  	  R_BCNodeStackTop -= nargs;
+	  break;
+	default: error(_("bad function"));
+	}
+	SETSTACK(-1, value);
+	ftype = 0;
 	NEXT();
-      }      
+      }                
     OP(CALLBUILTIN, 1, CONSTOP(1), LABELOP(0)):
       {
 	SEXP fun = GETSTACK(-3);
