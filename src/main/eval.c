@@ -1082,6 +1082,190 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     return (tmp);
 }
 
+/* Builds promargs cells from what is on the stack (last would be typically
+ * a pointer for the last argument on the node stack).  This is for
+ * positional calls only. */
+
+R_INLINE SEXP buildPositionalPromargs(int nargs, SEXP *last) {
+    if (nargs == 0) {
+        return R_NilValue;
+    }
+    SEXP pargs = CONS_NR(*last, R_NilValue);
+    SEXP *src = last;
+    int i;
+    for(i = nargs - 1; i > 0; i--) {
+        src = src - 1;
+        
+        pargs = CONS_NR(*src, pargs); /* FIXME: the ast interpreter uses CONS but the bc interpreter uses CONS_NR */
+    }
+    return pargs;    
+}
+
+/* 
+  This is a specialized version for calls that have no names, no dots, no (compile-time) missings.
+  Arguments are given as an array (SEXP*); most of the elements will be promises, but some may be
+  constants. 
+  
+  It does not support suppliedenv (usemethod).
+ */
+SEXP applyPositionalClosure(SEXP call, SEXP op, SEXP *args, int nargs, SEXP rho)
+{
+    SEXP formals, actuals, savedrho;
+    volatile SEXP body, newrho;
+    SEXP f, a, tmp;
+    RCNTXT cntxt;
+
+    /* formals = list of formal parameters */
+    /* actuals = values to be bound to formals and also added to the environment of the new function */
+    /* arglist = the tagged list of arguments */
+
+    /* protection against rho = NULL */
+    // these are deliberately not translated
+    if (!rho)
+	errorcall(call,
+		  "'rho' cannot be C NULL: detected in C-level applyClosure");
+    if (!isEnvironment(rho))
+	errorcall(call, "'rho' must be an environment not %s: detected in C-level applyClosure",
+		  type2char(TYPEOF(rho)));
+
+    formals = FORMALS(op);
+    body = BODY(op);
+    savedrho = CLOENV(op);
+
+    if (R_jit_enabled > 0 && TYPEOF(body) != BCODESXP) {
+	int old_enabled = R_jit_enabled;
+	SEXP newop;
+	R_jit_enabled = 0;
+	newop = R_cmpfun(op);
+	body = BODY(newop);
+	SET_BODY(op, body);
+	R_jit_enabled = old_enabled;
+    }
+
+    /*  Set up a context with the call in it so error has access to it */
+    /* FIXME: can we avoid this overhead? */
+
+    SEXP arglist = PROTECT(buildPositionalPromargs(nargs, args + (nargs - 1) )); /* TEMPORARY FOR DEBUGGING */
+    begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
+
+    /*  Build a list which matches the actual (unevaluated) arguments
+	to the formal paramters.  Build a new environment which
+	contains the matched pairs.  Ideally this environment sould be
+	hashed.  */
+
+    newrho = matchPositionalArgsCreateEnv(formals, args, nargs, call, savedrho, &actuals);
+    PROTECT(newrho);
+    PROTECT(actuals);
+
+    if (R_envHasNoSpecialSymbols(newrho))
+	SET_NO_SPECIAL_SYMBOLS(newrho);
+
+    /*  Terminate the previous context and start a new one with the
+	correct environment. */
+
+    endcontext(&cntxt);
+
+    /*  If we have a generic function we need to use the sysparent of
+	the generic as the sysparent of the method because the method
+	is a straight substitution of the generic.  */
+
+    if( R_GlobalContext->callflag == CTXT_GENERIC )
+	begincontext(&cntxt, CTXT_RETURN, call,
+		     newrho, R_GlobalContext->sysparent, arglist, op);
+    else
+	begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
+
+    /* Get the srcref record from the closure object */
+
+    R_Srcref = getAttrib(op, R_SrcrefSymbol);
+
+    /* The default return value is NULL.  FIXME: Is this really needed
+       or do we always get a sensible value returned?  */
+
+    tmp = R_NilValue;
+
+    /* Debugging */
+
+    SET_RDEBUG(newrho, RDEBUG(op) || RSTEP(op)
+		     || (RDEBUG(rho) && R_BrowserLastCommand == 's')) ;
+    if( RSTEP(op) ) SET_RSTEP(op, 0);
+    if (RDEBUG(newrho)) {
+	int old_bl = R_BrowseLines,
+	    blines = asInteger(GetOption1(install("deparse.max.lines")));
+	SEXP savesrcref;
+	cntxt.browserfinish = 0; /* Don't want to inherit the "f" */
+	/* switch to interpreted version when debugging compiled code */
+	if (TYPEOF(body) == BCODESXP)
+	    body = bytecodeExpr(body);
+	Rprintf("debugging in: ");
+	if(blines != NA_INTEGER && blines > 0)
+	    R_BrowseLines = blines;
+	PrintValueRec(call, rho);
+	R_BrowseLines = old_bl;
+
+	/* Is the body a bare symbol (PR#6804) */
+	if (!isSymbol(body) & !isVectorAtomic(body)){
+		/* Find out if the body is function with only one statement. */
+		if (isSymbol(CAR(body)))
+			tmp = findFun(CAR(body), rho);
+		else
+			tmp = eval(CAR(body), rho);
+	}
+	savesrcref = R_Srcref;
+	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
+	SrcrefPrompt("debug", R_Srcref);
+	PrintValue(body);
+	do_browser(call, op, R_NilValue, newrho);
+	R_Srcref = savesrcref;
+	UNPROTECT(1);
+    }
+
+    /*  It isn't completely clear that this is the right place to do
+	this, but maybe (if the matchArgs above reverses the
+	arguments) it might just be perfect.
+
+	This will not currently work as the entry points in envir.c
+	are static.
+    */
+
+#ifdef  HASHING
+    {
+	SEXP R_NewHashTable(int);
+	SEXP R_HashFrame(SEXP);
+	HASHTAB(newrho) = R_NewHashTable(nargs);
+	newrho = R_HashFrame(newrho);
+    }
+#endif
+#undef  HASHING
+
+    /*  Set a longjmp target which will catch any explicit returns
+	from the function body.  */
+
+    if ((SETJMP(cntxt.cjmpbuf))) {
+	if (R_ReturnedValue == R_RestartToken) {
+	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
+	    R_ReturnedValue = R_NilValue;  /* remove restart token */
+	    PROTECT(tmp = eval(body, newrho));
+	}
+	else
+	    PROTECT(tmp = R_ReturnedValue);
+    }
+    else {
+	PROTECT(tmp = eval(body, newrho));
+    }
+
+    endcontext(&cntxt);
+
+    if (RDEBUG(op)) {
+	Rprintf("exiting from: ");
+	PrintValueRec(call, rho);
+    }
+    UNPROTECT(3);
+    
+    return (tmp);
+}
+
+
 /* **** FIXME: This code is factored out of applyClosure.  If we keep
    **** it we should change applyClosure to run through this routine
    **** to avoid code drift. */
@@ -2363,24 +2547,6 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 
 #endif /* USE_PROMARGS_STACK */
 
-/* Builds promargs cells from what is on the stack (last would be typically
- * a pointer to the last argument on the node stack).  This is for
- * positional calls only. */
-
-R_INLINE SEXP buildPositionalPromargs(int nargs, SEXP *last) {
-    if (nargs == 0) {
-        return R_NilValue;
-    }
-    SEXP pargs = CONS_NR(*last, R_NilValue);
-    SEXP *src = last;
-    int i;
-    for(i = nargs - 1; i > 0; i--) {
-        src = src - 1;
-        
-        pargs = CONS_NR(*src, pargs); /* fixme - the ast interpreter uses CONS but the bc interpreter uses CONS_NR */
-    }
-    return pargs;    
-}
 
 /* Check that each formal is a symbol */
 
@@ -5242,8 +5408,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  break;
 	case CLOSXP:
           fun = GETSTACK(-1-nargs);
-          args = PROTECT(buildPositionalPromargs(nargs, R_BCNodeStackTop-1));
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+//          args = PROTECT(buildPositionalPromargs(nargs, R_BCNodeStackTop-1));
+//	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+          value = applyPositionalClosure(call, fun, R_BCNodeStackTop-nargs, nargs, rho); /* FIXME: redundantly calculates R_BCNodeStackTop-(1 + nargs) even for 0 args */
 	  RELEASE_PROMARGS(args);
           UNPROTECT(1);
   	  R_BCNodeStackTop -= nargs;

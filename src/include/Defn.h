@@ -1114,6 +1114,7 @@ SEXP matchArg(SEXP, SEXP*);
 SEXP matchArgExact(SEXP, SEXP*);
 SEXP matchArgs(SEXP, SEXP, SEXP);
 SEXP matchUnnamedArgsCreateEnv(SEXP, SEXP, SEXP, SEXP, SEXP*);
+SEXP matchPositionalArgsCreateEnv(SEXP, SEXP *, int, SEXP, SEXP, SEXP*);
 SEXP matchPar(const char *, SEXP*);
 void memtrace_report(void *, void *);
 SEXP mkCLOSXP(SEXP, SEXP, SEXP);

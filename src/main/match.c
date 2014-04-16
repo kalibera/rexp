@@ -513,3 +513,131 @@ SEXP attribute_hidden matchUnnamedArgsCreateEnv(SEXP formals, SEXP supplied, SEX
     *outActuals = actuals;
     return(newrho);
 }
+
+/* 
+   A specialized version of matchArgs for arguments (promargs) provided as a
+   C array (typically on the byte-code interpreter node-stack).
+   
+   Specialized for positional calls: no names, no caller dots, no
+   compile-time missing arguments.
+  
+   In addition to matchArgs, this specialized version also sets the tags of
+   the resulting actuals and creates the resulting environment.  Also, it
+   provides promises for default values if applicable.  And it enables
+   reference counting.
+   
+   Returns the new environment.
+   Returns the actuals in output parameter outActuals (not protected).
+   Supplied will not be protected by this function (it should be a C array safe from the GC).
+*/
+   
+SEXP attribute_hidden matchPositionalArgsCreateEnv(SEXP formals, SEXP *supplied, int nsupplied, SEXP call, SEXP rho, SEXP* outActuals)
+{
+    SEXP *s;
+    SEXP f, a;    
+    SEXP actuals = R_NilValue;
+    
+    SEXP newrho = PROTECT(NewEnvironmentNR(rho));    
+    
+    SEXP *endSupplied = supplied + nsupplied;
+    for (f = formals, s = supplied, a = actuals ; f != R_NilValue ; f = CDR(f), s++) {
+    
+        if (TAG(f) == R_DotsSymbol) {
+            /* pack all remaining arguments into ... */
+            
+            SEXP *rs = endSupplied - 1;
+            SEXP dotsContent = R_NilValue;
+            for(; rs >= s; rs--) {
+                dotsContent = CONS(*rs, dotsContent); /* FIXME: enabling refcnt? */
+            }
+            if (dotsContent != R_NilValue) {
+                SET_TYPEOF(dotsContent, DOTSXP);
+            }
+            SEXP dots = CONS_NR(dotsContent, R_NilValue);
+            SET_TAG(dots, R_DotsSymbol);
+
+            if (a == R_NilValue) {
+                PROTECT(actuals = dots);
+            } else {
+                SETCDR(a, dots);
+                ENABLE_REFCNT(a); /* dots are part of a protected list */
+            }
+            a = dots;
+            f = CDR(f);
+            s = endSupplied;
+            /* falls through into noMoreSupplied branch below */
+        }
+            
+        if (s == endSupplied) {
+            /* possibly fewer supplied arguments than formals */
+            SEXP ds;
+            for(; f != R_NilValue ; f = CDR(f), a = ds) { 
+                ds = CONS_NR(R_MissingArg, R_NilValue);
+                SET_TAG(ds, TAG(f));
+                if (a == R_NilValue) {
+                    PROTECT(actuals = ds);
+                } else {
+                    SETCDR(a, ds);
+                    ENABLE_REFCNT(a); /* ds is part of a protected list */
+                }
+                SEXP fdefault = CAR(f);
+                if (fdefault != R_MissingArg) {
+                    SET_MISSING(ds, 2);
+                    SETCAR(ds, mkPROMISE(fdefault, newrho));
+                } else {
+                    SET_MISSING(ds, 1);
+                }
+            }
+            break;
+        }
+        
+        /* normal case, the next supplied arg is available */
+        
+        SEXP arg = CONS_NR(*s, R_NilValue);
+        SET_TAG(arg, TAG(f));
+
+        if (a == R_NilValue) {
+            PROTECT(actuals = arg);
+        } else {
+            SETCDR(a, arg);
+            ENABLE_REFCNT(a);
+        }
+        a = arg;
+    }
+
+    if (s < endSupplied) {
+        /* some arguments are not used */
+
+        SEXP *rs = endSupplied - 1;
+        SEXP unusedForError = R_NilValue;
+        for(; rs >= s; rs--) {
+            SEXP rsValue = *rs;
+            if (TYPEOF(rsValue) == PROMSXP) {
+                rsValue = PREXPR(rsValue);
+            }
+            unusedForError = CONS(rsValue, unusedForError);
+        }
+        PROTECT(unusedForError); /* needed? */
+        errorcall(call /* R_GlobalContext->call */,
+	   ngettext("unused argument %s",
+	     "unused arguments %s",
+	     (unsigned long) length(unusedForError)),
+	     CHAR(STRING_ELT(deparse1line(unusedForError, 0), 0)) + 4);
+                  /* '+ 4' is to remove 'list' from 'list(badTag1,...)' */
+        UNPROTECT(1);
+    }
+        
+    if (a != R_NilValue) {
+        ENABLE_REFCNT(a);
+    }
+    
+    SET_FRAME(newrho, actuals);
+    ENABLE_REFCNT(newrho);
+    UNPROTECT(1);  /* newrho */
+    if (actuals != R_NilValue) {
+        UNPROTECT(1); /* actuals */
+    }    
+    *outActuals = actuals;
+    
+    return(newrho);
+}
