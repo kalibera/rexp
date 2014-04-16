@@ -50,7 +50,7 @@ static SEXP GetObject(RCNTXT *cptr)
     if (tag != R_NilValue && tag != R_DotsSymbol) {
 	s = NULL;
 	/** exact matches **/
-	for (b = cptr->promargs ; b != R_NilValue ; b = CDR(b))
+	for (b = accessPromargs(cptr) ; b != R_NilValue ; b = CDR(b))
 	    if (TAG(b) != R_NilValue && pmatch(tag, TAG(b), 1)) {
 		if (s != NULL)
 		    error(_("formal argument \"%s\" matched by multiple actual arguments"), tag);
@@ -60,7 +60,7 @@ static SEXP GetObject(RCNTXT *cptr)
 
 	if (s == NULL)
 	    /** partial matches **/
-	    for (b = cptr->promargs ; b != R_NilValue ; b = CDR(b))
+	    for (b = accessPromargs(cptr) ; b != R_NilValue ; b = CDR(b))
 		if (TAG(b) != R_NilValue && pmatch(tag, TAG(b), 0)) {
 		    if ( s != NULL)
 			error(_("formal argument \"%s\" matched by multiple actual arguments"), tag);
@@ -69,20 +69,20 @@ static SEXP GetObject(RCNTXT *cptr)
 		}
 	if (s == NULL)
 	    /** first untagged argument **/
-	    for (b = cptr->promargs ; b != R_NilValue ; b = CDR(b))
+	    for (b = accessPromargs(cptr) ; b != R_NilValue ; b = CDR(b))
 		if (TAG(b) == R_NilValue )
 		{
 		    s = CAR(b);
 		    break;
 		}
 	if (s == NULL)
-	    s = CAR(cptr->promargs);
+	    s = CAR(accessPromargs(cptr));
 /*
 	    error("failed to match argument for dispatch");
 */
     }
     else
-	s = CAR(cptr->promargs);
+	s = CAR(accessPromargs(cptr));
 
     UNPROTECT(2);
     if (TYPEOF(s) == PROMSXP) {
@@ -304,7 +304,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	}
     }
 
-    PROTECT(matchedarg = cptr->promargs);
+    PROTECT(matchedarg = accessPromargs(cptr));
     PROTECT(newcall = duplicate(cptr->call));
 
     PROTECT(klass = R_data_class2(obj));
@@ -573,7 +573,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     /* get formals and actuals; attach the names of the formals to
        the actuals, expanding any ... that occurs */
     formals = FORMALS(s);
-    PROTECT(actuals = matchArgs(formals, cptr->promargs, call));
+    PROTECT(actuals = matchArgs(formals, accessPromargs(cptr), call));  /* FIXME: could have a specialized version of matchArgs for this, avoiding reification of promargs */
 
     i = 0;
     for(s = formals, t = actuals; s != R_NilValue; s = CDR(s), t = CDR(t)) {
@@ -605,8 +605,8 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     /* we can't duplicate because it would force the promises */
     /* so we do our own duplication of the promargs */
 
-    PROTECT(matchedarg = allocList(length(cptr->promargs)));
-    for (t = matchedarg, s = cptr->promargs; t != R_NilValue;
+    PROTECT(matchedarg = allocList(length(accessPromargs(cptr))));
+    for (t = matchedarg, s = accessPromargs(cptr); t != R_NilValue;
 	 s = CDR(s), t = CDR(t)) {
 	SETCAR(t, CAR(s));
 	SET_TAG(t, TAG(s));

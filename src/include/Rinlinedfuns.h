@@ -697,10 +697,28 @@ INLINE_FUN SEXP R_FixupRHS(SEXP x, SEXP y)
 }
 #endif /* R_INLINES_H_ */
 
-/* Fixme: with GCC only, this could be changed into a macro using a compound statement */
+/* FIXME: with GCC only, this could be changed into a macro using a compound statement */
 INLINE_FUN SEXP argShift(SEXP *argsp) {
-    fprintf(stderr, "argShift, argsp = %p, *argsp = %p, CAR(*argsp) = %p, CDR(*argsp) = %p\n", argsp, *argsp, CAR(*argsp), CDR(*argsp));
     SEXP res = CAR(*argsp);
     *argsp = CDR(*argsp);
     return res;
+}
+
+/* Builds promargs cells from what is on the stack (last would be typically
+ * a pointer for the last argument on the node stack).  This is for
+ * positional calls only. */
+
+INLINE_FUN SEXP buildPositionalPromargs(int nargs, SEXP *last) {
+    if (nargs == 0) {
+        return R_NilValue;
+    }
+    SEXP pargs = CONS_NR(*last, R_NilValue);
+    SEXP *src = last;
+    int i;
+    for(i = nargs - 1; i > 0; i--) {
+        src = src - 1;
+        
+        pargs = CONS_NR(*src, pargs); /* FIXME: the ast interpreter uses CONS but the bc interpreter uses CONS_NR */
+    }
+    return pargs;    
 }

@@ -477,7 +477,7 @@ SEXP attribute_hidden do_nargs(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     for (cptr = R_GlobalContext; cptr != NULL; cptr = cptr->nextcontext) {
 	if ((cptr->callflag & CTXT_FUNCTION) && cptr->cloenv == rho) {
-	    nargs = length(cptr->promargs);
+	    nargs = length(accessPromargs(cptr)); /* FIXME: there would be a cheaper way to count arguments */
 	    break;
 	}
     }

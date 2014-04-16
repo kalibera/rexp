@@ -57,6 +57,8 @@
 #endif
 
 
+
+
 #define MAXELTSIZE 8192 /* Used as a default for string buffer sizes,
 			   and occasionally as a limit. */
 
@@ -76,9 +78,15 @@ Rcomplex Rf_ComplexFromInteger(int, int*);
 Rcomplex Rf_ComplexFromReal(double, int*);
 
 #define CALLED_FROM_DEFN_H 1
+#ifdef USE_SIGNALS
+
+#endif
 #include <Rinternals.h>		/*-> Arith.h, Boolean.h, Complex.h, Error.h,
 				  Memory.h, PrtUtil.h, Utils.h */
 #undef CALLED_FROM_DEFN_H
+
+
+
 extern0 SEXP	R_CommentSymbol;    /* "comment" */
 extern0 SEXP	R_DotEnvSymbol;     /* ".Environment" */
 extern0 SEXP	R_ExactSymbol;	    /* "exact" */
@@ -481,7 +489,6 @@ void releasePromargs(SEXPREC *);
 
 #endif
 
-
 #else /* not USE_RINTERNALS */
 
 typedef struct VECREC *VECP;
@@ -517,12 +524,10 @@ Rboolean (NO_SPECIAL_SYMBOLS)(SEXP b);
 #endif /* USE_RINTERNALS */
 
 
-
 typedef SEXP R_bcstack_t;
 #ifdef BC_INT_STACK
 typedef union { void *p; int i; } IStackval;
 #endif
-
 
 #ifdef R_USE_SIGNALS
 /* Stack entry for pending promises */
@@ -556,9 +561,12 @@ typedef struct RCNTXT {
 #ifdef BC_INT_STACK
     IStackval *intstack;
 #endif
+#ifdef USE_PROMARGS_STACK
     SEXPREC *promargsstackbase;
     SEXPREC *promargsstacktop;
     SEXPREC *promargsstackend;    /* could be computed from base */
+#endif
+    SEXP *positionalPromargs;
     SEXP srcref;	        /* The source line in effect */
     int browserfinish;     /* should browser finish this context without stopping */
 } RCNTXT, *context;
@@ -604,7 +612,23 @@ BUI   0 0 0 0 0 0 0 1 = 64
 #define IS_RESTART_BIT_SET(flags) ((flags) & CTXT_RESTART)
 #define SET_RESTART_BIT_ON(flags) (flags |= CTXT_RESTART)
 #define SET_RESTART_BIT_OFF(flags) (flags &= ~CTXT_RESTART)
+
+/* FIXME: this perhaps should be in Rinlinedfuncs, but it cannot, because it uses RCNTXT, which is defined in Defn.h,
+   which depends on SEXP, which is define in Rinternals.h */
+
+/* builds promargs if necessary */
+R_INLINE SEXP accessPromargs(RCNTXT* cptr) {
+    if (cptr->promargs != NULL) {
+        return cptr->promargs;
+    }
+    int nargs = length(CDR(cptr->call));
+    SEXP pargs = buildPositionalPromargs(nargs, cptr->positionalPromargs + nargs - 1);
+    cptr->promargs = pargs;
+    return pargs;
+}
+
 #endif /* USE_SIGNALS */
+
 
 /* Miscellaneous Definitions */
 #define streql(s, t)	(!strcmp((s), (t)))
@@ -848,9 +872,11 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 
 /*--- FUNCTIONS ------------------------------------------------------ */
 
+# define accessPromargs		Rf_accessPromargs
 # define allocCharsxp		Rf_allocCharsxp
 # define asVecSize		Rf_asVecSize
 # define begincontext		Rf_begincontext
+# define beginposcontext	Rf_beginposcontext
 # define check_stack_balance	Rf_check_stack_balance
 # define check1arg		Rf_check1arg
 # define CheckFormals		Rf_CheckFormals
@@ -1190,6 +1216,7 @@ SEXP vectorIndex(SEXP, SEXP, int, int, int, SEXP, Rboolean);
 
 #ifdef R_USE_SIGNALS
 void begincontext(RCNTXT*, int, SEXP, SEXP, SEXP, SEXP, SEXP);
+void beginposcontext(RCNTXT*, int, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
 SEXP dynamicfindVar(SEXP, RCNTXT*);
 void endcontext(RCNTXT*);
 int framedepth(RCNTXT*);

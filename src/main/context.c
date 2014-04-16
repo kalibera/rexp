@@ -222,13 +222,12 @@ static void jumpfun(RCNTXT * cptr, int mask, SEXP val)
     LONGJMP(cptr->cjmpbuf, mask);
 }
 
-
 /* begincontext - begin an execution context */
 
 /* begincontext and endcontext are used in dataentry.c and modules */
-void begincontext(RCNTXT * cptr, int flags,
+void beginposcontext(RCNTXT * cptr, int flags,
 		  SEXP syscall, SEXP env, SEXP sysp,
-		  SEXP promargs, SEXP callfun)
+		  SEXP promargs, SEXP callfun, SEXP* positionalPromargs)
 {
     cptr->cstacktop = R_PPStackTop;
     cptr->evaldepth = R_EvalDepth;
@@ -253,7 +252,8 @@ void begincontext(RCNTXT * cptr, int flags,
     cptr->promargsstackbase = R_PromargsStackBase;
     cptr->promargsstacktop = R_PromargsStackTop;
     cptr->promargsstackend = R_PromargsStackEnd;
-#endif    
+#endif
+    cptr->positionalPromargs = positionalPromargs;
     cptr->srcref = R_Srcref;    
     cptr->browserfinish = R_GlobalContext->browserfinish;
     cptr->nextcontext = R_GlobalContext;
@@ -261,6 +261,12 @@ void begincontext(RCNTXT * cptr, int flags,
     R_GlobalContext = cptr;
 }
 
+void begincontext(RCNTXT * cptr, int flags,
+		  SEXP syscall, SEXP env, SEXP sysp,
+		  SEXP promargs, SEXP callfun) {
+
+    beginposcontext(cptr, flags, syscall, env, sysp, promargs, callfun, NULL);		  
+}
 
 /* endcontext - end an execution context */
 
@@ -563,9 +569,9 @@ SEXP attribute_hidden do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
            error(_("not that many calls to browser are active"));
 
         if( PRIMVAL(op) == 1 )
-            rval = CAR(cptr->promargs);
+            rval = CAR(accessPromargs(cptr));
         else
-            rval = CADR(cptr->promargs);
+            rval = CADR(accessPromargs(cptr));
         break;
     case 3: /* turn on debugging n levels up */
         while ( (cptr != R_ToplevelContext) && n > 0 ) {

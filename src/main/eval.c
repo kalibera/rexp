@@ -1082,25 +1082,6 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     return (tmp);
 }
 
-/* Builds promargs cells from what is on the stack (last would be typically
- * a pointer for the last argument on the node stack).  This is for
- * positional calls only. */
-
-R_INLINE SEXP buildPositionalPromargs(int nargs, SEXP *last) {
-    if (nargs == 0) {
-        return R_NilValue;
-    }
-    SEXP pargs = CONS_NR(*last, R_NilValue);
-    SEXP *src = last;
-    int i;
-    for(i = nargs - 1; i > 0; i--) {
-        src = src - 1;
-        
-        pargs = CONS_NR(*src, pargs); /* FIXME: the ast interpreter uses CONS but the bc interpreter uses CONS_NR */
-    }
-    return pargs;    
-}
-
 /* 
   This is a specialized version for calls that have no names, no dots, no (compile-time) missings.
   Arguments are given as an array (SEXP*); most of the elements will be promises, but some may be
@@ -1145,8 +1126,7 @@ SEXP applyPositionalClosure(SEXP call, SEXP op, SEXP *args, int nargs, SEXP rho)
     /*  Set up a context with the call in it so error has access to it */
     /* FIXME: can we avoid this overhead? */
 
-    SEXP arglist = PROTECT(buildPositionalPromargs(nargs, args + (nargs - 1) )); /* TEMPORARY FOR DEBUGGING */
-    begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
+    beginposcontext(&cntxt, CTXT_RETURN, call, savedrho, rho, NULL, op, args);
 
     /*  Build a list which matches the actual (unevaluated) arguments
 	to the formal paramters.  Build a new environment which
@@ -1170,10 +1150,10 @@ SEXP applyPositionalClosure(SEXP call, SEXP op, SEXP *args, int nargs, SEXP rho)
 	is a straight substitution of the generic.  */
 
     if( R_GlobalContext->callflag == CTXT_GENERIC )
-	begincontext(&cntxt, CTXT_RETURN, call,
-		     newrho, R_GlobalContext->sysparent, arglist, op);
+	beginposcontext(&cntxt, CTXT_RETURN, call,
+		     newrho, R_GlobalContext->sysparent, NULL, op, args);
     else
-	begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
+	beginposcontext(&cntxt, CTXT_RETURN, call, newrho, rho, NULL, op, args);
 
     /* Get the srcref record from the closure object */
 
@@ -1438,7 +1418,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
     /* get the rest of the stuff we need from the current context,
        execute the method, and return the result */
     call = cptr->call;
-    arglist = cptr->promargs;
+    arglist = accessPromargs(cptr);
     val = R_execClosure(call, op, arglist, callerenv, newrho);
     UNPROTECT(1);
     return val;
@@ -2739,7 +2719,7 @@ SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	cptr = cptr->nextcontext;
     }
     if (cptr != NULL) {
-	args = cptr->promargs;
+	args = accessPromargs(cptr);
     }
     /* get the env recall was called from */
     s = R_GlobalContext->sysparent;
@@ -5408,11 +5388,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  break;
 	case CLOSXP:
           fun = GETSTACK(-1-nargs);
-//          args = PROTECT(buildPositionalPromargs(nargs, R_BCNodeStackTop-1));
-//	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
-          value = applyPositionalClosure(call, fun, R_BCNodeStackTop-nargs, nargs, rho); /* FIXME: redundantly calculates R_BCNodeStackTop-(1 + nargs) even for 0 args */
+//        /*defensive version for testing */  args = PROTECT(buildPositionalPromargs(nargs, R_BCNodeStackTop-1));
+//	                                      value = applyClosure(call, fun, args, rho, R_BaseEnv);
+          value = applyPositionalClosure(call, fun, R_BCNodeStackTop-nargs, nargs, rho); 
+            /* FIXME: redundantly calculates R_BCNodeStackTop-(1 + nargs) even for 0 args */
 	  RELEASE_PROMARGS(args);
-          UNPROTECT(1);
+//                                            UNPROTECT(1);
   	  R_BCNodeStackTop -= nargs;
 	  break;
 	default: error(_("bad function"));

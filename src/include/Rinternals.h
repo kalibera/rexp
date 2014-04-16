@@ -1145,6 +1145,7 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
 void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean decreasing);
 
 #ifndef R_NO_REMAP
+#define accessPromargs		Rf_accessPromargs
 #define acopy_string		Rf_acopy_string
 #define alloc3DArray            Rf_alloc3DArray
 #define allocArray		Rf_allocArray
@@ -1165,6 +1166,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define asLogical		Rf_asLogical
 #define asReal			Rf_asReal
 #define asS4			Rf_asS4
+#define buildPositionalPromargs Rf_buildPositionalPromargs
 #define classgets		Rf_classgets
 #define coerceVector		Rf_coerceVector
 #define conformable		Rf_conformable
@@ -1315,6 +1317,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
    with or without the Rf_ prefix.
 */
 SEXP     Rf_argShift(SEXP *);
+SEXP     Rf_buildPositionalPromargs(int nargs, SEXP *last);
 Rboolean Rf_conformable(SEXP, SEXP);
 SEXP	 Rf_elt(SEXP, int);
 Rboolean Rf_inherits(SEXP, const char *);
