@@ -978,29 +978,17 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 	}
     }
 
-    /*  Terminate the previous context and start a new one with the
-	correct environment. */
+    /* Patch the context with the new environment */    
 
-    endcontext(&cntxt);
-
-    /*  If we have a generic function we need to use the sysparent of
-	the generic as the sysparent of the method because the method
-	is a straight substitution of the generic.  */
-
-    if( R_GlobalContext->callflag == CTXT_GENERIC )
-	begincontext(&cntxt, CTXT_RETURN, call,
-		     newrho, R_GlobalContext->sysparent, arglist, op);
-    else
-	begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
+    cntxt.cstacktop += 2; /* the new context should have protection stack including newrho, actuals */	
+    cntxt.cloenv = newrho;    	
+    if( cntxt.nextcontext->callflag == CTXT_GENERIC ) {
+        cntxt.sysparent = cntxt.nextcontext->sysparent;
+    }
 
     /* Get the srcref record from the closure object */
 
     R_Srcref = getAttrib(op, R_SrcrefSymbol);
-
-    /* The default return value is NULL.  FIXME: Is this really needed
-       or do we always get a sensible value returned?  */
-
-    tmp = R_NilValue;
 
     /* Debugging */
 
@@ -1025,9 +1013,9 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 	if (!isSymbol(body) & !isVectorAtomic(body)){
 		/* Find out if the body is function with only one statement. */
 		if (isSymbol(CAR(body)))
-			tmp = findFun(CAR(body), rho);
+			tmp = findFun(CAR(body), rho); /* FIXME: the value of tmp is never used */
 		else
-			tmp = eval(CAR(body), rho);
+			tmp = eval(CAR(body), rho); /* FIXME: the value of tmp is never used */
 	}
 	savesrcref = R_Srcref;
 	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
@@ -1140,29 +1128,17 @@ SEXP applyPositionalClosure(SEXP call, SEXP op, SEXP *args, int nargs, SEXP rho)
     if (R_envHasNoSpecialSymbols(newrho))
 	SET_NO_SPECIAL_SYMBOLS(newrho);
 
-    /*  Terminate the previous context and start a new one with the
-	correct environment. */
+    /* Patch the context with the new environment */    
 
-    endcontext(&cntxt);
-
-    /*  If we have a generic function we need to use the sysparent of
-	the generic as the sysparent of the method because the method
-	is a straight substitution of the generic.  */
-
-    if( R_GlobalContext->callflag == CTXT_GENERIC )
-	beginposcontext(&cntxt, CTXT_RETURN, call,
-		     newrho, R_GlobalContext->sysparent, NULL, op, args);
-    else
-	beginposcontext(&cntxt, CTXT_RETURN, call, newrho, rho, NULL, op, args);
+    cntxt.cstacktop += 2; /* the new context should have protection stack including newrho, actuals */	
+    cntxt.cloenv = newrho;    	
+    if( cntxt.nextcontext->callflag == CTXT_GENERIC ) {
+        cntxt.sysparent = cntxt.nextcontext->sysparent;
+    }        
 
     /* Get the srcref record from the closure object */
 
     R_Srcref = getAttrib(op, R_SrcrefSymbol);
-
-    /* The default return value is NULL.  FIXME: Is this really needed
-       or do we always get a sensible value returned?  */
-
-    tmp = R_NilValue;
 
     /* Debugging */
 
@@ -1187,9 +1163,9 @@ SEXP applyPositionalClosure(SEXP call, SEXP op, SEXP *args, int nargs, SEXP rho)
 	if (!isSymbol(body) & !isVectorAtomic(body)){
 		/* Find out if the body is function with only one statement. */
 		if (isSymbol(CAR(body)))
-			tmp = findFun(CAR(body), rho);
+			tmp = findFun(CAR(body), rho); /* FIXME: the value of tmp is never used */
 		else
-			tmp = eval(CAR(body), rho);
+			tmp = eval(CAR(body), rho); /* FIXME: the value of tmp is never used */
 	}
 	savesrcref = R_Srcref;
 	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
