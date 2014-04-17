@@ -5326,7 +5326,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  R_Visible = flag != 1;
 	  value = PRIMFUN(fun) (call, fun, args, rho);
 	  if (flag < 2) R_Visible = flag != 1;
-	  RELEASE_PROMARGS(args);
 	  break;
 	case SPECIALSXP:
 	  flag = PRIMPRINT(fun);
@@ -5335,7 +5334,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
-//	  inspectArgs(CDR(call));
 	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
 	  RELEASE_PROMARGS(args);
 	  break;
@@ -5363,7 +5361,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  R_Visible = flag != 1;
 	  value = PRIMFUN(fun) (call, fun, args, rho);
 	  if (flag < 2) R_Visible = flag != 1;
-	  RELEASE_PROMARGS(args);
           UNPROTECT(1);	  
   	  R_BCNodeStackTop -= nargs;
 	  break;
@@ -5381,7 +5378,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 //	                                      value = applyClosure(call, fun, args, rho, R_BaseEnv);
           value = applyPositionalClosure(call, fun, R_BCNodeStackTop-nargs, nargs, rho); 
             /* FIXME: redundantly calculates R_BCNodeStackTop-(1 + nargs) even for 0 args */
-	  RELEASE_PROMARGS(args);
 //                                            UNPROTECT(1);
   	  R_BCNodeStackTop -= nargs;
 	  break;

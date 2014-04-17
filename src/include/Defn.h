@@ -460,7 +460,7 @@ typedef struct {
 
 /* Promargs stack */
 
-//#define USE_PROMARGS_STACK
+#define USE_PROMARGS_STACK
 
 #ifdef USE_PROMARGS_STACK
   /* required USE_RINTERNALS for SEXPREC */
