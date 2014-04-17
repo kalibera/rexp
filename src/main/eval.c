@@ -1125,7 +1125,9 @@ SEXP applyPositionalClosure(SEXP call, SEXP op, SEXP *args, int nargs, SEXP rho)
     PROTECT(newrho);
     PROTECT(actuals);
 
-    if (NO_SPECIAL_SYMBOLS(formals)) {
+    if (NO_SPECIAL_SYMBOLS(formals)) {  
+        /* FIXME: is this needed at all with the compiler, which disallows overriding of some(?) special symbols */
+                
         /* the call has no dots and no names, so the variable names in newrho are just the formals */
         SET_NO_SPECIAL_SYMBOLS(newrho);
     }
