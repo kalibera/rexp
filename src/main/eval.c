@@ -1125,8 +1125,10 @@ SEXP applyPositionalClosure(SEXP call, SEXP op, SEXP *args, int nargs, SEXP rho)
     PROTECT(newrho);
     PROTECT(actuals);
 
-    if (R_envHasNoSpecialSymbols(newrho))
-	SET_NO_SPECIAL_SYMBOLS(newrho);
+    if (NO_SPECIAL_SYMBOLS(formals)) {
+        /* the call has no dots and no names, so the variable names in newrho are just the formals */
+        SET_NO_SPECIAL_SYMBOLS(newrho);
+    }
 
     /* Patch the context with the new environment */    
 
@@ -2510,9 +2512,18 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 void attribute_hidden CheckFormals(SEXP ls)
 {
     if (isList(ls)) {
-	for (; ls != R_NilValue; ls = CDR(ls))
-	    if (TYPEOF(TAG(ls)) != SYMSXP)
+        int sawSpecialSymbol = 0;
+	for (; ls != R_NilValue; ls = CDR(ls)) {
+	    SEXP name = TAG(ls);
+	    if (TYPEOF(name) != SYMSXP)
 		goto err;
+            if (IS_SPECIAL_SYMBOL(name)) {
+                sawSpecialSymbol = 1;
+            }
+        }
+        if (!sawSpecialSymbol) {
+            SET_NO_SPECIAL_SYMBOLS(ls);
+        }
 	return;
     }
  err:
