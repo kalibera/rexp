@@ -757,20 +757,39 @@ typedef int PROTECT_INDEX;
 #define REPROTECT(x,i) R_Reprotect(x,i)
 
 /* Evaluation Environment */
-LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */
 
-LibExtern SEXP  R_EmptyEnv;	    /* An empty environment at the root of the
-				    	environment tree */
-LibExtern SEXP  R_BaseEnv;	    /* The base environment; formerly R_NilValue */
 LibExtern SEXP	R_BaseNamespace;    /* The (fake) namespace for base */
 LibExtern SEXP	R_NamespaceRegistry;/* Registry for registered namespaces */
-
 LibExtern SEXP	R_Srcref;           /* Current srcref, for debuggers */
 
+#ifndef __MAIN__
+    extern SEXP const R_GlobalEnv;	 /* The "global" environment */
+    extern SEXP const R_BaseEnv;	/* The base environment; formerly R_NilValue */
+    extern SEXP const R_EmptyEnv;	/* An empty environment at the root of the
+                                           environment tree */
+#else
+    SEXPREC R_BaseEnvContent;
+    SEXP const R_BaseEnv = &R_BaseEnvContent;
+    SEXPREC R_EmptyEnvContent;
+    SEXP const R_EmptyEnv = &R_EmptyEnvContent;
+    SEXPREC R_GlobalEnvContent;
+    SEXP const R_GlobalEnv = &R_GlobalEnvContent;
+#endif
+
 /* Special Values */
-LibExtern SEXP	R_NilValue;	    /* The nil object */
-LibExtern SEXP	R_UnboundValue;	    /* Unbound marker */
-LibExtern SEXP	R_MissingArg;	    /* Missing argument marker */
+#ifndef __MAIN__
+    extern SEXP const R_NilValue; /* The nil object */
+    extern SEXP const R_UnboundValue; /* Unbound marker */
+    extern SEXP const R_MissingArg; /* Missing argument marker */
+#else
+    SEXPREC R_NilValueContent;
+    SEXP const R_NilValue = &R_NilValueContent;
+    SEXPREC R_UnboundValueContent;
+    SEXP const R_UnboundValue = &R_UnboundValueContent;
+    SEXPREC R_MissingArgContent;
+    SEXP const R_MissingArg = &R_MissingArgContent;
+#endif
+
 #ifdef __MAIN__
 attribute_hidden
 #else
@@ -840,6 +859,8 @@ SEXP Rf_allocMatrix(SEXPTYPE, int, int);
 SEXP Rf_allocList(int);
 SEXP Rf_allocS4Object(void);
 SEXP Rf_allocSExp(SEXPTYPE);
+void Rf_initializeOffHeapSEXP(SEXP, SEXPTYPE);
+void Rf_initializeOffHeapEnvironment(SEXP newrho, SEXP namelist, SEXP valuelist, SEXP rho);
 SEXP Rf_allocVector(SEXPTYPE, R_xlen_t);
 R_xlen_t Rf_any_duplicated(SEXP x, Rboolean from_last);
 R_xlen_t Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
@@ -1202,6 +1223,8 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define GetRowNames		Rf_GetRowNames
 #define gsetVar			Rf_gsetVar
 #define inherits		Rf_inherits
+#define initializeOffHeapSEXP	Rf_initializeOffHeapSEXP
+#define initializeOffHeapEnvironment	Rf_initializeOffHeapEnvironment
 #define install			Rf_install
 #define isArray			Rf_isArray
 #define isBasicClass            Rf_isBasicClass

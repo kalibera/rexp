@@ -321,7 +321,6 @@ static SEXP R_HashGetLoc(int hashcode, SEXP symbol, SEXP table)
 }
 
 
-
 /*----------------------------------------------------------------------
 
   R_NewHashTable
@@ -362,6 +361,15 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
     SET_HASHTAB(s, R_NewHashTable(asInteger(size)));
     UNPROTECT(3);
     return s;
+}
+
+void initializeOffHeapHashedEnv(SEXP s, SEXP enclos, SEXP size)
+{
+    initializeOffHeapEnvironment(s, R_NilValue, R_NilValue, enclos);
+    PROTECT(enclos);
+    PROTECT(size);
+    SET_HASHTAB(s, R_NewHashTable(asInteger(size)));
+    UNPROTECT(2);
 }
 
 
@@ -653,13 +661,13 @@ static SEXP R_BaseNamespaceName;
 
 void attribute_hidden InitBaseEnv()
 {
-    R_EmptyEnv = NewEnvironment(R_NilValue, R_NilValue, R_NilValue);
-    R_BaseEnv = NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv);
+    initializeOffHeapEnvironment(R_EmptyEnv, R_NilValue, R_NilValue, R_NilValue);
+    initializeOffHeapEnvironment(R_BaseEnv, R_NilValue, R_NilValue, R_EmptyEnv);
 }
 
 void attribute_hidden InitGlobalEnv()
 {
-    R_GlobalEnv = R_NewHashedEnv(R_BaseEnv, ScalarInteger(0));
+    initializeOffHeapHashedEnv(R_GlobalEnv, R_BaseEnv, ScalarInteger(0));
     R_MethodsNamespace = R_GlobalEnv; // so it is initialized.
 #ifdef NEW_CODE /* Not used */
     HASHTAB(R_GlobalEnv) = R_NewHashTable(100);

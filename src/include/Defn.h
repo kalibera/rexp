@@ -923,6 +923,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define InitBaseEnv		Rf_InitBaseEnv
 # define InitGlobalEnv		Rf_InitGlobalEnv
 # define InitGraphics		Rf_InitGraphics
+# define initializeOffHeapEnvironment		Rf_initializeOffHeapEnvironment
 # define InitMemory		Rf_InitMemory
 # define InitNames		Rf_InitNames
 # define InitOptions		Rf_InitOptions
@@ -961,6 +962,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define mkSYMSXP		Rf_mkSYMSXP
 # define mkTrue			Rf_mkTrue
 # define NewEnvironment		Rf_NewEnvironment
+# define initializeOffHeapEnvironment		Rf_initializeOffHeapEnvironment
 # define OneIndex		Rf_OneIndex
 # define onintr			Rf_onintr
 # define onsigusr1              Rf_onsigusr1

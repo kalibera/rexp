@@ -1090,6 +1090,8 @@ static void AdjustHeapSize(R_size_t size_needed)
     DEBUG_ADJUST_HEAP_PRINT(node_occup, vect_occup);
 }
 
+/* FIXME: can we find a better way? */
+#define NODE_IS_ON_HEAP(x) ( NEXT_NODE(x) != NULL )
 
 /* Managing Old-to-New References. */
 
@@ -1148,8 +1150,6 @@ static void old_to_new(SEXP x, SEXP y)
 #define FIX_REFCNT(x, old, new) do {} while (0)
 #endif
 
-/* FIXME: can we find a better way? */
-#define NODE_IS_ON_HEAP(x) ( NEXT_NODE(x) != NULL )
 
 #define CHECK_OLD_TO_NEW(x,y) do { \
   if (NODE_IS_ON_HEAP(x) && NODE_IS_OLDER(CHK(x), CHK(y))) old_to_new(x,y);  } while (0)
@@ -2279,7 +2279,9 @@ void attribute_hidden InitMemory()
     /* Field assignments for R_NilValue must not go through write barrier
        since the write barrier prevents assignments to R_NilValue's fields.
        because of checks for nil */
-    GET_FREE_NODE(R_NilValue);
+
+    /* R_NilValue is now _not_ allocated from the heap, so that a pointer to it can be a compile-time constant */
+
     R_NilValue->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     INIT_REFCNT(R_NilValue);
     SET_REFCNT(R_NilValue, REFCNTMAX);
@@ -2289,6 +2291,11 @@ void attribute_hidden InitMemory()
     TAG(R_NilValue) = R_NilValue;
     ATTRIB(R_NilValue) = R_NilValue;
     MARK_NOT_MUTABLE(R_NilValue);
+
+    MARK_NODE(R_NilValue); /* prevent forwarding */
+    SET_NEXT_NODE(R_NilValue, R_NilValue);
+    SET_PREV_NODE(R_NilValue, R_NilValue);
+    SET_NODE_GENERATION(R_NilValue, NUM_OLD_GENERATIONS - 1); /* oldest generation */
 
     R_BCNodeStackBase = (SEXP *) malloc(R_BCNODESTACKSIZE * sizeof(SEXP));
     if (R_BCNodeStackBase == NULL)
@@ -2425,6 +2432,26 @@ SEXP allocSExp(SEXPTYPE t)
     return s;
 }
 
+void initializeOffHeapSEXP(SEXP s, SEXPTYPE t) {
+    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    INIT_REFCNT(s);
+    TYPEOF(s) = t;
+    CAR(s) = R_NilValue;
+    CDR(s) = R_NilValue;
+    TAG(s) = R_NilValue;
+#if VALGRIND_LEVEL > 2
+    VALGRIND_MAKE_WRITABLE(&ATTRIB(s), sizeof(void *));
+    VALGRIND_MAKE_WRITABLE(&(s->u), 3*(sizeof(void *)));
+    VALGRIND_MAKE_WRITABLE(s,3);
+#endif
+    ATTRIB(s) = R_NilValue;
+
+    MARK_NODE(s); /* prevent forwarding */
+    SET_NEXT_NODE(s, s);
+    SET_PREV_NODE(s, s);
+    SET_NODE_GENERATION(s, NUM_OLD_GENERATIONS - 1); /* oldest generation */
+}
+
 static SEXP allocSExpNonCons(SEXPTYPE t)
 {
     SEXP s;
@@ -2557,6 +2584,37 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 	n = CDR(n);
     }
     return (newrho);
+}
+
+void initializeOffHeapEnvironment(SEXP newrho, SEXP namelist, SEXP valuelist, SEXP rho)
+{
+    SEXP v, n;
+
+#if VALGRIND_LEVEL > 2
+    VALGRIND_MAKE_WRITABLE(&ATTRIB(newrho), sizeof(void *));
+    VALGRIND_MAKE_WRITABLE(&(newrho->u), 3*(sizeof(void *)));
+    VALGRIND_MAKE_WRITABLE(newrho,3);
+#endif
+    newrho->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    INIT_REFCNT(newrho);
+    TYPEOF(newrho) = ENVSXP;
+    FRAME(newrho) = valuelist;
+    ENCLOS(newrho) = CHK(rho);
+    HASHTAB(newrho) = R_NilValue;
+    ATTRIB(newrho) = R_NilValue;
+
+    v = CHK(valuelist);
+    n = CHK(namelist);
+    while (v != R_NilValue && n != R_NilValue) {
+	SET_TAG(v, TAG(n));
+	v = CDR(v);
+	n = CDR(n);
+    }
+
+    MARK_NODE(newrho); /* prevent forwarding */
+    SET_NEXT_NODE(newrho, newrho);
+    SET_PREV_NODE(newrho, newrho);
+    SET_NODE_GENERATION(newrho, NUM_OLD_GENERATIONS - 1); /* oldest generation */
 }
 
 /* disables reference counting on new environment, does not set any values */

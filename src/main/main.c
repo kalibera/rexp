@@ -819,7 +819,7 @@ void setup_Rmainloop(void)
     R_Toplevel.promargsstackend = R_PromargsStackBase;
     R_Toplevel.promargsstacktop = R_PromargsStackTop;
     R_Toplevel.promargsstackend = R_PromargsStackEnd;
-#endif USE_PROMARGS_STACK
+#endif /* USE_PROMARGS_STACK */
     R_Toplevel.cend = NULL;
     R_Toplevel.intsusp = FALSE;
     R_Toplevel.handlerstack = R_HandlerStack;

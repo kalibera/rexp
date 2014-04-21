@@ -1091,12 +1091,12 @@ void attribute_hidden InitNames()
 	R_Suicide("couldn't allocate memory for symbol table");
 
     /* R_UnboundValue */
-    R_UnboundValue = allocSExp(SYMSXP);
+    initializeOffHeapSEXP(R_UnboundValue, SYMSXP);
     SET_SYMVALUE(R_UnboundValue, R_UnboundValue);
     SET_PRINTNAME(R_UnboundValue, R_NilValue);
     SET_ATTRIB(R_UnboundValue, R_NilValue);
     /* R_MissingArg */
-    R_MissingArg = allocSExp(SYMSXP);
+    initializeOffHeapSEXP(R_MissingArg, SYMSXP);
     SET_SYMVALUE(R_MissingArg, R_MissingArg);
     SET_PRINTNAME(R_MissingArg, mkChar(""));
     SET_ATTRIB(R_MissingArg, R_NilValue);
