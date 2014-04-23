@@ -1157,7 +1157,7 @@ static void old_to_new(SEXP x, SEXP y)
 
 
 #define CHECK_OLD_TO_NEW(x,y) do { \
-  if (NODE_IS_ON_HEAP(x) && NODE_IS_OLDER(CHK(x), CHK(y))) old_to_new(x,y);  } while (0)
+  if (NODE_IS_OLDER(CHK(x), CHK(y)) && NODE_IS_ON_HEAP(x)) old_to_new(x,y);  } while (0)
 
 
 /* Node Sorting.  SortNodes attempts to improve locality of reference
