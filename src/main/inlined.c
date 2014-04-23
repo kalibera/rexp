@@ -21,6 +21,9 @@
 #include <config.h>
 #endif
 
+#define R_USE_SIGNALS
+#define USE_RINTERNALS
 #define COMPILING_R 1 /* for Rinlinedfuns.h included via Defn.h */
+
 #include <Defn.h>
 #undef COMPILING_R

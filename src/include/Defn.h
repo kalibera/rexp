@@ -56,9 +56,6 @@
 # define extern0 extern
 #endif
 
-
-
-
 #define MAXELTSIZE 8192 /* Used as a default for string buffer sizes,
 			   and occasionally as a limit. */
 
@@ -198,22 +195,6 @@ extern void R_WaitEvent(void);
 
 #define Mega 1048576. /* 1 Mega Byte := 2^20 (= 1048576) Bytes */
 #define Giga 1073741824. /* 1 Giga Byte := 2^30 Bytes */
-
-/*	R_PPSSIZE  The pointer protection stack size  */
-/*	R_NSIZE	   The number of cons cells	 */
-/*	R_VSIZE	   The vector heap size in bytes */
-/*  These values are defaults and can be overridden in config.h
-    The maxima and minima are in startup.c */
-
-#ifndef R_PPSSIZE
-#define	R_PPSSIZE	50000L
-#endif
-#ifndef R_NSIZE
-#define	R_NSIZE		350000L
-#endif
-#ifndef R_VSIZE
-#define	R_VSIZE		6291456L
-#endif
 
 /* some commonly needed headers */
 #include <math.h>
@@ -512,10 +493,6 @@ FUNTAB	R_FunTab[];	    /* Built in functions */
 LibExtern SEXP  R_SrcfileSymbol;    /* "srcfile" */
 LibExtern SEXP  R_SrcrefSymbol;     /* "srcref" */
 
-
-LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
-LibExtern int R_interrupts_pending INI_as(0);
-
 /* R Home Directory */
 LibExtern char *R_Home;		    /* Root of the R tree */
 
@@ -526,39 +503,6 @@ extern0 SEXP	R_NHeap;	    /* Start of the cons cell heap */
 extern0 SEXP	R_FreeSEXP;	    /* Cons cell free list */
 extern0 R_size_t R_Collected;	    /* Number of free cons cells (after gc) */
 extern0 int	R_Is_Running;	    /* for Windows memory manager */
-
-/* The Pointer Protection Stack */
-LibExtern int	R_PPStackSize	INI_as(R_PPSSIZE); /* The stack size (elements) */
-LibExtern int	R_PPStackTop;	    /* The top of the stack */
-LibExtern SEXP*	R_PPStack;	    /* The pointer protection stack */
-
-/* Evaluation Environment */
-extern0 SEXP	R_CurrentExpr;	    /* Currently evaluating expression */
-extern0 SEXP	R_ReturnedValue;    /* Slot for return-ing values */
-extern0 SEXP*	R_SymbolTable;	    /* The symbol table */
-#ifdef R_USE_SIGNALS
-extern0 RCNTXT R_Toplevel;	      /* Storage for the toplevel context */
-extern0 RCNTXT* R_ToplevelContext;  /* The toplevel context */
-LibExtern RCNTXT* R_GlobalContext;    /* The global context */
-extern0 RCNTXT* R_SessionContext;   /* The session toplevel context */
-#endif
-extern Rboolean R_Visible;	    /* Value visibility flag */
-extern0 int	R_EvalDepth	INI_as(0);	/* Evaluation recursion depth */
-extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
-
-extern0 int	R_Expressions	INI_as(5000);	/* options(expressions) */
-extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
-extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
-extern0 Rboolean R_CBoundsCheck	INI_as(FALSE);	/* options(CBoundsCheck) */
-extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
-extern0 int	R_nwarnings	INI_as(50);
-extern uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
-extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
-extern int	R_CStackDir	INI_as(1);	/* C stack direction */
-
-#ifdef R_USE_SIGNALS
-extern0 struct RPRSTACK *R_PendingPromises INI_as(NULL); /* Pending promise stack */
-#endif
 
 /* File Input/Output */
 LibExtern Rboolean R_Interactive INI_as(TRUE);	/* TRUE during interactive use*/
@@ -597,19 +541,6 @@ LibExtern int	R_HistorySize;	/* Size of the history file */
 LibExtern int	R_RestoreHistory;	/* restore the history file? */
 extern void 	R_setupHistory(void);
 
-/* Warnings/Errors */
-extern0 int	R_CollectWarnings INI_as(0);	/* the number of warnings */
-extern0 SEXP	R_Warnings;	    /* the warnings and their calls */
-extern0 int	R_ShowErrorMessages INI_as(1);	/* show error messages? */
-extern0 SEXP	R_HandlerStack;	/* Condition handler stack */
-extern0 SEXP	R_RestartStack;	/* Stack of available restarts */
-extern0 Rboolean R_warn_partial_match_args   INI_as(FALSE);
-extern0 Rboolean R_warn_partial_match_dollar INI_as(FALSE);
-extern0 Rboolean R_warn_partial_match_attr INI_as(FALSE);
-extern0 Rboolean R_ShowWarnCalls INI_as(FALSE);
-extern0 Rboolean R_ShowErrorCalls INI_as(FALSE);
-extern0 int	R_NShowCalls INI_as(50);
-
 LibExtern Rboolean utf8locale  INI_as(FALSE);  /* is this a UTF-8 locale? */
 LibExtern Rboolean mbcslocale  INI_as(FALSE);  /* is this a MBCS locale? */
 extern0   Rboolean latin1locale INI_as(FALSE); /* is this a Latin-1 locale? */
@@ -640,12 +571,6 @@ extern0 double elapsedLimitValue       	INI_as(-1.0);
 
 void resetTimeLimits(void);
 
-#define R_BCNODESTACKSIZE 100000
-extern0 SEXP *R_BCNodeStackBase, *R_BCNodeStackTop, *R_BCNodeStackEnd;
-#ifdef BC_INT_STACK
-# define R_BCINTSTACKSIZE 10000
-extern0 IStackval *R_BCIntStackBase, *R_BCIntStackTop, *R_BCIntStackEnd;
-#endif
 extern0 int R_jit_enabled INI_as(0);
 extern0 int R_compile_pkgs INI_as(0);
 extern SEXP R_cmpfun(SEXP);
@@ -704,8 +629,6 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 
 # define allocCharsxp		Rf_allocCharsxp
 # define asVecSize		Rf_asVecSize
-# define begincontext		Rf_begincontext
-# define beginposcontext	Rf_beginposcontext
 # define check_stack_balance	Rf_check_stack_balance
 # define check1arg		Rf_check1arg
 # define CheckFormals		Rf_CheckFormals
@@ -730,7 +653,6 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define EncodeRaw              Rf_EncodeRaw
 # define EncodeString           Rf_EncodeString
 # define EnsureString 		Rf_EnsureString
-# define endcontext		Rf_endcontext
 # define envlength		Rf_envlength
 # define ErrorMessage		Rf_ErrorMessage
 # define evalList		Rf_evalList
@@ -1046,10 +968,7 @@ int usemethod(const char *, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
 SEXP vectorIndex(SEXP, SEXP, int, int, int, SEXP, Rboolean);
 
 #ifdef R_USE_SIGNALS
-void begincontext(RCNTXT*, int, SEXP, SEXP, SEXP, SEXP, SEXP);
-void beginposcontext(RCNTXT*, int, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
 SEXP dynamicfindVar(SEXP, RCNTXT*);
-void endcontext(RCNTXT*);
 int framedepth(RCNTXT*);
 void R_InsertRestartHandlers(RCNTXT *, Rboolean);
 void R_JumpToContext(RCNTXT *, int, SEXP);

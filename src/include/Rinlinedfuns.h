@@ -723,7 +723,7 @@ INLINE_FUN SEXP buildPositionalPromargs(int nargs, SEXP *last) {
     return pargs;    
 }
 
-#ifdef R_USE_SIGNALS
+#if defined(R_USE_SIGNALS) && defined(CALLED_FROM_DEFN_H)
 
 /* builds promargs if necessary */
 INLINE_FUN SEXP accessPromargs(RCNTXT* cptr) {
@@ -736,4 +736,70 @@ INLINE_FUN SEXP accessPromargs(RCNTXT* cptr) {
     return pargs;
 }
 
+
+/* begincontext and endcontext are used in dataentry.c and modules */
+INLINE_FUN void beginposcontext(RCNTXT * cptr, int flags,
+		  SEXP syscall, SEXP env, SEXP sysp,
+		  SEXP promargs, SEXP callfun, SEXP* positionalPromargs)
+{
+    cptr->cstacktop = R_PPStackTop;
+    cptr->evaldepth = R_EvalDepth;
+    cptr->callflag = flags;
+    cptr->call = syscall;
+    cptr->cloenv = env;
+    cptr->sysparent = sysp;
+    cptr->conexit = R_NilValue;
+    cptr->cend = NULL;
+    cptr->promargs = promargs;
+    cptr->callfun = callfun;
+    cptr->vmax = vmaxget();
+    cptr->intsusp = R_interrupts_suspended;
+    cptr->handlerstack = R_HandlerStack;
+    cptr->restartstack = R_RestartStack;
+    cptr->prstack = R_PendingPromises;
+    cptr->nodestack = R_BCNodeStackTop;
+#ifdef BC_INT_STACK
+    cptr->intstack = R_BCIntStackTop;
 #endif
+#ifdef USE_PROMARGS_STACK
+    cptr->promargsstackbase = R_PromargsStackBase;
+    cptr->promargsstacktop = R_PromargsStackTop;
+    cptr->promargsstackend = R_PromargsStackEnd;
+#endif
+    cptr->positionalPromargs = positionalPromargs;
+    cptr->srcref = R_Srcref;    
+    cptr->browserfinish = R_GlobalContext->browserfinish;
+    cptr->nextcontext = R_GlobalContext;
+
+    R_GlobalContext = cptr;
+}
+
+INLINE_FUN void begincontext(RCNTXT * cptr, int flags,
+		  SEXP syscall, SEXP env, SEXP sysp,
+		  SEXP promargs, SEXP callfun) {
+
+    beginposcontext(cptr, flags, syscall, env, sysp, promargs, callfun, NULL);		  
+}
+
+/* endcontext - end an execution context */
+
+INLINE_FUN void endcontext(RCNTXT * cptr)
+{
+    R_HandlerStack = cptr->handlerstack;
+    R_RestartStack = cptr->restartstack;
+#ifdef USE_PROMARGS_STACK    
+    switchPromargsStack(cptr->promargsstackbase, cptr->promargsstacktop, cptr->promargsstackend);    
+#endif    
+    if (cptr->cloenv != R_NilValue && cptr->conexit != R_NilValue ) {
+	SEXP s = cptr->conexit;
+	Rboolean savevis = R_Visible;
+	cptr->conexit = R_NilValue; /* prevent recursion */
+	PROTECT(s);
+	eval(s, cptr->cloenv);
+	UNPROTECT(1);
+	R_Visible = savevis;
+    }
+    R_GlobalContext = cptr->nextcontext;
+}
+
+#endif /* R_USE_SIGNALS and USE_RINTERNALS */

@@ -33,6 +33,16 @@ extern "C" {
 # include <limits.h> /* for INT_MAX */
 #endif
 
+/* These are all required by C99 */
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+/* According to POSIX inttypes.h should include stdint.h,
+   but let's be sure. */
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+
 #include <R_ext/Arith.h>
 #include <R_ext/Boolean.h>
 #include <R_ext/Complex.h>
@@ -558,6 +568,7 @@ Rboolean (Rf_isString)(SEXP s);
 Rboolean (Rf_isObject)(SEXP s);
 
 # define IS_SCALAR(x, type) (TYPEOF(x) == (type) && XLENGTH(x) == 1)
+
 #endif /* USE_RINTERNALS */
 
 #define NAMEDMAX 2
@@ -611,11 +622,19 @@ typedef SEXP R_bcstack_t;
 typedef union { void *p; int i; } IStackval;
 #endif
 
-/* Promargs stack */
+#ifdef __MAIN__
+# define INI_as(v) = v
+# define extern0 attribute_hidden
+#else
+# define INI_as(v)
+# define extern0 extern
+#endif
 
-#define USE_PROMARGS_STACK
 
 #ifdef USE_RINTERNALS
+
+/* Promargs stack */
+#define USE_PROMARGS_STACK
 
 #ifdef USE_PROMARGS_STACK
   /* required USE_RINTERNALS for SEXPREC */
@@ -643,7 +662,6 @@ void releasePromargs(SEXPREC *);
 #define RELEASE_PROMARGS(x)
 
 #endif
-
 
 /* context management, for some reason this is only enabled with R_USE_SIGNALS */
 #ifdef R_USE_SIGNALS
@@ -754,8 +772,84 @@ BUI   0 0 0 0 0 0 0 1 = 64
 #define SET_RESTART_BIT_ON(flags) (flags |= CTXT_RESTART)
 #define SET_RESTART_BIT_OFF(flags) (flags &= ~CTXT_RESTART)
 
-#endif /* USE_SIGNALS */
+#endif /* R_USE_SIGNALS */
 #endif /* USE_RINTERNALS */
+
+#ifdef CALLED_FROM_DEFN_H
+
+LibExtern Rboolean R_interrupts_suspended INI_as(FALSE);
+LibExtern int R_interrupts_pending INI_as(0);
+
+/*	R_PPSSIZE  The pointer protection stack size  */
+/*	R_NSIZE	   The number of cons cells	 */
+/*	R_VSIZE	   The vector heap size in bytes */
+/*  These values are defaults and can be overridden in config.h
+    The maxima and minima are in startup.c */
+
+#ifndef R_PPSSIZE
+#define	R_PPSSIZE	50000L
+#endif
+#ifndef R_NSIZE
+#define	R_NSIZE		350000L
+#endif
+#ifndef R_VSIZE
+#define	R_VSIZE		6291456L
+#endif
+
+/* The Pointer Protection Stack */
+LibExtern int	R_PPStackSize	INI_as(R_PPSSIZE); /* The stack size (elements) */
+LibExtern int	R_PPStackTop;	    /* The top of the stack */
+LibExtern SEXP*	R_PPStack;	    /* The pointer protection stack */
+
+/* Evaluation Environment */
+extern0 SEXP	R_CurrentExpr;	    /* Currently evaluating expression */
+extern0 SEXP	R_ReturnedValue;    /* Slot for return-ing values */
+extern0 SEXP*	R_SymbolTable;	    /* The symbol table */
+#ifdef R_USE_SIGNALS
+extern0 RCNTXT R_Toplevel;	      /* Storage for the toplevel context */
+extern0 RCNTXT* R_ToplevelContext;  /* The toplevel context */
+LibExtern RCNTXT* R_GlobalContext;    /* The global context */
+extern0 RCNTXT* R_SessionContext;   /* The session toplevel context */
+#endif
+extern Rboolean R_Visible;	    /* Value visibility flag */
+LibExtern int	R_EvalDepth	INI_as(0);	/* Evaluation recursion depth */
+extern0 int	R_BrowseLines	INI_as(0);	/* lines/per call in browser */
+
+extern0 int	R_Expressions	INI_as(5000);	/* options(expressions) */
+extern0 int	R_Expressions_keep INI_as(5000);	/* options(expressions) */
+extern0 Rboolean R_KeepSource	INI_as(FALSE);	/* options(keep.source) */
+extern0 Rboolean R_CBoundsCheck	INI_as(FALSE);	/* options(CBoundsCheck) */
+extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
+extern0 int	R_nwarnings	INI_as(50);
+extern uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
+extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
+extern int	R_CStackDir	INI_as(1);	/* C stack direction */
+
+#ifdef R_USE_SIGNALS
+LibExtern struct RPRSTACK *R_PendingPromises INI_as(NULL); /* Pending promise stack */
+#endif
+
+/* Warnings/Errors */
+extern0 int	R_CollectWarnings INI_as(0);	/* the number of warnings */
+extern0 SEXP	R_Warnings;	    /* the warnings and their calls */
+extern0 int	R_ShowErrorMessages INI_as(1);	/* show error messages? */
+LibExtern SEXP	R_HandlerStack;	/* Condition handler stack */
+LibExtern SEXP	R_RestartStack;	/* Stack of available restarts */
+extern0 Rboolean R_warn_partial_match_args   INI_as(FALSE);
+extern0 Rboolean R_warn_partial_match_dollar INI_as(FALSE);
+extern0 Rboolean R_warn_partial_match_attr INI_as(FALSE);
+extern0 Rboolean R_ShowWarnCalls INI_as(FALSE);
+extern0 Rboolean R_ShowErrorCalls INI_as(FALSE);
+extern0 int	R_NShowCalls INI_as(50);
+
+#define R_BCNODESTACKSIZE 100000
+LibExtern SEXP *R_BCNodeStackBase, *R_BCNodeStackTop, *R_BCNodeStackEnd;
+#ifdef BC_INT_STACK
+# define R_BCINTSTACKSIZE 10000
+extern0 IStackval *R_BCIntStackBase, *R_BCIntStackTop, *R_BCIntStackEnd;
+#endif
+
+#endif /* CALLED_FROM_DEFN_H */
 
 /* Accessor functions.  Many are declared using () to avoid the macro
    definitions in the USE_RINTERNALS section.
@@ -1338,6 +1432,8 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define asLogical		Rf_asLogical
 #define asReal			Rf_asReal
 #define asS4			Rf_asS4
+#define begincontext		Rf_begincontext
+#define beginposcontext		Rf_beginposcontext
 #define buildPositionalPromargs Rf_buildPositionalPromargs
 #define classgets		Rf_classgets
 #define coerceVector		Rf_coerceVector
@@ -1356,6 +1452,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define duplicate		Rf_duplicate
 #define duplicated		Rf_duplicated
 #define elt			Rf_elt
+#define endcontext		Rf_endcontext
 #define errorcall		Rf_errorcall
 #define eval			Rf_eval
 #define findFun			Rf_findFun
@@ -1491,8 +1588,11 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
    with or without the Rf_ prefix.
 */
 
-#ifdef R_USE_SIGNALS
-SEXP 	 Rf_accessPromargs(RCNTXT* cptr);
+#if defined(R_USE_SIGNALS) && defined(USE_RINTERNALS)
+SEXP	Rf_accessPromargs(RCNTXT* cptr);
+void	Rf_beginposcontext(RCNTXT * cptr, int flags, SEXP syscall, SEXP env, SEXP sysp, SEXP promargs, SEXP callfun, SEXP* positionalPromargs);
+void	Rf_begincontext(RCNTXT * cptr, int flags, SEXP syscall, SEXP env, SEXP sysp, SEXP promargs, SEXP callfun);
+void	Rf_endcontext(RCNTXT * cptr);
 #endif
 
 SEXP     Rf_argShift(SEXP *);
