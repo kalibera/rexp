@@ -711,6 +711,11 @@ static R_size_t R_NodesInUse = 0;
 #define FC_FORWARD_NODE(__n__,__dummy__) FORWARD_NODE(__n__)
 #define FORWARD_CHILDREN(__n__) DO_CHILDREN(__n__,FC_FORWARD_NODE, 0)
 
+#define FC_FORWARD_YOUNGER(__n__,__g__) do { \
+  if (NODE_GEN_IS_YOUNGER(__n__,__g__)) FORWARD_NODE(__n__); \
+} while(0)
+#define FORWARD_YOUNGER_CHILDREN(__n__, __g__) DO_CHILDREN(__n__,FC_FORWARD_YOUNGER, __g__)
+
 /* This macro should help localize where a FREESXP node is encountered
    in the GC */
 #ifdef PROTECTCHECK
@@ -1573,7 +1578,8 @@ static void RunGenCollect(R_size_t size_needed)
 	    for (s = NEXT_NODE(R_GenHeap[i].OldToNew[gen]);
 		 s != R_GenHeap[i].OldToNew[gen];
 		 s = NEXT_NODE(s))
-		FORWARD_CHILDREN(s);
+ 		FORWARD_CHILDREN(s);
+// 		FORWARD_YOUNGER_CHILDREN(s, i);  this works, but causes performance regression
 #endif
 
     /* forward all roots */
