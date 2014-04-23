@@ -2484,7 +2484,7 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-		    SETCDR(tail, allocatePromargsCell(TAG(h), mkPROMISE(CAR(h), rho)));
+		    CDR(tail) = allocatePromargsCell(TAG(h), mkPROMISE(CAR(h), rho)); /* avoid barrier */
 		    tail = CDR(tail);
 		    h = CDR(h);
 		}
@@ -2493,11 +2493,11 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 		error(_("'...' used in an incorrect context"));
 	}
 	else if (CAR(el) == R_MissingArg) {
-	    SETCDR(tail, allocatePromargsCell(TAG(el), R_MissingArg));
+	    CDR(tail) = allocatePromargsCell(TAG(el), R_MissingArg); /* avoid barrier */
 	    tail = CDR(tail);
 	}
 	else {
-	    SETCDR(tail, allocatePromargsCell(TAG(el), mkPROMISE(CAR(el), rho)));
+	    CDR(tail) = allocatePromargsCell(TAG(el), mkPROMISE(CAR(el), rho)); /* avoid barrier */
 	    tail = CDR(tail);
 	}
 	el = CDR(el);
@@ -5271,7 +5271,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP tag = GETCONSTOP();
 	SEXP cell = GETSTACK(-1);
 	if (ftype != SPECIALSXP && cell != R_NilValue)
+#ifdef USE_PROMARGS_STACK
+          TAG(cell) = CreateTag(tag); /* no barrier */
+#else	
 	  SET_TAG(cell, CreateTag(tag));
+#endif	  
 	NEXT();
       }
     OP(DODOTS, 0, CONSTOP(0), LABELOP(0)):
