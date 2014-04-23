@@ -722,3 +722,18 @@ INLINE_FUN SEXP buildPositionalPromargs(int nargs, SEXP *last) {
     }
     return pargs;    
 }
+
+#ifdef R_USE_SIGNALS
+
+/* builds promargs if necessary */
+INLINE_FUN SEXP accessPromargs(RCNTXT* cptr) {
+    if (cptr->promargs != NULL) {
+        return cptr->promargs;
+    }
+    int nargs = length(CDR(cptr->call));
+    SEXP pargs = buildPositionalPromargs(nargs, cptr->positionalPromargs + nargs - 1);
+    cptr->promargs = pargs;
+    return pargs;
+}
+
+#endif

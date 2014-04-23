@@ -78,14 +78,9 @@ Rcomplex Rf_ComplexFromInteger(int, int*);
 Rcomplex Rf_ComplexFromReal(double, int*);
 
 #define CALLED_FROM_DEFN_H 1
-#ifdef USE_SIGNALS
-
-#endif
 #include <Rinternals.h>		/*-> Arith.h, Boolean.h, Complex.h, Error.h,
 				  Memory.h, PrtUtil.h, Utils.h */
 #undef CALLED_FROM_DEFN_H
-
-
 
 extern0 SEXP	R_CommentSymbol;    /* "comment" */
 extern0 SEXP	R_DotEnvSymbol;     /* ".Environment" */
@@ -158,15 +153,6 @@ SEXP (SET_CXTAIL)(SEXP x, SEXP y);
 extern void R_ProcessEvents(void);
 #ifdef Win32
 extern void R_WaitEvent(void);
-#endif
-
-#ifdef R_USE_SIGNALS
-#ifdef Win32
-# include <psignal.h>
-#else
-# include <signal.h>
-# include <setjmp.h>
-#endif
 #endif
 
 #ifdef Unix
@@ -273,24 +259,6 @@ extern int putenv(char *string);
 #    define PATH_MAX 5000
 #  endif
 # endif
-#endif
-
-#ifdef R_USE_SIGNALS
-#ifdef HAVE_POSIX_SETJMP
-# define SIGJMP_BUF sigjmp_buf
-# define SIGSETJMP(x,s) sigsetjmp(x,s)
-# define SIGLONGJMP(x,i) siglongjmp(x,i)
-# define JMP_BUF sigjmp_buf
-# define SETJMP(x) sigsetjmp(x,0)
-# define LONGJMP(x,i) siglongjmp(x,i)
-#else
-# define SIGJMP_BUF jmp_buf
-# define SIGSETJMP(x,s) setjmp(x)
-# define SIGLONGJMP(x,i) longjmp(x,i)
-# define JMP_BUF jmp_buf
-# define SETJMP(x) setjmp(x)
-# define LONGJMP(x,i) longjmp(x,i)
-#endif
 #endif
 
 #define HSIZE	   4119	/* The size of the hash table for symbols */
@@ -458,37 +426,6 @@ typedef struct {
 #define UNSET_NO_SPECIAL_SYMBOLS(b) ((b)->sxpinfo.gp &= (~SPECIAL_SYMBOL_MASK))
 #define NO_SPECIAL_SYMBOLS(b) ((b)->sxpinfo.gp & SPECIAL_SYMBOL_MASK)
 
-/* Promargs stack */
-
-#define USE_PROMARGS_STACK
-
-#ifdef USE_PROMARGS_STACK
-  /* required USE_RINTERNALS for SEXPREC */
-#define R_PROMARGSSTACKINITSIZE 4096
-extern0 SEXPREC *R_PromargsStackBase, *R_PromargsStackEnd, *R_PromargsStackTop;
-
-void switchPromargsStack(SEXPREC *, SEXPREC *, SEXPREC *);
-void releasePromargs(SEXPREC *);
-
-#define POINTER_IN_RANGE(start, x, end) ((uintptr_t) x - (uintptr_t)start <= (uintptr_t) end - (uintptr_t)start)
-#define PROMISE_ARGS promiseArgsStack
-#define RELEASE_PROMARGS(x) do { \
-  if (x == R_NilValue) { \
-  } else if (POINTER_IN_RANGE(R_PromargsStackBase, x, R_PromargsStackEnd)) { \
-    R_PromargsStackTop = x; \
-  } else { \
-    releasePromargs(x); \
-  } \
-  x = NULL; \
-} while(0)
-
-#else /* not USE_PROMARGS_STACK */
-
-#define PROMISE_ARGS promiseArgs
-#define RELEASE_PROMARGS(x)
-
-#endif
-
 #else /* not USE_RINTERNALS */
 
 typedef struct VECREC *VECP;
@@ -522,113 +459,6 @@ void (UNSET_NO_SPECIAL_SYMBOLS)(SEXP b);
 Rboolean (NO_SPECIAL_SYMBOLS)(SEXP b);
 
 #endif /* USE_RINTERNALS */
-
-
-typedef SEXP R_bcstack_t;
-#ifdef BC_INT_STACK
-typedef union { void *p; int i; } IStackval;
-#endif
-
-#ifdef R_USE_SIGNALS
-/* Stack entry for pending promises */
-typedef struct RPRSTACK {
-    SEXP promise;
-    struct RPRSTACK *next;
-} RPRSTACK;
-
-
-/* Evaluation Context Structure */
-typedef struct RCNTXT {
-    struct RCNTXT *nextcontext;	/* The next context up the chain */
-    int callflag;		/* The context "type" */
-    JMP_BUF cjmpbuf;		/* C stack and register information */
-    int cstacktop;		/* Top of the pointer protection stack */
-    int evaldepth;	        /* evaluation depth at inception */
-    SEXP promargs;		/* Promises supplied to closure */
-    SEXP callfun;		/* The closure called */
-    SEXP sysparent;		/* environment the closure was called from */
-    SEXP call;			/* The call that effected this context*/
-    SEXP cloenv;		/* The environment */
-    SEXP conexit;		/* Interpreted "on.exit" code */
-    void (*cend)(void *);	/* C "on.exit" thunk */
-    void *cenddata;		/* data for C "on.exit" thunk */
-    void *vmax;		        /* top of R_alloc stack */
-    int intsusp;                /* interrupts are suspended */
-    SEXP handlerstack;          /* condition handler stack */
-    SEXP restartstack;          /* stack of available restarts */
-    struct RPRSTACK *prstack;   /* stack of pending promises */
-    SEXP *nodestack;
-#ifdef BC_INT_STACK
-    IStackval *intstack;
-#endif
-#ifdef USE_PROMARGS_STACK
-    SEXPREC *promargsstackbase;
-    SEXPREC *promargsstacktop;
-    SEXPREC *promargsstackend;    /* could be computed from base */
-#endif
-    SEXP *positionalPromargs;
-    SEXP srcref;	        /* The source line in effect */
-    int browserfinish;     /* should browser finish this context without stopping */
-} RCNTXT, *context;
-
-/* The Various Context Types.
-
- * In general the type is a bitwise OR of the values below.
- * Note that CTXT_LOOP is already the or of CTXT_NEXT and CTXT_BREAK.
- * Only functions should have the third bit turned on;
- * this allows us to move up the context stack easily
- * with either RETURN's or GENERIC's or RESTART's.
- * If you add a new context type for functions make sure
- *   CTXT_NEWTYPE & CTXT_FUNCTION > 0
- */
-enum {
-    CTXT_TOPLEVEL = 0,
-    CTXT_NEXT	  = 1,
-    CTXT_BREAK	  = 2,
-    CTXT_LOOP	  = 3,	/* break OR next target */
-    CTXT_FUNCTION = 4,
-    CTXT_CCODE	  = 8,
-    CTXT_RETURN	  = 12,
-    CTXT_BROWSER  = 16,
-    CTXT_GENERIC  = 20,
-    CTXT_RESTART  = 32,
-    CTXT_BUILTIN  = 64  /* used in profiling */
-};
-
-/*
-TOP   0 0 0 0 0 0  = 0
-NEX   1 0 0 0 0 0  = 1
-BRE   0 1 0 0 0 0  = 2
-LOO   1 1 0 0 0 0  = 3
-FUN   0 0 1 0 0 0  = 4
-CCO   0 0 0 1 0 0  = 8
-BRO   0 0 0 0 1 0  = 16
-RET   0 0 1 1 0 0  = 12
-GEN   0 0 1 0 1 0  = 20
-RES   0 0 0 0 0 0 1 = 32
-BUI   0 0 0 0 0 0 0 1 = 64
-*/
-
-#define IS_RESTART_BIT_SET(flags) ((flags) & CTXT_RESTART)
-#define SET_RESTART_BIT_ON(flags) (flags |= CTXT_RESTART)
-#define SET_RESTART_BIT_OFF(flags) (flags &= ~CTXT_RESTART)
-
-/* FIXME: this perhaps should be in Rinlinedfuncs, but it cannot, because it uses RCNTXT, which is defined in Defn.h,
-   which depends on SEXP, which is define in Rinternals.h */
-
-/* builds promargs if necessary */
-R_INLINE SEXP accessPromargs(RCNTXT* cptr) {
-    if (cptr->promargs != NULL) {
-        return cptr->promargs;
-    }
-    int nargs = length(CDR(cptr->call));
-    SEXP pargs = buildPositionalPromargs(nargs, cptr->positionalPromargs + nargs - 1);
-    cptr->promargs = pargs;
-    return pargs;
-}
-
-#endif /* USE_SIGNALS */
-
 
 /* Miscellaneous Definitions */
 #define streql(s, t)	(!strcmp((s), (t)))
@@ -872,7 +702,6 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 
 /*--- FUNCTIONS ------------------------------------------------------ */
 
-# define accessPromargs		Rf_accessPromargs
 # define allocCharsxp		Rf_allocCharsxp
 # define asVecSize		Rf_asVecSize
 # define begincontext		Rf_begincontext
