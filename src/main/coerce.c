@@ -1759,7 +1759,7 @@ SEXP attribute_hidden do_typeof(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_earg_typeof(SEXP call, SEXP op, SEXP arg, SEXP rho)
 {
-    return ScalarString(type2str(TYPEOF(arg)));
+    return type2ImmutableScalarString(TYPEOF(arg));
 }
 
 /* Define many of the <primitive> "is.xxx" functions :

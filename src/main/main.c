@@ -794,6 +794,8 @@ void setup_Rmainloop(void)
     InitEd();
     InitGraphics();
     
+    initializeTypeTables();
+    
     R_Is_Running = 1;
     R_check_locale();
 

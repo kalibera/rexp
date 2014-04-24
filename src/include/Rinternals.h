@@ -1173,6 +1173,7 @@ SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
 void Rf_setVar(SEXP, SEXP, SEXP);
 SEXPTYPE Rf_str2type(const char *);
+void Rf_initializeTypeTables();
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
 const char * Rf_translateChar(SEXP);
@@ -1180,6 +1181,7 @@ const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
 SEXP Rf_type2str(SEXPTYPE);
+SEXP Rf_type2ImmutableScalarString(SEXPTYPE);
 #ifndef INLINE_PROTECT
 void Rf_unprotect(int);
 #endif
@@ -1473,6 +1475,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define inherits		Rf_inherits
 #define initializeOffHeapSEXP	Rf_initializeOffHeapSEXP
 #define initializeOffHeapEnvironment	Rf_initializeOffHeapEnvironment
+#define initializeTypeTables	Rf_initializeTypeTables
 #define install			Rf_install
 #define isArray			Rf_isArray
 #define isBasicClass            Rf_isBasicClass
@@ -1567,6 +1570,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define translateCharUTF8      	Rf_translateCharUTF8
 #define type2char		Rf_type2char
 #define type2str		Rf_type2str
+#define type2ImmutableScalarString		Rf_type2ImmutableScalarString
 #define unprotect		Rf_unprotect
 #define unprotect_ptr		Rf_unprotect_ptr
 #define VectorToPairList	Rf_VectorToPairList

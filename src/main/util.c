@@ -210,19 +210,21 @@ TypeTable[] = {
     { "builtin",	BUILTINSXP },
     { "char",		CHARSXP	   },
     { "logical",	LGLSXP	   },
+        /* 11 and 12 currently unallocated */
     { "integer",	INTSXP	   },
     { "double",		REALSXP	   }, /*-  "real", for R <= 0.61.x */
     { "complex",	CPLXSXP	   },
     { "character",	STRSXP	   },
     { "...",		DOTSXP	   },
     { "any",		ANYSXP	   },
+    { "list",		VECSXP	   },    
     { "expression",	EXPRSXP	   },
-    { "list",		VECSXP	   },
+    { "bytecode",	BCODESXP   },    
     { "externalptr",	EXTPTRSXP  },
-    { "bytecode",	BCODESXP   },
     { "weakref",	WEAKREFSXP },
     { "raw",		RAWSXP },
     { "S4",		S4SXP },
+        /* 26 - 29 currently unallocated */
     /* aliases : */
     { "numeric",	REALSXP	   },
     { "name",		SYMSXP	   },
@@ -230,6 +232,51 @@ TypeTable[] = {
     { (char *)NULL,	-1	   }
 };
 
+/* see Rinternals.h for more details, SEXPTYPE type  field of SEXPREC */
+#define NTYPES 32
+
+static struct {
+    const char *cstrName;
+    SEXP rcharName;
+    SEXP rstrName;
+    SEXP rsymName;
+} Type2Table[NTYPES];
+
+
+int findTypeInTypeTable(SEXPTYPE t) {
+    int i;
+    for (i = 0; TypeTable[i].str; i++) {
+	if (TypeTable[i].type == t)
+	    return i;
+    }
+    return -1;
+}
+
+void initializeTypeTables(void) {
+    int type;
+    for (type = 0; type < NTYPES; type++) {
+        int j = findTypeInTypeTable(type);
+        
+        if (j != -1) {
+            const char *cstr = TypeTable[j].str;
+            SEXP rchar = mkChar(cstr);
+            SEXP rstr = ScalarString(rchar);
+            MARK_NOT_MUTABLE(rstr);
+            R_PreserveObject(rstr);
+            SEXP rsym = install(cstr);
+            
+            Type2Table[type].cstrName = cstr; 
+            Type2Table[type].rcharName = rchar;
+            Type2Table[type].rstrName = rstr;
+            Type2Table[type].rsymName = rsym;
+        } else {
+            Type2Table[type].cstrName = NULL;
+            Type2Table[type].rcharName = NULL;
+            Type2Table[type].rstrName = NULL;
+            Type2Table[type].rsymName = NULL;
+        }
+    }
+}
 
 SEXPTYPE str2type(const char *s)
 {
@@ -245,23 +292,36 @@ SEXPTYPE str2type(const char *s)
 
 SEXP type2str(SEXPTYPE t)
 {
-    int i;
-
-    for (i = 0; TypeTable[i].str; i++) {
-	if (TypeTable[i].type == t)
-	    return mkChar(TypeTable[i].str);
+    if (t >= 0 && t < NTYPES) { /* FIXME: branch not really needed */
+        SEXP res = Type2Table[t].rcharName;
+        if (res != NULL) {
+            return res;
+        }
     }
     error(_("type %d is unimplemented in '%s'"), t, "type2str");
     return R_NilValue; /* for -Wall */
 }
 
+SEXP type2ImmutableScalarString(SEXPTYPE t) 
+{
+    if (t >= 0 && t < NTYPES) { /* FIXME: branch not really needed */
+        SEXP res = Type2Table[t].rstrName;
+        if (res != NULL) {
+            return res;
+        }
+    }
+    error(_("type %d is unimplemented in '%s'"), t, "type2ImmutableScalarString");
+    return R_NilValue; /* for -Wall */
+}
+
+
 const char *type2char(SEXPTYPE t)
 {
-    int i;
-
-    for (i = 0; TypeTable[i].str; i++) {
-	if (TypeTable[i].type == t)
-	    return TypeTable[i].str;
+    if (t >= 0 && t < NTYPES) { /* FIXME: branch not really needed */
+        const char * res = Type2Table[t].cstrName;
+        if (res != NULL) {
+            return res;
+        }
     }
     error(_("type %d is unimplemented in '%s'"), t, "type2char");
     return ""; /* for -Wall */
@@ -270,13 +330,11 @@ const char *type2char(SEXPTYPE t)
 #ifdef UNUSED
 SEXP type2symbol(SEXPTYPE t)
 {
-    int i;
-    /* for efficiency, a hash table set up to index TypeTable, and
-       with TypeTable pointing to both the
-       character string and to the symbol would be better */
-    for (i = 0; TypeTable[i].str; i++) {
-	if (TypeTable[i].type == t)
-	    return install((const char *)&TypeTable[i].str);
+    if (t >= 0 && t < NTYPES) { /* FIXME: branch not really needed */
+        SEXP res = Type2Table[t].rsymName;
+        if (res != NULL) {
+            return res;
+        }
     }
     error(_("type %d is unimplemented in '%s'"), t, "type2symbol");
     return R_NilValue; /* for -Wall */
