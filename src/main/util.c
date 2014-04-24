@@ -260,6 +260,7 @@ void initializeTypeTables(void) {
         if (j != -1) {
             const char *cstr = TypeTable[j].str;
             SEXP rchar = mkChar(cstr);
+            MARK_NOT_MUTABLE(rchar);
             SEXP rstr = ScalarString(rchar);
             MARK_NOT_MUTABLE(rstr);
             R_PreserveObject(rstr);
