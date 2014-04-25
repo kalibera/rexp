@@ -253,6 +253,8 @@ int findTypeInTypeTable(SEXPTYPE t) {
 }
 
 void initializeTypeTables(void) {
+
+    /* Type2Table */
     int type;
     for (type = 0; type < NTYPES; type++) {
         int j = findTypeInTypeTable(type);
@@ -277,17 +279,23 @@ void initializeTypeTables(void) {
             Type2Table[type].rsymName = NULL;
         }
     }
+    
+    /* typename to type conversion - validate the hashmap is up to date (note this won't detect removed names)*/
+    /* FIXME: this takes time at startup, perhaps too defensive */
+
+    int i;
+    for (i = 0; TypeTable[i].str; i++) {
+        int hashedType = hashed_typename2type(TypeTable[i].str);
+        if (hashedType != TypeTable[i].type) {
+            fprintf(stderr, "type name %s type code %d response %d\n", TypeTable[i].str, TypeTable[i].type, hashedType);
+            R_Suicide("inconsistency in hashed type table (wrong response for existing type name)");
+        }
+    }
 }
 
 SEXPTYPE str2type(const char *s)
 {
-    int i;
-    for (i = 0; TypeTable[i].str; i++) {
-	if (!strcmp(s, TypeTable[i].str))
-	    return (SEXPTYPE) TypeTable[i].type;
-    }
-    /* SEXPTYPE is an unsigned int, so the compiler warns us w/o the cast. */
-    return (SEXPTYPE) -1;
+    return (SEXPTYPE) hashed_typename2type(s);
 }
 
 

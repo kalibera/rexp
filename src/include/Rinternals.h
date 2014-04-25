@@ -1173,6 +1173,7 @@ SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
 void Rf_setVar(SEXP, SEXP, SEXP);
 SEXPTYPE Rf_str2type(const char *);
+int Rf_hashed_typename2type(const char *);
 void Rf_initializeTypeTables();
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
@@ -1472,6 +1473,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define GetOption		Rf_GetOption
 #define GetRowNames		Rf_GetRowNames
 #define gsetVar			Rf_gsetVar
+#define hashed_typename2type	Rf_hashed_typename2type
 #define inherits		Rf_inherits
 #define initializeOffHeapSEXP	Rf_initializeOffHeapSEXP
 #define initializeOffHeapEnvironment	Rf_initializeOffHeapEnvironment
