@@ -4121,7 +4121,12 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
   SETSTACK(-1, __cell__);	       \
 } while (0)
 
-#define PUSHCALLEARG(v) BCNPUSH_NOCHECK(v)
+#define PUSHCALLEARG_NOTSPECIAL(v) BCNPUSH_NOCHECK(v)
+#define PUSHCALLEARG(v) do { \
+    if (ftype != SPECIALSXP) { \
+        PUSHCALLEARG_NOTSPECIAL(v); \
+    } \
+} while(0)
 
 #define INLINE_GETVAR
 #ifdef INLINE_GETVAR
@@ -4190,7 +4195,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 
 #define DO_GETVAR(dd, keepmiss) DO_GETVAR_COMMON(dd, keepmiss, BCNPUSH)
 #define DO_GETVAR_PUSHCALLARG(dd, keepmiss) DO_GETVAR_COMMON(dd, keepmiss, PUSHCALLARG)
-#define DO_GETVAR_PUSHCALLEARG(dd, keepmiss) DO_GETVAR_COMMON(dd, keepmiss, PUSHCALLEARG)
+#define DO_GETVAR_PUSHCALLEARG_NOTSPECIAL(dd, keepmiss) DO_GETVAR_COMMON(dd, keepmiss, PUSHCALLEARG_NOTSPECIAL)
 
 #define EARG_CALLBUILTIN(nargs, PRIMCALL) do { \
   SEXP fun = GETSTACK(-1-nargs); \
@@ -5226,7 +5231,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	      value = bcEval(code, rho, TRUE);
 	  else
 	    value = mkPROMISE(code, rho);
-	  PUSHCALLEARG(value);
+	  PUSHCALLEARG_NOTSPECIAL(value);
 	}
 	NEXT();
       }      
@@ -5239,7 +5244,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
         } else if (ftype != SPECIALSXP) {
             SEXP symbol = VECTOR_ELT(constants, GETOP());
             value = mkPROMISE(symbol, rho);
-	    PUSHCALLARG(value);        
+	    PUSHCALLARG(value);
         } else {
             SKIP_OP();
         }
@@ -5249,12 +5254,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
         /* this instruction is not used for ..n and ... */
 	if (ftype == BUILTINSXP) {
-	    DO_GETVAR_PUSHCALLEARG(FALSE, FALSE);
+	    DO_GETVAR_PUSHCALLEARG_NOTSPECIAL(FALSE, FALSE);
 	    /* not reached */
         } else if (ftype != SPECIALSXP) {
             SEXP symbol = VECTOR_ELT(constants, GETOP());
             value = mkPROMISE(symbol, rho);
-	    PUSHCALLEARG(value);        
+	    PUSHCALLEARG_NOTSPECIAL(value);
         } else {
             SKIP_OP();
         }
