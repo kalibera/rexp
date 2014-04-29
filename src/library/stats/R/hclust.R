@@ -29,28 +29,37 @@
 ##
 ## Clustering Methods:
 ##
-## 1. Ward's minimum variance or error sum of squares method.
+## 1. Ward's minimum variance or error sum of squares method (using raw d) -> "ward.D"
 ## 2. single linkage or nearest neighbor method.
 ## 3. complete linkage or diameter.
 ## 4. average linkage, group average, or UPGMA method.
 ## 5. McQuitty's or WPGMA method.
 ## 6. median, Gower's or WPGMC method.
 ## 7. centroid or UPGMC method (7).
+## 8. Ward's ... "correct" method using d^2 (in Fortran) -> "ward.D2"
 ##
 ## Original author: F. Murtagh, May 1992
 ## R Modifications: Ross Ihaka, Dec 1996
 ##		    Friedrich Leisch, Apr 1998, Jun 2000
+## "ward.D" and "ward.D2" from suggestions by Pierre Legendre,
+## by Martin Maechler, mostly in the Fortran part.
 
 hclust <- function(d, method="complete", members=NULL)
 {
-    METHODS <- c("ward", "single",
-                 "complete", "average", "mcquitty",
-                 "median", "centroid")
-    method <-  pmatch(method, METHODS)
-    if(is.na(method))
-	stop("invalid clustering method")
-    if(method == -1)
-	stop("ambiguous clustering method")
+    ## order of METHODS --> i.meth -> Fortran's  iOpt  codes
+    METHODS <- c("ward.D", "single", # 1, 2,
+                 "complete", "average", "mcquitty", # 3, 4, 5,
+                 "median", "centroid", "ward.D2") # 6, 7, 8
+    if(method == "ward") { # do not deprecate earlier than 2015!
+	message("The \"ward\" method has been renamed to \"ward.D\"; note new \"ward.D2\"")
+	method <- "ward.D"
+    }
+    i.meth <-  pmatch(method, METHODS)
+    if(is.na(i.meth))
+        ## TODO: use gettextf() [-> translation string change]
+	stop("invalid clustering method", paste("", method))
+    if(i.meth == -1)
+	stop("ambiguous clustering method", paste("", method))
 
     n <- as.integer(attr(d, "Size"))
     if(is.null(n))
@@ -72,7 +81,7 @@ hclust <- function(d, method="complete", members=NULL)
     hcl <- .Fortran(C_hclust,
 		    n = n,
 		    len = len,
-		    method = as.integer(method),
+		    method = as.integer(i.meth),
 		    ia = integer(n),
 		    ib = integer(n),
 		    crit = double(n),
@@ -89,19 +98,18 @@ hclust <- function(d, method="complete", members=NULL)
 		      n = n, # checked above.
 		      ia = hcl$ia,
 		      ib = hcl$ib,
-  		      order = integer(n),
+		      order = integer(n),
 		      iia = integer(n),
 		      iib = integer(n))
 
-    tree <- list(merge = cbind(hcass$iia[1L:(n-1)], hcass$iib[1L:(n-1)]),
-		 height = hcl$crit[1L:(n-1)],
-		 order = hcass$order,
-		 labels = attr(d, "Labels"),
-                 method = METHODS[method],
-                 call = match.call(),
-                 dist.method = attr(d, "method"))
-    class(tree) <- "hclust"
-    tree
+    structure(list(merge = cbind(hcass$iia[1L:(n-1)], hcass$iib[1L:(n-1)]),
+		   height = hcl$crit[1L:(n-1)],
+		   order = hcass$order,
+		   labels = attr(d, "Labels"),
+		   method = METHODS[i.meth],
+		   call = match.call(),
+		   dist.method = attr(d, "method")),
+	      class = "hclust")
 }
 
 plot.hclust <-

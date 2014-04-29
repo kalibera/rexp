@@ -191,6 +191,7 @@ all.R
 /src/include/R_ext/stamp-R
 /src/include/R_ext/stats_package.ts
 /src/include/R_ext/stats_stubs.ts
+/src/include/R_ext/Rallocators.ts
 /src/include/Rconfig.h
 /src/include/Rconfig.tsa
 /src/include/Rdefines.ts

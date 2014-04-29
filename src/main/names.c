@@ -244,7 +244,7 @@ FUNTAB R_FunTab[] =
 {"duplicated",	do_duplicated, {.args4 = do_earg_duplicated},	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"unique",	do_duplicated, {.args4 = do_earg_duplicated},	1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"anyDuplicated",do_duplicated, {.args3 = do_earg_anyDuplicated},	2,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"anyNA",	do_anyNA, NULL,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"anyNA",	do_anyNA, NULL,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"which",	do_which, NULL,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"which.min",	do_first_min, NULL,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"pmin",	do_pmin, NULL,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -261,7 +261,6 @@ FUNTAB R_FunTab[] =
 {"detach",	do_detach, NULL,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"search",	do_search, NULL,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"setFileTime",	do_setFileTime, NULL,	0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}},
-
 
 /* Mathematical Functions */
 /* primitives: these are group generic and so need to eval args (possibly internally) */

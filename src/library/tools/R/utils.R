@@ -1,7 +1,7 @@
 #  File src/library/tools/R/utils.R
 #  Part of the R package, http://www.R-project.org
 #
-#  Copyright (C) 1995-2013 The R Core Team
+#  Copyright (C) 1995-2014 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -443,9 +443,10 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 ### ** .BioC_version_associated_with_R_version
 
 .BioC_version_associated_with_R_version <-
-    numeric_version(Sys.getenv("R_BIOC_VERSION", "2.14"))
+    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.0"))
 ## Things are more complicated from R-2.15.x with still two BioC
 ## releases a year, so we do need to set this manually.
+## Wierdly, 3.0 is the second version (after 2.14) for the 3.1.x series.
 
 ### ** .vc_dir_names
 
@@ -525,7 +526,8 @@ function(val) {
     if (v %in% c("1", "yes", "true")) TRUE
     else if (v %in% c("0", "no", "false")) FALSE
     else {
-        warning("cannot coerce ", sQuote(val), " to logical")
+        warning(gettextf("cannot coerce %s to logical", sQuote(val)),
+                domain = NA)
         NA
     }
 }
@@ -1027,6 +1029,8 @@ function()
                "Version",
                "VignetteBuilder",
                "ZipData"),
+             ## Should be documented in R-exts eventually:
+             c("Additional_repositories"),
              ## Others: adjust as needed.
              c("Repository",
                "Path",
@@ -1118,7 +1122,7 @@ function(fname, envir, mustMatch = TRUE)
     ##             { ... <UME> ... }
     ## then a recognizer for UME might be as follows.
 
-    f <- get(fname, envir = envir, inherits = FALSE)
+    f <- suppressMessages(get(fname, envir = envir, inherits = FALSE))
     if(!is.function(f)) return(FALSE)
     isUMEbrace <- function(e) {
         for (ee in as.list(e[-1L])) if (nzchar(res <- isUME(ee))) return(res)
@@ -1479,7 +1483,7 @@ function(x, dfile)
     Encoding(x) <- "unknown"
     ## Avoid folding for fields where we keep whitespace when reading.
     write.dcf(rbind(x), dfile,
-              keep.white = .keep_white_description_fields)
+              keep.white = c(.keep_white_description_fields, "Maintainer"))
 }
 
 ### ** .read_repositories
@@ -1503,7 +1507,7 @@ function(x)
                                     "http://www.bioconductor.org")),
              x, fixed = TRUE)
     sub("%v",
-        as.character(.BioC_version_associated_with_R_version),
+        as.character(.BioC_version_associated_with_R_version()),
         x, fixed = TRUE)
 }
 

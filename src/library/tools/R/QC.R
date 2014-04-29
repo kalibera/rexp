@@ -1910,22 +1910,19 @@ function(package, dir, file, lib.loc = NULL,
 		if (allow_suppress &&
                     name %in% suppressForeignCheck(, package))
 		    return ("SYMBOL OK") # skip false positives
-                if (have_registration || !allow_suppress) {
+                if (have_registration) {
                     if (name %in% fr) {
-                        if (have_registration) { # at least for now
-                            other_problem <<- c(other_problem, e)
-                            other_desc <<-
-                                c(other_desc,
-                                  sprintf("symbol %s in the local frame%s",
-                                          sQuote(name),
-                                          if(!have_registration) ", but no registered symbols" else ""))
-                        }
+                        other_problem <<- c(other_problem, e)
+                        other_desc <<-
+                            c(other_desc,
+                              sprintf("symbol %s in the local frame",
+                                      sQuote(name)))
                     } else {
                         other_problem <<- c(other_problem, e)
-                        other_desc <<- c(other_desc,
-                                         sprintf("symbol %s not in namespace%s",
-                                             sQuote(name),
-                                                 if(!have_registration) ", which does not have registered symbols" else ""))
+                        other_desc <<-
+                            c(other_desc,
+                              sprintf("symbol %s not in namespace",
+                                      sQuote(name)))
                     }
                 }
     	    	return("OTHER")
@@ -2930,10 +2927,16 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE)
     }
 
     ## Check for excessive 'Depends'
-
-    deps <- setdiff(depends, c("R", "base", "datasets", "grDevices", "graphics",
-                               "methods", "utils", "stats"))
+    deps <- setdiff(depends, c("R", "base", "datasets", "grDevices",
+                               "graphics", "methods", "utils", "stats"))
     if(length(deps) > 5L) bad_depends$many_depends <- deps
+
+    ## check header-only packages
+    if (check_incoming) {
+        hdOnly <- c("BH", "RcppArmadillo", "RcppEigen")
+        hd <- intersect(hdOnly, c(depends, imports))
+        if(length(hd)) bad_depends$hdOnly <- hd
+    }
 
     class(bad_depends) <- "check_package_depends"
     bad_depends
@@ -3018,9 +3021,16 @@ function(x, ...)
       },
       if(length(y <- x$bad_engine)) {
           c(y, "")
+      },
+      if(length(bad <- x$hdOnly)) {
+          c(if(length(bad) > 1L)
+            c("Packages in Depends/Imports which should probably only be in LinkingTo:", .pretty_format(bad))
+          else
+            sprintf("Package in Depends/Imports which should probably only be in LinkingTo: %s", sQuote(bad)),
+            "")
       }
       )
-}
+  }
 
 ### * .check_package_description
 
@@ -6683,7 +6693,7 @@ function(x, ...)
           "FOSS licence with BuildVignettes: false"
       },
       if(length(y <- x$fields)) {
-          c("Possibly mis-spelled fields in DESCRIPTION:",
+          c("Unknown, possibly mis-spelled, fields in DESCRIPTION:",
             sprintf("  %s", paste(sQuote(y), collapse = " ")))
       },
       if(length(y <- x$overrides)) {

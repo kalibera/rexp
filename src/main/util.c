@@ -307,8 +307,10 @@ SEXP type2str(SEXPTYPE t)
             return res;
         }
     }
-    error(_("type %d is unimplemented in '%s'"), t, "type2str");
-    return R_NilValue; /* for -Wall */
+    warning(_("type %d is unimplemented in '%s'"), t, "type2str");
+    char buf[50];
+    snprintf(buf, 50, "unknown type #%d", t);
+    return mkChar(buf);
 }
 
 SEXP type2ImmutableScalarString(SEXPTYPE t) 
@@ -332,8 +334,10 @@ const char *type2char(SEXPTYPE t)
             return res;
         }
     }
-    error(_("type %d is unimplemented in '%s'"), t, "type2char");
-    return ""; /* for -Wall */
+    warning(_("type %d is unimplemented in '%s'"), t, "type2char");
+    static char buf[50];
+    snprintf(buf, 50, "unknown type #%d", t);
+    return buf;
 }
 
 #ifdef UNUSED
@@ -967,7 +971,7 @@ SEXP attribute_hidden do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (i = 0; i < n; i++) {
 	path = translateChar(STRING_ELT(paths, i));
 	char *res = realpath(path, abspath);
-	if (res) 
+	if (res)
 	    SET_STRING_ELT(ans, i, mkChar(abspath));
 	else {
 	    SET_STRING_ELT(ans, i, STRING_ELT(paths, i));
@@ -1079,7 +1083,7 @@ SEXP attribute_hidden do_encodeString(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(na || s != NA_STRING) {
 	    cetype_t ienc = getCharCE(s);
 	    if(ienc == CE_UTF8) {
-		const char *ss = EncodeString(s, w-1000000, quote, 
+		const char *ss = EncodeString(s, w-1000000, quote,
 					      (Rprt_adj) justify);
 		SET_STRING_ELT(ans, i, mkCharCE(ss, ienc));
 	    } else {
@@ -1569,8 +1573,8 @@ int attribute_hidden Rf_AdobeSymbol2ucs2(int n)
     else return 0;
 }
 
-double R_strtod5(const char *str, char **endptr, char dec, 
-		 Rboolean NA, Rboolean exact)
+double R_strtod5(const char *str, char **endptr, char dec,
+		 Rboolean NA, int exact)
 {
     LDOUBLE ans = 0.0, p10 = 10.0, fac = 1.0;
     int n, expn = 0, sign = 1, ndigits = 0, exph = -1;
@@ -1617,11 +1621,19 @@ double R_strtod5(const char *str, char **endptr, char dec,
 	    else break;
 	    if (exph >= 0) exph += 4;
 	}
-	if (exact && ans > 9e15) { // lost accuracy
-	    ans = NA_REAL;
-	    p = str; /* back out */
-	    goto done;
+#define strtod_EXACT_CLAUSE						\
+	if((exact || exact == NA_LOGICAL) && ans > 0x1.fffffffffffffp52) { \
+	    if(exact == NA_LOGICAL)					\
+		warning(_(						\
+		"accuracy loss in conversion from \"%s\" to numeric"),	\
+			str);						\
+	    else {							\
+		ans = NA_REAL;						\
+		p = str; /* back out */					\
+		goto done;						\
+	    }								\
 	}
+	strtod_EXACT_CLAUSE;
 	if (*p == 'p' || *p == 'P') {
 	    int expsign = 1;
 	    double p2 = 2.0;
@@ -1655,12 +1667,7 @@ double R_strtod5(const char *str, char **endptr, char dec,
 	p = str; /* back out */
 	goto done;
     }
-    if (exact && ans > 9e15) { // lost accuracy
-//	error("lost accuracy in '%s'\n", str);
-	ans = NA_REAL;
-	p = str; /* back out */
-	goto done;
-    }
+    strtod_EXACT_CLAUSE;
 
     if (*p == 'e' || *p == 'E') {
 	int expsign = 1;
@@ -1735,20 +1742,20 @@ SEXP attribute_hidden do_enc2(SEXP call, SEXP op, SEXP args, SEXP env)
     ans = CAR(args);
     for (i = 0; i < XLENGTH(ans); i++) {
 	el = STRING_ELT(ans, i);
-	if (el == NA_STRING) { /* do nothing */ }
-	else if(PRIMVAL(op) && !known_to_be_utf8) { /* enc2utf8 */
-	    if(!IS_UTF8(el) && !IS_ASCII(el)) {
-		if (!duped) { PROTECT(ans = duplicate(ans)); duped = TRUE; }
-		SET_STRING_ELT(ans, i, 
-			       mkCharCE(translateCharUTF8(el), CE_UTF8));
-	    }
-	} else { /* enc2native */
-	    if((known_to_be_latin1 && IS_UTF8(el)) ||
-	       (known_to_be_utf8 && IS_LATIN1(el)) ||
-	       ENC_KNOWN(el)) {
-		if (!duped) { PROTECT(ans = duplicate(ans)); duped = TRUE; }
+	if (el == NA_STRING) continue;
+	if (PRIMVAL(op) || known_to_be_utf8) { /* enc2utf8 */
+	    if (IS_UTF8(el) || IS_ASCII(el) || IS_BYTES(el)) continue;
+	    if (!duped) { ans = PROTECT(duplicate(ans)); duped = TRUE; }
+	    SET_STRING_ELT(ans, i, 
+			   mkCharCE(translateCharUTF8(el), CE_UTF8));
+	} else if (ENC_KNOWN(el)) { /* enc2native */
+	    if (IS_ASCII(el) || IS_BYTES(el)) continue;
+	    if (known_to_be_latin1 && IS_LATIN1(el)) continue;
+	    if (!duped) { PROTECT(ans = duplicate(ans)); duped = TRUE; }
+	    if (known_to_be_latin1)
+		SET_STRING_ELT(ans, i, mkCharCE(translateChar(el), CE_LATIN1));
+	    else
 		SET_STRING_ELT(ans, i, mkChar(translateChar(el)));
-	    }
 	}
     }
     if(duped) UNPROTECT(1);
@@ -2005,7 +2012,7 @@ SEXP attribute_hidden do_crc64(SEXP call, SEXP op, SEXP args, SEXP rho)
     return mkString(ans);
 }
 
-static void 
+static void
 bincode(double *x, R_xlen_t n, double *breaks, int nb,
 	int *code, int right, int include_border)
 {
@@ -2072,7 +2079,7 @@ SEXP attribute_hidden do_tabulate(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_xlen_t n = XLENGTH(in);
     /* FIXME: could in principle be a long vector */
     int nb = asInteger(nbin);
-    if (nb == NA_INTEGER || nb < 0) 
+    if (nb == NA_INTEGER || nb < 0)
 	error(_("invalid '%s' argument"), "nbin");
     SEXP ans = allocVector(INTSXP, nb);
     int *x = INTEGER(in), *y = INTEGER(ans);
@@ -2100,7 +2107,7 @@ SEXP attribute_hidden do_findinterval(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (n == NA_INTEGER) error(_("invalid '%s' argument"), "vec");
     R_xlen_t nx = XLENGTH(x);
     int sr = asLogical(right), si = asLogical(inside);
-    if (sr == NA_INTEGER) 
+    if (sr == NA_INTEGER)
 	error(_("invalid '%s' argument"), "rightmost.closed");
     if (si == NA_INTEGER)
 	error(_("invalid '%s' argument"), "all.inside");
@@ -2134,10 +2141,10 @@ SEXP attribute_hidden do_pretty(SEXP call, SEXP op, SEXP args, SEXP rho)
     int n = asInteger(CAR(args)); args = CDR(args);
     if (n == NA_INTEGER || n < 0) error(_("invalid '%s' argument"), "n");
     int min_n = asInteger(CAR(args)); args = CDR(args);
-    if (min_n == NA_INTEGER || min_n < 0 || min_n > n) 
+    if (min_n == NA_INTEGER || min_n < 0 || min_n > n)
 	error(_("invalid '%s' argument"), "min.n");
     double shrink = asReal(CAR(args)); args = CDR(args);
-    if (!R_FINITE(shrink) || shrink <= 0.) 
+    if (!R_FINITE(shrink) || shrink <= 0.)
 	error(_("invalid '%s' argument"), "shrink.sml");
     PROTECT(hi = coerceVector(CAR(args), REALSXP)); args = CDR(args);
     double z;
@@ -2146,7 +2153,7 @@ SEXP attribute_hidden do_pretty(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!R_FINITE(z = REAL(hi)[1]) || z < 0.)
 	error(_("invalid '%s' argument"), "u5.bias");
     int eps = asInteger(CAR(args)); /* eps.correct */
-    if (eps == NA_INTEGER || eps < 0 || eps > 2) 
+    if (eps == NA_INTEGER || eps < 0 || eps > 2)
 	error(_("'eps.correct' must be 0, 1, or 2"));
     R_pretty(&l, &u, &n, min_n, shrink, REAL(hi), eps, 1);
     PROTECT(ans = allocVector(VECSXP, 3));
@@ -2163,7 +2170,7 @@ SEXP attribute_hidden do_pretty(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /*
-    r <- .Internal(formatC(x, as.character(mode), width, digits, 
+    r <- .Internal(formatC(x, as.character(mode), width, digits,
                    as.character(format), as.character(flag), i.strlen))
 */
 
@@ -2377,7 +2384,7 @@ void str_signif(void *x, R_xlen_t n, const char *type, int width, int digits,
 		} /* if(do_fg) for(i..) */
 	    else
 		for (R_xlen_t i = 0; i < n; i++)
-		    snprintf(result[i], strlen(result[i]) + 1, 
+		    snprintf(result[i], strlen(result[i]) + 1,
 			     form, width, dig, ((double *)x)[i]);
 	} else
 	    error("'type' must be \"real\" for this format");

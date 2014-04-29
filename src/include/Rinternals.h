@@ -851,6 +851,11 @@ extern0 IStackval *R_BCIntStackBase, *R_BCIntStackTop, *R_BCIntStackEnd;
 
 #endif /* CALLED_FROM_DEFN_H */
 
+/* Complex assignment support */
+/* temporary definition that will need to be refined to distinguish
+   getter from setter calls */
+#define IS_GETTER_CALL(call) (CADR(call) == R_TmpvalSymbol)
+
 /* Accessor functions.  Many are declared using () to avoid the macro
    definitions in the USE_RINTERNALS section.
    The function STRING_ELT is used as an argument to arrayAssign even
@@ -1096,6 +1101,10 @@ double Rf_asReal(SEXP x);
 Rcomplex Rf_asComplex(SEXP x);
 
 
+#ifndef R_ALLOCATOR_TYPE
+#define R_ALLOCATOR_TYPE
+typedef struct R_allocator R_allocator_t;
+#endif
 
 /* Other Internally Used Functions, excluding those which are inline-able*/
 
@@ -1108,7 +1117,7 @@ SEXP Rf_allocS4Object(void);
 SEXP Rf_allocSExp(SEXPTYPE);
 void Rf_initializeOffHeapSEXP(SEXP, SEXPTYPE);
 void Rf_initializeOffHeapEnvironment(SEXP newrho, SEXP namelist, SEXP valuelist, SEXP rho);
-SEXP Rf_allocVector(SEXPTYPE, R_xlen_t);
+SEXP Rf_allocVector3(SEXPTYPE, R_xlen_t, R_allocator_t*);
 R_xlen_t Rf_any_duplicated(SEXP x, Rboolean from_last);
 R_xlen_t Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
 SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP);
@@ -1425,6 +1434,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define allocS4Object		Rf_allocS4Object
 #define allocSExp		Rf_allocSExp
 #define allocVector		Rf_allocVector
+#define allocVector3		Rf_allocVector3
 #define any_duplicated		Rf_any_duplicated
 #define any_duplicated3		Rf_any_duplicated3
 #define applyClosure		Rf_applyClosure
@@ -1602,7 +1612,7 @@ void	Rf_beginposcontext(RCNTXT * cptr, int flags, SEXP syscall, SEXP env, SEXP s
 void	Rf_begincontext(RCNTXT * cptr, int flags, SEXP syscall, SEXP env, SEXP sysp, SEXP promargs, SEXP callfun);
 void	Rf_endcontext(RCNTXT * cptr);
 #endif
-
+SEXP     Rf_allocVector(SEXPTYPE, R_xlen_t);
 SEXP     Rf_argShift(SEXP *);
 SEXP     Rf_buildPositionalPromargs(int nargs, SEXP *last);
 Rboolean Rf_conformable(SEXP, SEXP);

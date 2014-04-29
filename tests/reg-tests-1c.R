@@ -73,16 +73,6 @@ try ( k. <- kmeans(r., 3) ) # after rounding, have only two distinct points
       k. <- kmeans(r., 2)   # fine
 
 
-## regression test incorrectly in example(NA)
-xx <- c(0:4)
-is.na(xx) <- c(2, 4)
-LL <- list(1:5, c(NA, 5:8), c("A","NA"), c("a", NA_character_))
-L2 <- LL[c(1,3)]
-dN <- dd <- USJudgeRatings; dN[3,6] <- NA
-stopifnot(anyNA(xx), anyNA(LL), !anyNA(L2),
-          anyNA(dN), !anyNA(dd), !any(is.na(dd)),
-          all(c(3,6) == which(is.na(dN), arr.ind=TRUE)))
-
 ## PR#15376
 stem(c(1, Inf))
 ## hung in 3.0.1
@@ -352,6 +342,36 @@ stopifnot(inherits(dl, "dendrogram"), is.leaf(dl),
 	  identical(order.dendrogram(dl), as.vector(dl)),
 	  identical(d, as.dendrogram(d)))
 ## as.dendrogram() was hidden;  order.*() failed for leaf
+
+
+## using *named* method
+hw <- hclust(dist(sqrt(1:5)), method=c(M = "ward"))
+## failed for 2 days in R-devel/-alpha
+
+
+## PR#15758
+my_env <- new.env(); my_env$one <- 1L
+save(one, file = tempfile(), envir = my_env)
+## failed in R < 3.1.1.
+
+
+## Conversion to numeric in boundary case
+ch <- "0x1.ffa0000000001p-1"
+rr <- type.convert(ch, exact=FALSE)
+rX <- type.convert(ch, exact=TRUE)
+stopifnot(is.numeric(rr), identical(rr, rX),
+          all.equal(rr, 0.999267578125),
+          all.equal(type.convert(ch), type.convert("0x1.ffap-1"), tol=5e-15))
+## type.convert(ch) was not numeric in R 3.1.0
+##
+ch <- "1234567890123456789" 
+rr <- type.convert(ch, exact=FALSE)
+rX <- type.convert(ch, exact=TRUE)
+rx <- type.convert(ch, exact=TRUE, as.is=TRUE)
+tools::assertWarning(r. <- type.convert(ch))
+stopifnot(is.numeric(rr), identical(rr, r.), all.equal(rr, 1.234567890e18),
+	  is.factor(rX),  identical(rx, ch))
+
 
 
 proc.time()

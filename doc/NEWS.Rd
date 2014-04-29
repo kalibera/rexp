@@ -10,10 +10,112 @@
 \section{\Rlogo CHANGES IN R-devel}{
   \subsection{NEW FEATURES}{
     \itemize{
-      \item \code{type.convert()} (and hence \code{read.table(as.is = TRUE)})
-      returns a character vector or factor when representing a numeric
-      input as a double would lose accuracy.  Similarly for complex
-      inputs.
+      \item \code{anyNA()} gains a \code{recursive} argument.
+
+      \item \code{Sys.getenv(x, names, *)} returns a
+      \code{"DList"}, and hence prints nicely when \code{x} is
+      missing and \code{names} is not false.
+
+      \item (Windows.)  \code{shell()} no longer consults the
+      environment variable \env{SHELL}: too many systems have been
+      encountered where it was set incorrectly (usually to a path where
+      software was compiled, not where it was installed).
+      \env{R_SHELL}, the preferred way to select a non-default shell,
+      can be used instead.
+    }
+  }
+  %% \subsection{BUG FIXES}{
+  %%   \itemize{
+  %%   }
+  %% }
+}
+
+\section{\Rlogo CHANGES IN R 3.1.0 patched}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \command{configure} option \option{--with-internal-tzcode}
+      can now be used with variable \code{rsharedir}.
+
+      \item \code{tools::buildVignette()} and \code{tools::buildVignettes()}
+      with \code{clean = FALSE} no longer remove any created files.
+      \code{buildvignette()} gains a \code{keep} argument for more
+      cleaning customization.
+
+      \item The Bioconductor \sQuote{version} used by
+      \code{setRepositories()} can now be set by environment variable
+      \env{R_BIOC_VERSION} at runtime, not just when \R is installed.
+      (It has been stated that Bioconductor will switch from version
+      2.14 to version 3.0 during the lifetime of the \R 3.1 series.)
+
+      \item Error messages from bugs in embedded \samp{Sexpr} code
+      in Sweave documents now report the source location.
+
+      %% port to R patched only after a bit of dust settlement:
+      \item \code{type.convert()}, \code{read.table()} and similar
+      \code{read.*()} functions get a new \code{exact} argument,
+      specifying how numeric input is converted when its conversion to
+      double precision loses accuracy.  The default \code{exact = NA}
+      corresponds to numeric conversion with a warning about accuracy loss.
+    }
+  }
+
+  \subsection{INSTALLATION and INCLUDED SOFTWARE}{
+    \itemize{
+      \item The included version of PCRE has been updated to 8.35.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item When \code{attach()} notices conflicts, it does so
+      compatibly with \code{library()}, using \code{message()}.
+
+      \item \command{R CMD Sweave} no longer cleans any files,
+      compatibly with versions of \R prior to 3.1.0.
+
+      \item \code{dbinom(x,n)}, \code{pbinom()}, \code{dpois()}, etc,
+      are slightly less restrictive in checking if \code{n} is
+      integer-valued.  (Wish of \PR{15734}.)
+
+      \item \code{pchisq(x, df, ncp, log.p = TRUE)} is more accurate and
+      no longer underflows for small \code{x} and \code{ncp < 80}, e.g,
+      for \code{pchisq(1e-5, df = 100, ncp = 1, log = TRUE)}.
+      (Based on \PR{15635} and a suggestion by Roby Joehanes.)
+
+      \item The \code{s} (\dQuote{step into}) command in the debugger
+      would cause \R to step into expressions evaluated there,
+      not just into functions being debugged.  (\PR{15770})
+
+      \item The third-party code used by \code{strptime()} rejected
+      time-zone offsets of more than \code{+1200} (\code{+1245},
+      \code{+1300} and \code{+1400} can occur).  (\PR{15768})
+
+      \item (Windows only.)
+      \code{png(type = "cairo", antialias = "gray")}
+      was not accepted.  (\PR{15760})
+
+      \item Use of \code{save(..., envir=)} with named objects could
+      fail.  (\PR{15758})
+
+      \item \code{Sweave()} mis-parsed \samp{Sexpr} expressions that
+      contained backslashes.  (\PR{15779})
+
+      \item The return value from \code{options(foo = NULL)} was not
+      the previous value of the option.  (\PR{15781})
+      
+      \item \code{enc2utf8()} and \code{enc2native()} did not always
+      mark the encoding of the return values when it was known.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.1.0}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{type.convert()} (and hence by default
+      \code{read.table()}) returns a character vector or factor when
+      representing a numeric input as a double would lose accuracy.
+      Similarly for complex inputs.
 
       If a file contains numeric data with unrepresentable numbers of
       decimal places that are intended to be read as numeric, specify
@@ -23,10 +125,9 @@
       definition of \command{diff -b} (as distinct from the description
       in the \command{man} pages of most systems).
 
-      \item New function \code{anyNA()}, a fast version of
-      \code{any(is.na(.))}, \emph{where neither \code{is.na()} nor
-      \code{any()} has a relevant method}, based on a proposal by Tim
-      Hesterberg. (Wish of \PR{15239}.)
+      \item New function \code{anyNA()}, a version of
+      \code{any(is.na(.))} which is fast for atomic vectors, based on a
+      proposal by Tim Hesterberg. (Wish of \PR{15239}.)
 
       \item \code{arrayInd(*, useNames = TRUE)} and, analogously,
       \code{which(*, arr.ind = TRUE)} now make use of
@@ -174,7 +275,10 @@
       assignments when possible.  This reduces copying of replacement
       values in expressions such as \code{Z$a <- a0} and
       \code{ans[[i]] <- tmp}: some package code has relied on there
-      being copies.  (Based on suggestions from Michael Lawrence.)
+      being copies.
+
+      Also, a number of other changes to reduce copying of objects; all
+      contributed by or based on suggestions by Michael Lawrence.
 
       \item The \code{fast} argument of \code{KalmanLike()},
       \code{KalmanRun()} and \code{KalmanForecast()} has been replaced
@@ -214,42 +318,65 @@
 
       The message for \code{all.equal.numeric()} reports a
       \code{"scaled difference"} only for \code{scale != 1}.
-      
+
       \item \code{all.equal()} now has a \code{"POSIXt"} method
       replacing the \code{"POSIXct"} method.
-      
+
       \item The \code{"Date"} and \code{"POSIXt"} methods of
       \code{seq()} allows \code{by = "quarter"} for completeness
       (\code{by = "3 months"} always worked).
 
-      \item A number of changes to reduce copying of objects, contributed
-      by Michael Lawrence.
-      
       \item \code{file.path()} removes any trailing separator on
       Windows, where they are invalid (although sometimes accepted).
       This is intended to enhance the portability of code written by
       those using POSIX file systems (where a trailing \code{/} can be
       used to confine path matching to directories).
-      
+
       \item New function \code{agrepl()} which like \code{grepl()}
       returns a logical vector.
-      
+
       \item \code{fifo()} is now supported on Windows. (\PR{15600})
-      
+
       \item \code{sort.list(method = "radix")} now allows negative
       integers (wish of \PR{15644}).
 
-      \item Some functionality of \code{print.ts()} is now available in 
+      \item Some functionality of \code{print.ts()} is now available in
       \code{.preformat.ts()} for more modularity.% and format.ts() might follow
 
-      \item \code{mcparallel()} gains an option \code{detach=TRUE} which
-      allows to execute code independently of the current session.
-      It is based on a new \code{estranged=TRUE} argument to
-      \code{mcfork()} which forks child processes such that they
-      become independent of the parent process.
-      
-      \item The \code{pdf()} device omits entirely circles and text at
-      extremely small sizes, since some viewers were failing on such files.
+      \item \code{mcparallel()} gains an option \code{detach = TRUE}
+      which allows execution of code independently of the current
+      session.  It is based on a new \code{estranged = TRUE} argument to
+      \code{mcfork()} which forks child processes such that they become
+      independent of the parent process.
+
+      \item The \code{pdf()} device omits circles and text at extremely
+      small sizes, since some viewers were failing on such files.
+
+      \item The rightmost break for the \code{"months"},
+      \code{"quarters"} and \code{"years"} cases of
+      \code{hist.POSIXlt()} has been increased by a day.  (Inter alia,
+      fixes \PR{15717}.)
+
+      \item The handling of \code{DF[i,] <- a} where \code{i} is of
+      length 0 is improved.  (Inter alia, fixes \PR{15718}.)
+
+      \item \code{hclust()} gains a new method \code{"ward.D2"} which
+      implements Ward's method correctly.  The previous \code{"ward"}
+      method is \code{"ward.D"} now, with the old name still working.
+      Thanks to research and proposals by Pierre Legendre.
+
+      \item The \code{sunspot.month} dataset has been amended and
+      updated from the official source, whereas the \code{sunspots} and
+      \code{sunspot.year} datasets will remain immutable. The
+      documentation and source links have been updated correspondingly.
+
+      \item The \code{summary()} method for \code{"lm"} fits warns if
+      the fit is essentially perfect, as most of the summary may be
+      computed inaccurately (and with platform-dependent values).
+
+      Programmers who use \code{summary()} in order to extract just
+      a component which will be reliable (e.g. \code{$cov.unscaled})
+      should wrap their calls in \code{suppressWarnings()}.
     }
   }
 
@@ -285,7 +412,9 @@
       \item The included (64-bit) time-zone conversion code and Olson
       time-zone database can be used instead of the system version: use
       \command{configure} option \option{--with-internal-tzcode}.  This
-      is the default on Windows and OS X.
+      is the default on Windows and OS X.  (Note that this does not
+      currently work if a non-default \code{rsharedir}
+      \command{configure} variable is used.)
 
       (It might be necessary to set environment variable \env{TZ} on
       OSes where this is not already set, although the system timezone is
@@ -298,14 +427,13 @@
       by testing some basic features.  This by default tries flags for
       the compiler specified by \samp{CXX}, but an alternative compiler,
       options and standard can be specified by variables \samp{CXX1X},
-      \samp{CXX1XFLAGS} and \samp{CXX1XSTD} (e.g. \samp{-std=c++1y} or
-      \samp{-std=gnu++11}).
+      \samp{CXX1XFLAGS} and \samp{CXX1XSTD} (e.g. \samp{-std=gnu++11}).
 
       \item \R{} can now optionally be compiled to use reference
       counting instead of the \code{NAMED} mechanism by defining
       \code{SWITCH_TO_REFCNT} in \file{Rinternals.h}. This may become
       the default in the future.
-      
+
       \item There is a new option \option{--use-system-tre} to use a
       suitable system \pkg{tre} library: at present this means a version
       from their \command{git} repository, after corrections.
@@ -324,7 +452,7 @@
       considered to be vignettes and hence indexed as such.
 
       \item In the \file{DESCRIPTION} file, \preformatted{    License: X11}
-      is no longer recognized as valid. Use \samp{MIT} or
+      is no longer recognized as valid.  Use \samp{MIT} or
       \samp{BSD_2_clause} instead, both of which need \samp{+ file LICENSE}.
 
       \item For consistency, entries in \file{.Rinstignore} are now matched
@@ -338,18 +466,8 @@
       \item \command{R CMD INSTALL --build} (not Windows) now defaults to
       the internal \code{tar()} unless \env{R_INSTALL_TAR} is set.
 
-      \item There is some support for compiling C++11 code in packages.
-      The file \file{src/Makevars} or \file{src/Makevars.win} should
-      define the macro \samp{USE_CXX1X} (with an empty value).  Where
-      needed, an alternative compiler can be specified by setting macros
-      \samp{CXX1X}, \samp{CXX1XFLAGS} and so on, either when \R is
-      configured or in a personal/site \file{Makevars} file.  The
-      default is to use \samp{$(CXX) -std=c++11} otherwise
-      \option{-std=c++0x} if supported, (the latter on Windows, as
-      supported by \code{g++ 4.6.x}.)
-
-      Other standards supported by the compiler can be specified by e.g.
-      \samp{USE_CXX1X = -std=c++1y} .
+      \item There is support for compiling C++11 code in packages on
+      suitable platforms: see \sQuote{Writing R Extensions}.
 
       \item Fake installs now install the contents of directory
       \file{inst}: some packages use this to install e.g. C++ headers
@@ -433,17 +551,17 @@
       \env{_R_CHECK_DEPENDS_ONLY_} make available packages only in
       \samp{LinkingTo} only for installation, and not for
       loading/runtime tests.
-      
+
       \item \command{tools::checkFF()} reports on \code{.C} and
       \code{.Fortran} calls with \code{DUP = FALSE} if argument
       \code{check_DUP} is true.  This is selected by
       \command{R CMD check} by default.
-      
+
       \item \command{R CMD check --use-gct} can be tuned to
       garbage-collect less frequently using \code{gctorture2()}
       \emph{via} the setting of environment variable
       \env{_R_CHECK_GCT_N_}.
-      
+
       \item Where supported, \code{tools::texi2dvi()} limits the number
       of passes tried to 20.
     }
@@ -479,6 +597,9 @@
       \item Calls to \code{SET_VECTOR_ELT()} and \code{SET_STRING_ELT()}
       are now checked for indices which are in-range: several packages
       were writing one element beyond the allocated length.
+
+      \item \code{allocVector3} has been added which allows custom
+      allocators to be used for individual vector allocations.
     }
   }
 
@@ -512,14 +633,17 @@
 
       \item Functions \code{readNEWS()} and \code{checkNEWS()} in
       package \pkg{tools} are defunct.
-      
+
       \item \code{download.file(method = "lynx")} is deprecated.
-      
+
       \item \code{.C(DUP = FALSE)} and \code{.Fortran(DUP = FALSE)} are
       now deprecated, and may be disabled in future versions of \R.  As
       their help has long said, \code{.Call()} is much preferred.
 
       \command{R CMD check} notes such usages (by default).
+
+      \item The workaround of setting \env{R_OSX_VALGRIND} has been
+      removed: it is not needed in current valgrind.
     }
   }
 
@@ -534,8 +658,8 @@
       by \code{`\\r`} when that object does not exist) now encode
       the control characters.  (Reported by Hadley Wickham.)
 
-      \item \code{getGraphicsEvent()} caused 100\% CPU usage in Windows.
-      (PR#15500)
+      \item \code{getGraphicsEvent()} caused 100\% usage of one CPU in
+      Windows. (PR#15500)
 
       \item \code{nls()} with no \code{start} argument may now work
       inside another function (scoping issue).
@@ -564,40 +688,48 @@
       This may introduce error messages in existing code and/or produce
       a different result in existing code (but only where a non-finite
       location or dimension may now become zero).
-      
+
       \item Some bugs in TRE have been corrected by updating from the
-      \command{git} repository.
+      \command{git} repository.  This allows \R to be installed on some
+      platforms for which this was a blocker (\PR{15087} suggests Linux
+      on ARM and HP-UX).
 
       \item \code{?} applied to a call to an S4 generic failed in
       several cases. (\PR{15680})
-      
+
       \item The implicit S4 generics for primitives with \code{\dots} in
       their argument list were incorrect. (\PR{15690})
-      
-      \item Bug fixes to methods::callGeneric(). (\PR{15691})
-      
-      \item The bug fix to \code{aggregrate()} in \PR{15004} introduced 
+
+      \item Bug fixes to \code{methods::callGeneric()}. (\PR{15691})
+
+      \item The bug fix to \code{aggregrate()} in \PR{15004} introduced
       a new bug in the case of no grouping variables. (\PR{15699})
-      
+
       \item In rare cases printing deeply nested lists overran a buffer
       by one byte and on a few platforms segfaulted. (\PR{15679})
 
       \item The dendrogram method of \code{as.dendrogram()} was hidden
       accidentally, (\PR{15703}), and \code{order.dendrogram(d)} gave
-      too much for a leaf \code{d}. (\PR{15702}) 
+      too much for a leaf \code{d}. (\PR{15702})
 
       \item \R would try to kill processes on exit that have pids ever
-      used by a child process spawned by \code{parallel} even though the
-      current process with that pid was not actually its child.
-      
+      used by a child process spawned by \code{mcparallel} even though
+      the current process with that pid was not actually its child.
+
       \item \code{cophenetic()} applied to a \code{"dendrogram"} object
       sometimes incorrectly returned a \code{"Labels"} attribute with
       dimensions.  (\PR{15706})
 
       \item \code{printCoefmat()} called from quite a few \code{print()}
       methods now obeys small \code{getOption("width")} settings,
-      line wrapping the "signif. codes" legend appropriately.
-      (\PR{15708}) 
+      line wrapping the \samp{"signif. codes"} legend appropriately.
+      (\PR{15708})
+
+      \item \code{model.matrix()} assumed that the stored dimnames for a
+      matrix was \code{NULL} or length 2, but length 1 occurred.
+
+      \item The clipping region for a device was sometimes used in base
+      graphics before it was set.
     }
   }
 }
@@ -656,7 +788,7 @@
       classes \code{"POSIXct"}, \code{"POSIXlt"} and \code{"Date"}
       recognize strings with marked encodings: this allows, for example,
       UTF-8 French month names to be read on (French) Windows.
-      
+
       \item \code{iconv(to = "utf8")} is now accepted on all platforms
       (some implementations did already, but GNU \pkg{libiconv} did not:
       however converted strings were not marked as being in UTF-8).  The
@@ -665,7 +797,7 @@
       \item \code{available.packages()} is better protected against
       corrupt metadata files.  (A recurring problem with Debian package
       \pkg{shogun-r}: \PR{14713}.)
-      
+
       \item Finalizers are marked to be run at garbage collection, but
       run only at a somewhat safer later time (when interrupts are
       checked).  This circumvents some problems with finalizers running
@@ -876,10 +1008,10 @@
       \item \code{pbeta(x, a, b, log.p = TRUE)} sometimes underflowed to
       zero for very small and very differently sized \code{a}, \code{b}.
       (\PR{15641})
-      
+
       \item \code{approx()} and \code{approxfun()} now handle infinite
       values with the \code{"constant"} method. (\PR{15655})
-      
+
       \item \code{stripchart()} again respects reversed limits in
       \code{xlim} and \code{ylim}.  (\PR{15664})
     }
@@ -1152,8 +1284,8 @@
 
       \item The default \sQuote{version} of Bioconductor for its
       packages has been changed to the upcoming \samp{2.13}, but this
-      can be set by the environment variable \env{R_BIOC_VERSION}, e.g.
-      in file \file{Renviron.site}.
+      can be set by the environment variable \env{R_BIOC_VERSION} when
+      \R is installed.
     }
   }
 
