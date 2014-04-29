@@ -953,7 +953,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
         a = actuals;
         while (f != R_NilValue) {
             if (CAR(a) == R_MissingArg && CAR(f) != R_MissingArg) {
-	        SETCAR(a, mkPROMISE(CAR(f), newrho));
+	        SETCAR(a, mkPROMISEorConst(CAR(f), newrho));
 	        SET_MISSING(a, 2);
             }
             f = CDR(f);
@@ -2433,7 +2433,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-		    SETCDR(tail, CONS(mkPROMISE(CAR(h), rho), R_NilValue));
+		    SETCDR(tail, CONS(mkPROMISEorConst(CAR(h), rho), R_NilValue));
 		    tail = CDR(tail);
 		    COPY_TAG(tail, h);
 		    h = CDR(h);
@@ -2448,7 +2448,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    COPY_TAG(tail, el);
 	}
 	else {
-	    SETCDR(tail, CONS(mkPROMISE(CAR(el), rho), R_NilValue));
+	    SETCDR(tail, CONS(mkPROMISEorConst(CAR(el), rho), R_NilValue));
 	    tail = CDR(tail);
 	    COPY_TAG(tail, el);
 	}
@@ -2484,7 +2484,7 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-		    CDR(tail) = allocatePromargsCell(TAG(h), mkPROMISE(CAR(h), rho)); /* avoid barrier */
+		    CDR(tail) = allocatePromargsCell(TAG(h), mkPROMISEorConst(CAR(h), rho)); /* avoid barrier */
 		    tail = CDR(tail);
 		    h = CDR(h);
 		}
@@ -2497,7 +2497,7 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 	    tail = CDR(tail);
 	}
 	else {
-	    CDR(tail) = allocatePromargsCell(TAG(el), mkPROMISE(CAR(el), rho)); /* avoid barrier */
+	    CDR(tail) = allocatePromargsCell(TAG(el), mkPROMISEorConst(CAR(el), rho)); /* avoid barrier */
 	    tail = CDR(tail);
 	}
 	el = CDR(el);
@@ -2851,7 +2851,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    /* create a promise to pass down to applyClosure  */
 	    if(!argsevald) {
 		argValue = pargs = PROMISE_ARGS(args, rho);
-		SET_PRVALUE(CAR(argValue), x);
+		SET_PRVALUE_IF_PROMISE(CAR(argValue), x);
 	    } else argValue = args;
 	    PROTECT(argValue); nprotect++;
 	    /* This means S4 dispatch */
@@ -2913,7 +2913,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       Hence here and in the other usemethod() uses below a
 	       new environment rho1 is created and used.  LT */
 	    PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho)); nprotect++;
-	    SET_PRVALUE(CAR(pargs), x);
+	    SET_PRVALUE_IF_PROMISE(CAR(pargs), x);
 	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
 	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, ans))
 	    {
@@ -3179,7 +3179,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if (length(s) != length(args))
 	error(_("dispatch error in group dispatch"));
     for (m = s ; m != R_NilValue ; m = CDR(m), args = CDR(args) ) {
-	SET_PRVALUE(CAR(m), CAR(args));
+	SET_PRVALUE_IF_PROMISE(CAR(m), CAR(args));
 	/* ensure positional matching for operators */
 	if(isOps) SET_TAG(m, R_NilValue);
     }
@@ -4251,7 +4251,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   SEXP op = SYMVALUE(install(generic)); /**** avoid this */
 
   PROTECT(pargs = PROMISE_ARGS(CDR(call), rho));
-  SET_PRVALUE(CAR(pargs), x);
+  SET_PRVALUE_IF_PROMISE(CAR(pargs), x);
 
   /**** Minimal hack to try to handle the S4 case.  If we do the check
 	and do not dispatch then some arguments beyond the first might
@@ -5218,7 +5218,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (ftype == BUILTINSXP)
 	      value = bcEval(code, rho, TRUE);
 	  else
-	    value = mkPROMISE(code, rho);
+	    value = mkPROMISE(code, rho); /* we know code is not const */
 	  PUSHCALLARG(value);
 	}
 	NEXT();
@@ -5230,7 +5230,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (ftype == BUILTINSXP)
 	      value = bcEval(code, rho, TRUE);
 	  else
-	    value = mkPROMISE(code, rho);
+	    value = mkPROMISE(code, rho); /* we know code is not const */
 	  PUSHCALLEARG_NOTSPECIAL(value);
 	}
 	NEXT();
@@ -5243,7 +5243,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    /* not reached */
         } else if (ftype != SPECIALSXP) {
             SEXP symbol = VECTOR_ELT(constants, GETOP());
-            value = mkPROMISE(symbol, rho);
+            value = mkPROMISE(symbol, rho); /* we know symbol is not const */
 	    PUSHCALLARG(value);
         } else {
             SKIP_OP();
@@ -5258,7 +5258,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    /* not reached */
         } else if (ftype != SPECIALSXP) {
             SEXP symbol = VECTOR_ELT(constants, GETOP());
-            value = mkPROMISE(symbol, rho);
+            value = mkPROMISE(symbol, rho); /* we know symbol is not const */
 	    PUSHCALLEARG_NOTSPECIAL(value);
         } else {
             SKIP_OP();
@@ -5291,7 +5291,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    for (; h != R_NilValue; h = CDR(h)) {
 	      SEXP val, cell;
 	      if (ftype == BUILTINSXP) val = eval(CAR(h), rho);
-	      else val = mkPROMISE(CAR(h), rho);
+	      else val = mkPROMISEorConst(CAR(h), rho);
 	      cell = CREATE_CALLARG_CELL(val);
 	      PUSHCALLARG_CELL(cell);
 	      if (TAG(h) != R_NilValue) SET_TAG(cell, CreateTag(TAG(h)));

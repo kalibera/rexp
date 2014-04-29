@@ -97,7 +97,7 @@ SEXP attribute_hidden do_earg_delayed(SEXP call, SEXP op, SEXP arg_x, SEXP arg_v
     if (!isEnvironment(aenv))
 	errorcall(call, _("invalid '%s' argument"), "assign.env");
 
-    defineVar(name, mkPROMISE(expr, eenv), aenv);
+    defineVar(name, mkPROMISEorConst(expr, eenv), aenv);
     return R_NilValue;
 }
 
@@ -123,7 +123,7 @@ SEXP attribute_hidden do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(val = eval(VECTOR_ELT(values, i), eenv));
 	PROTECT(expr0 = duplicate(expr));
 	SETCAR(CDR(expr0), val);
-	defineVar(name, mkPROMISE(expr0, eenv), aenv);
+	defineVar(name, mkPROMISEorConst(expr0, eenv), aenv);
 	UNPROTECT(2);
     }
     return R_NilValue;

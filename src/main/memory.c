@@ -2686,6 +2686,38 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     return s;
 }
 
+SEXP attribute_hidden mkPROMISEorConst(SEXP expr, SEXP rho)
+{
+  switch (TYPEOF(expr)) {
+    case NILSXP:
+    case LISTSXP:
+    case LGLSXP:
+    case INTSXP:
+    case REALSXP:
+    case STRSXP:
+    case CPLXSXP:
+    case RAWSXP:
+    case S4SXP:
+    case SPECIALSXP:
+    case BUILTINSXP:
+    case ENVSXP:
+    case CLOSXP:
+    case VECSXP:
+    case EXTPTRSXP:
+    case WEAKREFSXP:
+    case EXPRSXP:
+	/* Make sure constants in expressions are NAMED before being
+	   used as values.  Setting NAMED to 2 makes sure weird calls
+	   to replacement functions won't modify constants in
+	   expressions.  */
+
+	if (NAMED(expr) <= 1) SET_NAMED(expr, 2);
+	return expr;
+    default:
+      return mkPROMISE(expr, rho);
+  }
+}
+
 /* All vector objects must be a multiple of sizeof(SEXPREC_ALIGN)
    bytes so that alignment is preserved for all objects */
 
@@ -3867,10 +3899,12 @@ void (SET_ENVFLAGS)(SEXP x, int v) { SET_ENVFLAGS(x, v); }
 SEXP (PRCODE)(SEXP x) { return CHK(PRCODE(CHK(x))); }
 SEXP (PRENV)(SEXP x) { return CHK(PRENV(CHK(x))); }
 SEXP (PRVALUE)(SEXP x) { return CHK(PRVALUE(CHK(x))); }
+SEXP (PRVALUE_OR_CONST)(SEXP x) { if (TYPEOF(x) == PROMSXP) { return x; } else { return CHK(PRVALUE(CHK(x))); } }
 int (PRSEEN)(SEXP x) { return PRSEEN(CHK(x)); }
 
 void (SET_PRENV)(SEXP x, SEXP v){ FIX_REFCNT(x, PRENV(x), v); CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
 void (SET_PRVALUE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRVALUE(x), v); CHECK_OLD_TO_NEW(x, v); PRVALUE(x) = v; }
+void (SET_PRVALUE_IF_PROMISE)(SEXP x, SEXP v) { if (TYPEOF(x) == PROMSXP) { FIX_REFCNT(x, PRVALUE(x), v); CHECK_OLD_TO_NEW(x, v); PRVALUE(x) = v; } }
 void (SET_PRCODE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRCODE(x), v); CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
 

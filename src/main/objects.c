@@ -1476,8 +1476,9 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	    if(!promisedArgs) {
 		PROTECT(s = PROMISE_ARGS(CDR(call), rho));
 		if (length(s) != length(args)) error(_("dispatch error"));
-		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
-		    SET_PRVALUE(CAR(b), CAR(a));
+		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b)) {
+		    SET_PRVALUE_IF_PROMISE(CAR(b), CAR(a));
+                }
 		value =  applyClosure(call, value, s, rho, R_BaseEnv);
 		UNPROTECT(1);
 		RELEASE_PROMARGS(s);
@@ -1496,8 +1497,9 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
     if(!promisedArgs) {
 	PROTECT(s = PROMISE_ARGS(CDR(call), rho));
 	if (length(s) != length(args)) error(_("dispatch error"));
-	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
-	    SET_PRVALUE(CAR(b), CAR(a));
+	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b)) {
+	    SET_PRVALUE_IF_PROMISE(CAR(b), CAR(a));
+        }
 	value = applyClosure(call, fundef, s, rho, R_BaseEnv);
 	UNPROTECT(1);
 	RELEASE_PROMARGS(s);

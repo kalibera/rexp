@@ -1487,7 +1487,7 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* otherwise dispatch the default method */
     PROTECT(fn = findFun(install("xtfrm.default"), rho));
     PROTECT(prargs = PROMISE_ARGS(args, R_GlobalEnv));
-    SET_PRVALUE(CAR(prargs), CAR(args));
+    SET_PRVALUE_IF_PROMISE(CAR(prargs), CAR(args));
     ans = applyClosure(call, fn, prargs, rho, R_NilValue);
     UNPROTECT(2);
     RELEASE_PROMARGS(prargs);

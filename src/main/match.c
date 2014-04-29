@@ -456,7 +456,7 @@ SEXP attribute_hidden matchUnnamedArgsCreateEnv(SEXP formals, SEXP supplied, SEX
                 SEXP fdefault = CAR(f);
                 if (fdefault != R_MissingArg) {
                     SET_MISSING(ds, 2);
-                    SETCAR(ds, mkPROMISE(fdefault, newrho));
+                    SETCAR(ds, mkPROMISEorConst(fdefault, newrho));
                 } else {
                     SET_MISSING(ds, 1);
                 }
@@ -471,7 +471,7 @@ SEXP attribute_hidden matchUnnamedArgsCreateEnv(SEXP formals, SEXP supplied, SEX
             SEXP fdefault = CAR(f);
             if (fdefault != R_MissingArg) {
                 SET_MISSING(s, 2);
-                SETCAR(s, mkPROMISE(fdefault, newrho));
+                SETCAR(s, mkPROMISEorConst(fdefault, newrho));
             } else {
                 SET_MISSING(s, 1);
             }
@@ -583,7 +583,7 @@ SEXP attribute_hidden matchPositionalArgsCreateEnv(SEXP formals, SEXP *supplied,
                 SEXP fdefault = CAR(f);
                 if (fdefault != R_MissingArg) {
                     SET_MISSING(ds, 2);
-                    SETCAR(ds, mkPROMISE(fdefault, newrho));
+                    SETCAR(ds, mkPROMISEorConst(fdefault, newrho));
                 } else {
                     SET_MISSING(ds, 1);
                 }

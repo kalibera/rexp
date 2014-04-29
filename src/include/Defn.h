@@ -357,6 +357,7 @@ typedef struct {
 #define PRCODE(x)	((x)->u.promsxp.expr)
 #define PRENV(x)	((x)->u.promsxp.env)
 #define PRVALUE(x)	((x)->u.promsxp.value)
+#define	PRVALUE_OR_CONST(x)	((TYPEOF(x) == PROMSXP) ? (x)->u.promsxp.value : (x))
 #define PRSEEN(x)	((x)->sxpinfo.gp)
 #define SET_PRSEEN(x,v)	(((x)->sxpinfo.gp)=(v))
 
@@ -709,6 +710,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define mkCLOSXP		Rf_mkCLOSXP
 # define mkFalse		Rf_mkFalse
 # define mkPROMISE		Rf_mkPROMISE
+# define mkPROMISEorConst	Rf_mkPROMISEorConst
 # define mkQUOTE		Rf_mkQUOTE
 # define mkSYMSXP		Rf_mkSYMSXP
 # define mkTrue			Rf_mkTrue
@@ -900,6 +902,7 @@ SEXP mkCLOSXP(SEXP, SEXP, SEXP);
 SEXP mkFalse(void);
 SEXP mkPRIMSXP (int, int);
 SEXP mkPROMISE(SEXP, SEXP);
+SEXP mkPROMISEorConst(SEXP, SEXP);
 SEXP mkQUOTE(SEXP);
 SEXP mkSYMSXP(SEXP, SEXP);
 SEXP mkTrue(void);
