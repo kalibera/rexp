@@ -2086,17 +2086,30 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-static Rboolean anyNA(SEXP x, SEXP env)
+// Check if x has missing values; the anyNA.default() method
+static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Original code:
    Copyright 2012 Google Inc. All Rights Reserved.
    Author: Tim Hesterberg <rocket@google.com>
    Distributed under GPL 2 or later
 */
-// Check if x has missing values; the  anyNA.default() method:
 {
-    R_xlen_t i, n = xlength(x);
+    SEXP x = CAR(args);
+    SEXPTYPE xT = TYPEOF(x);
+    Rboolean isList =  (xT == VECSXP || xT == LISTSXP), recursive = FALSE;
 
-    switch (TYPEOF(x)) {
+    if (isList && length(args) > 1) recursive = asLogical(CADR(args));
+    if (OBJECT(x) || (isList && !recursive)) {
+	SEXP e0 = PROTECT(lang2(install("is.na"), x));
+	SEXP e = PROTECT(lang2(install("any"), e0));
+	SEXP res = PROTECT(eval(e, env));
+	int ans = asLogical(res);
+	UNPROTECT(3);
+	return ans == 1; // so NA answer is false.
+    }
+
+    R_xlen_t i, n = xlength(x);
+    switch (xT) {
     case REALSXP:
     {
 	double *xD = REAL(x);
@@ -2119,54 +2132,89 @@ static Rboolean anyNA(SEXP x, SEXP env)
 	break;
     }
     case CPLXSXP:
+    {
+	Rcomplex *xC = COMPLEX(x);
 	for (i = 0; i < n; i++)
-	    if (ISNAN(COMPLEX(x)[i].r) ||
-		ISNAN(COMPLEX(x)[i].i)) return TRUE;
+	    if (ISNAN(xC[i].r) || ISNAN(xC[i].i)) return TRUE;
 	break;
+    }
     case STRSXP:
 	for (i = 0; i < n; i++)
 	    if (STRING_ELT(x, i) == NA_STRING) return TRUE;
-	break;
- // Note that the recursive calls to anyNA() below never will do method dispatch
-    case LISTSXP:
-	for (i = 0; i < n; i++, x = CDR(x)) if (anyNA(CAR(x), env)) return TRUE;
-	break;
-    case VECSXP:
-	for (i = 0; i < n; i++)
-	    if (anyNA(VECTOR_ELT(x, i), env)) return TRUE;
 	break;
     case RAWSXP: /* no such thing as a raw NA:  is.na(.) gives FALSE always */
 	return FALSE;
     case NILSXP: // is.na() gives a warning..., but we do not.
 	return FALSE;
+    // The next two cases are only used if recursive = TRUE
+    case LISTSXP:
+    {
+	SEXP call2, args2, ans;
+	args2 = PROTECT(duplicate(args));
+	call2 = PROTECT(duplicate(call));
+	for (i = 0; i < n; i++, x = CDR(x)) {
+	    SETCAR(args2, CAR(x)); SETCADR(call2, CAR(x));
+	    if ((DispatchOrEval(call2, op, "anyNA", args2, env, &ans, 0, 1)
+		 && asLogical(ans)) || anyNA(call2, op, args2, env)) {
+		UNPROTECT(2);
+		return TRUE;
+	    }
+	}
+	UNPROTECT(2);
+	break;
+    }
+    case VECSXP:
+    {
+	SEXP call2, args2, ans;
+	args2 = PROTECT(duplicate(args));
+	call2 = PROTECT(duplicate(call));
+	for (i = 0; i < n; i++) {
+	    SETCAR(args2, VECTOR_ELT(x, i)); SETCADR(call2, VECTOR_ELT(x, i));
+	    if ((DispatchOrEval(call2, op, "anyNA", args2, env, &ans, 0, 1)
+		 && asLogical(ans)) || anyNA(call2, op, args2, env)) {
+		UNPROTECT(2);
+		return TRUE;
+	    }
+	}
+	UNPROTECT(2);
+	break;
+    }
 
     default:
-	if(IS_S4_OBJECT(x)) { // --> any(is.na(.))
-	    SEXP e, isna;
-	    // is.na(x) which *should* use dispatch (S4, typically):
-	    PROTECT(e = lang2(install("is.na"),x));
-	    PROTECT(isna = eval(e, env));
-	    int *x_is_na = LOGICAL(isna);
-	    for(i = 0; i < n; i++) // maybe use  xlength(isna) instead of n ?
-		if(x_is_na[i]) { UNPROTECT(2); return TRUE; }
-	    UNPROTECT(2);
-	} else
-	    error("anyNA() applied to non-(list or vector) of type '%s'",
-		  type2char(TYPEOF(x)));
+	error("anyNA() applied to non-(list or vector) of type '%s'",
+	      type2char(TYPEOF(x)));
     }
     return FALSE;
 } // anyNA()
 
 SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    checkArity(op, args);
-    check1arg(args, call, "x");
-
     SEXP ans;
+
+    if (length(args) < 1 || length(args) > 2)
+	errorcall(call, "anyNA takes 1 or 2 arguments");
+
     if (DispatchOrEval(call, op, "anyNA", args, rho, &ans, 0, 1))
-	return(ans);
-    // else
-    return ScalarLogical(anyNA(CAR(args), rho));
+	return ans;
+
+    if(length(args) == 1) {
+	check1arg(args, call, "x");
+ 	ans = ScalarLogical(anyNA(call, op, args, rho));
+   } else {
+	/* This is a primitive, so we manage argument matching ourselves.
+	   But this takes a little time.
+	 */
+	SEXP ap, tmp;
+	PROTECT(ap = CONS(R_NilValue, CONS(R_NilValue, R_NilValue)));
+	tmp = ap;
+	SET_TAG(tmp, install("x")); tmp = CDR(tmp);
+	SET_TAG(tmp, install("recursive"));
+	PROTECT(args = matchArgs(ap, args, call));
+	if(CADR(args) ==  R_MissingArg) SETCADR(args, ScalarLogical(FALSE));
+	ans = ScalarLogical(anyNA(call, op, args, rho));
+	UNPROTECT(2);
+    }
+    return ans;
 }
 
 

@@ -2867,3 +2867,15 @@ aa
 op <- options(width = 40)
 aa ; options(op)
 ## did not line wrap "Signif. codes" previously
+
+
+## PR#15718
+d <- data.frame(a=1)
+d[integer(), "a"] <- 2
+## warned in 3.0.3.
+
+
+## PR15781
+options(foo = 1)
+print(options(foo = NULL))
+## printed wrong value in 3.1.0

@@ -171,8 +171,8 @@ static void Init_R_Platform(SEXP rho)
     SET_VECTOR_ELT(value, 4, mkString("little"));
 #endif
 /* pkgType should be "mac.binary" for CRAN build *only*, not for all
-   AQUA builds. Also we want to be able to use "mac.binary.leopard"
-   and similar for special builds. */
+   AQUA builds. Also we want to be able to use "mac.binary.leopard",
+   "mac.binary.mavericks" and similar. */
 #ifdef PLATFORM_PKGTYPE
     SET_VECTOR_ELT(value, 5, mkString(PLATFORM_PKGTYPE));
 #else /* unix default */
@@ -1475,13 +1475,6 @@ static int R_unlink(const char *name, int recursive, int force)
     res2 = unlink(name);
     /* We want to return 0 if either unlink succeeded or 'name' did not exist */
     return (res2 == 0 || res != 0) ? 0 : 1;
-}
-
-/* for use under valgrind on OS X */
-void attribute_hidden R_CleanTempDir2(void)
-{
-    if (Sys_TempDir)
-	R_unlink(Sys_TempDir, 1, 1); /* recursive=TRUE, force=TRUE */
 }
 
 #endif

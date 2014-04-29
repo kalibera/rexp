@@ -218,8 +218,9 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 	    get_current_mem(&smallv, &bigv, &nodes);
 	    if((len = strlen(buf)) < PROFLINEMAX)
 		snprintf(buf+len, PROFBUFSIZ - len,
-			 ":%ld:%ld:%ld:%ld:", smallv, bigv,
-			 nodes, get_duplicate_counter());
+			 ":%lu:%lu:%lu:%lu:", 
+			 (unsigned long) smallv, (unsigned long) bigv,
+			 (unsigned long) nodes, get_duplicate_counter());
 	    reset_duplicate_counter();
     }
 
@@ -1726,7 +1727,8 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
 	   see an unmodified LHS value. This heuristic fails if the
 	   accessor function called here is not a closure but the
 	   replacement function is. */
-	if (MAYBE_SHARED(nval) || MAYBE_SHARED(CAR(val)))
+	if (MAYBE_REFERENCED(nval) &&
+	    (MAYBE_SHARED(nval) || MAYBE_SHARED(CAR(val))))
 	    nval = shallow_duplicate(nval);
 	UNPROTECT(4);
 	return CONS_NR(nval, val);
@@ -3572,7 +3574,7 @@ typedef R_bcstack_t * R_binding_cache_t;
 #  define GET_SMALLCACHE_BINDING_CELL(vcache, sidx) \
     (vcache ? vcache[sidx] : R_NilValue)
 
-#  define SET_CACHED_BINDING(cvache, sidx, cell) \
+#  define SET_CACHED_BINDING(vcache, sidx, cell) \
     do { if (vcache) vcache[CACHEIDX(sidx)] = (cell); } while (0)
 # else
 typedef SEXP R_binding_cache_t;
@@ -5138,7 +5140,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	   will need to see an unmodified LHS value. This heuristic
 	   fails if the accessor function called here is not a closure
 	   but the replacement function is. */
-	if (MAYBE_SHARED(tmp) || MAYBE_SHARED(R_BCNodeStackTop[-3]))
+	if (MAYBE_REFERENCED(tmp) &&
+	    (MAYBE_SHARED(tmp) || MAYBE_SHARED(R_BCNodeStackTop[-3])))
 	    tmp = shallow_duplicate(tmp);
 	R_BCNodeStackTop[-1] = R_BCNodeStackTop[-2];
 	R_BCNodeStackTop[-2] = tmp;
