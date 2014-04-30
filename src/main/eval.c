@@ -2464,12 +2464,12 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 
 SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 {
-    SEXP ans, h, tail;
+    SEXP ans, h, arg, tail;
 
-    /* FIXME: can be rewritten to avoid allocating the first cell */
-    ans = tail = allocatePromargsCell(R_NilValue, R_NilValue);
+    ans = R_NilValue;
+    tail = R_NilValue;
 
-    while(el != R_NilValue) {
+    for(; el != R_NilValue; el = CDR(el)) {
 
 	/* If we have a ... symbol, we look to see what it is bound to.
 	 * If its binding is Null (i.e. zero length)
@@ -2486,25 +2486,34 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-		    CDR(tail) = allocatePromargsCell(TAG(h), mkPROMISEorConst(CAR(h), rho)); /* avoid barrier */
-		    tail = CDR(tail);
+		    arg = allocatePromargsCell(TAG(h), mkPROMISEorConst(CAR(h), rho)); /* avoid barrier */
+		    if (tail == R_NilValue) {
+		        ans = arg;
+		    } else {
+		        CDR(tail) = arg;
+		    }
+		    tail = arg;
 		    h = CDR(h);
 		}
 	    }
 	    else if (h != R_MissingArg)
 		error(_("'...' used in an incorrect context"));
+            continue;
 	}
-	else if (CAR(el) == R_MissingArg) {
-	    CDR(tail) = allocatePromargsCell(TAG(el), R_MissingArg); /* avoid barrier */
-	    tail = CDR(tail);
-	}
-	else {
-	    CDR(tail) = allocatePromargsCell(TAG(el), mkPROMISEorConst(CAR(el), rho)); /* avoid barrier */
-	    tail = CDR(tail);
-	}
-	el = CDR(el);
+
+	if (CAR(el) == R_MissingArg) {
+            arg = allocatePromargsCell(TAG(el), R_MissingArg); /* avoid barrier */
+        } else {
+            arg = allocatePromargsCell(TAG(el), mkPROMISEorConst(CAR(el), rho)); /* avoid barrier */
+        }
+        if (tail == R_NilValue) {
+            ans = arg;
+        } else {
+            CDR(tail) = arg;
+        }
+        tail = arg;
     }
-    return CDR(ans);
+    return ans;
 }
 
 #endif /* USE_PROMARGS_STACK */
