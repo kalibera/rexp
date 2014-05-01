@@ -927,8 +927,16 @@ void process_user_Renviron(void);
 SEXP promiseArgs(SEXP, SEXP);
 SEXP promiseArgsStack(SEXP, SEXP);
 
-SEXP allocatePromargsCell(SEXP tag, SEXP value);
+SEXP allocatePromargsCell(SEXP tag, SEXP value, SEXP next);
 SEXP allocatePromargsCellNoTag(SEXP value);
+SEXP allocatePromargsTuple(SEXP firstValue, SEXP secondValue);
+SEXP allocatePromargsTriple(SEXP firstValue, SEXP secondValue, SEXP thirdValue);
+SEXP allocatePromargsTripleLastValue(SEXP firstValue, SEXP secondValue, SEXP thirdValue);
+SEXP allocatePromargsQuadrupleLastValue(SEXP firstValue, SEXP secondValue, SEXP thirdValue, SEXP fourthValue);
+SEXP allocateCallargTuple(SEXP firstValue, SEXP secondValue);
+SEXP allocateCallargTriple(SEXP firstValue, SEXP secondValue, SEXP thirdValue);
+SEXP allocateCallargTripleLastValue(SEXP firstValue, SEXP secondValue, SEXP thirdValue);
+SEXP allocateCallargQuadrupleLastValue(SEXP firstValue, SEXP secondValue, SEXP thirdValue, SEXP fourthValue);
 void expandPromargsStack();
 void Rcons_vprintf(const char *, va_list);
 SEXP R_data_class(SEXP , Rboolean);

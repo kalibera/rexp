@@ -2374,7 +2374,7 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 
 #ifdef USE_PROMARGS_STACK
 
-R_INLINE SEXP allocatePromargsCell(SEXP tag, SEXP value) {
+R_INLINE SEXP allocatePromargsCell(SEXP tag, SEXP value, SEXP next) {
     SEXPREC *top = R_PromargsStackTop;
     
     if (top == R_PromargsStackEnd) {
@@ -2387,7 +2387,7 @@ R_INLINE SEXP allocatePromargsCell(SEXP tag, SEXP value) {
     SEXP s = top;
     
     CAR(s) = value; /* ? refcnt */
-    CDR(s) = R_NilValue;
+    CDR(s) = next;
     TAG(s) = tag; /* ? refcnt */
     s->sxpinfo = R_NilValue->sxpinfo; /* FIXME: avoid dereference? */
     TYPEOF(s) = LISTSXP;
@@ -2402,10 +2402,72 @@ R_INLINE SEXP allocatePromargsCell(SEXP tag, SEXP value) {
 }
 
 R_INLINE SEXP allocatePromargsCellNoTag(SEXP value) {
-    return allocatePromargsCell(R_NilValue, value);
+    return allocatePromargsCell(R_NilValue, value, R_NilValue);
 }
 
+R_INLINE SEXP allocatePromargsTuple(SEXP firstValue, SEXP secondValue) {
+    SEXP first = allocatePromargsCell(R_NilValue, firstValue, R_NilValue);
+    CDR(first) = allocatePromargsCell(R_NilValue, secondValue, R_NilValue);
+    return first;
+}
+
+R_INLINE SEXP allocatePromargsTriple(SEXP firstValue, SEXP secondValue, SEXP thirdValue) {
+    SEXP first = allocatePromargsCell(R_NilValue, firstValue, R_NilValue);
+    SEXP second = allocatePromargsCell(R_NilValue, secondValue, R_NilValue);
+    CDR(first) = second;
+    CDR(second) = allocatePromargsCell(R_NilValue, thirdValue, R_NilValue);
+    
+    return first;
+}
+
+R_INLINE SEXP allocatePromargsTripleLastValue(SEXP firstValue, SEXP secondValue, SEXP thirdValue) {
+    SEXP first = allocatePromargsCell(R_NilValue, firstValue, R_NilValue);
+    SEXP second = allocatePromargsCell(R_NilValue, secondValue, R_NilValue);
+    CDR(first) = second;
+    CDR(second) = allocatePromargsCell(R_valueSym, thirdValue, R_NilValue);
+    
+    return first;
+}
+
+R_INLINE SEXP allocatePromargsQuadrupleLastValue(SEXP firstValue, SEXP secondValue, SEXP thirdValue, SEXP fourthValue) {
+    SEXP first = allocatePromargsCell(R_NilValue, firstValue, R_NilValue);
+    SEXP second = allocatePromargsCell(R_NilValue, secondValue, R_NilValue);
+    CDR(first) = second;
+    SEXP third = allocatePromargsCell(R_NilValue, thirdValue, R_NilValue);
+    CDR(second) = third;
+    CDR(third) = allocatePromargsCell(R_valueSym, fourthValue, R_NilValue);
+    
+    return first;
+}
+
+
 #endif /* USE_PROMARGS_STACK */
+
+R_INLINE SEXP allocateCallargTuple(SEXP firstValue, SEXP secondValue) {
+    SEXP second = CONS_NR(secondValue, R_NilValue);
+    return CONS_NR(firstValue, second);
+}
+
+R_INLINE SEXP allocateCallargTriple(SEXP firstValue, SEXP secondValue, SEXP thirdValue) {
+    SEXP third = CONS_NR(thirdValue, R_NilValue);
+    SEXP second = CONS_NR(secondValue, third);
+    return CONS_NR(firstValue, second);
+}
+
+R_INLINE SEXP allocateCallargTripleLastValue(SEXP firstValue, SEXP secondValue, SEXP thirdValue) {
+    SEXP third = CONS_NR(thirdValue, R_NilValue);
+    SET_TAG(third, R_valueSym);
+    SEXP second = CONS_NR(secondValue, third);
+    return CONS_NR(firstValue, second);
+}
+
+R_INLINE SEXP allocateCallargQuadrupleLastValue(SEXP firstValue, SEXP secondValue, SEXP thirdValue, SEXP fourthValue) {
+    SEXP fourth = CONS_NR(fourthValue, R_NilValue);
+    SET_TAG(fourth, R_valueSym);
+    SEXP third = CONS_NR(thirdValue, fourth);
+    SEXP second = CONS_NR(secondValue, third);
+    return CONS_NR(firstValue, second);
+}
 
 /* Create a promise to evaluate each argument.	Although this is most */
 /* naturally attacked with a recursive algorithm, we use the iterative */
@@ -2486,7 +2548,7 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 	    h = findVar(CAR(el), rho);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-		    arg = allocatePromargsCell(TAG(h), mkPROMISEorConst(CAR(h), rho)); /* avoid barrier */
+		    arg = allocatePromargsCell(TAG(h), mkPROMISEorConst(CAR(h), rho), R_NilValue); /* avoid barrier */
 		    if (tail == R_NilValue) {
 		        ans = arg;
 		    } else {
@@ -2502,9 +2564,9 @@ SEXP attribute_hidden promiseArgsStack(SEXP el, SEXP rho)
 	}
 
 	if (CAR(el) == R_MissingArg) {
-            arg = allocatePromargsCell(TAG(el), R_MissingArg); /* avoid barrier */
+            arg = allocatePromargsCell(TAG(el), R_MissingArg, R_NilValue); /* avoid barrier */
         } else {
-            arg = allocatePromargsCell(TAG(el), mkPROMISEorConst(CAR(el), rho)); /* avoid barrier */
+            arg = allocatePromargsCell(TAG(el), mkPROMISEorConst(CAR(el), rho), R_NilValue); /* avoid barrier */
         }
         if (tail == R_NilValue) {
             ans = arg;
@@ -4123,10 +4185,18 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
     #define CREATE_CALLARG_CELL(v) ((ftype == BUILTINSXP) ? CONS_NR(v,R_NilValue) : allocatePromargsCellNoTag(v))
   */
   #define CREATE_CALLARG_CELL(v) allocatePromargsCellNoTag(v)
+  #define CREATE_CALLARG_2CELLS(u,v) allocatePromargsTuple(u, v)
+  #define CREATE_CALLARG_3CELLS(u,v,w) allocatePromargsTriple(u, v, w)
+  #define CREATE_CALLARG_3VCELLS(u,v,w) allocatePromargsTripleLastValue(u, v, w)
+  #define CREATE_CALLARG_4VCELLS(u,v,w,x) allocatePromargsQuadrupleLastValue(u, v, w, x)
 
 #else /* not USE_PROMARGS_STACK */
   #define CREATE_CALLARG_CELL(v) CONS_NR(v, R_NilValue)
-
+  #define CREATE_CALLARG_2CELLS(u,v) allocateCallargTupe(u, v)
+  #define CREATE_CALLARG_3CELLS(u,v,w) allocateCallargTriple(u, v, w)
+  #define CREATE_CALLARG_3VCELLS(u,v,w) allocateCallargTripleLastValue(u, v, w)
+  #define CREATE_CALLARG_4VCELLS(u,v,w,x) allocateCallargQuadrupleLastValue(u, v, w, x)
+  
 #endif
 
 #define PUSHCALLARG(v) PUSHCALLARG_CELL(CREATE_CALLARG_CELL(v))
@@ -4525,11 +4595,15 @@ static R_INLINE void VECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *si,
 
     /* fall through to the standard default handler */
     idx = GETSTACK_PTR(si);
-    args = CONS_NR(idx, R_NilValue);
-    args = CONS_NR(vec, args);
+    args = CREATE_CALLARG_2CELLS(vec, idx);
+#ifndef USE_PROMARGS_STACK    
     PROTECT(args);
+#endif    
     value = do_subset_dflt(R_NilValue, R_SubsetSym, args, rho);
+#ifndef USE_PROMARGS_STACK    
     UNPROTECT(1);
+#endif
+    RELEASE_PROMARGS(args);    
     SETSTACK_PTR(sv, value);
 }
 
@@ -4593,11 +4667,13 @@ static R_INLINE void DO_MATSUBSET(SEXP rho)
     /* fall through to the standard default handler */
     idx = GETSTACK(-2);
     jdx = GETSTACK(-1);
-    args = CONS_NR(jdx, R_NilValue);
-    args = CONS_NR(idx, args);
-    args = CONS_NR(mat, args);
+
+    args = CREATE_CALLARG_3CELLS(mat, idx, jdx);
     SETSTACK(-1, args); /* for GC protection */
+
     value = do_subset_dflt(R_NilValue, R_SubsetSym, args, rho);
+
+    RELEASE_PROMARGS(args);
     R_BCNodeStackTop -= 2;
     SETSTACK(-1, value);
 }
@@ -4657,13 +4733,19 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
     /* fall through to the standard default handler */
     value = GETSTACK_PTR(srhs);
     idx = GETSTACK_PTR(si);
-    args = CONS_NR(value, R_NilValue);
-    SET_TAG(args, R_valueSym);
-    args = CONS_NR(idx, args);
-    args = CONS_NR(vec, args);
+    
+    args = CREATE_CALLARG_3VCELLS(vec, idx, value);
+
+#ifndef USE_PROMARGS_STACK
     PROTECT(args);
+#endif
+    
     vec = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
+    
+#ifndef USE_PROMARGS_STACK
     UNPROTECT(1);
+#endif
+    RELEASE_PROMARGS(args);
     SETSTACK_PTR(sv, vec);
 }
 
@@ -4709,13 +4791,11 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
     value = GETSTACK(-3);
     idx = GETSTACK(-2);
     jdx = GETSTACK(-1);
-    args = CONS_NR(value, R_NilValue);
-    SET_TAG(args, R_valueSym);
-    args = CONS_NR(jdx, args);
-    args = CONS_NR(idx, args);
-    args = CONS_NR(mat, args);
+
+    args = CREATE_CALLARG_4VCELLS(mat, idx, jdx, value);
     SETSTACK(-1, args); /* for GC protection */
     mat = do_subassign_dflt(R_NilValue, R_SubassignSym, args, rho);
+    RELEASE_PROMARGS(args);
     R_BCNodeStackTop -= 3;
     SETSTACK(-1, mat);
 }
