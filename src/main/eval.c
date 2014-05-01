@@ -3007,7 +3007,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       in a promise, so evaluating it again should be no problem. */
 	    *ans = evalArgs(args, rho, dropmissing, call, 0);
 	else {
-	    PROTECT(*ans = CONS_NR(x, evalArgs(CDR(args), rho, dropmissing, call, 1)));
+	    PROTECT(*ans = CONS_NR(x, evalArgs(CDR(args), rho, dropmissing, call, 1))); /* FIXME: use promargs stack? */
 	    SET_TAG(*ans, CreateTag(TAG(args)));
 	    UNPROTECT(1);
 	}
@@ -5433,6 +5433,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+	  RELEASE_PROMARGS(args);
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case SPECIALSXP:
@@ -5521,6 +5522,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	R_BCNodeStackTop -= 2;
+	RELEASE_PROMARGS(args);
 	SETSTACK(-1, value);
 	NEXT();
       }
@@ -5811,6 +5813,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* make the call */
 	  checkForMissings(args, call);
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+	  RELEASE_PROMARGS(args);
 	  break;
 	case SPECIALSXP:
 	  /* duplicate arguments and put into stack for GC protection */
@@ -5864,6 +5867,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* make the call */
 	  checkForMissings(args, call);
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+	  RELEASE_PROMARGS(args);
 	  break;
 	case SPECIALSXP:
 	  /* duplicate arguments and put into stack for GC protection */
