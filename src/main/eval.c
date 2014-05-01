@@ -4115,8 +4115,14 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 }
 
 #ifdef USE_PROMARGS_STACK
-  /* BUILTINS could possibly leak their arguments/promargs */
-  #define CREATE_CALLARG_CELL(v) ((ftype == BUILTINSXP) ? CONS_NR(v,R_NilValue) : allocatePromargsCellNoTag(v))
+  /* 
+    Initially this definition has been used assuming that BUILTINS could possibly leak their arguments/promargs.
+    But using ftype is not reliable for this in case of calls to builtins compiled to use GETBUILTIN, CALLBUILTIN.
+    There may be call of another type while a call to a builtin is in progress.
+
+    #define CREATE_CALLARG_CELL(v) ((ftype == BUILTINSXP) ? CONS_NR(v,R_NilValue) : allocatePromargsCellNoTag(v))
+  */
+  #define CREATE_CALLARG_CELL(v) allocatePromargsCellNoTag(v)
 
 #else /* not USE_PROMARGS_STACK */
   #define CREATE_CALLARG_CELL(v) CONS_NR(v, R_NilValue)
@@ -4318,7 +4324,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   } \
   else { \
     SEXP tag = TAG(CDR(call)); \
-    SEXP cell = CONS_NR(value, R_NilValue); \
+    SEXP cell = CREATE_CALLARG_CELL(value); \
     BCNSTACKCHECK(3); \
     SETSTACK(0, call); \
     SETSTACK(1, cell); \
@@ -4334,6 +4340,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   SEXP call = GETSTACK(-3); \
   SEXP args = GETSTACK(-2); \
   value = fun(call, symbol, args, rho); \
+  RELEASE_PROMARGS(args); \
   R_BCNodeStackTop -= 3; \
   SETSTACK(-1, value); \
   NEXT(); \
@@ -4358,7 +4365,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   } \
   else { \
     SEXP tag = TAG(CDR(call)); \
-    SEXP cell = CONS_NR(lhs, R_NilValue); \
+    SEXP cell = CREATE_CALLARG_CELL(lhs); \
     BCNSTACKCHECK(3); \
     SETSTACK(0, call); \
     SETSTACK(1, cell); \
@@ -4376,6 +4383,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   SEXP args = GETSTACK(-2); \
   PUSHCALLARG(rhs); \
   value = fun(call, symbol, args, rho); \
+  RELEASE_PROMARGS(args); \
   R_BCNodeStackTop -= 4; \
   SETSTACK(-1, value);	 \
   NEXT(); \
@@ -5753,7 +5761,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SETCAR(args, prom);
 	  /* make the call */
 	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
-	  RELEASE_PROMARGS(args);
+	  RELEASE_PROMARGS(args); /* also releases prom which was allocated after args */
 	  break;
 	default: error(_("bad function"));
 	}
