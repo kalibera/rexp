@@ -3722,19 +3722,22 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 
 #define Builtin1(do_fun,which,rho) do { \
   SEXP call = GETCONSTOP(); \
-  SETSTACK(-1, CONS_NR(GETSTACK(-1), R_NilValue));		     \
+  SEXP args = CREATE_CALLARG_CELL(GETSTACK(-1)); \
+  SETSTACK(-1, args);		     \
   SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP), \
-		      GETSTACK(-1), rho));		     \
+		      args, rho));		     \
+  RELEASE_PROMARGS(args); \
   NEXT(); \
 } while(0)
 
-#define Builtin2(do_fun,which,rho) do {		     \
+#define Builtin2(do_fun,which,rho) do { \
   SEXP call = GETCONSTOP(); \
-  SEXP tmp = CONS_NR(GETSTACK(-1), R_NilValue); \
-  SETSTACK(-2, CONS_NR(GETSTACK(-2), tmp));     \
+  SEXP args = CREATE_CALLARG_2CELLS(GETSTACK(-2), GETSTACK(-1)); \
+  SETSTACK(-2, args);     \
   R_BCNodeStackTop--; \
   SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP),	\
-		      GETSTACK(-1), rho));			\
+		      args, rho));			\
+  RELEASE_PROMARGS(args); \
   NEXT(); \
 } while(0)
 
