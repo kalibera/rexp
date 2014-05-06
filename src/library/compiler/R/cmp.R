@@ -2480,10 +2480,23 @@ cmpSimpleInternal <- function(e, cb, cntxt) {
     }
 }
 
-safeBaseInternals <- c("atan2", "besselY", "beta", "choose",
-                       "drop", "inherits", "is.vector", "lbeta", "lchoose",
-                       "nchar", "polyroot", "typeof", "vector", "which.max",
-                       "which.min", "is.loaded", "identical")
+#safeBaseInternals <- c("atan2", "besselY", "beta", "choose",
+#                       "drop", "inherits", "is.vector", "lbeta", "lchoose",
+#                       "nchar", "polyroot", "typeof", "vector", "which.max",
+#                       "which.min", "is.loaded", "identical")
+
+safeBaseInternals <- c(".bincode", ".colMeans", ".colSums", ".detach", ".mapply", ".row_names_info", ".rowMeans", ".rowSums", "args", "as.name",
+  "as.pairlist", "as.symbol", "as.vector", "asS4", "atan2", "basename", "besselJ", "besselY", "beta", "bindtextdomain", "bitwAnd", "bitwNot", "bitwOr",
+  "bitwShiftL", "bitwShiftR", "bitwXor", "builtins", "character", "charToRaw", "choose", "clearPushBack", "comment", "comment<-", "crossprod", "Cstack_info",
+  "date", "dir", "dirname", "double", "drop", "dyn.unload", "Encoding", "Encoding<-", "env.profile", "environmentIsLocked",
+  "environmentName", "file.append", "file.choose", "file.rename", "flush.connection", "format.info", "gcinfo", "gctorture", "getAllConnections",
+  "getConnection", "geterrmessage", "getLoadedDLLs", "getwd", "gzcon", "identical", "inherits", "integer", "intToBits", "intToUtf8", "is.loaded", "is.vector",
+  "isIncomplete", "isNamespace", "isSeekable", "l10n_info", "La_version", "lbeta", "lchoose", "list.dirs", "list.files", "lockEnvironment", "logical",
+  "make.unique", "match", "memory.profile", "nchar", "ngettext", "numeric", "parent.env", "parent.env<-", "path.expand", "polyroot", "psigamma", "pushBackLength",
+  "q", "quit", "R.Version", "raw", "rawConnectionValue", "rawShift", "rawToBits", "rawToChar", "readline", "readRenviron", "reg.finalizer", "regexec", "rep_len", 
+  "rep.int", "search", "setSessionTimeLimit", "setTimeLimit", "setwd", "stderr", "stdin", "stdout", "Sys.getpid", "Sys.info", "Sys.localeconv",
+  "Sys.readlink", "Sys.sleep", "t.default", "tcrossprod", "tempdir", "textConnectionValue", "tracingState", "typeof", "utf8ToInt", "vector",
+  "which.max", "which.min")
 
 for (i in safeBaseInternals) setInlineHandler(i,  cmpSimpleInternal)
 
