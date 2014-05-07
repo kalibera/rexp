@@ -2214,6 +2214,30 @@ is.simpleInternal <- function(def) {
     else FALSE
 }
 
+is.simpleExternal <- function(def, ns = NULL, pos) {
+    if (typeof(def) == "closure" && simpleFormals(def)) {
+        b <- body(def)
+        if (typeof(b) == "language" && length(b) == 2 && b[[1]] == "{")
+            b <- b[[2]]
+        if (typeof(b) == "language" &&
+            typeof(b[[1]]) == "symbol" &&
+            b[[1]] == ".External") {
+            externalSymbol <- b[[2]]
+            externalSymbolName <- as.character(externalSymbol)
+            if (typeof(externalSymbol) == "symbol" && simpleArgs(b[-1], names(formals(def))) && (!(externalSymbolName %in% names(formals(def))))) {
+              is.null(ns) || (
+                exists(externalSymbolName, envir = asNamespace(ns), inherits = FALSE) &&
+                !exists(externalSymbolName, pos)
+              )
+            } else {
+              FALSE
+            }
+        }
+        else FALSE
+    }
+    else FALSE
+}
+
 inlineSimpleInternalCall <- function(e, def) {
     if (! dots.or.missing(e) && is.simpleInternal(def)) {
         forms <- formals(def)
@@ -2228,6 +2252,39 @@ inlineSimpleInternalCall <- function(e, def) {
             if (typeof(n) == "symbol") cenv[[as.character(n)]] else n
         args <- lapply(as.list(icall[-1]), subst)
         as.call(list(quote(.Internal), as.call(c(icall[[1]], args))))
+    }
+    else NULL
+}
+
+inlineSimpleExternalCall <- function(e, def, cntxt) {
+    if (! dots.or.missing(e) && is.simpleExternal(def)) {
+        # FIXME: info is retrieved again on the call stack (already when looking for inlining handler)
+        name <- as.character(e[[1]])
+        info <- getInlineInfo(name, cntxt)
+        info$package
+
+        forms <- formals(def)
+        fnames <- names(forms)
+        b <- body(def)
+        if (typeof(b) == "language" && length(b) == 2 && b[[1]] == "{")
+            b <- b[[2]]
+        defaults <- forms ## **** could strip missings but OK not to?
+        cenv <- c(as.list(match.call(def, e, F))[-1], defaults)
+        subst <- function(n)
+            if (typeof(n) == "symbol") cenv[[as.character(n)]] else n
+        args <- lapply(as.list(b[c(-1,-2)]), subst)
+
+# this is slower than not inlining
+#        as.call(c(list(quote(.External), call(":::", as.symbol(info$package), b[[2]])), args))
+
+# this is about the same speed as not inlining (because of duplicate on getconst)
+#   also this will not work with serialization
+#
+#        callInfo <- get(as.character(b[[2]]), as.environment(asNamespace(info$package)), inherits=FALSE)
+#        as.call(c(list(quote(.External), callInfo), args))
+
+        callInfo <- get(as.character(b[[2]]), as.environment(asNamespace(info$package)), inherits=FALSE)
+        as.call(c(list(quote(.External), callInfo), args))
     }
     else NULL
 }
@@ -2249,6 +2306,23 @@ cmpSimpleInternal <- function(e, cb, cntxt) {
     }
 }
 
+cmpSimpleExternal <- function(e, cb, cntxt) {
+    if (any.dots(e))
+        FALSE
+    else {
+        name <- as.character(e[[1]])
+        def <- findFunDef(name, cntxt)
+        if (! checkCall(def, e, NULL)) return(FALSE)
+        call <- inlineSimpleExternalCall(e, def, cntxt)
+        if (is.null(call))
+            FALSE
+        else {
+            cmp(call, cb, cntxt)
+            TRUE
+        }
+    }
+}
+
 safeBaseInternals <- c("atan2", "besselY", "beta", "choose",
                        "drop", "inherits", "is.vector", "lbeta", "lchoose",
                        "nchar", "polyroot", "typeof", "vector", "which.max",
@@ -2256,18 +2330,20 @@ safeBaseInternals <- c("atan2", "besselY", "beta", "choose",
 
 for (i in safeBaseInternals) setInlineHandler(i,  cmpSimpleInternal)
 
-safeStatsInternals <- c("dbinom", "dcauchy", "dgeom", "dhyper", "dlnorm",
-                        "dlogis", "dnorm", "dpois", "dunif", "dweibull",
-                        "fft", "mvfft", "pbinom", "pcauchy",
-                        "pgeom", "phyper", "plnorm", "plogis", "pnorm",
-                        "ppois", "punif", "pweibull", "qbinom", "qcauchy",
-                        "qgeom", "qhyper", "qlnorm", "qlogis", "qnorm",
-                        "qpois", "qunif", "qweibull", "rbinom", "rcauchy",
-                        "rgeom", "rhyper", "rlnorm", "rlogis", "rnorm",
-                        "rpois", "rsignrank",  "runif", "rweibull",
-                        "rwilcox", "ptukey", "qtukey")
+safeStatsInternals <- c()
 
 for (i in safeStatsInternals) setInlineHandler(i,  cmpSimpleInternal, "stats")
+
+safeStatsExternals <- c("D", "dbinom", "dcauchy", "dgeom", "dhyper", "dlnorm",
+                        "dlogis", "dnorm", "dpois", "dunif", "dweibull", "pbinom",
+                        "pcauchy", "pgeom", "phyper", "plnorm", "plogis", "pnorm",
+                        "ppois", "ptukey", "punif", "pweibull", "qbinom", "qcauchy",
+                        "qgeom", "qhyper", "qlnorm", "qlogis", "qnorm", "qpois",
+                        "qtukey", "qunif", "qweibull", "rbinom", "rcauchy", "rgeom",
+                        "rhyper", "rlnorm", "rlogis", "rmultinom", "rnorm", "rpois",
+                        "rsignrank", "runif", "rweibull", "rwilcox")
+
+for (i in safeStatsExternals) setInlineHandler(i,  cmpSimpleExternal, "stats")
 
 
 ##
@@ -2757,3 +2833,31 @@ disassemble <- function(code) {
     }
     dput(disasm(.Internal(disassemble(code))))
 }
+
+##
+## Maintenance functions
+##
+
+simpleInternals <- function(pos = "package:base") {
+    names <- ls(pos = pos, all = T)
+    if (length(names) == 0)
+        character(0)
+    else {
+        fn <-  function(n)
+            is.simpleInternal(get(n, pos = pos))
+        names[sapply(names, fn)]
+    }
+}
+
+simpleExternals <- function(ns = "stats") {
+    pos = paste("package:",ns,sep="")
+    names <- ls(pos = pos, all = T)
+    if (length(names) == 0)
+        character(0)
+    else {
+        fn <-  function(n)
+            is.simpleExternal(get(n, pos = pos), ns = ns, pos = pos)
+        names[sapply(names, fn)]
+    }
+}
+
