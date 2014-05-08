@@ -264,63 +264,62 @@ static SEXP math3_2(SEXP sa, SEXP sb, SEXP sc, SEXP sI, SEXP sJ,
     return sy;
 } /* math3_2 */
 
-#define Math3_1(A, FUN)	math3_1(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN)
-#define Math3_2(A, FUN) math3_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), CAD4R(A), FUN)
+#define DEFMATH3_1(name) \
+    SEXP do_##name(SEXP sa, SEXP sb, SEXP sc, SEXP sI) { \
+        return math3_1(sa, sb, sc, sI, name); \
+    }
 
-SEXP distn3(SEXP args)
-{
-    if (!isVectorList(CAR(args))) error("incorrect usage");
-    const char *dn = CHAR(STRING_ELT(getListElement(CAR(args), "name"), 0));
-    args = CDR(args);
+DEFMATH3_1(dbeta)
+DEFMATH3_1(dbinom)
+DEFMATH3_1(dcauchy)
+DEFMATH3_1(df)
+DEFMATH3_1(dgamma)
+DEFMATH3_1(dlnorm)
+DEFMATH3_1(dlogis)
+DEFMATH3_1(dnbinom)
+DEFMATH3_1(dnbinom_mu)
+DEFMATH3_1(dnorm)
+DEFMATH3_1(dweibull)
+DEFMATH3_1(dunif)
+DEFMATH3_1(dnt)
+DEFMATH3_1(dnchisq)
+DEFMATH3_1(dwilcox)
 
-    if (streql(dn, "dbeta")) return Math3_1(args, dbeta);
-    else if (streql(dn, "pbeta")) return Math3_2(args, pbeta);
-    else if (streql(dn, "qbeta")) return Math3_2(args, qbeta);
-    else if (streql(dn, "dbinom")) return Math3_1(args, dbinom);
-    else if (streql(dn, "pbinom")) return Math3_2(args, pbinom);
-    else if (streql(dn, "qbinom")) return Math3_2(args, qbinom);
-    else if (streql(dn, "dcauchy")) return Math3_1(args, dcauchy);
-    else if (streql(dn, "pcauchy")) return Math3_2(args, pcauchy);
-    else if (streql(dn, "qcauchy")) return Math3_2(args, qcauchy);
-    else if (streql(dn, "df")) return Math3_1(args, df);
-    else if (streql(dn, "pf")) return Math3_2(args, pf);
-    else if (streql(dn, "qf")) return Math3_2(args, qf);
-    else if (streql(dn, "dgamma")) return Math3_1(args, dgamma);
-    else if (streql(dn, "pgamma")) return Math3_2(args, pgamma);
-    else if (streql(dn, "qgamma")) return Math3_2(args, qgamma);
-    else if (streql(dn, "dlnorm")) return Math3_1(args, dlnorm);
-    else if (streql(dn, "plnorm")) return Math3_2(args, plnorm);
-    else if (streql(dn, "qlnorm")) return Math3_2(args, qlnorm);
-    else if (streql(dn, "dlogis")) return Math3_1(args, dlogis);
-    else if (streql(dn, "plogis")) return Math3_2(args, plogis);
-    else if (streql(dn, "qlogis")) return Math3_2(args, qlogis);
-    else if (streql(dn, "dnbinom")) return Math3_1(args, dnbinom);
-    else if (streql(dn, "pnbinom")) return Math3_2(args, pnbinom);
-    else if (streql(dn, "qnbinom")) return Math3_2(args, qnbinom);
-    else if (streql(dn, "dnbinom_mu")) return Math3_1(args, dnbinom_mu);
-    else if (streql(dn, "pnbinom_mu")) return Math3_2(args, pnbinom_mu);
-    else if (streql(dn, "qnbinom_mu")) return Math3_2(args, qnbinom_mu);
-    else if (streql(dn, "dnorm")) return Math3_1(args, dnorm);
-    else if (streql(dn, "pnorm")) return Math3_2(args, pnorm);
-    else if (streql(dn, "qnorm")) return Math3_2(args, qnorm);
-    else if (streql(dn, "dweibull")) return Math3_1(args, dweibull);
-    else if (streql(dn, "pweibull")) return Math3_2(args, pweibull);
-    else if (streql(dn, "qweibull")) return Math3_2(args, qweibull);
-    else if (streql(dn, "dunif")) return Math3_1(args, dunif);
-    else if (streql(dn, "punif")) return Math3_2(args, punif);
-    else if (streql(dn, "qunif")) return Math3_2(args, qunif);
-    else if (streql(dn, "dnt")) return Math3_1(args, dnt);
-    else if (streql(dn, "pnt")) return Math3_2(args, pnt);
-    else if (streql(dn, "qnt")) return Math3_2(args, qnt);
-    else if (streql(dn, "dnchisq")) return Math3_1(args, dnchisq);
-    else if (streql(dn, "pnchisq")) return Math3_2(args, pnchisq);
-    else if (streql(dn, "qnchisq")) return Math3_2(args, qnchisq);
-    else if (streql(dn, "dwilcox")) return Math3_1(args, dwilcox);
-    else if (streql(dn, "pwilcox")) return Math3_2(args, pwilcox);
-    else if (streql(dn, "qwilcox")) return Math3_2(args, qwilcox);
-    else error("unknown distribution %s", dn);
-    return R_NilValue;
-}
+#define DEFMATH3_2(name) \
+    SEXP do_##name(SEXP sa, SEXP sb, SEXP sc, SEXP sI, SEXP sJ) { \
+        return math3_2(sa, sb, sc, sI, sJ, name); \
+    }
+
+DEFMATH3_2(pbeta)
+DEFMATH3_2(qbeta)
+DEFMATH3_2(pbinom)
+DEFMATH3_2(qbinom)
+DEFMATH3_2(pcauchy)
+DEFMATH3_2(qcauchy)
+DEFMATH3_2(pf)
+DEFMATH3_2(qf)
+DEFMATH3_2(pgamma)
+DEFMATH3_2(qgamma)
+DEFMATH3_2(plnorm)
+DEFMATH3_2(qlnorm)
+DEFMATH3_2(plogis)
+DEFMATH3_2(qlogis)
+DEFMATH3_2(pnbinom)
+DEFMATH3_2(qnbinom)
+DEFMATH3_2(pnbinom_mu)
+DEFMATH3_2(qnbinom_mu)
+DEFMATH3_2(pnorm)
+DEFMATH3_2(qnorm)
+DEFMATH3_2(pweibull)
+DEFMATH3_2(qweibull)
+DEFMATH3_2(punif)
+DEFMATH3_2(qunif)
+DEFMATH3_2(pnt)
+DEFMATH3_2(qnt)
+DEFMATH3_2(pnchisq)
+DEFMATH3_2(qnchisq)
+DEFMATH3_2(pwilcox)
+DEFMATH3_2(qwilcox)
 
 /* Mathematical Functions of Four (Real) Arguments */
 
