@@ -297,19 +297,18 @@ static R_INLINE SEXP random3(SEXP sn, SEXP sa, SEXP sb, SEXP sc, ran3 fn, SEXPTY
 
 DEFRAND3_INT(rhyper)
 
-SEXP Rmultinom(SEXP args)
+SEXP do_rmultinom(SEXP sn, SEXP ssize, SEXP sprob)
 {
     SEXP prob, ans, nms;
     int n, size, k, i, ik;
     
-    args = CDR(args);
-    n	 = asInteger(CAR(args)); args = CDR(args);/* n= #{samples} */
-    size = asInteger(CAR(args)); args = CDR(args);/* X ~ Multi(size, prob) */
+    n	 = asInteger(sn); /* n= #{samples} */
+    size = asInteger(size); /* X ~ Multi(size, prob) */
     if (n == NA_INTEGER || n < 0)
 	error(_("invalid first argument 'n'"));
     if (size == NA_INTEGER || size < 0)
 	error(_("invalid second argument 'size'"));
-    prob = CAR(args);
+    prob = sprob;
     prob = coerceVector(prob, REALSXP);
     k = length(prob);/* k = #{components or classes} = X-vector length */
     if (MAYBE_REFERENCED(prob)) prob = duplicate(prob);/*as `do_sample' -- need this line? */

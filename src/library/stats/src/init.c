@@ -245,6 +245,8 @@ static const R_CallMethodDef CallEntries[] = {
 
     CALLDEF_RAND3(rhyper),
 
+    CALLDEF_DO(rmultinom, 3),
+
     {NULL, NULL, 0}
 };
 
@@ -290,8 +292,6 @@ static const R_ExternalMethodDef ExtEntries[] = {
     EXTDEF(optimhess, 4),
     EXTDEF(call_dqags, 7),
     EXTDEF(call_dqagi, 7),
-
-    {"rmultinom", (DL_FUNC) &Rmultinom, 3},
 
     {"signrank_free", (DL_FUNC) &stats_signrank_free, 0},
     {"wilcox_free", (DL_FUNC) &stats_wilcox_free, 0},
