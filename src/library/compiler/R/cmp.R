@@ -2334,7 +2334,7 @@ safeStatsInternals <- c()
 
 for (i in safeStatsInternals) setInlineHandler(i,  cmpSimpleInternal, "stats")
 
-safeStatsExternals <- c("D", "dbinom", "dcauchy", "dgeom", "dhyper", "dlnorm",
+safeStatsExternalsOFF <- c("D", "dbinom", "dcauchy", "dgeom", "dhyper", "dlnorm",
                         "dlogis", "dnorm", "dpois", "dunif", "dweibull", "pbinom",
                         "pcauchy", "pgeom", "phyper", "plnorm", "plogis", "pnorm",
                         "ppois", "ptukey", "punif", "pweibull", "qbinom", "qcauchy",
@@ -2343,6 +2343,7 @@ safeStatsExternals <- c("D", "dbinom", "dcauchy", "dgeom", "dhyper", "dlnorm",
                         "rhyper", "rlnorm", "rlogis", "rmultinom", "rnorm", "rpois",
                         "rsignrank", "runif", "rweibull", "rwilcox")
 
+safeStatsExternals <- c() # temporarily disabled
 for (i in safeStatsExternals) setInlineHandler(i,  cmpSimpleExternal, "stats")
 
 
