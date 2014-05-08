@@ -425,36 +425,28 @@ static SEXP math4_2(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ,
     return sy;
 } /* math4_2() */
 
+#define DEFMATH4_1(name) \
+    SEXP do_##name(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI) { \
+        return math4_1(sa, sb, sc, sd, sI, name); \
+    }
 
-#define CAD3R	CADDDR
-/* This is not (yet) in Rinternals.h : */
-#define CAD5R(e)	CAR(CDR(CDR(CDR(CDR(CDR(e))))))
+DEFMATH4_1(dhyper)
+DEFMATH4_1(dnbeta)
+DEFMATH4_1(dnf)
 
-#define Math4_1(A, FUN) math4_1(CAR(A), CADR(A), CADDR(A), CAD3R(A), CAD4R(A), \
-				FUN)
-#define Math4_2(A, FUN) math4_2(CAR(A), CADR(A), CADDR(A), CAD3R(A), CAD4R(A), \
-				CAD5R(A), FUN)
+#define DEFMATH4_2(name) \
+    SEXP do_##name(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ) { \
+        return math4_2(sa, sb, sc, sd, sI, sJ, name); \
+    }
 
-SEXP distn4(SEXP args)
-{
-    if (!isVectorList(CAR(args))) error("incorrect usage");
-    const char *dn = CHAR(STRING_ELT(getListElement(CAR(args), "name"), 0));
-    args = CDR(args);
-
-    if (streql(dn, "dhyper")) return Math4_1(args, dhyper);
-    else if (streql(dn, "phyper")) return Math4_2(args, phyper);
-    else if (streql(dn, "qhyper")) return Math4_2(args, qhyper);
-    else if (streql(dn, "dnbeta")) return Math4_1(args, dnbeta);
-    else if (streql(dn, "pnbeta")) return Math4_2(args, pnbeta);
-    else if (streql(dn, "qnbeta")) return Math4_2(args, qnbeta);
-    else if (streql(dn, "dnf")) return Math4_1(args, dnf);
-    else if (streql(dn, "pnf")) return Math4_2(args, pnf);
-    else if (streql(dn, "qnf")) return Math4_2(args, qnf);
-    else if (streql(dn, "ptukey")) return Math4_2(args, ptukey);
-    else if (streql(dn, "qtukey")) return Math4_2(args, qtukey);
-    else error("unknown distribution %s", dn);
-    return R_NilValue;
-}
+DEFMATH4_2(phyper)
+DEFMATH4_2(qhyper)
+DEFMATH4_2(pnbeta)
+DEFMATH4_2(qnbeta)
+DEFMATH4_2(pnf)
+DEFMATH4_2(qnf)
+DEFMATH4_2(ptukey)
+DEFMATH4_2(qtukey)
 
 /* These are here to get them in the correct package */
 

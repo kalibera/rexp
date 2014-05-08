@@ -122,15 +122,15 @@ rweibull <- function(n, shape, scale=1) .External(C_rweibull, n, shape, scale)
 
 dbeta <- function(x, shape1, shape2, ncp=0, log = FALSE) {
     if(missing(ncp)) .Call(C_dbeta, x, shape1, shape2, log)
-    else .External(C_dnbeta, x, shape1, shape2, ncp, log)
+    else .Call(C_dnbeta, x, shape1, shape2, ncp, log)
 }
 pbeta <- function(q, shape1, shape2, ncp=0, lower.tail = TRUE, log.p = FALSE) {
     if(missing(ncp)) .Call(C_pbeta, q, shape1, shape2, lower.tail, log.p)
-    else .External(C_pnbeta, q, shape1, shape2, ncp, lower.tail, log.p)
+    else .Call(C_pnbeta, q, shape1, shape2, ncp, lower.tail, log.p)
 }
 qbeta <- function(p, shape1, shape2, ncp=0, lower.tail = TRUE, log.p = FALSE) {
     if(missing(ncp)) .Call(C_qbeta, p, shape1, shape2, lower.tail, log.p)
-    else .External(C_qnbeta, p, shape1, shape2, ncp, lower.tail, log.p)
+    else .Call(C_qnbeta, p, shape1, shape2, ncp, lower.tail, log.p)
 }
 rbeta <- function(n, shape1, shape2, ncp = 0) {
     if(ncp == 0) .External(C_rbeta, n, shape1, shape2)
@@ -198,15 +198,15 @@ rchisq <- function(n, df, ncp=0) {
 
 df <- function(x, df1, df2, ncp, log = FALSE) {
     if(missing(ncp)) .Call(C_df, x, df1, df2, log)
-    else .External(C_dnf, x, df1, df2, ncp, log)
+    else .Call(C_dnf, x, df1, df2, ncp, log)
 }
 pf <- function(q, df1, df2, ncp, lower.tail = TRUE, log.p = FALSE) {
     if(missing(ncp)) .Call(C_pf, q, df1, df2, lower.tail, log.p)
-    else .External(C_pnf, q, df1, df2, ncp, lower.tail, log.p)
+    else .Call(C_pnf, q, df1, df2, ncp, lower.tail, log.p)
 }
 qf <- function(p, df1, df2, ncp, lower.tail = TRUE, log.p = FALSE) {
     if(missing(ncp)) .Call(C_qf, p, df1, df2, lower.tail, log.p)
-    else .External(C_qnf, p, df1, df2, ncp, lower.tail, log.p)
+    else .Call(C_qnf, p, df1, df2, ncp, lower.tail, log.p)
 }
 rf <- function(n, df1, df2, ncp)
 {
@@ -222,11 +222,11 @@ qgeom <- function(p, prob, lower.tail = TRUE, log.p = FALSE)
 rgeom <- function(n, prob) .External(C_rgeom, n, prob)
 
 dhyper <- function(x, m, n, k, log = FALSE)
-    .External(C_dhyper, x, m, n, k, log)
+    .Call(C_dhyper, x, m, n, k, log)
 phyper <- function(q, m, n, k, lower.tail = TRUE, log.p = FALSE)
-    .External(C_phyper, q, m, n, k, lower.tail, log.p)
+    .Call(C_phyper, q, m, n, k, lower.tail, log.p)
 qhyper <- function(p, m, n, k, lower.tail = TRUE, log.p = FALSE)
-    .External(C_qhyper, p, m, n, k, lower.tail, log.p)
+    .Call(C_qhyper, p, m, n, k, lower.tail, log.p)
 rhyper <- function(nn, m, n, k) .External(C_rhyper, nn, m, n, k)
 
 dnbinom <- function(x, size, prob, mu, log = FALSE)
@@ -289,9 +289,9 @@ rt <- function(n, df, ncp) {
 }
 
 ptukey <- function(q, nmeans, df, nranges=1, lower.tail = TRUE, log.p = FALSE)
-    .External(C_ptukey, q, nranges, nmeans, df, lower.tail, log.p)
+    .Call(C_ptukey, q, nranges, nmeans, df, lower.tail, log.p)
 qtukey <- function(p, nmeans, df, nranges=1, lower.tail = TRUE, log.p = FALSE)
-    .External(C_qtukey, p, nranges, nmeans, df, lower.tail, log.p)
+    .Call(C_qtukey, p, nranges, nmeans, df, lower.tail, log.p)
 
 dwilcox <- function(x, m, n, log = FALSE)
 {

@@ -50,6 +50,8 @@ static const R_CMethodDef CEntries[]  = {
 #define CALLDEF_MATH2_2(name) CALLDEF_MATH(name, 4)
 #define CALLDEF_MATH3_1(name) CALLDEF_MATH(name, 4)
 #define CALLDEF_MATH3_2(name) CALLDEF_MATH(name, 5)
+#define CALLDEF_MATH4_1(name) CALLDEF_MATH(name, 5)
+#define CALLDEF_MATH4_2(name) CALLDEF_MATH(name, 6)
 
 static const R_CallMethodDef CallEntries[] = {
     CALLDEF(cutree, 2),
@@ -203,6 +205,18 @@ static const R_CallMethodDef CallEntries[] = {
     CALLDEF_MATH3_2(qwilcox),
         // {"qnbinom_mu", (DL_FUNC) &distn3, 5},  // exists but currently unused
 
+    CALLDEF_MATH4_1(dhyper),
+    CALLDEF_MATH4_1(dnbeta),
+    CALLDEF_MATH4_1(dnf),
+    CALLDEF_MATH4_2(phyper),
+    CALLDEF_MATH4_2(qhyper),
+    CALLDEF_MATH4_2(pnbeta),
+    CALLDEF_MATH4_2(qnbeta),
+    CALLDEF_MATH4_2(pnf),
+    CALLDEF_MATH4_2(qnf),
+    CALLDEF_MATH4_2(ptukey),
+    CALLDEF_MATH4_2(qtukey),
+
     {NULL, NULL, 0}
 };
 
@@ -269,23 +283,12 @@ static const R_ExternalMethodDef ExtEntries[] = {
     {"rnbinom_mu", (DL_FUNC) &Random2, 3},
     {"rnchisq", (DL_FUNC) &Random2, 3},
     {"rnorm", (DL_FUNC) &Random2, 3},
-    {"ptukey", (DL_FUNC) &distn4, 6},
-    {"qtukey", (DL_FUNC) &distn4, 6},
     {"runif", (DL_FUNC) &Random2, 3},
     {"rweibull", (DL_FUNC) &Random2, 3},
     {"rwilcox", (DL_FUNC) &Random2, 3},
 
     // 3-arg distributions
-    {"dhyper", (DL_FUNC) &distn4, 5},
-    {"phyper", (DL_FUNC) &distn4, 6},
-    {"qhyper", (DL_FUNC) &distn4, 6},
     {"rhyper", (DL_FUNC) &Random3, 4},
-    {"dnbeta", (DL_FUNC) &distn4, 5},
-    {"pnbeta", (DL_FUNC) &distn4, 6},
-    {"qnbeta", (DL_FUNC) &distn4, 6},
-    {"dnf", (DL_FUNC) &distn4, 5},
-    {"pnf", (DL_FUNC) &distn4, 6},
-    {"qnf", (DL_FUNC) &distn4, 6},
 
     {"rmultinom", (DL_FUNC) &Rmultinom, 3},
 

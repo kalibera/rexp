@@ -110,6 +110,18 @@ SEXP do_qnchisq(SEXP sa, SEXP sb, SEXP sc, SEXP sI, SEXP sJ);
 SEXP do_pwilcox(SEXP sa, SEXP sb, SEXP sc, SEXP sI, SEXP sJ);
 SEXP do_qwilcox(SEXP sa, SEXP sb, SEXP sc, SEXP sI, SEXP sJ);
 
+SEXP do_dhyper(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI);
+SEXP do_dnbeta(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI);
+SEXP do_dnf(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI);
+SEXP do_phyper(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
+SEXP do_qhyper(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
+SEXP do_pnbeta(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
+SEXP do_qnbeta(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
+SEXP do_pnf(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
+SEXP do_qnf(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
+SEXP do_ptukey(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
+SEXP do_qtukey(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
+
 /* Declarations for .External[2] entry points */
 
 SEXP compcases(SEXP args);
@@ -129,7 +141,6 @@ SEXP call_dqags(SEXP);
 SEXP Random1(SEXP args);
 SEXP Random2(SEXP args);
 SEXP Random3(SEXP args);
-SEXP distn4(SEXP args);
 
 SEXP Rsm(SEXP x, SEXP stype, SEXP send);
 SEXP tukeyline(SEXP x, SEXP y, SEXP call);
