@@ -17,11 +17,11 @@
 #  http://www.r-project.org/Licenses/
 
 
-dexp <- function(x, rate=1, log = FALSE) .External(C_dexp, x, 1/rate, log)
+dexp <- function(x, rate=1, log = FALSE) .Call(C_dexp, x, 1/rate, log)
 pexp <- function(q, rate=1, lower.tail = TRUE, log.p = FALSE)
-    .External(C_pexp, q, 1/rate, lower.tail, log.p)
+    .Call(C_pexp, q, 1/rate, lower.tail, log.p)
 qexp <- function(p, rate=1, lower.tail = TRUE, log.p = FALSE)
-    .External(C_qexp, p, 1/rate, lower.tail, log.p)
+    .Call(C_qexp, p, 1/rate, lower.tail, log.p)
 rexp <- function(n, rate=1) .External(C_rexp, n, 1/rate)
 
 dunif <- function(x, min=0, max=1, log = FALSE)
@@ -180,15 +180,15 @@ dmultinom <- function(x, size=NULL, prob, log = FALSE)
 rmultinom <- function(n, size, prob) .External(C_rmultinom, n, size, prob)
 
 dchisq <- function(x, df, ncp=0, log = FALSE) {
-    if(missing(ncp)) .External(C_dchisq, x, df, log)
+    if(missing(ncp)) .Call(C_dchisq, x, df, log)
     else .External(C_dnchisq, x, df, ncp, log)
 }
 pchisq <- function(q, df, ncp=0, lower.tail = TRUE, log.p = FALSE) {
-    if(missing(ncp)) .External(C_pchisq, q, df, lower.tail, log.p)
+    if(missing(ncp)) .Call(C_pchisq, q, df, lower.tail, log.p)
     else .External(C_pnchisq, q, df, ncp, lower.tail, log.p)
 }
 qchisq <- function(p, df, ncp=0, lower.tail = TRUE, log.p = FALSE) {
-    if(missing(ncp)) .External(C_qchisq, p, df, lower.tail, log.p)
+    if(missing(ncp)) .Call(C_qchisq, p, df, lower.tail, log.p)
     else .External(C_qnchisq, p, df, ncp, lower.tail, log.p)
 }
 rchisq <- function(n, df, ncp=0) {
@@ -214,11 +214,11 @@ rf <- function(n, df1, df2, ncp)
     else (rchisq(n, df1, ncp=ncp)/df1)/(rchisq(n, df2)/df2)
 }
 
-dgeom <- function(x, prob, log = FALSE) .External(C_dgeom, x, prob, log)
+dgeom <- function(x, prob, log = FALSE) .Call(C_dgeom, x, prob, log)
 pgeom <- function(q, prob, lower.tail = TRUE, log.p = FALSE)
-    .External(C_pgeom, q, prob, lower.tail, log.p)
+    .Call(C_pgeom, q, prob, lower.tail, log.p)
 qgeom <- function(p, prob, lower.tail = TRUE, log.p = FALSE)
-    .External(C_qgeom, p, prob, lower.tail, log.p)
+    .Call(C_qgeom, p, prob, lower.tail, log.p)
 rgeom <- function(n, prob) .External(C_rgeom, n, prob)
 
 dhyper <- function(x, m, n, k, log = FALSE)
@@ -264,23 +264,23 @@ rnbinom <- function(n, size, prob, mu)
     } else .External(C_rnbinom, n, size, prob)
 }
 
-dpois <- function(x, lambda, log = FALSE) .External(C_dpois, x, lambda, log)
+dpois <- function(x, lambda, log = FALSE) .Call(C_dpois, x, lambda, log)
 ppois <- function(q, lambda, lower.tail = TRUE, log.p = FALSE)
-    .External(C_ppois, q, lambda, lower.tail, log.p)
+    .Call(C_ppois, q, lambda, lower.tail, log.p)
 qpois <- function(p, lambda, lower.tail = TRUE, log.p = FALSE)
-    .External(C_qpois, p, lambda, lower.tail, log.p)
+    .Call(C_qpois, p, lambda, lower.tail, log.p)
 rpois <- function(n, lambda) .External(C_rpois, n, lambda)
 
 dt <- function(x, df, ncp, log = FALSE) {
-    if(missing(ncp)) .External(C_dt, x, df, log)
+    if(missing(ncp)) .Call(C_dt, x, df, log)
     else .External(C_dnt, x, df, ncp, log)
 }
 pt <- function(q, df, ncp, lower.tail = TRUE, log.p = FALSE) {
-    if(missing(ncp)) .External(C_pt, q, df, lower.tail, log.p)
+    if(missing(ncp)) .Call(C_pt, q, df, lower.tail, log.p)
     else .External(C_pnt, q, df, ncp, lower.tail, log.p)
 }
 qt <- function(p, df, ncp, lower.tail = TRUE, log.p = FALSE) {
-    if(missing(ncp)) .External(C_qt, p, df, lower.tail, log.p)
+    if(missing(ncp)) .Call(C_qt, p, df, lower.tail, log.p)
     else .External(C_qnt,p, df, ncp, lower.tail, log.p)
 }
 rt <- function(n, df, ncp) {
@@ -313,17 +313,17 @@ rwilcox <- function(nn, m, n) .External(C_rwilcox, nn, m, n)
 dsignrank <- function(x, n, log = FALSE)
 {
     on.exit(.External(C_signrank_free))
-    .External(C_dsignrank, x, n, log)
+    .Call(C_dsignrank, x, n, log)
 }
 psignrank <- function(q, n, lower.tail = TRUE, log.p = FALSE)
 {
     on.exit(.External(C_signrank_free))
-    .External(C_psignrank, q, n, lower.tail, log.p)
+    .Call(C_psignrank, q, n, lower.tail, log.p)
 }
 qsignrank <- function(p, n, lower.tail = TRUE, log.p = FALSE)
 {
     on.exit(.External(C_signrank_free))
-    .External(C_qsignrank, p, n, lower.tail, log.p)
+    .Call(C_qsignrank, p, n, lower.tail, log.p)
 }
 rsignrank <- function(nn, n) .External(C_rsignrank, nn, n)
 

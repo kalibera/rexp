@@ -45,6 +45,26 @@ SEXP lowess(SEXP x, SEXP y, SEXP sf, SEXP siter, SEXP sdelta);
 SEXP DoubleCentre(SEXP A);
 SEXP BinDist(SEXP x, SEXP weights, SEXP slo, SEXP sup, SEXP sn);
 
+SEXP do_dchisq(SEXP sa, SEXP sb, SEXP sI);
+SEXP do_dexp(SEXP sa, SEXP sb, SEXP sI);
+SEXP do_dgeom(SEXP sa, SEXP sb, SEXP sI);
+SEXP do_dpois(SEXP sa, SEXP sb, SEXP sI);
+SEXP do_dt(SEXP sa, SEXP sb, SEXP sI);
+SEXP do_dsignrank(SEXP sa, SEXP sb, SEXP sI);
+SEXP do_pchisq(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_qchisq(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_pexp(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_qexp(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_pgeom(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_qgeom(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_ppois(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_qpois(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_pt(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_qt(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_psignrank(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP do_qsignrank(SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+
+
 /* Declarations for .External[2] entry points */
 
 SEXP compcases(SEXP args);
@@ -64,7 +84,6 @@ SEXP call_dqags(SEXP);
 SEXP Random1(SEXP args);
 SEXP Random2(SEXP args);
 SEXP Random3(SEXP args);
-SEXP distn2(SEXP args);
 SEXP distn3(SEXP args);
 SEXP distn4(SEXP args);
 

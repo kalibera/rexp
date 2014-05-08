@@ -135,37 +135,35 @@ static SEXP math2_2(SEXP sa, SEXP sb, SEXP sI1, SEXP sI2,
     return sy;
 } /* math2_2() */
 
-#define Math2_1(A, FUN)	math2_1(CAR(A), CADR(A), CADDR(A), FUN)
-#define Math2_2(A, FUN) math2_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN)
+#define DEFMATH2_1(name) \
+    SEXP do_##name(SEXP sa, SEXP sb, SEXP sI) { \
+        return math2_1(sa, sb, sI, name); \
+    }
 
-SEXP distn2(SEXP args)
-{
-    if (!isVectorList(CAR(args))) error("incorrect usage");
-    const char *dn = CHAR(STRING_ELT(getListElement(CAR(args), "name"), 0));
-    args = CDR(args);
+DEFMATH2_1(dchisq)
+DEFMATH2_1(dexp)
+DEFMATH2_1(dgeom)
+DEFMATH2_1(dpois)
+DEFMATH2_1(dt)
+DEFMATH2_1(dsignrank)
 
-    if (streql(dn, "dchisq")) return Math2_1(args, dchisq);
-    else if (streql(dn, "pchisq")) return Math2_2(args, pchisq);
-    else if (streql(dn, "qchisq")) return Math2_2(args, qchisq);
-    else if (streql(dn, "dexp")) return Math2_1(args, dexp);
-    else if (streql(dn, "pexp")) return Math2_2(args, pexp);
-    else if (streql(dn, "qexp")) return Math2_2(args, qexp);
-    else if (streql(dn, "dgeom")) return Math2_1(args, dgeom);
-    else if (streql(dn, "pgeom")) return Math2_2(args, pgeom);
-    else if (streql(dn, "qgeom")) return Math2_2(args, qgeom);
-    else if (streql(dn, "dpois")) return Math2_1(args, dpois);
-    else if (streql(dn, "ppois")) return Math2_2(args, ppois);
-    else if (streql(dn, "qpois")) return Math2_2(args, qpois);
-    else if (streql(dn, "dt")) return Math2_1(args, dt);
-    else if (streql(dn, "pt")) return Math2_2(args, pt);
-    else if (streql(dn, "qt")) return Math2_2(args, qt);
-    else if (streql(dn, "dsignrank")) return Math2_1(args, dsignrank);
-    else if (streql(dn, "psignrank")) return Math2_2(args, psignrank);
-    else if (streql(dn, "qsignrank")) return Math2_2(args, qsignrank);
-    else error("unknown distribution %s", dn);
-    return R_NilValue;
-}
+#define DEFMATH2_2(name) \
+    SEXP do_##name(SEXP sa, SEXP sb, SEXP sI, SEXP sJ) { \
+        return math2_2(sa, sb, sI, sJ, name); \
+    }
 
+DEFMATH2_2(pchisq)
+DEFMATH2_2(qchisq)
+DEFMATH2_2(pexp)
+DEFMATH2_2(qexp)
+DEFMATH2_2(pgeom)
+DEFMATH2_2(qgeom)
+DEFMATH2_2(ppois)
+DEFMATH2_2(qpois)
+DEFMATH2_2(pt)
+DEFMATH2_2(qt)
+DEFMATH2_2(psignrank)
+DEFMATH2_2(qsignrank)
 
 /* Mathematical Functions of Three (Real) Arguments */
 

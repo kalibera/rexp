@@ -45,6 +45,10 @@ static const R_CMethodDef CEntries[]  = {
 
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
 
+#define CALLDEF_MATH(name, n) {#name, (DL_FUNC) &do_##name, n}
+#define CALLDEF_MATH2_1(name) CALLDEF_MATH(name, 3)
+#define CALLDEF_MATH2_2(name) CALLDEF_MATH(name, 4)
+
 static const R_CallMethodDef CallEntries[] = {
     CALLDEF(cutree, 2),
     CALLDEF(isoreg, 1),
@@ -130,6 +134,26 @@ static const R_CallMethodDef CallEntries[] = {
     CALLDEF(Fisher_sim, 3),
     CALLDEF(chisq_sim, 4),
     CALLDEF(d2x2xk, 5),
+
+    CALLDEF_MATH2_1(dchisq),
+    CALLDEF_MATH2_1(dexp),
+    CALLDEF_MATH2_1(dgeom),
+    CALLDEF_MATH2_1(dpois),
+    CALLDEF_MATH2_1(dt),
+    CALLDEF_MATH2_1(dsignrank),
+    CALLDEF_MATH2_2(pchisq),
+    CALLDEF_MATH2_2(qchisq),
+    CALLDEF_MATH2_2(pexp),
+    CALLDEF_MATH2_2(qexp),
+    CALLDEF_MATH2_2(pgeom),
+    CALLDEF_MATH2_2(qgeom),
+    CALLDEF_MATH2_2(ppois),
+    CALLDEF_MATH2_2(qpois),
+    CALLDEF_MATH2_2(pt),
+    CALLDEF_MATH2_2(qt),
+    CALLDEF_MATH2_2(psignrank),
+    CALLDEF_MATH2_2(qsignrank),
+
     {NULL, NULL, 0}
 };
 
@@ -177,29 +201,11 @@ static const R_ExternalMethodDef ExtEntries[] = {
     EXTDEF(call_dqagi, 7),
 
     // 1-arg distributions
-    {"dchisq", (DL_FUNC) &distn2, 3},
-    {"pchisq", (DL_FUNC) &distn2, 4},
-    {"qchisq", (DL_FUNC) &distn2, 4},
     {"rchisq", (DL_FUNC) &Random1, 2},
-    {"dexp", (DL_FUNC) &distn2, 3},
-    {"pexp", (DL_FUNC) &distn2, 4},
-    {"qexp", (DL_FUNC) &distn2, 4},
     {"rexp", (DL_FUNC) &Random1, 2},
-    {"dgeom", (DL_FUNC) &distn2, 3},
-    {"pgeom", (DL_FUNC) &distn2, 4},
-    {"qgeom", (DL_FUNC) &distn2, 4},
     {"rgeom", (DL_FUNC) &Random1, 2},
-    {"dpois", (DL_FUNC) &distn2, 3},
-    {"ppois", (DL_FUNC) &distn2, 4},
-    {"qpois", (DL_FUNC) &distn2, 4},
     {"rpois", (DL_FUNC) &Random1, 2},
-    {"dt", (DL_FUNC) &distn2, 3},
-    {"pt", (DL_FUNC) &distn2, 4},
-    {"qt", (DL_FUNC) &distn2, 4},
     {"rt", (DL_FUNC) &Random1, 2},
-    {"dsignrank", (DL_FUNC) &distn2, 3},
-    {"psignrank", (DL_FUNC) &distn2, 4},
-    {"qsignrank", (DL_FUNC) &distn2, 4},
     {"rsignrank", (DL_FUNC) &Random1, 2},
 
     // 2-arg distributions
