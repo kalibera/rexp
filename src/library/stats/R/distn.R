@@ -227,7 +227,7 @@ phyper <- function(q, m, n, k, lower.tail = TRUE, log.p = FALSE)
     .Call(C_phyper, q, m, n, k, lower.tail, log.p)
 qhyper <- function(p, m, n, k, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qhyper, p, m, n, k, lower.tail, log.p)
-rhyper <- function(nn, m, n, k) .External(C_rhyper, nn, m, n, k)
+rhyper <- function(nn, m, n, k) .Call(C_rhyper, nn, m, n, k)
 
 dnbinom <- function(x, size, prob, mu, log = FALSE)
 {

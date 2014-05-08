@@ -144,6 +144,8 @@ SEXP do_rwilcox(SEXP sn, SEXP sa, SEXP sb);
 SEXP do_rnchisq(SEXP sn, SEXP sa, SEXP sb);
 SEXP do_rnbinom_mu(SEXP sn, SEXP sa, SEXP sb);
 
+SEXP do_rhyper(SEXP sn, SEXP sa, SEXP sb, SEXP sc);
+
 /* Declarations for .External[2] entry points */
 
 SEXP compcases(SEXP args);
@@ -160,7 +162,6 @@ SEXP optimhess(SEXP call, SEXP op, SEXP args, SEXP rho);
 SEXP Rmultinom(SEXP args);
 SEXP call_dqagi(SEXP);
 SEXP call_dqags(SEXP);
-SEXP Random3(SEXP args);
 
 SEXP Rsm(SEXP x, SEXP stype, SEXP send);
 SEXP tukeyline(SEXP x, SEXP y, SEXP call);

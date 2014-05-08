@@ -55,6 +55,7 @@ static const R_CMethodDef CEntries[]  = {
 
 #define CALLDEF_RAND1(name) CALLDEF_DO(name, 2)
 #define CALLDEF_RAND2(name) CALLDEF_DO(name, 3)
+#define CALLDEF_RAND3(name) CALLDEF_DO(name, 4)
 
 static const R_CallMethodDef CallEntries[] = {
     CALLDEF(cutree, 2),
@@ -242,6 +243,8 @@ static const R_CallMethodDef CallEntries[] = {
     CALLDEF_RAND2(rnchisq),
     CALLDEF_RAND2(rnbinom_mu),
 
+    CALLDEF_RAND3(rhyper),
+
     {NULL, NULL, 0}
 };
 
@@ -287,9 +290,6 @@ static const R_ExternalMethodDef ExtEntries[] = {
     EXTDEF(optimhess, 4),
     EXTDEF(call_dqags, 7),
     EXTDEF(call_dqagi, 7),
-
-    // 3-arg distributions
-    {"rhyper", (DL_FUNC) &Random3, 4},
 
     {"rmultinom", (DL_FUNC) &Rmultinom, 3},
 
