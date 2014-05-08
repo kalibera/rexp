@@ -122,6 +122,13 @@ SEXP do_qnf(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
 SEXP do_ptukey(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
 SEXP do_qtukey(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
 
+SEXP do_rchisq(SEXP sn, SEXP sa);
+SEXP do_rexp(SEXP sn, SEXP sa);
+SEXP do_rgeom(SEXP sn, SEXP sa);
+SEXP do_rpois(SEXP sn, SEXP sa);
+SEXP do_rt(SEXP sn, SEXP sa);
+SEXP do_rsignrank(SEXP sn, SEXP sa);
+
 /* Declarations for .External[2] entry points */
 
 SEXP compcases(SEXP args);
@@ -138,7 +145,6 @@ SEXP optimhess(SEXP call, SEXP op, SEXP args, SEXP rho);
 SEXP Rmultinom(SEXP args);
 SEXP call_dqagi(SEXP);
 SEXP call_dqags(SEXP);
-SEXP Random1(SEXP args);
 SEXP Random2(SEXP args);
 SEXP Random3(SEXP args);
 

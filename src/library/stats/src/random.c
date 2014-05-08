@@ -38,64 +38,69 @@ typedef double (*ran1) (double);
 typedef double (*ran2) (double, double);
 typedef double (*ran3) (double, double, double);
 
-/* random sampling from 1 parameter families. */
+static void fillWithNAs(SEXP x, R_xlen_t n, SEXPTYPE type) {
+    R_xlen_t i;
 
-SEXP Random1(SEXP args)
-{
-    if (!isVectorList(CAR(args))) error("incorrect usage");
-    SEXP x, a;
-    R_xlen_t i, n, na;
-    ran1 fn = NULL; /* -Wall */
-    const char *dn = CHAR(STRING_ELT(getListElement(CAR(args), "name"), 0));
-    SEXPTYPE type = REALSXP;
-
-    if (streql(dn, "rchisq")) fn = &rchisq;
-    else if (streql(dn, "rexp")) fn = &rexp;
-    else if (streql(dn, "rgeom")) {
-	type = INTSXP;
-	fn = &rgeom;
-    } else if (streql(dn, "rpois")) {
-	type = INTSXP;
-	fn = &rpois;
+    if (type == INTSXP) {
+        for (i = 0; i < n; i++) {
+            INTEGER(x)[i] = NA_INTEGER;
+        }
+    } else { /* REALSXP */
+        for (i = 0; i < n; i++) {
+            REAL(x)[i] = NA_REAL;
+        }
     }
-    else if (streql(dn, "rt")) fn = &rt;
-    else if (streql(dn, "rsignrank")) {
-	type = INTSXP;
-	fn = &rsignrank;
-    }
-    else error(_("invalid arguments"));
+    warning(_("NAs produced"));
+}
 
-    args = CDR(args);
-    if (!isVector(CAR(args)) || !isNumeric(CADR(args)))
+static R_INLINE R_xlen_t resultLength(SEXP lengthArgument) {
+    R_xlen_t n;
+
+    if (!isVector(lengthArgument)) {
 	error(_("invalid arguments"));
-    if (XLENGTH(CAR(args)) == 1) {
+    }
+    if (XLENGTH(lengthArgument) == 1) {
 #ifdef LONG_VECTOR_SUPPORT
-	double dn = asReal(CAR(args));
-	if (ISNAN(dn) || dn < 0 || dn > R_XLEN_T_MAX)
+	double dn = asReal(lengthArgument);
+	if (ISNAN(dn) || dn < 0 || dn > R_XLEN_T_MAX) {
 	    error(_("invalid arguments"));
+        }
 	n = (R_xlen_t) dn;
 #else
-	n = asInteger(CAR(args));
-	if (n == NA_INTEGER || n < 0)
+	n = asInteger(lengthArgument);
+	if (n == NA_INTEGER || n < 0) {
 	    error(_("invalid arguments"));
+        }
 #endif
+    } else {
+        n = XLENGTH(lengthArgument);
     }
-    else n = XLENGTH(CAR(args));
+
+    return n;
+}
+
+/* random sampling from 1 parameter families. */
+
+static R_INLINE SEXP random1(SEXP sn, SEXP sa, ran1 fn, SEXPTYPE type) {
+
+    SEXP x, a;
+    R_xlen_t i, n, na;
+
+    if (!isNumeric(sa)) {
+	error(_("invalid arguments"));
+    }
+    n = resultLength(sn);
     PROTECT(x = allocVector(type, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
     }
-    na = XLENGTH(CADR(args));
+    na = XLENGTH(sa);
     if (na < 1) {
-	if (type == INTSXP)
-	    for (i = 0; i < n; i++) INTEGER(x)[i] = NA_INTEGER;
-	else
-	    for (i = 0; i < n; i++) REAL(x)[i] = NA_REAL;
-	warning(_("NAs produced"));
+        fillWithNAs(x, n, type);
     } else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(CADR(args), REALSXP));
+	PROTECT(a = coerceVector(sa, REALSXP));
 	GetRNGstate();
 	double *ra = REAL(a);
 	errno = 0;
@@ -125,6 +130,23 @@ SEXP Random1(SEXP args)
     UNPROTECT(1);
     return x;
 }
+
+#define DEFRAND1_REAL(name) \
+    SEXP do_##name(SEXP sn, SEXP sa) { \
+        return random1(sn, sa, name, REALSXP); \
+    }
+
+#define DEFRAND1_INT(name) \
+    SEXP do_##name(SEXP sn, SEXP sa) { \
+        return random1(sn, sa, name, INTSXP); \
+    }
+
+DEFRAND1_REAL(rchisq);
+DEFRAND1_REAL(rexp);
+DEFRAND1_INT(rgeom);
+DEFRAND1_INT(rpois);
+DEFRAND1_REAL(rt);
+DEFRAND1_INT(rsignrank);
 
 /* random sampling from 2 parameter families. */
 
@@ -161,23 +183,10 @@ SEXP Random2(SEXP args)
     } else error(_("invalid arguments"));
 
     args = CDR(args);
-    if (!isVector(CAR(args)) ||
-	!isNumeric(CADR(args)) ||
+    if (!isNumeric(CADR(args)) ||
 	!isNumeric(CADDR(args)))
 	error(_("invalid arguments"));
-    if (XLENGTH(CAR(args)) == 1) {
-#ifdef LONG_VECTOR_SUPPORT
-	double dn = asReal(CAR(args));
-	if (ISNAN(dn) || dn < 0 || dn > R_XLEN_T_MAX)
-	    error(_("invalid arguments"));
-	n = (R_xlen_t) dn;
-#else
-	n = asInteger(CAR(args));
-	if (n == NA_INTEGER || n < 0)
-	    error(_("invalid arguments"));
-#endif
-    }
-    else n = XLENGTH(CAR(args));
+    n = resultLength(CAR(args));
     PROTECT(x = allocVector(type, n));
     if (n == 0) {
 	UNPROTECT(1);
@@ -186,12 +195,7 @@ SEXP Random2(SEXP args)
     na = XLENGTH(CADR(args));
     nb = XLENGTH(CADDR(args));
     if (na < 1 || nb < 1) {
-	if (type == INTSXP)
-	    for (i = 0; i < n; i++) INTEGER(x)[i] = NA_INTEGER;
-	else
-	    for (i = 0; i < n; i++) REAL(x)[i] = NA_REAL;
-	for (i = 0; i < n; i++) REAL(x)[i] = NA_REAL;
-	warning(_("NAs produced"));
+        fillWithNAs(x, n, type);
     }
     else {
 	Rboolean naflag = FALSE;
@@ -237,20 +241,7 @@ SEXP Random3(SEXP args)
     ran3 fn = rhyper;  /* the only current example */
 
     args = CDR(args);
-    if (!isVector(CAR(args))) error(_("invalid arguments"));
-    if (LENGTH(CAR(args)) == 1) {
-#ifdef LONG_VECTOR_SUPPORT
-	double dn = asReal(CAR(args));
-	if (ISNAN(dn) || dn < 0 || dn > R_XLEN_T_MAX)
-	    error(_("invalid arguments"));
-	n = (R_xlen_t) dn;
-#else
-	n = asInteger(CAR(args));
-	if (n == NA_INTEGER || n < 0)
-	    error(_("invalid arguments"));
-#endif
-    }
-    else n = XLENGTH(CAR(args));
+    n = resultLength(CAR(args));
     PROTECT(x = allocVector(INTSXP, n));
     if (n == 0) {
 	UNPROTECT(1);
@@ -266,8 +257,7 @@ SEXP Random3(SEXP args)
     nb = XLENGTH(b);
     nc = XLENGTH(c);
     if (na < 1 || nb < 1 || nc < 1) {
-	for (i = 0; i < n; i++) INTEGER(x)[i] = NA_INTEGER;
-	warning(_("NAs produced"));
+        fillWithNAs(x, n, INTSXP);
     }
     else {
 	Rboolean naflag = FALSE;

@@ -45,13 +45,15 @@ static const R_CMethodDef CEntries[]  = {
 
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
 
-#define CALLDEF_MATH(name, n) {#name, (DL_FUNC) &do_##name, n}
-#define CALLDEF_MATH2_1(name) CALLDEF_MATH(name, 3)
-#define CALLDEF_MATH2_2(name) CALLDEF_MATH(name, 4)
-#define CALLDEF_MATH3_1(name) CALLDEF_MATH(name, 4)
-#define CALLDEF_MATH3_2(name) CALLDEF_MATH(name, 5)
-#define CALLDEF_MATH4_1(name) CALLDEF_MATH(name, 5)
-#define CALLDEF_MATH4_2(name) CALLDEF_MATH(name, 6)
+#define CALLDEF_DO(name, n) {#name, (DL_FUNC) &do_##name, n}
+#define CALLDEF_MATH2_1(name) CALLDEF_DO(name, 3)
+#define CALLDEF_MATH2_2(name) CALLDEF_DO(name, 4)
+#define CALLDEF_MATH3_1(name) CALLDEF_DO(name, 4)
+#define CALLDEF_MATH3_2(name) CALLDEF_DO(name, 5)
+#define CALLDEF_MATH4_1(name) CALLDEF_DO(name, 5)
+#define CALLDEF_MATH4_2(name) CALLDEF_DO(name, 6)
+
+#define CALLDEF_RAND1(name) CALLDEF_DO(name, 2)
 
 static const R_CallMethodDef CallEntries[] = {
     CALLDEF(cutree, 2),
@@ -217,6 +219,13 @@ static const R_CallMethodDef CallEntries[] = {
     CALLDEF_MATH4_2(ptukey),
     CALLDEF_MATH4_2(qtukey),
 
+    CALLDEF_RAND1(rchisq),
+    CALLDEF_RAND1(rexp),
+    CALLDEF_RAND1(rgeom),
+    CALLDEF_RAND1(rpois),
+    CALLDEF_RAND1(rt),
+    CALLDEF_RAND1(rsignrank),
+
     {NULL, NULL, 0}
 };
 
@@ -262,14 +271,6 @@ static const R_ExternalMethodDef ExtEntries[] = {
     EXTDEF(optimhess, 4),
     EXTDEF(call_dqags, 7),
     EXTDEF(call_dqagi, 7),
-
-    // 1-arg distributions
-    {"rchisq", (DL_FUNC) &Random1, 2},
-    {"rexp", (DL_FUNC) &Random1, 2},
-    {"rgeom", (DL_FUNC) &Random1, 2},
-    {"rpois", (DL_FUNC) &Random1, 2},
-    {"rt", (DL_FUNC) &Random1, 2},
-    {"rsignrank", (DL_FUNC) &Random1, 2},
 
     // 2-arg distributions
     {"rbeta", (DL_FUNC) &Random2, 3},

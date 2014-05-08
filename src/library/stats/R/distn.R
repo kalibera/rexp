@@ -22,7 +22,7 @@ pexp <- function(q, rate=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_pexp, q, 1/rate, lower.tail, log.p)
 qexp <- function(p, rate=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qexp, p, 1/rate, lower.tail, log.p)
-rexp <- function(n, rate=1) .External(C_rexp, n, 1/rate)
+rexp <- function(n, rate=1) .Call(C_rexp, n, 1/rate)
 
 dunif <- function(x, min=0, max=1, log = FALSE)
     .Call(C_dunif, x, min, max, log)
@@ -192,7 +192,7 @@ qchisq <- function(p, df, ncp=0, lower.tail = TRUE, log.p = FALSE) {
     else .Call(C_qnchisq, p, df, ncp, lower.tail, log.p)
 }
 rchisq <- function(n, df, ncp=0) {
-    if(missing(ncp)) .External(C_rchisq, n, df)
+    if(missing(ncp)) .Call(C_rchisq, n, df)
     else .External(C_rnchisq, n, df, ncp)
 }
 
@@ -219,7 +219,7 @@ pgeom <- function(q, prob, lower.tail = TRUE, log.p = FALSE)
     .Call(C_pgeom, q, prob, lower.tail, log.p)
 qgeom <- function(p, prob, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qgeom, p, prob, lower.tail, log.p)
-rgeom <- function(n, prob) .External(C_rgeom, n, prob)
+rgeom <- function(n, prob) .Call(C_rgeom, n, prob)
 
 dhyper <- function(x, m, n, k, log = FALSE)
     .Call(C_dhyper, x, m, n, k, log)
@@ -269,7 +269,7 @@ ppois <- function(q, lambda, lower.tail = TRUE, log.p = FALSE)
     .Call(C_ppois, q, lambda, lower.tail, log.p)
 qpois <- function(p, lambda, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qpois, p, lambda, lower.tail, log.p)
-rpois <- function(n, lambda) .External(C_rpois, n, lambda)
+rpois <- function(n, lambda) .Call(C_rpois, n, lambda)
 
 dt <- function(x, df, ncp, log = FALSE) {
     if(missing(ncp)) .Call(C_dt, x, df, log)
@@ -284,7 +284,7 @@ qt <- function(p, df, ncp, lower.tail = TRUE, log.p = FALSE) {
     else .Call(C_qnt,p, df, ncp, lower.tail, log.p)
 }
 rt <- function(n, df, ncp) {
-    if(missing(ncp)) .External(C_rt, n, df)
+    if(missing(ncp)) .Call(C_rt, n, df)
     else rnorm(n, ncp)/sqrt(rchisq(n, df)/df)
 }
 
@@ -325,7 +325,7 @@ qsignrank <- function(p, n, lower.tail = TRUE, log.p = FALSE)
     on.exit(.External(C_signrank_free))
     .Call(C_qsignrank, p, n, lower.tail, log.p)
 }
-rsignrank <- function(nn, n) .External(C_rsignrank, nn, n)
+rsignrank <- function(nn, n) .Call(C_rsignrank, nn, n)
 
 ##' Random sample from a Wishart distribution
 rWishart <- function(n, df, Sigma) .Call(C_rWishart, n, df, Sigma)
