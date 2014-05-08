@@ -141,66 +141,38 @@ static R_INLINE SEXP random1(SEXP sn, SEXP sa, ran1 fn, SEXPTYPE type) {
         return random1(sn, sa, name, INTSXP); \
     }
 
-DEFRAND1_REAL(rchisq);
-DEFRAND1_REAL(rexp);
-DEFRAND1_INT(rgeom);
-DEFRAND1_INT(rpois);
-DEFRAND1_REAL(rt);
-DEFRAND1_INT(rsignrank);
+DEFRAND1_REAL(rchisq)
+DEFRAND1_REAL(rexp)
+DEFRAND1_INT(rgeom)
+DEFRAND1_INT(rpois)
+DEFRAND1_REAL(rt)
+DEFRAND1_INT(rsignrank)
 
 /* random sampling from 2 parameter families. */
 
-SEXP Random2(SEXP args)
-{
-    if (!isVectorList(CAR(args))) error("incorrect usage");
+static R_INLINE SEXP random2(SEXP sn, SEXP sa, SEXP sb, ran2 fn, SEXPTYPE type) {
+
     SEXP x, a, b;
     R_xlen_t i, n, na, nb;
-    ran2 fn = NULL; /* -Wall */
-    const char *dn = CHAR(STRING_ELT(getListElement(CAR(args), "name"), 0));
-    SEXPTYPE type = REALSXP;
 
-    if (streql(dn, "rbeta")) fn = &rbeta;
-    else if (streql(dn, "rbinom")) {
-	type = INTSXP;
-	fn = &rbinom;
-    } else if (streql(dn, "rcauchy")) fn = &rcauchy;
-    else if (streql(dn, "rf")) fn = &rf;
-    else if (streql(dn, "rgamma")) fn = &rgamma;
-    else if (streql(dn, "rlnorm")) fn = &rlnorm;
-    else if (streql(dn, "rlogis")) fn = &rlogis;
-    else if (streql(dn, "rnbinom")) {
-	type = INTSXP;
-	fn = &rnbinom;
-    } else if (streql(dn, "rnorm")) fn = &rnorm;
-    else if (streql(dn, "runif")) fn = &runif;
-    else if (streql(dn, "rweibull")) fn = &rweibull;
-    else if (streql(dn, "rwilcox")) {
-	type = INTSXP;
-	fn = &rwilcox;
-    } else if (streql(dn, "rnchisq")) fn = &rnchisq;
-    else if (streql(dn, "rnbinom_mu")) {
-	fn = &rnbinom_mu;
-    } else error(_("invalid arguments"));
-
-    args = CDR(args);
-    if (!isNumeric(CADR(args)) ||
-	!isNumeric(CADDR(args)))
+    if (!isNumeric(sa) || !isNumeric(sb)) {
 	error(_("invalid arguments"));
-    n = resultLength(CAR(args));
+    }
+    n = resultLength(sn);
     PROTECT(x = allocVector(type, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
     }
-    na = XLENGTH(CADR(args));
-    nb = XLENGTH(CADDR(args));
+    na = XLENGTH(sa);
+    nb = XLENGTH(sb);
     if (na < 1 || nb < 1) {
         fillWithNAs(x, n, type);
     }
     else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(CADR(args), REALSXP));
-	PROTECT(b = coerceVector(CADDR(args), REALSXP));
+	PROTECT(a = coerceVector(sa, REALSXP));
+	PROTECT(b = coerceVector(sb, REALSXP));
 	GetRNGstate();
 	double *ra = REAL(a), *rb = REAL(b);
 	if (type == INTSXP) {
@@ -230,6 +202,31 @@ SEXP Random2(SEXP args)
     UNPROTECT(1);
     return x;
 }
+
+#define DEFRAND2_REAL(name) \
+    SEXP do_##name(SEXP sn, SEXP sa, SEXP sb) { \
+        return random2(sn, sa, sb, name, REALSXP); \
+    }
+
+#define DEFRAND2_INT(name) \
+    SEXP do_##name(SEXP sn, SEXP sa, SEXP sb) { \
+        return random2(sn, sa, sb, name, INTSXP); \
+    }
+
+DEFRAND2_REAL(rbeta)
+DEFRAND2_INT(rbinom)
+DEFRAND2_REAL(rcauchy)
+DEFRAND2_REAL(rf)
+DEFRAND2_REAL(rgamma)
+DEFRAND2_REAL(rlnorm)
+DEFRAND2_REAL(rlogis)
+DEFRAND2_INT(rnbinom)
+DEFRAND2_REAL(rnorm)
+DEFRAND2_REAL(runif)
+DEFRAND2_REAL(rweibull)
+DEFRAND2_INT(rwilcox)
+DEFRAND2_REAL(rnchisq)
+DEFRAND2_REAL(rnbinom_mu)
 
 /* random sampling from 3 parameter families. */
 

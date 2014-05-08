@@ -54,6 +54,7 @@ static const R_CMethodDef CEntries[]  = {
 #define CALLDEF_MATH4_2(name) CALLDEF_DO(name, 6)
 
 #define CALLDEF_RAND1(name) CALLDEF_DO(name, 2)
+#define CALLDEF_RAND2(name) CALLDEF_DO(name, 3)
 
 static const R_CallMethodDef CallEntries[] = {
     CALLDEF(cutree, 2),
@@ -226,6 +227,21 @@ static const R_CallMethodDef CallEntries[] = {
     CALLDEF_RAND1(rt),
     CALLDEF_RAND1(rsignrank),
 
+    CALLDEF_RAND2(rbeta),
+    CALLDEF_RAND2(rbinom),
+    CALLDEF_RAND2(rcauchy),
+    CALLDEF_RAND2(rf),
+    CALLDEF_RAND2(rgamma),
+    CALLDEF_RAND2(rlnorm),
+    CALLDEF_RAND2(rlogis),
+    CALLDEF_RAND2(rnbinom),
+    CALLDEF_RAND2(rnorm),
+    CALLDEF_RAND2(runif),
+    CALLDEF_RAND2(rweibull),
+    CALLDEF_RAND2(rwilcox),
+    CALLDEF_RAND2(rnchisq),
+    CALLDEF_RAND2(rnbinom_mu),
+
     {NULL, NULL, 0}
 };
 
@@ -271,22 +287,6 @@ static const R_ExternalMethodDef ExtEntries[] = {
     EXTDEF(optimhess, 4),
     EXTDEF(call_dqags, 7),
     EXTDEF(call_dqagi, 7),
-
-    // 2-arg distributions
-    {"rbeta", (DL_FUNC) &Random2, 3},
-    {"rbinom", (DL_FUNC) &Random2, 3},
-    {"rcauchy", (DL_FUNC) &Random2, 3},
-    {"rf", (DL_FUNC) &Random2, 3},
-    {"rgamma", (DL_FUNC) &Random2, 3},
-    {"rlnorm", (DL_FUNC) &Random2, 3},
-    {"rlogis", (DL_FUNC) &Random2, 3},
-    {"rnbinom", (DL_FUNC) &Random2, 3},
-    {"rnbinom_mu", (DL_FUNC) &Random2, 3},
-    {"rnchisq", (DL_FUNC) &Random2, 3},
-    {"rnorm", (DL_FUNC) &Random2, 3},
-    {"runif", (DL_FUNC) &Random2, 3},
-    {"rweibull", (DL_FUNC) &Random2, 3},
-    {"rwilcox", (DL_FUNC) &Random2, 3},
 
     // 3-arg distributions
     {"rhyper", (DL_FUNC) &Random3, 4},

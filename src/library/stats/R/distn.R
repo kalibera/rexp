@@ -30,7 +30,7 @@ punif <- function(q, min=0, max=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_punif, q, min, max, lower.tail, log.p)
 qunif <- function(p, min=0, max=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qunif, p, min, max, lower.tail, log.p)
-runif <- function(n, min=0, max=1) .External(C_runif, n, min, max)
+runif <- function(n, min=0, max=1) .Call(C_runif, n, min, max)
 
 dnorm <- function(x, mean=0, sd=1, log=FALSE)
     .Call(C_dnorm, x, mean, sd, log)
@@ -38,7 +38,7 @@ pnorm <- function(q, mean=0, sd=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_pnorm, q, mean, sd, lower.tail, log.p)
 qnorm <- function(p, mean=0, sd=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qnorm, p, mean, sd, lower.tail, log.p)
-rnorm <- function(n, mean=0, sd=1) .External(C_rnorm, n, mean, sd)
+rnorm <- function(n, mean=0, sd=1) .Call(C_rnorm, n, mean, sd)
 
 dcauchy <- function(x, location=0, scale=1, log = FALSE)
     .Call(C_dcauchy, x, location, scale, log)
@@ -49,7 +49,7 @@ qcauchy <-
     function(p, location=0, scale=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qcauchy, p, location, scale, lower.tail, log.p)
 rcauchy <-
-    function(n, location=0, scale=1) .External(C_rcauchy, n, location, scale)
+    function(n, location=0, scale=1) .Call(C_rcauchy, n, location, scale)
 
 ## allow a fuzz of ca 20ulp here.
 dgamma <- function(x, shape, rate = 1, scale = 1/rate, log = FALSE)
@@ -92,7 +92,7 @@ rgamma <- function(n, shape, rate = 1, scale = 1/rate)
         else
             stop("specify 'rate' or 'scale' but not both")
     }
-    .External(C_rgamma, n, shape, scale)
+    .Call(C_rgamma, n, shape, scale)
 }
 dlnorm <- function(x, meanlog=0, sdlog=1, log=FALSE)
     .Call(C_dlnorm, x, meanlog, sdlog, log)
@@ -101,7 +101,7 @@ plnorm <- function(q, meanlog=0, sdlog=1, lower.tail = TRUE, log.p = FALSE)
 qlnorm <- function(p, meanlog=0, sdlog=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qlnorm, p, meanlog, sdlog, lower.tail, log.p)
 rlnorm <- function(n, meanlog=0, sdlog=1)
-    .External(C_rlnorm, n, meanlog, sdlog)
+    .Call(C_rlnorm, n, meanlog, sdlog)
 
 dlogis <- function(x, location=0, scale=1, log = FALSE)
     .Call(C_dlogis, x, location, scale, log)
@@ -110,7 +110,7 @@ plogis <- function(q, location=0, scale=1, lower.tail = TRUE, log.p = FALSE)
 qlogis <- function(p, location=0, scale=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qlogis, p, location, scale, lower.tail, log.p)
 rlogis <- function(n, location=0, scale=1)
-    .External(C_rlogis, n, location, scale)
+    .Call(C_rlogis, n, location, scale)
 
 dweibull <- function(x, shape, scale=1, log = FALSE)
     .Call(C_dweibull, x, shape, scale, log)
@@ -118,7 +118,7 @@ pweibull <- function(q, shape, scale=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_pweibull, q, shape, scale, lower.tail, log.p)
 qweibull <- function(p, shape, scale=1, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qweibull, p, shape, scale, lower.tail, log.p)
-rweibull <- function(n, shape, scale=1) .External(C_rweibull, n, shape, scale)
+rweibull <- function(n, shape, scale=1) .Call(C_rweibull, n, shape, scale)
 
 dbeta <- function(x, shape1, shape2, ncp=0, log = FALSE) {
     if(missing(ncp)) .Call(C_dbeta, x, shape1, shape2, log)
@@ -133,7 +133,7 @@ qbeta <- function(p, shape1, shape2, ncp=0, lower.tail = TRUE, log.p = FALSE) {
     else .Call(C_qnbeta, p, shape1, shape2, ncp, lower.tail, log.p)
 }
 rbeta <- function(n, shape1, shape2, ncp = 0) {
-    if(ncp == 0) .External(C_rbeta, n, shape1, shape2)
+    if(ncp == 0) .Call(C_rbeta, n, shape1, shape2)
     else {
         X <- rchisq(n, 2*shape1, ncp =ncp)
         X/(X + rchisq(n, 2*shape2))
@@ -146,7 +146,7 @@ pbinom <- function(q, size, prob, lower.tail = TRUE, log.p = FALSE)
     .Call(C_pbinom, q, size, prob, lower.tail, log.p)
 qbinom <- function(p, size, prob, lower.tail = TRUE, log.p = FALSE)
     .Call(C_qbinom, p, size, prob, lower.tail, log.p)
-rbinom <- function(n, size, prob) .External(C_rbinom, n, size, prob)
+rbinom <- function(n, size, prob) .Call(C_rbinom, n, size, prob)
 
 ## Multivariate: that's why there's no C interface (yet) for d...():
 dmultinom <- function(x, size=NULL, prob, log = FALSE)
@@ -193,7 +193,7 @@ qchisq <- function(p, df, ncp=0, lower.tail = TRUE, log.p = FALSE) {
 }
 rchisq <- function(n, df, ncp=0) {
     if(missing(ncp)) .Call(C_rchisq, n, df)
-    else .External(C_rnchisq, n, df, ncp)
+    else .Call(C_rnchisq, n, df, ncp)
 }
 
 df <- function(x, df1, df2, ncp, log = FALSE) {
@@ -210,7 +210,7 @@ qf <- function(p, df1, df2, ncp, lower.tail = TRUE, log.p = FALSE) {
 }
 rf <- function(n, df1, df2, ncp)
 {
-    if(missing(ncp)) .External(C_rf, n, df1, df2)
+    if(missing(ncp)) .Call(C_rf, n, df1, df2)
     else (rchisq(n, df1, ncp=ncp)/df1)/(rchisq(n, df2)/df2)
 }
 
@@ -260,8 +260,8 @@ rnbinom <- function(n, size, prob, mu)
 {
     if (!missing(mu)) {
         if (!missing(prob)) stop("'prob' and 'mu' both specified")
-        .External(C_rnbinom_mu, n, size, mu)
-    } else .External(C_rnbinom, n, size, prob)
+        .Call(C_rnbinom_mu, n, size, mu)
+    } else .Call(C_rnbinom, n, size, prob)
 }
 
 dpois <- function(x, lambda, log = FALSE) .Call(C_dpois, x, lambda, log)
@@ -308,7 +308,7 @@ qwilcox <- function(p, m, n, lower.tail = TRUE, log.p = FALSE)
     on.exit(.External(C_wilcox_free))
     .Call(C_qwilcox, p, m, n, lower.tail, log.p)
 }
-rwilcox <- function(nn, m, n) .External(C_rwilcox, nn, m, n)
+rwilcox <- function(nn, m, n) .Call(C_rwilcox, nn, m, n)
 
 dsignrank <- function(x, n, log = FALSE)
 {
