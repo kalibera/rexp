@@ -952,7 +952,7 @@ Rf_MakeNativeSymbolRef(DL_FUNC f)
 {
     SEXP ref, klass;
 
-    PROTECT(ref = R_MakeExternalPtrFn(f, install("native symbol"),
+    PROTECT(ref = R_MakeExternalPtrFn(f, R_native_symbol,
 				      R_NilValue));
     PROTECT(klass = mkString("NativeSymbol"));
     setAttrib(ref, R_ClassSymbol, klass);
@@ -984,7 +984,7 @@ Rf_MakeRegisteredNativeSymbol(R_RegisteredNativeSymbol *symbol)
     *copy = *symbol;
 
     PROTECT(ref = R_MakeExternalPtr(copy,
-				    install("registered native symbol"),
+				    R_registered_native_symbol,
 				    R_NilValue));
     R_RegisterCFinalizer(ref, freeRegisteredNativeSymbolCopy);
 

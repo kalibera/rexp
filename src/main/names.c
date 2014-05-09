@@ -1079,6 +1079,15 @@ static void SymbolShortcuts(void)
     R_dot_Class = install(".Class");
     R_dot_GenericCallEnv = install(".GenericCallEnv");
     R_dot_GenericDefEnv = install(".GenericDefEnv");
+
+    R_native_symbol = install("native symbol");
+    R_registered_native_symbol = install("registered native symbol");
+    R_PACKAGESymbol = install("PACKAGE");
+    R_NAOKSymbol = install("NAOK");
+    R_DUPSymbol = install("DUP");
+    R_ENCODINGSymbol = install("ENCODING");
+    R_CsingleSymbol = install("Csingle");
+
 }
 
 /* initialize the symbol table */

@@ -691,6 +691,16 @@ LibExtern SEXP  R_dot_defined;      /* ".defined" */
 LibExtern SEXP  R_dot_Method;       /* ".Method" */
 LibExtern SEXP  R_dot_target;       /* ".target" */
 
+LibExtern SEXP  R_native_symbol;    /* "native symbol" */
+LibExtern SEXP  R_registered_native_symbol;    /* "registered native symbol" */
+LibExtern SEXP  R_PACKAGESymbol;    /* "PACKAGE" */
+LibExtern SEXP  R_NAOKSymbol;       /* "NAOK" */
+LibExtern SEXP  R_DUPSymbol;        /* "DUP" */
+LibExtern SEXP  R_ENCODINGSymbol;   /* "ENCODING" */
+LibExtern SEXP  R_CsingleSymbol;    /* "Csingle" */
+
+
+
 /* Missing Values - others from Arith.h */
 #define NA_STRING	R_NaString
 LibExtern SEXP	R_NaString;	    /* NA_STRING as a CHARSXP */
