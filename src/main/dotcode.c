@@ -193,7 +193,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 	    errorcall(call, _("too many arguments in foreign function call"));
     } else {
 	/* This has the side effect of setting dll.type if a PACKAGE=
-	   argument if found, but it will only be used if a string was
+	   argument is found, but it will only be used if a string was
 	   passed in  */
 	args = pkgtrim(args, &dll);
     }
