@@ -303,7 +303,7 @@ SEXP do_rmultinom(SEXP sn, SEXP ssize, SEXP sprob)
     int n, size, k, i, ik;
     
     n	 = asInteger(sn); /* n= #{samples} */
-    size = asInteger(size); /* X ~ Multi(size, prob) */
+    size = asInteger(ssize); /* X ~ Multi(size, prob) */
     if (n == NA_INTEGER || n < 0)
 	error(_("invalid first argument 'n'"));
     if (size == NA_INTEGER || size < 0)
