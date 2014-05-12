@@ -142,7 +142,7 @@ checkValidSymbolId(SEXP op, SEXP call, DL_FUNC *fun,
 
 	return;
     }
-    else if(inherits(op, "NativeSymbolInfo")) {
+    else if(inheritsCharSXP(op, R_NativeSymbolInfoCharSXP)) {
 	checkValidSymbolId(VECTOR_ELT(op, 1), call, fun, symbol, buf);
 	return;
     }
@@ -1339,7 +1339,7 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 	PROTECT(dll->obj); numProtects++;
     }
 
-    if(inherits(dll->obj, "DLLInfo")) {
+    if(inheritsCharSXP(dll->obj, R_DLLInfoCharSXP)) {
 	SEXP tmp;
 	tmp = VECTOR_ELT(dll->obj, 4);
 	info = (DllInfo *) R_ExternalPtrAddr(tmp);

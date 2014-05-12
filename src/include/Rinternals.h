@@ -699,6 +699,16 @@ LibExtern SEXP  R_DUPSymbol;        /* "DUP" */
 LibExtern SEXP  R_ENCODINGSymbol;   /* "ENCODING" */
 LibExtern SEXP  R_CsingleSymbol;    /* "Csingle" */
 
+/* CHARSXP shortcuts */
+LibExtern SEXP R_NativeSymbolInfoCharSXP; /* "NativeSymbolInfo" */
+LibExtern SEXP R_FactorCharSXP;           /* "factor" */
+LibExtern SEXP R_OrderedCharSXP;          /* "ordered" */
+LibExtern SEXP R_ConnectionCharSXP;       /* "connection" */
+LibExtern SEXP R_RawConnectionCharSXP;    /* "rawConnection" */
+LibExtern SEXP R_TextConnectionCharSXP;   /* "textConnection" */
+LibExtern SEXP R_DLLInfoCharSXP;          /* "DLLInfo" */
+LibExtern SEXP R_UserDefinedDatabaseCharSXP;	/* "UserDefinedDatabase" */
+LibExtern SEXP R_POSIXltCharSXP;          /* "POSIXlt" */
 
 
 /* Missing Values - others from Arith.h */
@@ -1099,6 +1109,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define GetRowNames		Rf_GetRowNames
 #define gsetVar			Rf_gsetVar
 #define inherits		Rf_inherits
+#define inheritsCharSXP         Rf_inheritsCharSXP
 #define install			Rf_install
 #define isArray			Rf_isArray
 #define isBasicClass            Rf_isBasicClass
@@ -1217,6 +1228,7 @@ SEXP     Rf_allocVector(SEXPTYPE, R_xlen_t);
 Rboolean Rf_conformable(SEXP, SEXP);
 SEXP	 Rf_elt(SEXP, int);
 Rboolean Rf_inherits(SEXP, const char *);
+Rboolean Rf_inheritsCharSXP(SEXP, SEXP);
 Rboolean Rf_isArray(SEXP);
 Rboolean Rf_isFactor(SEXP);
 Rboolean Rf_isFrame(SEXP);

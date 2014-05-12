@@ -912,7 +912,7 @@ static SEXP dimnamesgets1(SEXP val1)
     /* if (isObject(val1)) dispatch on as.character.foo, but we don't
        have the context at this point to do so */
 
-    if (inherits(val1, "factor"))  /* mimic as.character.factor */
+    if (inheritsCharSXP(val1, R_FactorCharSXP))  /* mimic as.character.factor */
         return asCharacterFactor(val1);
 
     if (!isString(val1)) { /* mimic as.character.default */

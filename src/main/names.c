@@ -1090,9 +1090,21 @@ static void SymbolShortcuts(void)
 
 }
 
+static void CharSXPShortcuts(void) {
+    R_NativeSymbolInfoCharSXP = mkChar("NativeSymbolInfo");
+    R_FactorCharSXP = mkChar("factor");
+    R_OrderedCharSXP = mkChar("ordered");
+    R_ConnectionCharSXP = mkChar("connection");
+    R_RawConnectionCharSXP = mkChar("rawConnection");
+    R_TextConnectionCharSXP = mkChar("textConnection");
+    R_DLLInfoCharSXP = mkChar("DLLInfo");
+    R_UserDefinedDatabaseCharSXP = mkChar("UserDefinedDatabase");
+    R_POSIXltCharSXP = mkChar("POSIXlt");
+}
+
 /* initialize the symbol table */
-void attribute_hidden InitNames()
-{
+void attribute_hidden InitNames() {
+
     /* allocate the symbol table */
     if (!(R_SymbolTable = (SEXP *) calloc(HSIZE, sizeof(SEXP))))
 	R_Suicide("couldn't allocate memory for symbol table");
@@ -1139,6 +1151,8 @@ void attribute_hidden InitNames()
 
     R_initAsignSymbols();
     R_initialize_bcode();
+
+    CharSXPShortcuts();
 }
 
 

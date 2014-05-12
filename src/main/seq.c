@@ -148,7 +148,7 @@ SEXP attribute_hidden do_colon(SEXP call, SEXP op, SEXP args, SEXP rho)
     double n1, n2;
 
     checkArity(op, args);
-    if (inherits(CAR(args), "factor") && inherits(CADR(args), "factor"))
+    if (inheritsCharSXP(CAR(args), R_FactorCharSXP) && inheritsCharSXP(CADR(args), R_FactorCharSXP))
 	return(cross_colon(call, CAR(args), CADR(args)));
 
     s1 = CAR(args);
@@ -366,12 +366,12 @@ SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 #endif
 
-    if (inherits(s, "factor")) {
+    if (inheritsCharSXP(s, R_FactorCharSXP)) {
 	SEXP tmp;
-	if(inherits(s, "ordered")) {
+	if(inheritsCharSXP(s, R_OrderedCharSXP)) {
 	    PROTECT(tmp = allocVector(STRSXP, 2));
-	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
-	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
+	    SET_STRING_ELT(tmp, 0, R_OrderedCharSXP);
+	    SET_STRING_ELT(tmp, 1, R_FactorCharSXP);
 	} else PROTECT(tmp = mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
 	UNPROTECT(1);
@@ -424,12 +424,12 @@ SEXP attribute_hidden do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 #endif
 
-    if (inherits(s, "factor")) {
+    if (inheritsCharSXP(s, R_FactorCharSXP)) {
 	SEXP tmp;
-	if(inherits(s, "ordered")) {
+	if(inheritsCharSXP(s, R_OrderedCharSXP)) {
 	    PROTECT(tmp = allocVector(STRSXP, 2));
-	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
-	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
+	    SET_STRING_ELT(tmp, 0, R_OrderedCharSXP);
+	    SET_STRING_ELT(tmp, 1, R_FactorCharSXP);
 	} else PROTECT(tmp = mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
 	UNPROTECT(1);

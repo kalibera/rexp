@@ -1432,7 +1432,7 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* deal with the case where we are iterating over a factor
        we need to coerce to character - then iterate */
 
-    if ( inherits(val, "factor") ) {
+    if ( inheritsCharSXP(val, R_FactorCharSXP) ) {
 	SEXP tmp = asCharacterFactor(val);
 	UNPROTECT(1); /* val from above */
 	PROTECT(val = tmp);
@@ -4392,7 +4392,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	int label = GETOP();
 
 	/* if we are iterating over a factor, coerce to character first */
-	if (inherits(seq, "factor")) {
+	if (inheritsCharSXP(seq, R_FactorCharSXP)) {
 	    seq = asCharacterFactor(seq);
 	    SETSTACK(-1, seq);
 	}
@@ -4921,7 +4921,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(ISLOGICAL, 0): DO_ISTYPE(LGLSXP);
     OP(ISINTEGER, 0): {
 	SEXP arg = GETSTACK(-1);
-	Rboolean test = (TYPEOF(arg) == INTSXP) && ! inherits(arg, "factor");
+	Rboolean test = (TYPEOF(arg) == INTSXP) && ! inheritsCharSXP(arg, R_FactorCharSXP);
 	SETSTACK(-1, test ? mkTrue() : mkFalse());
 	NEXT();
       }
