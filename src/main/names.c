@@ -1091,15 +1091,15 @@ static void SymbolShortcuts(void)
 }
 
 static void CharSXPShortcuts(void) {
-    R_NativeSymbolInfoCharSXP = mkChar("NativeSymbolInfo");
-    R_FactorCharSXP = mkChar("factor");
-    R_OrderedCharSXP = mkChar("ordered");
-    R_ConnectionCharSXP = mkChar("connection");
-    R_RawConnectionCharSXP = mkChar("rawConnection");
-    R_TextConnectionCharSXP = mkChar("textConnection");
-    R_DLLInfoCharSXP = mkChar("DLLInfo");
-    R_UserDefinedDatabaseCharSXP = mkChar("UserDefinedDatabase");
-    R_POSIXltCharSXP = mkChar("POSIXlt");
+    R_PreserveObject(R_NativeSymbolInfoCharSXP = mkChar("NativeSymbolInfo"));
+    R_PreserveObject(R_FactorCharSXP = mkChar("factor"));
+    R_PreserveObject(R_OrderedCharSXP = mkChar("ordered"));
+    R_PreserveObject(R_ConnectionCharSXP = mkChar("connection"));
+    R_PreserveObject(R_RawConnectionCharSXP = mkChar("rawConnection"));
+    R_PreserveObject(R_TextConnectionCharSXP = mkChar("textConnection"));
+    R_PreserveObject(R_DLLInfoCharSXP = mkChar("DLLInfo"));
+    R_PreserveObject(R_UserDefinedDatabaseCharSXP = mkChar("UserDefinedDatabase"));
+    R_PreserveObject(R_POSIXltCharSXP = mkChar("POSIXlt"));
 }
 
 /* initialize the symbol table */
