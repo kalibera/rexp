@@ -698,6 +698,7 @@ LibExtern SEXP  R_NAOKSymbol;       /* "NAOK" */
 LibExtern SEXP  R_DUPSymbol;        /* "DUP" */
 LibExtern SEXP  R_ENCODINGSymbol;   /* "ENCODING" */
 LibExtern SEXP  R_CsingleSymbol;    /* "Csingle" */
+LibExtern SEXP  R_OriginSymbol;     /* "origin" */
 
 /* CHARSXP shortcuts */
 LibExtern SEXP R_NativeSymbolInfoCharSXP; /* "NativeSymbolInfo" */

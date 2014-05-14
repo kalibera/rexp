@@ -1087,6 +1087,7 @@ static void SymbolShortcuts(void)
     R_DUPSymbol = install("DUP");
     R_ENCODINGSymbol = install("ENCODING");
     R_CsingleSymbol = install("Csingle");
+    R_OriginSymbol = install("origin");
 
 }
 
