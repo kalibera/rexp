@@ -3262,7 +3262,7 @@ setInlineHandler("$", function(e, cb, cntxt) {
 
 \subsection{Inlining simple [[.Internal]] functions}
 A number of functions are defined as simple wrappers around
-[[.Internal]] calls. One example is [[dnorm]], which is currently
+[[.Internal]] calls. One example is [[dnorm]], which used to be
 defined as
 \begin{verbatim}
 dnorm <- function (x, mean = 0, sd = 1, log = FALSE) 
@@ -3271,7 +3271,7 @@ dnorm <- function (x, mean = 0, sd = 1, log = FALSE)
 The implementation of [[.Internal]] functions can be of type
 [[BUILTIN]] or [[SPECIAL]].  The [[dnorm]] implementation is of type
 [[BUILTIN]], so its arguments are guaranteed to be evaluated in order,
-and this particular function doe not depend on the position of its
+and this particular function does not depend on the position of its
 calls in the evaluation stack. As a result, a call of the form
 \begin{verbatim}
 dnorm(2, 1)
@@ -3349,20 +3349,123 @@ safeBaseInternals <- c(".bincode", ".colMeans", ".colSums", ".detach", ".mapply"
 for (i in safeBaseInternals) setInlineHandler(i,  cmpSimpleInternal)
 @ %def safeBaseInternals
 
+The stats package used to include wrappers for internal functions, but it
+does not anymore.  If any such wrappers were added and were inlineable, they
+can be added here.
 %% **** nextn would also be OK with a broader definition of 'safe'
 <<inline safe simple [[.Internal]] functions from [[stats]]>>=
-safeStatsInternals <- c("dbinom", "dcauchy", "dgeom", "dhyper", "dlnorm",
-                        "dlogis", "dnorm", "dpois", "dunif", "dweibull",
-                        "fft", "mvfft", "pbinom", "pcauchy",
-                        "pgeom", "phyper", "plnorm", "plogis", "pnorm",
-                        "ppois", "punif", "pweibull", "qbinom", "qcauchy",
-                        "qgeom", "qhyper", "qlnorm", "qlogis", "qnorm",
-                        "qpois", "qunif", "qweibull", "rbinom", "rcauchy",
-                        "rgeom", "rhyper", "rlnorm", "rlogis", "rnorm",
-                        "rpois", "rsignrank",  "runif", "rweibull",
-                        "rwilcox", "ptukey", "qtukey")
+safeStatsInternals <- c()
 
 for (i in safeStatsInternals) setInlineHandler(i,  cmpSimpleInternal, "stats")
+@ %def
+
+Currently, the stats package uses, instead, a number of wrappers for native
+calls via [[.Call]]. One such example is
+%
+\begin{verbatim}
+qnorm <- function (p, mean = 0, sd = 1, lower.tail = TRUE, log.p = FALSE)
+    .Call(C_qnorm, p, mean, sd, lower.tail, log.p)
+\end{verbatim}
+%
+[[.Call]] is a builtin, and thus all arguments are guaranteed to be
+evaluated in order and eagerly, prior to calling the respective native
+function.  In theory, the respective native function could depend on its
+position in the call stack, but [[qnorm]] and similar do not.
+Like with [[.Internal]] calls, there is still the issue that the package
+holding the wrapper could be unloaded, which will not be reflected correctly
+with inlining.  Like with other inlining done by the compiler, overriding of
+the wrapper function after a call to it has been already inlined is not
+treated correctly (will have no effect).
+
+There are additional difficulties with inlining [[.Call]] wrappers (and
+other native wrappers).  The native function to call is defined by a
+registered native symbol, which is an external pointer bound to [[C_qnorm]].
+The binding is created at the time when the [[stats]] package/namespace is
+loaded.  This binding is locked, the namespace environment is also locked,
+and the [[qnorm]] closure is created within the namespace (at top-level).
+Still, the [[C_qnorm]] symbol could be shadowed after the call is inlined,
+and the compiler will then work incorrectly (it will ignore this
+overshadowing).
+
+Retrieving the symbol from the namespace, e.g. [[stats:::C_qnorm]] has
+proven to be very slow.  The compiler hence inlines the value of that symbol
+into the constant pool, and as a further optimization, just the external
+pointer of it, which is sufficient for the invocation, e.g.
+[[(stats::C_qnorm)$address]].
+
+The compiled code, including the constant pool, can however be serialized
+and de-serialized.  De-serializing an external pointer nullifies its external
+address as it may not be longer valid.  To make sure the constant pool is
+valid even after de-serialization, the compiler adds an [[origin]] attribute
+to the external pointer.  This attribute contains R code to be called at
+de-serialization time (see [[loadNativeSymbol]] below).
+
+The same inlining mechanism is implemented for all native calls:
+[[.Call]], [[.Call.graphics]], [[.C]], [[.Fortran]], [[.External]], [[.External2]], [[.External.graphics]]
+
+<<[[inlineSimpleNativeCall]] function>>=
+
+loadNativeSymbol <- function(ns, name) {
+    res <- getFromNamespace(name, ns)$address
+    attr(res, "origin") <- as.call(list(loadNativeSymbol, ns, name))
+    res
+}
+
+inlineSimpleNativeCall <- function(e, name, def) {
+
+    if (dots.or.missing(e) || !is.simpleNative(wname = as.character(name), def = def)) {
+      return (NULL)
+    }
+
+    package <- environmentName(environment(def)) # also can get this from the inline info
+    forms <- formals(def)
+    fnames <- names(forms)
+    b <- body(def)
+    if (typeof(b) == "language" && length(b) == 2 && b[[1]] == "{")
+      b <- b[[2]]
+    defaults <- forms ## **** could strip missings but OK not to?
+    cenv <- c(as.list(match.call(def, e, F))[-1], defaults)
+    subst <- function(n)
+      if (typeof(n) == "symbol") cenv[[as.character(n)]] else n
+    args <- lapply(as.list(b[c(-1,-2)]), subst)
+
+    nativeSymbolName <- as.character(b[[2]])
+    nativeSymbolArg <- loadNativeSymbol(package, nativeSymbolName)
+    as.call(c(list(b[[1]], nativeSymbolArg), args))
+}
+@ %def inlineSimpleNativeCall
+
+<<[[cmpSimpleNative]] function>>=
+cmpSimpleNative <- function(e, cb, cntxt) {
+    if (any.dots(e))
+        FALSE
+    else {
+        name <- as.character(e[[1]])
+        def <- findFunDef(name, cntxt)
+        if (! checkCall(def, e, NULL)) return(FALSE)
+        call <- inlineSimpleNativeCall(e, name, def)
+        if (is.null(call))
+            FALSE
+        else {
+            cmp(call, cb, cntxt)
+            TRUE
+        }
+    }
+}
+@ %def cmpSimpleNative
+
+<<inline safe simple native functions from [[stats]]>>=
+
+safeStatsNatives <- c(".lm.fit", "D", "dbinom", "dcauchy", "dgeom",
+    "dhyper", "dlnorm", "dlogis", "dnorm", "dpois", "dunif", "dweibull", "fft",
+    "mvfft", "pbinom", "pcauchy", "pgeom", "phyper", "plnorm", "plogis",
+    "pnorm", "ppois", "ptukey", "punif", "pweibull", "qbinom", "qcauchy",
+    "qgeom", "qhyper", "qlnorm", "qlogis", "qnorm", "qpois", "qtukey", "qunif",
+    "qweibull", "rbinom", "rcauchy", "rgeom", "rhyper", "rlnorm", "rlogis",
+    "rmultinom", "rnorm", "rpois", "rsignrank", "runif", "rweibull", "rwilcox",
+    "rWishart")
+
+for (i in safeStatsNatives) setInlineHandler(i,  cmpSimpleNative, "stats")
 @ %def
 
 It is possible to automate the process of identifying functions with
@@ -3410,6 +3513,77 @@ is.simpleInternal <- function(def) {
     else FALSE
 }
 @ %def is.simpleInternal
+
+Inlineable wrappers for native functions can be also identified
+semi-automatically, candidates are provided by [[simpleNatives]].  These
+candidates have to be checked manually.
+
+<<[[simpleNatives]] function>>=
+simpleNatives <- function(ns = "stats", iface = NULL) {
+    pos = paste("package:", ns, sep="")
+    names <- ls(pos = pos, all = T)
+    if (length(names) == 0)
+        character(0)
+    else {
+        fn <-  function(n)
+            is.simpleNative(wname = n, def = get(n, pos = pos), iface = iface)
+        names[sapply(names, fn)]
+    }
+}
+@ %def simpleNatives
+
+
+<<[[is.simpleNative]] function>>=
+is.simpleNative <- function(wname, def, iface = NULL) {
+
+    if (typeof(def) != "closure" || !simpleFormals(def)) {
+      return (FALSE)
+    }
+
+    ns <- environment(def)
+    if (!isNamespace(ns) || !environmentIsLocked(ns) || !bindingIsLocked(wname, ns) || !identical(getFromNamespace(wname, ns), def)) {
+      return (FALSE)
+    }
+
+    wbody <- body(def)
+    if (typeof(wbody) == "language" && length(wbody) == 2 && wbody[[1]] == "{")
+      wbody <- wbody[[2]]
+
+    if (typeof(wbody) != "language" || typeof(wbody[[1]]) != "symbol") {
+      return (FALSE)
+    }
+
+    ifaceName <- as.character(wbody[[1]])
+    if (!is.null(iface)) {
+      if (ifaceName != iface) {
+        return (FALSE)
+      }
+    } else {
+      if (!(ifaceName %in% c(".Call", ".Call.graphics", ".C", ".Fortran", ".External", ".External2", ".External.graphics"))) {
+        return (FALSE)
+      }
+    }
+
+    nativeSymbol <- wbody[[2]]
+    if (typeof(nativeSymbol) != "symbol") {
+      return (FALSE)
+    }
+
+    nativeSymbolName <- as.character(nativeSymbol)
+    if (!exists(nativeSymbolName, envir = ns, inherits = FALSE) || exists(nativeSymbolName, getNamespaceInfo(ns, "exports")) || 
+        !bindingIsLocked(nativeSymbolName, ns)) {
+
+      return (FALSE)
+    }
+
+    formalsNames <- names(formals(def))
+    if (!simpleArgs(wbody[-1], formalsNames) || nativeSymbolName %in% formalsNames) {
+      return (FALSE)
+    }
+
+    TRUE
+}
+@ %def is.simpleNative
 
 <<[[simpleFormals]] function>>=
 simpleFormals <- function(def) {
@@ -5977,13 +6151,21 @@ Opcodes.names <- names(Opcodes.argc)
 
 <<[[is.simpleInternal]] function>>
 
+<<[[is.simpleNative]] function>>
+
 <<[[inlineSimpleInternalCall]] function>>
 
+<<[[inlineSimpleNativeCall]] function>>
+
 <<[[cmpSimpleInternal]] function>>
+
+<<[[cmpSimpleNative]] function>>
 
 <<inline safe simple [[.Internal]] functions from [[base]]>>
 
 <<inline safe simple [[.Internal]] functions from [[stats]]>>
+
+<<inline safe simple native functions from [[stats]]>>
 
 
 ##
@@ -6073,5 +6255,14 @@ Opcodes.names <- names(Opcodes.argc)
 <<[[bcDecode]] function>>
 
 <<[[disassemble]] function>>
+
+##
+## Maintenance functions
+##
+
+<<[[simpleInternals]] function>>
+
+<<[[simpleNatives]] function>>
+
 @ 
 \end{document}

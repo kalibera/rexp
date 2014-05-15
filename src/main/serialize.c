@@ -1610,14 +1610,57 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	   newly allocated value PROTECTed */
 	switch (type) {
 	case EXTPTRSXP:
+	/* A de-serialized external pointer will have its external address
+           set to NULL. This makes native symbols and registered native
+           symbols unusable after de-serialization.  Therefore, an external
+           pointer may hold R code to run at de-serialization time (in its
+           "origin" attribute).  This R code is eval'd and returns the new
+           representation of the external pointer.  Note that if the new
+           representation should have again the "origin" attribute set, the
+           supplied R code must take care of it.
+
+           The "origin" attribute is currently used by the compiler.
+	*/
 	    PROTECT(s = allocSExp(type));
-	    AddReadRef(ref_table, s);
-	    R_SetExternalPtrAddr(s, NULL);
+	    AddReadRef(ref_table, s); /* need to register first, unfortunately before knowing if there is "origin" attribute */
+
 	    R_ReadItemDepth++;
-	    R_SetExternalPtrProtected(s, ReadItem(ref_table, stream));
-	    R_SetExternalPtrTag(s, ReadItem(ref_table, stream));
+	    SEXP nprotected = PROTECT(ReadItem(ref_table, stream));
+	    SEXP ntag = PROTECT(ReadItem(ref_table, stream));
+	    SEXP nattr = PROTECT(hasattr ? ReadItem(ref_table, stream) : R_NilValue);
 	    R_ReadItemDepth--;
-	    break;
+
+	    SEXP newptr = R_NilValue;
+	    if (hasattr) {
+	        SEXP a;
+	        for (a = nattr; a != R_NilValue && TAG(a) != R_OriginSymbol; a = CDR(a));
+                if (a != R_NilValue) {
+                    a = CAR(a);
+                    SET_NAMED(a, 2);
+                    newptr = eval(a, R_GlobalEnv);
+                }
+	    }
+	    if (newptr != R_NilValue) {
+	        /* new value provided through R code in the "origin" attribute */
+	        PROTECT(newptr);
+	        R_SetExternalPtrAddr(s, R_ExternalPtrAddr(newptr));
+	        R_SetExternalPtrProtected(s, R_ExternalPtrProtected(newptr));
+	        R_SetExternalPtrTag(s, R_ExternalPtrTag(newptr));
+	        SET_ATTRIB(s, ATTRIB(newptr));
+	        SETLEVELS(s, LEVELS(newptr));
+	        SET_OBJECT(s, OBJECT(newptr));
+	        UNPROTECT(1); /* newptr */
+	    } else {
+                /* keep the external address NULL, no or invalid "origin" attribute */
+	        R_SetExternalPtrAddr(s, NULL);
+	        R_SetExternalPtrProtected(s, nprotected);
+	        R_SetExternalPtrTag(s, ntag);
+	        SET_ATTRIB(s, nattr);
+	        SETLEVELS(s, levs);
+	        SET_OBJECT(s, objf);
+            }
+            UNPROTECT(4); /* s, nprotected, ntag, nattr */
+            return s;
 	case WEAKREFSXP:
 	    PROTECT(s = R_MakeWeakRef(R_NilValue, R_NilValue, R_NilValue,
 				      FALSE));

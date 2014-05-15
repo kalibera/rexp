@@ -1375,7 +1375,7 @@ SEXP asCharacterFactor(SEXP x)
 {
     SEXP ans;
 
-    if( !inherits(x, "factor") )
+    if( !inheritsCharSXP(x, R_FactorCharSXP) )
 	error(_("attempting to coerce non-factor"));
 
     R_xlen_t i, n = XLENGTH(x);
@@ -1798,7 +1798,7 @@ SEXP attribute_hidden do_is_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEXP
 	break;
     case INTSXP:	/* is.integer */
 	LOGICAL(ans)[0] = (TYPEOF(x) == INTSXP)
-	    && !inherits(x, "factor");
+	    && !inheritsCharSXP(x, R_FactorCharSXP);
 	break;
     case REALSXP:	/* is.double */
 	LOGICAL(ans)[0] = (TYPEOF(x) == REALSXP);

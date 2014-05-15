@@ -820,8 +820,8 @@ static SEXP HashLookup(SEXP table, SEXP x, HashData *d)
 static SEXP match_transform(SEXP s, SEXP env)
 {
     if(OBJECT(s)) {
-	if(inherits(s, "factor")) return asCharacterFactor(s);
-	else if(inherits(s, "POSIXlt")) { /* and maybe more classes in the future:
+	if(inheritsCharSXP(s, R_FactorCharSXP)) return asCharacterFactor(s);
+	else if(inheritsCharSXP(s, R_POSIXltCharSXP)) { /* and maybe more classes in the future:
 					   * Call R's (generic)  as.character(s) : */
 	    SEXP call, r;
 	    PROTECT(call = lang2(install("as.character"), s));

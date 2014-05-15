@@ -1077,6 +1077,27 @@ LibExtern SEXP  R_dot_defined;      /* ".defined" */
 LibExtern SEXP  R_dot_Method;       /* ".Method" */
 LibExtern SEXP  R_dot_target;       /* ".target" */
 
+LibExtern SEXP  R_native_symbol;    /* "native symbol" */
+LibExtern SEXP  R_registered_native_symbol;    /* "registered native symbol" */
+LibExtern SEXP  R_PACKAGESymbol;    /* "PACKAGE" */
+LibExtern SEXP  R_NAOKSymbol;       /* "NAOK" */
+LibExtern SEXP  R_DUPSymbol;        /* "DUP" */
+LibExtern SEXP  R_ENCODINGSymbol;   /* "ENCODING" */
+LibExtern SEXP  R_CsingleSymbol;    /* "Csingle" */
+LibExtern SEXP  R_OriginSymbol;     /* "origin" */
+
+/* CHARSXP shortcuts */
+LibExtern SEXP R_NativeSymbolInfoCharSXP; /* "NativeSymbolInfo" */
+LibExtern SEXP R_FactorCharSXP;           /* "factor" */
+LibExtern SEXP R_OrderedCharSXP;          /* "ordered" */
+LibExtern SEXP R_ConnectionCharSXP;       /* "connection" */
+LibExtern SEXP R_RawConnectionCharSXP;    /* "rawConnection" */
+LibExtern SEXP R_TextConnectionCharSXP;   /* "textConnection" */
+LibExtern SEXP R_DLLInfoCharSXP;          /* "DLLInfo" */
+LibExtern SEXP R_UserDefinedDatabaseCharSXP;	/* "UserDefinedDatabase" */
+LibExtern SEXP R_POSIXltCharSXP;          /* "POSIXlt" */
+
+
 /* Missing Values - others from Arith.h */
 #define NA_STRING	R_NaString
 LibExtern SEXP	R_NaString;	    /* NA_STRING as a CHARSXP */
@@ -1490,6 +1511,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define initializeOffHeapSEXP	Rf_initializeOffHeapSEXP
 #define initializeOffHeapEnvironment	Rf_initializeOffHeapEnvironment
 #define initializeTypeTables	Rf_initializeTypeTables
+#define inheritsCharSXP         Rf_inheritsCharSXP
 #define install			Rf_install
 #define isArray			Rf_isArray
 #define isBasicClass            Rf_isBasicClass
@@ -1618,6 +1640,7 @@ SEXP     Rf_buildPositionalPromargs(int nargs, SEXP *last);
 Rboolean Rf_conformable(SEXP, SEXP);
 SEXP	 Rf_elt(SEXP, int);
 Rboolean Rf_inherits(SEXP, const char *);
+Rboolean Rf_inheritsCharSXP(SEXP, SEXP);
 Rboolean Rf_isArray(SEXP);
 Rboolean Rf_isFactor(SEXP);
 Rboolean Rf_isFrame(SEXP);

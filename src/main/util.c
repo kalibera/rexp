@@ -182,15 +182,15 @@ SEXP asChar(SEXP x)
 Rboolean isUnordered(SEXP s)
 {
     return (TYPEOF(s) == INTSXP
-	    && inherits(s, "factor")
-	    && !inherits(s, "ordered"));
+	    && inheritsCharSXP(s, R_FactorCharSXP)
+	    && !inheritsCharSXP(s, R_OrderedCharSXP));
 }
 
 Rboolean isOrdered(SEXP s)
 {
     return (TYPEOF(s) == INTSXP
-	    && inherits(s, "factor")
-	    && inherits(s, "ordered"));
+	    && inheritsCharSXP(s, R_FactorCharSXP)
+	    && inheritsCharSXP(s, R_OrderedCharSXP));
 }
 
 

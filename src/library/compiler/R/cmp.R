@@ -2445,6 +2445,56 @@ is.simpleInternal <- function(def) {
     else FALSE
 }
 
+is.simpleNative <- function(wname, def, iface = NULL) {
+
+    if (typeof(def) != "closure" || !simpleFormals(def)) {
+      return (FALSE)
+    }
+
+    ns <- environment(def)
+    if (!isNamespace(ns) || !environmentIsLocked(ns) || !bindingIsLocked(wname, ns) || !identical(getFromNamespace(wname, ns), def)) {
+      return (FALSE)
+    }
+
+    wbody <- body(def)
+    if (typeof(wbody) == "language" && length(wbody) == 2 && wbody[[1]] == "{")
+      wbody <- wbody[[2]]
+
+    if (typeof(wbody) != "language" || typeof(wbody[[1]]) != "symbol") {
+      return (FALSE)
+    }
+
+    ifaceName <- as.character(wbody[[1]])
+    if (!is.null(iface)) {
+      if (ifaceName != iface) {
+        return (FALSE)
+      }
+    } else {
+      if (!(ifaceName %in% c(".Call", ".Call.graphics", ".C", ".Fortran", ".External", ".External2", ".External.graphics"))) {
+        return (FALSE)
+      }
+    }
+
+    nativeSymbol <- wbody[[2]]
+    if (typeof(nativeSymbol) != "symbol") {
+      return (FALSE)
+    }
+
+    nativeSymbolName <- as.character(nativeSymbol)
+    if (!exists(nativeSymbolName, envir = ns, inherits = FALSE) || exists(nativeSymbolName, getNamespaceInfo(ns, "exports")) || 
+        !bindingIsLocked(nativeSymbolName, ns)) {
+
+      return (FALSE)
+    }
+
+    formalsNames <- names(formals(def))
+    if (!simpleArgs(wbody[-1], formalsNames) || nativeSymbolName %in% formalsNames) {
+      return (FALSE)
+    }
+
+    TRUE
+}
+
 inlineSimpleInternalCall <- function(e, def) {
     if (! dots.or.missing(e) && is.simpleInternal(def)) {
         forms <- formals(def)
@@ -2463,6 +2513,36 @@ inlineSimpleInternalCall <- function(e, def) {
     else NULL
 }
 
+
+loadNativeSymbol <- function(ns, name) {
+    res <- getFromNamespace(name, ns)$address
+    attr(res, "origin") <- as.call(list(loadNativeSymbol, ns, name))
+    res
+}
+
+inlineSimpleNativeCall <- function(e, name, def) {
+
+    if (dots.or.missing(e) || !is.simpleNative(wname = as.character(name), def = def)) {
+      return (NULL)
+    }
+
+    package <- environmentName(environment(def)) # also can get this from the inline info
+    forms <- formals(def)
+    fnames <- names(forms)
+    b <- body(def)
+    if (typeof(b) == "language" && length(b) == 2 && b[[1]] == "{")
+      b <- b[[2]]
+    defaults <- forms ## **** could strip missings but OK not to?
+    cenv <- c(as.list(match.call(def, e, F))[-1], defaults)
+    subst <- function(n)
+      if (typeof(n) == "symbol") cenv[[as.character(n)]] else n
+    args <- lapply(as.list(b[c(-1,-2)]), subst)
+
+    nativeSymbolName <- as.character(b[[2]])
+    nativeSymbolArg <- loadNativeSymbol(package, nativeSymbolName)
+    as.call(c(list(b[[1]], nativeSymbolArg), args))
+}
+
 cmpSimpleInternal <- function(e, cb, cntxt) {
     if (any.dots(e))
         FALSE
@@ -2471,6 +2551,23 @@ cmpSimpleInternal <- function(e, cb, cntxt) {
         def <- findFunDef(name, cntxt)
         if (! checkCall(def, e, NULL)) return(FALSE)
         call <- inlineSimpleInternalCall(e, def)
+        if (is.null(call))
+            FALSE
+        else {
+            cmp(call, cb, cntxt)
+            TRUE
+        }
+    }
+}
+
+cmpSimpleNative <- function(e, cb, cntxt) {
+    if (any.dots(e))
+        FALSE
+    else {
+        name <- as.character(e[[1]])
+        def <- findFunDef(name, cntxt)
+        if (! checkCall(def, e, NULL)) return(FALSE)
+        call <- inlineSimpleNativeCall(e, name, def)
         if (is.null(call))
             FALSE
         else {
@@ -2500,18 +2597,21 @@ safeBaseInternals <- c(".bincode", ".colMeans", ".colSums", ".detach", ".mapply"
 
 for (i in safeBaseInternals) setInlineHandler(i,  cmpSimpleInternal)
 
-safeStatsInternals <- c("dbinom", "dcauchy", "dgeom", "dhyper", "dlnorm",
-                        "dlogis", "dnorm", "dpois", "dunif", "dweibull",
-                        "fft", "mvfft", "pbinom", "pcauchy",
-                        "pgeom", "phyper", "plnorm", "plogis", "pnorm",
-                        "ppois", "punif", "pweibull", "qbinom", "qcauchy",
-                        "qgeom", "qhyper", "qlnorm", "qlogis", "qnorm",
-                        "qpois", "qunif", "qweibull", "rbinom", "rcauchy",
-                        "rgeom", "rhyper", "rlnorm", "rlogis", "rnorm",
-                        "rpois", "rsignrank",  "runif", "rweibull",
-                        "rwilcox", "ptukey", "qtukey")
+safeStatsInternals <- c()
 
 for (i in safeStatsInternals) setInlineHandler(i,  cmpSimpleInternal, "stats")
+
+
+safeStatsNatives <- c(".lm.fit", "D", "dbinom", "dcauchy", "dgeom",
+    "dhyper", "dlnorm", "dlogis", "dnorm", "dpois", "dunif", "dweibull", "fft",
+    "mvfft", "pbinom", "pcauchy", "pgeom", "phyper", "plnorm", "plogis",
+    "pnorm", "ppois", "ptukey", "punif", "pweibull", "qbinom", "qcauchy",
+    "qgeom", "qhyper", "qlnorm", "qlogis", "qnorm", "qpois", "qtukey", "qunif",
+    "qweibull", "rbinom", "rcauchy", "rgeom", "rhyper", "rlnorm", "rlogis",
+    "rmultinom", "rnorm", "rpois", "rsignrank", "runif", "rweibull", "rwilcox",
+    "rWishart")
+
+for (i in safeStatsNatives) setInlineHandler(i,  cmpSimpleNative, "stats")
 
 
 ##
@@ -3001,3 +3101,31 @@ disassemble <- function(code) {
     }
     dput(disasm(.Internal(disassemble(code))))
 }
+
+##
+## Maintenance functions
+##
+
+simpleInternals <- function(pos = "package:base") {
+    names <- ls(pos = pos, all = T)
+    if (length(names) == 0)
+        character(0)
+    else {
+        fn <-  function(n)
+            is.simpleInternal(get(n, pos = pos))
+        names[sapply(names, fn)]
+    }
+}
+
+simpleNatives <- function(ns = "stats", iface = NULL) {
+    pos = paste("package:", ns, sep="")
+    names <- ls(pos = pos, all = T)
+    if (length(names) == 0)
+        character(0)
+    else {
+        fn <-  function(n)
+            is.simpleNative(wname = n, def = get(n, pos = pos), iface = iface)
+        names[sapply(names, fn)]
+    }
+}
+

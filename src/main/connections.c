@@ -1254,7 +1254,7 @@ SEXP attribute_hidden do_fifo(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = ScalarInteger(ncon));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar("fifo"));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     setAttrib(ans, R_ConnIdSymbol, con->ex_ptr);
     R_RegisterCFinalizerEx(con->ex_ptr, conFinalizer, FALSE);
@@ -1422,7 +1422,7 @@ SEXP attribute_hidden do_pipe(SEXP call, SEXP op, SEXP args, SEXP env)
     if(CharacterMode != RTerm)
 	SET_STRING_ELT(class, 0, mkChar("pipeWin32"));
 #endif
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     setAttrib(ans, R_ConnIdSymbol, con->ex_ptr);
     R_RegisterCFinalizerEx(con->ex_ptr, conFinalizer, FALSE);
@@ -2078,7 +2078,7 @@ SEXP attribute_hidden do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
 	SET_STRING_ELT(class, 0, mkChar("xzfile"));
 	break;
     }
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     setAttrib(ans, R_ConnIdSymbol, con->ex_ptr);
     R_RegisterCFinalizerEx(con->ex_ptr, conFinalizer, FALSE);
@@ -2434,7 +2434,7 @@ SEXP attribute_hidden do_stdin(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = ScalarInteger(0));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar(con->class));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     UNPROTECT(2);
     return ans;
@@ -2454,7 +2454,7 @@ SEXP attribute_hidden do_earg_stdout(SEXP call, SEXP op, SEXP env)
     PROTECT(ans = ScalarInteger(R_OutputCon));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar(con->class));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     UNPROTECT(2);
     return ans;
@@ -2470,7 +2470,7 @@ SEXP attribute_hidden do_stderr(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = ScalarInteger(2));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar(con->class));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     UNPROTECT(2);
     return ans;
@@ -2685,8 +2685,8 @@ SEXP attribute_hidden do_rawconnection(SEXP call, SEXP op, SEXP args, SEXP env)
 
     PROTECT(ans = ScalarInteger(ncon));
     PROTECT(class = allocVector(STRSXP, 2));
-    SET_STRING_ELT(class, 0, mkChar("rawConnection"));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 0, R_RawConnectionCharSXP);
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     con->ex_ptr = R_MakeExternalPtr(con->id, install("connection"), R_NilValue);
     setAttrib(ans, R_ConnIdSymbol, con->ex_ptr);
@@ -2702,7 +2702,7 @@ SEXP attribute_hidden do_rawconvalue(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "rawConnection"))
+    if(!inheritsCharSXP(CAR(args), R_RawConnectionCharSXP))
 	error(_("'con' is not a rawConnection"));
     con = getConnection(asInteger(CAR(args)));
     if(!con->canwrite)
@@ -3100,8 +3100,8 @@ SEXP attribute_hidden do_textconnection(SEXP call, SEXP op, SEXP args, SEXP env)
 
     PROTECT(ans = ScalarInteger(ncon));
     PROTECT(class = allocVector(STRSXP, 2));
-    SET_STRING_ELT(class, 0, mkChar("textConnection"));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 0, R_TextConnectionCharSXP);
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     con->ex_ptr = R_MakeExternalPtr(con->id, install("connection"), R_NilValue);
     setAttrib(ans, R_ConnIdSymbol, con->ex_ptr);
@@ -3116,7 +3116,7 @@ SEXP attribute_hidden do_textconvalue(SEXP call, SEXP op, SEXP args, SEXP env)
     Routtextconn this;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "textConnection"))
+    if(!inheritsCharSXP(CAR(args), R_TextConnectionCharSXP))
 	error(_("'con' is not a textConnection"));
     con = getConnection(asInteger(CAR(args)));
     if(!con->canwrite)
@@ -3188,7 +3188,7 @@ SEXP attribute_hidden do_sockconn(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = ScalarInteger(ncon));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar("sockconn"));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     setAttrib(ans, R_ConnIdSymbol, con->ex_ptr);
     R_RegisterCFinalizerEx(con->ex_ptr, conFinalizer, FALSE);
@@ -3241,7 +3241,7 @@ SEXP attribute_hidden do_unz(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = ScalarInteger(ncon));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar("unz"));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     setAttrib(ans, R_ConnIdSymbol, con->ex_ptr);
     R_RegisterCFinalizerEx(con->ex_ptr, conFinalizer, FALSE);
@@ -3261,7 +3261,7 @@ SEXP attribute_hidden do_open(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean success;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inheritsCharSXP(CAR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     i = asInteger(CAR(args));
     con = getConnection(i);
@@ -3310,7 +3310,7 @@ SEXP attribute_hidden do_isincomplete(SEXP call, SEXP op, SEXP args, SEXP env)
     Rconnection con;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inheritsCharSXP(CAR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     con = getConnection(asInteger(CAR(args)));
     return ScalarLogical(con->incomplete != FALSE);
@@ -3321,7 +3321,7 @@ SEXP attribute_hidden do_isseekable(SEXP call, SEXP op, SEXP args, SEXP env)
     Rconnection con;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inheritsCharSXP(CAR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     con = getConnection(asInteger(CAR(args)));
     return ScalarLogical(con->canseek != FALSE);
@@ -3368,7 +3368,7 @@ SEXP attribute_hidden do_close(SEXP call, SEXP op, SEXP args, SEXP env)
     int i, j;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inheritsCharSXP(CAR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     i = asInteger(CAR(args));
     if(i < 3) error(_("cannot close standard connections"));
@@ -3393,7 +3393,7 @@ SEXP attribute_hidden do_seek(SEXP call, SEXP op, SEXP args, SEXP env)
     double where;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inheritsCharSXP(CAR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     con = getConnection(asInteger(CAR(args)));
     if(!con->isopen) error(_("connection is not open"));
@@ -3416,7 +3416,7 @@ SEXP attribute_hidden do_truncate(SEXP call, SEXP op, SEXP args, SEXP env)
     Rconnection con = NULL;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inheritsCharSXP(CAR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     con = getConnection(asInteger(CAR(args)));
     con->truncate(con);
@@ -3428,7 +3428,7 @@ SEXP attribute_hidden do_flush(SEXP call, SEXP op, SEXP args, SEXP env)
     Rconnection con = NULL;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inheritsCharSXP(CAR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     con = getConnection(asInteger(CAR(args)));
     if(con->canwrite) con->fflush(con);
@@ -3544,7 +3544,7 @@ SEXP attribute_hidden do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
     R_xlen_t i, n, nn, nnn, nread;
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inheritsCharSXP(CAR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     con = getConnection(asInteger(CAR(args))); args = CDR(args);
     n = asVecSize(CAR(args)); args = CDR(args);
@@ -3669,7 +3669,7 @@ SEXP attribute_hidden do_writelines(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     text = CAR(args);
     if(!isString(text)) error(_("invalid '%s' argument"), "text");
-    if(!inherits(CADR(args), "connection"))
+    if(!inheritsCharSXP(CADR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     con_num = asInteger(CADR(args));
     con = getConnection(con_num);
@@ -4902,7 +4902,7 @@ do_getconnection(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = ScalarInteger(what));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar(con->class));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     if (what > 2)
 	setAttrib(ans, R_ConnIdSymbol, con->ex_ptr);
@@ -5114,7 +5114,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ans = ScalarInteger(ncon));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar(class2));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     setAttrib(ans, R_ConnIdSymbol, con->ex_ptr);
     R_RegisterCFinalizerEx(con->ex_ptr, conFinalizer, FALSE);
@@ -5409,7 +5409,7 @@ SEXP attribute_hidden do_gzcon(SEXP call, SEXP op, SEXP args, SEXP rho)
     char *m, *mode = NULL /* -Wall */,  description[1000];
 
     checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inheritsCharSXP(CAR(args), R_ConnectionCharSXP))
 	error(_("'con' is not a connection"));
     incon = getConnection(icon = asInteger(CAR(args)));
     level = asInteger(CADR(args));
@@ -5479,7 +5479,7 @@ SEXP attribute_hidden do_gzcon(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = ScalarInteger(icon));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar("gzcon"));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     setAttrib(ans, R_ConnIdSymbol, new->ex_ptr);
     /* Disable, as e.g. load() leaves no reference to the new connection */
@@ -6052,7 +6052,7 @@ SEXP R_new_custom_connection(const char *description, const char *mode, const ch
     PROTECT(ans = ScalarInteger(ncon));
     PROTECT(class = allocVector(STRSXP, 2));
     SET_STRING_ELT(class, 0, mkChar(class_name));
-    SET_STRING_ELT(class, 1, mkChar("connection"));
+    SET_STRING_ELT(class, 1, R_ConnectionCharSXP);
     classgets(ans, class);
     setAttrib(ans, R_ConnIdSymbol, new->ex_ptr);
     R_RegisterCFinalizerEx(new->ex_ptr, conFinalizer, FALSE);

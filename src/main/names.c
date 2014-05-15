@@ -1080,11 +1080,33 @@ static void SymbolShortcuts(void)
     R_dot_Class = install(".Class");
     R_dot_GenericCallEnv = install(".GenericCallEnv");
     R_dot_GenericDefEnv = install(".GenericDefEnv");
+
+    R_native_symbol = install("native symbol");
+    R_registered_native_symbol = install("registered native symbol");
+    R_PACKAGESymbol = install("PACKAGE");
+    R_NAOKSymbol = install("NAOK");
+    R_DUPSymbol = install("DUP");
+    R_ENCODINGSymbol = install("ENCODING");
+    R_CsingleSymbol = install("Csingle");
+    R_OriginSymbol = install("origin");
+
+}
+
+static void CharSXPShortcuts(void) {
+    R_PreserveObject(R_NativeSymbolInfoCharSXP = mkChar("NativeSymbolInfo"));
+    R_PreserveObject(R_FactorCharSXP = mkChar("factor"));
+    R_PreserveObject(R_OrderedCharSXP = mkChar("ordered"));
+    R_PreserveObject(R_ConnectionCharSXP = mkChar("connection"));
+    R_PreserveObject(R_RawConnectionCharSXP = mkChar("rawConnection"));
+    R_PreserveObject(R_TextConnectionCharSXP = mkChar("textConnection"));
+    R_PreserveObject(R_DLLInfoCharSXP = mkChar("DLLInfo"));
+    R_PreserveObject(R_UserDefinedDatabaseCharSXP = mkChar("UserDefinedDatabase"));
+    R_PreserveObject(R_POSIXltCharSXP = mkChar("POSIXlt"));
 }
 
 /* initialize the symbol table */
-void attribute_hidden InitNames()
-{
+void attribute_hidden InitNames() {
+
     /* allocate the symbol table */
     if (!(R_SymbolTable = (SEXP *) calloc(HSIZE, sizeof(SEXP))))
 	R_Suicide("couldn't allocate memory for symbol table");
@@ -1131,6 +1153,8 @@ void attribute_hidden InitNames()
 
     R_initAsignSymbols();
     R_initialize_bcode();
+
+    CharSXPShortcuts();
 }
 
 

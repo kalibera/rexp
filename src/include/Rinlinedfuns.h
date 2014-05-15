@@ -366,12 +366,43 @@ INLINE_FUN Rboolean inherits(SEXP s, const char *name)
 	klass = getAttrib(s, R_ClassSymbol);
 	nclass = length(klass);
 	for (i = 0; i < nclass; i++) {
-	    if (!strcmp(CHAR(STRING_ELT(klass, i)), name))
+	    if (!strcmp(CHAR(STRING_ELT(klass, i)), name)) {
 		return TRUE;
+            }
 	}
     }
     return FALSE;
 }
+
+INLINE_FUN Rboolean inheritsCharSXP(SEXP s, SEXP nameCharSXP)
+{
+    SEXP klass;
+    int i, nclass;
+    const char *name = CHAR(nameCharSXP);
+
+    if (OBJECT(s)) {
+	klass = getAttrib(s, R_ClassSymbol);
+	nclass = length(klass);
+	/* fast comparison using equals */
+	for (i = 0; i < nclass; i++) {
+	    SEXP sCharSXP = STRING_ELT(klass, i);
+	    if (sCharSXP == nameCharSXP) {
+	        return TRUE;
+	    }
+        }
+        /* FIXME: could we rely on CHARSXP caching/interning instead and avoid this slow checking? */
+        for (i = 0; i < nclass; i++) {
+            SEXP sCharSXP = STRING_ELT(klass, i);
+	    if (!strcmp(CHAR(sCharSXP), name)) {
+		return TRUE;
+            }
+	}
+    }
+    return FALSE;
+}
+
+
+
 
 INLINE_FUN Rboolean isValidString(SEXP x)
 {
@@ -525,12 +556,12 @@ INLINE_FUN Rboolean isTs(SEXP s)
 
 INLINE_FUN Rboolean isInteger(SEXP s)
 {
-    return (TYPEOF(s) == INTSXP && !inherits(s, "factor"));
+    return (TYPEOF(s) == INTSXP && !inheritsCharSXP(s, R_FactorCharSXP));
 }
 
 INLINE_FUN Rboolean isFactor(SEXP s)
 {
-    return (TYPEOF(s) == INTSXP  && inherits(s, "factor"));
+    return (TYPEOF(s) == INTSXP  && inheritsCharSXP(s, R_FactorCharSXP));
 }
 
 INLINE_FUN int nlevels(SEXP f)
@@ -548,7 +579,7 @@ INLINE_FUN Rboolean isNumeric(SEXP s)
 {
     switch(TYPEOF(s)) {
     case INTSXP:
-	if (inherits(s,"factor")) return FALSE;
+	if (inheritsCharSXP(s, R_FactorCharSXP)) return FALSE;
     case LGLSXP:
     case REALSXP:
 	return TRUE;
@@ -562,7 +593,7 @@ INLINE_FUN Rboolean isNumber(SEXP s)
 {
     switch(TYPEOF(s)) {
     case INTSXP:
-	if (inherits(s,"factor")) return FALSE;
+	if (inheritsCharSXP(s, R_FactorCharSXP)) return FALSE;
     case LGLSXP:
     case REALSXP:
     case CPLXSXP:
