@@ -2491,7 +2491,18 @@ is.simpleNative <- function(wname, def, iface = NULL) {
     symbolNfo <- .Internal(getRegisteredSymbolInfo(symbolAddress))
     symbolNargs <- symbolNfo$nargs
 
+    # the call has the required number of arguments
     if (symbolNargs != (length(wbody) - 2)) {
+      return (FALSE)
+    }
+
+    # the call does not have the PACKAGE argument and the first argument is unnamed
+    callNames <- names(wbody)
+    if ("PACKAGE" %in% callNames[c(-1,-2,-3)]) {
+      return (FALSE)
+    }
+    firstCallName <- callNames[2]
+    if (!is.null(firstCallName) && firstCallName != "") {
       return (FALSE)
     }
 
