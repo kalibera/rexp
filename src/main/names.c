@@ -630,6 +630,13 @@ FUNTAB R_FunTab[] =
 {".External",   do_External, NULL,    0,      1,      -1,     {PP_FOREIGN, PREC_FN,	0}},
 {".External2",   do_External, NULL,   1,    201,      -1,     {PP_FOREIGN, PREC_FN,	0}},
 {".Call",       do_dotcall, NULL,     0,      1,      -1,     {PP_FOREIGN, PREC_FN,	0}},
+{".Call.Simple0", do_dotcall, {.args1 = do_earg_dotcall_simple0},     0,      1,      1,     {PP_FOREIGN, PREC_FN,	0}},
+{".Call.Simple1", do_dotcall, {.args2 = do_earg_dotcall_simple1},     0,      1,      2,     {PP_FOREIGN, PREC_FN,	0}},
+{".Call.Simple2", do_dotcall, {.args3 = do_earg_dotcall_simple2},     0,      1,      3,     {PP_FOREIGN, PREC_FN,	0}},
+{".Call.Simple3", do_dotcall, {.args4 = do_earg_dotcall_simple3},     0,      1,      4,     {PP_FOREIGN, PREC_FN,	0}},
+{".Call.Simple4", do_dotcall, {.args5 = do_earg_dotcall_simple4},     0,      1,      5,     {PP_FOREIGN, PREC_FN,	0}},
+{".Call.Simple5", do_dotcall, {.args6 = do_earg_dotcall_simple5},     0,      1,      6,     {PP_FOREIGN, PREC_FN,	0}},
+{".Call.Simple6", do_dotcall, {.args7 = do_earg_dotcall_simple6},     0,      1,      7,     {PP_FOREIGN, PREC_FN,	0}},
 {".External.graphics", do_Externalgr, NULL, 0, 1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 {".Call.graphics", do_dotcallgr, NULL, 0,	1,	-1,	{PP_FOREIGN, PREC_FN,	0}},
 

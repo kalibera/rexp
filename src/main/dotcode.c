@@ -1220,6 +1220,105 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     return retval;
 }
 
+
+SEXP do_earg_dotcall_simple0 (SEXP call, SEXP op, SEXP argSymbol, SEXP rho) {
+
+    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
+    //   in theory this builtin could be called with an incorrect type
+    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    SEXP retval = R_NilValue;
+    const void *vmax = vmaxget();
+    VarFun fun = rns->symbol.call->fun;
+    retval = (SEXP)fun();
+    vmaxset(vmax);
+
+    return retval;
+}
+
+SEXP do_earg_dotcall_simple1 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP rho) {
+
+    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
+    //   in theory this builtin could be called with an incorrect type
+    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    SEXP retval = R_NilValue;
+    const void *vmax = vmaxget();
+    VarFun fun = rns->symbol.call->fun;
+    retval = (SEXP)fun(arg1);
+    vmaxset(vmax);
+
+    return retval;
+}
+
+SEXP do_earg_dotcall_simple2 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP rho) {
+
+    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
+    //   in theory this builtin could be called with an incorrect type
+    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    SEXP retval = R_NilValue;
+    const void *vmax = vmaxget();
+    VarFun fun = rns->symbol.call->fun;
+    retval = (SEXP)fun(arg1, arg2);
+    vmaxset(vmax);
+
+    return retval;
+}
+
+SEXP do_earg_dotcall_simple3 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP rho) {
+
+    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
+    //   in theory this builtin could be called with an incorrect type
+    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    SEXP retval = R_NilValue;
+    const void *vmax = vmaxget();
+    VarFun fun = rns->symbol.call->fun;
+    retval = (SEXP)fun(arg1, arg2, arg3);
+    vmaxset(vmax);
+
+    return retval;
+}
+
+SEXP do_earg_dotcall_simple4 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP rho) {
+
+    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
+    //   in theory this builtin could be called with an incorrect type
+    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    SEXP retval = R_NilValue;
+    const void *vmax = vmaxget();
+    VarFun fun = rns->symbol.call->fun;
+    retval = (SEXP)fun(arg1, arg2, arg3, arg4);
+    vmaxset(vmax);
+
+    return retval;
+}
+
+SEXP do_earg_dotcall_simple5 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5, SEXP rho) {
+
+    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
+    //   in theory this builtin could be called with an incorrect type
+    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    SEXP retval = R_NilValue;
+    const void *vmax = vmaxget();
+    VarFun fun = rns->symbol.call->fun;
+    retval = (SEXP)fun(arg1, arg2, arg3, arg4, arg5);
+    vmaxset(vmax);
+
+    return retval;
+}
+
+SEXP do_earg_dotcall_simple6 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5, SEXP arg6, SEXP rho) {
+
+    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
+    //   in theory this builtin could be called with an incorrect type
+    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    SEXP retval = R_NilValue;
+    const void *vmax = vmaxget();
+    VarFun fun = rns->symbol.call->fun;
+    retval = (SEXP)fun(arg1, arg2, arg3, arg4, arg5, arg6);
+    vmaxset(vmax);
+
+    return retval;
+}
+
 /*  Call dynamically loaded "internal" graphics functions
     .External.graphics (used in graphics) and  .Call.graphics (used in grid).
 

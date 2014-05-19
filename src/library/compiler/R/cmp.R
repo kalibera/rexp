@@ -2240,7 +2240,6 @@ setInlineHandler(".Internal", function(e, cb, cntxt) {
     sym <- ee[[1]]
     if (.Internal(is.builtin.internal(sym))) {
         cmpBuiltin(ee, cb, cntxt, internal = TRUE, explicitArgs = .Internal(internal.supports.earg(sym)))
-#        cmpBuiltin(ee, cb, cntxt, internal = TRUE, explicitArgs = -1)
     }
     else {
         cmpSpecial(e, cb, cntxt)
@@ -2564,7 +2563,17 @@ inlineSimpleNativeCall <- function(e, name, def) {
 
     nativeSymbolName <- as.character(b[[2]])
     nativeSymbolArg <- loadNativeSymbol(package, nativeSymbolName, length(b) - 2)
-    as.call(c(list(b[[1]], nativeSymbolArg), args))
+
+    ncallSymbol <- b[[1]]
+    ncallName <- as.character(ncallSymbol)
+    nargs = length(args)
+
+    if (ncallName == ".Call" && nargs <= 7) {
+      ncallName <- paste0(".Call.Simple", nargs)
+      ncallSymbol <- as.symbol(ncallName)
+    }
+
+    as.call(c(list(ncallSymbol, nativeSymbolArg), args))
 }
 
 cmpSimpleInternal <- function(e, cb, cntxt) {
