@@ -3405,9 +3405,14 @@ The same inlining mechanism is implemented for all native calls:
 
 <<[[inlineSimpleNativeCall]] function>>=
 
-loadNativeSymbol <- function(ns, name) {
+loadNativeSymbol <- function(ns, name, expectedNargs) {
     res <- getFromNamespace(name, ns)$address
-    attr(res, "origin") <- as.call(list(loadNativeSymbol, ns, name))
+
+    symbolNfo <- .Internal(getRegisteredSymbolInfo(res))
+    if (symbolNfo$nargs != expectedNargs) {
+	stop("A registered native symbol requires a different number of arguments after de-serialization.")
+    }
+    attr(res, "origin") <- as.call(list(loadNativeSymbol, ns, name, expectedNargs))
     res
 }
 
@@ -3430,7 +3435,7 @@ inlineSimpleNativeCall <- function(e, name, def) {
     args <- lapply(as.list(b[c(-1,-2)]), subst)
 
     nativeSymbolName <- as.character(b[[2]])
-    nativeSymbolArg <- loadNativeSymbol(package, nativeSymbolName)
+    nativeSymbolArg <- loadNativeSymbol(package, nativeSymbolName, length(b) - 2)
     as.call(c(list(b[[1]], nativeSymbolArg), args))
 }
 @ %def inlineSimpleNativeCall
@@ -3573,6 +3578,14 @@ is.simpleNative <- function(wname, def, iface = NULL) {
     if (!exists(nativeSymbolName, envir = ns, inherits = FALSE) || exists(nativeSymbolName, getNamespaceInfo(ns, "exports")) || 
         !bindingIsLocked(nativeSymbolName, ns)) {
 
+      return (FALSE)
+    }
+
+    symbolAddress <- getFromNamespace(nativeSymbolName, ns)$address
+    symbolNfo <- .Internal(getRegisteredSymbolInfo(symbolAddress))
+    symbolNargs <- symbolNfo$nargs
+
+    if (symbolNargs != (length(wbody) - 2)) {
       return (FALSE)
     }
 

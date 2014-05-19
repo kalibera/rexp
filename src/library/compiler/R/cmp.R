@@ -2487,6 +2487,14 @@ is.simpleNative <- function(wname, def, iface = NULL) {
       return (FALSE)
     }
 
+    symbolAddress <- getFromNamespace(nativeSymbolName, ns)$address
+    symbolNfo <- .Internal(getRegisteredSymbolInfo(symbolAddress))
+    symbolNargs <- symbolNfo$nargs
+
+    if (symbolNargs != (length(wbody) - 2)) {
+      return (FALSE)
+    }
+
     formalsNames <- names(formals(def))
     if (!simpleArgs(wbody[-1], formalsNames) || nativeSymbolName %in% formalsNames) {
       return (FALSE)
@@ -2514,9 +2522,14 @@ inlineSimpleInternalCall <- function(e, def) {
 }
 
 
-loadNativeSymbol <- function(ns, name) {
+loadNativeSymbol <- function(ns, name, expectedNargs) {
     res <- getFromNamespace(name, ns)$address
-    attr(res, "origin") <- as.call(list(loadNativeSymbol, ns, name))
+
+    symbolNfo <- .Internal(getRegisteredSymbolInfo(res))
+    if (symbolNfo$nargs != expectedNargs) {
+        stop("A registered native symbol requires a different number of arguments after de-serialization.")
+    }
+    attr(res, "origin") <- as.call(list(loadNativeSymbol, ns, name, expectedNargs))
     res
 }
 
@@ -2539,7 +2552,7 @@ inlineSimpleNativeCall <- function(e, name, def) {
     args <- lapply(as.list(b[c(-1,-2)]), subst)
 
     nativeSymbolName <- as.character(b[[2]])
-    nativeSymbolArg <- loadNativeSymbol(package, nativeSymbolName)
+    nativeSymbolArg <- loadNativeSymbol(package, nativeSymbolName, length(b) - 2)
     as.call(c(list(b[[1]], nativeSymbolArg), args))
 }
 
