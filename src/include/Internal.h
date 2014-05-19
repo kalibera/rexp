@@ -206,6 +206,8 @@ SEXP do_getGraphicsEventEnv(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getlocale(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getRegisteredRoutines(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getSymbolInfo(SEXP, SEXP, SEXP, SEXP);
+SEXP do_getRegisteredSymbolInfo(SEXP call, SEXP op, SEXP args, SEXP rho);
+SEXP do_earg_getRegisteredSymbolInfo(SEXP call, SEXP op, SEXP arg_x, SEXP rho);
 SEXP do_getRestart(SEXP, SEXP, SEXP, SEXP);
 SEXP do_gettext(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getwd(SEXP, SEXP, SEXP, SEXP);

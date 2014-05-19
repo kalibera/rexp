@@ -1330,6 +1330,66 @@ do_getSymbolInfo(SEXP call, SEXP op, SEXP args, SEXP env)
     return sym;
 }
 
+SEXP do_getRegisteredSymbolInfo(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
+    return do_earg_getRegisteredSymbolInfo(call, op, CAR(args), env);
+}
+
+SEXP do_earg_getRegisteredSymbolInfo(SEXP call, SEXP op, SEXP arg, SEXP env) {
+    SEXP rnsArg = arg;
+    
+    if (TYPEOF(rnsArg) != EXTPTRSXP || R_ExternalPtrTag(rnsArg) != R_registered_native_symbol) {
+      error(_("first argument must be a registered native symbol"));
+    }
+    
+    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(rnsArg);
+    char *name;
+    int nargs;
+    char *iface;
+    
+    switch(rns->type) {
+      case R_C_SYM:
+        name = rns->symbol.c->name;
+        nargs = rns->symbol.c->numArgs;
+        iface = ".C";
+        break;
+      case R_FORTRAN_SYM:
+        name = rns->symbol.fortran->name;
+        nargs = rns->symbol.fortran->numArgs;
+        iface = ".Fortran";
+        break;
+      case R_CALL_SYM:
+        name = rns->symbol.call->name;
+        nargs = rns->symbol.call->numArgs;
+        iface = ".Call";
+        break;
+      case R_EXTERNAL_SYM:
+        name = rns->symbol.external->name;
+        nargs = rns->symbol.external->numArgs;
+        iface = ".External";
+        break;
+      default:
+        error(_("unsupported type of registered native symbol"));
+    }
+    
+    SEXP res;
+    PROTECT(res = allocVector(VECSXP, 3));
+    SET_VECTOR_ELT(res, 0, mkString(name));
+    SET_VECTOR_ELT(res, 1, ScalarInteger(nargs));
+    SET_VECTOR_ELT(res, 2, mkString(iface));
+    
+    SEXP resNames;
+    PROTECT(resNames = allocVector(STRSXP,3));
+    SET_STRING_ELT(resNames, 0, mkChar("name"));
+    SET_STRING_ELT(resNames, 1, mkChar("nargs"));
+    SET_STRING_ELT(resNames, 2, mkChar("interface"));
+    setAttrib(res, R_NamesSymbol, resNames);
+    
+    UNPROTECT(2);
+    return res;
+
+}
+
 /* .Internal(getLoadedDLLs()) */
 SEXP attribute_hidden
 do_getDllTable(SEXP call, SEXP op, SEXP args, SEXP env)
