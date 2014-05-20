@@ -279,7 +279,7 @@ static R_INLINE SEXP random3(SEXP sn, SEXP sa, SEXP sb, SEXP sc, ran3 fn, SEXPTY
 	}
 	if (naflag) warning(_("NAs produced"));
 	PutRNGstate();
-	UNPROTECT(2);
+	UNPROTECT(3);
     }
     UNPROTECT(1);
     return x;
