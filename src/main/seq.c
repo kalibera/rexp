@@ -648,7 +648,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SEXP a;
 	PROTECT(a = duplicate(x));
 	if(len != NA_INTEGER && len > 0) a = xlengthgets(a, len);
-	UNPROTECT(4);
+	UNPROTECT(3);
 	return a;
     }
     if (!isVector(x))
