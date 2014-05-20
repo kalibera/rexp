@@ -822,7 +822,7 @@ void setup_Rmainloop(void)
     R_Toplevel.intstack = R_BCIntStackTop;
 #endif
 #ifdef USE_PROMARGS_STACK
-    R_Toplevel.promargsstackend = R_PromargsStackBase;
+    R_Toplevel.promargsstackbase = R_PromargsStackBase;
     R_Toplevel.promargsstacktop = R_PromargsStackTop;
     R_Toplevel.promargsstackend = R_PromargsStackEnd;
 #endif /* USE_PROMARGS_STACK */

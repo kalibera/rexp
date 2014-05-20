@@ -106,7 +106,7 @@ static int gc_count = 0;
 
 #ifdef USE_PROMARGS_STACK
 
-/* #define PAS_ZEROING	 */ /* to speed up crashes in case of code errors */
+/* #define PAS_ZEROING */	/* to speed up crashes in case of code errors */
 /* #define PAS_DEBUGGING */
 /* #define PAS_INFO */ /* just print info about malloc / free for promargs stack */
 
@@ -2069,23 +2069,30 @@ void dumpPromargStack() {
   }
 }
 
+/*
+  Expands the promargs stack and moves the current position to the first
+  newly allocated entry.  Hence, if called with a nonfull stack, some
+  entries will remain unused.
+*/
+
 void expandPromargsStack() {
 
 #ifdef PAS_DEBUGGING
   fprintf(stderr, "Expanding promargs stack...\n");
   dumpPromargStack();
-#endif  
+#endif
   
   int first = (promargs_stack_first == NULL);
 
   if (!first) {
     SEXPREC *curHeader = R_PromargsStackBase - 1;
-    if (PASNEXT(curHeader) != NULL) {
+    SEXPREC *nextBase = PASNEXT(curHeader);
+    if (nextBase != NULL) {
       /* there is one more stack block, already allocated */
       
-      R_PromargsStackBase = PASNEXT(curHeader);
-      R_PromargsStackEnd = PASEND(R_PromargsStackBase - 1);
-      R_PromargsStackTop = R_PromargsStackBase;
+      R_PromargsStackBase = nextBase;
+      R_PromargsStackEnd = PASEND(nextBase - 1);
+      R_PromargsStackTop = nextBase;
       
 #ifdef PAS_ZEROING
       bzero(R_PromargsStackBase, (R_PromargsStackEnd - R_PromargsStackBase) * sizeof(SEXPREC));
@@ -2199,7 +2206,7 @@ void cleanupPromargsStack() {
   }
 
 #ifdef PAS_DEBUGGING  
-  fprintf(stderr, "Cleaned up promargs stack (2)\n");
+  fprintf(stderr, "Cleaned up promargs stack\n");
   dumpPromargStack();
 #endif  
 
@@ -2225,6 +2232,12 @@ void switchPromargsStack(SEXPREC *base, SEXPREC *top, SEXPREC *end) {
 /* slow version */
 void releasePromargs(SEXPREC *newTop) {
 
+#ifdef PAS_DEBUGGING
+  fprintf(stderr, "Releasing promargs (slow), new top is %p...\n", newTop);
+  dumpPromargStack();
+#endif
+
+
   SEXPREC *base;
   int passedCurrentBlock = 0;
   for (base = promargs_stack_first; base != NULL && !passedCurrentBlock; base = PASNEXT(base - 1)) {
@@ -2239,6 +2252,11 @@ void releasePromargs(SEXPREC *newTop) {
       R_PromargsStackBase = base;
       R_PromargsStackTop = newTop;
       R_PromargsStackEnd = end;
+
+#ifdef PAS_DEBUGGING
+      fprintf(stderr, "Released promargs (slow)\n");
+      dumpPromargStack();
+#endif
       return ;
     }
   }
