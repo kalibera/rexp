@@ -434,6 +434,8 @@ SEXP attribute_hidden matchUnnamedArgsCreateEnv(SEXP formals, SEXP supplied, SEX
                 SET_TYPEOF(s, DOTSXP);
                 SETCAR(dots, s);
                 s = R_NilValue;
+            } else {
+                SET_MISSING(dots, 1);
             }
             prevS = dots;
             f = CDR(f);
@@ -550,12 +552,13 @@ SEXP attribute_hidden matchPositionalArgsCreateEnv(SEXP formals, SEXP *supplied,
             for(; rs >= s; rs--) {
                 dotsContent = CONS(*rs, dotsContent); /* FIXME: enabling refcnt? */
             }
-            if (dotsContent != R_NilValue) {
-                SET_TYPEOF(dotsContent, DOTSXP);
-            }
             SEXP dots = CONS_NR(dotsContent, R_NilValue);
             SET_TAG(dots, R_DotsSymbol);
-
+            if (dotsContent != R_NilValue) {
+                SET_TYPEOF(dotsContent, DOTSXP);
+            } else {
+                SET_MISSING(dots, 1);
+            }
             if (a == R_NilValue) {
                 PROTECT(actuals = dots);
             } else {
