@@ -3384,7 +3384,8 @@ loaded.  This binding is locked, the namespace environment is also locked,
 and the [[qnorm]] closure is created within the namespace (at top-level).
 Still, the [[C_qnorm]] symbol could be shadowed after the call is inlined,
 and the compiler will then work incorrectly (it will ignore this
-overshadowing).
+overshadowing).  Moreover, the binding could in theory be unlocked and
+modified, again leading to incorrect behavior with the compiler.
 
 Retrieving the symbol from the namespace, e.g. [[stats:::C_qnorm]] has
 proven to be very slow.  The compiler hence inlines the value of that symbol
