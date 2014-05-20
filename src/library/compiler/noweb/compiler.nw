@@ -1153,7 +1153,7 @@ character vector of the names of variables for which warnings should
 be suppressed.
 <<compiler options data base>>=
 compilerOptions <- new.env(hash = TRUE, parent = emptyenv())
-compilerOptions$optimize <- 2
+compilerOptions$optimize <- 3
 compilerOptions$suppressAll <- FALSE
 compilerOptions$suppressUndefined <-
     c(".Generic", ".Method", ".Random.seed", ".self")
