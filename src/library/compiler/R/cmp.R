@@ -2451,7 +2451,7 @@ is.simpleNative <- function(wname, def, iface = NULL) {
     }
 
     ns <- environment(def)
-    if (!isNamespace(ns) || !environmentIsLocked(ns) || !bindingIsLocked(wname, ns) || !identical(getFromNamespace(wname, ns), def)) {
+    if (!isNamespace(ns) || !environmentIsLocked(ns) || !bindingIsLocked(wname, ns) || !identical(get(wname, ns), def)) {
       return (FALSE)
     }
 
@@ -2486,7 +2486,7 @@ is.simpleNative <- function(wname, def, iface = NULL) {
       return (FALSE)
     }
 
-    symbolAddress <- getFromNamespace(nativeSymbolName, ns)$address
+    symbolAddress <- get(nativeSymbolName, ns)$address
     symbolNfo <- .Internal(getRegisteredSymbolInfo(symbolAddress))
     symbolNargs <- symbolNfo$nargs
 
@@ -2532,9 +2532,9 @@ inlineSimpleInternalCall <- function(e, def) {
 }
 
 
+# ns is an environment (not character)
 loadNativeSymbol <- function(ns, name, expectedNargs) {
-    res <- getFromNamespace(name, ns)$address
-
+    res <- get(name, ns)$address
     symbolNfo <- .Internal(getRegisteredSymbolInfo(res))
     if (symbolNfo$nargs != expectedNargs) {
         stop("A registered native symbol requires a different number of arguments after de-serialization.")
@@ -2549,7 +2549,7 @@ inlineSimpleNativeCall <- function(e, name, def) {
       return (NULL)
     }
 
-    package <- environmentName(environment(def)) # also can get this from the inline info
+    package <- environment(def) # also can get this from the inline info
     forms <- formals(def)
     fnames <- names(forms)
     b <- body(def)
