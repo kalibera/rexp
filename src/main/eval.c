@@ -4195,7 +4195,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 
 #else /* not USE_PROMARGS_STACK */
   #define CREATE_CALLARG_CELL(v) CONS_NR(v, R_NilValue)
-  #define CREATE_CALLARG_2CELLS(u,v) allocateCallargTupe(u, v)
+  #define CREATE_CALLARG_2CELLS(u,v) allocateCallargTuple(u, v)
   #define CREATE_CALLARG_3CELLS(u,v,w) allocateCallargTriple(u, v, w)
   #define CREATE_CALLARG_3VCELLS(u,v,w) allocateCallargTripleLastValue(u, v, w)
   #define CREATE_CALLARG_4VCELLS(u,v,w,x) allocateCallargQuadrupleLastValue(u, v, w, x)
