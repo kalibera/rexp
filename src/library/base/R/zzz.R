@@ -59,6 +59,13 @@ assign(".Fortran",
        function(.NAME, ..., NAOK = FALSE, DUP = TRUE, PACKAGE, ENCODING) NULL,
        envir = .ArgsEnv)
 assign(".Call", function(.NAME, ..., PACKAGE) NULL, envir = .ArgsEnv)
+assign(".Call.Simple0", function(.NAME) NULL, envir = .ArgsEnv)
+assign(".Call.Simple1", function(.NAME, arg1) NULL, envir = .ArgsEnv)
+assign(".Call.Simple2", function(.NAME, arg1, arg2) NULL, envir = .ArgsEnv)
+assign(".Call.Simple3", function(.NAME, arg1, arg2, arg3) NULL, envir = .ArgsEnv)
+assign(".Call.Simple4", function(.NAME, arg1, arg2, arg3, arg4) NULL, envir = .ArgsEnv)
+assign(".Call.Simple5", function(.NAME, arg1, arg2, arg3, arg4, arg5) NULL, envir = .ArgsEnv)
+assign(".Call.Simple6", function(.NAME, arg1, arg2, arg3, arg4, arg5, arg6) NULL, envir = .ArgsEnv)
 assign(".Call.graphics", function(.NAME, ..., PACKAGE) NULL, envir = .ArgsEnv)
 assign(".External", function(.NAME, ..., PACKAGE) NULL, envir = .ArgsEnv)
 assign(".External2", function(.NAME, ..., PACKAGE) NULL, envir = .ArgsEnv)

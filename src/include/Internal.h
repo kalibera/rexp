@@ -137,6 +137,7 @@ SEXP do_dircreate(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dirname(SEXP, SEXP, SEXP, SEXP);
 SEXP do_docall(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotcall(SEXP, SEXP, SEXP, SEXP);
+SEXP do_dotcall_simple(SEXP, SEXP, SEXP, SEXP);
 SEXP do_earg_dotcall_simple0(SEXP, SEXP, SEXP, SEXP);
 SEXP do_earg_dotcall_simple1(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP do_earg_dotcall_simple2(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);

@@ -1220,12 +1220,59 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     return retval;
 }
 
+SEXP attribute_hidden do_dotcall_simple(SEXP call, SEXP op, SEXP args, SEXP rho) {
 
-SEXP do_earg_dotcall_simple0 (SEXP call, SEXP op, SEXP argSymbol, SEXP rho) {
+    checkArity(op, args);
 
-    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
-    //   in theory this builtin could be called with an incorrect type
-    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    SEXP argSymbol = CAR(args);
+    SEXP arg1 = CDR(args);
+    if (arg1 == R_NilValue) {
+        return do_earg_dotcall_simple0(call, op, argSymbol, rho);
+    }
+    SEXP arg2 = CDR(arg1);
+    if (arg2 == R_NilValue) {
+        return do_earg_dotcall_simple1(call, op, argSymbol, arg1, rho);
+    }
+    SEXP arg3 = CDR(arg2);
+    if (arg3 == R_NilValue) {
+        return do_earg_dotcall_simple2(call, op, argSymbol, arg1, arg2, rho);
+    }
+    SEXP arg4 = CDR(arg3);
+    if (arg4 == R_NilValue) {
+        return do_earg_dotcall_simple3(call, op, argSymbol, arg1, arg2, arg3, rho);
+    }
+    SEXP arg5 = CDR(arg4);
+    if (arg5 == R_NilValue) {
+        return do_earg_dotcall_simple4(call, op, argSymbol, arg1, arg2, arg3, arg4, rho);
+    }
+    SEXP arg6 = CDR(arg5);
+    if (arg6 == R_NilValue) {
+        return do_earg_dotcall_simple5(call, op, argSymbol, arg1, arg2, arg3, arg4, arg5, rho);
+    }
+    SEXP arg7 = CDR(arg6);
+    if (arg7 == R_NilValue) {
+        return do_earg_dotcall_simple6(call, op, argSymbol, arg1, arg2, arg3, arg4, arg5, arg6, rho);
+    }
+    return do_dotcall(call, op, args, rho); /* fall back to the slow case, for now */
+}
+
+static R_RegisteredNativeSymbol* checkAndGetRNS(SEXP call, SEXP argSymbol) {
+    /*
+        The compiler makes sure that argSymbol is registered native symbol,
+        but in theory this builtin could be called with an incorrect type,
+        and the regression tests do.
+    */
+
+    if (TYPEOF(argSymbol) == EXTPTRSXP && R_ExternalPtrTag(argSymbol) == R_registered_native_symbol) {
+        return (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    }
+    errorcall(call,
+          _("first argument must be a registered native symbol reference"));
+}
+
+SEXP attribute_hidden do_earg_dotcall_simple0 (SEXP call, SEXP op, SEXP argSymbol, SEXP rho) {
+
+    R_RegisteredNativeSymbol *rns = checkAndGetRNS(call, argSymbol);
     SEXP retval = R_NilValue;
     const void *vmax = vmaxget();
     VarFun fun = rns->symbol.call->fun;
@@ -1235,11 +1282,9 @@ SEXP do_earg_dotcall_simple0 (SEXP call, SEXP op, SEXP argSymbol, SEXP rho) {
     return retval;
 }
 
-SEXP do_earg_dotcall_simple1 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP rho) {
+SEXP attribute_hidden do_earg_dotcall_simple1 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP rho) {
 
-    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
-    //   in theory this builtin could be called with an incorrect type
-    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    R_RegisteredNativeSymbol *rns = checkAndGetRNS(call, argSymbol);
     SEXP retval = R_NilValue;
     const void *vmax = vmaxget();
     VarFun fun = rns->symbol.call->fun;
@@ -1249,11 +1294,9 @@ SEXP do_earg_dotcall_simple1 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEX
     return retval;
 }
 
-SEXP do_earg_dotcall_simple2 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP rho) {
+SEXP attribute_hidden do_earg_dotcall_simple2 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP rho) {
 
-    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
-    //   in theory this builtin could be called with an incorrect type
-    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    R_RegisteredNativeSymbol *rns = checkAndGetRNS(call, argSymbol);
     SEXP retval = R_NilValue;
     const void *vmax = vmaxget();
     VarFun fun = rns->symbol.call->fun;
@@ -1263,11 +1306,9 @@ SEXP do_earg_dotcall_simple2 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEX
     return retval;
 }
 
-SEXP do_earg_dotcall_simple3 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP rho) {
+SEXP attribute_hidden do_earg_dotcall_simple3 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP rho) {
 
-    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
-    //   in theory this builtin could be called with an incorrect type
-    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    R_RegisteredNativeSymbol *rns = checkAndGetRNS(call, argSymbol);
     SEXP retval = R_NilValue;
     const void *vmax = vmaxget();
     VarFun fun = rns->symbol.call->fun;
@@ -1277,11 +1318,9 @@ SEXP do_earg_dotcall_simple3 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEX
     return retval;
 }
 
-SEXP do_earg_dotcall_simple4 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP rho) {
+SEXP attribute_hidden do_earg_dotcall_simple4 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP rho) {
 
-    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
-    //   in theory this builtin could be called with an incorrect type
-    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    R_RegisteredNativeSymbol *rns = checkAndGetRNS(call, argSymbol);
     SEXP retval = R_NilValue;
     const void *vmax = vmaxget();
     VarFun fun = rns->symbol.call->fun;
@@ -1291,11 +1330,9 @@ SEXP do_earg_dotcall_simple4 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEX
     return retval;
 }
 
-SEXP do_earg_dotcall_simple5 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5, SEXP rho) {
+SEXP attribute_hidden do_earg_dotcall_simple5 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5, SEXP rho) {
 
-    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
-    //   in theory this builtin could be called with an incorrect type
-    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    R_RegisteredNativeSymbol *rns = checkAndGetRNS(call, argSymbol);
     SEXP retval = R_NilValue;
     const void *vmax = vmaxget();
     VarFun fun = rns->symbol.call->fun;
@@ -1305,11 +1342,9 @@ SEXP do_earg_dotcall_simple5 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEX
     return retval;
 }
 
-SEXP do_earg_dotcall_simple6 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5, SEXP arg6, SEXP rho) {
+SEXP attribute_hidden do_earg_dotcall_simple6 (SEXP call, SEXP op, SEXP argSymbol, SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5, SEXP arg6, SEXP rho) {
 
-    // FIXME: the compiler makes sure that argSymbol is registered native symbol, but
-    //   in theory this builtin could be called with an incorrect type
-    R_RegisteredNativeSymbol *rns = (R_RegisteredNativeSymbol *) R_ExternalPtrAddr(argSymbol);
+    R_RegisteredNativeSymbol *rns = checkAndGetRNS(call, argSymbol);
     SEXP retval = R_NilValue;
     const void *vmax = vmaxget();
     VarFun fun = rns->symbol.call->fun;
