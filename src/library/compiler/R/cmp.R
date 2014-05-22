@@ -22,7 +22,7 @@
 ##
 
 compilerOptions <- new.env(hash = TRUE, parent = emptyenv())
-compilerOptions$optimize <- 2
+compilerOptions$optimize <- 3
 compilerOptions$suppressAll <- FALSE
 compilerOptions$suppressUndefined <-
     c(".Generic", ".Method", ".Random.seed", ".self")
@@ -2221,7 +2221,7 @@ is.simpleNative <- function(wname, def, iface = NULL) {
     }
 
     ns <- environment(def)
-    if (!isNamespace(ns) || !environmentIsLocked(ns) || !bindingIsLocked(wname, ns) || !identical(getFromNamespace(wname, ns), def)) {
+    if (!isNamespace(ns) || !environmentIsLocked(ns) || !bindingIsLocked(wname, ns) || !identical(get(wname, ns), def)) {
       return (FALSE)
     }
 
@@ -2283,8 +2283,9 @@ inlineSimpleInternalCall <- function(e, def) {
 }
 
 
-loadNativeSymbol <- function(ns, name) { 
-    res <- getFromNamespace(name, ns)$address
+# ns is an environment (not character)
+loadNativeSymbol <- function(ns, name) {
+    res <- get(name, ns)$address
     attr(res, "origin") <- as.call(list(loadNativeSymbol, ns, name))
     res
 }
@@ -2295,13 +2296,7 @@ inlineSimpleNativeCall <- function(e, name, def) {
       return (NULL)
     }
 
-    package <- environmentName(environment(def)) # also can get this from the inline info
-      #   # FIXME: info is retrieved again on the call stack (already when looking for inlining handler)
-      #   name <- as.character(e[[1]])
-      #   info <- getInlineInfo(name, cntxt)
-      #   info$package
-
-
+    package <- environment(def) # also can get this from the inline info
     forms <- formals(def)
     fnames <- names(forms)
     b <- body(def)
@@ -2879,7 +2874,7 @@ simpleInternals <- function(pos = "package:base") {
     }
 }
 
-simpleNatives <- function(ns = "stats", iface = ".External") {
+simpleNatives <- function(ns = "stats", iface = NULL) {
     pos = paste("package:", ns, sep="")
     names <- ls(pos = pos, all = T)
     if (length(names) == 0)
