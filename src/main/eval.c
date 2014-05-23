@@ -1356,21 +1356,63 @@ SEXP R_execMethod(SEXP op, SEXP rho)
 	SET_FRAME(newrho, CONS(val, FRAME(newrho)));
 	SET_TAG(FRAME(newrho), symbol);
 	if (missing) {
-	    SET_MISSING(FRAME(newrho), missing);
-	    if (TYPEOF(val) == PROMSXP && PRENV(val) == rho) {
-		SEXP deflt;
-		SET_PRENV(val, newrho);
-		/* find the symbol in the method, copy its expression
-		 * to the promise */
-		for(deflt = CAR(op); deflt != R_NilValue; deflt = CDR(deflt)) {
-		    if(TAG(deflt) == symbol)
-			break;
-		}
-		if(deflt == R_NilValue)
-		    error(_("symbol \"%s\" not in environment of method"),
-			  CHAR(PRINTNAME(symbol)));
-		SET_PRCODE(val, CAR(deflt));
+	    switch(TYPEOF(val)) {
+                case NILSXP:
+                case LISTSXP:
+                case LGLSXP:
+                case INTSXP:
+                case REALSXP:
+                case STRSXP:
+                case CPLXSXP:
+                case RAWSXP:
+                case S4SXP:
+                case SPECIALSXP:
+                case BUILTINSXP:
+                case ENVSXP:
+                case CLOSXP:
+                case VECSXP:
+                case EXTPTRSXP:
+                case WEAKREFSXP:
+                case EXPRSXP:
+                    {
+                        /* turn into a promise for the case that the method overrides defaults */
+
+                        if (symbol == R_DotsSymbol) {
+                            break;
+                        }
+                        SEXP deflt;
+                        for(deflt = CAR(op); deflt != R_NilValue; deflt = CDR(deflt)) { /* FIXME: why is the loop needed? */
+                            if(TAG(deflt) == symbol) break;
+                        }
+                        if(deflt == R_NilValue)
+                            error(_("symbol \"%s\" not in environment of method"), CHAR(PRINTNAME(symbol)));
+                        val = mkPROMISEorConst(CAR(deflt), newrho);
+                        break;
+                    }
+
+	        case PROMSXP:
+	            {
+	                if (PRENV(val) == rho) {
+                            SEXP deflt;
+                            SET_PRENV(val, newrho);
+                            /* find the symbol in the method, copy its expression
+                            * to the promise */
+                            for(deflt = CAR(op); deflt != R_NilValue; deflt = CDR(deflt)) { /* FIXME: why is the loop needed? */
+		                if(TAG(deflt) == symbol) break;
+                            }
+                            if(deflt == R_NilValue)
+                                error(_("symbol \"%s\" not in environment of method"), CHAR(PRINTNAME(symbol)));
+                            SET_PRCODE(val, CAR(deflt));
+                        }
+                        break;
+                    }
 	    }
+            SET_FRAME(newrho, CONS(val, FRAME(newrho)));
+	    SET_TAG(FRAME(newrho), symbol);
+	    SET_MISSING(FRAME(newrho), missing);
+	} else { /* val is not missing, just add it to the new environment */
+	    SET_FRAME(newrho, CONS(val, FRAME(newrho)));
+	    SET_TAG(FRAME(newrho), symbol);
 	}
     }
 
