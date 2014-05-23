@@ -240,7 +240,6 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
    two optional arguments (deep and pvec - see above), positional argument
    matching only */
 SEXP attribute_hidden do_inspect(SEXP call, SEXP op, SEXP args, SEXP env) {
-//    *((int *)0) = 1; // crash
     SEXP obj = CAR(args);
     int deep = -1;
     int pvec = 20;
