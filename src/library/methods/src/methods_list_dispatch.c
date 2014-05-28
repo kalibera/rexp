@@ -44,7 +44,7 @@ extern int snprintf (char *s, size_t n, const char *format, ...);
 static SEXP do_dispatch(SEXP fname, SEXP ev, SEXP mlist, int firstTry,
 			int evalArgs);
 static SEXP R_loadMethod(SEXP f, SEXP fname, SEXP ev);
-static SEXP R_selectByPackage(SEXP f, SEXP classes, int nargs);
+static SEXP R_selectByPackage(SEXP f, SEXP* classes, int nargs);
 
 /* objects, mostly symbols, that are initialized once to save a little time */
 static int initialized = 0;
@@ -328,7 +328,7 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
 	}
 	ptr = strcpy(ptr, "#"); ptr +=1;
 	ptr = strcpy(ptr, "missing"); ptr += strlen("missing");
-    }	    
+    }
     value = findVarInFrame(mtable, install(buf));
     if(value == R_UnboundValue)
 	value = R_NilValue;
@@ -763,34 +763,50 @@ static SEXP R_loadMethod(SEXP def, SEXP fname, SEXP ev)
     }
 }
 
-static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
-    int lwidth, i; SEXP thisPkg;
-    char *buf, *bufptr;
-    lwidth = 0;
-    for(i = 0; i<nargs; i++) {
-	thisPkg = PACKAGE_SLOT(VECTOR_ELT(classes, i));
-	if(thisPkg == R_NilValue)
-	    thisPkg = s_base;
-	lwidth += strlen(STRING_VALUE(thisPkg)) + 1;
-    }	
-    /* make the label */
-    const void *vmax = vmaxget();
-    buf = (char *) R_alloc(lwidth + 1, sizeof(char));
-    bufptr = buf;
-    for(i = 0; i<nargs; i++) {
-	if(i > 0)
-	    *bufptr++ = '#';
-	thisPkg = PACKAGE_SLOT(VECTOR_ELT(classes, i));
-	if(thisPkg == R_NilValue)
-	    thisPkg = s_base;
-	strcpy(bufptr, STRING_VALUE(thisPkg));
-	while(*bufptr)
-	    bufptr++;
-    }
+static SEXP R_selectByPackage(SEXP table, SEXP* classes, int nargs) {
+
+    SEXP sym, thisPkg;
+
     /* look up the method by package -- if R_unboundValue, will go on
      to do inherited calculation */
-    SEXP sym = install(buf);
-    vmaxset(vmax);
+
+    if (nargs == 1) {
+        thisPkg = PACKAGE_SLOT(classes[0]);
+        if(thisPkg == R_NilValue)
+            thisPkg = s_base;
+        sym = installCharSXP(asChar(thisPkg));
+    } else {
+
+        int lwidth, i;
+        char *buf, *bufptr;
+        lwidth = 0;
+
+        for(i = 0; i<nargs; i++) {
+            thisPkg = PACKAGE_SLOT(classes[i]);
+	    if(thisPkg == R_NilValue)
+	        thisPkg = s_base;
+            lwidth += LENGTH(asChar(thisPkg));
+        }
+
+        /* make the label */
+        const void *vmax = vmaxget();
+        buf = (char *) R_alloc(lwidth + nargs + 1, sizeof(char));
+        bufptr = buf;
+        for(i = 0; i<nargs; i++) {
+	    if(i > 0)
+	        *bufptr++ = '#';
+	    thisPkg = PACKAGE_SLOT(classes[i]);
+	    if(thisPkg == R_NilValue)
+	        thisPkg = s_base;
+            const char *src = STRING_VALUE(thisPkg);
+            while (*src) {
+                *bufptr++ = *src++;
+            }
+        }
+        *bufptr = 0;
+        sym = install(buf);
+        vmaxset(vmax);
+    }
     return findVarInFrame(table, sym);
 }
 
@@ -884,7 +900,7 @@ SEXP R_getClassFromCache(SEXP class, SEXP table)
     } else /* assumes a class def, but might check */
 	return class;
 }
-	
+
 
 static SEXP do_inherited_table(SEXP class_objs, SEXP fdef, SEXP mtable, SEXP ev)
 {
@@ -939,7 +955,7 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 {
     static SEXP R_mtable = NULL, R_allmtable, R_sigargs, R_siglength, R_dots;
     int nprotect = 0;
-    SEXP mtable, classes, thisClass = R_NilValue /* -Wall */, sigargs, 
+    SEXP mtable, thisClass = R_NilValue /* -Wall */, sigargs,
 	siglength, f_env = R_NilValue, method, f, val = R_NilValue;
     char *buf, *bufptr;
     int nargs, i, lwidth = 0;
@@ -978,7 +994,9 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
        mtable == R_UnboundValue)
 	error("generic \"%s\" seems not to have been initialized for table dispatch---need to have '.SigArgs' and '.AllMtable' assigned in its environment");
     nargs = asInteger(siglength);
-    PROTECT(classes = allocVector(VECSXP, nargs)); nprotect++;
+
+    SEXP classes[nargs];
+
     if (nargs > LENGTH(sigargs))
 	error("'.SigArgs' is shorter than '.SigLength' says it should be");
     for(i = 0; i < nargs; i++) {
@@ -1002,27 +1020,48 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 		      CHAR(PRINTNAME(arg_sym)),CHAR(asChar(fname)),
 		      R_curErrorBuf());
 	}
-	SET_VECTOR_ELT(classes, i, thisClass);
-	lwidth += strlen(STRING_VALUE(thisClass)) + 1;
+	classes[i] = PROTECT(thisClass); nprotect++;
+	/* it is not great protecting each argument individually, but perhaps cheaper than allocating
+	   from the heap */
     }
-    /* make the label */
-    const void *vmax = vmaxget();
-    buf = (char *) R_alloc(lwidth + 1, sizeof(char));
-    bufptr = buf;
-    for(i = 0; i<nargs; i++) {
-	if(i > 0)
-	    *bufptr++ = '#';
-	thisClass = VECTOR_ELT(classes, i);
-	strcpy(bufptr, STRING_VALUE(thisClass));
-	while(*bufptr)
-	    bufptr++;
+
+    SEXP signature;
+    if (nargs == 1) { /* this is quite common */
+        signature = installCharSXP(asChar(classes[0]));
+    } else {
+        for(int i = 0; i < nargs; i++) {
+            lwidth += LENGTH(asChar(classes[i]));
+        }
+        /* make the label */
+        const void *vmax = vmaxget();
+        buf = (char *) R_alloc(lwidth + nargs + 1, sizeof(char));
+        bufptr = buf;
+        for(i = 0; i < nargs; i++) {
+	    if(i > 0) {
+	        *bufptr++ = '#';
+            }
+	    const char *src = STRING_VALUE(classes[i]);
+	    while (*src) {
+	        *bufptr++ = *src++;
+            }
+        }
+        *bufptr = 0;
+        signature = install(buf);
+        vmaxset(vmax);
     }
-    method = findVarInFrame(mtable, install(buf));
-    vmaxset(vmax);
-    if(DUPLICATE_CLASS_CASE(method))
+    method = findVarInFrame(mtable, signature);
+    if(DUPLICATE_CLASS_CASE(method)) {
 	method = R_selectByPackage(method, classes, nargs);
+    }
+
     if(method == R_UnboundValue) {
-	method = do_inherited_table(classes, fdef, mtable, ev);
+        SEXP classesList;
+        PROTECT(classesList = allocVector(VECSXP, nargs));
+        nprotect++;
+        for(i = 0; i < nargs; i++) {
+            SET_VECTOR_ELT(classesList, i, classes[i]);
+        }
+	method = do_inherited_table(classesList, fdef, mtable, ev);
     }
     /* the rest of this is identical to R_standardGeneric;
        hence the f=method to remind us  */
