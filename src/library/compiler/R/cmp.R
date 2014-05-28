@@ -3140,7 +3140,7 @@ disassemble <- function(code) {
 ##
 
 simpleInternals <- function(pos = "package:base") {
-    names <- ls(pos = pos, all = T)
+    names <- ls(pos = pos, all = TRUE)
     if (length(names) == 0)
         character(0)
     else {
@@ -3152,7 +3152,7 @@ simpleInternals <- function(pos = "package:base") {
 
 simpleNatives <- function(ns = "stats", iface = NULL) {
     pos = paste("package:", ns, sep="")
-    names <- ls(pos = pos, all = T)
+    names <- ls(pos = pos, all = TRUE)
     if (length(names) == 0)
         character(0)
     else {
