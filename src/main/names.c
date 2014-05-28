@@ -1193,6 +1193,53 @@ SEXP install(const char *name)
     return (sym);
 }
 
+/*
+  like install, but the string is given as a CHARSXP
+  one could use install(CHAR(charSXP)) instead, but this is more efficient
+*/
+
+SEXP installCharSXP(SEXP charSXP) {
+    int len = LENGTH(charSXP);
+
+    if (len == 0) {
+        error(_("attempt to use zero-length variable name"));
+    }
+    if (len > MAXIDSIZE) {
+	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
+    }
+
+    int hashcode;
+
+    if (HASHASH(charSXP)) {
+        hashcode = HASHVALUE(charSXP);
+    } else {
+        hashcode = R_Newhashpjw(CHAR(charSXP));
+        SET_HASHVALUE(charSXP, hashcode);
+        SET_HASHASH(charSXP, 1);
+    }
+
+    int i = hashcode % HSIZE;
+    SEXP symList;
+    for (symList = R_SymbolTable[i]; symList != R_NilValue; symList = CDR(symList)) {
+        SEXP sym = CAR(symList);
+        if (PRINTNAME(sym) == charSXP) { /* we assume all CHARSXPs are interned/cached */
+            return sym;
+        }
+    }
+/*
+    for (symList = R_SymbolTable[i]; symList != R_NilValue; symList = CDR(symList)) {
+        SEXP sym = CAR(symList);
+        if (!strcmp(CHAR(PRINTNAME(sym)),CHAR(charSXP))) {
+            fprintf(stderr, "Non-interned string detected %s\n", CHAR(charSXP));
+            *((int *)0) = 1;
+        }
+    }
+*/
+    SEXP sym = mkSYMSXP(charSXP, R_UnboundValue);
+    R_SymbolTable[i] = CONS(sym, R_SymbolTable[i]);
+    return sym;
+}
+
 
 /*  do_internal - This is the code for .Internal(). */
 
