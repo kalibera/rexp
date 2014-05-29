@@ -98,6 +98,17 @@ extern0 SEXP    R_dot_Class;  /* ".Class" */
 extern0 SEXP    R_dot_GenericCallEnv;  /* ".GenericCallEnv" */
 extern0 SEXP    R_dot_GenericDefEnv;  /* ".GenericDefEnv" */
 
+extern0 SEXP	R_XSymbol;	/* "x" */
+extern0 SEXP	R_FSymbol;	/* "f" */
+extern0 SEXP	R_dot_NAME;	/* ".NAME" */
+extern0 SEXP	R_ObjectSymbol;	/* "object" */
+extern0 SEXP	R_OnSymbol;	/* "on" */
+extern0 SEXP	R_AlongWithSymbol;	/* "along.with" */
+extern0 SEXP	R_LengthOutSymbol;	/* "length.out" */
+extern0 SEXP	R_EXPRSymbol;	/* "EXPR" */
+extern0	SEXP	R_ExprSymbol;	/* "expr" */
+extern0 SEXP	R_ZSymbol;	/* "z" */
+
 extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 
 
@@ -632,6 +643,8 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define asVecSize		Rf_asVecSize
 # define check_stack_balance	Rf_check_stack_balance
 # define check1arg		Rf_check1arg
+# define check1argX		Rf_check1argX
+# define check1argSymbol	Rf_check1argSymbol
 # define CheckFormals		Rf_CheckFormals
 # define CleanEd		Rf_CleanEd
 # define CoercionWarning       	Rf_CoercionWarning
@@ -832,6 +845,8 @@ SEXP Rf_allocCharsxp(R_len_t);
 SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
 R_xlen_t asVecSize(SEXP x);
 void check1arg(SEXP, SEXP, const char *);
+void check1argX(SEXP, SEXP);
+void check1argSymbol(SEXP, SEXP, SEXP);
 void Rf_checkArityCall(SEXP, SEXP, SEXP);
 void CheckFormals(SEXP);
 void R_check_locale(void);

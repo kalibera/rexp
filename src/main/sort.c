@@ -1481,7 +1481,7 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP fn, prargs, ans;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if(DispatchOrEval(call, op, "xtfrm", args, rho, &ans, 0, 1)) return ans;
     /* otherwise dispatch the default method */

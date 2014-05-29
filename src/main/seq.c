@@ -946,7 +946,7 @@ SEXP attribute_hidden do_seq_along(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     checkArity(op, args);
-    check1arg(args, call, "along.with");
+    check1argSymbol(args, call, R_AlongWithSymbol);
 
     /* Try to dispatch to S3 or S4 methods for 'length'.  For cases
        where no methods are defined this is more efficient than an
@@ -985,7 +985,7 @@ SEXP attribute_hidden do_seq_len(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_xlen_t len;
 
     checkArity(op, args);
-    check1arg(args, call, "length.out");
+    check1argSymbol(args, call, R_LengthOutSymbol);
     if(length(CAR(args)) != 1)
 	warningcall(call, _("first element used of '%s' argument"),
 		    "length.out");

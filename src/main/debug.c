@@ -66,7 +66,7 @@ SEXP attribute_hidden do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_trace(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     find_char_fun
 
@@ -123,7 +123,7 @@ SEXP attribute_hidden do_tracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
     char buffer[21];
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     object = CAR(args);
     if (TYPEOF(object) == CLOSXP ||
@@ -157,7 +157,7 @@ SEXP attribute_hidden do_untracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP object;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     object=CAR(args);
     if (TYPEOF(object) == CLOSXP ||

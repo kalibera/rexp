@@ -296,7 +296,7 @@ SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP env, s = CAR(args);
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     env = CADR(args);
 
@@ -910,7 +910,7 @@ SEXP attribute_hidden do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP x, ans;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     x = CAR(args);
 
@@ -1019,7 +1019,7 @@ SEXP attribute_hidden do_switch(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP x, y, z, w, ans, dflt = NULL;
 
     if (nargs < 1) errorcall(call, _("'EXPR' is missing"));
-    check1arg(args, call, "EXPR");
+    check1argSymbol(args, call, R_EXPRSymbol);
     PROTECT(x = eval(CAR(args), rho));
     if (!isVector(x) || length(x) != 1)
 	errorcall(call, _("EXPR must be a length 1 vector"));

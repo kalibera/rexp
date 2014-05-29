@@ -528,6 +528,41 @@ void attribute_hidden Rf_check1arg(SEXP arg, SEXP call, const char *formal)
 		  supplied, formal);
 }
 
+void attribute_hidden Rf_check1argSymbol(SEXP arg, SEXP call, SEXP formalSymbol)
+{
+    SEXP suppliedSymbol = TAG(arg);
+
+    if (suppliedSymbol == R_NilValue || suppliedSymbol == formalSymbol) {
+        return;
+    }
+
+    SEXP suppliedCharSXP = PRINTNAME(suppliedSymbol);
+    size_t ns = LENGTH(suppliedCharSXP);
+    SEXP formalCharSXP = PRINTNAME(formalSymbol);
+    size_t nf = LENGTH(formalCharSXP);
+    const char *supplied = CHAR(suppliedCharSXP);
+    const char *formal = CHAR(formalCharSXP);
+
+    if (ns <= nf) {
+        if (strncmp(supplied, formal, ns)) { /* supplied is prefix of formal */
+            return;
+        }
+    }
+
+    errorcall(call, _("supplied argument name '%s' does not match '%s'"), supplied, formal);
+}
+
+
+void attribute_hidden Rf_check1argX(SEXP arg, SEXP call)
+{
+    SEXP suppliedSymbol = TAG(arg);
+
+    /* note: a symbol represents a nonempty string */
+    if (suppliedSymbol != R_NilValue && suppliedSymbol != R_XSymbol) {
+        errorcall(call, _("supplied argument name '%s' does not match 'x'"), CHAR(PRINTNAME(suppliedSymbol)));
+    }
+}
+
 
 SEXP nthcdr(SEXP s, int n)
 {
@@ -1740,7 +1775,7 @@ SEXP attribute_hidden do_enc2(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean duped = FALSE;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (!isString(CAR(args)))
 	errorcall(call, "argumemt is not a character vector");

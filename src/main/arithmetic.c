@@ -1185,7 +1185,7 @@ SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP s;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (DispatchGroup("Math", call, op, args, env, &s))
 	return s;
@@ -1250,7 +1250,7 @@ SEXP attribute_hidden do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchGroup("Math", call, op, args, env, &s))
 	return s;
     checkArity(op, args); /* but is -1 in names.c */
-    check1arg(args, call, "x");
+    check1argX(args, call);
     if (isComplex(CAR(args)))
 	errorcall(call, _("unimplemented complex function"));
     return math1(CAR(args), trunc, call);
@@ -1266,7 +1266,7 @@ SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP x, s = R_NilValue /* -Wall */;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
     x = CAR(args);
 
     if (DispatchGroup("Math", call, op, args, env, &s))
@@ -1586,7 +1586,7 @@ SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP res, call2, args2, tmp = R_NilValue /* -Wall */;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (DispatchGroup("Math", call, op, args, env, &res)) return res;
 

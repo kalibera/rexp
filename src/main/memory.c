@@ -3160,7 +3160,7 @@ SEXP attribute_hidden do_gctime(SEXP call, SEXP op, SEXP args, SEXP env)
     if (args == R_NilValue)
 	gctime_enabled = TRUE;
     else {
-	check1arg(args, call, "on");
+	check1argSymbol(args, call, R_OnSymbol);
 	gctime_enabled = asLogical(CAR(args));
     }
     ans = allocVector(REALSXP, 5);

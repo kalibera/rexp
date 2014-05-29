@@ -1401,7 +1401,7 @@ SEXP attribute_hidden do_ascharacter(SEXP call, SEXP op, SEXP args, SEXP rho)
     int type = STRSXP, op0 = PRIMVAL(op);
     char *name = NULL /* -Wall */;
 
-    check1arg(args, call, "x");
+    check1argX(args, call);
     switch(op0) {
     case 0:
 	name = "as.character"; break;
@@ -1577,7 +1577,7 @@ SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
     int i, n;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     args = CAR(args);
     switch (TYPEOF(args)) {
@@ -1928,7 +1928,7 @@ SEXP attribute_hidden do_is_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEXP
 
 SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
     
     return do_is_main(call, op, args, CAR(args), rho);
 }
@@ -2107,7 +2107,7 @@ SEXP attribute_hidden do_isna_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SE
 
 SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
     
     return do_isna_main(call, op, args, CAR(args), rho);
 }
@@ -2229,7 +2229,7 @@ SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return ans;
 
     if(length(args) == 1) {
-	check1arg(args, call, "x");
+	check1argX(args, call);
  	ans = ScalarLogical(anyNA(call, op, args, rho));
    } else {
 	/* This is a primitive, so we manage argument matching ourselves.
@@ -2255,7 +2255,7 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_xlen_t i, n;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (DispatchOrEval(call, op, "is.nan", args, rho, &ans, 1, 1))
 	return(ans);
@@ -2318,7 +2318,7 @@ SEXP attribute_hidden do_isfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_xlen_t i, n;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (DispatchOrEval(call, op, "is.finite", args, rho, &ans, 0, 1))
 	return(ans);
@@ -2378,7 +2378,7 @@ SEXP attribute_hidden do_isinfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_xlen_t i, n;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (DispatchOrEval(call, op, "is.infinite", args, rho, &ans, 0, 1))
 	return(ans);
@@ -2445,7 +2445,7 @@ SEXP attribute_hidden do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP rest, evargs, rfun, tmp;
 
     if (length(args) < 1) errorcall(call, _("'name' is missing"));
-    check1arg(args, call, "name");
+    check1argSymbol(args, call, R_NameSymbol);
     PROTECT(rfun = eval(CAR(args), rho));
     /* zero-length string check used to be here but install gives
        better error message.
@@ -2667,7 +2667,7 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_quote(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    check1arg(args, call, "expr");
+    check1argSymbol(args, call, R_ExprSymbol);
     SEXP val = CAR(args);
     /* Make sure expression has NAMED == 2 before being returning
        in to avoid modification of source code */
@@ -2824,7 +2824,7 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 SEXP attribute_hidden R_do_set_class(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     return R_set_class(CAR(args), CADR(args), call);
 }
@@ -2837,7 +2837,7 @@ SEXP attribute_hidden do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXPTYPE type;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     obj = CAR(args);
 

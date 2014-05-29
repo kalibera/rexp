@@ -442,7 +442,7 @@ SEXP attribute_hidden do_length_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, 
 
 SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho) {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     return do_length_main(call, op, args, CAR(args), rho);
 }

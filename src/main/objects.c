@@ -829,7 +829,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_unclass(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     switch(TYPEOF(CAR(args))) {
     case ENVSXP:
@@ -1172,7 +1172,7 @@ SEXP attribute_hidden do_standardGeneric(SEXP call, SEXP op, SEXP args, SEXP env
     SEXP arg, value, fdef; R_stdGen_ptr_t ptr = R_get_standardGeneric_ptr();
 
     checkArity(op, args); /* set to -1 */
-    check1arg(args, call, "f");
+    check1argSymbol(args, call, R_FSymbol);
 
     if(!ptr) {
 	warningcall(call,

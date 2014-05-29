@@ -1098,6 +1098,17 @@ static void SymbolShortcuts(void)
     R_CsingleSymbol = install("Csingle");
     R_OriginSymbol = install("origin");
 
+    R_XSymbol = install("x");
+    R_FSymbol = install("f");
+    R_dot_NAME = install(".NAME");
+    R_ObjectSymbol = install("object");
+    R_OnSymbol = install("on");
+    R_AlongWithSymbol = install("along.with");
+    R_LengthOutSymbol = install("length.out");
+    R_EXPRSymbol = install("EXPR");
+    R_ExprSymbol = install("expr");
+    R_ZSymbol = install("z");
+
 }
 
 static void CharSXPShortcuts(void) {

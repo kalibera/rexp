@@ -536,7 +536,7 @@ SEXP classgets(SEXP vec, SEXP klass)
 SEXP attribute_hidden do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (MAYBE_SHARED(CAR(args))) SETCAR(args, shallow_duplicate(CAR(args)));
     if (length(CADR(args)) == 0) SETCADR(args, R_NilValue);
@@ -551,7 +551,7 @@ SEXP attribute_hidden do_classgets(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_class(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
     SEXP x = CAR(args), s3class;
     if(IS_S4_OBJECT(x)) {
       if((s3class = S3Class(x)) != R_NilValue) {
@@ -754,14 +754,14 @@ SEXP attribute_hidden R_do_data_class(SEXP call, SEXP op, SEXP args, SEXP env)
   checkArity(op, args);
   if(PRIMVAL(op) == 1) {
       const char *class; SEXP klass;
-      check1arg(args, call, "class");
+      check1argSymbol(args, call, R_ClassSymbol);
       klass = CAR(args);
       if(TYPEOF(klass) != STRSXP || LENGTH(klass) < 1)
 	  error("invalid class argument to internal .class_cache");
       class = translateChar(STRING_ELT(klass, 0));
       return cache_class(class, CADR(args));
   }
-  check1arg(args, call, "x");
+  check1argX(args, call);
   return R_data_class(CAR(args), FALSE);
 }
 
@@ -770,7 +770,7 @@ SEXP attribute_hidden do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (DispatchOrEval(call, op, "names<-", args, env, &ans, 0, 1))
 	return(ans);
@@ -898,7 +898,7 @@ SEXP attribute_hidden do_names_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, S
 
 SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env) {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
     
     return do_names_main(call, op, args, CAR(args), env);
 }
@@ -913,7 +913,7 @@ SEXP attribute_hidden do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1))
 	return(ans);
@@ -1021,7 +1021,7 @@ SEXP attribute_hidden do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans;
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
     if (DispatchOrEval(call, op, "dimnames", args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
@@ -1042,7 +1042,7 @@ SEXP attribute_hidden do_dim_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEX
 
 SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env) {
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
     
     return do_dim_main(call, op, args, CAR(args), env);
 }
@@ -1125,7 +1125,7 @@ SEXP attribute_hidden do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
     int nvalues;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
     namesattr = R_NilValue;
     attrs = ATTRIB(CAR(args));
     nvalues = length(attrs);
@@ -1172,7 +1172,7 @@ SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     if (DispatchOrEval(call, op, "levels<-", args, env, &ans, 0, 1))
 	/* calls, e.g., levels<-.factor() */
@@ -1201,7 +1201,7 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Extract the arguments from the argument list */
 
     checkArity(op, args);
-    check1arg(args, call, "x");
+    check1argX(args, call);
 
     object = CAR(args);
     attrs = CADR(args);
