@@ -514,11 +514,16 @@ void Rf_checkArityCall(SEXP op, SEXP args, SEXP call)
 void attribute_hidden Rf_check1arg(SEXP arg, SEXP call, const char *formal)
 {
     SEXP tag = TAG(arg);
+    SEXP suppliedCharSXP;
     const char *supplied;
     size_t ns;
+
     if (tag == R_NilValue) return;
-    supplied = CHAR(PRINTNAME(tag)); ns = strlen(supplied);
-    if (ns > strlen(formal) || strncmp(supplied, formal, ns))
+    suppliedCharSXP = PRINTNAME(tag);
+    supplied = CHAR(suppliedCharSXP);
+    ns = LENGTH(suppliedCharSXP);
+
+    if (strncmp(supplied, formal, ns))
 	errorcall(call, _("supplied argument name '%s' does not match '%s'"),
 		  supplied, formal);
 }
