@@ -544,7 +544,7 @@ void attribute_hidden Rf_check1argSymbol(SEXP arg, SEXP call, SEXP formalSymbol)
     const char *formal = CHAR(formalCharSXP);
 
     if (ns <= nf) {
-        if (strncmp(supplied, formal, ns)) { /* supplied is prefix of formal */
+        if (!strncmp(supplied, formal, ns)) { /* supplied is prefix of formal */
             return;
         }
     }
