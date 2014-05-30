@@ -1108,6 +1108,7 @@ static void SymbolShortcuts(void)
     R_EXPRSymbol = install("EXPR");
     R_ExprSymbol = install("expr");
     R_ZSymbol = install("z");
+    R_GenericSymbol = install("generic");
 
 }
 

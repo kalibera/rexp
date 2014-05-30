@@ -395,7 +395,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
     if (do_usemethod_formals == NULL) {
         do_usemethod_formals = list2(R_NilValue, R_NilValue);
         R_PreserveObject(do_usemethod_formals);
-        SET_TAG(do_usemethod_formals,  install("generic"));
+        SET_TAG(do_usemethod_formals,  R_GenericSymbol);
         SET_TAG(CDR(do_usemethod_formals), R_ObjectSymbol);
     }
     PROTECT(argList =  matchArgs(do_usemethod_formals, args, call));
@@ -1379,10 +1379,10 @@ argument to standardGeneric.
 static SEXP get_this_generic(SEXP args)
 {
     const void *vmax = vmaxget();
-    SEXP value = R_NilValue; static SEXP gen_name;
+    SEXP value = R_NilValue;
     int i, n;
     RCNTXT *cptr;
-    const char *fname;
+    SEXP fnameCharSXP;
 
     /* a second argument to the call, if any, is taken as the function */
     if(CDR(args) != R_NilValue)
@@ -1390,18 +1390,16 @@ static SEXP get_this_generic(SEXP args)
     /* else use sys.function (this is fairly expensive-- would be good
      * to force a second argument if possible) */
     PROTECT(args);
-    if(!gen_name)
-	gen_name = install("generic");
     cptr = R_GlobalContext;
-    fname = translateChar(asChar(CAR(args)));
+    fnameCharSXP = asChar(CAR(args));
     n = framedepth(cptr);
     /* check for a matching "generic" slot */
     for(i=0;  i<n; i++) {
 	SEXP rval = R_sysfunction(i, cptr);
 	if(isObject(rval)) {
-	    SEXP generic = getAttrib(rval, gen_name);
+	    SEXP generic = getAttrib(rval, R_GenericSymbol);
 	    if(TYPEOF(generic) == STRSXP &&
-	       !strcmp(translateChar(asChar(generic)), fname)) {
+	       asChar(generic) == fnameCharSXP) {
 	      value = rval;
 	      break;
 	    }

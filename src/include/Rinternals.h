@@ -1092,6 +1092,7 @@ LibExtern SEXP  R_DUPSymbol;        /* "DUP" */
 LibExtern SEXP  R_ENCODINGSymbol;   /* "ENCODING" */
 LibExtern SEXP  R_CsingleSymbol;    /* "Csingle" */
 LibExtern SEXP  R_OriginSymbol;     /* "origin" */
+LibExtern SEXP	R_GenericSymbol;    /* "generic" */
 
 /* CHARSXP shortcuts */
 LibExtern SEXP R_NativeSymbolInfoCharSXP; /* "NativeSymbolInfo" */
@@ -1103,7 +1104,6 @@ LibExtern SEXP R_TextConnectionCharSXP;   /* "textConnection" */
 LibExtern SEXP R_DLLInfoCharSXP;          /* "DLLInfo" */
 LibExtern SEXP R_UserDefinedDatabaseCharSXP;	/* "UserDefinedDatabase" */
 LibExtern SEXP R_POSIXltCharSXP;          /* "POSIXlt" */
-
 
 /* Missing Values - others from Arith.h */
 #define NA_STRING	R_NaString
