@@ -74,6 +74,32 @@ Rcomplex Rf_ComplexFromLogical(int, int*);
 Rcomplex Rf_ComplexFromInteger(int, int*);
 Rcomplex Rf_ComplexFromReal(double, int*);
 
+ /* writable char access for R internal use only */
+#define CHAR_RW(x)	((char *) CHAR(x))
+
+/* CHARSXP charset bits */
+#define BYTES_MASK (1<<1)
+#define LATIN1_MASK (1<<2)
+#define UTF8_MASK (1<<3)
+/* (1<<4) is taken by S4_OBJECT_MASK */
+#define CACHED_MASK (1<<5)
+#define ASCII_MASK (1<<6)
+#define HASHASH_MASK 1
+/**** HASHASH uses the first bit -- see HASHASH_MASK defined below */
+
+#ifdef USE_RINTERNALS
+# define IS_BYTES(x) ((x)->sxpinfo.gp & BYTES_MASK)
+# define SET_BYTES(x) (((x)->sxpinfo.gp) |= BYTES_MASK)
+# define IS_LATIN1(x) ((x)->sxpinfo.gp & LATIN1_MASK)
+# define SET_LATIN1(x) (((x)->sxpinfo.gp) |= LATIN1_MASK)
+# define IS_ASCII(x) ((x)->sxpinfo.gp & ASCII_MASK)
+# define SET_ASCII(x) (((x)->sxpinfo.gp) |= ASCII_MASK)
+# define IS_UTF8(x) ((x)->sxpinfo.gp & UTF8_MASK)
+# define SET_UTF8(x) (((x)->sxpinfo.gp) |= UTF8_MASK)
+# define ENC_KNOWN(x) ((x)->sxpinfo.gp & (LATIN1_MASK | UTF8_MASK))
+# define SET_CACHED(x) (((x)->sxpinfo.gp) |= CACHED_MASK)
+# define IS_CACHED(x) (((x)->sxpinfo.gp) & CACHED_MASK)
+
 #define CALLED_FROM_DEFN_H 1
 #include <Rinternals.h>		/*-> Arith.h, Boolean.h, Complex.h, Error.h,
 				  Memory.h, PrtUtil.h, Utils.h */
@@ -111,32 +137,6 @@ extern0 SEXP	R_ZSymbol;	/* "z" */
 
 extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 
-
- /* writable char access for R internal use only */
-#define CHAR_RW(x)	((char *) CHAR(x))
-
-/* CHARSXP charset bits */
-#define BYTES_MASK (1<<1)
-#define LATIN1_MASK (1<<2)
-#define UTF8_MASK (1<<3)
-/* (1<<4) is taken by S4_OBJECT_MASK */
-#define CACHED_MASK (1<<5)
-#define ASCII_MASK (1<<6)
-#define HASHASH_MASK 1
-/**** HASHASH uses the first bit -- see HASHASH_MASK defined below */
-
-#ifdef USE_RINTERNALS
-# define IS_BYTES(x) ((x)->sxpinfo.gp & BYTES_MASK)
-# define SET_BYTES(x) (((x)->sxpinfo.gp) |= BYTES_MASK)
-# define IS_LATIN1(x) ((x)->sxpinfo.gp & LATIN1_MASK)
-# define SET_LATIN1(x) (((x)->sxpinfo.gp) |= LATIN1_MASK)
-# define IS_ASCII(x) ((x)->sxpinfo.gp & ASCII_MASK)
-# define SET_ASCII(x) (((x)->sxpinfo.gp) |= ASCII_MASK)
-# define IS_UTF8(x) ((x)->sxpinfo.gp & UTF8_MASK)
-# define SET_UTF8(x) (((x)->sxpinfo.gp) |= UTF8_MASK)
-# define ENC_KNOWN(x) ((x)->sxpinfo.gp & (LATIN1_MASK | UTF8_MASK))
-# define SET_CACHED(x) (((x)->sxpinfo.gp) |= CACHED_MASK)
-# define IS_CACHED(x) (((x)->sxpinfo.gp) & CACHED_MASK)
 #else /* not USE_RINTERNALS */
 /* Needed only for write-barrier testing */
 int IS_BYTES(SEXP x);
@@ -371,13 +371,6 @@ typedef struct {
 #define	PRVALUE_OR_CONST(x)	((TYPEOF(x) == PROMSXP) ? (x)->u.promsxp.value : (x))
 #define PRSEEN(x)	((x)->sxpinfo.gp)
 #define SET_PRSEEN(x,v)	(((x)->sxpinfo.gp)=(v))
-
-/* Hashing Macros */
-#define HASHASH(x)      ((x)->sxpinfo.gp & HASHASH_MASK)
-#define HASHVALUE(x)    TRUELENGTH(x)
-#define SET_HASHASH(x,v) ((v) ? (((x)->sxpinfo.gp) |= HASHASH_MASK) : \
-			  (((x)->sxpinfo.gp) &= (~HASHASH_MASK)))
-#define SET_HASHVALUE(x,v) SET_TRUELENGTH(x, v)
 
 /* Vector Heap Structure */
 typedef struct {

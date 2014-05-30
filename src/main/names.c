@@ -1190,7 +1190,7 @@ SEXP install(const char *name)
 	error(_("attempt to use zero-length variable name"));
     if (strlen(name) > MAXIDSIZE)
 	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
-    hashcode = R_Newhashpjw(name);
+    hashcode = Newhashpjw(name);
     i = hashcode % HSIZE;
     /* Check to see if the symbol is already present;  if it is, return it. */
     for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = CDR(sym))
@@ -1203,6 +1203,7 @@ SEXP install(const char *name)
     R_SymbolTable[i] = CONS(sym, R_SymbolTable[i]);
     return (sym);
 }
+
 
 /*
   like install, but the string is given as a CHARSXP
@@ -1219,17 +1220,7 @@ SEXP installCharSXP(SEXP charSXP) {
 	error(_("variable names are limited to %d bytes"), MAXIDSIZE);
     }
 
-    int hashcode;
-
-    if (HASHASH(charSXP)) {
-        hashcode = HASHVALUE(charSXP);
-    } else {
-        hashcode = R_Newhashpjw(CHAR(charSXP));
-        SET_HASHVALUE(charSXP, hashcode);
-        SET_HASHASH(charSXP, 1);
-    }
-
-    int i = hashcode % HSIZE;
+    int i = hashCharSXP(charSXP) % HSIZE;
     SEXP symList;
     for (symList = R_SymbolTable[i]; symList != R_NilValue; symList = CDR(symList)) {
         SEXP sym = CAR(symList);

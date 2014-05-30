@@ -195,35 +195,6 @@ Rboolean R_envHasNoSpecialSymbols (SEXP env)
 
 /*----------------------------------------------------------------------
 
-  String Hashing
-
-  This is taken from the second edition of the "Dragon Book" by
-  Aho, Ullman and Sethi.
-
-*/
-
-/* was extern: used in this file and names.c (for the symbol table).
-
-   This hash function seems to work well enough for symbol tables,
-   and hash tables get saved as part of environments so changing it
-   is a major decision.
- */
-int attribute_hidden R_Newhashpjw(const char *s)
-{
-    char *p;
-    unsigned h = 0, g;
-    for (p = (char *) s; *p; p++) {
-	h = (h << 4) + (*p);
-	if ((g = h & 0xf0000000) != 0) {
-	    h = h ^ (g >> 24);
-	    h = h ^ g;
-	}
-    }
-    return h;
-}
-
-/*----------------------------------------------------------------------
-
   R_HashSet
 
   Hashtable set function.  Sets 'symbol' in 'table' to be 'value'.
@@ -436,7 +407,7 @@ static SEXP R_HashResize(SEXP table)
     for (counter = 0; counter < length(table); counter++) {
 	chain = VECTOR_ELT(table, counter);
 	while (!ISNULL(chain)) {
-	    new_hashcode = R_Newhashpjw(CHAR(PRINTNAME(TAG(chain)))) %
+	    new_hashcode = Newhashpjw(CHAR(PRINTNAME(TAG(chain)))) %
 		HASHSIZE(new_table);
 	    new_chain = VECTOR_ELT(new_table, new_hashcode);
 	    /* If using a primary slot then increase HASHPRI */
@@ -513,12 +484,7 @@ static SEXP R_HashFrame(SEXP rho)
     table = HASHTAB(rho);
     frame = FRAME(rho);
     while (!ISNULL(frame)) {
-	if( !HASHASH(PRINTNAME(TAG(frame))) ) {
-	    SET_HASHVALUE(PRINTNAME(TAG(frame)),
-			  R_Newhashpjw(CHAR(PRINTNAME(TAG(frame)))));
-	    SET_HASHASH(PRINTNAME(TAG(frame)), 1);
-	}
-	hashcode = HASHVALUE(PRINTNAME(TAG(frame))) % HASHSIZE(table);
+	hashcode = hashCharSXP(PRINTNAME(TAG(frame))) % HASHSIZE(table);
 	chain = VECTOR_ELT(table, hashcode);
 	/* If using a primary slot then increase HASHPRI */
 	if (ISNULL(chain)) SET_HASHPRI(table, HASHPRI(table) + 1);
@@ -693,11 +659,7 @@ void attribute_hidden InitGlobalEnv()
 static int hashIndex(SEXP symbol, SEXP table)
 {
     SEXP c = PRINTNAME(symbol);
-    if( !HASHASH(c) ) {
-	SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	SET_HASHASH(c, 1);
-    }
-    return HASHVALUE(c) % HASHSIZE(table);
+    return hashCharSXP(c) % HASHSIZE(table);
 }
 
 static void R_FlushGlobalCache(SEXP sym)
@@ -856,11 +818,7 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
     else {
 	/* This case is currently unused */
 	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashCharSXP(c) % HASHSIZE(HASHTAB(rho));
 	R_HashDelete(hashcode, symbol, HASHTAB(rho));
 	/* we have no record here if deletion worked */
 	if (rho == R_GlobalEnv) R_DirtyImage = 1;
@@ -928,11 +886,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
     }
     else {
 	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c,  1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashCharSXP(c) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_NilValue' if not found */
 	return R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
     }
@@ -1032,11 +986,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean doGet)
     }
     else {
 	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashCharSXP(c) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_UnboundValue' if not found */
 	return(R_HashGet(hashcode, symbol, HASHTAB(rho)));
     }
@@ -1081,11 +1031,7 @@ static Rboolean existsVarInFrame(SEXP rho, SEXP symbol)
     }
     else {
 	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashCharSXP(c) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_UnboundValue' if not found */
 	return R_HashExists(hashcode, symbol, HASHTAB(rho));
     }
@@ -1465,11 +1411,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 	}
 	else {
 	    c = PRINTNAME(symbol);
-	    if( !HASHASH(c) ) {
-		SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-		SET_HASHASH(c, 1);
-	    }
-	    hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	    hashcode = hashCharSXP(c) % HASHSIZE(HASHTAB(rho));
 	    R_HashSet(hashcode, symbol, HASHTAB(rho), value,
 		      FRAME_IS_LOCKED(rho));
 	    if (R_HashSizeCheck(HASHTAB(rho)))
@@ -1526,11 +1468,7 @@ static SEXP setVarInFrame(SEXP rho, SEXP symbol, SEXP value)
     } else {
 	/* Do the hash table thing */
 	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashCharSXP(c) % HASHSIZE(HASHTAB(rho));
 	frame = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
 	if (frame != R_NilValue) {
 	    if (rho == R_GlobalEnv) R_DirtyImage = 1;
@@ -1762,10 +1700,7 @@ SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (i = 0; i < LENGTH(name); i++) {
 	done = 0;
 	tsym = installTrChar(STRING_ELT(name, i));
-	if( !HASHASH(PRINTNAME(tsym)) )
-	    hashcode = R_Newhashpjw(CHAR(PRINTNAME(tsym)));
-	else
-	    hashcode = HASHVALUE(PRINTNAME(tsym));
+        hashcode = hashCharSXP(PRINTNAME(tsym));
 	tenv = envarg;
 	while (tenv != R_EmptyEnv) {
 	    done = RemoveVariable(tsym, hashcode, tenv);
@@ -3337,10 +3272,7 @@ SEXP attribute_hidden do_unregNS(SEXP call, SEXP op, SEXP args, SEXP rho)
     name = checkNSname(call, CAR(args));
     if (findVarInFrame(R_NamespaceRegistry, name) == R_UnboundValue)
 	errorcall(call, _("namespace not registered"));
-    if( !HASHASH(PRINTNAME(name)))
-	hashcode = R_Newhashpjw(CHAR(PRINTNAME(name)));
-    else
-	hashcode = HASHVALUE(PRINTNAME(name));
+    hashcode = hashCharSXP(PRINTNAME(name));
     RemoveVariable(name, hashcode, R_NamespaceRegistry);
     return R_NilValue;
 }

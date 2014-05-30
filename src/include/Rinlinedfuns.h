@@ -758,6 +758,49 @@ INLINE_FUN SEXP buildPositionalPromargs(int nargs, SEXP *last) {
     return pargs;    
 }
 
+
+/*----------------------------------------------------------------------
+
+  String Hashing
+
+  This is taken from the second edition of the "Dragon Book" by
+  Aho, Ullman and Sethi.
+
+*/
+
+/* was extern: used in this file and names.c (for the symbol table).
+
+   This hash function seems to work well enough for symbol tables,
+   and hash tables get saved as part of environments so changing it
+   is a major decision.
+ */
+INLINE_FUN int Newhashpjw(const char *s)
+{
+    char *p;
+    unsigned h = 0, g;
+    for (p = (char *) s; *p; p++) {
+	h = (h << 4) + (*p);
+	if ((g = h & 0xf0000000) != 0) {
+	    h = h ^ (g >> 24);
+	    h = h ^ g;
+	}
+    }
+    return h;
+}
+
+INLINE_FUN int hashCharSXP(SEXP charSXP) {
+    int hashcode;
+
+    if (HASHASH(charSXP)) {
+        hashcode = HASHVALUE(charSXP);
+    } else {
+        hashcode = Newhashpjw(CHAR(charSXP));
+        SET_HASHVALUE(charSXP, hashcode);
+        SET_HASHASH(charSXP, 1);
+    }
+    return hashcode;
+}
+
 #if defined(R_USE_SIGNALS) && defined(CALLED_FROM_DEFN_H)
 
 /* builds promargs if necessary */
@@ -836,5 +879,6 @@ INLINE_FUN void endcontext(RCNTXT * cptr)
     }
     R_GlobalContext = cptr->nextcontext;
 }
+
 
 #endif /* R_USE_SIGNALS and USE_RINTERNALS */

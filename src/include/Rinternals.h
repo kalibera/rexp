@@ -549,6 +549,13 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define ENVFLAGS(x)	((x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
 
+/* Hashing Macros */
+#define HASHASH(x)      ((x)->sxpinfo.gp & HASHASH_MASK)
+#define HASHVALUE(x)    TRUELENGTH(x)
+#define SET_HASHASH(x,v) ((v) ? (((x)->sxpinfo.gp) |= HASHASH_MASK) : \
+			  (((x)->sxpinfo.gp) &= (~HASHASH_MASK)))
+#define SET_HASHVALUE(x,v) SET_TRUELENGTH(x, v)
+
 #else /* not USE_RINTERNALS */
 
 typedef struct SEXPREC *SEXP;
@@ -1508,6 +1515,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define GetRowNames		Rf_GetRowNames
 #define gsetVar			Rf_gsetVar
 #define hashed_typename2type	Rf_hashed_typename2type
+#define hashCharSXP		Rf_hashCharSXP
 #define inherits		Rf_inherits
 #define initializeOffHeapSEXP	Rf_initializeOffHeapSEXP
 #define initializeOffHeapEnvironment	Rf_initializeOffHeapEnvironment
@@ -1578,6 +1586,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define mkString		Rf_mkString
 #define namesgets		Rf_namesgets
 #define ncols			Rf_ncols
+#define Newhashpjw		Rf_Newhashpjw
 #define nlevels			Rf_nlevels
 #define NonNullStringMatch	Rf_NonNullStringMatch
 #define nrows			Rf_nrows
@@ -1640,7 +1649,8 @@ SEXP     Rf_allocVector(SEXPTYPE, R_xlen_t);
 SEXP     Rf_argShift(SEXP *);
 SEXP     Rf_buildPositionalPromargs(int nargs, SEXP *last);
 Rboolean Rf_conformable(SEXP, SEXP);
-SEXP	 Rf_elt(SEXP, int);
+SEXP     Rf_elt(SEXP, int);
+int      Rf_hashCharSXP(SEXP charSXP);
 Rboolean Rf_inherits(SEXP, const char *);
 Rboolean Rf_inheritsCharSXP(SEXP, SEXP);
 Rboolean Rf_isArray(SEXP);
@@ -1682,6 +1692,7 @@ SEXP	 Rf_listAppend(SEXP, SEXP);
 SEXP	 Rf_mkNamed(SEXPTYPE, const char **);
 SEXP	 Rf_mkString(const char *);
 int	 Rf_nlevels(SEXP);
+int      Rf_Newhashpjw(const char *);
 SEXP	 Rf_ScalarComplex(Rcomplex);
 SEXP	 Rf_ScalarInteger(int);
 SEXP	 Rf_ScalarLogical(int);
