@@ -1029,25 +1029,7 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
     if (nargs == 1) { /* this is quite common */
         signature = installCharSXP(asChar(classes[0]));
     } else {
-        for(int i = 0; i < nargs; i++) {
-            lwidth += LENGTH(asChar(classes[i]));
-        }
-        /* make the label */
-        const void *vmax = vmaxget();
-        buf = (char *) R_alloc(lwidth + nargs + 1, sizeof(char));
-        bufptr = buf;
-        for(i = 0; i < nargs; i++) {
-	    if(i > 0) {
-	        *bufptr++ = '#';
-            }
-	    const char *src = STRING_VALUE(classes[i]);
-	    while (*src) {
-	        *bufptr++ = *src++;
-            }
-        }
-        *bufptr = 0;
-        signature = install(buf);
-        vmaxset(vmax);
+        signature = installSignature(classes, nargs, '#');
     }
     method = findVarInFrame(mtable, signature);
     if(DUPLICATE_CLASS_CASE(method)) {

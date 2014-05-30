@@ -773,6 +773,8 @@ INLINE_FUN SEXP buildPositionalPromargs(int nargs, SEXP *last) {
    This hash function seems to work well enough for symbol tables,
    and hash tables get saved as part of environments so changing it
    is a major decision.
+
+   Has to be kept in sync with installCharSXPSignature.
  */
 INLINE_FUN int Newhashpjw(const char *s)
 {

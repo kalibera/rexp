@@ -1243,6 +1243,134 @@ SEXP installCharSXP(SEXP charSXP) {
 }
 
 
+/*
+
+  Returns a symbol for a string "<name1><sep><name2><sep>...<name_nelems>".
+  Elements are given as CHARSXPs.
+  charSXPs is an input array of elements of length nelems.
+  The implementation has to be kept in sync with Newhashpjw.
+
+  This is equivalent to creating a C string for the signature and then
+  calling install on it, but more efficient.
+
+*/
+SEXP installCharSXPSignature(SEXP *charSXPs, int nelems, char sep) {
+
+    if (nelems == 1) {
+        return installCharSXP(*charSXPs);
+    }
+
+    if (nelems == 0) {  /* but this should not happen */
+        return R_MissingArg;
+    }
+
+    /* hash the first element - take it from the CHARSXP */
+    unsigned h = hashCharSXP(charSXPs[0]);
+    unsigned g;
+
+    int i;
+    int signatureLength = LENGTH(charSXPs[0]); /* length of the signature (calculated below) */
+
+    for(i = 1; i < nelems; i++) {
+
+        /* hash the separator */
+        h = (h << 4) + sep;
+	if ((g = h & 0xf0000000) != 0) {
+	    h = h ^ (g >> 24);
+	    h = h ^ g;
+	}
+
+	/* hash the next element */
+	const char *p;
+        for (p = CHAR(charSXPs[i]); *p; p++) {
+            h = (h << 4) + (*p);
+	    if ((g = h & 0xf0000000) != 0) {
+	        h = h ^ (g >> 24);
+	        h = h ^ g;
+	    }
+        }
+
+        signatureLength += 1 + LENGTH(charSXPs[i]);
+    }
+
+    SEXP symList;
+    int tableIndex = h % HSIZE;
+    for (symList = R_SymbolTable[tableIndex]; symList != R_NilValue; symList = CDR(symList)) {
+        SEXP sym = CAR(symList);
+        SEXP symCharSXP = PRINTNAME(sym);
+        int symLength = LENGTH(symCharSXP);
+
+        if (symLength != signatureLength) {
+            /* FIXME: if the hashing is very good, this check will not be paying off */
+            goto differs;
+        }
+
+        /* check if sym corresponds to the signature */
+        const char *symStr = CHAR(symCharSXP);
+        const char *str = CHAR(charSXPs[0]);
+
+            /* check the first element */
+        while(*str)  {
+            if (*str++ != *symStr++) {
+                goto differs;
+            }
+        }
+
+            /* check separators and remaining elements */
+
+        for (i = 1; i < nelems; i++) {
+            if (*symStr++ != sep) {
+                goto differs;
+            }
+            str = CHAR(charSXPs[i]);
+            while(*str)  {
+                if (*str++ != *symStr++) {
+                    goto differs;
+                }
+            }
+        }
+
+        if (*symStr == 0) {
+            return sym;
+        }
+
+        differs: ; /* continue */
+    }
+
+    /* the symbol does not exist */
+
+
+        /* create a CharSXP for the symbol, this is slowpath, so does not have to be fast */
+    char sbuf[signatureLength];
+    char *s = sbuf;
+    for (i = 0; i < nelems; i++) {
+        if (i > 0) {
+            *s++ = sep;
+        }
+        strcpy(s, CHAR(charSXPs[i]));
+        s += LENGTH(charSXPs[0]);
+    }
+    SEXP charSXP = mkChar(sbuf);
+
+    SET_HASHVALUE(charSXP, h);
+    SET_HASHASH(charSXP, 1);
+    SEXP symbol = mkSYMSXP(charSXP, R_UnboundValue);
+    R_SymbolTable[tableIndex] = CONS(symbol, R_SymbolTable[tableIndex]);
+
+    return symbol;
+}
+
+SEXP installSignature(SEXP *sxps, int nelems, char sep) {
+
+    SEXP charSXPs[nelems];
+
+    for (int i = 0; i < nelems; i++) {
+        charSXPs[i] = asChar(sxps[i]);
+    }
+
+    return installCharSXPSignature(charSXPs, nelems, sep);
+}
+
 /*  do_internal - This is the code for .Internal(). */
 
 SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)

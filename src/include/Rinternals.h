@@ -1186,6 +1186,8 @@ SEXP Rf_GetRowNames(SEXP);
 void Rf_gsetVar(SEXP, SEXP, SEXP);
 SEXP Rf_install(const char *);
 SEXP Rf_installCharSXP(SEXP);
+SEXP Rf_installCharSXPSignature(SEXP *, int, char);
+SEXP Rf_installSignature(SEXP *, int, char);
 Rboolean Rf_isFree(SEXP);
 Rboolean Rf_isOrdered(SEXP);
 Rboolean Rf_isUnordered(SEXP);
@@ -1523,6 +1525,8 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define inheritsCharSXP         Rf_inheritsCharSXP
 #define install			Rf_install
 #define installCharSXP		Rf_installCharSXP
+#define installCharSXPSignature		Rf_installCharSXPSignature
+#define installSignature	Rf_installSignature
 #define isArray			Rf_isArray
 #define isBasicClass            Rf_isBasicClass
 #define isComplex		Rf_isComplex
