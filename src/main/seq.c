@@ -606,9 +606,9 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (do_rep_formals == NULL) {
         do_rep_formals = CONS(R_NilValue, list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue));
         R_PreserveObject(do_rep_formals);
-        SET_TAG(do_rep_formals, install("x"));
+        SET_TAG(do_rep_formals, R_XSymbol);
         SET_TAG(CDR(do_rep_formals), install("times"));
-        SET_TAG(CDDR(do_rep_formals), install("length.out"));
+        SET_TAG(CDDR(do_rep_formals), R_LengthOutSymbol);
         SET_TAG(CDR(CDDR(do_rep_formals)), install("each"));
         SET_TAG(CDDR(CDDR(do_rep_formals)), R_DotsSymbol);
     }
@@ -738,8 +738,8 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
         SET_TAG(tmp, install("from")); tmp = CDR(tmp);
         SET_TAG(tmp, install("to")); tmp = CDR(tmp);
         SET_TAG(tmp, install("by")); tmp = CDR(tmp);
-        SET_TAG(tmp, install("length.out")); tmp = CDR(tmp);
-        SET_TAG(tmp, install("along.with")); tmp = CDR(tmp);
+        SET_TAG(tmp, R_LengthOutSymbol); tmp = CDR(tmp);
+        SET_TAG(tmp, R_AlongWithSymbol); tmp = CDR(tmp);
         SET_TAG(tmp, R_DotsSymbol);
     }
     

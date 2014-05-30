@@ -211,7 +211,7 @@ SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
     char buffer[21];
 
     PROTECT(ap = list2(R_NilValue, R_NilValue));
-    SET_TAG(ap,  install("x"));
+    SET_TAG(ap,  R_XSymbol);
     SET_TAG(CDR(ap), install("previous"));
     PROTECT(argList =  matchArgs(ap, args, call));
     if(CAR(argList) == R_MissingArg) SETCAR(argList, R_NilValue);

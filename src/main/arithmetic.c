@@ -1565,7 +1565,7 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	        if (do_Math2_formals == NULL) {
                     do_Math2_formals = CONS(R_NilValue, list1(R_NilValue));
                     R_PreserveObject(do_Math2_formals);
-                    SET_TAG(do_Math2_formals,  install("x"));
+                    SET_TAG(do_Math2_formals,  R_XSymbol);
                     SET_TAG(CDR(do_Math2_formals), install("digits"));
                 }
 		PROTECT(args = matchArgs(do_Math2_formals, args, call));
@@ -1639,7 +1639,7 @@ SEXP attribute_hidden do_log(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (do_log_formals == NULL) {
   	        do_log_formals = list2(R_NilValue, R_NilValue);
   	        R_PreserveObject(do_log_formals);
-                SET_TAG(do_log_formals, install("x"));
+                SET_TAG(do_log_formals, R_XSymbol);
                 SET_TAG(CDR(do_log_formals), install("base"));
             }
 	    PROTECT(args = matchArgs(do_log_formals, args, call));

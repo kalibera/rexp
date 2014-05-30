@@ -1379,7 +1379,7 @@ SEXP asCharacterFactor(SEXP x)
 	error(_("attempting to coerce non-factor"));
 
     R_xlen_t i, n = XLENGTH(x);
-    SEXP labels = getAttrib(x, install("levels"));
+    SEXP labels = getAttrib(x, R_LevelsSymbol);
     PROTECT(ans = allocVector(STRSXP, n));
     for(i = 0; i < n; i++) {
       int ii = INTEGER(x)[i];
@@ -2238,8 +2238,8 @@ SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SEXP ap, tmp;
 	PROTECT(ap = CONS(R_NilValue, CONS(R_NilValue, R_NilValue)));
 	tmp = ap;
-	SET_TAG(tmp, install("x")); tmp = CDR(tmp);
-	SET_TAG(tmp, install("recursive"));
+	SET_TAG(tmp, R_XSymbol); tmp = CDR(tmp);
+	SET_TAG(tmp, R_RecursiveSymbol);
 	PROTECT(args = matchArgs(ap, args, call));
 	if(CADR(args) ==  R_MissingArg) SETCADR(args, ScalarLogical(FALSE));
 	ans = ScalarLogical(anyNA(call, op, args, rho));
@@ -2637,7 +2637,7 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (do_substitute_formals == NULL) {
         do_substitute_formals = list2(R_NilValue, R_NilValue);
         R_PreserveObject(do_substitute_formals);
-        SET_TAG(do_substitute_formals,  install("expr"));
+        SET_TAG(do_substitute_formals,  R_ExprSymbol);
         SET_TAG(CDR(do_substitute_formals), install("env"));
     }
     PROTECT(argList = matchArgs(do_substitute_formals, args, call));

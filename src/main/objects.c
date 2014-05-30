@@ -396,7 +396,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
         do_usemethod_formals = list2(R_NilValue, R_NilValue);
         R_PreserveObject(do_usemethod_formals);
         SET_TAG(do_usemethod_formals,  install("generic"));
-        SET_TAG(CDR(do_usemethod_formals), install("object"));
+        SET_TAG(CDR(do_usemethod_formals), R_ObjectSymbol);
     }
     PROTECT(argList =  matchArgs(do_usemethod_formals, args, call));
     if (CAR(argList) == R_MissingArg)

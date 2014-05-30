@@ -881,7 +881,7 @@ void setup_Rmainloop(void)
 #endif
     /* At least temporarily unlock some bindings used in graphics */
     R_unLockBinding(R_DeviceSymbol, R_BaseEnv);
-    R_unLockBinding(install(".Devices"), R_BaseEnv);
+    R_unLockBinding(R_DevicesSymbol, R_BaseEnv);
     R_unLockBinding(install(".Library.site"), R_BaseEnv);
 
     /* require(methods) if it is in the default packages */
@@ -1113,7 +1113,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ap = list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue));
     SET_TAG(ap,  install("text"));
     SET_TAG(CDR(ap), install("condition"));
-    SET_TAG(CDDR(ap), install("expr"));
+    SET_TAG(CDDR(ap), R_ExprSymbol);
     SET_TAG(CDR(CDDR(ap)), install("skipCalls"));
     argList = matchArgs(ap, args, call);
     UNPROTECT(1);

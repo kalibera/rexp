@@ -576,7 +576,7 @@ static SEXP lang2str(SEXP obj, SEXPTYPE t)
     eq_sym = install("=");
     gets_sym = install("<-");
     lpar_sym = install("(");
-    lbrace_sym = install("{");
+    lbrace_sym = R_BraceSymbol;
     call_sym = install("call");
   }
   if(isSymbol(symb)) {
@@ -1310,9 +1310,9 @@ SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
     if (do_attr_formals == NULL) {
        do_attr_formals = list3(R_NilValue, R_NilValue, R_NilValue);
        R_PreserveObject(do_attr_formals);
-       SET_TAG(do_attr_formals,  install("x"));
+       SET_TAG(do_attr_formals,  R_XSymbol);
        SET_TAG(CDR(do_attr_formals), install("which"));
-       SET_TAG(CDDR(do_attr_formals), install("exact"));
+       SET_TAG(CDDR(do_attr_formals), R_ExactSymbol);
     }
     argList = matchArgs(do_attr_formals, args, call);
     PROTECT(argList);
@@ -1471,7 +1471,7 @@ SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
     if (do_attrgets_formals == NULL) {
         do_attrgets_formals = list3(R_NilValue, R_NilValue, R_NilValue);
         R_PreserveObject(do_attrgets_formals);
-        SET_TAG(do_attrgets_formals,  install("x"));
+        SET_TAG(do_attrgets_formals,  R_XSymbol);
         SET_TAG(CDR(do_attrgets_formals), install("which"));
         SET_TAG(CDDR(do_attrgets_formals), install("value"));
     }

@@ -140,7 +140,7 @@ SEXP attribute_hidden do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (do_onexit_formals == NULL) {
         do_onexit_formals = list2(R_NilValue, R_NilValue);
         R_PreserveObject(do_onexit_formals);
-        SET_TAG(do_onexit_formals,  install("expr"));
+        SET_TAG(do_onexit_formals,  R_ExprSymbol);
         SET_TAG(CDR(do_onexit_formals), install("add"));
     }
     PROTECT(argList =  matchArgs(do_onexit_formals, args, call));
