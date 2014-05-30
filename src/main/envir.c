@@ -737,7 +737,7 @@ static void R_FlushGlobalCacheFromUserTable(SEXP udb)
     names = tb->objects(tb);
     n = length(names);
     for(i = 0; i < n ; i++)
-	R_FlushGlobalCache(Rf_install(CHAR(STRING_ELT(names,i))));
+	R_FlushGlobalCache(Rf_installCharSXP(STRING_ELT(names,i)));
 }
 
 static void R_AddGlobalCache(SEXP symbol, SEXP place)

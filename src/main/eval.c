@@ -6607,7 +6607,7 @@ SEXP attribute_hidden do_internal_supports_earg(SEXP call, SEXP op, SEXP args, S
     if (TYPEOF(prim) == CHARSXP) {
         if (LENGTH(prim) != 1 )
 	    error(_("invalid length of '%s' argument"), "prim");
-        sym = install(CHAR(prim));
+        sym = installCharSXP(prim);
     } else if (TYPEOF(prim) == SYMSXP) {
         sym = prim;
     } else {
@@ -6646,7 +6646,7 @@ SEXP attribute_hidden do_true_builtin_supports_earg(SEXP call, SEXP op, SEXP arg
     if (TYPEOF(prim) == CHARSXP) {
         if (LENGTH(prim) != 1 )
 	    error(_("invalid length of '%s' argument"), "prim");
-        sym = install(CHAR(prim));
+        sym = installCharSXP(prim);
     } else if (TYPEOF(prim) == SYMSXP) {
         sym = prim;
     } else {

@@ -1607,7 +1607,7 @@ int R_has_slot(SEXP obj, SEXP name) {
 	error(_("invalid type or length for slot name"));		\
     if(!s_dot_Data)							\
 	init_slot_handling();						\
-    if(isString(name)) name = install(CHAR(STRING_ELT(name, 0)))
+    if(isString(name)) name = installCharSXP(STRING_ELT(name, 0))
 
     R_SLOT_INIT;
     if(name == s_dot_Data && TYPEOF(obj) != S4SXP)

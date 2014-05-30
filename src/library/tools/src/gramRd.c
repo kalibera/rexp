@@ -3104,7 +3104,7 @@ static SEXP xxnewcommand(SEXP cmd, SEXP name, SEXP defn, YYLTYPE *lloc)
     	PROTECT(thedefn = mkString(CHAR(STRING_ELT(thedefn,0))));
     else
     	PROTECT(thedefn = mkString(""));
-    prev = findVar(install(CHAR(STRING_ELT(thename, 0))), parseState.xxMacroList);
+    prev = findVar(installCharSXP(STRING_ELT(thename, 0)), parseState.xxMacroList);
     if (prev != R_UnboundValue && !strcmp(CHAR(STRING_ELT(cmd,0)), "\renewcommand")) {
         snprintf(buffer, sizeof(buffer), _("Macro '%s' previously defined."), 
                  CHAR(STRING_ELT(thename, 0)));
@@ -3122,7 +3122,7 @@ static SEXP xxnewcommand(SEXP cmd, SEXP name, SEXP defn, YYLTYPE *lloc)
     setAttrib(ans, install("Rd_tag"), cmd);
     setAttrib(ans, install("definition"), thedefn);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
-    defineVar(install(CHAR(STRING_ELT(thename, 0))), ans, parseState.xxMacroList);
+    defineVar(installCharSXP(STRING_ELT(thename, 0)), ans, parseState.xxMacroList);
 
     UNPROTECT_PTR(thedefn);
     UNPROTECT_PTR(cmd);
