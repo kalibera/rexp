@@ -1378,7 +1378,6 @@ argument to standardGeneric.
 */
 static SEXP get_this_generic(SEXP args)
 {
-    const void *vmax = vmaxget();
     SEXP value = R_NilValue;
     int i, n;
     RCNTXT *cptr;
@@ -1387,28 +1386,28 @@ static SEXP get_this_generic(SEXP args)
     /* a second argument to the call, if any, is taken as the function */
     if(CDR(args) != R_NilValue)
 	return CAR(CDR(args));
-    /* else use sys.function (this is fairly expensive-- would be good
-     * to force a second argument if possible) */
-    PROTECT(args);
-    cptr = R_GlobalContext;
+
+    /* else search the context and check the "generic" attribute
+     * (this is fairly expensive -- would be good to force a second argument if possible)
+     * TK: this comment originally refered to code that used R_sysfunction, but certainly
+     * scanning the contexts and checking the attributes is also going to be expensive)
+     */
+
     fnameCharSXP = asChar(CAR(args));
-    n = framedepth(cptr);
-    /* check for a matching "generic" slot */
-    for(i=0;  i<n; i++) {
-	SEXP rval = R_sysfunction(i, cptr);
-	if(isObject(rval)) {
-	    SEXP generic = getAttrib(rval, R_GenericSymbol);
-	    if(TYPEOF(generic) == STRSXP &&
-	       asChar(generic) == fnameCharSXP) {
-	      value = rval;
-	      break;
+
+    for(cptr = R_GlobalContext; cptr != NULL; cptr = cptr->nextcontext) {
+        if (cptr->callflag & CTXT_FUNCTION ) {
+            SEXP fun = cptr->callfun;
+            if(isObject(fun)) {
+	        SEXP generic = getGenericAttrib(fun);
+	        if(TYPEOF(generic) == STRSXP && asChar(generic) == fnameCharSXP) {
+	            return fun; /* no dup, unlike R_sysfunction */
+	        }
 	    }
 	}
+	cptr = cptr->nextcontext;
     }
-    UNPROTECT(1);
-    vmaxset(vmax);
-
-    return value;
+    return R_NilValue;
 }
 
 /* Could there be methods for this op?	Checks

@@ -86,6 +86,16 @@ static SEXP stripAttrib(SEXP tag, SEXP lst)
     return lst;
 }
 
+static R_INLINE SEXP getListedAttribBySymbol(SEXP vec, SEXP name) {
+    SEXP s;
+    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s))
+	if (TAG(s) == name) {
+	    SET_NAMED(CAR(s), 2);
+	    return CAR(s);
+	}
+    return R_NilValue;
+}
+
 /* NOTE: For environments serialize.c calls this function to find if
    there is a class attribute in order to reconstruct the object bit
    if needed.  This means the function cannot use OBJECT(vec) == 0 to
@@ -152,6 +162,10 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 	    return CAR(s);
 	}
     return R_NilValue;
+}
+
+SEXP getGenericAttrib(SEXP vec) {
+    return getListedAttribBySymbol(vec, R_GenericSymbol);
 }
 
 SEXP getAttrib(SEXP vec, SEXP name)
