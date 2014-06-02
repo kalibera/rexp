@@ -2655,7 +2655,7 @@ static SEXP VectorToPairListNamed(SEXP x)
     const void *vmax = vmaxget();
 
     PROTECT(x);
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol)); /* isn't this protected via x? */
+    PROTECT(xnames = getNamesAttrib(x)); /* isn't this protected via x? */
     named = (xnames != R_NilValue);
     if(named)
 	for (i = 0; i < length(x); i++)

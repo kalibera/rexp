@@ -633,8 +633,8 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 	vmaxset(vmax);
     }
 
-    if (getAttrib(x, R_NamesSymbol) != R_NilValue)
-	namesgets(ans, getAttrib(x, R_NamesSymbol));
+    if (getNamesAttrib(x) != R_NilValue)
+	namesgets(ans, getNamesAttrib(x));
     UNPROTECT(1);
     Free(pt); Free(wpt);
     if (tables) pcre_free((void *)tables);
@@ -786,7 +786,7 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
     n = XLENGTH(text);
     if (STRING_ELT(pat, 0) == NA_STRING) {
 	if (value_opt) {
-	    SEXP nmold = getAttrib(text, R_NamesSymbol);
+	    SEXP nmold = getNamesAttrib(text);
 	    PROTECT(ans = allocVector(STRSXP, n));
 	    for (i = 0; i < n; i++)  SET_STRING_ELT(ans, i, NA_STRING);
 	    if (!isNull(nmold))
@@ -937,7 +937,7 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if (value_opt) {
-	SEXP nmold = getAttrib(text, R_NamesSymbol), nm;
+	SEXP nmold = getNamesAttrib(text), nm;
 	PROTECT(ans = allocVector(STRSXP, nmatches));
 	for (i = 0, j = 0; i < n ; i++)
 	    if (invert ^ LOGICAL(ind)[i])

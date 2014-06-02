@@ -160,7 +160,7 @@ SEXP attribute_hidden do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
 	t = CAR(args);
 	n = XLENGTH(t);
 	PROTECT(s = allocVector(CPLXSXP, n));
-	setAttrib(s, R_NamesSymbol, getAttrib(t, R_NamesSymbol));
+	setAttrib(s, R_NamesSymbol, getNamesAttrib(t));
 	UNPROTECT(1);
 	if(n == 0) return s;
 	for (i = 0 ; i < n ; i++) {
@@ -188,7 +188,7 @@ SEXP attribute_hidden do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(t = coerceVector(CAR(args), INTSXP));
 	n = XLENGTH(t);
 	PROTECT(s = allocVector(INTSXP, n));
-	setAttrib(s, R_NamesSymbol, getAttrib(t, R_NamesSymbol));
+	setAttrib(s, R_NamesSymbol, getNamesAttrib(t));
 	UNPROTECT(2);
 	if(n == 0) return s;
 	for(i = 0 ; i < n ; i++) INTEGER(s)[i] = NA_INTEGER;
@@ -209,7 +209,7 @@ SEXP attribute_hidden do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(t = coerceVector(CAR(args), REALSXP));
 	n = XLENGTH(t);
 	PROTECT(s = allocVector(REALSXP, n));
-	setAttrib(s, R_NamesSymbol, getAttrib(t, R_NamesSymbol));
+	setAttrib(s, R_NamesSymbol, getNamesAttrib(t));
 	UNPROTECT(2);
 	if(n == 0) return s;
 	for(i = 0 ; i < n ; i++) REAL(s)[i] = NA_REAL;

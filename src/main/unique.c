@@ -1593,7 +1593,7 @@ rowsum_df(SEXP x, SEXP g, SEXP uniqueg, SEXP snarm, SEXP rn)
 	    error(_("this cannot happen"));
 	}
     }
-    namesgets(ans, getAttrib(x, R_NamesSymbol));
+    namesgets(ans, getNamesAttrib(x));
     if (TYPEOF(rn) != STRSXP) error("row names are not character");
     setAttrib(ans, R_RowNamesSymbol, rn);
     classgets(ans, mkString("data.frame"));

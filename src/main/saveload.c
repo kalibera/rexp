@@ -2007,7 +2007,7 @@ static SEXP RestoreToEnv(SEXP ans, SEXP aenv)
     if (TYPEOF(ans) == VECSXP) {
 	int i;
 	PROTECT(ans);
-	PROTECT(names = getAttrib(ans, R_NamesSymbol)); /* PROTECT needed?? */
+	PROTECT(names = getNamesAttrib(ans)); /* PROTECT needed?? */
 	if (TYPEOF(names) != STRSXP || LENGTH(names) != LENGTH(ans))
 	    error(_("not a valid named list"));
 	for (i = 0; i < LENGTH(ans); i++) {

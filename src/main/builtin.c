@@ -816,7 +816,7 @@ SEXP xlengthgets(SEXP x, R_xlen_t len)
     if (lenx == len)
 	return (x);
     PROTECT(rval = allocVector(TYPEOF(x), len));
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol));
+    PROTECT(xnames = getNamesAttrib(x));
     if (xnames != R_NilValue)
 	names = allocVector(STRSXP, len);
     else names = R_NilValue;	/*- just for -Wall --- should we do this ? */

@@ -407,7 +407,7 @@ static void SaveAsPostscript(pDevDesc dd, const char *fn)
     /* and then try to get it from .PostScript.Options */
     s = findVar(install(".PostScript.Options"), xd->psenv);
     if ((s != R_UnboundValue) && (s != R_NilValue)) {
-	SEXP names = getAttrib(s, R_NamesSymbol);
+	SEXP names = getNamesAttrib(s);
 	int i, done;
 	for (i = 0, done = 0; (done<  4) && (i < length(s)) ; i++) {
 	    if(!strcmp("family", CHAR(STRING_ELT(names, i)))) {
@@ -475,7 +475,7 @@ static void SaveAsPDF(pDevDesc dd, const char *fn)
     strncpy(fg, "black", 256);
     /* and then try to get it from .PDF.Options */
     if ((s != R_UnboundValue) && (s != R_NilValue)) {
-	SEXP names = getAttrib(s, R_NamesSymbol);
+	SEXP names = getNamesAttrib(s);
 	for (int i = 0; i < length(s) ; i++) {
 	    if(!strcmp("family", CHAR(STRING_ELT(names, i))))
 		strncpy(family, CHAR(STRING_ELT(VECTOR_ELT(s, i), 0)),255);
@@ -628,7 +628,7 @@ static char* translateFontFamily(const char* family) {
     if(TYPEOF(windowsenv) == PROMSXP)
 	REPROTECT(windowsenv = eval(windowsenv, graphicsNS), xpi);
     PROTECT(fontdb = findVar(install(".Windows.Fonts"), windowsenv));
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    PROTECT(fontnames = getNamesAttrib(fontdb));
     nfonts = LENGTH(fontdb);
     if (strlen(family) > 0) {
 	int found = 0;

@@ -90,7 +90,7 @@ OneIndex(SEXP x, SEXP s, R_xlen_t len, int partial, SEXP *newname,
     case STRSXP:
 	vmax = vmaxget();
 	nx = xlength(x);
-	names = getAttrib(x, R_NamesSymbol);
+	names = getNamesAttrib(x);
 	if (names != R_NilValue) {
 	    /* Try for exact match */
 	    for (i = 0; i < nx; i++) {
@@ -124,7 +124,7 @@ OneIndex(SEXP x, SEXP s, R_xlen_t len, int partial, SEXP *newname,
     case SYMSXP:
 	vmax = vmaxget();
 	nx = xlength(x);
-	names = getAttrib(x, R_NamesSymbol);
+	names = getNamesAttrib(x);
 	if (names != R_NilValue) {
 	    for (i = 0; i < nx; i++)
 		if (streql(translateChar(STRING_ELT(names, i)),
@@ -303,7 +303,7 @@ vectorIndex(SEXP x, SEXP thesub, int start, int stop, int pok, SEXP call,
 	    else
 		errorcall(call, _("attempt to select more than one element"));
 	}
-	offset = get1index(thesub, getAttrib(x, R_NamesSymbol),
+	offset = get1index(thesub, getNamesAttrib(x),
 		           xlength(x), pok, i, call);
 	if(offset < 0 || offset >= xlength(x))
 	    errorcall(call, _("no such index at level %d\n"), i+1);
@@ -907,7 +907,7 @@ makeSubscript(SEXP x, SEXP s, R_xlen_t *stretch, SEXP call)
 	break;
     case STRSXP:
     {
-	SEXP names = getAttrib(x, R_NamesSymbol);
+	SEXP names = getNamesAttrib(x);
 	/* *stretch = 0; */
 	ans = stringSubscript(s, ns, nx, names, stretch, call);
 	break;

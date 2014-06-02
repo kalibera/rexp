@@ -1592,7 +1592,7 @@ SEXP attribute_hidden do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("first argument must be a named list"));
     x = CAR(args);
     n = LENGTH(x);
-    xnms = getAttrib(x, R_NamesSymbol);
+    xnms = getNamesAttrib(x);
     if (TYPEOF(xnms) != STRSXP || LENGTH(xnms) != n)
 	error(_("names(x) must be a character vector of the same length as x"));
     envir = CADR(args);

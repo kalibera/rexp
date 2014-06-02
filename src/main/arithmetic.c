@@ -636,12 +636,12 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
     else {
 	dims = R_NilValue;
 	if (xattr) {
-	    PROTECT(xnames = getAttrib(x, R_NamesSymbol));
+	    PROTECT(xnames = getNamesAttrib(x));
 	    nprotect++;
 	}
 	else xnames = R_NilValue;
 	if (yattr) {
-	    PROTECT(ynames = getAttrib(y, R_NamesSymbol));
+	    PROTECT(ynames = getNamesAttrib(y));
 	    nprotect++;
 	}
 	else ynames = R_NilValue;
@@ -757,7 +757,7 @@ static SEXP logical_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 {
     R_xlen_t n = XLENGTH(s1);
     SEXP ans = PROTECT(allocVector(INTSXP, n));
-    SEXP names = PROTECT(getAttrib(s1, R_NamesSymbol));
+    SEXP names = PROTECT(getNamesAttrib(s1));
     SEXP dim = PROTECT(getDimAttrib(s1));
     SEXP dimnames = PROTECT(getDimNamesAttrib(s1));
     if(names != R_NilValue) setAttrib(ans, R_NamesSymbol, names);

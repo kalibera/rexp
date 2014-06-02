@@ -98,7 +98,7 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
     if(!isNewList(m))
 	error(_("'m' must be a list"));
 
-    PROTECT(tmp = getAttrib(control, R_NamesSymbol));
+    PROTECT(tmp = getNamesAttrib(control));
 
     conv = getListElement(control, tmp, "maxiter");
     if(conv == NULL || !isNumeric(conv))
@@ -159,7 +159,7 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
 
 
     /* now get parts from 'm' */
-    tmp = getAttrib(m, R_NamesSymbol);
+    tmp = getNamesAttrib(m);
 
     conv = getListElement(m, tmp, "conv");
     if(conv == NULL || !isFunction(conv))

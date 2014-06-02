@@ -595,7 +595,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
     if (isArray(cvec))
 	PROTECT(names = getDimNamesAttrib(cvec));
     else
-	PROTECT(names = getAttrib(cvec, R_NamesSymbol));
+	PROTECT(names = getNamesAttrib(cvec));
 
     /* Find the first non-NA entry (empty => NA) */
     for (i = 0; i < len; i++) {

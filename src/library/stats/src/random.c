@@ -322,7 +322,7 @@ SEXP do_rmultinom(SEXP sn, SEXP ssize, SEXP sprob)
 	rmultinom(size, REAL(prob), k, &INTEGER(ans)[ik]);
     }
     PutRNGstate();
-    if(!isNull(nms = getAttrib(prob, R_NamesSymbol))) {
+    if(!isNull(nms = getNamesAttrib(prob))) {
 	SEXP dimnms;
 	PROTECT(nms);
 	PROTECT(dimnms = allocVector(VECSXP, 2));

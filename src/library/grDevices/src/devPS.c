@@ -1582,7 +1582,7 @@ static SEXP getFont(const char *family, const char *fontdbname) {
     int found = 0;
     SEXP fontdb = getFontDB(fontdbname);
     SEXP fontnames;
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    PROTECT(fontnames = getNamesAttrib(fontdb));
     nfonts = LENGTH(fontdb);
     for (i=0; i<nfonts && !found; i++) {
 	const char *fontFamily = CHAR(STRING_ELT(fontnames, i));
@@ -1615,7 +1615,7 @@ fontMetricsFileName(const char *family, int faceIndex,
     int found = 0;
     SEXP fontdb = getFontDB(fontdbname);
     SEXP fontnames;
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    PROTECT(fontnames = getNamesAttrib(fontdb));
     nfonts = LENGTH(fontdb);
     for (i = 0; i < nfonts && !found; i++) {
 	const char *fontFamily = CHAR(STRING_ELT(fontnames, i));
@@ -1688,7 +1688,7 @@ static const char *getFontEncoding(const char *family, const char *fontdbname)
     const char *result = NULL;
     int found = 0;
     SEXP fontdb = getFontDB(fontdbname);
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    PROTECT(fontnames = getNamesAttrib(fontdb));
     nfonts = LENGTH(fontdb);
     for (i=0; i<nfonts && !found; i++) {
 	const char *fontFamily = CHAR(STRING_ELT(fontnames, i));
@@ -1715,7 +1715,7 @@ static const char *getFontName(const char *family, const char *fontdbname)
     const char *result = NULL;
     int found = 0;
     SEXP fontdb = getFontDB(fontdbname);
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    PROTECT(fontnames = getNamesAttrib(fontdb));
     nfonts = LENGTH(fontdb);
     for (i=0; i<nfonts && !found; i++) {
 	const char *fontFamily = CHAR(STRING_ELT(fontnames, i));
@@ -1742,7 +1742,7 @@ static const char *getFontCMap(const char *family, const char *fontdbname)
     const char *result = NULL;
     int found = 0;
     SEXP fontdb = getFontDB(fontdbname);
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    PROTECT(fontnames = getNamesAttrib(fontdb));
     nfonts = LENGTH(fontdb);
     for (i=0; i<nfonts && !found; i++) {
 	const char *fontFamily = CHAR(STRING_ELT(fontnames, i));
@@ -1770,7 +1770,7 @@ getCIDFontEncoding(const char *family, const char *fontdbname)
     const char *result = NULL;
     int found = 0;
     SEXP fontdb = getFontDB(fontdbname);
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    PROTECT(fontnames = getNamesAttrib(fontdb));
     nfonts = LENGTH(fontdb);
     for (i=0; i<nfonts && !found; i++) {
 	const char *fontFamily = CHAR(STRING_ELT(fontnames, i));
@@ -1797,7 +1797,7 @@ static const char *getCIDFontPDFResource(const char *family)
     const char *result = NULL;
     int found = 0;
     SEXP fontdb = getFontDB(PDFFonts);
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    PROTECT(fontnames = getNamesAttrib(fontdb));
     nfonts = LENGTH(fontdb);
     for (i=0; i<nfonts && !found; i++) {
 	const char *fontFamily = CHAR(STRING_ELT(fontnames, i));

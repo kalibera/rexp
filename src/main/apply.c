@@ -44,7 +44,7 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     Rboolean realIndx = n > INT_MAX;
 
     SEXP ans = PROTECT(allocVector(VECSXP, n));
-    SEXP names = getAttrib(XX, R_NamesSymbol);
+    SEXP names = getNamesAttrib(XX);
     if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
 
     /* Build call: FUN(XX[[<ind>]], ...) */
@@ -116,7 +116,7 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     array_value = (TYPEOF(dim_v) == INTSXP && LENGTH(dim_v) >= 1);
     PROTECT(ans = allocVector(commonType, n*commonLen));
     if (useNames) {
-    	PROTECT(names = getAttrib(XX, R_NamesSymbol));
+        PROTECT(names = getNamesAttrib(XX));
     	if (isNull(names) && TYPEOF(XX) == STRSXP) {
     	    UNPROTECT(1);
     	    PROTECT(names = XX);
@@ -250,7 +250,7 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
     if(isNewList(X)) {
 	n = length(X);
 	PROTECT(ans = allocVector(VECSXP, n));
-	names = getAttrib(X, R_NamesSymbol);
+	names = getNamesAttrib(X);
 	/* or copy attributes if replace = TRUE? */
 	if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
 	for(i = 0; i < n; i++)
@@ -299,7 +299,7 @@ SEXP attribute_hidden do_rapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     replace = strcmp(CHAR(STRING_ELT(how, 0)), "replace") == 0; /* ASCII */
     n = length(X);
     PROTECT(ans = allocVector(VECSXP, n));
-    names = getAttrib(X, R_NamesSymbol);
+    names = getNamesAttrib(X);
     /* or copy attributes if replace = TRUE? */
     if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
     for(i = 0; i < n; i++)

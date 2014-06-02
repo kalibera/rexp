@@ -203,7 +203,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
     PROTECT(result = ExtractSubset(x, result, indx, call));
     if (result != R_NilValue) {
 	if (
-	    ((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
+	    ((attrib = getNamesAttrib(x)) != R_NilValue) ||
 	    ( /* here we might have an array.  Use row names if 1D */
 		isArray(x) && LENGTH(getDimNamesAttrib(x)) == 1 &&
 		(attrib = getDimNamesAttrib(x)) != R_NilValue &&
@@ -351,7 +351,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
     if (nrs >= 0 && ncs >= 0) {
 	SEXP dimnames, dimnamesnames, newdimnames;
 	dimnames = getDimNamesAttrib(x);
-	dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+	dimnamesnames = getNamesAttrib(dimnames);
 	if (!isNull(dimnames)) {
 	    PROTECT(newdimnames = allocVector(VECSXP, 2));
 	    if (TYPEOF(dimnames) == VECSXP) {
@@ -509,7 +509,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     /* dimnames of the returned value. */
 
     dimnames = getDimNamesAttrib(x);
-    dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+    dimnamesnames = getNamesAttrib(dimnames);
     if (dimnames != R_NilValue) {
 	int j = 0;
 	PROTECT(xdims = allocVector(VECSXP, k));
@@ -782,7 +782,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	else {
 	    PROTECT(ax = allocVector(VECSXP, length(x)));
-	    setAttrib(ax, R_NamesSymbol, getAttrib(x, R_NamesSymbol));
+	    setAttrib(ax, R_NamesSymbol, getNamesAttrib(x));
 	}
 	for(px = x, i = 0 ; px != R_NilValue ; px = CDR(px))
 	    SET_VECTOR_ELT(ax, i++, CAR(px));
@@ -807,7 +807,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	    if(!drop || len > 1) {
 		// must grab these before the dim is set.
-		SEXP nm = PROTECT(getAttrib(ans, R_NamesSymbol));
+		SEXP nm = PROTECT(getNamesAttrib(ans));
 		PROTECT(attr = allocVector(INTSXP, 1));
 		INTEGER(attr)[0] = length(ans);
 		setAttrib(ans, R_DimSymbol, attr);
@@ -844,7 +844,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    SETCAR(px, VECTOR_ELT(ax, i++));
 	setAttrib(ans, R_DimSymbol, getDimAttrib(ax));
 	setAttrib(ans, R_DimNamesSymbol, getDimNamesAttrib(ax));
-	setAttrib(ans, R_NamesSymbol, getAttrib(ax, R_NamesSymbol));
+	setAttrib(ans, R_NamesSymbol, getNamesAttrib(ax));
 	SET_NAMED(ans, NAMED(ax)); /* PR#7924 */
     }
     else {
@@ -982,7 +982,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    named_x = NAMED(x);
 	}
 	    
-	offset = get1index(thesub, getAttrib(x, R_NamesSymbol),
+	offset = get1index(thesub, getNamesAttrib(x),
 			   xlength(x), pok, len > 1 ? len-1 : -1, call);
 	if (offset < 0 || offset >= xlength(x)) {
 	    /* a bold attempt to get the same behaviour for $ and [[ */
@@ -1213,7 +1213,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
     else if (isVectorList(x)) {
 	R_xlen_t i, n, imatch = -1;
 	int havematch;
-	nlist = getAttrib(x, R_NamesSymbol);
+	nlist = getNamesAttrib(x);
 	UNPROTECT(2);
 	n = xlength(nlist);
 	havematch = 0;

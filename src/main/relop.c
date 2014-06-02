@@ -238,8 +238,8 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP x, SEXP y)
     }
     else {
 	PROTECT(dims = R_NilValue);
-	PROTECT(xnames = getAttrib(x, R_NamesSymbol));
-	PROTECT(ynames = getAttrib(y, R_NamesSymbol));
+	PROTECT(xnames = getNamesAttrib(x));
+	PROTECT(ynames = getNamesAttrib(y));
     }
     if (xts || yts) {
 	if (xts && yts) {

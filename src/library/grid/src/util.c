@@ -27,7 +27,7 @@
 SEXP getListElement(SEXP list, char *str)
 {
   SEXP elmt = R_NilValue;
-  SEXP names = getAttrib(list, R_NamesSymbol);
+  SEXP names = getNamesAttrib(list);
   int i;
 
   for (i = 0; i < length(list); i++)
@@ -40,7 +40,7 @@ SEXP getListElement(SEXP list, char *str)
 
 void setListElement(SEXP list, char *str, SEXP value)
 {
-  SEXP names = getAttrib(list, R_NamesSymbol);
+  SEXP names = getNamesAttrib(list);
   int i;
 
   for (i = 0; i < length(list); i++)

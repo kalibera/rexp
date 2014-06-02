@@ -96,74 +96,6 @@ static R_INLINE SEXP getListedAttribBySymbol(SEXP vec, SEXP name) {
     return R_NilValue;
 }
 
-/* NOTE: For environments serialize.c calls this function to find if
-   there is a class attribute in order to reconstruct the object bit
-   if needed.  This means the function cannot use OBJECT(vec) == 0 to
-   conclude that the class attribute is R_NilValue.  If you want to
-   rewrite this function to use such a pre-test, be sure to adjust
-   serialize.c accordingly.  LT */
-SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
-{
-    SEXP s;
-    int len, i, any;
-
-    if (name == R_NamesSymbol) {
-	if(isVector(vec) || isList(vec) || isLanguage(vec)) {
-	    s = getDimAttrib(vec);
-	    if(TYPEOF(s) == INTSXP && length(s) == 1) {
-		s = getDimNamesAttrib(vec);
-		if(!isNull(s)) {
-		    SET_NAMED(VECTOR_ELT(s, 0), 2);
-		    return VECTOR_ELT(s, 0);
-		}
-	    }
-	}
-	if (isList(vec) || isLanguage(vec)) {
-	    len = length(vec);
-	    PROTECT(s = allocVector(STRSXP, len));
-	    i = 0;
-	    any = 0;
-	    for ( ; vec != R_NilValue; vec = CDR(vec), i++) {
-		if (TAG(vec) == R_NilValue)
-		    SET_STRING_ELT(s, i, R_BlankString);
-		else if (isSymbol(TAG(vec))) {
-		    any = 1;
-		    SET_STRING_ELT(s, i, PRINTNAME(TAG(vec)));
-		}
-		else
-		    error(_("getAttrib: invalid type (%s) for TAG"),
-			  type2char(TYPEOF(TAG(vec))));
-	    }
-	    UNPROTECT(1);
-	    if (any) {
-		if (!isNull(s)) SET_NAMED(s, 2);
-		return (s);
-	    }
-	    return R_NilValue;
-	}
-    }
-    /* This is where the old/new list adjustment happens. */
-    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s))
-	if (TAG(s) == name) {
-	    if (name == R_DimNamesSymbol && TYPEOF(CAR(s)) == LISTSXP) {
-		SEXP _new, old;
-		int i;
-		_new = allocVector(VECSXP, length(CAR(s)));
-		old = CAR(s);
-		i = 0;
-		while (old != R_NilValue) {
-		    SET_VECTOR_ELT(_new, i++, CAR(old));
-		    old = CDR(old);
-		}
-		SET_NAMED(_new, 2);
-		return _new;
-	    }
-	    SET_NAMED(CAR(s), 2);
-	    return CAR(s);
-	}
-    return R_NilValue;
-}
-
 /* Specialized getters for common attributes */
 
 SEXP getGenericAttrib(SEXP vec) {
@@ -199,7 +131,64 @@ SEXP getDimNamesAttrib(SEXP vec) {
     return R_NilValue;
 }
 
+SEXP getNamesAttrib(SEXP vec) {
+    SEXP s;
+
+    if(isVector(vec) || isList(vec) || isLanguage(vec)) {
+        s = getDimAttrib(vec);
+	if(TYPEOF(s) == INTSXP && length(s) == 1) {
+	    s = getDimNamesAttrib(vec);
+	    if(!isNull(s)) {
+	        SET_NAMED(VECTOR_ELT(s, 0), 2);
+	        return VECTOR_ELT(s, 0);
+	    }
+        }
+    }
+    if (isList(vec) || isLanguage(vec)) {
+        int len = length(vec);
+        PROTECT(s = allocVector(STRSXP, len));
+
+        int i = 0;
+	int any = 0;
+	for ( ; vec != R_NilValue; vec = CDR(vec), i++) {
+            if (TAG(vec) == R_NilValue)
+	        SET_STRING_ELT(s, i, R_BlankString);
+            else if (isSymbol(TAG(vec))) {
+                any = 1;
+                SET_STRING_ELT(s, i, PRINTNAME(TAG(vec)));
+            } else
+	        error(_("getAttrib: invalid type (%s) for TAG"), type2char(TYPEOF(TAG(vec))));
+        }
+	UNPROTECT(1);
+	if (any) {
+	    if (!isNull(s)) SET_NAMED(s, 2);
+            return (s);
+        }
+        return R_NilValue;
+    }
+
+    return getListedAttribBySymbol(vec, R_NamesSymbol);
+}
+
 /* General getter */
+
+/* NOTE: For environments serialize.c calls this function to find if
+   there is a class attribute in order to reconstruct the object bit
+   if needed.  This means the function cannot use OBJECT(vec) == 0 to
+   conclude that the class attribute is R_NilValue.  If you want to
+   rewrite this function to use such a pre-test, be sure to adjust
+   serialize.c accordingly.  LT */
+SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name) {
+
+    if (name == R_NamesSymbol) {
+        return getNamesAttrib(vec);
+    }
+    if (name == R_DimNamesSymbol) {
+        return getDimNamesAttrib(vec);
+    }
+    return getListedAttribBySymbol(vec, name);
+}
+
 
 SEXP getAttrib(SEXP vec, SEXP name)
 {
@@ -823,14 +812,14 @@ SEXP attribute_hidden do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	return(ans);
     /* Special case: removing non-existent names, to avoid a copy */
     if (CADR(args) == R_NilValue &&
-	getAttrib(CAR(args), R_NamesSymbol) == R_NilValue)
+	getNamesAttrib(CAR(args)) == R_NilValue)
 	return CAR(args);
     PROTECT(args = ans);
     if (MAYBE_SHARED(CAR(args)))
 	SETCAR(args, shallow_duplicate(CAR(args)));
     if(IS_S4_OBJECT(CAR(args))) {
 	const char *klass = CHAR(STRING_ELT(R_data_class(CAR(args), FALSE), 0));
-	if(getAttrib(CAR(args), R_NamesSymbol) == R_NilValue) {
+	if(getNamesAttrib(CAR(args)) == R_NilValue) {
 	    /* S4 class w/o a names slot or attribute */
 	    if(TYPEOF(CAR(args)) == S4SXP)
 		error(_("class '%s' has no 'names' slot"), klass);
@@ -938,7 +927,7 @@ SEXP attribute_hidden do_names_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, S
 	return(ans);
 
     if (isVector(x) || isList(x) || isLanguage(x) || IS_S4_OBJECT(x))
-	return getAttrib(x, R_NamesSymbol);
+	return getNamesAttrib(x);
 
     return R_NilValue;
 }
@@ -1177,7 +1166,7 @@ SEXP attribute_hidden do_attributes(SEXP call, SEXP op, SEXP args, SEXP env)
     attrs = ATTRIB(CAR(args));
     nvalues = length(attrs);
     if (isList(CAR(args))) {
-	namesattr = getAttrib(CAR(args), R_NamesSymbol);
+	namesattr = getNamesAttrib(CAR(args));
 	if (namesattr != R_NilValue)
 	    nvalues++;
     }
@@ -1258,7 +1247,7 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("attributes must be a list or NULL"));
     nattrs = length(attrs);
     if (nattrs > 0) {
-	names = getAttrib(attrs, R_NamesSymbol);
+	names = getNamesAttrib(attrs);
 	if (names == R_NilValue)
 	    error(_("attributes must be named"));
 	for (i = 1; i < nattrs; i++) {
@@ -1437,7 +1426,7 @@ SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 	       query is ambiguous and we return R_NilValue.  If there is no
 	       "names" attribute, then the partially matched one, which is
 	       the current value of tag, can be used. */
-	    if (getAttrib(s, R_NamesSymbol) != R_NilValue) {
+	    if (getNamesAttrib(s) != R_NilValue) {
 		UNPROTECT(1);
 		return R_NilValue;
 	    }
@@ -1558,7 +1547,7 @@ void GetMatrixDimnames(SEXP x, SEXP *rl, SEXP *cl,
     else {
 	*rl = VECTOR_ELT(dimnames, 0);
 	*cl = VECTOR_ELT(dimnames, 1);
-	nn = getAttrib(dimnames, R_NamesSymbol);
+	nn = getNamesAttrib(dimnames);
 	if (isNull(nn)) {
 	    *rn = NULL;
 	    *cn = NULL;

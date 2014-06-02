@@ -161,7 +161,7 @@ SEXP R_initMethodDispatch(SEXP envir)
 static SEXP R_element_named(SEXP obj, const char * what)
 {
     int offset = -1, i, n;
-    SEXP names = getAttrib(obj, R_NamesSymbol);
+    SEXP names = getNamesAttrib(obj);
     n = length(names);
     if(n > 0) {
 	for(i = 0; i < n; i++) {

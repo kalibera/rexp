@@ -558,7 +558,7 @@ SEXP col2rgb(SEXP colors, SEXP alpha)
     SET_STRING_ELT(names, 2, mkChar("blue"));
     if(alph) SET_STRING_ELT(names, 3, mkChar("alpha"));
     SET_VECTOR_ELT(dmns, 0, names);
-    if ((names = getAttrib(colors, R_NamesSymbol)) != R_NilValue)
+    if ((names = getNamesAttrib(colors)) != R_NilValue)
 	SET_VECTOR_ELT(dmns, 1, names);
     setAttrib(ans, R_DimNamesSymbol, dmns);
 

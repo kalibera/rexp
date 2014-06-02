@@ -1087,7 +1087,7 @@ SEXP C_par(SEXP call, SEXP op, SEXP args, SEXP rho)
 	int i;
 	PROTECT(newnames = allocVector(STRSXP, nargs));
 	PROTECT(value = allocVector(VECSXP, nargs));
-	oldnames = getAttrib(args, R_NamesSymbol);
+	oldnames = getNamesAttrib(args);
 	for (i = 0 ; i < nargs ; i++) {
 	    if (oldnames != R_NilValue)
 		tag = STRING_ELT(oldnames, i);

@@ -314,7 +314,7 @@ SEXP in_RX11_dataentry(SEXP call, SEXP op, SEXP args, SEXP rho)
     nprotect = 0;/* count the PROTECT()s */
     PROTECT_WITH_INDEX(DE->work = duplicate(CAR(args)), &DE->wpi); nprotect++;
     colmodes = CADR(args);
-    tnames = getAttrib(DE->work, R_NamesSymbol);
+    tnames = getNamesAttrib(DE->work);
 
     if (TYPEOF(DE->work) != VECSXP || TYPEOF(colmodes) != VECSXP)
 	errorcall(call, "invalid argument");
@@ -469,7 +469,7 @@ SEXP in_R_X11_dataviewer(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     nprotect = 0;/* count the PROTECT()s */
     DE->work = CAR(args);
-    DE->names = getAttrib(DE->work, R_NamesSymbol);
+    DE->names = getNamesAttrib(DE->work);
 
     if (TYPEOF(DE->work) != VECSXP)
 	errorcall(call, "invalid argument");

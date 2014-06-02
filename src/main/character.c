@@ -204,7 +204,7 @@ SEXP attribute_hidden do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 	vmaxset(vmax);
     }
     R_FreeStringBufferL(&cbuff);
-    if ((d = getAttrib(x, R_NamesSymbol)) != R_NilValue)
+    if ((d = getNamesAttrib(x)) != R_NilValue)
 	setAttrib(s, R_NamesSymbol, d);
     if ((d = getDimAttrib(x)) != R_NilValue)
 	setAttrib(s, R_DimSymbol, d);

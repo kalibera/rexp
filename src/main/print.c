@@ -431,7 +431,7 @@ static void PrintGenericVector(SEXP s, SEXP env)
 	UNPROTECT(2);
     }
     else { /* .. no dim() .. */
-	names = getAttrib(s, R_NamesSymbol);
+	names = getNamesAttrib(s);
 	taglen = (int) strlen(tagbuf);
 	ptag = tagbuf + taglen;
 	PROTECT(newcall = allocList(2));
@@ -768,7 +768,7 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
 		const void *vmax = vmaxget();
 		PROTECT(t = getDimNamesAttrib(s));
 		if (t != R_NilValue && VECTOR_ELT(t, 0) != R_NilValue) {
-		    SEXP nn = getAttrib(t, R_NamesSymbol);
+		    SEXP nn = getNamesAttrib(t);
 		    const char *title = NULL;
 
 		    if (!isNull(nn))
@@ -796,7 +796,7 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
 	}
 	else {
 	    UNPROTECT(1);
-	    PROTECT(t = getAttrib(s, R_NamesSymbol));
+	    PROTECT(t = getNamesAttrib(s));
 	    if (t != R_NilValue)
 		printNamedVector(s, t, R_print.quote, NULL);
 	    else

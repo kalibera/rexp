@@ -862,7 +862,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 		(userbinop = isUserBinop(op))) {
 		s = CDR(s);
 		if (userbinop) {
-		    if (isNull(getAttrib(s, R_NamesSymbol))) {  
+		    if (isNull(getNamesAttrib(s))) {
 			fop.kind = PP_BINARY2;    /* not quite right for spacing, but can't be unary */
 			fop.precedence = PREC_PERCENT;
 			fop.rightassoc = 0;
@@ -1471,7 +1471,7 @@ static void vec2buff(SEXP v, LocalParseData *d)
     const void *vmax = vmaxget();
 
     n = length(v);
-    nv = getAttrib(v, R_NamesSymbol);
+    nv = getNamesAttrib(v);
     if (length(nv) == 0) nv = R_NilValue;
 
     if (d->opts & USESOURCE) {

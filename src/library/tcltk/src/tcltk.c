@@ -206,7 +206,7 @@ SEXP dotTclObjv(SEXP args)
 {
     SEXP t,
 	avec = CADR(args),
-	nm = getAttrib(avec, R_NamesSymbol);
+	nm = getNamesAttrib(avec);
     int objc, i, result;
     Tcl_Obj **objv;
     const void *vmax = vmaxget();

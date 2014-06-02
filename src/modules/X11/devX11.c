@@ -1780,7 +1780,7 @@ static char* translateFontFamily(char* family, pX11Desc xd)
     if(TYPEOF(x11env) == PROMSXP)
 	REPROTECT(x11env = eval(x11env, graphicsNS), xpi);
     PROTECT(fontdb = findVar(install(".X11.Fonts"), x11env));
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    PROTECT(fontnames = getNamesAttrib(fontdb));
     nfonts = LENGTH(fontdb);
     if (family[0]) {
 	Rboolean found = FALSE;

@@ -473,11 +473,11 @@ static BOOL CALLBACK EnumWindowsProc(HWND handle, LPARAM param)
     	    int newlen = 2*length(EnumResult);
     	    REPROTECT(EnumResult = lengthgets(EnumResult, newlen), EnumIndex);
     	    setAttrib(EnumResult, R_NamesSymbol, 
-    	              lengthgets(getAttrib(EnumResult, R_NamesSymbol), newlen));
+                lengthgets(getNamesAttrib(EnumResult), newlen));
     	}
     	SET_VECTOR_ELT(EnumResult, EnumCount, R_MakeExternalPtr(handle,R_NilValue,R_NilValue));
     	if (GetWindowText(handle, title, 1024)) 
-    	    SET_STRING_ELT(getAttrib(EnumResult, R_NamesSymbol), EnumCount, mkChar(title));
+                SET_STRING_ELT(getNamesAttrib(EnumResult), EnumCount, mkChar(title));
     	EnumCount++;
     }
     return TRUE;

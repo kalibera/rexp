@@ -217,7 +217,7 @@ SEXP Win_dataentry(SEXP args)
     nprotect = 0;/* count the PROTECT()s */
     PROTECT_WITH_INDEX(DE->work = duplicate(CAR(args)), &DE->wpi); nprotect++;
     colmodes = CADR(args);
-    tnames = getAttrib(DE->work, R_NamesSymbol);
+    tnames = getNamesAttrib(DE->work);
 
     if (TYPEOF(DE->work) != VECSXP || TYPEOF(colmodes) != VECSXP)
 	error(G_("invalid argument"));
@@ -1844,7 +1844,7 @@ SEXP Win_dataviewer(SEXP args)
     DE->isEditor = FALSE;
     nprotect = 0;/* count the PROTECT()s */
     DE->work = CAR(args);
-    DE->names = getAttrib(DE->work, R_NamesSymbol);
+    DE->names = getNamesAttrib(DE->work);
 
     if (TYPEOF(DE->work) != VECSXP)
 	error(G_("invalid argument"));

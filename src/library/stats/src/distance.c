@@ -283,7 +283,7 @@ SEXP Cdist(SEXP x, SEXP smethod, SEXP attrs, SEXP p)
     PROTECT(x);
     R_distance(REAL(x), &nr, &nc, REAL(ans), &diag, &method, &rp);
     /* tack on attributes */
-    SEXP names = getAttrib(attrs, R_NamesSymbol);
+    SEXP names = getNamesAttrib(attrs);
     for (int i = 0; i < LENGTH(attrs); i++)
 	setAttrib(ans, install(translateChar(STRING_ELT(names, i))),
 		  VECTOR_ELT(attrs, i));

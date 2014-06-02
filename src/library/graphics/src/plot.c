@@ -358,7 +358,7 @@ GetTextArg(SEXP spec, SEXP *ptxt, rcolor *pcol, double *pcex, int *pfont)
 	    *ptxt = R_NilValue;
 	}
 	else {
-	    nms = getAttrib(spec, R_NamesSymbol);
+	    nms = getNamesAttrib(spec);
 	    if (nms == R_NilValue){ /* PR#1939 */
 	       txt = VECTOR_ELT(spec, 0);
 	       if (TYPEOF(txt) == LANGSXP || TYPEOF(txt) == SYMSXP )

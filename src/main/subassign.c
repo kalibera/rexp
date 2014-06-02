@@ -171,7 +171,7 @@ static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
     }
 
     /* Adjust the attribute list. */
-    names = getAttrib(x, R_NamesSymbol);
+    names = getNamesAttrib(x);
     if (!isNull(names)) {
 	PROTECT(newnames = allocVector(STRSXP, newlen));
 	for (i = 0; i < len; i++)
@@ -433,7 +433,7 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 	    ii++;
 	}
     }
-    xnames = getAttrib(x, R_NamesSymbol);
+    xnames = getNamesAttrib(x);
     if (xnames != R_NilValue) {
 	PROTECT(xnewnames = allocVector(STRSXP, ii));
 	ii = 0;
@@ -722,7 +722,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
        attribute (a vector list) of the generated subscript vector */
     newnames = getAttrib(indx, R_UseNamesSymbol);
     if (newnames != R_NilValue) {
-	SEXP oldnames = getAttrib(x, R_NamesSymbol);
+	SEXP oldnames = getNamesAttrib(x);
 	if (oldnames != R_NilValue) {
 	    for (i = 0; i < n; i++) {
 		if (VECTOR_ELT(newnames, i) != R_NilValue) {
@@ -1530,7 +1530,7 @@ static SEXP DeleteOneVectorListItem(SEXP x, R_xlen_t which)
 	for (i = 0 ; i < n; i++)
 	    if(i != which)
 		SET_VECTOR_ELT_NR(y, k++, VECTOR_ELT(x, i));
-	xnames = getAttrib(x, R_NamesSymbol);
+	xnames = getNamesAttrib(x);
 	if (xnames != R_NilValue) {
 	    PROTECT(ynames = allocVector(STRSXP, n - 1));
 	    k = 0;
@@ -1813,7 +1813,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	/* (if it doesn't already exist) and set the new */
 	/* value in the names attribute. */
 	if (stretch && newname != R_NilValue) {
-	    names = getAttrib(x, R_NamesSymbol);
+	    names = getNamesAttrib(x);
 	    if (names == R_NilValue) {
 		PROTECT(names = allocVector(STRSXP, length(x)));
 		SET_STRING_ELT(names, offset, newname);
@@ -2008,7 +2008,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 	    warning(_("Coercing LHS to a list"));
 	    REPROTECT(x = coerceVector(x, VECSXP), pxidx);
 	}
-	names = getAttrib(x, R_NamesSymbol);
+	names = getNamesAttrib(x);
 	nx = xlength(x);
 	nlist = PRINTNAME(nlist);
 	if (isNull(val)) {

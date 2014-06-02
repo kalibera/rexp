@@ -688,7 +688,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(len > 0 && each == 0)
 	errorcall(call, _("invalid '%s' argument"), "each");
 
-    SEXP xn = getAttrib(x, R_NamesSymbol);
+    SEXP xn = getNamesAttrib(x);
 
     PROTECT(ans = rep4(x, times, len, each, nt));
     if (length(xn) > 0)

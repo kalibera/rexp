@@ -789,7 +789,7 @@ static void OutStringVec(R_outpstream_t stream, SEXP s, SEXP ref_table)
     R_assert(TYPEOF(s) == STRSXP);
 
 #ifdef WARN_ABOUT_NAMES_IN_PERSISTENT_STRINGS
-    SEXP names = getAttrib(s, R_NamesSymbol);
+    SEXP names = getNamesAttrib(s);
     if (names != R_NilValue)
 	warning(_("names in persistent strings are currently ignored"));
 #endif

@@ -827,10 +827,10 @@ SEXP attribute_hidden do_earg_first_min(SEXP call, SEXP op, SEXP argx, SEXP rho)
     PROTECT(ans = allocVector(INTSXP, i ? 1 : 0));
     if (i) {
 	INTEGER(ans)[0] = indx + 1;
-	if (getAttrib(sx, R_NamesSymbol) != R_NilValue) { /* preserve names */
+	if (getNamesAttrib(sx) != R_NilValue) { /* preserve names */
 	    SEXP ansnam;
 	    PROTECT(ansnam =
-		    ScalarString(STRING_ELT(getAttrib(sx, R_NamesSymbol), indx)));
+		    ScalarString(STRING_ELT(getNamesAttrib(sx), indx)));
 	    setAttrib(ans, R_NamesSymbol, ansnam);
 	    UNPROTECT(1);
 	}
@@ -863,7 +863,7 @@ SEXP attribute_hidden do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(INTSXP, len));
     memcpy(INTEGER(ans), buf, sizeof(int) * len);
 
-    if ((v_nms = getAttrib(v, R_NamesSymbol)) != R_NilValue) {
+    if ((v_nms = getNamesAttrib(v)) != R_NilValue) {
         PROTECT(ans_nms = allocVector(STRSXP, len));
         for (i = 0; i < len; i++) {
             SET_STRING_ELT(ans_nms, i,

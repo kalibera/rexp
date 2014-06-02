@@ -1178,6 +1178,7 @@ SEXP Rf_getAttrib(SEXP, SEXP);
 SEXP Rf_getDimAttrib(SEXP);
 SEXP Rf_getDimNamesAttrib(SEXP);
 SEXP Rf_getGenericAttrib(SEXP);
+SEXP Rf_getNamesAttrib(SEXP);
 SEXP Rf_GetArrayDimnames(SEXP);
 SEXP Rf_GetColNames(SEXP);
 void Rf_GetMatrixDimnames(SEXP, SEXP*, SEXP*, const char**, const char**);
@@ -1513,6 +1514,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define getDimAttrib		Rf_getDimAttrib
 #define getDimNamesAttrib	Rf_getDimNamesAttrib
 #define getGenericAttrib	Rf_getGenericAttrib
+#define getNamesAttrib		Rf_getNamesAttrib
 #define getCharCE		Rf_getCharCE
 #define GetColNames		Rf_GetColNames
 #define GetMatrixDimnames	Rf_GetMatrixDimnames

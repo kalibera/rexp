@@ -619,7 +619,7 @@ static void process_request_(void *ptr)
 	}
 
 	if (TYPEOF(x) == VECSXP && LENGTH(x) > 0) { /* a list (generic vector) can be a real payload */
-	    SEXP xNames = getAttrib(x, R_NamesSymbol);
+	    SEXP xNames = getNamesAttrib(x);
 	    if (LENGTH(x) > 1) {
 		SEXP sCT = VECTOR_ELT(x, 1); /* second element is content type if present */
 		if (TYPEOF(sCT) == STRSXP && LENGTH(sCT) > 0)

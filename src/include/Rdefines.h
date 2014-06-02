@@ -126,7 +126,7 @@
 #define GET_ROWNAMES(x)       	GetRowNames(x)
 #define GET_LEVELS(x)       	getAttrib(x, R_LevelsSymbol)
 #define GET_TSP(x)       	getAttrib(x, R_TspSymbol)
-#define GET_NAMES(x)		getAttrib(x, R_NamesSymbol)
+#define GET_NAMES(x)		getNamesAttrib(x)
 #define SET_ATTR(x, what, n)    setAttrib(x, what, n)
 #define SET_CLASS(x, n)     	setAttrib(x, R_ClassSymbol, n)
 #define SET_DIM(x, n)     	setAttrib(x, R_DimSymbol, n)

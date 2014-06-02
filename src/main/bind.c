@@ -54,7 +54,7 @@ struct BindData {
 static int HasNames(SEXP x)
 {
     if(isVector(x)) {
-	if (!isNull(getAttrib(x, R_NamesSymbol)))
+	if (!isNull(getNamesAttrib(x)))
 	    return 1;
     }
     else if(isList(x)) {
@@ -110,7 +110,7 @@ AnswerType(SEXP x, int recurse, int usenames, struct BindData *data, SEXP call)
 	if (recurse) {
 	    R_xlen_t i, n = xlength(x);
 	    if (usenames && !data->ans_nnames &&
-		!isNull(getAttrib(x, R_NamesSymbol)))
+		!isNull(getNamesAttrib(x)))
 		data->ans_nnames = 1;
 	    for (i = 0; i < n; i++) {
 		if (usenames && !data->ans_nnames)
@@ -596,7 +596,7 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
     else saveseqno = 0;
 
     n = xlength(v);
-    PROTECT(names = getAttrib(v, R_NamesSymbol));
+    PROTECT(names = getNamesAttrib(v));
 
     switch(TYPEOF(v)) {
     case NILSXP:
@@ -869,7 +869,7 @@ SEXP attribute_hidden do_unlist_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, 
 
     if (isNewList(x)) {
 	n = xlength(x);
-	if (usenames && getAttrib(x, R_NamesSymbol) != R_NilValue)
+	if (usenames && getNamesAttrib(x) != R_NilValue)
 	    data.ans_nnames = 1;
 	for (i = 0; i < n; i++) {
 	    if (usenames && !data.ans_nnames)
@@ -941,7 +941,7 @@ SEXP attribute_hidden do_unlist_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, 
 	PROTECT(data.ans_names = allocVector(STRSXP, data.ans_length));
 	if (!recurse) {
 	    if (TYPEOF(x) == VECSXP) {
-		SEXP names = getAttrib(x, R_NamesSymbol);
+		SEXP names = getNamesAttrib(x);
 		data.ans_nnames = 0;
 		nameData.seqno = 0;
 		nameData.firstpos = 0;
@@ -1223,7 +1223,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		warned = TRUE;
 		warning("number of rows of result is not a multiple of vector length (arg %d)", na + 1);
 	    }
-	    dn = getAttrib(u, R_NamesSymbol);
+	    dn = getNamesAttrib(u);
 	    if (k >= lenmin && (TAG(t) != R_NilValue ||
 				(deparse_level == 2) ||
 				((deparse_level == 1) &&
@@ -1375,7 +1375,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 			SET_STRING_ELT(nam, j++, R_BlankString);
 		}
 	    } else if (length(u) >= lenmin) {
-		u = getAttrib(u, R_NamesSymbol);
+		u = getNamesAttrib(u);
 
 		if (have_rnames && GetRowNames(dn) == R_NilValue
 		    && u != R_NilValue && length(u) == rows)
@@ -1470,7 +1470,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		warned = TRUE;
 		warning("number of columns of result is not a multiple of vector length (arg %d)", na + 1);
 	    }
-	    dn = getAttrib(u, R_NamesSymbol);
+	    dn = getNamesAttrib(u);
 	    if (k >= lenmin && (TAG(t) != R_NilValue ||
 				(deparse_level == 2) ||
 				((deparse_level == 1) &&
@@ -1628,7 +1628,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		}
 	    }
 	    else if (length(u) >= lenmin) {
-		u = getAttrib(u, R_NamesSymbol);
+		u = getNamesAttrib(u);
 
 		if (have_cnames && GetColNames(dn) == R_NilValue
 		    && u != R_NilValue && length(u) == cols)

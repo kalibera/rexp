@@ -532,7 +532,7 @@ void printArray(SEXP x, SEXP dim, int quote, int right, SEXP dimnames)
 	    dn0 = VECTOR_ELT(dimnames, 0);
 	    dn1 = VECTOR_ELT(dimnames, 1);
 	    has_dimnames = 1;
-	    dnn = getAttrib(dimnames, R_NamesSymbol);
+	    dnn = getNamesAttrib(dimnames);
 	    has_dnn = !isNull(dnn);
 	    if ( has_dnn ) {
 		rn = (char *) translateChar(STRING_ELT(dnn, 0));

@@ -33,7 +33,7 @@ do_mapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_xlen_t *lengths, *counters, longest = 0;
 
     m = length(varyingArgs);
-    SEXP vnames = PROTECT(getAttrib(varyingArgs, R_NamesSymbol));
+    SEXP vnames = PROTECT(getNamesAttrib(varyingArgs));
     Rboolean named = vnames != R_NilValue;
 
     lengths = (R_xlen_t *)  R_alloc(m, sizeof(R_xlen_t));

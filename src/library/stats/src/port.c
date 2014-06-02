@@ -450,7 +450,7 @@ nlsb_iterate(double b[], double d[], double dr[], int iv[], int liv,
  */
 static R_INLINE SEXP getElement(SEXP list, char *nm)
 {
-    int i; SEXP names = getAttrib(list, R_NamesSymbol);
+    int i; SEXP names = getNamesAttrib(list);
 
     if (!isNewList(list) || LENGTH(names) != LENGTH(list))
 	error(_("'getElement' applies only to named lists"));

@@ -165,7 +165,7 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
 	    PROTECT(ans = allocVector(STRSXP, n));
 	    for(i = 0; i < n; i++)
 		SET_STRING_ELT(ans, i, NA_STRING);
-	    SEXP nms = getAttrib(vec, R_NamesSymbol);
+	    SEXP nms = getNamesAttrib(vec);
 	    if(!isNull(nms))
 		setAttrib(ans, R_NamesSymbol, nms);
 	} else {
@@ -253,7 +253,7 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if(opt_value) {
 	PROTECT(ans = allocVector(STRSXP, nmatches));
-	SEXP nmold = getAttrib(vec, R_NamesSymbol), nm;
+	SEXP nmold = getNamesAttrib(vec), nm;
 	for (j = i = 0 ; i < n ; i++) {
 	    if(LOGICAL(ind)[i])
 		SET_STRING_ELT(ans, j++, STRING_ELT(vec, i));
@@ -442,8 +442,8 @@ adist_full(SEXP x, SEXP y, double *costs, Rboolean opt_counts)
 	}
     }
 
-    x = getAttrib(x, R_NamesSymbol);
-    y = getAttrib(y, R_NamesSymbol);
+    x = getNamesAttrib(x);
+    y = getNamesAttrib(y);
     if(!isNull(x) || !isNull(y)) {
 	PROTECT(dimnames = allocVector(VECSXP, 2));	    
 	SET_VECTOR_ELT(dimnames, 0, x);
@@ -692,8 +692,8 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
 
-    x = getAttrib(x, R_NamesSymbol);
-    y = getAttrib(y, R_NamesSymbol);
+    x = getNamesAttrib(x);
+    y = getNamesAttrib(y);
     if(!isNull(x) || !isNull(y)) {
 	PROTECT(dimnames = allocVector(VECSXP, 2));	    
 	SET_VECTOR_ELT(dimnames, 0, x);

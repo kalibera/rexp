@@ -1679,7 +1679,7 @@ SEXP termsform(SEXP args)
     if (isNull(data) || isEnvironment(data))
 	framenames = R_NilValue;
     else if (isFrame(data))
-	framenames = getAttrib(data, R_NamesSymbol);
+	framenames = getNamesAttrib(data);
     else
 	error(_("'data' argument is of the wrong type"));
     PROTECT_WITH_INDEX(framenames, &vpi);

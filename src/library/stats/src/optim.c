@@ -35,7 +35,7 @@
 
 SEXP getListElement(SEXP list, char *str)
 {
-    SEXP elmt = R_NilValue, names = getAttrib(list, R_NamesSymbol);
+    SEXP elmt = R_NilValue, names = getNamesAttrib(list);
     int i;
 
     for (i = 0; i < length(list); i++)
@@ -188,7 +188,7 @@ SEXP optim(SEXP call, SEXP op, SEXP args, SEXP rho)
     OS->usebounds = 0;
     OS->R_env = rho;
     par = CAR(args);
-    OS->names = getAttrib(par, R_NamesSymbol);
+    OS->names = getNamesAttrib(par);
     args = CDR(args); fn = CAR(args);
     if (!isFunction(fn)) error(_("'fn' is not a function"));
     args = CDR(args); gr = CAR(args);
@@ -394,7 +394,7 @@ SEXP optimhess(SEXP call, SEXP op, SEXP args, SEXP rho)
     OS->R_env = rho;
     par = CAR(args);
     npar = LENGTH(par);
-    OS->names = getAttrib(par, R_NamesSymbol);
+    OS->names = getNamesAttrib(par);
     args = CDR(args); fn = CAR(args);
     if (!isFunction(fn)) error(_("'fn' is not a function"));
     args = CDR(args); gr = CAR(args);
@@ -445,7 +445,7 @@ SEXP optimhess(SEXP call, SEXP op, SEXP args, SEXP rho)
 		0.5 * (REAL(ans)[i * npar + j] + REAL(ans)[j * npar + i]);
 	    REAL(ans)[i * npar + j] = REAL(ans)[j * npar + i] = tmp;
 	}
-    SEXP nm = getAttrib(par, R_NamesSymbol);
+    SEXP nm = getNamesAttrib(par);
     if(!isNull(nm)) {
 	SEXP dm;
 	PROTECT(dm = allocVector(VECSXP, 2));

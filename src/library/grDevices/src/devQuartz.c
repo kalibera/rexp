@@ -615,7 +615,7 @@ const char *RQuartz_LookUpFontName(int fontface, const char *fontfamily)
     if(TYPEOF(env) == PROMSXP)
         REPROTECT(env = eval(env,ns) ,index);
     PROTECT(db    = findVar(install(".Quartz.Fonts"), env));
-    PROTECT(names = getAttrib(db, R_NamesSymbol));
+    PROTECT(names = getNamesAttrib(db));
     if (*fontfamily) {
         int i;
         for(i = 0; i < length(names); i++)

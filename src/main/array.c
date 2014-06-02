@@ -351,7 +351,7 @@ SEXP DropDims(SEXP x)
     } else {
 	/* We have a lower dimensional array. */
 	SEXP newdims, dnn, newnamesnames = R_NilValue;
-	dnn = getAttrib(dimnames, R_NamesSymbol);
+	dnn = getNamesAttrib(dimnames);
 	PROTECT(newdims = allocVector(INTSXP, n));
 	for (i = 0, n = 0; i < ndims; i++)
 	    if (INTEGER(dims)[i] != 1)
@@ -831,7 +831,7 @@ SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y
 	    if (xdims != R_NilValue) {
 		if (ldx == 2 || ncx == 1) {
 		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims, 0));
-		    dnx = getAttrib(xdims, R_NamesSymbol);
+		    dnx = getNamesAttrib(xdims);
 		    if(!isNull(dnx))
 			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx, 0));
 		}
@@ -841,12 +841,12 @@ SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y
 	    if (ydims != R_NilValue) {					\
 		if (ldy == 2) {						\
 		    SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 1));	\
-		    dny = getAttrib(ydims, R_NamesSymbol);		\
+		    dny = getNamesAttrib(ydims);		\
 		    if(!isNull(dny))					\
 			SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 1)); \
 		} else if (nry == 1) {					\
 		    SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 0));	\
-		    dny = getAttrib(ydims, R_NamesSymbol);		\
+		    dny = getNamesAttrib(ydims);		\
 		    if(!isNull(dny))					\
 			SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 0)); \
 		}							\
@@ -903,7 +903,7 @@ SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y
 	    if (xdims != R_NilValue) {
 		if (ldx == 2) {/* not nrx==1 : .. fixed, ihaka 2003-09-30 */
 		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims, 1));
-		    dnx = getAttrib(xdims, R_NamesSymbol);
+		    dnx = getNamesAttrib(xdims);
 		    if(!isNull(dnx))
 			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx, 1));
 		}
@@ -948,7 +948,7 @@ SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y
 	    if (xdims != R_NilValue) {
 		if (ldx == 2) {
 		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims, 0));
-		    dnx = getAttrib(xdims, R_NamesSymbol);
+		    dnx = getNamesAttrib(xdims);
 		    if(!isNull(dnx))
 			SET_STRING_ELT(dimnamesnames, 0, STRING_ELT(dnx, 0));
 		}
@@ -956,7 +956,7 @@ SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y
 	    if (ydims != R_NilValue) {
 		if (ldy == 2) {
 		    SET_VECTOR_ELT(dimnames, 1, VECTOR_ELT(ydims, 0));
-		    dny = getAttrib(ydims, R_NamesSymbol);
+		    dny = getNamesAttrib(ydims);
 		    if(!isNull(dny))
 			SET_STRING_ELT(dimnamesnames, 1, STRING_ELT(dny, 0));
 		}
@@ -999,7 +999,7 @@ SEXP attribute_hidden do_earg_transpose(SEXP call, SEXP op, SEXP arg_x, SEXP rho
 	case 0:
 	    len = nrow = LENGTH(a);
 	    ncol = 1;
-	    rnames = getAttrib(a, R_NamesSymbol);
+	    rnames = getNamesAttrib(a);
 	    dimnames = rnames;/* for isNull() below*/
 	    break;
 	case 1:
@@ -1008,7 +1008,7 @@ SEXP attribute_hidden do_earg_transpose(SEXP call, SEXP op, SEXP arg_x, SEXP rho
 	    dimnames = getDimNamesAttrib(a);
 	    if (dimnames != R_NilValue) {
 		rnames = VECTOR_ELT(dimnames, 0);
-		dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+		dimnamesnames = getNamesAttrib(dimnames);
 	    }
 	    break;
 	case 2:
@@ -1019,7 +1019,7 @@ SEXP attribute_hidden do_earg_transpose(SEXP call, SEXP op, SEXP arg_x, SEXP rho
 	    if (dimnames != R_NilValue) {
 		rnames = VECTOR_ELT(dimnames, 0);
 		cnames = VECTOR_ELT(dimnames, 1);
-		dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+		dimnamesnames = getNamesAttrib(dimnames);
 	    }
 	    break;
 	default:
@@ -1159,7 +1159,7 @@ SEXP attribute_hidden do_earg_aperm(SEXP call, SEXP op, SEXP arg_a, SEXP arg_per
 	    SEXP dna = getDimNamesAttrib(a);
 	    if (isNull(dna))
 		error(_("'a' does not have named dimnames"));
-	    SEXP dnna = getAttrib(dna, R_NamesSymbol);
+	    SEXP dnna = getNamesAttrib(dna);
 	    if (isNull(dnna))
 		error(_("'a' does not have named dimnames"));
 	    for (i = 0; i < n; i++) {
@@ -1273,7 +1273,7 @@ SEXP attribute_hidden do_earg_aperm(SEXP call, SEXP op, SEXP arg_a, SEXP arg_per
 	    SEXP dnna, dnr, dnnr;
 
 	    PROTECT(dnr  = allocVector(VECSXP, n));
-	    PROTECT(dnna = getAttrib(dna, R_NamesSymbol));
+	    PROTECT(dnna = getNamesAttrib(dna));
 	    if (dnna != R_NilValue) {
 		PROTECT(dnnr = allocVector(STRSXP, n));
 		for (i = 0; i < n; i++) {

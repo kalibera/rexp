@@ -391,7 +391,7 @@ SEXP VectorToPairList(SEXP x)
     len = length(x);
     PROTECT(x);
     PROTECT(xnew = allocList(len)); /* limited to int */
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol));
+    PROTECT(xnames = getNamesAttrib(x));
     named = (xnames != R_NilValue);
     xptr = xnew;
     for (i = 0; i < len; i++) {
@@ -897,7 +897,7 @@ static SEXP coerceToVectorList(SEXP v)
     default:
 	UNIMPLEMENTED_TYPE("coerceToVectorList", v);
     }
-    tmp = getAttrib(v, R_NamesSymbol);
+    tmp = getNamesAttrib(v);
     if (tmp != R_NilValue)
 	setAttrib(ans, R_NamesSymbol, tmp);
     UNPROTECT(1);
@@ -946,7 +946,7 @@ static SEXP coerceToPairList(SEXP v)
 	}
 	ansp = CDR(ansp);
     }
-    ansp = getAttrib(v, R_NamesSymbol);
+    ansp = getNamesAttrib(v);
     if (ansp != R_NilValue)
 	setAttrib(ans, R_NamesSymbol, ansp);
     UNPROTECT(1);
@@ -1135,7 +1135,7 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
 	      type2char(type));
 
     if (warn) CoercionWarning(warn);
-    names = getAttrib(v, R_NamesSymbol);
+    names = getNamesAttrib(v);
     if (names != R_NilValue)
 	setAttrib(rval, R_NamesSymbol, names);
     UNPROTECT(1);
@@ -1543,7 +1543,7 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = length(arglist);
     if (n < 1)
 	errorcall(call, _("argument must have length at least 1"));
-    names = getAttrib(arglist, R_NamesSymbol);
+    names = getNamesAttrib(arglist);
     PROTECT(pargs = args = allocList(n - 1));
     for (i = 0; i < n - 1; i++) {
 	SETCAR(pargs, VECTOR_ELT(arglist, i));
@@ -1588,7 +1588,7 @@ SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
     case EXPRSXP:
 	if(0 == (n = length(args)))
 	    errorcall(call, _("invalid length 0 argument"));
-	names = getAttrib(args, R_NamesSymbol);
+	names = getNamesAttrib(args);
 	PROTECT(ap = ans = allocList(n));
 	for (i = 0; i < n; i++) {
 	    SETCAR(ap, VECTOR_ELT(args, i));
@@ -2017,7 +2017,7 @@ SEXP attribute_hidden do_isna_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SE
 	if (isArray(x))
 	    PROTECT(names = getDimNamesAttrib(x));
 	else
-	    PROTECT(names = getAttrib(x, R_NamesSymbol));
+	    PROTECT(names = getNamesAttrib(x));
     }
     else dims = names = R_NilValue;
     switch (TYPEOF(x)) {
@@ -2273,7 +2273,7 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (isArray(x))
 	    PROTECT(names = getDimNamesAttrib(x));
 	else
-	    PROTECT(names = getAttrib(x, R_NamesSymbol));
+	    PROTECT(names = getNamesAttrib(x));
     }
     else dims = names = R_NilValue;
     switch (TYPEOF(x)) {
@@ -2334,7 +2334,7 @@ SEXP attribute_hidden do_isfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (isArray(x))
 	    names = getDimNamesAttrib(x);
 	else
-	    names = getAttrib(x, R_NamesSymbol);
+	    names = getNamesAttrib(x);
     }
     else dims = names = R_NilValue;
     switch (TYPEOF(x)) {
@@ -2394,7 +2394,7 @@ SEXP attribute_hidden do_isinfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (isArray(x))
 	    names = getDimNamesAttrib(x);
 	else
-	    names = getAttrib(x, R_NamesSymbol);
+	    names = getNamesAttrib(x);
     }
     else	dims = names = R_NilValue;
     switch (TYPEOF(x)) {
@@ -2498,7 +2498,7 @@ SEXP attribute_hidden do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("'envir' must be an environment"));
 
     n = length(args);
-    names = getAttrib(args, R_NamesSymbol);
+    names = getNamesAttrib(args);
 
     PROTECT(c = call = allocList(n + 1));
     SET_TYPEOF(c, LANGSXP);
