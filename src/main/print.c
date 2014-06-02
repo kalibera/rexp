@@ -583,7 +583,7 @@ static void printList(SEXP s, SEXP env)
 			rn, cn);
 	}
 	else {
-	    dimnames = getAttrib(s, R_DimNamesSymbol);
+	    dimnames = getDimNamesAttrib(s);
 	    printArray(t, dims, 0, Rprt_adj_left, dimnames);
 	}
 	UNPROTECT(2);
@@ -766,7 +766,7 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
 	if (TYPEOF(t) == INTSXP) {
 	    if (LENGTH(t) == 1) {
 		const void *vmax = vmaxget();
-		PROTECT(t = getAttrib(s, R_DimNamesSymbol));
+		PROTECT(t = getDimNamesAttrib(s));
 		if (t != R_NilValue && VECTOR_ELT(t, 0) != R_NilValue) {
 		    SEXP nn = getAttrib(t, R_NamesSymbol);
 		    const char *title = NULL;

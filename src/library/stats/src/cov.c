@@ -770,7 +770,7 @@ static SEXP corcov(SEXP x, SEXP y, SEXP na_method, SEXP skendall, Rboolean cor)
     }
     if (ansmat) { /* set dimnames() when applicable */
 	if (isNull(y)) {
-	    x = getAttrib(x, R_DimNamesSymbol);
+	    x = getDimNamesAttrib(x);
 	    if (!isNull(x) && !isNull(VECTOR_ELT(x, 1))) {
 		PROTECT(ind = allocVector(VECSXP, 2));
 		SET_VECTOR_ELT(ind, 0, duplicate(VECTOR_ELT(x, 1)));
@@ -780,8 +780,8 @@ static SEXP corcov(SEXP x, SEXP y, SEXP na_method, SEXP skendall, Rboolean cor)
 	    }
 	}
 	else {
-	    x = getAttrib(x, R_DimNamesSymbol);
-	    y = getAttrib(y, R_DimNamesSymbol);
+	    x = getDimNamesAttrib(x);
+	    y = getDimNamesAttrib(y);
 	    if ((length(x) >= 2 && !isNull(VECTOR_ELT(x, 1))) ||
 		(length(y) >= 2 && !isNull(VECTOR_ELT(y, 1)))) {
 		PROTECT(ind = allocVector(VECSXP, 2));

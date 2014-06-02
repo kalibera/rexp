@@ -1210,7 +1210,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	u = PRVALUE_OR_CONST(CAR(t));
 	dims = getDimAttrib(u);
 	if (length(dims) == 2) {
-	    dn = getAttrib(u, R_DimNamesSymbol);
+	    dn = getDimNamesAttrib(u);
 	    if (length(dn) == 2) {
 		if (VECTOR_ELT(dn, 1) != R_NilValue)
 		    have_cnames = TRUE;
@@ -1356,7 +1356,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE_OR_CONST(CAR(t));
 	    if (isMatrix(u)) {
-		v = getAttrib(u, R_DimNamesSymbol);
+		v = getDimNamesAttrib(u);
 
 		if (have_rnames &&
 		    GetRowNames(dn) == R_NilValue &&
@@ -1456,7 +1456,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	u = PRVALUE_OR_CONST(CAR(t));
 	dims = getDimAttrib(u);
 	if (length(dims) == 2) {
-	    dn = getAttrib(u, R_DimNamesSymbol);
+	    dn = getDimNamesAttrib(u);
 	    if (length(dn) == 2) {
 		if (VECTOR_ELT(dn, 0) != R_NilValue)
 		    have_rnames = TRUE;
@@ -1606,7 +1606,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE_OR_CONST(CAR(t));
 	    if (isMatrix(u)) {
-		v = getAttrib(u, R_DimNamesSymbol);
+		v = getDimNamesAttrib(u);
 
 		if (have_cnames &&
 		    GetColNames(dn) == R_NilValue &&

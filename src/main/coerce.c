@@ -2015,7 +2015,7 @@ SEXP attribute_hidden do_isna_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SE
     if (isVector(x)) {
 	PROTECT(dims = getDimAttrib(x));
 	if (isArray(x))
-	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
+	    PROTECT(names = getDimNamesAttrib(x));
 	else
 	    PROTECT(names = getAttrib(x, R_NamesSymbol));
     }
@@ -2271,7 +2271,7 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (isVector(x)) {
 	PROTECT(dims = getDimAttrib(x));
 	if (isArray(x))
-	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
+	    PROTECT(names = getDimNamesAttrib(x));
 	else
 	    PROTECT(names = getAttrib(x, R_NamesSymbol));
     }
@@ -2332,7 +2332,7 @@ SEXP attribute_hidden do_isfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (isVector(x)) {
 	dims = getDimAttrib(x);
 	if (isArray(x))
-	    names = getAttrib(x, R_DimNamesSymbol);
+	    names = getDimNamesAttrib(x);
 	else
 	    names = getAttrib(x, R_NamesSymbol);
     }
@@ -2392,7 +2392,7 @@ SEXP attribute_hidden do_isinfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (isVector(x)) {
 	dims = getDimAttrib(x);
 	if (isArray(x))
-	    names = getAttrib(x, R_DimNamesSymbol);
+	    names = getDimNamesAttrib(x);
 	else
 	    names = getAttrib(x, R_NamesSymbol);
     }

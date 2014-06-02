@@ -344,8 +344,8 @@ INLINE_FUN SEXP lang6(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w, SEXP x)
 INLINE_FUN Rboolean conformable(SEXP x, SEXP y)
 {
     int i, n;
-    PROTECT(x = getAttrib(x, R_DimSymbol));
-    y = getAttrib(y, R_DimSymbol);
+    PROTECT(x = getDimAttrib(x));
+    y = getDimAttrib(y);
     UNPROTECT(1);
     if ((n = length(x)) != length(y))
 	return FALSE;
@@ -526,7 +526,7 @@ INLINE_FUN Rboolean isMatrix(SEXP s)
 {
     SEXP t;
     if (isVector(s)) {
-	t = getAttrib(s, R_DimSymbol);
+	t = getDimAttrib(s);
 	/* You are not supposed to be able to assign a non-integer dim,
 	   although this might be possible by misuse of ATTRIB. */
 	if (TYPEOF(t) == INTSXP && LENGTH(t) == 2)
@@ -539,7 +539,7 @@ INLINE_FUN Rboolean isArray(SEXP s)
 {
     SEXP t;
     if (isVector(s)) {
-	t = getAttrib(s, R_DimSymbol);
+	t = getDimAttrib(s);
 	/* You are not supposed to be able to assign a 0-length dim,
 	 nor a non-integer dim */
 	if (TYPEOF(t) == INTSXP && LENGTH(t) > 0)

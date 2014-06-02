@@ -290,7 +290,7 @@ SEXP DropDims(SEXP x)
 
     PROTECT(x);
     dims = getDimAttrib(x);
-    dimnames = getAttrib(x, R_DimNamesSymbol);
+    dimnames = getDimNamesAttrib(x);
 
     /* Check that dropping will actually do something. */
     /* (1) Check that there is a "dim" attribute. */
@@ -818,8 +818,8 @@ SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y
 	    matprod(REAL(x), nrx, ncx,
 		    REAL(y), nry, ncy, REAL(ans));
 
-	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
-	PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
+	PROTECT(xdims = getDimNamesAttrib(x));
+	PROTECT(ydims = getDimNamesAttrib(y));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -886,11 +886,11 @@ SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y
 			  REAL(y), nry, ncy, REAL(ans));
 	}
 
-	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
+	PROTECT(xdims = getDimNamesAttrib(x));
 	if (sym)
 	    PROTECT(ydims = xdims);
 	else
-	    PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
+	    PROTECT(ydims = getDimNamesAttrib(y));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -931,11 +931,11 @@ SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y
 			   REAL(y), nry, ncy, REAL(ans));
 	}
 
-	PROTECT(xdims = getAttrib(x, R_DimNamesSymbol));
+	PROTECT(xdims = getDimNamesAttrib(x));
 	if (sym)
 	    PROTECT(ydims = xdims);
 	else
-	    PROTECT(ydims = getAttrib(y, R_DimNamesSymbol));
+	    PROTECT(ydims = getDimNamesAttrib(y));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
@@ -1005,7 +1005,7 @@ SEXP attribute_hidden do_earg_transpose(SEXP call, SEXP op, SEXP arg_x, SEXP rho
 	case 1:
 	    len = nrow = LENGTH(a);
 	    ncol = 1;
-	    dimnames = getAttrib(a, R_DimNamesSymbol);
+	    dimnames = getDimNamesAttrib(a);
 	    if (dimnames != R_NilValue) {
 		rnames = VECTOR_ELT(dimnames, 0);
 		dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
@@ -1015,7 +1015,7 @@ SEXP attribute_hidden do_earg_transpose(SEXP call, SEXP op, SEXP arg_x, SEXP rho
 	    ncol = ncols(a);
 	    nrow = nrows(a);
 	    len = XLENGTH(a);
-	    dimnames = getAttrib(a, R_DimNamesSymbol);
+	    dimnames = getDimNamesAttrib(a);
 	    if (dimnames != R_NilValue) {
 		rnames = VECTOR_ELT(dimnames, 0);
 		cnames = VECTOR_ELT(dimnames, 1);
@@ -1156,7 +1156,7 @@ SEXP attribute_hidden do_earg_aperm(SEXP call, SEXP op, SEXP arg_a, SEXP arg_per
 	    error(_("'perm' is of wrong length %d (!= %d)"),
 		  LENGTH(perm), n);
 	if (isString(perm)) {
-	    SEXP dna = getAttrib(a, R_DimNamesSymbol);
+	    SEXP dna = getDimNamesAttrib(a);
 	    if (isNull(dna))
 		error(_("'a' does not have named dimnames"));
 	    SEXP dnna = getAttrib(dna, R_NamesSymbol);
@@ -1268,7 +1268,7 @@ SEXP attribute_hidden do_earg_aperm(SEXP call, SEXP op, SEXP arg_a, SEXP arg_per
 
     /* and handle the dimnames, if any */
     if (resize) {
-	PROTECT(dna = getAttrib(a, R_DimNamesSymbol));
+	PROTECT(dna = getDimNamesAttrib(a));
 	if (dna != R_NilValue) {
 	    SEXP dnna, dnr, dnnr;
 

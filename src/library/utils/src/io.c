@@ -593,7 +593,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
 
     PROTECT(dims = getDimAttrib(cvec));
     if (isArray(cvec))
-	PROTECT(names = getAttrib(cvec, R_DimNamesSymbol));
+	PROTECT(names = getDimNamesAttrib(cvec));
     else
 	PROTECT(names = getAttrib(cvec, R_NamesSymbol));
 

@@ -313,7 +313,7 @@ static char *AppendInteger(char *buf, int i)
 
 static SEXP ColumnNames(SEXP x)
 {
-    SEXP dn = getAttrib(x, R_DimNamesSymbol);
+    SEXP dn = getDimNamesAttrib(x);
     if (dn == R_NilValue || length(dn) < 2)
 	return R_NilValue;
     else
@@ -370,7 +370,7 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Get the variable names from the factor matrix */
 
-    vnames = getAttrib(factors, R_DimNamesSymbol);
+    vnames = getDimNamesAttrib(factors);
     if (length(factors) > 0) {
 	if (length(vnames) < 1 ||
 	    (nVar - intrcept > 0 && !isString(VECTOR_ELT(vnames, 0))))

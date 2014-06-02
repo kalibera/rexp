@@ -816,7 +816,7 @@ int_arraySubscript(int dim, SEXP s, SEXP dims, SEXP x, SEXP call)
 	UNPROTECT(1);
 	return tmp;
     case STRSXP:
-	dnames = getAttrib(x, R_DimNamesSymbol);
+	dnames = getDimNamesAttrib(x);
 	if (dnames == R_NilValue) {
 	    ECALL(call, _("no 'dimnames' attribute for array"));
 	}

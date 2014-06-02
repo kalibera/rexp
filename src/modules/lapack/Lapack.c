@@ -535,7 +535,7 @@ static SEXP La_solve_cmplx(SEXP A, SEXP Bin)
     if(n == 0) error(_("'a' is 0-diml"));
     int n2 = Adims[1];
     if(n2 != n) error(_("'a' (%d x %d) must be square"), n, n2);
-    Adn = getAttrib(A, R_DimNamesSymbol);
+    Adn = getDimNamesAttrib(A);
 
     if (isMatrix(Bin)) {
 	Bdims = INTEGER(coerceVector(getDimAttrib(Bin), INTSXP));
@@ -546,7 +546,7 @@ static SEXP La_solve_cmplx(SEXP A, SEXP Bin)
 	    error(_("'b' (%d x %d) must be compatible with 'a' (%d x %d)"),
 		  p2, p, n, n);
 	PROTECT(B = allocMatrix(CPLXSXP, n, p));
-	SEXP Bindn =  getAttrib(Bin, R_DimNamesSymbol);
+	SEXP Bindn =  getDimNamesAttrib(Bin);
 	if (!isNull(Adn) || !isNull(Bindn)) {
 	    Bdn = allocVector(VECSXP, 2);
 	    if (!isNull(Adn)) SET_VECTOR_ELT(Bdn, 0, VECTOR_ELT(Adn, 1));
@@ -600,7 +600,7 @@ static SEXP La_qr_cmplx(SEXP Ain)
 
     if (!(isMatrix(Ain) && isComplex(Ain)))
 	error(_("'a' must be a complex matrix"));
-    SEXP Adn = getAttrib(Ain, R_DimNamesSymbol);
+    SEXP Adn = getDimNamesAttrib(Ain);
     Adims = INTEGER(coerceVector(getDimAttrib(Ain), INTSXP));
     m = Adims[0]; n = Adims[1];
     SEXP A = PROTECT(allocMatrix(CPLXSXP, m, n));
@@ -964,7 +964,7 @@ static SEXP La_chol(SEXP A, SEXP pivot, SEXP stol)
 	}
 	setAttrib(ans, install("pivot"), piv);
 	setAttrib(ans, install("rank"), ScalarInteger(rank));
-	SEXP cn, dn = getAttrib(ans, R_DimNamesSymbol);
+	SEXP cn, dn = getDimNamesAttrib(ans);
 	if (!isNull(dn) && !isNull(cn = VECTOR_ELT(dn, 1))) {
 	    // need to pivot the colnames
 	    SEXP dn2 = PROTECT(duplicate(dn));
@@ -1042,7 +1042,7 @@ static SEXP La_solve(SEXP A, SEXP Bin, SEXP tolin)
     if(n == 0) error(_("'a' is 0-diml"));
     int n2 = Adims[1];
     if(n2 != n) error(_("'a' (%d x %d) must be square"), n, n2);
-    Adn = getAttrib(A, R_DimNamesSymbol);
+    Adn = getDimNamesAttrib(A);
 
     if (isMatrix(Bin)) {
 	int *Bdims = INTEGER(coerceVector(getDimAttrib(Bin), INTSXP));
@@ -1053,7 +1053,7 @@ static SEXP La_solve(SEXP A, SEXP Bin, SEXP tolin)
 	    error(_("'b' (%d x %d) must be compatible with 'a' (%d x %d)"),
 		  p2, p, n, n);
 	PROTECT(B = allocMatrix(REALSXP, n, p));
-	SEXP Bindn =  getAttrib(Bin, R_DimNamesSymbol);
+	SEXP Bindn =  getDimNamesAttrib(Bin);
 	// This is somewhat odd, but Matrix relies on dropping NULL dimnames
 	if (!isNull(Adn) || !isNull(Bindn)) {
 	    // rownames(ans) = colnames(A), colnames(ans) = colnames(Bin)
@@ -1112,7 +1112,7 @@ static SEXP La_qr(SEXP Ain)
     int m, n;
 
     if (!isMatrix(Ain)) error(_("'a' must be a numeric matrix"));
-    SEXP Adn = getAttrib(Ain, R_DimNamesSymbol);
+    SEXP Adn = getDimNamesAttrib(Ain);
     int *Adims = INTEGER(coerceVector(getDimAttrib(Ain), INTSXP));
     m = Adims[0]; n = Adims[1];
     SEXP A;

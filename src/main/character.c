@@ -208,7 +208,7 @@ SEXP attribute_hidden do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 	setAttrib(s, R_NamesSymbol, d);
     if ((d = getDimAttrib(x)) != R_NilValue)
 	setAttrib(s, R_DimSymbol, d);
-    if ((d = getAttrib(x, R_DimNamesSymbol)) != R_NilValue)
+    if ((d = getDimNamesAttrib(x)) != R_NilValue)
 	setAttrib(s, R_DimNamesSymbol, d);
     UNPROTECT(2);
     return s;

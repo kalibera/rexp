@@ -1176,6 +1176,7 @@ SEXP Rf_findVarInFrame(SEXP, SEXP);
 SEXP Rf_findVarInFrame3(SEXP, SEXP, Rboolean);
 SEXP Rf_getAttrib(SEXP, SEXP);
 SEXP Rf_getDimAttrib(SEXP);
+SEXP Rf_getDimNamesAttrib(SEXP);
 SEXP Rf_getGenericAttrib(SEXP);
 SEXP Rf_GetArrayDimnames(SEXP);
 SEXP Rf_GetColNames(SEXP);
@@ -1510,6 +1511,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define GetArrayDimnames	Rf_GetArrayDimnames
 #define getAttrib		Rf_getAttrib
 #define getDimAttrib		Rf_getDimAttrib
+#define getDimNamesAttrib	Rf_getDimNamesAttrib
 #define getGenericAttrib	Rf_getGenericAttrib
 #define getCharCE		Rf_getCharCE
 #define GetColNames		Rf_GetColNames

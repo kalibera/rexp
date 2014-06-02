@@ -574,7 +574,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     if((l = getDimAttrib(x)) != R_NilValue) {
 	setAttrib(y, R_DimSymbol, l);
-	if((l = getAttrib(x, R_DimNamesSymbol)) != R_NilValue)
+	if((l = getDimNamesAttrib(x)) != R_NilValue)
 	    setAttrib(y, R_DimNamesSymbol, l);
     } else if((l = getAttrib(x, R_NamesSymbol)) != R_NilValue)
 	setAttrib(y, R_NamesSymbol, l);

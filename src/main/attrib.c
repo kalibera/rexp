@@ -111,7 +111,7 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 	if(isVector(vec) || isList(vec) || isLanguage(vec)) {
 	    s = getDimAttrib(vec);
 	    if(TYPEOF(s) == INTSXP && length(s) == 1) {
-		s = getAttrib(vec, R_DimNamesSymbol);
+		s = getDimNamesAttrib(vec);
 		if(!isNull(s)) {
 		    SET_NAMED(VECTOR_ELT(s, 0), 2);
 		    return VECTOR_ELT(s, 0);
@@ -164,6 +164,8 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
     return R_NilValue;
 }
 
+/* Specialized getters for common attributes */
+
 SEXP getGenericAttrib(SEXP vec) {
     return getListedAttribBySymbol(vec, R_GenericSymbol);
 }
@@ -171,6 +173,33 @@ SEXP getGenericAttrib(SEXP vec) {
 SEXP getDimAttrib(SEXP vec) {
     return getListedAttribBySymbol(vec, R_DimSymbol);
 }
+
+SEXP getDimNamesAttrib(SEXP vec) {
+    SEXP s;
+
+    /* This is where the old/new list adjustment happens. */
+    for (s = ATTRIB(vec); s != R_NilValue; s = CDR(s))
+	if (TAG(s) == R_DimNamesSymbol) {
+	    if (TYPEOF(CAR(s)) == LISTSXP) {
+		SEXP _new, old;
+		int i;
+		_new = allocVector(VECSXP, length(CAR(s)));
+		old = CAR(s);
+		i = 0;
+		while (old != R_NilValue) {
+		    SET_VECTOR_ELT(_new, i++, CAR(old));
+		    old = CDR(old);
+		}
+		SET_NAMED(_new, 2);
+		return _new;
+	    }
+	    SET_NAMED(CAR(s), 2);
+	    return CAR(s);
+	}
+    return R_NilValue;
+}
+
+/* General getter */
 
 SEXP getAttrib(SEXP vec, SEXP name)
 {
@@ -1043,7 +1072,7 @@ SEXP attribute_hidden do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
     if (DispatchOrEval(call, op, "dimnames", args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
-    ans = getAttrib(CAR(args), R_DimNamesSymbol);
+    ans = getDimNamesAttrib(CAR(args));
     UNPROTECT(1);
     return ans;
 }
@@ -1517,7 +1546,7 @@ SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 void GetMatrixDimnames(SEXP x, SEXP *rl, SEXP *cl,
 		       const char **rn, const char **cn)
 {
-    SEXP dimnames = getAttrib(x, R_DimNamesSymbol);
+    SEXP dimnames = getDimNamesAttrib(x);
     SEXP nn;
 
     if (isNull(dimnames)) {
@@ -1544,7 +1573,7 @@ void GetMatrixDimnames(SEXP x, SEXP *rl, SEXP *cl,
 
 SEXP GetArrayDimnames(SEXP x)
 {
-    return getAttrib(x, R_DimNamesSymbol);
+    return getDimNamesAttrib(x);
 }
 
 

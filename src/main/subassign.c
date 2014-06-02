@@ -1662,7 +1662,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (ndims != nsubs)
 		error(_("[[ ]] improper number of subscripts"));
 	    PROTECT(indx = allocVector(INTSXP, ndims));
-	    names = getAttrib(x, R_DimNamesSymbol);
+	    names = getDimNamesAttrib(x);
 	    for (i = 0; i < ndims; i++) {
 		INTEGER(indx)[i] = (int)
 		    get1index(CAR(subs), isNull(names) ?
@@ -1840,7 +1840,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (ndims != nsubs)
 		error(_("[[ ]] improper number of subscripts"));
 	    PROTECT(indx = allocVector(INTSXP, ndims));
-	    names = getAttrib(x, R_DimNamesSymbol);
+	    names = getDimNamesAttrib(x);
 	    for (i = 0; i < ndims; i++) {
 		INTEGER(indx)[i] = (int)
 		    get1index(CAR(subs), CAR(names),

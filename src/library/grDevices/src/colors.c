@@ -514,7 +514,7 @@ SEXP RGB2hsv(SEXP rgb)
     SET_STRING_ELT(names, 2, mkChar("v"));
     SET_VECTOR_ELT(dmns, 0, names);
     /* column names if input has: */
-    if ((dd = getAttrib(rgb, R_DimNamesSymbol)) != R_NilValue &&
+    if ((dd = getDimNamesAttrib(rgb)) != R_NilValue &&
 	(names = VECTOR_ELT(dd, 1)) != R_NilValue)
 	SET_VECTOR_ELT(dmns, 1, names);
     setAttrib(ans, R_DimNamesSymbol, dmns);

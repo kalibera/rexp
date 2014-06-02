@@ -233,8 +233,8 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP x, SEXP y)
 	else /*(yarray)*/ {
 	    PROTECT(dims = getDimAttrib(y));
 	}
-	PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
-	PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
+	PROTECT(xnames = getDimNamesAttrib(x));
+	PROTECT(ynames = getDimNamesAttrib(y));
     }
     else {
 	PROTECT(dims = R_NilValue);
