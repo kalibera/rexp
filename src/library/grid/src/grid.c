@@ -2917,7 +2917,7 @@ SEXP L_raster(SEXP raster, SEXP x, SEXP y, SEXP w, SEXP h,
             image[i] = RGBpar3(raster, i, R_TRANWHITE);
         }
     }
-    dim = getAttrib(raster, R_DimSymbol);
+    dim = getDimAttrib(raster);
     maxn = unitLength(x); 
     ny = unitLength(y); 
     nw = unitLength(w); 
@@ -3018,8 +3018,8 @@ SEXP L_cap()
         image = raster;
     } else {
         size = LENGTH(raster);
-        nrow = INTEGER(getAttrib(raster, R_DimSymbol))[0];
-        ncol = INTEGER(getAttrib(raster, R_DimSymbol))[1];
+        nrow = INTEGER(getDimAttrib(raster))[0];
+        ncol = INTEGER(getDimAttrib(raster))[1];
         
         PROTECT(image = allocVector(STRSXP, size));
         rint = INTEGER(raster);

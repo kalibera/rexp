@@ -76,7 +76,7 @@ SEXP
 rWishart(SEXP ns, SEXP nuP, SEXP scal)
 {
     SEXP ans;
-    int *dims = INTEGER(getAttrib(scal, R_DimSymbol)), info,
+    int *dims = INTEGER(getDimAttrib(scal)), info,
 	n = asInteger(ns), psqr;
     double *scCp, *ansp, *tmp, nu = asReal(nuP), one = 1, zero = 0;
 

@@ -184,8 +184,8 @@ SEXP devcapture(SEXP args)
 
     /* non-native, covert to color strings (this is based on grid.cap) */
     size = LENGTH(raster);
-    nrow = INTEGER(getAttrib(raster, R_DimSymbol))[0];
-    ncol = INTEGER(getAttrib(raster, R_DimSymbol))[1];
+    nrow = INTEGER(getDimAttrib(raster))[0];
+    ncol = INTEGER(getDimAttrib(raster))[1];
         
     PROTECT(image = allocVector(STRSXP, size));
     rint = INTEGER(raster);

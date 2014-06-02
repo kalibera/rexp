@@ -49,7 +49,7 @@ SEXP compcases(SEXP args)
 	if (isList(CAR(s))) {
 	    for (t = CAR(s); t != R_NilValue; t = CDR(t))
 		if (isMatrix(CAR(t))) {
-		    u = getAttrib(CAR(t), R_DimSymbol);
+		    u = getDimAttrib(CAR(t));
 		    if (len < 0)
 			len = INTEGER(u)[0];
 		    else if (len != INTEGER(u)[0])
@@ -74,7 +74,7 @@ SEXP compcases(SEXP args)
 	    if(nt) {
 		for (it = 0 ; it < nt ; it++) {
 		    if (isMatrix(VECTOR_ELT(t, it))) {
-			u = getAttrib(VECTOR_ELT(t, it), R_DimSymbol);
+			u = getDimAttrib(VECTOR_ELT(t, it));
 			if (len < 0)
 			    len = INTEGER(u)[0];
 			else if (len != INTEGER(u)[0])
@@ -100,7 +100,7 @@ SEXP compcases(SEXP args)
 	    }
 	}
 	else if (isMatrix(CAR(s))) {
-	    u = getAttrib(CAR(s), R_DimSymbol);
+	    u = getDimAttrib(CAR(s));
 	    if (len < 0)
 		len = INTEGER(u)[0];
 	    else if (len != INTEGER(u)[0])

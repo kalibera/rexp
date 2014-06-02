@@ -53,7 +53,7 @@ SEXP Cdqrls(SEXP x, SEXP y, SEXP tol, SEXP chk)
     double rtol = asReal(tol), *work;
     Rboolean check = asLogical(chk);
 
-    ans = getAttrib(x, R_DimSymbol);
+    ans = getDimAttrib(x);
     if(check && length(ans) != 2) error(_("'x' is not a matrix"));
     int *dims = INTEGER(ans);
     n = dims[0]; p = dims[1];

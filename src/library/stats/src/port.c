@@ -315,7 +315,7 @@ double* check_gv(SEXP gr, SEXP hs, SEXP rho, int n, double *gv, double *hv)
 	if(ISNAN(gv[i])) error("NA/NaN gradient evaluation");
     if (hv) {
 	SEXP hval = PROTECT(eval(hs, rho));
-	SEXP dim = getAttrib(hval, R_DimSymbol);
+	SEXP dim = getDimAttrib(hval);
 	int i, j, pos;
 	double *rhval = REAL(hval);
 
@@ -481,8 +481,8 @@ static R_INLINE SEXP getFunc(SEXP list, char *enm, char *lnm)
 static void neggrad(SEXP gf, SEXP rho, SEXP gg)
 {
     SEXP val = PROTECT(eval(gf, rho));
-    int *dims = INTEGER(getAttrib(val, R_DimSymbol)),
-	*gdims = INTEGER(getAttrib(gg, R_DimSymbol));
+    int *dims = INTEGER(getDimAttrib(val)),
+	*gdims = INTEGER(getDimAttrib(gg));
     int i, ntot = gdims[0] * gdims[1];
 
     if (TYPEOF(val) != TYPEOF(gg) || !isMatrix(val) || dims[0] != gdims[0] ||
@@ -530,7 +530,7 @@ SEXP eval_check_store(SEXP fcn, SEXP rho, SEXP vv)
 SEXP port_nlsb(SEXP m, SEXP d, SEXP gg, SEXP iv, SEXP v,
 	       SEXP lowerb, SEXP upperb)
 {
-    int *dims = INTEGER(getAttrib(gg, R_DimSymbol));
+    int *dims = INTEGER(getDimAttrib(gg));
     int i, n = LENGTH(d), p = LENGTH(d), nd = dims[0];
     SEXP getPars, setPars, resid, gradient,
 	rr = PROTECT(allocVector(REALSXP, nd)),
