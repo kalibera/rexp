@@ -166,7 +166,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
     if (s == R_MissingArg) return duplicate(x);
 
     PROTECT(s);
-    attrib = getAttrib(x, R_DimSymbol);
+    attrib = getDimAttrib(x);
 
     /* Check to see if we have special matrix subscripting. */
     /* If we do, make a real subscript vector and protect it. */
@@ -250,7 +250,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
 
     /* Note that "s" is protected on entry. */
     /* The following ensures that pointers remain protected. */
-    dim = getAttrib(x, R_DimSymbol);
+    dim = getDimAttrib(x);
 
     sr = SETCAR(s, int_arraySubscript(0, CAR(s), dim, x, call));
     sc = SETCADR(s, int_arraySubscript(1, CADR(s), dim, x, call));
@@ -391,7 +391,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     const void *vmaxsave = vmaxget();
 
     mode = TYPEOF(x);
-    xdims = getAttrib(x, R_DimSymbol);
+    xdims = getDimAttrib(x);
     k = length(xdims);
 
     /* k is now the number of dims */
@@ -773,7 +773,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (isVector(x))
 	PROTECT(ax);
     else if (isPairList(x)) {
-	SEXP dim = getAttrib(x, R_DimSymbol);
+	SEXP dim = getDimAttrib(x);
 	int ndim = length(dim);
 	if (ndim > 1) {
 	    PROTECT(ax = allocArray(VECSXP, dim));
@@ -793,7 +793,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* The separation of arrays and matrices is purely an optimization. */
 
     if(nsubs < 2) {
-	SEXP dim = getAttrib(x, R_DimSymbol);
+	SEXP dim = getDimAttrib(x);
 	int ndim = length(dim);
 	PROTECT(ans = VectorSubset(ax, (nsubs == 1 ? CAR(subs) : R_MissingArg),
 				   call));
@@ -823,7 +823,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	}
     } else {
-	if (nsubs != length(getAttrib(x, R_DimSymbol)))
+	if (nsubs != length(getDimAttrib(x)))
 	    errorcall(call, _("incorrect number of dimensions"));
 	if (nsubs == 2)
 	    ans = MatrixSubset(ax, subs, call, drop);
@@ -842,7 +842,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    SET_TYPEOF(ans, LANGSXP);
 	for(px = ans, i = 0 ; px != R_NilValue ; px = CDR(px))
 	    SETCAR(px, VECTOR_ELT(ax, i++));
-	setAttrib(ans, R_DimSymbol, getAttrib(ax, R_DimSymbol));
+	setAttrib(ans, R_DimSymbol, getDimAttrib(ax));
 	setAttrib(ans, R_DimNamesSymbol, getAttrib(ax, R_DimNamesSymbol));
 	setAttrib(ans, R_NamesSymbol, getAttrib(ax, R_NamesSymbol));
 	SET_NAMED(ans, NAMED(ax)); /* PR#7924 */
@@ -922,7 +922,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     subs = CDR(args);
     if(0 == (nsubs = length(subs)))
 	errorcall(call, _("no index specified"));
-    dims = getAttrib(x, R_DimSymbol);
+    dims = getDimAttrib(x);
     ndims = length(dims);
     if(nsubs > 1 && nsubs != ndims)
 	errorcall(call, _("incorrect number of subscripts"));

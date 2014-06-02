@@ -96,13 +96,13 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
 		error(_("binary operation on non-conformable arrays"));
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	}
 	else if (xarray) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	}
 	else /*(yarray)*/ {
-	    PROTECT(dims = getAttrib(y, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(y));
 	}
 	PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
 	PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
@@ -193,7 +193,7 @@ static SEXP lunary(SEXP call, SEXP op, SEXP arg)
     else {
 	x = PROTECT(allocVector(isRaw(arg) ? RAWSXP : LGLSXP, len));
 	PROTECT(names = getAttrib(arg, R_NamesSymbol));
-	PROTECT(dim = getAttrib(arg, R_DimSymbol));
+	PROTECT(dim = getDimAttrib(arg));
 	PROTECT(dimnames = getAttrib(arg, R_DimNamesSymbol));
 	if(names != R_NilValue) setAttrib(x, R_NamesSymbol, names);
 	if(dim != R_NilValue) setAttrib(x, R_DimSymbol, dim);

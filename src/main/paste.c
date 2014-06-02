@@ -572,7 +572,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 	    error(_("Impossible mode ( x )")); y = R_NilValue;/* -Wall */
 	}
     }
-    if((l = getAttrib(x, R_DimSymbol)) != R_NilValue) {
+    if((l = getDimAttrib(x)) != R_NilValue) {
 	setAttrib(y, R_DimSymbol, l);
 	if((l = getAttrib(x, R_DimNamesSymbol)) != R_NilValue)
 	    setAttrib(y, R_DimNamesSymbol, l);

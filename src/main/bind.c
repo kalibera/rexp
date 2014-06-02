@@ -1188,7 +1188,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     int na = 0;
     for (t = args; t != R_NilValue; t = CDR(t), na++) {
 	u = PRVALUE_OR_CONST(CAR(t));
-	dims = getAttrib(u, R_DimSymbol);
+	dims = getDimAttrib(u);
 	if (length(dims) == 2) {
 	    if (mrows == -1)
 		mrows = INTEGER(dims)[0];
@@ -1208,7 +1208,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 
     for (t = args, na = 0; t != R_NilValue; t = CDR(t), na++) {
 	u = PRVALUE_OR_CONST(CAR(t));
-	dims = getAttrib(u, R_DimSymbol);
+	dims = getDimAttrib(u);
 	if (length(dims) == 2) {
 	    dn = getAttrib(u, R_DimNamesSymbol);
 	    if (length(dn) == 2) {
@@ -1433,7 +1433,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     int na = 0;
     for (t = args; t != R_NilValue; t = CDR(t), na++) {
 	u = PRVALUE_OR_CONST(CAR(t));
-	dims = getAttrib(u, R_DimSymbol);
+	dims = getDimAttrib(u);
 	if (length(dims) == 2) {
 	    if (mcols == -1)
 		mcols = INTEGER(dims)[1];
@@ -1454,7 +1454,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     na = 0;
     for (t = args; t != R_NilValue; t = CDR(t), na++) {
 	u = PRVALUE_OR_CONST(CAR(t));
-	dims = getAttrib(u, R_DimSymbol);
+	dims = getDimAttrib(u);
 	if (length(dims) == 2) {
 	    dn = getAttrib(u, R_DimNamesSymbol);
 	    if (length(dn) == 2) {

@@ -2013,7 +2013,7 @@ SEXP attribute_hidden do_isna_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SE
     n = xlength(x);
     PROTECT(ans = allocVector(LGLSXP, n));
     if (isVector(x)) {
-	PROTECT(dims = getAttrib(x, R_DimSymbol));
+	PROTECT(dims = getDimAttrib(x));
 	if (isArray(x))
 	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
 	else
@@ -2269,7 +2269,7 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = xlength(x);
     PROTECT(ans = allocVector(LGLSXP, n));
     if (isVector(x)) {
-	PROTECT(dims = getAttrib(x, R_DimSymbol));
+	PROTECT(dims = getDimAttrib(x));
 	if (isArray(x))
 	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
 	else
@@ -2330,7 +2330,7 @@ SEXP attribute_hidden do_isfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = xlength(x);
     ans = allocVector(LGLSXP, n);
     if (isVector(x)) {
-	dims = getAttrib(x, R_DimSymbol);
+	dims = getDimAttrib(x);
 	if (isArray(x))
 	    names = getAttrib(x, R_DimNamesSymbol);
 	else
@@ -2390,7 +2390,7 @@ SEXP attribute_hidden do_isinfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = xlength(x);
     ans = allocVector(LGLSXP, n);
     if (isVector(x)) {
-	dims = getAttrib(x, R_DimSymbol);
+	dims = getDimAttrib(x);
 	if (isArray(x))
 	    names = getAttrib(x, R_DimNamesSymbol);
 	else
@@ -2798,15 +2798,15 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	/* the next 2 special cases mirror the special code in
 	 * R_data_class */
 	else if(!strcmp("matrix", valueString)) {
-	    if(length(getAttrib(obj, R_DimSymbol)) != 2)
+	    if(length(getDimAttrib(obj)) != 2)
 		error(_("invalid to set the class to matrix unless the dimension attribute is of length 2 (was %d)"),
-		 length(getAttrib(obj, R_DimSymbol)));
+		 length(getDimAttrib(obj)));
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj))
 	      do_unsetS4(obj, value);
 	}
 	else if(!strcmp("array", valueString)) {
-	    if(length(getAttrib(obj, R_DimSymbol)) <= 0)
+	    if(length(getDimAttrib(obj)) <= 0)
 		error(_("cannot set class to \"array\" unless the dimension attribute has length > 0"));
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj)) /* NULL class is only valid for S3 objects */

@@ -112,7 +112,7 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (commonLen > 1 && n > INT_MAX)
 	error(_("long vectors are not supported for matrix/array results"));
     commonType = TYPEOF(value);
-    dim_v = getAttrib(value, R_DimSymbol);
+    dim_v = getDimAttrib(value);
     array_value = (TYPEOF(dim_v) == INTSXP && LENGTH(dim_v) >= 1);
     PROTECT(ans = allocVector(commonType, n*commonLen));
     if (useNames) {

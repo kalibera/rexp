@@ -613,13 +613,13 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
 		errorcall(lcall, _("non-conformable arrays"));
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	}
 	else if (xarray) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(x));
 	}
 	else {			/* (yarray) */
-	    PROTECT(dims = getAttrib(y, R_DimSymbol));
+	    PROTECT(dims = getDimAttrib(y));
 	}
 	nprotect++;
 	if (xattr) {
@@ -758,7 +758,7 @@ static SEXP logical_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
     R_xlen_t n = XLENGTH(s1);
     SEXP ans = PROTECT(allocVector(INTSXP, n));
     SEXP names = PROTECT(getAttrib(s1, R_NamesSymbol));
-    SEXP dim = PROTECT(getAttrib(s1, R_DimSymbol));
+    SEXP dim = PROTECT(getDimAttrib(s1));
     SEXP dimnames = PROTECT(getAttrib(s1, R_DimNamesSymbol));
     if(names != R_NilValue) setAttrib(ans, R_NamesSymbol, names);
     if(dim != R_NilValue) setAttrib(ans, R_DimSymbol, dim);

@@ -478,7 +478,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 
     PROTECT(s);
     if (ATTRIB(s) != R_NilValue) { /* pretest to speed up simple case */
-	SEXP dim = getAttrib(x, R_DimSymbol);
+	SEXP dim = getDimAttrib(x);
 	if (isMatrix(s) && isArray(x) && ncols(s) == length(dim)) {
 	    if (isString(s)) {
 		s = strmat2intmat(s, GetArrayDimnames(x), call);
@@ -771,7 +771,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* Note that "s" has been protected. */
     /* No GC problems here. */
 
-    dim = getAttrib(x, R_DimSymbol);
+    dim = getDimAttrib(x);
     sr = SETCAR(s, int_arraySubscript(0, CAR(s), dim, x, call));
     sc = SETCADR(s, int_arraySubscript(1, CADR(s), dim, x, call));
     nrs = LENGTH(sr);
@@ -1033,7 +1033,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     SEXP dims, tmp;
     const void *vmax = vmaxget();
 
-    PROTECT(dims = getAttrib(x, R_DimSymbol));
+    PROTECT(dims = getDimAttrib(x));
     if (dims == R_NilValue || (k = LENGTH(dims)) != length(s))
 	error(_("incorrect number of subscripts"));
 
@@ -1600,7 +1600,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     xtop = xup = x; /* x will be the element which is assigned to */
 
-    dims = getAttrib(x, R_DimSymbol);
+    dims = getDimAttrib(x);
     ndims = length(dims);
 
     /* code to allow classes to extend ENVSXP */

@@ -109,7 +109,7 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 
     if (name == R_NamesSymbol) {
 	if(isVector(vec) || isList(vec) || isLanguage(vec)) {
-	    s = getAttrib(vec, R_DimSymbol);
+	    s = getDimAttrib(vec);
 	    if(TYPEOF(s) == INTSXP && length(s) == 1) {
 		s = getAttrib(vec, R_DimNamesSymbol);
 		if(!isNull(s)) {
@@ -166,6 +166,10 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
 
 SEXP getGenericAttrib(SEXP vec) {
     return getListedAttribBySymbol(vec, R_GenericSymbol);
+}
+
+SEXP getDimAttrib(SEXP vec) {
+    return getListedAttribBySymbol(vec, R_DimSymbol);
 }
 
 SEXP getAttrib(SEXP vec, SEXP name)
@@ -614,7 +618,7 @@ SEXP R_data_class(SEXP obj, Rboolean singleString)
     if(n == 1 || (n > 0 && !singleString))
 	return(klass);
     if(n == 0) {
-	SEXP dim = getAttrib(obj, R_DimSymbol);
+	SEXP dim = getDimAttrib(obj);
 	int nd = length(dim);
 	if(nd > 0) {
 	    if(nd == 2)
@@ -710,7 +714,7 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
       }
       else { /* length(klass) == 0 */
 	SEXPTYPE t;
-	SEXP value, class0 = R_NilValue, dim = getAttrib(obj, R_DimSymbol);
+	SEXP value, class0 = R_NilValue, dim = getDimAttrib(obj);
 	int n = length(dim);
 	if(n > 0) {
 	    if(n == 2)
@@ -866,7 +870,7 @@ SEXP namesgets(SEXP vec, SEXP val)
     /* Special treatment for one dimensional arrays */
 
     if (isVector(vec) || isList(vec) || isLanguage(vec)) {
-	s = getAttrib(vec, R_DimSymbol);
+	s = getDimAttrib(vec);
 	if (TYPEOF(s) == INTSXP && length(s) == 1) {
 	    PROTECT(val = CONS(val, R_NilValue));
 	    setAttrib(vec, R_DimNamesSymbol, val);
@@ -976,7 +980,7 @@ SEXP dimnamesgets(SEXP vec, SEXP val)
     /* There are, when this gets used as names<- for 1-d arrays */
     if (!isPairList(val) && !isNewList(val))
 	error(_("'dimnames' must be a list"));
-    dims = getAttrib(vec, R_DimSymbol);
+    dims = getDimAttrib(vec);
     if ((k = LENGTH(dims)) < length(val))
 	error(_("length of 'dimnames' [%d] must match that of 'dims' [%d]"),
 	      length(val), k);
@@ -1051,7 +1055,7 @@ SEXP attribute_hidden do_dim_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEX
     SEXP x = arg_x;
     if (isObject(x) && DispatchOrEval(call, op, "dim", BUILD_1ARGS(args, x), env, &ans, 0, 1))
 	return(ans);
-    return getAttrib(x, R_DimSymbol);
+    return getDimAttrib(x);
 }
 
 SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env) {

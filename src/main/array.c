@@ -289,7 +289,7 @@ SEXP DropDims(SEXP x)
     int i, n, ndims;
 
     PROTECT(x);
-    dims = getAttrib(x, R_DimSymbol);
+    dims = getDimAttrib(x);
     dimnames = getAttrib(x, R_DimNamesSymbol);
 
     /* Check that dropping will actually do something. */
@@ -403,7 +403,7 @@ SEXP attribute_hidden do_earg_drop(SEXP call, SEXP op, SEXP arg_x, SEXP rho)
     int i, n, shorten;
     
     x = arg_x;
-    if ((xdims = getAttrib(x, R_DimSymbol)) != R_NilValue) {
+    if ((xdims = getDimAttrib(x)) != R_NilValue) {
 	n = LENGTH(xdims);
 	shorten = 0;
 	for (i = 0; i < n; i++)
@@ -702,8 +702,8 @@ SEXP attribute_hidden do_earg_matprod(SEXP call, SEXP op, SEXP arg_x, SEXP arg_y
     if ( !(isNumeric(x) || isComplex(x)) || !(isNumeric(y) || isComplex(y)) )
 	errorcall(call, _("requires numeric/complex matrix/vector arguments"));
 
-    xdims = getAttrib(x, R_DimSymbol);
-    ydims = getAttrib(y, R_DimSymbol);
+    xdims = getDimAttrib(x);
+    ydims = getDimAttrib(y);
     ldx = length(xdims);
     ldy = length(ydims);
 
@@ -991,7 +991,7 @@ SEXP attribute_hidden do_earg_transpose(SEXP call, SEXP op, SEXP arg_x, SEXP rho
     a = arg_x;
 
     if (isVector(a)) {
-	dims = getAttrib(a, R_DimSymbol);
+	dims = getDimAttrib(a);
 	ldim = length(dims);
 	rnames = R_NilValue;
 	cnames = R_NilValue;
@@ -1141,7 +1141,7 @@ SEXP attribute_hidden do_earg_aperm(SEXP call, SEXP op, SEXP arg_a, SEXP arg_per
     if (!isArray(a))
 	error(_("invalid first argument, must be an array"));
 
-    PROTECT(dimsa = getAttrib(a, R_DimSymbol));
+    PROTECT(dimsa = getDimAttrib(a));
     n = LENGTH(dimsa);
     int *isa = INTEGER(dimsa);
 
