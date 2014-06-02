@@ -363,7 +363,7 @@ INLINE_FUN Rboolean inherits(SEXP s, const char *name)
     SEXP klass;
     int i, nclass;
     if (OBJECT(s)) {
-	klass = getAttrib(s, R_ClassSymbol);
+	klass = getClassAttrib(s);
 	nclass = length(klass);
 	for (i = 0; i < nclass; i++) {
 	    if (!strcmp(CHAR(STRING_ELT(klass, i)), name)) {
@@ -381,7 +381,7 @@ INLINE_FUN Rboolean inheritsCharSXP(SEXP s, SEXP nameCharSXP)
     const char *name = CHAR(nameCharSXP);
 
     if (OBJECT(s)) {
-	klass = getAttrib(s, R_ClassSymbol);
+	klass = getClassAttrib(s);
 	nclass = length(klass);
 	/* fast comparison using equals */
 	for (i = 0; i < nclass; i++) {
@@ -510,7 +510,7 @@ INLINE_FUN Rboolean isFrame(SEXP s)
     SEXP klass;
     int i;
     if (OBJECT(s)) {
-	klass = getAttrib(s, R_ClassSymbol);
+	klass = getClassAttrib(s);
 	for (i = 0; i < length(klass); i++)
 	    if (!strcmp(CHAR(STRING_ELT(klass, i)), "data.frame")) return TRUE;
     }

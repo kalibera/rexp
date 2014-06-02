@@ -1611,7 +1611,7 @@ static SEXP findConditionHandler(SEXP cond)
 {
     int i;
     SEXP list;
-    SEXP classes = getAttrib(cond, R_ClassSymbol);
+    SEXP classes = getClassAttrib(cond);
 
     if (TYPEOF(classes) != STRSXP)
 	return R_NilValue;

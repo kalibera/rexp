@@ -656,20 +656,20 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
 	if (xts && yts) {
 	    if (!tsConform(x, y))
 		errorcall(lcall, _("non-conformable time-series"));
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    PROTECT(tsp = getTspAttrib(x));
+	    PROTECT(klass = getClassAttrib(x));
 	}
 	else if (xts) {
 	    if (nx < ny)
 		ErrorMessage(lcall, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    PROTECT(tsp = getTspAttrib(x));
+	    PROTECT(klass = getClassAttrib(x));
 	}
 	else {			/* (yts) */
 	    if (ny < nx)
 		ErrorMessage(lcall, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(y, R_TspSymbol));
-	    PROTECT(klass = getAttrib(y, R_ClassSymbol));
+	    PROTECT(tsp = getTspAttrib(y));
+	    PROTECT(klass = getClassAttrib(y));
 	}
 	nprotect += 2;
     }

@@ -1379,7 +1379,7 @@ SEXP asCharacterFactor(SEXP x)
 	error(_("attempting to coerce non-factor"));
 
     R_xlen_t i, n = XLENGTH(x);
-    SEXP labels = getAttrib(x, R_LevelsSymbol);
+    SEXP labels = getLevelsAttrib(x);
     PROTECT(ans = allocVector(STRSXP, n));
     for(i = 0; i < n; i++) {
       int ii = INTEGER(x)[i];

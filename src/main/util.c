@@ -61,8 +61,8 @@ void F77_SYMBOL(rexitc)(char *msg, int *nchar);
 attribute_hidden
 Rboolean tsConform(SEXP x, SEXP y)
 {
-    if ((x = getAttrib(x, R_TspSymbol)) != R_NilValue &&
-	(y = getAttrib(y, R_TspSymbol)) != R_NilValue) {
+    if ((x = getTspAttrib(x)) != R_NilValue &&
+	(y = getTspAttrib(y)) != R_NilValue) {
 	/* tspgets should enforce this, but prior to 2.4.0
 	   had INTEGER() here */
 	if(TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP)

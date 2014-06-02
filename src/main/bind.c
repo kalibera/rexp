@@ -1039,7 +1039,7 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(obj = eval(CAR(a), env));
 	if (isObject(obj)) {
 	    int i;
-	    classlist = getAttrib(obj, R_ClassSymbol);
+	    classlist = getClassAttrib(obj);
 	    for (i = 0; i < length(classlist); i++) {
 		classname = STRING_ELT(classlist, i);
 		s = translateChar(classname);

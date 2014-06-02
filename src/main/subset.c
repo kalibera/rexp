@@ -227,7 +227,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 	/* FIXME:  this is wrong, because the slots are gone, so result is an invalid object of the S4 class! JMC 3/3/09 */
 #ifdef _S4_subsettable
 	if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
-	    setAttrib(result, R_ClassSymbol, getAttrib(x, R_ClassSymbol));
+	    setAttrib(result, R_ClassSymbol, getClassAttrib(x));
 	    SET_S4_OBJECT(result);
 	}
 #endif

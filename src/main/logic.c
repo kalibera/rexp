@@ -122,20 +122,20 @@ static SEXP lbinary(SEXP call, SEXP op, SEXP args)
 	if (xts && yts) {
 	    if (!tsConform(x, y))
 		errorcall(call, _("non-conformable time series"));
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    PROTECT(tsp = getTspAttrib(x));
+	    PROTECT(klass = getClassAttrib(x));
 	}
 	else if (xts) {
 	    if (XLENGTH(x) < XLENGTH(y))
 		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    PROTECT(tsp = getTspAttrib(x));
+	    PROTECT(klass = getClassAttrib(x));
 	}
 	else /*(yts)*/ {
 	    if (XLENGTH(y) < XLENGTH(x))
 		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(y, R_TspSymbol));
-	    PROTECT(klass = getAttrib(y, R_ClassSymbol));
+	    PROTECT(tsp = getTspAttrib(y));
+	    PROTECT(klass = getClassAttrib(y));
 	}
     }
     if(mismatch)

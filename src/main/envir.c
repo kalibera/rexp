@@ -2181,7 +2181,7 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	    tb->onAttach(tb);
 	s = allocSExp(ENVSXP);
 	SET_HASHTAB(s, CAR(args));
-	setAttrib(s, R_ClassSymbol, getAttrib(HASHTAB(s), R_ClassSymbol));
+	setAttrib(s, R_ClassSymbol, getClassAttrib(HASHTAB(s)));
     }
 
     setAttrib(s, R_NameSymbol, name);

@@ -1558,7 +1558,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    SET_ATTRIB(s, ReadItem(ref_table, stream));
 	    R_ReadItemDepth--;
 	    if (ATTRIB(s) != R_NilValue &&
-		getAttrib(s, R_ClassSymbol) != R_NilValue)
+		getClassAttrib(s) != R_NilValue)
 		/* We don't write out the object bit for environments,
 		   so reconstruct it here if needed. */
 		SET_OBJECT(s, 1);

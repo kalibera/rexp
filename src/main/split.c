@@ -64,7 +64,7 @@ SEXP attribute_hidden do_split(SEXP call, SEXP op, SEXP args, SEXP env)
     for (R_xlen_t i = 0;  i < nlevs; i++) {
 	SET_VECTOR_ELT(vec, i, allocVector(TYPEOF(x), INTEGER(counts)[i]));
 	setAttrib(VECTOR_ELT(vec, i), R_LevelsSymbol,
-		  getAttrib(x, R_LevelsSymbol));
+		  getLevelsAttrib(x));
 	if(have_names)
 	    setAttrib(VECTOR_ELT(vec, i), R_NamesSymbol,
 		      allocVector(STRSXP, INTEGER(counts)[i]));
@@ -104,7 +104,7 @@ SEXP attribute_hidden do_split(SEXP call, SEXP op, SEXP args, SEXP env)
 	    INTEGER(counts)[j - 1] += 1;
 	}
     }
-    setAttrib(vec, R_NamesSymbol, getAttrib(f, R_LevelsSymbol));
+    setAttrib(vec, R_NamesSymbol, getLevelsAttrib(f));
     UNPROTECT(2);
     return vec;
 }

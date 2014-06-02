@@ -47,8 +47,8 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
     if (length(s) != length(t))
 	errorcall(call, _("unequal factor lengths"));
     n = length(s);
-    ls = getAttrib(s, R_LevelsSymbol);
-    lt = getAttrib(t, R_LevelsSymbol);
+    ls = getLevelsAttrib(s);
+    lt = getLevelsAttrib(t);
     nls = LENGTH(ls);
     nlt = LENGTH(lt);
     PROTECT(a = allocVector(INTSXP, n));
@@ -361,7 +361,7 @@ SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
-	setAttrib(a, R_ClassSymbol, getAttrib(s, R_ClassSymbol));
+	setAttrib(a, R_ClassSymbol, getClassAttrib(s));
 	SET_S4_OBJECT(a);
     }
 #endif
@@ -375,7 +375,7 @@ SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 	} else PROTECT(tmp = mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
 	UNPROTECT(1);
-	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
+	setAttrib(a, R_LevelsSymbol, getLevelsAttrib(s));
     }
     UNPROTECT(1);
     return a;
@@ -419,7 +419,7 @@ SEXP attribute_hidden do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
-	setAttrib(a, R_ClassSymbol, getAttrib(s, R_ClassSymbol));
+	setAttrib(a, R_ClassSymbol, getClassAttrib(s));
 	SET_S4_OBJECT(a);
     }
 #endif
@@ -433,7 +433,7 @@ SEXP attribute_hidden do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho)
 	} else PROTECT(tmp = mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
 	UNPROTECT(1);
-	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
+	setAttrib(a, R_LevelsSymbol, getLevelsAttrib(s));
     }
     UNPROTECT(1);
     return a;
@@ -696,7 +696,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(x)) { /* e.g. contains = "list" */
-	setAttrib(ans, R_ClassSymbol, getAttrib(x, R_ClassSymbol));
+	setAttrib(ans, R_ClassSymbol, getClassAttrib(x));
 	SET_S4_OBJECT(ans);
     }
 #endif

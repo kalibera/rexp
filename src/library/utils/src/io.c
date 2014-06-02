@@ -1097,7 +1097,7 @@ SEXP writetable(SEXP call, SEXP op, SEXP args, SEXP env)
 		error(_("corrupt data frame -- length of column %d does not not match nrows"),
 		      j+1);
 	    if(inherits(xj, "factor")) {
-		levels[j] = getAttrib(xj, R_LevelsSymbol);
+		levels[j] = getLevelsAttrib(xj);
 	    } else levels[j] = R_NilValue;
 	}
 
