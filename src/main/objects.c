@@ -215,7 +215,7 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
     else {
 	/* We assume here that no one registered a non-function */
 	SEXP table = findVarInFrame3(defrho,
-				     install(".__S3MethodsTable__."),
+				     R_S3MethodsTableSymbol,
 				     TRUE);
 	if (TYPEOF(table) == PROMSXP) table = eval(table, R_BaseEnv);
 	if (TYPEOF(table) == ENVSXP) {
@@ -241,7 +241,7 @@ static int match_to_obj(SEXP arg, SEXP obj) {
 int isBasicClass(const char *ss) {
     static SEXP s_S3table = 0;
     if(!s_S3table) {
-      s_S3table = findVarInFrame3(R_MethodsNamespace, install(".S3MethodsClasses"), TRUE);
+      s_S3table = findVarInFrame3(R_MethodsNamespace, R_S3MethodsClassesSymbol, TRUE);
       if(s_S3table == R_UnboundValue)
 	error(_("no '.S3MethodsClass' table, cannot use S4 objects with S3 methods ('methods' package not attached?)"));
 	if (TYPEOF(s_S3table) == PROMSXP)  /* findVar... ignores lazy data */
@@ -308,7 +308,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     PROTECT(newcall = duplicate(cptr->call));
 
     PROTECT(klass = R_data_class2(obj));
-    sort_list = install("sort.list");
 
     nclass = length(klass);
     for (i = 0; i < nclass; i++) {
@@ -321,7 +320,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	vmaxset(vmax);
 	sxp = R_LookupMethod(method, rho, callrho, defrho);
 	if (isFunction(sxp)) {
-	    if(method == sort_list && CLOENV(sxp) == R_BaseNamespace)
+	    if(method == R_SortListSymbol && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
             if( RDEBUG(op) || RSTEP(op) )
                 SET_RSTEP(sxp, 1);
@@ -331,7 +330,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 		PROTECT(t = allocVector(STRSXP, nclass - i));
 		for(j = 0, ii = i; j < length(t); j++, ii++)
 		      SET_STRING_ELT(t, j, STRING_ELT(klass, ii));
-		setAttrib(t, install("previous"), klass);
+		setAttrib(t, R_PreviousSymbol, klass);
 		defineVar(R_dot_Class, t, newrho);
 		UNPROTECT(1);
 	    } else
@@ -790,7 +789,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(m = allocSExp(ENVSXP));
     for (j = 0; j < length(s); j++)
 	SET_STRING_ELT(s, j, duplicate(STRING_ELT(klass, i++)));
-    setAttrib(s, install("previous"), klass);
+    setAttrib(s, R_PreviousSymbol, klass);
     defineVar(R_dot_Class, s, m);
     /* It is possible that if a method was called directly that
 	'method' is unset */
@@ -981,15 +980,10 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 	/* now try the superclasses, i.e.,  try   is(x, "....");  superCl :=
 	   .selectSuperClasses(getClass("....")@contains, dropVirtual=TRUE)  */
 	SEXP classExts, superCl, _call;
-	static SEXP s_contains = NULL, s_selectSuperCl = NULL;
 	int i;
-	if(!s_contains) {
-	    s_contains      = install("contains");
-	    s_selectSuperCl = install(".selectSuperClasses");
-	}
 
-	PROTECT(classExts = R_do_slot(R_getClassDef(class), s_contains));
-	PROTECT(_call = lang3(s_selectSuperCl, classExts,
+	PROTECT(classExts = R_do_slot(R_getClassDef(class), R_ContainsSymbol));
+	PROTECT(_call = lang3(R_SelectSuperClassesSymbol, classExts,
 			      /* dropVirtual = */ ScalarLogical(1)));
 	superCl = eval(_call, rho);
 	UNPROTECT(2);
@@ -1024,16 +1018,13 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
  */
 int R_check_class_etc(SEXP x, const char **valid)
 {
-    static SEXP meth_classEnv = NULL;
     SEXP cl = getClassAttrib(x), rho = R_GlobalEnv, pkg;
-    if(!meth_classEnv)
-	meth_classEnv = install(".classEnv");
 
     pkg = getAttrib(cl, R_PackageSymbol); /* ==R== packageSlot(class(x)) */
     if(!isNull(pkg)) { /* find  rho := correct class Environment */
 	SEXP clEnvCall;
 	// FIXME: fails if 'methods' is not loaded.
-	PROTECT(clEnvCall = lang2(meth_classEnv, cl));
+	PROTECT(clEnvCall = lang2(R_ClassEnvSymbol, cl));
 	rho = eval(clEnvCall, R_MethodsNamespace);
 	UNPROTECT(1);
 	if(!isEnvironment(rho))
@@ -1087,7 +1078,7 @@ static SEXP R_isMethodsDispatchOn(SEXP onOff)
 	    warning("R_isMethodsDispatchOn(TRUE) called -- may not work correctly");
 	    // FIXME: use call = PROTECT(lang1(install("initMethodDispatch")));
 	    SEXP call = PROTECT(allocList(2));
-	    SETCAR(call, install("initMethodDispatch"));
+	    SETCAR(call, R_InitMethodDispatchSymbol);
 	    eval(call, R_MethodsNamespace); // only works with methods loaded
 	    UNPROTECT(1);
 	}

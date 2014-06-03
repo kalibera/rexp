@@ -1110,6 +1110,15 @@ static void SymbolShortcuts(void)
     R_ZSymbol = install("z");
     R_GenericSymbol = install("generic");
 
+    R_S3MethodsTableSymbol = install(".__S3MethodsTable__.");
+    R_S3MethodsClassesSymbol = install(".S3MethodsClasses");
+    R_SortListSymbol = install("sort.list");
+    R_PreviousSymbol = install("previous");
+    R_ContainsSymbol = install("contains");
+    R_SelectSuperClassesSymbol = install(".selectSuperClasses");
+    R_ClassEnvSymbol = install(".classEnv");
+    R_InitMethodDispatchSymbol = install("initMethodDispatch");
+
 }
 
 static void CharSXPShortcuts(void) {

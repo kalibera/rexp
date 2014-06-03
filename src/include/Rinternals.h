@@ -1094,6 +1094,15 @@ LibExtern SEXP  R_CsingleSymbol;    /* "Csingle" */
 LibExtern SEXP  R_OriginSymbol;     /* "origin" */
 LibExtern SEXP	R_GenericSymbol;    /* "generic" */
 
+LibExtern SEXP  R_S3MethodsTableSymbol;   /* ".__S3MethodsTable__." */
+LibExtern SEXP  R_S3MethodsClassesSymbol; /* ".S3MethodsClasses" */
+LibExtern SEXP  R_SortListSymbol;         /* "sort.list */
+LibExtern SEXP  R_PreviousSymbol;         /* "previous" */
+LibExtern SEXP  R_ContainsSymbol;         /* "contains */
+LibExtern SEXP  R_SelectSuperClassesSymbol; /* ".selectSuperClasses" */
+LibExtern SEXP  R_ClassEnvSymbol;         /* ".classEnv" */
+LibExtern SEXP  R_InitMethodDispatchSymbol; /* "initMethodDispatch" */
+
 /* CHARSXP shortcuts */
 LibExtern SEXP R_NativeSymbolInfoCharSXP; /* "NativeSymbolInfo" */
 LibExtern SEXP R_FactorCharSXP;           /* "factor" */
