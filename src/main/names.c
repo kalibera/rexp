@@ -1270,7 +1270,7 @@ SEXP installCharSXPSignature(SEXP *charSXPs, int nelems, char sep) {
     unsigned g;
 
     int i;
-    int signatureLength = LENGTH(charSXPs[0]); /* length of the signature (calculated below) */
+    int signatureLength = LENGTH(charSXPs[0]);
 
     for(i = 1; i < nelems; i++) {
 
@@ -1349,7 +1349,7 @@ SEXP installCharSXPSignature(SEXP *charSXPs, int nelems, char sep) {
             *s++ = sep;
         }
         strcpy(s, CHAR(charSXPs[i]));
-        s += LENGTH(charSXPs[0]);
+        s += LENGTH(charSXPs[i]);
     }
     SEXP charSXP = mkChar(sbuf);
 
@@ -1370,6 +1370,58 @@ SEXP installSignature(SEXP *sxps, int nelems, char sep) {
     }
 
     return installCharSXPSignature(charSXPs, nelems, sep);
+}
+
+/* this is for debugging only, can be called from a debugger  */
+
+static int cmpstringp(const void *p1, const void *p2) {
+    return strcmp(* (char * const *) p1, * (char * const *) p2);
+}
+
+int checkSymbolTable() {
+
+    int i;
+    int nsymbols = 0;
+
+    for(i = 0; i < HSIZE; i++) {
+        nsymbols += length(R_SymbolTable[i]);
+    }
+
+    fprintf(stderr, "Symbol table entries: %d\n", nsymbols);
+
+    char *names[nsymbols];
+    int j = 0;
+
+    for(i = 0; i < HSIZE; i++) {
+        SEXP s;
+        for(s = R_SymbolTable[i]; s != R_NilValue; s = CDR(s)) {
+            SEXP sym = CAR(s);
+            const char *pname = CHAR(PRINTNAME(sym));
+            int len = strlen(pname);
+
+            char *str = (char *) malloc(len * sizeof(char) + 1);
+            strcpy(str, pname);
+            names[j++] = str;
+        }
+    }
+
+    fprintf(stderr, "Copied entries: %d\n", j);
+    qsort(names, nsymbols, sizeof(char *), cmpstringp);
+
+    int nerrors = 0;
+    for(j = 1; j < nsymbols ; j++) {
+        if (!strcmp(names[j], names[j-1])) {
+            fprintf(stderr, "ERROR in symbol table, duplicated entry %s.\n", names[j]);
+            nerrors++;
+        }
+    }
+
+    fprintf(stderr, "Done checking.\n");
+    for(j = 0; j < nsymbols ; j++) {
+        free(names[j]);
+    }
+
+    return nerrors;
 }
 
 /*  do_internal - This is the code for .Internal(). */
