@@ -775,19 +775,18 @@ static void *latin1_obj = NULL, *utf8_obj=NULL, *ucsmb_obj=NULL,
     *ucsutf8_obj=NULL;
 
 
-/*
-  fromUTF8 == 1 -> convert from UTF8 (to Latin1)
-           == 0 -> convert from Latin1 (to UTF8)
+static void translateToNativeEncoding(const char *ans, R_StringBuffer *cbuff, nttype_t ttype) {
 
-*/
-static void translateToNativeEncoding(const char *ans, R_StringBuffer *cbuff, int fromUTF8) {
+    if (ttype == NT_NONE) { /* this should be an assertion */
+        error(_("no translation needed"));
+    }
     void * obj;
     const char *inbuf;
     char *outbuf;
     size_t inb, outb;
     size_t res;
 
-    if(!fromUTF8) {
+    if(ttype = NT_FROM_LATIN1) {
 	if(!latin1_obj) {
 	    obj = Riconv_open("", "latin1");
 	    /* should never happen */
@@ -836,7 +835,7 @@ next_char:
 	    R_AllocStringBuffer(2*cbuff->bufsize, cbuff);
 	    goto top_of_loop;
 	}
-	if (fromUTF8) {
+	if (ttype = NT_FROM_UTF8) {
 	    /* if starting in UTF-8, use \uxxxx */
 	    /* This must be the first byte */
 	    size_t clen;
@@ -870,31 +869,43 @@ next_char:
     *outbuf = '\0';
 }
 
+/*
+  returns 0 -- translation from latin1 to UTF8 needed
+          1 -- translation from UTF8 to latin1 needed
+          2 -- no translation needed
+*/
+nttype_t needsTranslationToNativeEncoding(SEXP x) {
+
+    if (IS_ASCII(x)) {
+        return NT_NONE;
+    }
+    if (IS_UTF8(x)) {
+        if (utf8locale || x == NA_STRING) return NT_NONE;
+        return NT_FROM_UTF8;
+    } else if (IS_LATIN1(x)) {
+        if (x == NA_STRING || latin1locale) return NT_NONE;
+        return NT_FROM_LATIN1;
+    } else if (IS_BYTES(x)) {
+        error(_("translating strings with \"bytes\" encoding is not allowed"));
+    } else {
+        return NT_NONE;
+    }
+}
+
 /* This may return a R_alloc-ed result, so the caller has to manage the
    R_alloc stack */
 const char *translateChar(SEXP x)
 {
-    const char *ans = CHAR(x);
     if(TYPEOF(x) != CHARSXP)
 	error(_("'%s' must be called on a CHARSXP"), "translateChar");
-    if(IS_ASCII(x)) return ans;
-
-    int fromUTF8;
-    if (IS_UTF8(x)) {
-        if (utf8locale) return ans;
-        fromUTF8 = 1; /* convert from UTF8 to Latin1 */
-    } else if (IS_LATIN1(x)) {
-        if (latin1locale) return ans;
-        fromUTF8 = 0; /* convert from Latin1 to UTF8 */
-    } else if (IS_BYTES(x)) {
-        error(_("translating strings with \"bytes\" encoding is not allowed"));
-    } else {
-        return ans; /* native encoding */
+    nttype_t t = needsTranslationToNativeEncoding(x);
+    const char *ans = CHAR(x);
+    if (t == NT_NONE) {
+        return ans;
     }
-    if (x == NA_STRING) return ans;
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-    translateToNativeEncoding(ans, &cbuff, fromUTF8);
+    translateToNativeEncoding(ans, &cbuff, t);
 
     size_t res = strlen(cbuff.data) + 1;
     char *p = R_alloc(res, 1);
@@ -905,27 +916,16 @@ const char *translateChar(SEXP x)
 
 SEXP installTrChar(SEXP x)
 {
-    const char *ans = CHAR(x);
     if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP"), "installTrChar");
-    if(IS_ASCII(x)) return install(ans);
-
-    int fromUTF8;
-    if (IS_UTF8(x)) {
-        if (utf8locale) return install(ans);
-        fromUTF8 = 1; /* convert from UTF8 to Latin1 */
-    } else if (IS_LATIN1(x)) {
-        if (latin1locale) return install(ans);
-        fromUTF8 = 0; /* convert from Latin1 to UTF8 */
-    } else if (IS_BYTES(x)) {
-        error(_("translating strings with \"bytes\" encoding is not allowed"));
-    } else {
-        return install(ans); /* native encoding */
+	error(_("'%s' must be called on a CHARSXP"), "translateChar");
+    nttype_t t = needsTranslationToNativeEncoding(x);
+    const char *ans = CHAR(x);
+    if (t == NT_NONE) {
+        return installNativeCharSXP(x, TRUE);
     }
-    if (x == NA_STRING) return install(ans);
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-    translateToNativeEncoding(ans, &cbuff, fromUTF8);
+    translateToNativeEncoding(ans, &cbuff, t);
 
     SEXP Sans = install(cbuff.data);
     R_FreeStringBuffer(&cbuff);

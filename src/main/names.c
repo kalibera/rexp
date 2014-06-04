@@ -1218,9 +1218,12 @@ SEXP install(const char *name)
 /*
   like install, but the string is given as a CHARSXP
   one could use install(CHAR(charSXP)) instead, but this is more efficient
+
+  knownNative can be set to TRUE for efficiency, when the caller knows that
+  charSXP is in the native encoding
 */
 
-SEXP installCharSXP(SEXP charSXP) {
+SEXP installNativeCharSXP(SEXP charSXP, Rboolean knownNative) {
     int len = LENGTH(charSXP);
 
     if (len == 0) {
@@ -1231,25 +1234,62 @@ SEXP installCharSXP(SEXP charSXP) {
     }
 
     int i = hashCharSXP(charSXP) % HSIZE;
+
     SEXP symList;
     for (symList = R_SymbolTable[i]; symList != R_NilValue; symList = CDR(symList)) {
         SEXP sym = CAR(symList);
         if (PRINTNAME(sym) == charSXP) { /* we assume all CHARSXPs are interned/cached */
-            return sym;
+
+            /*
+               Symbols are only allowed to have _native_ (not set) encoding,
+               at least that is the behaviour of the original install
+               function.
+             */
+
+            if (knownNative || IS_ASCII(charSXP)) { /* the common case */
+                return sym;
+            }
+
+            int isUTF8 = IS_UTF8(charSXP);
+            int isLatin1 = IS_LATIN1(charSXP);
+
+            if (isUTF8) {
+                if (utf8locale) {
+                    return sym;
+                }
+            } else if (isLatin1) {
+                if (latin1locale) {
+                    return sym;
+                }
+            } else {
+                return sym;
+            }
+
+            /*
+              The charSXP has a different encoding from PRINTNAME(sym), but
+              they have the same bytes.  This is perhaps just a
+              philosophical option.
+             */
+
+            return install(CHAR(charSXP));
         }
     }
-/*
-    for (symList = R_SymbolTable[i]; symList != R_NilValue; symList = CDR(symList)) {
-        SEXP sym = CAR(symList);
-        if (!strcmp(CHAR(PRINTNAME(sym)),CHAR(charSXP))) {
-            fprintf(stderr, "Non-interned string detected %s\n", CHAR(charSXP));
-            *((int *)0) = 1;
-        }
+
+    if (!knownNative && (IS_UTF8(charSXP) || IS_LATIN1(charSXP))) {
+
+        /* this is slow, has questionable semantics, but keeps behaviour of
+         * the old install function */
+
+        charSXP = mkChar(CHAR(charSXP));
     }
-*/
+
     SEXP sym = mkSYMSXP(charSXP, R_UnboundValue);
     R_SymbolTable[i] = CONS(sym, R_SymbolTable[i]);
     return sym;
+}
+
+SEXP installCharSXP(SEXP charSXP) {
+    return installNativeCharSXP(charSXP, FALSE);
 }
 
 

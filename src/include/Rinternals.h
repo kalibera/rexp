@@ -1201,6 +1201,7 @@ int Rf_GetOptionWidth(void);
 SEXP Rf_GetRowNames(SEXP);
 void Rf_gsetVar(SEXP, SEXP, SEXP);
 SEXP Rf_install(const char *);
+SEXP Rf_installNativeCharSXP(SEXP, Rboolean);
 SEXP Rf_installCharSXP(SEXP);
 SEXP Rf_installCharSXPSignature(SEXP *, int, char);
 SEXP Rf_installSignature(SEXP *, int, char);
@@ -1214,6 +1215,15 @@ SEXP R_lsInternal(SEXP, Rboolean);
 SEXP Rf_match(SEXP, SEXP, int);
 SEXP Rf_matchE(SEXP, SEXP, int, SEXP);
 SEXP Rf_namesgets(SEXP, SEXP);
+
+typedef enum {
+    NT_NONE        = 0,
+    NT_FROM_UTF8   = 1,
+    NT_FROM_LATIN1 = 2,
+} nttype_t;
+
+
+nttype_t needsTranslationToNativeEncoding(SEXP);
 SEXP Rf_mkChar(const char *);
 SEXP Rf_mkCharLen(const char *, int);
 Rboolean Rf_NonNullStringMatch(SEXP, SEXP);
@@ -1548,6 +1558,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define inheritsCharSXP         Rf_inheritsCharSXP
 #define install			Rf_install
 #define installCharSXP		Rf_installCharSXP
+#define installNativeCharSXP		Rf_installNativeCharSXP
 #define installCharSXPSignature		Rf_installCharSXPSignature
 #define installSignature	Rf_installSignature
 #define isArray			Rf_isArray
@@ -1613,6 +1624,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define mkString		Rf_mkString
 #define namesgets		Rf_namesgets
 #define ncols			Rf_ncols
+#define needsTranslationToNativeEncoding		Rf_needsTranslationToNativeEncoding
 #define Newhashpjw		Rf_Newhashpjw
 #define nlevels			Rf_nlevels
 #define NonNullStringMatch	Rf_NonNullStringMatch
