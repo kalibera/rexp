@@ -774,27 +774,20 @@ int Riconv_close (void *cd)
 static void *latin1_obj = NULL, *utf8_obj=NULL, *ucsmb_obj=NULL,
     *ucsutf8_obj=NULL;
 
-/* This may return a R_alloc-ed result, so the caller has to manage the
-   R_alloc stack */
-const char *translateChar(SEXP x)
-{
+
+/*
+  fromUTF8 == 1 -> convert from UTF8 (to Latin1)
+           == 0 -> convert from Latin1 (to UTF8)
+
+*/
+static void translateToNativeEncoding(const char *ans, R_StringBuffer *cbuff, int fromUTF8) {
     void * obj;
-    const char *inbuf, *ans = CHAR(x);
+    const char *inbuf;
     char *outbuf;
-    size_t inb, outb, res;
-    cetype_t ienc = getCharCE(x);
-    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    size_t inb, outb;
+    size_t res;
 
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP"), "translateChar");
-    if(x == NA_STRING || !(ENC_KNOWN(x))) return ans;
-    if(IS_BYTES(x))
-	error(_("translating strings with \"bytes\" encoding is not allowed"));
-    if(utf8locale && IS_UTF8(x)) return ans;
-    if(latin1locale && IS_LATIN1(x)) return ans;
-    if(IS_ASCII(x)) return ans;
-
-    if(IS_LATIN1(x)) {
+    if(!fromUTF8) {
 	if(!latin1_obj) {
 	    obj = Riconv_open("", "latin1");
 	    /* should never happen */
@@ -826,24 +819,24 @@ const char *translateChar(SEXP x)
 	obj = utf8_obj;
     }
 
-    R_AllocStringBuffer(0, &cbuff);
+    R_AllocStringBuffer(0, cbuff);
 top_of_loop:
     inbuf = ans; inb = strlen(inbuf);
-    outbuf = cbuff.data; outb = cbuff.bufsize - 1;
+    outbuf = cbuff->data; outb = cbuff->bufsize - 1;
     /* First initialize output */
     Riconv (obj, NULL, NULL, &outbuf, &outb);
 next_char:
     /* Then convert input  */
     res = Riconv(obj, &inbuf , &inb, &outbuf, &outb);
     if(res == -1 && errno == E2BIG) {
-	R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
+	R_AllocStringBuffer(2*cbuff->bufsize, cbuff);
 	goto top_of_loop;
     } else if(res == -1 && (errno == EILSEQ || errno == EINVAL)) {
 	if(outb < 13) {
-	    R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
+	    R_AllocStringBuffer(2*cbuff->bufsize, cbuff);
 	    goto top_of_loop;
 	}
-	if (ienc == CE_UTF8) {
+	if (fromUTF8) {
 	    /* if starting in UTF-8, use \uxxxx */
 	    /* This must be the first byte */
 	    size_t clen;
@@ -875,7 +868,35 @@ next_char:
 	goto next_char;
     }
     *outbuf = '\0';
-    res = strlen(cbuff.data) + 1;
+}
+
+/* This may return a R_alloc-ed result, so the caller has to manage the
+   R_alloc stack */
+const char *translateChar(SEXP x)
+{
+    const char *ans = CHAR(x);
+    if(TYPEOF(x) != CHARSXP)
+	error(_("'%s' must be called on a CHARSXP"), "translateChar");
+    if(IS_ASCII(x)) return ans;
+
+    int fromUTF8;
+    if (IS_UTF8(x)) {
+        if (utf8locale) return ans;
+        fromUTF8 = 1; /* convert from UTF8 to Latin1 */
+    } else if (IS_LATIN1(x)) {
+        if (latin1locale) return ans;
+        fromUTF8 = 0; /* convert from Latin1 to UTF8 */
+    } else if (IS_BYTES(x)) {
+        error(_("translating strings with \"bytes\" encoding is not allowed"));
+    } else {
+        return ans; /* native encoding */
+    }
+    if (x == NA_STRING) return ans;
+
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    translateToNativeEncoding(ans, &cbuff, fromUTF8);
+
+    size_t res = strlen(cbuff.data) + 1;
     char *p = R_alloc(res, 1);
     memcpy(p, cbuff.data, res);
     R_FreeStringBuffer(&cbuff);
@@ -884,103 +905,28 @@ next_char:
 
 SEXP installTrChar(SEXP x)
 {
-    void * obj;
-    const char *inbuf, *ans = CHAR(x);
-    char *outbuf;
-    size_t inb, outb, res;
-    cetype_t ienc = getCharCE(x);
-    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-
+    const char *ans = CHAR(x);
     if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP"), "translateChar");
-    if(x == NA_STRING || !(ENC_KNOWN(x))) return install(ans);
-    if(IS_BYTES(x))
-	error(_("translating strings with \"bytes\" encoding is not allowed"));
-    if(utf8locale && IS_UTF8(x)) return install(ans);
-    if(latin1locale && IS_LATIN1(x)) return install(ans);
+	error(_("'%s' must be called on a CHARSXP"), "installTrChar");
     if(IS_ASCII(x)) return install(ans);
 
-    if(IS_LATIN1(x)) {
-	if(!latin1_obj) {
-	    obj = Riconv_open("", "latin1");
-	    /* should never happen */
-	    if(obj == (void *)(-1))
-#ifdef Win32
-		error(_("unsupported conversion from '%s' in codepage %d"),
-		      "latin1", localeCP);
-#else
-	        error(_("unsupported conversion from '%s' to '%s'"),
-		      "latin1", "");
-#endif
-	    latin1_obj = obj;
-	}
-	obj = latin1_obj;
+    int fromUTF8;
+    if (IS_UTF8(x)) {
+        if (utf8locale) return install(ans);
+        fromUTF8 = 1; /* convert from UTF8 to Latin1 */
+    } else if (IS_LATIN1(x)) {
+        if (latin1locale) return install(ans);
+        fromUTF8 = 0; /* convert from Latin1 to UTF8 */
+    } else if (IS_BYTES(x)) {
+        error(_("translating strings with \"bytes\" encoding is not allowed"));
     } else {
-	if(!utf8_obj) {
-	    obj = Riconv_open("", "UTF-8");
-	    /* should never happen */
-	    if(obj == (void *)(-1)) 
-#ifdef Win32
-		error(_("unsupported conversion from '%s' in codepage %d"),
-		      "latin1", localeCP);
-#else
-	        error(_("unsupported conversion from '%s' to '%s'"),
-		      "latin1", "");
-#endif
-	    utf8_obj = obj;
-	}
-	obj = utf8_obj;
+        return install(ans); /* native encoding */
     }
+    if (x == NA_STRING) return install(ans);
 
-    R_AllocStringBuffer(0, &cbuff);
-top_of_loop:
-    inbuf = ans; inb = strlen(inbuf);
-    outbuf = cbuff.data; outb = cbuff.bufsize - 1;
-    /* First initialize output */
-    Riconv (obj, NULL, NULL, &outbuf, &outb);
-next_char:
-    /* Then convert input  */
-    res = Riconv(obj, &inbuf , &inb, &outbuf, &outb);
-    if(res == -1 && errno == E2BIG) {
-	R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
-	goto top_of_loop;
-    } else if(res == -1 && (errno == EILSEQ || errno == EINVAL)) {
-	if(outb < 13) {
-	    R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
-	    goto top_of_loop;
-	}
-	if (ienc == CE_UTF8) {
-	    /* if starting in UTF-8, use \uxxxx */
-	    /* This must be the first byte */
-	    size_t clen;
-	    wchar_t wc;
-	    clen = utf8toucs(&wc, inbuf);
-	    if(clen > 0 && inb >= clen) {
-		inbuf += clen; inb -= clen;
-# ifndef Win32
-		if((unsigned int) wc < 65536) {
-# endif
-		    snprintf(outbuf, 9, "<U+%04X>", (unsigned int) wc);
-		    outbuf += 8; outb -= 8;
-# ifndef Win32
-		} else {
-		    snprintf(outbuf, 13, "<U+%08X>", (unsigned int) wc);
-		    outbuf += 12; outb -= 12;
-		}
-# endif
-	    } else {
-		snprintf(outbuf, 5, "<%02x>", (unsigned char)*inbuf);
-		outbuf += 4; outb -= 4;
-		inbuf++; inb--;
-	    }
-	} else {
-	    snprintf(outbuf, 5, "<%02x>", (unsigned char)*inbuf);
-	    outbuf += 4; outb -= 4;
-	    inbuf++; inb--;
-	}
-	goto next_char;
-    }
-    *outbuf = '\0';
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    translateToNativeEncoding(ans, &cbuff, fromUTF8);
+
     SEXP Sans = install(cbuff.data);
     R_FreeStringBuffer(&cbuff);
     return Sans;
