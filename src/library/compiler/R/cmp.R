@@ -2382,7 +2382,7 @@ setInlineHandler("is.symbol", function(e, cb, cntxt)
 ##
 
 local({
-    basevars <- ls('package:base', all = TRUE)
+    basevars <- ls('package:base', all.names = TRUE)
     types <- sapply(basevars, function(n) typeof(get(n)))
     for (s in basevars[types == "special"])
         if (! haveInlineHandler(s, "base"))
@@ -3140,7 +3140,7 @@ disassemble <- function(code) {
 ##
 
 simpleInternals <- function(pos = "package:base") {
-    names <- ls(pos = pos, all = TRUE)
+    names <- ls(pos = pos, all.names = TRUE)
     if (length(names) == 0)
         character(0)
     else {
@@ -3152,7 +3152,7 @@ simpleInternals <- function(pos = "package:base") {
 
 simpleNatives <- function(ns = "stats", iface = NULL) {
     pos = paste("package:", ns, sep="")
-    names <- ls(pos = pos, all = TRUE)
+    names <- ls(pos = pos, all.names = TRUE)
     if (length(names) == 0)
         character(0)
     else {
