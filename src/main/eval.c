@@ -3133,14 +3133,14 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     /* check whether we are processing the default method */
     if ( isSymbol(CAR(call)) ) {
-	if(strlen(CHAR(PRINTNAME(CAR(call)))) >= 512)
-	   error(_("call name too long in '%s'"), EncodeChar(PRINTNAME(CAR(call))));
-	sprintf(lbuf, "%s", CHAR(PRINTNAME(CAR(call))) );
-	pt = strtok(lbuf, ".");
-	pt = strtok(NULL, ".");
+        SEXP callCharSXP = PRINTNAME(CAR(call));
+	if(LENGTH(callCharSXP) >= 512)
+	    error(_("call name too long in '%s'"), EncodeChar(callCharSXP));
 
-	if( pt != NULL && !strcmp(pt, "default") )
+	const char *cstr = strchr(CHAR(callCharSXP), '.');
+	if (cstr && !strcmp(cstr + 1, "default")) {
 	    return 0;
+	}
     }
 
     if(isOps)
