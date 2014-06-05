@@ -3076,19 +3076,13 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
     */
     for (whichclass = 0 ; whichclass < len ; whichclass++) {
 	const char *ss = translateChar(STRING_ELT(Class, whichclass));
-	if(strlen(generic) + strlen(ss) + 2 > 512)
-	    error(_("class name too long in '%s'"), generic);
-	sprintf(buf, "%s.%s", generic, ss);
-	*meth = install(buf);
+	*meth = installS3MethodSignature(generic, ss, buf, 512);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
 	    *gr = mkString("");
 	    break;
 	}
-	if(strlen(group) + strlen(ss) + 2 > 512)
-	    error(_("class name too long in '%s'"), group);
-	sprintf(buf, "%s.%s", group, ss);
-	*meth = install(buf);
+	*meth = installS3MethodSignature(group, ss, buf, 512);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
 	    *gr = mkString(group);

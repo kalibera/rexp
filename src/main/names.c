@@ -1421,6 +1421,47 @@ SEXP installSignature(SEXP *sxps, int nelems, char sep) {
     return installCharSXPSignature(charSXPs, nelems, sep);
 }
 
+/*
+ Equivalent to install( className . "." methodName )
+ 
+ Signature is a buffer of length maxLength, which will be filled in with the string version
+ of the signature. The returned value is the symbol.
+ 
+*/
+
+SEXP installS3MethodSignature(const char *className, const char *methodName, char *signature, int maxLength) {
+
+    const char *src;
+
+    int i = 0;
+    for(src = className; *src; src++) {
+        if (i == maxLength) {
+            error(_("class name too long in '%s'"), className);
+        }
+        signature[i++] = *src;
+    }
+
+    if (i == maxLength) {
+        error(_("class name too long in '%s'"), className);
+    }
+    signature[i++] = '.';
+
+    for(src = methodName; *src; src++) {
+        if (i == maxLength) {
+            error(_("class name too long in '%s'"), className);
+        }
+        signature[i++] = *src;
+    }
+
+    if (i == maxLength) {
+        error(_("class name too long in '%s'"), className);
+    }
+    signature[i] = 0;
+
+    return install(signature);
+}
+
+
 /* this is for debugging only, can be called from a debugger  */
 
 static int cmpstringp(const void *p1, const void *p2) {

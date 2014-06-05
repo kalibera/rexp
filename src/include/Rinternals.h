@@ -1205,6 +1205,7 @@ SEXP Rf_installNativeCharSXP(SEXP, Rboolean);
 SEXP Rf_installCharSXP(SEXP);
 SEXP Rf_installCharSXPSignature(SEXP *, int, char);
 SEXP Rf_installSignature(SEXP *, int, char);
+SEXP Rf_installS3MethodSignature(const char *, const char *, char *, int);
 Rboolean Rf_isFree(SEXP);
 Rboolean Rf_isOrdered(SEXP);
 Rboolean Rf_isUnordered(SEXP);
@@ -1561,6 +1562,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define installNativeCharSXP		Rf_installNativeCharSXP
 #define installCharSXPSignature		Rf_installCharSXPSignature
 #define installSignature	Rf_installSignature
+#define installS3MethodSignature	Rf_installS3MethodSignature
 #define isArray			Rf_isArray
 #define isBasicClass            Rf_isBasicClass
 #define isComplex		Rf_isComplex
