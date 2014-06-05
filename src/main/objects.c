@@ -505,10 +505,35 @@ static SEXP fixcall(SEXP call, SEXP args)
 
 #define ARGUSED(x) LEVELS(x)
 
+/*
+   compares signature and "left.right"
+   all arguments must be non-null
+*/
+R_INLINE static Rboolean signatureEquals(const char *signature, const char *left, const char *right) {
+
+    const char *s = signature;
+    const char *a;
+
+    for(a = left; *a; s++, a++) {
+        if (*s != *a) {
+            return FALSE;
+        }
+    }
+    if (*s++ != '.') {
+        return FALSE;
+    }
+    for(a = right; *a; s++, a++) {
+        if (*s != *a) {
+            return FALSE;
+        }
+    }
+    return !*s;
+}
+
 /* This is a special .Internal */
 SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    char buf[512], b[512], bb[512], tbuf[10];
+    char buf[512], tbuf[10];
     const char *sb, *sg, *sk;
     SEXP ans, s, t, klass, method, matchedarg, generic, nextfun;
     SEXP sysp, m, formals, actuals, tmp, newcall;
@@ -690,45 +715,38 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 
     method = findVarInFrame3(R_GlobalContext->sysparent,
 			     R_dot_Method, TRUE);
+
+    const char *b;
     if( method != R_UnboundValue) {
-	const char *ss;
 	if( !isString(method) )
 	    error(_("wrong value for .Method"));
 	for(i = 0; i < length(method); i++) {
-	    ss = translateChar(STRING_ELT(method, i));
-	    if(strlen(ss) >= 512)
-		error(_("method name too long in '%s'"), ss);
-	    snprintf(b, 512, "%s", ss);
-	    if(strlen(b)) break;
+	    b = translateChar(STRING_ELT(method, i));
+	    if (*b) break;
 	}
 	/* for binary operators check that the second argument's method
 	   is the same or absent */
 	for(j = i; j < length(method); j++) {
-	    const char *ss = translateChar(STRING_ELT(method, j));
-	    if(strlen(ss) >= 512)
-		error(_("method name too long in '%s'"), ss);
-	    snprintf(bb, 512, "%s", ss);
-	    if (strlen(bb) && strcmp(b,bb))
+	    const char *bb = translateChar(STRING_ELT(method, j));
+	    if (*bb && strcmp(b,bb))
 		warning(_("Incompatible methods ignored"));
 	}
     }
     else {
-	if(strlen(CHAR(PRINTNAME(CAR(cptr->call)))) >= 512)
-	   error(_("call name too long in '%s'"),
-		 EncodeChar(PRINTNAME(CAR(cptr->call))));
-	snprintf(b, 512, "%s", CHAR(PRINTNAME(CAR(cptr->call))));
+	b = CHAR(PRINTNAME(CAR(cptr->call)));
     }
 
     sb = translateChar(STRING_ELT(basename, 0));
+    Rboolean foundSignature = FALSE;
     for (j = 0; j < length(klass); j++) {
 	sk = translateChar(STRING_ELT(klass, j));
-	if(strlen(sb) + strlen(sk) + 2 > 512)
-	    error(_("class name too long in '%s'"), sb);
-	snprintf(buf, 512, "%s.%s", sb, sk);
-	if (!strcmp(buf, b)) break;
+	if (signatureEquals(b, sb, sk)) { /*  b == sb.sk */
+            foundSignature = TRUE;
+	    break;
+	}
     }
 
-    if (!strcmp(buf, b)) /* we found a match and start from there */
+    if (foundSignature) /* we found a match and start from there */
       j++;
     else
       j = 0;  /*no match so start with the first element of .Class */
