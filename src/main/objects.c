@@ -535,7 +535,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     char buf[512], tbuf[10];
     const char *sb, *sg, *sk;
-    SEXP ans, s, t, klass, method, matchedarg, generic, nextfun;
+    SEXP ans, s, t, klass, method, matchedarg, generic, nextfun, nextfunSignature;
     SEXP sysp, m, formals, actuals, tmp, newcall;
     SEXP a, group, basename;
     SEXP callenv, defenv;
@@ -707,6 +707,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     else basename = group;
 
     nextfun = R_NilValue;
+    nextfunSignature = R_NilValue;
 
     /*
        Find the method currently being invoked and jump over the current call
@@ -757,11 +758,13 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     sg = translateChar(STRING_ELT(generic, 0));
     for (i = j ; i < length(klass); i++) {
 	sk = translateChar(STRING_ELT(klass, i));
-	nextfun = R_LookupMethod(installS3MethodSignature(sg, sk, buf, 512), env, callenv, defenv);
+	nextfunSignature = installS3MethodSignature(sg, sk, buf, 512);
+	nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	if (isFunction(nextfun)) break;
 	if (group != R_UnboundValue) {
 	    /* if not Generic.foo, look for Group.foo */
-	    nextfun = R_LookupMethod(installS3MethodSignature(sb, sk, buf, 512), env, callenv, defenv);
+	    nextfunSignature = installS3MethodSignature(sb, sk, buf, 512);
+	    nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	    if(isFunction(nextfun))
 		break;
 	}
@@ -769,7 +772,8 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    break;
     }
     if (!isFunction(nextfun)) {
-	nextfun = R_LookupMethod(installS3MethodSignature(sg, "default", buf, 512), env, callenv, defenv);
+        nextfunSignature = installS3MethodSignature(sg, "default", buf, 512);
+	nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	/* If there is no default method, try the generic itself,
 	   provided it is primitive or a wrapper for a .Internal
 	   function of the same name.
@@ -803,21 +807,20 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(method = duplicate(method));
 	for(j = 0; j < length(method); j++) {
 	    if (*(CHAR(STRING_ELT(method,j))))
-		SET_STRING_ELT(method, j,  mkChar(buf));
+		SET_STRING_ELT(method, j, PRINTNAME(nextfunSignature));
 	}
     } else
-	PROTECT(method = mkString(buf));
+	PROTECT(method = ScalarString(PRINTNAME(nextfunSignature)));
     defineVar(R_dot_Method, method, m);
     defineVar(R_dot_GenericCallEnv, callenv, m);
     defineVar(R_dot_GenericDefEnv, defenv, m);
 
-    method = install(buf);
 
     defineVar(R_dot_Generic, generic, m);
 
     defineVar(R_dot_Group, group, m);
 
-    SETCAR(newcall, method);
+    SETCAR(newcall, nextfunSignature);
 
     /* applyMethod expects that the parent of the caller is the caller
        of the generic, so fixup by brute force. This should fix
