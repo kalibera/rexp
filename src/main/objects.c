@@ -297,6 +297,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    for (t = formals; t != R_NilValue; t = CDR(t))
 	        if (TAG(t) == TAG(s)) {
 		    matched = 1;
+		    break;
 		}
 
 	    if (!matched) defineVar(TAG(s), CAR(s), newrho);
