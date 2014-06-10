@@ -1178,6 +1178,7 @@ SEXP Rf_lazy_duplicate(SEXP);
 /* the next really should not be here and is also in Defn.h */
 SEXP Rf_duplicated(SEXP, Rboolean);
 Rboolean R_envHasNoSpecialSymbols(SEXP);
+Rboolean Rf_equalS3Signature(const char *, const char *, const char *);
 SEXP Rf_eval(SEXP, SEXP);
 SEXP Rf_findFun(SEXP, SEXP);
 SEXP Rf_findVar(SEXP, SEXP);
@@ -1527,6 +1528,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define elt			Rf_elt
 #define endcontext		Rf_endcontext
 #define errorcall		Rf_errorcall
+#define equalS3Signature	Rf_equalS3Signature
 #define eval			Rf_eval
 #define findFun			Rf_findFun
 #define findVar			Rf_findVar
@@ -1628,6 +1630,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define ncols			Rf_ncols
 #define needsTranslationToNativeEncoding		Rf_needsTranslationToNativeEncoding
 #define Newhashpjw		Rf_Newhashpjw
+#define NewhashpjwAppend	Rf_NewhashpjwAppend
 #define nlevels			Rf_nlevels
 #define NonNullStringMatch	Rf_NonNullStringMatch
 #define nrows			Rf_nrows
@@ -1734,6 +1737,8 @@ SEXP	 Rf_mkNamed(SEXPTYPE, const char **);
 SEXP	 Rf_mkString(const char *);
 int	 Rf_nlevels(SEXP);
 int      Rf_Newhashpjw(const char *);
+int      Rf_NewhashpjwAppend(const char *, int);
+int      Rf_NewhashpjwAppendChar(char, int);
 SEXP	 Rf_ScalarComplex(Rcomplex);
 SEXP	 Rf_ScalarInteger(int);
 SEXP	 Rf_ScalarLogical(int);

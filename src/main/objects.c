@@ -508,7 +508,7 @@ static SEXP fixcall(SEXP call, SEXP args)
    compares signature and "left.right"
    all arguments must be non-null
 */
-R_INLINE static Rboolean signatureEquals(const char *signature, const char *left, const char *right) {
+Rboolean attribute_hidden equalS3Signature(const char *signature, const char *left, const char *right) {
 
     const char *s = signature;
     const char *a;
@@ -526,7 +526,7 @@ R_INLINE static Rboolean signatureEquals(const char *signature, const char *left
             return FALSE;
         }
     }
-    return !*s;
+    return !*s ? TRUE : FALSE;
 }
 
 /* This is a special .Internal */
@@ -740,7 +740,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean foundSignature = FALSE;
     for (j = 0; j < length(klass); j++) {
 	sk = translateChar(STRING_ELT(klass, j));
-	if (signatureEquals(b, sb, sk)) { /*  b == sb.sk */
+	if (equalS3Signature(b, sb, sk)) { /*  b == sb.sk */
             foundSignature = TRUE;
 	    break;
 	}

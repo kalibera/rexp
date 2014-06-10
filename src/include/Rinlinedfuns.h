@@ -790,6 +790,31 @@ INLINE_FUN int Newhashpjw(const char *s)
     return h;
 }
 
+INLINE_FUN int NewhashpjwAppend(const char *s, int _h) {
+
+    char *p;
+    unsigned h = _h, g;
+    for (p = (char *) s; *p; p++) {
+	h = (h << 4) + (*p);
+	if ((g = h & 0xf0000000) != 0) {
+	    h = h ^ (g >> 24);
+	    h = h ^ g;
+	}
+    }
+    return h;
+}
+
+INLINE_FUN int NewhashpjwAppendChar(char c, int _h) {
+
+    unsigned h = _h, g;
+    h = (h << 4) + c;
+    if ((g = h & 0xf0000000) != 0) {
+        h = h ^ (g >> 24);
+        h = h ^ g;
+    }
+    return h;
+}
+
 INLINE_FUN int hashCharSXP(SEXP charSXP) {
     int hashcode;
 

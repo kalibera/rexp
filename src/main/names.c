@@ -1298,7 +1298,6 @@ SEXP installCharSXP(SEXP charSXP) {
   Returns a symbol for a string "<name1><sep><name2><sep>...<name_nelems>".
   Elements are given as CHARSXPs.
   charSXPs is an input array of elements of length nelems.
-  The implementation has to be kept in sync with Newhashpjw.
 
   This is equivalent to creating a C string for the signature and then
   calling install on it, but more efficient.
@@ -1315,31 +1314,14 @@ SEXP installCharSXPSignature(SEXP *charSXPs, int nelems, char sep) {
     }
 
     /* hash the first element - take it from the CHARSXP */
-    unsigned h = hashCharSXP(charSXPs[0]);
-    unsigned g;
+    int h = hashCharSXP(charSXPs[0]);
 
     int i;
     int signatureLength = LENGTH(charSXPs[0]);
 
     for(i = 1; i < nelems; i++) {
-
-        /* hash the separator */
-        h = (h << 4) + sep;
-	if ((g = h & 0xf0000000) != 0) {
-	    h = h ^ (g >> 24);
-	    h = h ^ g;
-	}
-
-	/* hash the next element */
-	const char *p;
-        for (p = CHAR(charSXPs[i]); *p; p++) {
-            h = (h << 4) + (*p);
-	    if ((g = h & 0xf0000000) != 0) {
-	        h = h ^ (g >> 24);
-	        h = h ^ g;
-	    }
-        }
-
+        h = NewhashpjwAppendChar(sep, h);
+        h = NewhashpjwAppend(CHAR(charSXPs[i]), h);
         signatureLength += 1 + LENGTH(charSXPs[i]);
     }
 
@@ -1428,7 +1410,8 @@ SEXP installSignature(SEXP *sxps, int nelems, char sep) {
  
 */
 
-SEXP installS3MethodSignature(const char *className, const char *methodName) {
+/* this is a naive version which always copies strings */
+SEXP installS3MethodSignatureSlow(const char *className, const char *methodName) {
 
     const char *src;
     const int maxLength = 512;
@@ -1460,6 +1443,41 @@ SEXP installS3MethodSignature(const char *className, const char *methodName) {
     signature[i] = 0;
 
     return install(signature);
+}
+
+/* this is an on-the-fly version (no copying) */
+/* this has to be kept in sync with Newhashpjw */
+/* FIXME: extract parts common with installCharSXPSignature */
+SEXP installS3MethodSignature(const char *className, const char *methodName) {
+
+    int h = Newhashpjw(className);
+    h = NewhashpjwAppendChar('.', h);
+    h = NewhashpjwAppend(methodName, h);
+
+    SEXP symList;
+    int tableIndex = h % HSIZE;
+    for (symList = R_SymbolTable[tableIndex]; symList != R_NilValue; symList = CDR(symList)) {
+        SEXP sym = CAR(symList);
+        SEXP symCharSXP = PRINTNAME(sym);
+
+        if (equalS3Signature(CHAR(symCharSXP), className, methodName)) {
+            return sym;
+        }
+    }
+
+    /* the symbol does not exist */
+
+        /* create a CharSXP for the symbol, this is slowpath, so does not have to be fast */
+    char sbuf[strlen(className) + strlen(methodName) + 2];
+    sprintf(sbuf, "%s.%s", className, methodName);
+    SEXP charSXP = mkChar(sbuf);
+
+    SET_HASHVALUE(charSXP, h);
+    SET_HASHASH(charSXP, 1);
+    SEXP symbol = mkSYMSXP(charSXP, R_UnboundValue);
+    R_SymbolTable[tableIndex] = CONS(symbol, R_SymbolTable[tableIndex]);
+
+    return symbol;
 }
 
 
