@@ -1422,16 +1422,17 @@ SEXP installSignature(SEXP *sxps, int nelems, char sep) {
 }
 
 /*
- Equivalent to install( className . "." methodName )
+  Equivalent to install( className . "." methodName )
  
- Signature is a buffer of length maxLength, which will be filled in with the string version
- of the signature. The returned value is the symbol.
+  The returned value is the symbol.
  
 */
 
-SEXP installS3MethodSignature(const char *className, const char *methodName, char *signature, int maxLength) {
+SEXP installS3MethodSignature(const char *className, const char *methodName) {
 
     const char *src;
+    const int maxLength = 512;
+    char signature[maxLength];
 
     int i = 0;
     for(src = className; *src; src++) {

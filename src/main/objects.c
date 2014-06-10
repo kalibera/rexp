@@ -259,7 +259,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 {
     SEXP klass, method, sxp, t, s, matchedarg, sort_list;
     SEXP op, formals, newrho, newcall;
-    char buf[512];
     int i, j, nclass, matched, /* S4toS3, */ nprotect;
     RCNTXT *cptr;
 
@@ -314,7 +313,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
         const void *vmax = vmaxget();
         const char *ss = translateChar(STRING_ELT(klass, i));
         vmaxset(vmax);
-        method = installS3MethodSignature(generic, ss, buf, 512);
+        method = installS3MethodSignature(generic, ss);
 	sxp = R_LookupMethod(method, rho, callrho, defrho);
 	if (isFunction(sxp)) {
 	    if(method == R_SortListSymbol && CLOENV(sxp) == R_BaseNamespace)
@@ -332,7 +331,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 		UNPROTECT(1);
 	    } else
 		defineVar(R_dot_Class, klass, newrho);
-	    PROTECT(t = mkString(buf));
+	    PROTECT(t = ScalarString(PRINTNAME(method)));
 	    defineVar(R_dot_Method, t, newrho);
 	    UNPROTECT(1);
 	    defineVar(R_dot_GenericCallEnv, callrho, newrho);
@@ -346,14 +345,14 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    return 1;
 	}
     }
-    method = installS3MethodSignature(generic, "default", buf, 512);
+    method = installS3MethodSignature(generic, "default");
     sxp = R_LookupMethod(method, rho, callrho, defrho);
     if (isFunction(sxp)) {
         if( RDEBUG(op) || RSTEP(op) )
             SET_RSTEP(sxp, 1);
 	defineVar(R_dot_Generic, mkString(generic), newrho);
 	defineVar(R_dot_Class, R_NilValue, newrho);
-	PROTECT(t = mkString(buf));
+	PROTECT(t = ScalarString(PRINTNAME(method)));
 	defineVar(R_dot_Method, t, newrho);
 	UNPROTECT(1);
 	defineVar(R_dot_GenericCallEnv, callrho, newrho);
@@ -533,7 +532,7 @@ R_INLINE static Rboolean signatureEquals(const char *signature, const char *left
 /* This is a special .Internal */
 SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    char buf[512], tbuf[10];
+    char tbuf[10];
     const char *sb, *sg, *sk;
     SEXP ans, s, t, klass, method, matchedarg, generic, nextfun, nextfunSignature;
     SEXP sysp, m, formals, actuals, tmp, newcall;
@@ -758,12 +757,12 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     sg = translateChar(STRING_ELT(generic, 0));
     for (i = j ; i < length(klass); i++) {
 	sk = translateChar(STRING_ELT(klass, i));
-	nextfunSignature = installS3MethodSignature(sg, sk, buf, 512);
+	nextfunSignature = installS3MethodSignature(sg, sk);
 	nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	if (isFunction(nextfun)) break;
 	if (group != R_UnboundValue) {
 	    /* if not Generic.foo, look for Group.foo */
-	    nextfunSignature = installS3MethodSignature(sb, sk, buf, 512);
+	    nextfunSignature = installS3MethodSignature(sb, sk);
 	    nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	    if(isFunction(nextfun))
 		break;
@@ -772,7 +771,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    break;
     }
     if (!isFunction(nextfun)) {
-        nextfunSignature = installS3MethodSignature(sg, "default", buf, 512);
+        nextfunSignature = installS3MethodSignature(sg, "default");
 	nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	/* If there is no default method, try the generic itself,
 	   provided it is primitive or a wrapper for a .Internal

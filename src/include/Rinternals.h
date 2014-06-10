@@ -1205,7 +1205,7 @@ SEXP Rf_installNativeCharSXP(SEXP, Rboolean);
 SEXP Rf_installCharSXP(SEXP);
 SEXP Rf_installCharSXPSignature(SEXP *, int, char);
 SEXP Rf_installSignature(SEXP *, int, char);
-SEXP Rf_installS3MethodSignature(const char *, const char *, char *, int);
+SEXP Rf_installS3MethodSignature(const char *, const char *);
 Rboolean Rf_isFree(SEXP);
 Rboolean Rf_isOrdered(SEXP);
 Rboolean Rf_isUnordered(SEXP);
