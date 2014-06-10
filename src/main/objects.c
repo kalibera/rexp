@@ -802,7 +802,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* for Ops we need `method' to be a vector */
 	PROTECT(method = duplicate(method));
 	for(j = 0; j < length(method); j++) {
-	    if (strlen(CHAR(STRING_ELT(method,j))))
+	    if (*(CHAR(STRING_ELT(method,j))))
 		SET_STRING_ELT(method, j,  mkChar(buf));
 	}
     } else
@@ -976,7 +976,7 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
     SEXP cl = getClassAttrib(x);
     const char *class = CHAR(asChar(cl));
     for (ans = 0; ; ans++) {
-	if (!strlen(valid[ans])) // empty string
+	if (!*(valid[ans])) // empty string
 	    break;
 	if (!strcmp(class, valid[ans])) return ans;
     }
@@ -996,7 +996,7 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 	for(i=0; i < length(superCl); i++) {
 	    const char *s_class = CHAR(STRING_ELT(superCl, i));
 	    for (ans = 0; ; ans++) {
-		if (!strlen(valid[ans]))
+		if (!*(valid[ans]))
 		    break;
 		if (!strcmp(s_class, valid[ans])) {
 		    UNPROTECT(1);
