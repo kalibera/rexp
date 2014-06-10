@@ -201,7 +201,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     /* We were given a symbol (or an address), so we are done. */
     if (*fun) return args;
 
-    if (dll.type == FILENAME && !strlen(dll.DLLname))
+    if (dll.type == FILENAME && !*dll.DLLname)
 	errorcall(call, _("PACKAGE = \"\" is invalid"));
 
     // find if we were called from a namespace
@@ -213,7 +213,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 
 #ifdef CHECK_CROSS_USAGE
     if (dll.type == FILENAME && strcmp(dll.DLLname, "base")) {
-	if(strlen(ns) && strcmp(dll.DLLname, ns) &&
+	if(*ns && strcmp(dll.DLLname, ns) &&
 	   !(streql(dll.DLLname, "BioC_graph") && streql(ns, "graph")))
 	    warningcall(call, 
 			"using PACKAGE = \"%s\" from namespace '%s'",
@@ -236,7 +236,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
 	vmaxset(vmax);
     }
 
-    if(dll.type != FILENAME && strlen(ns)) {
+    if(dll.type != FILENAME && *ns) {
 	/* no PACKAGE= arg, so see if we can identify a DLL
 	   from the namespace defining the function */
 	*fun = R_FindNativeSymbolFromDLL(buf, &dll, symbol, env2);
@@ -254,7 +254,7 @@ resolveNativeRoutine(SEXP args, DL_FUNC *fun,
     if (*fun) return args;
 
     /* so we've failed and bail out */
-    if(strlen(dll.DLLname)) {
+    if(*dll.DLLname) {
 	switch(symbol->type) {
 	case R_C_SYM:
 	    errorcall(call,

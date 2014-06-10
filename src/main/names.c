@@ -1551,10 +1551,10 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
 	const char *fn = CHAR(PRINTNAME(fun));
 	// nspackloader.R contained a .Internal call, so need this
 	// until all packages have been re-installed.
-	if (!strlen(ns) && strcmp(fn, "getRegisteredNamespace"))
+	if (!*ns && strcmp(fn, "getRegisteredNamespace"))
 	    errorcall(call,
 		      ".Internal(%s()) not called from a base namespace\n", fn);
-	if (strlen(ns)
+	if (*ns
 #if CHECK_INTERNALS < 2
 	    && strcmp(ns, "Matrix")
 #endif

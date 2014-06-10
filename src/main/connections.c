@@ -240,7 +240,7 @@ void set_iconv(Rconnection con)
 
     /* need to test if this is text, open for reading to writing or both,
        and set inconv and/or outconv */
-    if(!con->text || !strlen(con->encname) ||
+    if(!con->text || !*(con->encname) ||
        strcmp(con->encname, "native.enc") == 0) {
 	con->UTF8out = FALSE;
 	return;
@@ -562,7 +562,7 @@ static Rboolean file_open(Rconnection con)
 #endif
     int mlen = (int) strlen(con->mode); // short
 
-    if(strlen(con->description) == 0) {
+    if(!*(con->description)) {
 	temp = TRUE;
 	name = R_tmpnam("Rf", R_TempDir);
     } else name = R_ExpandFileName(con->description);
@@ -848,7 +848,7 @@ static Rboolean fifo_open(Rconnection con)
     struct stat sb;
     Rboolean temp = FALSE;
 
-    if(strlen(con->description) == 0) {
+    if(!*(con->description)) {
 	temp = TRUE;
 	name = R_tmpnam("Rf", R_TempDir);
     } else name = R_ExpandFileName(con->description);
@@ -1229,21 +1229,21 @@ SEXP attribute_hidden do_fifo(SEXP call, SEXP op, SEXP args, SEXP env)
        strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
-    if(strlen(file) == 0) {
-	if(!strlen(open)) open ="w+";
+    if(!*file) {
+	if(!*open) open ="w+";
 	if(strcmp(open, "w+") != 0 && strcmp(open, "w+b") != 0) {
 	    open ="w+";
 	    warning(_("fifo(\"\") only supports open = \"w+\" and open = \"w+b\": using the former"));
 	}
     }
     ncon = NextConnection();
-    con = Connections[ncon] = newfifo(file, strlen(open) ? open : "r");
+    con = Connections[ncon] = newfifo(file, *open ? open : "r");
     con->blocking = block;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(strlen(open)) {
+    if(*open) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -1398,16 +1398,16 @@ SEXP attribute_hidden do_pipe(SEXP call, SEXP op, SEXP args, SEXP env)
     ncon = NextConnection();
 #ifdef Win32
     if(CharacterMode != RTerm)
-	con = newWpipe(file, ienc, strlen(open) ? open : "r");
+	con = newWpipe(file, ienc, *open ? open : "r");
     else
 #endif
-	con = newpipe(file, ienc, strlen(open) ? open : "r");
+	con = newpipe(file, ienc, *open ? open : "r");
     Connections[ncon] = con;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(strlen(open)) {
+    if(*open) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -2038,13 +2038,13 @@ SEXP attribute_hidden do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     switch(type) {
     case 0:
-	con = newgzfile(file, strlen(open) ? open : "rb", compress);
+	con = newgzfile(file, *open ? open : "rb", compress);
 	break;
     case 1:
-	con = newbzfile(file, strlen(open) ? open : "rb", compress);
+	con = newbzfile(file, *open ? open : "rb", compress);
 	break;
     case 2:
-	con = newxzfile(file, strlen(open) ? open : "rb", subtype, compress);
+	con = newxzfile(file, *open ? open : "rb", subtype, compress);
 	break;
     }
     ncon = NextConnection();
@@ -2057,7 +2057,7 @@ SEXP attribute_hidden do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(strlen(open)) {
+    if(*open) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -2853,7 +2853,7 @@ static void outtext_close(Rconnection con)
     if(this->namesymbol &&
        findVarInFrame3(env, this->namesymbol, FALSE) != R_UnboundValue)
 	R_unLockBinding(this->namesymbol, env);
-    if(strlen(this->lastline) > 0) {
+    if(*(this->lastline)) {
 	PROTECT(tmp = xlengthgets(this->data, ++this->len));
 	SET_STRING_ELT(tmp, this->len - 1, mkCharLocal(this->lastline));
 	if(this->namesymbol) defineVar(this->namesymbol, tmp, env);
@@ -3075,7 +3075,7 @@ SEXP attribute_hidden do_textconnection(SEXP call, SEXP op, SEXP args, SEXP env)
     if (type == NA_INTEGER)
 	error(_("invalid '%s' argument"), "encoding");
     ncon = NextConnection();
-    if(!strlen(open) || strncmp(open, "r", 1) == 0) {
+    if(!*open || strncmp(open, "r", 1) == 0) {
 	if(!isString(stext))
 	    error(_("invalid '%s' argument"), "text");
 	con = Connections[ncon] = newtext(desc, stext, type);
@@ -3177,7 +3177,7 @@ SEXP attribute_hidden do_sockconn(SEXP call, SEXP op, SEXP args, SEXP env)
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(strlen(open)) {
+    if(*open) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -3225,12 +3225,12 @@ SEXP attribute_hidden do_unz(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "encoding");
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
     ncon = NextConnection();
-    con = Connections[ncon] = R_newunz(file, strlen(open) ? open : "r");
+    con = Connections[ncon] = R_newunz(file, *open ? open : "r");
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(strlen(open)) {
+    if(*open) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -3277,7 +3277,7 @@ SEXP attribute_hidden do_open(SEXP call, SEXP op, SEXP args, SEXP env)
     if(block == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "blocking");
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
-    if(strlen(open) > 0) strcpy(con->mode, open);
+    if(*open) strcpy(con->mode, open);
     con->blocking = block;
     success = con->open(con);
     if(!success) {
@@ -5016,19 +5016,19 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	   whereas on Unix it is file:///path/to */
 	if (strlen(url) > 9 && url[7] == '/' && url[9] == ':') nh = 8;
 #endif
-	con = newfile(url + nh, ienc, strlen(open) ? open : "r", raw);
+	con = newfile(url + nh, ienc, *open ? open : "r", raw);
 	class2 = "file";
 #ifdef HAVE_INTERNET
     } else if (strncmp(url, "http://", 7) == 0 ||
 	       strncmp(url, "https://", 8) == 0 ||
 	       strncmp(url, "ftp://", 6) == 0) {
-       con = R_newurl(url, strlen(open) ? open : "r");
+       con = R_newurl(url, *open ? open : "r");
        ((Rurlconn)con->private)->type = type;
 #endif
     } else {
 	if(PRIMVAL(op)) { /* call to file() */
-	    if(strlen(url) == 0) {
-		if(!strlen(open)) open ="w+";
+	    if(!*url) {
+		if(!*open) open ="w+";
 		if(strcmp(open, "w+") != 0 && strcmp(open, "w+b") != 0) {
 		    open ="w+";
 		    warning(_("file(\"\") only supports open = \"w+\" and open = \"w+b\": using the former"));
@@ -5043,10 +5043,10 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	       || strcmp(url, "X11_clipboard") == 0
 #endif
 		)
-		con = newclp(url, strlen(open) ? open : "r");
+		con = newclp(url, *open ? open : "r");
 	    else {
 		if (!raw &&
-		    (!strlen(open) || streql(open, "r") || streql(open, "rt"))) {
+		    (!*open || streql(open, "r") || streql(open, "rt"))) {
 		    /* check if this is a compressed file */
 		    FILE *fp = fopen(R_ExpandFileName(url), "rb");
 		    char buf[7];
@@ -5068,20 +5068,20 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 		    }
 		    switch(ztype) {
 		    case -1:
-			con = newfile(url, ienc, strlen(open) ? open : "r", raw);
+			con = newfile(url, ienc, *open ? open : "r", raw);
 			break;
 		    case 0:
-			con = newgzfile(url, strlen(open) ? open : "rt", compress);
+			con = newgzfile(url, *open ? open : "rt", compress);
 			break;
 		    case 1:
-			con = newbzfile(url, strlen(open) ? open : "rt", compress);
+			con = newbzfile(url, *open ? open : "rt", compress);
 			break;
 		    case 2:
-			con = newxzfile(url, strlen(open) ? open : "rt", subtype, compress);
+			con = newxzfile(url, *open ? open : "rt", subtype, compress);
 			break;
 		    }
 		} else
-		    con = newfile(url, ienc, strlen(open) ? open : "r", raw);
+		    con = newfile(url, ienc, *open ? open : "r", raw);
 	    }
 	    class2 = "file";
 	} else {
@@ -5103,7 +5103,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(strlen(open)) {
+    if(*open) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);

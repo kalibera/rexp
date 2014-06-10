@@ -4150,7 +4150,7 @@ SEXP do_Rprofmem(SEXP args)
     append_mode = asLogical(CADR(args));
     filename = STRING_ELT(CAR(args), 0);
     threshold = (R_size_t) REAL(CADDR(args))[0];
-    if (strlen(CHAR(filename)))
+    if (*(CHAR(filename)))
 	R_InitMemReporting(filename, append_mode, threshold);
     else
 	R_EndMemReporting();

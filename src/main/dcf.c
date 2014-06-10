@@ -128,7 +128,7 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
     blank_skip = TRUE;
     void *vmax = vmaxget();
     while((line = Rconn_getline2(con))) {
-	if(strlen(line) == 0 ||
+	if(!*line ||
 	   tre_regexecb(&blankline, line, 0, 0, 0) == 0) {
 	    /* A blank line.  The first one after a record ends a new
 	     * record, subsequent ones are skipped */
