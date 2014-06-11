@@ -1759,7 +1759,7 @@ SEXP attribute_hidden do_setlocale(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(STRSXP, 1));
     if (p) SET_STRING_ELT(ans, 0, mkChar(p));
     else  {
-	SET_STRING_ELT(ans, 0, mkChar(""));
+	SET_STRING_ELT(ans, 0, R_EmptyCharSXP);
 	warning(_("OS reports request to set locale to \"%s\" cannot be honored"),
 		CHAR(STRING_ELT(locale, 0)));
     }
@@ -2757,7 +2757,7 @@ SEXP attribute_hidden do_readlink(SEXP call, SEXP op, SEXP args, SEXP env)
 	res = readlink(R_ExpandFileName(translateChar(STRING_ELT(paths, i))),
 		       buf, PATH_MAX);
 	if (res >= 0) SET_STRING_ELT(ans, i, mkChar(buf));
-	else if (errno == EINVAL) SET_STRING_ELT(ans, i, mkChar(""));
+	else if (errno == EINVAL) SET_STRING_ELT(ans, i, R_EmptyCharSXP);
 	else SET_STRING_ELT(ans, i,  NA_STRING);
     }
 #endif

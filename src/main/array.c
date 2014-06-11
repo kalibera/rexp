@@ -423,7 +423,7 @@ SEXP attribute_hidden do_length_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, 
     SEXP x = arg_x;
     SEXP ans;
     
-    if (isObject(x) && DispatchOrEval(call, op, "length", BUILD_1ARGS(args, x), rho, &ans, 0, 1)) {
+    if (isObject(x) && DispatchOrEval(call, op, R_LengthCharSXP, BUILD_1ARGS(args, x), rho, &ans, 0, 1)) {
         if (length(ans) == 1 && TYPEOF(ans) == REALSXP) {
             double d = REAL(ans)[0];
             if (R_FINITE(d) && d >= 0. && d <= INT_MAX && floor(d) == d) {

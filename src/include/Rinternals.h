@@ -1060,11 +1060,13 @@ SEXP	R_RestartToken;     /* Marker for restarted function calls */
 LibExtern SEXP	R_Bracket2Symbol;   /* "[[" */
 LibExtern SEXP	R_BracketSymbol;    /* "[" */
 LibExtern SEXP	R_BraceSymbol;      /* "{" */
+LibExtern SEXP	R_CSymbol;          /* "c" */
 LibExtern SEXP	R_ClassSymbol;	    /* "class" */
 LibExtern SEXP	R_DeviceSymbol;     /* ".Device" */
 LibExtern SEXP	R_DimNamesSymbol;   /* "dimnames" */
 LibExtern SEXP	R_DimSymbol;	    /* "dim" */
 LibExtern SEXP	R_DollarSymbol;	    /* "$" */
+LibExtern SEXP	R_DollarAssignSymbol;	    /* "$<-" */
 LibExtern SEXP	R_DotsSymbol;	    /* "..." */
 LibExtern SEXP	R_DropSymbol;	    /* "drop" */
 LibExtern SEXP	R_LastvalueSymbol;  /* ".Last.value" */
@@ -1113,6 +1115,49 @@ LibExtern SEXP R_TextConnectionCharSXP;   /* "textConnection" */
 LibExtern SEXP R_DLLInfoCharSXP;          /* "DLLInfo" */
 LibExtern SEXP R_UserDefinedDatabaseCharSXP;	/* "UserDefinedDatabase" */
 LibExtern SEXP R_POSIXltCharSXP;          /* "POSIXlt" */
+LibExtern SEXP R_OpsCharSXP;              /* "Ops" */
+LibExtern SEXP R_MathCharSXP;             /* "Math" */
+LibExtern SEXP R_ComplexCharSXP;          /* "Complex" */
+LibExtern SEXP R_SummaryCharSXP;          /* "Summary" */
+LibExtern SEXP R_LengthCharSXP;           /* "length" */
+LibExtern SEXP R_LengthAssignCharSXP;     /* "length<-" */
+LibExtern SEXP R_NamesCharSXP;            /* "names" */
+LibExtern SEXP R_NamesAssignCharSXP;      /* "names<-" */
+LibExtern SEXP R_DimNamesCharSXP;         /* "dimnames" */
+LibExtern SEXP R_DimNamesAssignCharSXP;   /* "dimnames<-" */
+LibExtern SEXP R_DimCharSXP;              /* "dim" */
+LibExtern SEXP R_DimAssignCharSXP;        /* "dim<-" */
+LibExtern SEXP R_LevelsAssignCharSXP;     /* "levels<-" */
+LibExtern SEXP R_AtAssignCharSXP;         /* "@<-" */
+LibExtern SEXP R_CCharSXP;                /* "c" */
+LibExtern SEXP R_UnlistCharSXP;           /* "unlist" */
+LibExtern SEXP R_AsVectorCharSXP;         /* "as.vector" */
+LibExtern SEXP R_IsNACharSXP;             /* "is.na" */
+LibExtern SEXP R_AnyNACharSXP;            /* "anyNA" */
+LibExtern SEXP R_IsNaNCharSXP;            /* "is.nan" */
+LibExtern SEXP R_IsFiniteCharSXP;         /* "is.finite" */
+LibExtern SEXP R_IsInfiniteCharSXP;       /* "is.infinite" */
+LibExtern SEXP R_AsEnvironmentCharSXP;    /* "as.environment" */
+LibExtern SEXP R_RepCharSXP;              /* "rep" */
+LibExtern SEXP R_SeqCharSXP;              /* "seq" */
+LibExtern SEXP R_IsUnsortedCharSXP;       /* "is.unsorted" */
+LibExtern SEXP R_XtfrmCharSXP;            /* "xtfrm" */
+LibExtern SEXP R_SubsetCharSXP;           /* "[" */
+LibExtern SEXP R_Subset2CharSXP;          /* "[[" */
+LibExtern SEXP R_SubassignCharSXP;        /* "[<-" */
+LibExtern SEXP R_Subassign2CharSXP;       /* "[[<-" */
+LibExtern SEXP R_DollarCharSXP;           /* "$" */
+LibExtern SEXP R_DollarAssignCharSXP;     /* "$<-" */
+LibExtern SEXP R_AsCharacterCharSXP;      /* "as.character" */
+LibExtern SEXP R_AsIntegerCharSXP;        /* "as.integer" */
+LibExtern SEXP R_AsDoubleCharSXP;         /* "as.double" */
+LibExtern SEXP R_AsComplexCharSXP;        /* "as.complex" */
+LibExtern SEXP R_AsLogicalCharSXP;        /* "as.logical" */
+LibExtern SEXP R_AsRawCharSXP;            /* "as.raw" */
+LibExtern SEXP R_IsNumericCharSXP;        /* "is.numeric" */
+LibExtern SEXP R_IsMatrixCharSXP;         /* "is.matrix" */
+LibExtern SEXP R_IsArrayCharSXP;          /* "is.array" */
+LibExtern SEXP R_EmptyCharSXP;            /* "" */
 
 /* Missing Values - others from Arith.h */
 #define NA_STRING	R_NaString
@@ -1207,6 +1252,7 @@ SEXP Rf_installCharSXP(SEXP);
 SEXP Rf_installCharSXPSignature(SEXP *, int, char);
 SEXP Rf_installSignature(SEXP *, int, char);
 SEXP Rf_installS3MethodSignature(const char *, const char *);
+SEXP Rf_installS3MethodSignatureNativeCharSXP(SEXP, const char *);
 Rboolean Rf_isFree(SEXP);
 Rboolean Rf_isOrdered(SEXP);
 Rboolean Rf_isUnordered(SEXP);
@@ -1251,6 +1297,7 @@ const char * Rf_translateChar(SEXP);
 const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
+SEXP translateCharToCharSXP(SEXP);
 SEXP Rf_type2str(SEXPTYPE);
 SEXP Rf_type2ImmutableScalarString(SEXPTYPE);
 #ifndef INLINE_PROTECT
@@ -1565,6 +1612,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define installCharSXPSignature		Rf_installCharSXPSignature
 #define installSignature	Rf_installSignature
 #define installS3MethodSignature	Rf_installS3MethodSignature
+#define installS3MethodSignatureNativeCharSXP	Rf_installS3MethodSignatureNativeCharSXP
 #define isArray			Rf_isArray
 #define isBasicClass            Rf_isBasicClass
 #define isComplex		Rf_isComplex
@@ -1659,6 +1707,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define translateChar		Rf_translateChar
 #define translateChar0		Rf_translateChar0
 #define translateCharUTF8      	Rf_translateCharUTF8
+#define translateCharToCharSXP  Rf_translateCharToCharSXP
 #define type2char		Rf_type2char
 #define type2str		Rf_type2str
 #define type2ImmutableScalarString		Rf_type2ImmutableScalarString

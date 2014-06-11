@@ -46,7 +46,7 @@ do_mapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (length_op == NULL) length_op = R_Primitive("length");
 	    // DispatchOrEval() needs 'args' to be a pairlist
 	    SEXP ans, tmp2 = PROTECT(list1(tmp1));
-	    if (DispatchOrEval(call, length_op, "length", tmp2, rho, &ans, 0, 1))
+	    if (DispatchOrEval(call, length_op, R_LengthCharSXP, tmp2, rho, &ans, 0, 1))
 		lengths[i] = (R_xlen_t) (TYPEOF(ans) == REALSXP ?
 					 REAL(ans)[0] : asInteger(ans));
 	    UNPROTECT(1);

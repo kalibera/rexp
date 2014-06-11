@@ -254,12 +254,12 @@ int isBasicClass(const char *ss) {
 
 
 attribute_hidden
-int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
+int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, SEXP *ans)
 {
     SEXP klass, method, sxp, t, s, matchedarg, sort_list;
     SEXP op, formals, newrho, newcall;
-    int i, j, nclass, matched, /* S4toS3, */ nprotect;
+    int i, j, nclass, /* S4toS3, */ nprotect;
     RCNTXT *cptr;
 
     /* Get the context which UseMethod was called from. */
@@ -293,14 +293,13 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     if (TYPEOF(op) == CLOSXP) {
 	formals = FORMALS(op);
 	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
-	    matched = 0;
 	    for (t = formals; t != R_NilValue; t = CDR(t))
 	        if (TAG(t) == TAG(s)) {
-		    matched = 1;
-		    break;
+		    goto hasvar;
 		}
 
-	    if (!matched) defineVar(TAG(s), CAR(s), newrho);
+            defineVar(TAG(s), CAR(s), newrho);
+            hasvar: ;
 	}
     }
 
@@ -314,14 +313,14 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
         const void *vmax = vmaxget();
         const char *ss = translateChar(STRING_ELT(klass, i));
         vmaxset(vmax);
-        method = installS3MethodSignature(generic, ss);
+        method = installS3MethodSignatureNativeCharSXP(genericNativeCharSXP, ss);
 	sxp = R_LookupMethod(method, rho, callrho, defrho);
 	if (isFunction(sxp)) {
 	    if(method == R_SortListSymbol && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
             if( RDEBUG(op) || RSTEP(op) )
                 SET_RSTEP(sxp, 1);
-	    defineVar(R_dot_Generic, mkString(generic), newrho);
+	    defineVar(R_dot_Generic, ScalarString(genericNativeCharSXP), newrho);
 	    if (i > 0) {
 	        int ii;
 		PROTECT(t = allocVector(STRSXP, nclass - i));
@@ -346,12 +345,12 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    return 1;
 	}
     }
-    method = installS3MethodSignature(generic, "default");
+    method = installS3MethodSignatureNativeCharSXP(genericNativeCharSXP, "default");
     sxp = R_LookupMethod(method, rho, callrho, defrho);
     if (isFunction(sxp)) {
         if( RDEBUG(op) || RSTEP(op) )
             SET_RSTEP(sxp, 1);
-	defineVar(R_dot_Generic, mkString(generic), newrho);
+	defineVar(R_dot_Generic, ScalarString(genericNativeCharSXP), newrho);
 	defineVar(R_dot_Class, R_NilValue, newrho);
 	PROTECT(t = ScalarString(PRINTNAME(method)));
 	defineVar(R_dot_Method, t, newrho);
@@ -419,7 +418,9 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	The generic need not be a closure (Henrik Bengtsson writes
 	UseMethod("$"), although only functions are documented.)
     */
-    val = findVar1(installTrChar(STRING_ELT(generic, 0)),
+    SEXP genericSymbol = installTrChar(STRING_ELT(generic, 0));
+
+    val = findVar1(genericSymbol,
 		   ENCLOS(env), FUNSXP, TRUE); /* That has evaluated promises */
     if(TYPEOF(val) == CLOSXP) defenv = CLOENV(val);
     else defenv = R_BaseNamespace;
@@ -438,12 +439,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(obj = GetObject(cptr));
     }
 
-    if (TYPEOF(generic) != STRSXP ||
-	LENGTH(generic) < 1 ||
-	CHAR(STRING_ELT(generic, 0))[0] == '\0')
-	errorcall(call, _("first argument must be a generic name"));
-
-    if (usemethod(translateChar(STRING_ELT(generic, 0)), obj, call, CDR(args),
+    if (usemethod(PRINTNAME(genericSymbol), obj, call, CDR(args),
 		  env, callenv, defenv, &ans) == 1) {
 	UNPROTECT(2); /* obj, argList */
 	PROTECT(ans);
@@ -467,7 +463,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    strcat(cl, "')");
 	}
 	errorcall(call, _("no applicable method for '%s' applied to an object of class \"%s\""),
-		  translateChar(STRING_ELT(generic, 0)), cl);
+		  PRINTNAME(genericSymbol), cl);
     }
     /* Not reached */
     return R_NilValue;

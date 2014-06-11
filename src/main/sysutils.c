@@ -919,17 +919,30 @@ SEXP installTrChar(SEXP x)
     if(TYPEOF(x) != CHARSXP)
 	error(_("'%s' must be called on a CHARSXP"), "translateChar");
     nttype_t t = needsTranslationToNativeEncoding(x);
-    const char *ans = CHAR(x);
     if (t == NT_NONE) {
         return installNativeCharSXP(x, TRUE);
     }
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-    translateToNativeEncoding(ans, &cbuff, t);
+    translateToNativeEncoding(CHAR(x), &cbuff, t);
 
     SEXP Sans = install(cbuff.data);
     R_FreeStringBuffer(&cbuff);
     return Sans;
+}
+
+SEXP translateCharToCharSXP(SEXP x) {
+    if(TYPEOF(x) != CHARSXP)
+	error(_("'%s' must be called on a CHARSXP"), "translateChar");
+    nttype_t t = needsTranslationToNativeEncoding(x);
+    if (t == NT_NONE) {
+        return x;
+    }
+
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    translateToNativeEncoding(CHAR(x), &cbuff, t);
+
+    return mkChar(cbuff.data);
 }
 
 /* This may return a R_alloc-ed result, so the caller has to manage the

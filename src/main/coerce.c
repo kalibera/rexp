@@ -1399,24 +1399,24 @@ SEXP attribute_hidden do_ascharacter(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP ans, x;
 
     int type = STRSXP, op0 = PRIMVAL(op);
-    char *name = NULL /* -Wall */;
+    SEXP nameCharSXP = NULL /* -Wall */;
 
     check1argX(args, call);
     switch(op0) {
     case 0:
-	name = "as.character"; break;
+	nameCharSXP = R_AsCharacterCharSXP; break;
     case 1:
-	name = "as.integer"; type = INTSXP; break;
+	nameCharSXP = R_AsIntegerCharSXP; type = INTSXP; break;
     case 2:
-	name = "as.double"; type = REALSXP; break;
+	nameCharSXP = R_AsDoubleCharSXP; type = REALSXP; break;
     case 3:
-	name = "as.complex"; type = CPLXSXP; break;
+	nameCharSXP = R_AsComplexCharSXP; type = CPLXSXP; break;
     case 4:
-	name = "as.logical"; type = LGLSXP; break;
+	nameCharSXP = R_AsLogicalCharSXP; type = LGLSXP; break;
     case 5:
-	name = "as.raw"; type = RAWSXP; break;
+	nameCharSXP = R_AsRawCharSXP; type = RAWSXP; break;
     }
-    if (DispatchOrEval(call, op, name, args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, nameCharSXP, args, rho, &ans, 0, 1))
 	return(ans);
 
     /* Method dispatch has failed, we now just */
@@ -1442,7 +1442,7 @@ SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP x, ans;
     int type;
 
-    if (DispatchOrEval(call, op, "as.vector", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, R_AsVectorCharSXP, args, rho, &ans, 0, 1))
 	return(ans);
 
     /* Method dispatch has failed, we now just */
@@ -1776,14 +1776,14 @@ SEXP attribute_hidden do_is_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEXP
        isObject(x)) {
 	/* This used CHAR(PRINTNAME(CAR(call))), but that is not
 	   necessarily correct, e.g. when called from lapply() */
-	const char *nm;
+	SEXP nmCharSXP;
 	switch(PRIMVAL(op)) {
-	case 100: nm = "is.numeric"; break;
-	case 101: nm = "is.matrix"; break;
-	case 102: nm = "is.array"; break;
-	default: nm = ""; /* -Wall */
+	case 100: nmCharSXP = R_IsNumericCharSXP; break;
+	case 101: nmCharSXP = R_IsMatrixCharSXP; break;
+	case 102: nmCharSXP = R_IsArrayCharSXP; break;
+	default: nmCharSXP = R_EmptyCharSXP; /* -Wall */
 	}
-	if(DispatchOrEval(call, op, nm, BUILD_1ARGS(args, arg_x), rho, &ans, 0, 1))
+	if(DispatchOrEval(call, op, nmCharSXP, BUILD_1ARGS(args, arg_x), rho, &ans, 0, 1))
 	    return(ans);
     }
 
@@ -2001,7 +2001,7 @@ SEXP attribute_hidden do_isna_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SE
     R_xlen_t i, n;
 
     x = arg_x;
-    if (isObject(x) && DispatchOrEval(call, op, "is.na", BUILD_1ARGS(args, arg_x), rho, &ans, 1, 1))
+    if (isObject(x) && DispatchOrEval(call, op, R_IsNACharSXP, BUILD_1ARGS(args, arg_x), rho, &ans, 1, 1))
 	return(ans);
 
 #ifdef stringent_is
@@ -2185,7 +2185,7 @@ static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
 	call2 = PROTECT(duplicate(call));
 	for (i = 0; i < n; i++, x = CDR(x)) {
 	    SETCAR(args2, CAR(x)); SETCADR(call2, CAR(x));
-	    if ((DispatchOrEval(call2, op, "anyNA", args2, env, &ans, 0, 1)
+	    if ((DispatchOrEval(call2, op, R_AnyNACharSXP, args2, env, &ans, 0, 1)
 		 && asLogical(ans)) || anyNA(call2, op, args2, env)) {
 		UNPROTECT(2);
 		return TRUE;
@@ -2201,7 +2201,7 @@ static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
 	call2 = PROTECT(duplicate(call));
 	for (i = 0; i < n; i++) {
 	    SETCAR(args2, VECTOR_ELT(x, i)); SETCADR(call2, VECTOR_ELT(x, i));
-	    if ((DispatchOrEval(call2, op, "anyNA", args2, env, &ans, 0, 1)
+	    if ((DispatchOrEval(call2, op, R_AnyNACharSXP, args2, env, &ans, 0, 1)
 		 && asLogical(ans)) || anyNA(call2, op, args2, env)) {
 		UNPROTECT(2);
 		return TRUE;
@@ -2225,7 +2225,7 @@ SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (length(args) < 1 || length(args) > 2)
 	errorcall(call, "anyNA takes 1 or 2 arguments");
 
-    if (DispatchOrEval(call, op, "anyNA", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, R_AnyNACharSXP, args, rho, &ans, 0, 1))
 	return ans;
 
     if(length(args) == 1) {
@@ -2257,7 +2257,7 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1argX(args, call);
 
-    if (DispatchOrEval(call, op, "is.nan", args, rho, &ans, 1, 1))
+    if (DispatchOrEval(call, op, R_IsNaNCharSXP, args, rho, &ans, 1, 1))
 	return(ans);
 
     PROTECT(args = ans);
@@ -2320,7 +2320,7 @@ SEXP attribute_hidden do_isfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1argX(args, call);
 
-    if (DispatchOrEval(call, op, "is.finite", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, R_IsFiniteCharSXP, args, rho, &ans, 0, 1))
 	return(ans);
 #ifdef stringent_is
     if (!isList(CAR(args)) && !isVector(CAR(args)))
@@ -2380,7 +2380,7 @@ SEXP attribute_hidden do_isinfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1argX(args, call);
 
-    if (DispatchOrEval(call, op, "is.infinite", args, rho, &ans, 0, 1))
+    if (DispatchOrEval(call, op, R_IsInfiniteCharSXP, args, rho, &ans, 0, 1))
 	return(ans);
 #ifdef stringent_is
     if (!isList(CAR(args)) && !isVector(CAR(args)))

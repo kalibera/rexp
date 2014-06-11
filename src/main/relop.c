@@ -64,7 +64,7 @@ SEXP attribute_hidden do_relop(SEXP call, SEXP op, SEXP args, SEXP env)
     arg2 = CADR(args);
 
     if (ATTRIB(arg1) != R_NilValue || ATTRIB(arg2) != R_NilValue) {
-	if (DispatchGroup("Ops", call, op, args, env, &ans))
+	if (DispatchGroup(R_OpsCharSXP, call, op, args, env, &ans))
 	    return ans;
     }
     else if (argc == 2) {

@@ -368,7 +368,7 @@ recommended:
 bytecode-recommended:
 	@$(ECHO) "--- Making and compiling recommended packages"
 	@rm ../library/Recommended/*.ts
-	@R_COMPILE_PKGS=1 R_COMPILER_SUPPRESS_ALL=1 \
+	@R_COMPILE_PKGS=1  \
 	  $(MK) -C ../library/Recommended -f Makefile.win
 
 docfiles:

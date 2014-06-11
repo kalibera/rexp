@@ -729,7 +729,7 @@ SEXP attribute_hidden do_c(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* Attempt method dispatch. */
 
-    if (DispatchOrEval(call, op, "c", args, env, &ans, 1, 1))
+    if (DispatchOrEval(call, op, R_CCharSXP, args, env, &ans, 1, 1))
 	return(ans);
     return do_c_dflt(call, op, ans, env);
 }
@@ -847,7 +847,7 @@ SEXP attribute_hidden do_unlist_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, 
     
     /* Attempt method dispatch. */
 
-    if (isObject(arg_x) && DispatchOrEval(call, op, "unlist", BUILD_3ARGS(args, arg_x, arg_recursive, arg_use_names), env, &ans, 0, 1))
+    if (isObject(arg_x) && DispatchOrEval(call, op, R_UnlistCharSXP, BUILD_3ARGS(args, arg_x, arg_recursive, arg_use_names), env, &ans, 0, 1))
 	return(ans);
 
     /* Method dispatch has failed; run the default code. */

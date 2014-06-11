@@ -337,6 +337,7 @@ typedef struct {
     int	   eval;     /* evaluate args? */
     int	   arity;    /* function arity */
     PPinfo gram;     /* pretty-print info */
+    SEXP   symbol;
 } FUNTAB;
 
 #ifdef USE_RINTERNALS
@@ -363,6 +364,8 @@ typedef struct {
 #define PPINFO(x)	(R_FunTab[(x)->u.primsxp.offset].gram)
 #define PRIMPRINT(x)	(((R_FunTab[(x)->u.primsxp.offset].eval)/100)%10)
 #define PRIMINTERNAL(x)	(((R_FunTab[(x)->u.primsxp.offset].eval)%100)/10)
+#define PRIMSYMBOL(x)	(R_FunTab[(x)->u.primsxp.offset].symbol)
+#define PRIMCHARSXP(x)	(PRINTNAME(R_FunTab[(x)->u.primsxp.offset].symbol))
 
 /* Promise Access Macros */
 #define PRCODE(x)	((x)->u.promsxp.expr)
@@ -853,9 +856,9 @@ SEXP deparse1(SEXP,Rboolean,int);
 SEXP deparse1w(SEXP,Rboolean,int);
 SEXP deparse1line(SEXP,Rboolean);
 SEXP deparse1s(SEXP call);
-int DispatchAnyOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
-int DispatchOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
-int DispatchGroup(const char *, SEXP,SEXP,SEXP,SEXP,SEXP*);
+int DispatchAnyOrEval(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*, int, int);
+int DispatchOrEval(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*, int, int);
+int DispatchGroup(SEXP, SEXP,SEXP,SEXP,SEXP,SEXP*);
 SEXP duplicated(SEXP, Rboolean);
 R_xlen_t any_duplicated(SEXP, Rboolean);
 R_xlen_t any_duplicated3(SEXP, SEXP, Rboolean);
@@ -985,7 +988,7 @@ void unbindVar(SEXP, SEXP);
 void unmarkPhase(void);
 #endif
 SEXP R_LookupMethod(SEXP, SEXP, SEXP, SEXP);
-int usemethod(const char *, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
+int usemethod(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
 SEXP vectorIndex(SEXP, SEXP, int, int, int, SEXP, Rboolean);
 
 #ifdef R_USE_SIGNALS

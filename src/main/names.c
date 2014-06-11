@@ -1023,10 +1023,12 @@ static void installFunTab(int i)
     SEXP prim;
     /* prim needs to be protected since install can (and does here) allocate */
     PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
+    SEXP sym = install(R_FunTab[i].name);
     if ((R_FunTab[i].eval % 100 )/10)
-	SET_INTERNAL(install(R_FunTab[i].name), prim);
+	SET_INTERNAL(sym, prim);
     else
-	SET_SYMVALUE(install(R_FunTab[i].name), prim);
+	SET_SYMVALUE(sym, prim);
+    R_FunTab[i].symbol = sym;
     UNPROTECT(1);
 }
 
@@ -1035,11 +1037,13 @@ static void SymbolShortcuts(void)
     R_Bracket2Symbol = install("[[");
     R_BracketSymbol = install("[");
     R_BraceSymbol = install("{");
+    R_CSymbol = install("c");
     R_ClassSymbol = install("class");
     R_DeviceSymbol = install(".Device");
     R_DimNamesSymbol = install("dimnames");
     R_DimSymbol = install("dim");
     R_DollarSymbol = install("$");
+    R_DollarAssignSymbol = install("$<-");
     R_DotsSymbol = install("...");
     R_DropSymbol = install("drop");
 
@@ -1118,7 +1122,6 @@ static void SymbolShortcuts(void)
     R_SelectSuperClassesSymbol = install(".selectSuperClasses");
     R_ClassEnvSymbol = install(".classEnv");
     R_InitMethodDispatchSymbol = install("initMethodDispatch");
-
 }
 
 static void CharSXPShortcuts(void) {
@@ -1131,6 +1134,50 @@ static void CharSXPShortcuts(void) {
     R_PreserveObject(R_DLLInfoCharSXP = mkChar("DLLInfo"));
     R_PreserveObject(R_UserDefinedDatabaseCharSXP = mkChar("UserDefinedDatabase"));
     R_PreserveObject(R_POSIXltCharSXP = mkChar("POSIXlt"));
+    R_PreserveObject(R_OpsCharSXP = mkChar("Ops"));
+    R_PreserveObject(R_MathCharSXP = mkChar("Math"));
+    R_PreserveObject(R_ComplexCharSXP = mkChar("Complex"));
+    R_PreserveObject(R_SummaryCharSXP = mkChar("Summary"));
+
+    R_PreserveObject(R_LengthCharSXP = mkChar("length"));
+    R_PreserveObject(R_LengthAssignCharSXP = mkChar("length<-"));
+    R_PreserveObject(R_NamesCharSXP = mkChar("names"));
+    R_PreserveObject(R_NamesAssignCharSXP = mkChar("names<-"));
+    R_PreserveObject(R_DimNamesCharSXP = mkChar("dimnames"));
+    R_PreserveObject(R_DimNamesAssignCharSXP = mkChar("dimnames<-"));
+    R_PreserveObject(R_DimCharSXP = mkChar("dim"));
+    R_PreserveObject(R_DimAssignCharSXP = mkChar("dim<-"));
+    R_PreserveObject(R_LevelsAssignCharSXP = mkChar("levels<-"));
+    R_PreserveObject(R_AtAssignCharSXP = mkChar("@<-"));
+    R_PreserveObject(R_CCharSXP = mkChar("c"));
+    R_PreserveObject(R_UnlistCharSXP = mkChar("unlist"));
+    R_PreserveObject(R_AsVectorCharSXP = mkChar("as.vector"));
+    R_PreserveObject(R_IsNACharSXP = mkChar("is.na"));
+    R_PreserveObject(R_AnyNACharSXP = mkChar("anyNA"));
+    R_PreserveObject(R_IsNaNCharSXP = mkChar("is.nan"));
+    R_PreserveObject(R_IsFiniteCharSXP = mkChar("is.finite"));
+    R_PreserveObject(R_IsInfiniteCharSXP = mkChar("is.infinite"));
+    R_PreserveObject(R_AsEnvironmentCharSXP = mkChar("as.environment"));
+    R_PreserveObject(R_RepCharSXP = mkChar("rep"));
+    R_PreserveObject(R_SeqCharSXP = mkChar("seq"));
+    R_PreserveObject(R_IsUnsortedCharSXP = mkChar("is.unsorted"));
+    R_PreserveObject(R_XtfrmCharSXP = mkChar("xtfrm"));
+    R_PreserveObject(R_SubsetCharSXP = mkChar("["));
+    R_PreserveObject(R_Subset2CharSXP = mkChar("[["));
+    R_PreserveObject(R_SubassignCharSXP = mkChar("[<-"));
+    R_PreserveObject(R_Subassign2CharSXP = mkChar("[[<-"));
+    R_PreserveObject(R_DollarCharSXP = mkChar("$"));
+    R_PreserveObject(R_DollarAssignCharSXP = mkChar("$<-"));
+    R_PreserveObject(R_AsCharacterCharSXP = mkChar("as.character"));
+    R_PreserveObject(R_AsIntegerCharSXP = mkChar("as.integer"));
+    R_PreserveObject(R_AsDoubleCharSXP = mkChar("as.double"));
+    R_PreserveObject(R_AsComplexCharSXP = mkChar("as.complex"));
+    R_PreserveObject(R_AsLogicalCharSXP = mkChar("as.logical"));
+    R_PreserveObject(R_AsRawCharSXP = mkChar("as.raw"));
+    R_PreserveObject(R_IsNumericCharSXP = mkChar("is.numeric"));
+    R_PreserveObject(R_IsMatrixCharSXP = mkChar("is.matrix"));
+    R_PreserveObject(R_IsArrayCharSXP = mkChar("is.array"));
+    R_PreserveObject(R_EmptyCharSXP = mkChar(""));
 }
 
 /* initialize the symbol table */
@@ -1445,6 +1492,21 @@ SEXP installS3MethodSignatureSlow(const char *className, const char *methodName)
     return install(signature);
 }
 
+SEXP R_INLINE static installNewS3MethodSignature(const char *className, const char *methodName, int h, int tableIndex) {
+    /* create a CharSXP for the symbol, this is slowpath, so does not have to be fast */
+
+    char sbuf[strlen(className) + strlen(methodName) + 2];
+    sprintf(sbuf, "%s.%s", className, methodName);
+    SEXP charSXP = mkChar(sbuf);
+
+    SET_HASHVALUE(charSXP, h);
+    SET_HASHASH(charSXP, 1);
+    SEXP symbol = mkSYMSXP(charSXP, R_UnboundValue);
+    R_SymbolTable[tableIndex] = CONS(symbol, R_SymbolTable[tableIndex]);
+
+    return symbol;
+}
+
 /* this is an on-the-fly version (no copying) */
 /* this has to be kept in sync with Newhashpjw */
 /* FIXME: extract parts common with installCharSXPSignature */
@@ -1466,20 +1528,29 @@ SEXP installS3MethodSignature(const char *className, const char *methodName) {
     }
 
     /* the symbol does not exist */
-
-        /* create a CharSXP for the symbol, this is slowpath, so does not have to be fast */
-    char sbuf[strlen(className) + strlen(methodName) + 2];
-    sprintf(sbuf, "%s.%s", className, methodName);
-    SEXP charSXP = mkChar(sbuf);
-
-    SET_HASHVALUE(charSXP, h);
-    SET_HASHASH(charSXP, 1);
-    SEXP symbol = mkSYMSXP(charSXP, R_UnboundValue);
-    R_SymbolTable[tableIndex] = CONS(symbol, R_SymbolTable[tableIndex]);
-
-    return symbol;
+    return installNewS3MethodSignature(className, methodName, h, tableIndex);
 }
 
+SEXP installS3MethodSignatureNativeCharSXP(SEXP classNameCharSXP, const char *methodName) {
+
+    int h = hashCharSXP(classNameCharSXP);
+    h = NewhashpjwAppendChar('.', h);
+    h = NewhashpjwAppend(methodName, h);
+
+    SEXP symList;
+    int tableIndex = h % HSIZE;
+    const char *className = CHAR(classNameCharSXP);
+    for (symList = R_SymbolTable[tableIndex]; symList != R_NilValue; symList = CDR(symList)) {
+        SEXP sym = CAR(symList);
+
+        if (equalS3Signature(CHAR(PRINTNAME(sym)), className, methodName)) {
+            return sym;
+        }
+    }
+
+    /* the symbol does not exist */
+    return installNewS3MethodSignature(className, methodName, h, tableIndex);
+}
 
 /* this is for debugging only, can be called from a debugger  */
 

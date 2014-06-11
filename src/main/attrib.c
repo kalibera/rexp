@@ -820,7 +820,7 @@ SEXP attribute_hidden do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1argX(args, call);
 
-    if (DispatchOrEval(call, op, "names<-", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, R_NamesAssignCharSXP, args, env, &ans, 0, 1))
 	return(ans);
     /* Special case: removing non-existent names, to avoid a copy */
     if (CADR(args) == R_NilValue &&
@@ -935,7 +935,7 @@ SEXP attribute_hidden do_names_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, S
     SEXP ans;
     SEXP x = arg_x;
 
-    if (isObject(x) && DispatchOrEval(call, op, "names", BUILD_1ARGS(args, x), env, &ans, 0, 1))
+    if (isObject(x) && DispatchOrEval(call, op, R_NamesCharSXP, BUILD_1ARGS(args, x), env, &ans, 0, 1))
 	return(ans);
 
     if (isVector(x) || isList(x) || isLanguage(x) || IS_S4_OBJECT(x))
@@ -963,7 +963,7 @@ SEXP attribute_hidden do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1argX(args, call);
 
-    if (DispatchOrEval(call, op, "dimnames<-", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, R_DimNamesAssignCharSXP, args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
     if (MAYBE_SHARED(CAR(args))) SETCAR(args, shallow_duplicate(CAR(args)));
@@ -1070,7 +1070,7 @@ SEXP attribute_hidden do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans;
     checkArity(op, args);
     check1argX(args, call);
-    if (DispatchOrEval(call, op, "dimnames", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, R_DimNamesCharSXP, args, env, &ans, 0, 1))
 	return(ans);
     PROTECT(args = ans);
     ans = getDimNamesAttrib(CAR(args));
@@ -1083,7 +1083,7 @@ SEXP attribute_hidden do_dim_main(SEXP call, SEXP op, SEXP args, SEXP arg_x, SEX
     SEXP ans;
 
     SEXP x = arg_x;
-    if (isObject(x) && DispatchOrEval(call, op, "dim", BUILD_1ARGS(args, x), env, &ans, 0, 1))
+    if (isObject(x) && DispatchOrEval(call, op, R_DimCharSXP, BUILD_1ARGS(args, x), env, &ans, 0, 1))
 	return(ans);
     return getDimAttrib(x);
 }
@@ -1103,7 +1103,7 @@ SEXP attribute_hidden do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x;
     checkArity(op, args);
-    if (DispatchOrEval(call, op, "dim<-", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, R_DimAssignCharSXP, args, env, &ans, 0, 1))
 	return(ans);
     x = CAR(args);
     /* Duplication might be expensive */
@@ -1222,7 +1222,7 @@ SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1argX(args, call);
 
-    if (DispatchOrEval(call, op, "levels<-", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, R_LevelsAssignCharSXP, args, env, &ans, 0, 1))
 	/* calls, e.g., levels<-.factor() */
 	return(ans);
     if(!isNull(CADR(args)) && any_duplicated(CADR(args), FALSE))
@@ -1497,7 +1497,7 @@ SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	SETCADR(args, input);
 	UNPROTECT(1); // 'input' is now protected
 
- 	if(DispatchOrEval(call, op, "@<-", args, env, &ans, 0, 0))
+        if(DispatchOrEval(call, op, R_AtAssignCharSXP, args, env, &ans, 0, 0))
 	    return(ans);
 
 	PROTECT(obj = CAR(ans));

@@ -283,7 +283,7 @@ SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
     check1argSymbol(args, call, R_ZSymbol);
-    if (DispatchGroup("Complex", call, op, args, env, &x))
+    if (DispatchGroup(R_ComplexCharSXP, call, op, args, env, &x))
 	return x;
     x = CAR(args);
     if (isComplex(x)) {

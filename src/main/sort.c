@@ -166,7 +166,7 @@ SEXP attribute_hidden do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
 
     SEXP ans, x = CAR(args);
-    if(DispatchOrEval(call, op, "is.unsorted", args, rho, &ans, 0, 1))
+    if(DispatchOrEval(call, op, R_IsUnsortedCharSXP, args, rho, &ans, 0, 1))
 	return ans;
     PROTECT(args = ans); // args evaluated now
 
@@ -1483,7 +1483,7 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1argX(args, call);
 
-    if(DispatchOrEval(call, op, "xtfrm", args, rho, &ans, 0, 1)) return ans;
+    if(DispatchOrEval(call, op, R_XtfrmCharSXP, args, rho, &ans, 0, 1)) return ans;
     /* otherwise dispatch the default method */
     PROTECT(fn = findFun(install("xtfrm.default"), rho));
     PROTECT(prargs = PROMISE_ARGS(args, R_GlobalEnv));

@@ -438,7 +438,7 @@ SEXP attribute_hidden do_arith(SEXP call, SEXP op, SEXP args, SEXP env)
     arg2 = CADR(args);
 
     if (ATTRIB(arg1) != R_NilValue || ATTRIB(arg2) != R_NilValue) {
-	if (DispatchGroup("Ops", call, op, args, env, &ans))
+	if (DispatchGroup(R_OpsCharSXP, call, op, args, env, &ans))
 	    return ans;
     }
     else if (argc == 2) {
@@ -1187,7 +1187,7 @@ SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1argX(args, call);
 
-    if (DispatchGroup("Math", call, op, args, env, &s))
+    if (DispatchGroup(R_MathCharSXP, call, op, args, env, &s))
 	return s;
 
     if (isComplex(CAR(args)))
@@ -1247,7 +1247,7 @@ SEXP attribute_hidden do_math1(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_trunc(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP s;
-    if (DispatchGroup("Math", call, op, args, env, &s))
+    if (DispatchGroup(R_MathCharSXP, call, op, args, env, &s))
 	return s;
     checkArity(op, args); /* but is -1 in names.c */
     check1argX(args, call);
@@ -1269,7 +1269,7 @@ SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
     check1argX(args, call);
     x = CAR(args);
 
-    if (DispatchGroup("Math", call, op, args, env, &s))
+    if (DispatchGroup(R_MathCharSXP, call, op, args, env, &s))
 	return s;
 
     if (isInteger(x) || isLogical(x)) {
@@ -1554,7 +1554,7 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
                        "%d arguments passed to '%s'which requires 1 or 2 arguments", n),
               n, PRIMNAME(op));
 
-    if (! DispatchGroup("Math", call2, op, args, env, &res)) {
+    if (! DispatchGroup(R_MathCharSXP, call2, op, args, env, &res)) {
 	if(n == 1) {
 	    double digits = 0.0;
 	    if(PRIMVAL(op) == 10004) digits = 6.0;
@@ -1588,14 +1588,14 @@ SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     check1argX(args, call);
 
-    if (DispatchGroup("Math", call, op, args, env, &res)) return res;
+    if (DispatchGroup(R_MathCharSXP, call, op, args, env, &res)) return res;
 
     if(PRIMVAL(op) == 10) tmp = ScalarReal(10.0);
     if(PRIMVAL(op) == 2)  tmp = ScalarReal(2.0);
 
     PROTECT(call2 = lang3(install("log"), CAR(args), tmp));
     PROTECT(args2 = lang2(CAR(args), tmp));
-    if (! DispatchGroup("Math", call2, op, args2, env, &res)) {
+    if (! DispatchGroup(R_MathCharSXP, call2, op, args2, env, &res)) {
 	if (isComplex(CAR(args)))
 	    res = complex_math2(call2, op, args2, env);
 	else
@@ -1625,7 +1625,7 @@ SEXP attribute_hidden do_log(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(call2 = lang2(CAR(call), R_NilValue));
     SETCDR(call2, args);
 
-    if (! DispatchGroup("Math", call2, op, args, env, &res)) {
+    if (! DispatchGroup(R_MathCharSXP, call2, op, args, env, &res)) {
 	switch (n) {
 	case 1:
 	    if (isComplex(CAR(args)))

@@ -3637,7 +3637,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
    	    	buf[i] = (char) R_IoBufferGetc(buffer);
 
    	    buf[buflen] = 0;
-    	    defineVar(install("filename"), ScalarString(mkChar("")), ParseState.Original);
+            defineVar(install("filename"), ScalarString(R_EmptyCharSXP), ParseState.Original);
     	    defineVar(install("lines"), ScalarString(mkChar(buf)), ParseState.Original);
     	    PROTECT(class = allocVector(STRSXP, 2));
             SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
@@ -5464,7 +5464,7 @@ static void record_( int first_parsed, int first_column, int last_parsed, int la
 	if ( text_in )
 	    SET_STRING_ELT(ParseState.text, ParseState.data_count, mkChar(text_in));
 	else
-	    SET_STRING_ELT(ParseState.text, ParseState.data_count, mkChar(""));
+	    SET_STRING_ELT(ParseState.text, ParseState.data_count, R_EmptyCharSXP);
 	
 	if( id > ID_COUNT ){
 		growID(id) ;

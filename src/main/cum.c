@@ -154,7 +154,7 @@ SEXP attribute_hidden do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP s, t, ans;
     R_xlen_t i, n;
     checkArity(op, args);
-    if (DispatchGroup("Math", call, op, args, env, &ans))
+    if (DispatchGroup(R_MathCharSXP, call, op, args, env, &ans))
 	return ans;
     if (isComplex(CAR(args))) {
 	t = CAR(args);

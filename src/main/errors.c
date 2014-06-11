@@ -565,7 +565,7 @@ static SEXP GetSrcLoc(SEXP srcref)
     SEXP sep, line, result;
     SEXP srcfile = R_GetSrcFilename(srcref);
     if (TYPEOF(srcref) != INTSXP || length(srcref) < 4)
-	return ScalarString(mkChar(""));
+	return ScalarString(R_EmptyCharSXP);
     SEXP e2 = PROTECT(lang2( install("basename"), srcfile));
     PROTECT(srcfile = eval(e2, R_BaseEnv ) );
     PROTECT(sep = ScalarString(mkChar("#")));
@@ -1928,10 +1928,10 @@ R_GetSrcFilename(SEXP srcref)
 {
     SEXP srcfile = getAttrib(srcref, R_SrcfileSymbol);
     if (TYPEOF(srcfile) != ENVSXP) 
-    	return ScalarString(mkChar(""));
+        return ScalarString(R_EmptyCharSXP);
     srcfile = findVar(install("filename"), srcfile);	
     if (TYPEOF(srcfile) != STRSXP)
-        return ScalarString(mkChar(""));
+        return ScalarString(R_EmptyCharSXP);
     return srcfile;
 }
 
