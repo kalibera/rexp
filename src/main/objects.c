@@ -259,7 +259,7 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 {
     SEXP klass, method, sxp, t, s, matchedarg, sort_list;
     SEXP op, formals, newrho, newcall;
-    int i, j, nclass, /* S4toS3, */ nprotect;
+    int i, j, nclass /*, S4toS3 */;
     RCNTXT *cptr;
 
     /* Get the context which UseMethod was called from. */
@@ -289,7 +289,6 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 	error(_("invalid generic function in 'usemethod'"));
     }
 
-    nprotect = 5;
     if (TYPEOF(op) == CLOSXP) {
 	formals = FORMALS(op);
 	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
@@ -297,7 +296,6 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 	        if (TAG(t) == TAG(s)) {
 		    goto hasvar;
 		}
-
             defineVar(TAG(s), CAR(s), newrho);
             hasvar: ;
 	}
@@ -331,17 +329,14 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 		UNPROTECT(1);
 	    } else
 		defineVar(R_dot_Class, klass, newrho);
-	    PROTECT(t = ScalarString(PRINTNAME(method)));
-	    defineVar(R_dot_Method, t, newrho);
-	    UNPROTECT(1);
+	    defineVar(R_dot_Method, ScalarString(PRINTNAME(method)), newrho);
 	    defineVar(R_dot_GenericCallEnv, callrho, newrho);
 	    defineVar(R_dot_GenericDefEnv, defrho, newrho);
-	    t = newcall;
-	    SETCAR(t, method);
+	    SETCAR(newcall, method);
 	    R_GlobalContext->callflag = CTXT_GENERIC;
-	    *ans = applyMethod(t, sxp, matchedarg, rho, newrho);
+	    *ans = applyMethod(newcall, sxp, matchedarg, rho, newrho);
 	    R_GlobalContext->callflag = CTXT_RETURN;
-	    UNPROTECT(nprotect);
+	    UNPROTECT(5);
 	    return 1;
 	}
     }
@@ -352,15 +347,12 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
             SET_RSTEP(sxp, 1);
 	defineVar(R_dot_Generic, ScalarString(genericNativeCharSXP), newrho);
 	defineVar(R_dot_Class, R_NilValue, newrho);
-	PROTECT(t = ScalarString(PRINTNAME(method)));
-	defineVar(R_dot_Method, t, newrho);
-	UNPROTECT(1);
+	defineVar(R_dot_Method, ScalarString(PRINTNAME(method)), newrho);
 	defineVar(R_dot_GenericCallEnv, callrho, newrho);
 	defineVar(R_dot_GenericDefEnv, defrho, newrho);
-	t = newcall;
-	SETCAR(t, method);
+	SETCAR(newcall, method);
 	R_GlobalContext->callflag = CTXT_GENERIC;
-	*ans = applyMethod(t, sxp, matchedarg, rho, newrho);
+	*ans = applyMethod(newcall, sxp, matchedarg, rho, newrho);
 	R_GlobalContext->callflag = CTXT_RETURN;
 	UNPROTECT(5);
 	return 1;
@@ -764,8 +756,6 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if(isFunction(nextfun))
 		break;
 	}
-	if (isFunction(nextfun))
-	    break;
     }
     if (!isFunction(nextfun)) {
         nextfunSignature = installS3MethodSignature(sg, "default");
@@ -793,7 +783,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(klass = duplicate(klass));
     PROTECT(m = allocSExp(ENVSXP));
     for (j = 0; j < length(s); j++)
-	SET_STRING_ELT(s, j, duplicate(STRING_ELT(klass, i++)));
+	SET_STRING_ELT(s, j, STRING_ELT(klass, i++));
     setAttrib(s, R_PreviousSymbol, klass);
     defineVar(R_dot_Class, s, m);
     /* It is possible that if a method was called directly that
@@ -810,12 +800,8 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     defineVar(R_dot_Method, method, m);
     defineVar(R_dot_GenericCallEnv, callenv, m);
     defineVar(R_dot_GenericDefEnv, defenv, m);
-
-
     defineVar(R_dot_Generic, generic, m);
-
     defineVar(R_dot_Group, group, m);
-
     SETCAR(newcall, nextfunSignature);
 
     /* applyMethod expects that the parent of the caller is the caller
