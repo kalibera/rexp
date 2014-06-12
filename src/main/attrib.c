@@ -732,6 +732,72 @@ static SEXP S4_extends(SEXP klass)
     return(val);
 }
 
+static struct {
+    SEXP vector;
+    SEXP matrix;
+    SEXP array;
+} Type2DefaultClass[NTYPES];
+
+
+static SEXP createDefaultClass(SEXP part1, SEXP part2, SEXP part3) {
+
+    int size = 0;
+    if (part1 != R_NilValue) size++;
+    if (part2 != R_NilValue) size++;
+    if (part3 != R_NilValue) size++;
+
+    if (size == 0) {
+        return R_NilValue;
+    }
+    SEXP res = allocVector(STRSXP, size);
+    R_PreserveObject(res);
+
+    int i = 0;
+    if (part1 != R_NilValue) {
+        SET_STRING_ELT(res, i++, part1);
+    }
+    if (part2 != R_NilValue) {
+        SET_STRING_ELT(res, i++, part2);
+    }
+    if (part3 != R_NilValue) {
+        SET_STRING_ELT(res, i, part3);
+    }
+    MARK_NOT_MUTABLE(res);
+    return res;
+}
+
+/* requires type2str (Type2Tables to be already initialized) */
+void initializeS3DefaultTypes() {
+    int type;
+
+    for(type = 0; type < NTYPES; type++) {
+        SEXP part2 = R_NilValue;
+        SEXP part3 = R_NilValue;
+
+        switch(type) {
+            case CLOSXP:
+            case SPECIALSXP:
+            case BUILTINSXP:
+	        part2 = R_FunctionCharSXP;
+	        break;
+            case INTSXP:
+	    case REALSXP:
+	        part2 = type2str_noerr(type);
+	        part3 = R_NumericCharSXP;
+	        break;
+	    case LANGSXP:
+	        part2 = R_NilValue; /* cannot be pre-allocated, depends on the object value */
+	        break;
+	    default:
+	        part2 = type2str_noerr(type);
+	}
+
+	Type2DefaultClass[type].vector = createDefaultClass(R_NilValue, part2, part3);
+	Type2DefaultClass[type].matrix = createDefaultClass(R_MatrixCharSXP, part2, part3);
+	Type2DefaultClass[type].array = createDefaultClass(R_ArrayCharSXP, part2, part3);
+    }
+}
+
 /* Version for S3-dispatch */
 SEXP attribute_hidden R_data_class2 (SEXP obj)
 {
@@ -743,56 +809,24 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
 	    return klass;
       }
       else { /* length(klass) == 0 */
-	SEXPTYPE t;
-	SEXP value, class0 = R_NilValue, dim = getDimAttrib(obj);
-	int n = length(dim);
-	if(n > 0) {
-	    if(n == 2)
-		class0 = R_MatrixCharSXP;
-	    else
-		class0 = R_ArrayCharSXP;
-	}
-	PROTECT(class0);
-	switch(t = TYPEOF(obj)) {
-	case CLOSXP: case SPECIALSXP: case BUILTINSXP:
-	    klass = R_FunctionCharSXP;
-	    break;
-	case INTSXP:
-	case REALSXP:
-	    if(isNull(class0)) {
-		PROTECT(value = allocVector(STRSXP, 2));
-		SET_STRING_ELT(value, 0, type2str(t));
-		SET_STRING_ELT(value, 1, R_NumericCharSXP);
-		UNPROTECT(2);
-	    }
-	    else {
-		PROTECT(value = allocVector(STRSXP, 3));
-		SET_STRING_ELT(value, 0, class0);
-		SET_STRING_ELT(value, 1, type2str(t));
-		SET_STRING_ELT(value, 2, R_NumericCharSXP);
-		UNPROTECT(2);
-	    }
-	    return value;
-	    break;
-	case SYMSXP:
-	    klass = R_NameCharSXP;
-	    break;
-	case LANGSXP:
-	    klass = lang2str(obj);
-	    break;
-	default:
-	    klass = type2str(t);
-	}
-	PROTECT(klass);
-	if(isNull(class0)) {
-	    value = ScalarString(klass);
-	} else {
-	    value = allocVector(STRSXP, 2);
-	    SET_STRING_ELT(value, 0, class0);
-	    SET_STRING_ELT(value, 1, klass);
-	}
-	UNPROTECT(2);
-	return value;
+
+        SEXP dim = getDimAttrib(obj);
+        int n = length(dim);
+        SEXPTYPE t = TYPEOF(obj);
+        SEXP defaultClass;
+        switch(n) {
+            case 0: defaultClass = Type2DefaultClass[t].vector; break;
+            case 2: defaultClass = Type2DefaultClass[t].matrix; break;
+            default: defaultClass = Type2DefaultClass[t].array; break;
+        }
+
+        if (defaultClass == R_NilValue) {
+            if (t != LANGSXP) { /* this will only happen in case of an internal error */
+                error("invalid or unsupported type in R_data_class2");
+            }
+            defaultClass = ScalarString(lang2str(obj));
+        }
+        return defaultClass;
     }
 }
 

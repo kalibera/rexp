@@ -95,6 +95,10 @@ typedef int R_len_t;
 /*  These exact numeric values are seldom used, but they are, e.g., in
  *  ../main/subassign.c, and they are serialized.
 */
+
+/* this number of types is used in type tables, utils.c; should be kept in sync with SEXPTYPE below */
+#define NTYPES 32
+
 #ifndef enum_SEXPTYPE
 /* NOT YET using enum:
  *  1)	The SEXPREC struct below has 'SEXPTYPE type : 5'
@@ -1297,6 +1301,7 @@ void Rf_setVar(SEXP, SEXP, SEXP);
 SEXPTYPE Rf_str2type(const char *);
 int Rf_hashed_typename2type(const char *);
 void Rf_initializeTypeTables();
+void Rf_initializeS3DefaultTypes();
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
 const char * Rf_translateChar(SEXP);
@@ -1305,6 +1310,7 @@ const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
 SEXP translateCharToCharSXP(SEXP);
 SEXP Rf_type2str(SEXPTYPE);
+SEXP Rf_type2str_noerr(SEXPTYPE);
 SEXP Rf_type2ImmutableScalarString(SEXPTYPE);
 #ifndef INLINE_PROTECT
 void Rf_unprotect(int);
@@ -1611,6 +1617,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define initializeOffHeapSEXP	Rf_initializeOffHeapSEXP
 #define initializeOffHeapEnvironment	Rf_initializeOffHeapEnvironment
 #define initializeTypeTables	Rf_initializeTypeTables
+#define initializeS3DefaultTypes	Rf_initializeS3DefaultTypes
 #define inheritsCharSXP         Rf_inheritsCharSXP
 #define install			Rf_install
 #define installCharSXP		Rf_installCharSXP
@@ -1716,6 +1723,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define translateCharToCharSXP  Rf_translateCharToCharSXP
 #define type2char		Rf_type2char
 #define type2str		Rf_type2str
+#define type2str_noerr		Rf_type2str_noerr
 #define type2ImmutableScalarString		Rf_type2ImmutableScalarString
 #define unprotect		Rf_unprotect
 #define unprotect_ptr		Rf_unprotect_ptr

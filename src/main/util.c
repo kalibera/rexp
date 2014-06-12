@@ -233,7 +233,7 @@ TypeTable[] = {
 };
 
 /* see Rinternals.h for more details, SEXPTYPE type  field of SEXPREC */
-#define NTYPES 32
+/* #define NTYPES 32 */
 
 static struct {
     const char *cstrName;
@@ -311,6 +311,16 @@ SEXP type2str(SEXPTYPE t)
     char buf[50];
     snprintf(buf, 50, "unknown type #%d", t);
     return mkChar(buf);
+}
+
+SEXP type2str_noerr(SEXPTYPE t)
+{
+    if (t >= 0 && t < NTYPES) { /* FIXME: branch not really needed */
+        SEXP res = Type2Table[t].rcharName;
+        return res ? res : R_NilValue;
+    } else {
+        return R_NilValue;
+    }
 }
 
 SEXP type2ImmutableScalarString(SEXPTYPE t) 
