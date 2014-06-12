@@ -652,21 +652,21 @@ SEXP R_data_class(SEXP obj, Rboolean singleString)
 	int nd = length(dim);
 	if(nd > 0) {
 	    if(nd == 2)
-		klass = mkChar("matrix");
+		klass = R_MatrixCharSXP;
 	    else
-		klass = mkChar("array");
+		klass = R_ArrayCharSXP;
 	}
 	else {
 	  SEXPTYPE t = TYPEOF(obj);
 	  switch(t) {
 	  case CLOSXP: case SPECIALSXP: case BUILTINSXP:
-	    klass = mkChar("function");
+	    klass = R_FunctionCharSXP;
 	    break;
 	  case REALSXP:
-	    klass = mkChar("numeric");
+	    klass = R_NumericCharSXP;
 	    break;
 	  case SYMSXP:
-	    klass = mkChar("name");
+	    klass = R_NameCharSXP;
 	    break;
 	  case LANGSXP:
 	    klass = lang2str(obj, t);
@@ -748,34 +748,34 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
 	int n = length(dim);
 	if(n > 0) {
 	    if(n == 2)
-		class0 = mkChar("matrix");
+		class0 = R_MatrixCharSXP;
 	    else
-		class0 = mkChar("array");
+		class0 = R_ArrayCharSXP;
 	}
 	PROTECT(class0);
 	switch(t = TYPEOF(obj)) {
 	case CLOSXP: case SPECIALSXP: case BUILTINSXP:
-	    klass = mkChar("function");
+	    klass = R_FunctionCharSXP;
 	    break;
 	case INTSXP:
 	case REALSXP:
 	    if(isNull(class0)) {
 		PROTECT(value = allocVector(STRSXP, 2));
 		SET_STRING_ELT(value, 0, type2str(t));
-		SET_STRING_ELT(value, 1, mkChar("numeric"));
+		SET_STRING_ELT(value, 1, R_NumericCharSXP);
 		UNPROTECT(2);
 	    }
 	    else {
 		PROTECT(value = allocVector(STRSXP, 3));
 		SET_STRING_ELT(value, 0, class0);
 		SET_STRING_ELT(value, 1, type2str(t));
-		SET_STRING_ELT(value, 2, mkChar("numeric"));
+		SET_STRING_ELT(value, 2, R_NumericCharSXP);
 		UNPROTECT(2);
 	    }
 	    return value;
 	    break;
 	case SYMSXP:
-	    klass = mkChar("name");
+	    klass = R_NameCharSXP;
 	    break;
 	case LANGSXP:
 	    klass = lang2str(obj, t);

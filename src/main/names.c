@@ -1178,6 +1178,11 @@ static void CharSXPShortcuts(void) {
     R_PreserveObject(R_IsMatrixCharSXP = mkChar("is.matrix"));
     R_PreserveObject(R_IsArrayCharSXP = mkChar("is.array"));
     R_PreserveObject(R_EmptyCharSXP = mkChar(""));
+    R_PreserveObject(R_MatrixCharSXP = mkChar("matrix"));
+    R_PreserveObject(R_ArrayCharSXP = mkChar("array"));
+    R_PreserveObject(R_FunctionCharSXP = mkChar("function"));
+    R_PreserveObject(R_NumericCharSXP = mkChar("numeric"));
+    R_PreserveObject(R_NameCharSXP = mkChar("name"));
 }
 
 /* initialize the symbol table */

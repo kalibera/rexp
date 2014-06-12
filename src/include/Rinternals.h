@@ -1158,6 +1158,12 @@ LibExtern SEXP R_IsNumericCharSXP;        /* "is.numeric" */
 LibExtern SEXP R_IsMatrixCharSXP;         /* "is.matrix" */
 LibExtern SEXP R_IsArrayCharSXP;          /* "is.array" */
 LibExtern SEXP R_EmptyCharSXP;            /* "" */
+LibExtern SEXP R_MatrixCharSXP;           /* "matrix" */
+LibExtern SEXP R_ArrayCharSXP;            /* "array" */
+LibExtern SEXP R_FunctionCharSXP;         /* "function" */
+LibExtern SEXP R_NumericCharSXP;          /* "numeric" */
+LibExtern SEXP R_NameCharSXP;             /* "name" */
+
 
 /* Missing Values - others from Arith.h */
 #define NA_STRING	R_NaString

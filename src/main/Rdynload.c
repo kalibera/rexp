@@ -1155,7 +1155,7 @@ createRSymbolObject(SEXP sname, DL_FUNC f, R_RegisteredNativeSymbol *symbol,
     }
 
     SET_VECTOR_ELT(sym, 0, sname);
-    SET_STRING_ELT(names, 0, mkChar("name"));
+    SET_STRING_ELT(names, 0, R_NameCharSXP);
 
     SET_VECTOR_ELT(sym, 1,
 		   withRegistrationInfo && symbol && symbol->symbol.c && symbol->dll
@@ -1380,7 +1380,7 @@ SEXP do_earg_getRegisteredSymbolInfo(SEXP call, SEXP op, SEXP arg, SEXP env) {
     
     SEXP resNames;
     PROTECT(resNames = allocVector(STRSXP,3));
-    SET_STRING_ELT(resNames, 0, mkChar("name"));
+    SET_STRING_ELT(resNames, 0, R_NameCharSXP);
     SET_STRING_ELT(resNames, 1, mkChar("nargs"));
     SET_STRING_ELT(resNames, 2, mkChar("interface"));
     setAttrib(res, R_NamesSymbol, resNames);
