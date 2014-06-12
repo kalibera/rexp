@@ -611,7 +611,7 @@ SEXP attribute_hidden do_class(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* character elements corresponding to the syntactic types in the
    grammar */
-static SEXP lang2str(SEXP obj, SEXPTYPE t)
+static SEXP lang2str(SEXP obj)
 {
   SEXP symb = CAR(obj);
   static SEXP if_sym = 0, while_sym, for_sym, eq_sym, gets_sym,
@@ -669,7 +669,7 @@ SEXP R_data_class(SEXP obj, Rboolean singleString)
 	    klass = R_NameCharSXP;
 	    break;
 	  case LANGSXP:
-	    klass = lang2str(obj, t);
+	    klass = lang2str(obj);
 	    break;
 	  default:
 	    klass = type2str(t);
@@ -778,7 +778,7 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
 	    klass = R_NameCharSXP;
 	    break;
 	case LANGSXP:
-	    klass = lang2str(obj, t);
+	    klass = lang2str(obj);
 	    break;
 	default:
 	    klass = type2str(t);
