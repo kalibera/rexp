@@ -1241,6 +1241,7 @@ SEXP Rf_findVarInFrame(SEXP, SEXP);
 SEXP Rf_findVarInFrame3(SEXP, SEXP, Rboolean);
 SEXP Rf_getAttrib(SEXP, SEXP);
 SEXP Rf_getClassAttrib(SEXP);
+SEXP Rf_getDDVALSymbol(int n);
 SEXP Rf_getDimAttrib(SEXP);
 SEXP Rf_getDimNamesAttrib(SEXP);
 SEXP Rf_getGenericAttrib(SEXP);
@@ -1596,6 +1597,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define GetArrayDimnames	Rf_GetArrayDimnames
 #define getAttrib		Rf_getAttrib
 #define getClassAttrib		Rf_getClassAttrib
+#define getDDVALSymbol		Rf_getDDVALSymbol
 #define getDimAttrib		Rf_getDimAttrib
 #define getDimNamesAttrib	Rf_getDimNamesAttrib
 #define getGenericAttrib	Rf_getGenericAttrib

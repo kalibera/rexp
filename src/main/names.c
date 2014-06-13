@@ -1185,6 +1185,34 @@ static void CharSXPShortcuts(void) {
     R_PreserveObject(R_NameCharSXP = mkChar("name"));
 }
 
+#define N_DDVAL_SYMBOLS 65
+
+static SEXP DDVALSymbols[N_DDVAL_SYMBOLS];
+
+static SEXP createDDVALSymbol(int n) {
+    char buf[10];
+    snprintf(buf, 10, "..%d", n);
+    return mkSYMSXP(mkChar(buf), R_UnboundValue);
+}
+
+static void initializeDDVALSymbols() {
+    for(int i = 0; i < N_DDVAL_SYMBOLS; i++) {
+        SEXP s = createDDVALSymbol(i);
+        R_PreserveObject(s);
+        MARK_NOT_MUTABLE(s);
+        DDVALSymbols[i] = s;
+    }
+}
+
+SEXP getDDVALSymbol(int n) {
+    if (n < N_DDVAL_SYMBOLS) {
+        return DDVALSymbols[n];
+    }
+
+    return createDDVALSymbol(n);
+}
+
+
 /* initialize the symbol table */
 void attribute_hidden InitNames() {
 
@@ -1233,6 +1261,7 @@ void attribute_hidden InitNames() {
         SET_SPECIAL_SYMBOL(install(Spec_name[i]));
 
     R_initAsignSymbols();
+    initializeDDVALSymbols();
     R_initialize_bcode();
 
     CharSXPShortcuts();
@@ -1556,6 +1585,8 @@ SEXP installS3MethodSignatureNativeCharSXP(SEXP classNameCharSXP, const char *me
     /* the symbol does not exist */
     return installNewS3MethodSignature(className, methodName, h, tableIndex);
 }
+
+
 
 /* this is for debugging only, can be called from a debugger  */
 
