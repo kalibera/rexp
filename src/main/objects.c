@@ -289,11 +289,10 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 	error(_("invalid generic function in 'usemethod'"));
     }
 
-    Rboolean onlyFormals = FALSE;
-
     if (TYPEOF(op) == CLOSXP) {
 	formals = FORMALS(op);
 	SEXP locals = FRAME(cptr->cloenv);
+	Rboolean onlyFormals = FALSE;
 
 	/* Copy any newly added variables to the new environment. It is
 	 * however extremely rare for any variables to be added by a
@@ -305,13 +304,8 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 	SEXP f, l;
 	for (l = locals, f = formals; ; f = CDR(f), l = CDR(l)) {
 	    if (f == R_NilValue) {
-	        if (l == R_NilValue) {
-                    onlyFormals = TRUE; /* we know that local variables are just the formals */
-	            break;
-                } else {
-                    onlyFormals = FALSE;
-                    break;
-                }
+	        onlyFormals = (l == R_NilValue);
+	        break;
 	    }
 	    if (l == R_NilValue || TAG(l) != TAG(f)) {
 	        onlyFormals = FALSE;
