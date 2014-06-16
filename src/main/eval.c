@@ -1353,8 +1353,6 @@ SEXP R_execMethod(SEXP op, SEXP rho)
 		  CHAR(PRINTNAME(symbol)));
 	missing = R_GetVarLocMISSING(loc);
 	val = R_GetVarLocValue(loc);
-	SET_FRAME(newrho, CONS(val, FRAME(newrho)));
-	SET_TAG(FRAME(newrho), symbol);
 	if (missing) {
 	    switch(TYPEOF(val)) {
                 case NILSXP:
