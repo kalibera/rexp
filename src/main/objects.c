@@ -289,15 +289,50 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 	error(_("invalid generic function in 'usemethod'"));
     }
 
+    Rboolean onlyFormals = FALSE;
+
     if (TYPEOF(op) == CLOSXP) {
 	formals = FORMALS(op);
-	for (s = FRAME(cptr->cloenv); s != R_NilValue; s = CDR(s)) {
-	    for (t = formals; t != R_NilValue; t = CDR(t))
-	        if (TAG(t) == TAG(s)) {
-		    goto hasvar;
-		}
-            defineVar(TAG(s), CAR(s), newrho);
-            hasvar: ;
+	SEXP locals = FRAME(cptr->cloenv);
+
+	/* Copy any newly added variables to the new environment. It is
+	 * however extremely rare for any variables to be added by a
+	 * generic, normally a generic will just be a call to UseMethod.
+	 * Hence, the search below is written so that it is linear in the
+	 * common case and quadratic only if variables have been added.
+	 */
+
+	SEXP f, l;
+	for (l = locals, f = formals; ; f = CDR(f), l = CDR(l)) {
+	    if (f == R_NilValue) {
+	        if (l == R_NilValue) {
+                    onlyFormals = TRUE; /* we know that local variables are just the formals */
+	            break;
+                } else {
+                    onlyFormals = FALSE;
+                    break;
+                }
+	    }
+	    if (l == R_NilValue || TAG(l) != TAG(f)) {
+	        onlyFormals = FALSE;
+	        break;
+	    }
+	}
+
+	if (!onlyFormals) {
+
+	    /* Fall back to the quadratic algorithm, checking the remaining
+	     * formals and locals.  */
+
+	    SEXP rf, rl;
+	    for (rl = l; rl != R_NilValue; rl = CDR(rl)) {
+	        for (rf = f; rf != R_NilValue; rf = CDR(rf))
+	            if (TAG(rl) == TAG(rf)) {
+		        goto hasvar;
+		    }
+                defineVar(TAG(rl), CAR(rl), newrho);
+                hasvar: ;
+            }
 	}
     }
 
