@@ -201,10 +201,13 @@ Rboolean R_envHasNoSpecialSymbols (SEXP env)
   'hashcode' must be provided by user.	Allocates some memory for list
   entries.
 
+  When onlyifNotPresent is TRUE and an symbol is already found in the hash
+  table, R_HashSet returns FALSE and leaves that symbol alone.
+
 */
 
-static void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
-		      Rboolean frame_locked)
+static Rboolean R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
+		      Rboolean frame_locked, Rboolean onlyIfNotPresent)
 {
     SEXP chain;
 
@@ -214,9 +217,12 @@ static void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
     /* Search for the value in the chain */
     for (; !ISNULL(chain); chain = CDR(chain))
 	if (TAG(chain) == symbol) {
+	    if (onlyIfNotPresent) {
+	        return FALSE;
+	    }
 	    SET_BINDING_VALUE(chain, value);
 	    SET_MISSING(chain, 0);	/* Over-ride for new value */
-	    return;
+	    return TRUE;
 	}
     if (frame_locked)
 	error(_("cannot add bindings to a locked environment"));
@@ -225,7 +231,7 @@ static void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
     /* Add the value into the chain */
     SET_VECTOR_ELT(table, hashcode, CONS(value, VECTOR_ELT(table, hashcode)));
     SET_TAG(VECTOR_ELT(table, hashcode), symbol);
-    return;
+    return TRUE;
 }
 
 
@@ -706,7 +712,7 @@ static void R_AddGlobalCache(SEXP symbol, SEXP place)
 {
     int oldpri = HASHPRI(R_GlobalCache);
     R_HashSet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache, place,
-	      FALSE);
+	      FALSE, FALSE);
 #ifdef FAST_BASE_CACHE_LOOKUP
     if (symbol == place)
 	SET_BASE_SYM_CACHED(symbol);
@@ -1352,15 +1358,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
 }
 
 
-/*----------------------------------------------------------------------
-
-  defineVar
-
-  Assign a value in a specific environment frame.
-
-*/
-
-void defineVar(SEXP symbol, SEXP value, SEXP rho)
+R_INLINE static Rboolean defineVarCommon(SEXP symbol, SEXP value, SEXP rho, Rboolean onlyIfNotPresent)
 {
     int hashcode;
     SEXP frame, c;
@@ -1374,17 +1372,26 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
     if(IS_USER_DATABASE(rho)) {
 	R_ObjectTable *table;
 	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
+	const char *sname = CHAR(PRINTNAME(symbol));
+
+        if (onlyIfNotPresent && table->active && table->exists(sname, NULL, table)) {
+            return FALSE;
+        }
 	if(table->assign == NULL)
 	    error(_("cannot assign variables to this database"));
-	table->assign(CHAR(PRINTNAME(symbol)), value, table);
+	table->assign(sname, value, table);
 #ifdef USE_GLOBAL_CACHE
 	if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
 #endif
-	return;
+	return TRUE;
     }
 
     if (rho == R_BaseNamespace || rho == R_BaseEnv) {
+        if (onlyIfNotPresent && SYMVALUE(symbol) != R_UnboundValue) {
+            return FALSE;
+        }
 	gsetVar(symbol, value, rho);
+	return TRUE;
     } else {
 #ifdef USE_GLOBAL_CACHE
 	if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
@@ -1398,9 +1405,12 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 	    frame = FRAME(rho);
 	    while (frame != R_NilValue) {
 		if (TAG(frame) == symbol) {
+		    if (onlyIfNotPresent) {
+		        return FALSE;
+		    }
 		    SET_BINDING_VALUE(frame, value);
 		    SET_MISSING(frame, 0);	/* Over-ride */
-		    return;
+		    return TRUE;
 		}
 		frame = CDR(frame);
 	    }
@@ -1408,17 +1418,49 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 		error(_("cannot add bindings to a locked environment"));
 	    SET_FRAME(rho, CONS(value, FRAME(rho)));
 	    SET_TAG(FRAME(rho), symbol);
+	    return TRUE;
 	}
 	else {
 	    c = PRINTNAME(symbol);
 	    hashcode = hashCharSXP(c) % HASHSIZE(HASHTAB(rho));
-	    R_HashSet(hashcode, symbol, HASHTAB(rho), value,
-		      FRAME_IS_LOCKED(rho));
-	    if (R_HashSizeCheck(HASHTAB(rho)))
+	    Rboolean added = R_HashSet(hashcode, symbol, HASHTAB(rho), value,
+		      FRAME_IS_LOCKED(rho), onlyIfNotPresent);
+	    if (added && R_HashSizeCheck(HASHTAB(rho)))
 		SET_HASHTAB(rho, R_HashResize(HASHTAB(rho)));
+            return added;
 	}
     }
 }
+
+
+/*----------------------------------------------------------------------
+
+  defineVar
+
+  Assign a value in a specific environment frame.
+
+*/
+
+void defineVar(SEXP symbol, SEXP value, SEXP rho)
+{
+    defineVarCommon(symbol, value, rho, FALSE);
+}
+
+/*----------------------------------------------------------------------
+
+  defineVarIfNotPresent
+
+  Bind value to symbol in a specific environment. If onlyOfNotPresent is
+  TRUE, add such binding only if that symbol is not already present in the
+  environment.
+
+  Returns TRUE iff a binding was added/updated.
+*/
+
+Rboolean defineVarIfNotPresent(SEXP symbol, SEXP value, SEXP rho) {
+    return defineVarCommon(symbol, value, rho, TRUE);
+}
+
 
 /*----------------------------------------------------------------------
 

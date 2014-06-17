@@ -969,13 +969,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
 
     if (suppliedenv != R_NilValue) {
 	for (tmp = FRAME(suppliedenv); tmp != R_NilValue; tmp = CDR(tmp)) {
-	    for (a = actuals; a != R_NilValue; a = CDR(a))
-		if (TAG(a) == TAG(tmp))
-		    break;
-	    if (a == R_NilValue)
-		/* Use defineVar instead of earlier version that added
-		   bindings manually */
-		defineVar(TAG(tmp), CAR(tmp), newrho);
+	    defineVarIfNotPresent(TAG(tmp), CAR(tmp), newrho);
 	}
     }
 
