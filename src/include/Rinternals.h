@@ -1236,6 +1236,7 @@ SEXP Rf_lazy_duplicate(SEXP);
 /* the next really should not be here and is also in Defn.h */
 SEXP Rf_duplicated(SEXP, Rboolean);
 Rboolean R_envHasNoSpecialSymbols(SEXP);
+Rboolean Rf_equalCharSXPsWhenTranslated(SEXP, SEXP);
 Rboolean Rf_equalS3Signature(const char *, const char *, const char *);
 SEXP Rf_eval(SEXP, SEXP);
 SEXP Rf_findFun(SEXP, SEXP);
@@ -1594,6 +1595,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define elt			Rf_elt
 #define endcontext		Rf_endcontext
 #define errorcall		Rf_errorcall
+#define equalCharSXPsWhenTranslated Rf_equalCharSXPsWhenTranslated
 #define equalS3Signature	Rf_equalS3Signature
 #define eval			Rf_eval
 #define findFun			Rf_findFun

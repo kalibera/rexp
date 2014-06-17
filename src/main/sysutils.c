@@ -945,6 +945,13 @@ SEXP translateCharToCharSXP(SEXP x) {
     return mkChar(cbuff.data);
 }
 
+Rboolean equalCharSXPsWhenTranslated(SEXP x, SEXP y) {
+
+    SEXP xt = translateCharToCharSXP(x);
+    SEXP yt = translateCharToCharSXP(y);
+    return xt == yt ? TRUE : FALSE;
+}
+
 /* This may return a R_alloc-ed result, so the caller has to manage the
    R_alloc stack */
 const char *translateChar0(SEXP x)

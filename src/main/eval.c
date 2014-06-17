@@ -3236,8 +3236,7 @@ int DispatchGroup(SEXP groupNativeCharSXP, SEXP call, SEXP op, SEXP args, SEXP r
 	set = 0;
 	if (isString(t)) {
 	    for (j = 0 ; j < length(t) ; j++) {
-		if (!strcmp(translateChar(STRING_ELT(t, j)),
-			    translateChar(STRING_ELT(lclass, lwhich)))) {
+                if (equalCharSXPsWhenTranslated(STRING_ELT(t, j), STRING_ELT(lclass, lwhich))) {
 		    SET_STRING_ELT(m, i, PRINTNAME(lmeth));
 		    set = 1;
 		    break;
