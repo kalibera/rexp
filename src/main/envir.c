@@ -1847,7 +1847,7 @@ SEXP attribute_hidden do_earg_get(SEXP call, SEXP op, SEXP arg_x, SEXP arg_envir
     */
 
     if (isString(arg_mode)) {
-	if (!strcmp(CHAR(STRING_ELT(arg_mode, 0)), "function")) /* ASCII */
+	if (STRING_ELT(arg_mode, 0) == R_FunctionCharSXP) /* ASCII */
 	    gmode = FUNSXP;
 	else
 	    gmode = str2type(CHAR(STRING_ELT(arg_mode, 0))); /* ASCII */
@@ -1976,7 +1976,7 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     for(int i = 0; i < nvals; i++) {
 	SEXPTYPE gmode;
-	if (!strcmp(CHAR(STRING_ELT(CAR(CDDR(args)), i % nmode)), "function"))
+	if (STRING_ELT(CAR(CDDR(args)), i % nmode) == R_FunctionCharSXP)
 	    gmode = FUNSXP;
 	else {
 	    gmode = str2type(CHAR(STRING_ELT(CAR(CDDR(args)), i % nmode)));
