@@ -289,10 +289,10 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 	error(_("invalid generic function in 'usemethod'"));
     }
 
+    Rboolean onlyFormals = FALSE;
     if (TYPEOF(op) == CLOSXP) {
 	formals = FORMALS(op);
 	SEXP locals = FRAME(cptr->cloenv);
-	Rboolean onlyFormals = FALSE;
 
 	/* Copy any newly added variables to the new environment. It is
 	 * however extremely rare for any variables to be added by a
@@ -347,20 +347,20 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
 		continue; /* kludge because sort.list is not a method */
             if( RDEBUG(op) || RSTEP(op) )
                 SET_RSTEP(sxp, 1);
-	    defineVar(R_dot_Generic, ScalarString(genericNativeCharSXP), newrho);
+	    defineVarMaybeNotPresent(R_dot_Generic, ScalarString(genericNativeCharSXP), newrho, onlyFormals);
 	    if (i > 0) {
 	        int ii;
 		PROTECT(t = allocVector(STRSXP, nclass - i));
 		for(j = 0, ii = i; j < length(t); j++, ii++)
 		      SET_STRING_ELT(t, j, STRING_ELT(klass, ii));
 		setAttrib(t, R_PreviousSymbol, klass);
-		defineVar(R_dot_Class, t, newrho);
+		defineVarMaybeNotPresent(R_dot_Class, t, newrho, onlyFormals);
 		UNPROTECT(1);
 	    } else
-		defineVar(R_dot_Class, klass, newrho);
-	    defineVar(R_dot_Method, ScalarString(PRINTNAME(method)), newrho);
-	    defineVar(R_dot_GenericCallEnv, callrho, newrho);
-	    defineVar(R_dot_GenericDefEnv, defrho, newrho);
+		defineVarMaybeNotPresent(R_dot_Class, klass, newrho, onlyFormals);
+	    defineVarMaybeNotPresent(R_dot_Method, ScalarString(PRINTNAME(method)), newrho, onlyFormals);
+	    defineVarMaybeNotPresent(R_dot_GenericCallEnv, callrho, newrho, onlyFormals);
+	    defineVarMaybeNotPresent(R_dot_GenericDefEnv, defrho, newrho, onlyFormals);
 	    SETCAR(newcall, method);
 	    R_GlobalContext->callflag = CTXT_GENERIC;
 	    *ans = applyMethod(newcall, sxp, matchedarg, rho, newrho);
@@ -374,11 +374,11 @@ int usemethod(SEXP genericNativeCharSXP, SEXP obj, SEXP call, SEXP args,
     if (isFunction(sxp)) {
         if( RDEBUG(op) || RSTEP(op) )
             SET_RSTEP(sxp, 1);
-	defineVar(R_dot_Generic, ScalarString(genericNativeCharSXP), newrho);
-	defineVar(R_dot_Class, R_NilValue, newrho);
-	defineVar(R_dot_Method, ScalarString(PRINTNAME(method)), newrho);
-	defineVar(R_dot_GenericCallEnv, callrho, newrho);
-	defineVar(R_dot_GenericDefEnv, defrho, newrho);
+	defineVarMaybeNotPresent(R_dot_Generic, ScalarString(genericNativeCharSXP), newrho, onlyFormals);
+	defineVarMaybeNotPresent(R_dot_Class, R_NilValue, newrho, onlyFormals);
+	defineVarMaybeNotPresent(R_dot_Method, ScalarString(PRINTNAME(method)), newrho, onlyFormals);
+	defineVarMaybeNotPresent(R_dot_GenericCallEnv, callrho, newrho, onlyFormals);
+	defineVarMaybeNotPresent(R_dot_GenericDefEnv, defrho, newrho, onlyFormals);
 	SETCAR(newcall, method);
 	R_GlobalContext->callflag = CTXT_GENERIC;
 	*ans = applyMethod(newcall, sxp, matchedarg, rho, newrho);
@@ -812,7 +812,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     for (j = 0; j < length(s); j++)
 	SET_STRING_ELT(s, j, STRING_ELT(klass, i++));
     setAttrib(s, R_PreviousSymbol, klass);
-    defineVar(R_dot_Class, s, m);
+    defineVarAssertNotPresent(R_dot_Class, s, m);
     /* It is possible that if a method was called directly that
 	'method' is unset */
     if (method != R_UnboundValue) {
@@ -824,11 +824,11 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     } else
 	PROTECT(method = ScalarString(PRINTNAME(nextfunSignature)));
-    defineVar(R_dot_Method, method, m);
-    defineVar(R_dot_GenericCallEnv, callenv, m);
-    defineVar(R_dot_GenericDefEnv, defenv, m);
-    defineVar(R_dot_Generic, generic, m);
-    defineVar(R_dot_Group, group, m);
+    defineVarAssertNotPresent(R_dot_Method, method, m);
+    defineVarAssertNotPresent(R_dot_GenericCallEnv, callenv, m);
+    defineVarAssertNotPresent(R_dot_GenericDefEnv, defenv, m);
+    defineVarAssertNotPresent(R_dot_Generic, generic, m);
+    defineVarAssertNotPresent(R_dot_Group, group, m);
     SETCAR(newcall, nextfunSignature);
 
     /* applyMethod expects that the parent of the caller is the caller

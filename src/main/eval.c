@@ -3250,20 +3250,20 @@ int DispatchGroup(SEXP groupNativeCharSXP, SEXP call, SEXP op, SEXP args, SEXP r
     }
     vmaxset(vmax);
 
-    defineVar(R_dot_Method, m, newrho);
+    defineVarAssertNotPresent(R_dot_Method, m, newrho);
     UNPROTECT(1);
     PROTECT(t = ScalarString(genericNativeCharSXP));
-    defineVar(R_dot_Generic, t, newrho);
+    defineVarAssertNotPresent(R_dot_Generic, t, newrho);
     UNPROTECT(1);
-    defineVar(R_dot_Group, lgr, newrho);
+    defineVarAssertNotPresent(R_dot_Group, lgr, newrho);
     set = length(lclass) - lwhich;
     PROTECT(t = allocVector(STRSXP, set));
     for(j = 0 ; j < set ; j++ )
 	SET_STRING_ELT(t, j, duplicate(STRING_ELT(lclass, lwhich++)));
-    defineVar(R_dot_Class, t, newrho);
+    defineVarAssertNotPresent(R_dot_Class, t, newrho);
     UNPROTECT(1);
-    defineVar(R_dot_GenericCallEnv, rho, newrho);
-    defineVar(R_dot_GenericDefEnv, R_BaseEnv, newrho);
+    defineVarAssertNotPresent(R_dot_GenericCallEnv, rho, newrho);
+    defineVarAssertNotPresent(R_dot_GenericDefEnv, R_BaseEnv, newrho);
 
     PROTECT(t = LCONS(lmeth, CDR(call)));
 

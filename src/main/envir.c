@@ -1482,6 +1482,17 @@ void defineVarAssertNotPresent(SEXP symbol, SEXP value, SEXP rho) {
 }
 
 
+void defineVarMaybeNotPresent(SEXP symbol, SEXP value, SEXP rho, Rboolean assertNotPresent) {
+    if (assertNotPresent) { /* this is to ensure inlining of the branches */
+        defineVarCommon(symbol, value, rho, FALSE, TRUE);
+    } else {
+        defineVar(symbol, value, rho);
+    }
+}
+
+
+
+
 /*----------------------------------------------------------------------
 
   setVarInFrame
