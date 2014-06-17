@@ -383,26 +383,16 @@ INLINE_FUN Rboolean inheritsCharSXP(SEXP s, SEXP nameCharSXP)
     if (OBJECT(s)) {
 	klass = getClassAttrib(s);
 	nclass = length(klass);
-	/* fast comparison using equals */
+
 	for (i = 0; i < nclass; i++) {
 	    SEXP sCharSXP = STRING_ELT(klass, i);
 	    if (sCharSXP == nameCharSXP) {
 	        return TRUE;
 	    }
         }
-        /* FIXME: could we rely on CHARSXP caching/interning instead and avoid this slow checking? */
-        for (i = 0; i < nclass; i++) {
-            SEXP sCharSXP = STRING_ELT(klass, i);
-	    if (!strcmp(CHAR(sCharSXP), name)) {
-		return TRUE;
-            }
-	}
     }
     return FALSE;
 }
-
-
-
 
 INLINE_FUN Rboolean isValidString(SEXP x)
 {

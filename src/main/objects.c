@@ -907,39 +907,21 @@ static SEXP inherits3(SEXP x, SEXP what, SEXP which)
 	PROTECT(rval = allocVector(INTSXP, nwhat));
 
     for(j = 0; j < nwhat; j++) {
-        SEXP ssCharSXP = STRING_ELT(what, j);
-
+        SEXP ssCharSXP = translateCharToCharSXP(STRING_ELT(what, j));
 	int i;
 	if(isvec)
 	    INTEGER(rval)[j] = 0;
-
-	/* fast version using CHARSXP comparison */
 	for(i = 0; i < nclass; i++) {
-	    if(STRING_ELT(klass, i) == ssCharSXP) {
+	    if(translateCharToCharSXP(STRING_ELT(klass, i)) == ssCharSXP) {
 		if(isvec)
 		    INTEGER(rval)[j] = i+1;
 		else {
 		    UNPROTECT(1);
 		    return mkTrue();
 		}
-		goto found;
+                break;
 	    }
 	}
-	/* slow version using string comparison */
-        /* FIXME: could we rely on CHARSXP caching/interning instead and avoid this slow checking? */
-	const char *ss = translateChar(ssCharSXP);
-	for(i = 0; i < nclass; i++) {
-	    if(!strcmp(translateChar(STRING_ELT(klass, i)), ss)) {
-		if(isvec)
-		    INTEGER(rval)[j] = i+1;
-		else {
-		    UNPROTECT(1);
-		    return mkTrue();
-		}
-		goto found;
-	    }
-	}
-	found: ;
     }
     vmaxset(vmax);
     if(!isvec) {

@@ -1313,7 +1313,7 @@ const char * Rf_translateChar(SEXP);
 const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
-SEXP translateCharToCharSXP(SEXP);
+SEXP Rf_translateCharToCharSXP(SEXP);
 SEXP Rf_type2str(SEXPTYPE);
 SEXP Rf_type2str_noerr(SEXPTYPE);
 SEXP Rf_type2ImmutableScalarString(SEXPTYPE);
