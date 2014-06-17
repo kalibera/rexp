@@ -1225,6 +1225,7 @@ int Rf_countContexts(int, int);
 SEXP Rf_CreateTag(SEXP);
 void Rf_defineVar(SEXP, SEXP, SEXP);
 Rboolean Rf_defineVarIfNotPresent(SEXP, SEXP, SEXP);
+void Rf_defineVarAssertNotPresent(SEXP, SEXP, SEXP);
 SEXP Rf_dimgets(SEXP, SEXP);
 SEXP Rf_dimnamesgets(SEXP, SEXP);
 SEXP Rf_DropDims(SEXP);
@@ -1582,6 +1583,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define CreateTag		Rf_CreateTag
 #define defineVar		Rf_defineVar
 #define defineVarIfNotPresent	Rf_defineVarIfNotPresent
+#define defineVarAssertNotPresent	Rf_defineVarAssertNotPresent
 #define dimgets			Rf_dimgets
 #define dimnamesgets		Rf_dimnamesgets
 #define DropDims                Rf_DropDims

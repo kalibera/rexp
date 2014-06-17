@@ -206,23 +206,25 @@ Rboolean R_envHasNoSpecialSymbols (SEXP env)
 
 */
 
-static Rboolean R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
-		      Rboolean frame_locked, Rboolean onlyIfNotPresent)
+R_INLINE static Rboolean R_HashSetCommon(int hashcode, SEXP symbol, SEXP table, SEXP value,
+		      Rboolean frame_locked, Rboolean onlyIfNotPresent, Rboolean assertNotPresent)
 {
     SEXP chain;
 
     /* Grab the chain from the hashtable */
     chain = VECTOR_ELT(table, hashcode);
 
-    /* Search for the value in the chain */
-    for (; !ISNULL(chain); chain = CDR(chain))
-	if (TAG(chain) == symbol) {
-	    if (onlyIfNotPresent) {
-	        return FALSE;
-	    }
-	    SET_BINDING_VALUE(chain, value);
-	    SET_MISSING(chain, 0);	/* Over-ride for new value */
-	    return TRUE;
+    if (!assertNotPresent) {
+        /* Search for the value in the chain */
+        for (; !ISNULL(chain); chain = CDR(chain))
+	    if (TAG(chain) == symbol) {
+	        if (onlyIfNotPresent) {
+	            return FALSE;
+	        }
+	        SET_BINDING_VALUE(chain, value);
+	        SET_MISSING(chain, 0);	/* Over-ride for new value */
+	        return TRUE;
+            }
 	}
     if (frame_locked)
 	error(_("cannot add bindings to a locked environment"));
@@ -234,6 +236,9 @@ static Rboolean R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value,
     return TRUE;
 }
 
+void R_HashSet(int hashcode, SEXP symbol, SEXP table, SEXP value, Rboolean frame_locked) {
+    R_HashSetCommon(hashcode, symbol, table, value, frame_locked, FALSE, FALSE);
+}
 
 
 /*----------------------------------------------------------------------
@@ -712,7 +717,7 @@ static void R_AddGlobalCache(SEXP symbol, SEXP place)
 {
     int oldpri = HASHPRI(R_GlobalCache);
     R_HashSet(hashIndex(symbol, R_GlobalCache), symbol, R_GlobalCache, place,
-	      FALSE, FALSE);
+	      FALSE);
 #ifdef FAST_BASE_CACHE_LOOKUP
     if (symbol == place)
 	SET_BASE_SYM_CACHED(symbol);
@@ -1358,7 +1363,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
 }
 
 
-R_INLINE static Rboolean defineVarCommon(SEXP symbol, SEXP value, SEXP rho, Rboolean onlyIfNotPresent)
+R_INLINE static Rboolean defineVarCommon(SEXP symbol, SEXP value, SEXP rho, Rboolean onlyIfNotPresent, Rboolean assertNotPresent)
 {
     int hashcode;
     SEXP frame, c;
@@ -1374,7 +1379,7 @@ R_INLINE static Rboolean defineVarCommon(SEXP symbol, SEXP value, SEXP rho, Rboo
 	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
 	const char *sname = CHAR(PRINTNAME(symbol));
 
-        if (onlyIfNotPresent && table->active && table->exists(sname, NULL, table)) {
+        if (onlyIfNotPresent && !assertNotPresent && table->active && table->exists(sname, NULL, table)) {
             return FALSE;
         }
 	if(table->assign == NULL)
@@ -1387,7 +1392,7 @@ R_INLINE static Rboolean defineVarCommon(SEXP symbol, SEXP value, SEXP rho, Rboo
     }
 
     if (rho == R_BaseNamespace || rho == R_BaseEnv) {
-        if (onlyIfNotPresent && SYMVALUE(symbol) != R_UnboundValue) {
+        if (onlyIfNotPresent && !assertNotPresent && SYMVALUE(symbol) != R_UnboundValue) {
             return FALSE;
         }
 	gsetVar(symbol, value, rho);
@@ -1401,18 +1406,20 @@ R_INLINE static Rboolean defineVarCommon(SEXP symbol, SEXP value, SEXP rho, Rboo
             UNSET_NO_SPECIAL_SYMBOLS(rho);
 
 	if (HASHTAB(rho) == R_NilValue) {
-	    /* First check for an existing binding */
-	    frame = FRAME(rho);
-	    while (frame != R_NilValue) {
-		if (TAG(frame) == symbol) {
-		    if (onlyIfNotPresent) {
-		        return FALSE;
+	    if (!assertNotPresent) {
+	        /* First check for an existing binding */
+	        frame = FRAME(rho);
+	        while (frame != R_NilValue) {
+		    if (TAG(frame) == symbol) {
+		        if (onlyIfNotPresent) {
+		            return FALSE;
+		        }
+		        SET_BINDING_VALUE(frame, value);
+		        SET_MISSING(frame, 0);	/* Over-ride */
+		        return TRUE;
 		    }
-		    SET_BINDING_VALUE(frame, value);
-		    SET_MISSING(frame, 0);	/* Over-ride */
-		    return TRUE;
-		}
-		frame = CDR(frame);
+		    frame = CDR(frame);
+                }
 	    }
 	    if (FRAME_IS_LOCKED(rho))
 		error(_("cannot add bindings to a locked environment"));
@@ -1423,8 +1430,8 @@ R_INLINE static Rboolean defineVarCommon(SEXP symbol, SEXP value, SEXP rho, Rboo
 	else {
 	    c = PRINTNAME(symbol);
 	    hashcode = hashCharSXP(c) % HASHSIZE(HASHTAB(rho));
-	    Rboolean added = R_HashSet(hashcode, symbol, HASHTAB(rho), value,
-		      FRAME_IS_LOCKED(rho), onlyIfNotPresent);
+	    Rboolean added = R_HashSetCommon(hashcode, symbol, HASHTAB(rho), value,
+		      FRAME_IS_LOCKED(rho), onlyIfNotPresent, assertNotPresent);
 	    if (added && R_HashSizeCheck(HASHTAB(rho)))
 		SET_HASHTAB(rho, R_HashResize(HASHTAB(rho)));
             return added;
@@ -1443,22 +1450,35 @@ R_INLINE static Rboolean defineVarCommon(SEXP symbol, SEXP value, SEXP rho, Rboo
 
 void defineVar(SEXP symbol, SEXP value, SEXP rho)
 {
-    defineVarCommon(symbol, value, rho, FALSE);
+    defineVarCommon(symbol, value, rho, FALSE, FALSE);
 }
 
 /*----------------------------------------------------------------------
 
   defineVarIfNotPresent
 
-  Bind value to symbol in a specific environment. If onlyOfNotPresent is
-  TRUE, add such binding only if that symbol is not already present in the
-  environment.
+  Bind value to symbol in a specific environment, but only if that symbol is
+  not already present in the environment.
 
   Returns TRUE iff a binding was added/updated.
 */
 
 Rboolean defineVarIfNotPresent(SEXP symbol, SEXP value, SEXP rho) {
-    return defineVarCommon(symbol, value, rho, TRUE);
+    return defineVarCommon(symbol, value, rho, TRUE, FALSE);
+}
+
+/*----------------------------------------------------------------------
+
+  defineVarAssertNotPresent
+
+  Bind value to symbol in a specific environment.  Assume (without checking)
+  that the symbol is not yet present in the environment.
+
+  Returns TRUE iff a binding was added/updated.
+*/
+
+void defineVarAssertNotPresent(SEXP symbol, SEXP value, SEXP rho) {
+    defineVarCommon(symbol, value, rho, FALSE, TRUE); 
 }
 
 
