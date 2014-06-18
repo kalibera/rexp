@@ -559,7 +559,7 @@ cat("abc\ndef\n", file = Tfile)
 readLines(Tfile)
 close(Tfile)
 
-\donttest{## fifo example -- may fail even with OS support for fifos
+\dontrun{## fifo example -- may hang even with OS support for fifos
 if(capabilities("fifo")) {
   zz <- fifo("foo-fifo", "w+")
   writeLines("abc", zz)
@@ -593,7 +593,8 @@ zz <- pipe(paste("sed s/\\\\\\\\./,/ >", "outfile"), "w")
 cat(format(round(stats::rnorm(48), 4)), fill = 70, file = zz)
 close(zz)
 file.show("outfile", delete.file = TRUE)
-
+}
+\dontrun{
 ## example for a machine running a finger daemon
 
 con <- socketConnection(port = 79, blocking = TRUE)

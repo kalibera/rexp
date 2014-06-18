@@ -175,6 +175,7 @@ all.R
 /src/include/R_ext/Print.ts
 /src/include/R_ext/PrtUtil.ts
 /src/include/R_ext/QuartzDevice.ts
+/src/include/R_ext/Rallocators.ts
 /src/include/R_ext/R-ftp-http.ts
 /src/include/R_ext/RS.ts
 /src/include/R_ext/RStartup.ts

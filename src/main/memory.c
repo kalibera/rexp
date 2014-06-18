@@ -2352,6 +2352,21 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     return s;
 }
 
+SEXP R_mkEVPROMISE(SEXP expr, SEXP val)
+{
+    SEXP prom = mkPROMISE(expr, R_NilValue);
+    SET_PRVALUE(prom, val);
+    return prom;
+}
+
+SEXP R_mkEVPROMISE_NR(SEXP expr, SEXP val)
+{
+    SEXP prom = mkPROMISE(expr, R_NilValue);
+    DISABLE_REFCNT(prom);
+    SET_PRVALUE(prom, val);
+    return prom;
+}
+
 /* support for custom allocators that allow vectors to be allocated
    using non-standard means such as COW mmap() */
 
@@ -2892,16 +2907,16 @@ static void R_gc_internal(R_size_t size_needed)
     /* sanity check on logical scalar values */
     if (R_TrueValue != NULL && LOGICAL(R_TrueValue)[0] != TRUE) {
 	LOGICAL(R_TrueValue)[0] = TRUE;
-	warning("internal TRUE value has been modified");
+	error("internal TRUE value has been modified");
     }
     if (R_FalseValue != NULL && LOGICAL(R_FalseValue)[0] != FALSE) {
 	LOGICAL(R_FalseValue)[0] = FALSE;
-	warning("internal FALSE value has been modified");
+	error("internal FALSE value has been modified");
     }
     if (R_LogicalNAValue != NULL &&
 	LOGICAL(R_LogicalNAValue)[0] != NA_LOGICAL) {
 	LOGICAL(R_LogicalNAValue)[0] = NA_LOGICAL;
-	warning("internal logical NA value has been modified");
+	error("internal logical NA value has been modified");
     }
 }
 
