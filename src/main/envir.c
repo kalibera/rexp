@@ -779,7 +779,9 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, int *found)
 	*found = 1;
 	SETCAR(list, R_UnboundValue); /* in case binding is cached */
 	LOCK_BINDING(list);           /* in case binding is cached */
-	return CDR(list);
+	SEXP rest = CDR(list);
+	SETCDR(list, R_NilValue);     /* to fix refcnt on 'rest' */
+	return rest;
     }
     else {
 	SEXP last = list;
@@ -790,6 +792,7 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, int *found)
 		SETCAR(next, R_UnboundValue); /* in case binding is cached */
 		LOCK_BINDING(next);           /* in case binding is cached */
 		SETCDR(last, CDR(next));
+		SETCDR(next, R_NilValue);     /* to fix refcnt on 'list' */
 		return list;
 	    }
 	    else {
@@ -1384,7 +1387,9 @@ R_INLINE static Rboolean defineVarCommon(SEXP symbol, SEXP value, SEXP rho, Rboo
         }
 	if(table->assign == NULL)
 	    error(_("cannot assign variables to this database"));
-	table->assign(sname, value, table);
+	PROTECT(value);
+	table->assign(CHAR(PRINTNAME(symbol)), value, table);
+	UNPROTECT(1);
 #ifdef USE_GLOBAL_CACHE
 	if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
 #endif
@@ -1518,7 +1523,10 @@ static SEXP setVarInFrame(SEXP rho, SEXP symbol, SEXP value)
 	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
 	if(table->assign == NULL)
 	    error(_("cannot assign variables to this database"));
-	return(table->assign(CHAR(PRINTNAME(symbol)), value, table));
+	PROTECT(value);
+	SEXP result = table->assign(CHAR(PRINTNAME(symbol)), value, table);
+	UNPROTECT(1);
+	return(result);
     }
 
     if (rho == R_BaseNamespace || rho == R_BaseEnv) {

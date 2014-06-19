@@ -12,12 +12,12 @@
 }
 \usage{
 read.DIF(file, header = FALSE,
-         dec = ".", exact = NA, row.names, col.names,
-         as.is = !stringsAsFactors,
+         dec = ".", numerals = c("allow.loss", "warn.loss", "no.loss"),
+         row.names, col.names, as.is = !stringsAsFactors,
          na.strings = "NA", colClasses = NA, nrows = -1,
          skip = 0, check.names = TRUE, blank.lines.skip = TRUE,
          stringsAsFactors = default.stringsAsFactors(),
-         transpose = FALSE)
+         transpose = FALSE, fileEncoding = "")
 }
 \arguments{
   \item{file}{the name of the file which the data are to be read from,
@@ -36,7 +36,7 @@ read.DIF(file, header = FALSE,
 
   \item{dec}{the character used in the file for decimal points.}
 
-  \item{exact}{logical indicating how to convert numbers whose conversion
+  \item{numerals}{string indicating how to convert numbers whose conversion
     to double precision would lose accuracy, see \code{\link{type.convert}}.}
 
   \item{row.names}{a vector of row names.  This can be a vector giving
@@ -117,6 +117,12 @@ read.DIF(file, header = FALSE,
     interpretation should be transposed.  Microsoft's Excel has been
     known to produce (non-standard conforming) DIF files which would
     need \code{transpose = TRUE} to be read correctly.}
+  
+  \item{fileEncoding}{character string: if non-empty declares the
+    encoding used on a file (not a connection or clipboard) so the
+    character data can be re-encoded.  See the \sQuote{Encoding} section
+    of the help for \code{\link{file}}, the \sQuote{R Data Import/Export
+    Manual} and \sQuote{Note}.}
 }
 \value{
   A data frame (\code{\link{data.frame}}) containing a representation of
@@ -132,8 +138,7 @@ read.DIF(file, header = FALSE,
   Less memory will be used if \code{colClasses} is specified as one of
   the six atomic vector classes.
 }
-\author{R Core; \code{transpose} option by
-  Christoph Buser, ETH Zurich}
+\author{R Core; \code{transpose} option by Christoph Buser, ETH Zurich}
 \seealso{
   The \emph{R Data Import/Export} manual.
 
@@ -154,7 +159,7 @@ read.DIF(file, header = FALSE,
   its WinFX system, which may or may not be compatible.
 }
 \examples{
-## read.DIF() needs transpose = TRUE for file exported from Excel
+## read.DIF() may need transpose = TRUE for a file exported from Excel
 udir <- system.file("misc", package = "utils")
 dd <- read.DIF(file.path(udir, "exDIF.dif"), header = TRUE, transpose = TRUE)
 dc <- read.csv(file.path(udir, "exDIF.csv"), header = TRUE)

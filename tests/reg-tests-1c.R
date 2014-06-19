@@ -357,21 +357,49 @@ save(one, file = tempfile(), envir = my_env)
 
 ## Conversion to numeric in boundary case
 ch <- "0x1.ffa0000000001p-1"
-rr <- type.convert(ch, exact=FALSE)
-rX <- type.convert(ch, exact=TRUE)
+rr <- type.convert(ch, numerals = "allow.loss")
+rX <- type.convert(ch, numerals = "no.loss")
 stopifnot(is.numeric(rr), identical(rr, rX),
           all.equal(rr, 0.999267578125),
-          all.equal(type.convert(ch), type.convert("0x1.ffap-1"), tol=5e-15))
+	  all.equal(type.convert(ch,	      numerals = "warn"),
+		    type.convert("0x1.ffap-1",numerals = "warn"), tol = 5e-15))
 ## type.convert(ch) was not numeric in R 3.1.0
 ##
-ch <- "1234567890123456789" 
-rr <- type.convert(ch, exact=FALSE)
-rX <- type.convert(ch, exact=TRUE)
-rx <- type.convert(ch, exact=TRUE, as.is=TRUE)
-tools::assertWarning(r. <- type.convert(ch))
+ch <- "1234567890123456789"
+rr <- type.convert(ch, numerals = "allow.loss")
+rX <- type.convert(ch, numerals = "no.loss")
+rx <- type.convert(ch, numerals = "no.loss", as.is = TRUE)
+tools::assertWarning(r. <- type.convert(ch, numerals = "warn.loss"))
 stopifnot(is.numeric(rr), identical(rr, r.), all.equal(rr, 1.234567890e18),
 	  is.factor(rX),  identical(rx, ch))
 
 
+## PR#15764: integer overflow could happen without a warning or giving NA
+tools::assertWarning(ii <- 1980000020L + 222000000L)
+stopifnot(is.na(ii))
+tools::assertWarning(ii <- (-1980000020L) + (-222000000L))
+stopifnot(is.na(ii))
+tools::assertWarning(ii <- (-1980000020L) - 222000000L)
+stopifnot(is.na(ii))
+tools::assertWarning(ii <- 1980000020L - (-222000000L))
+stopifnot(is.na(ii))
+## first two failed for some version of clang in R < 3.1.1
+
+
+## PR#15735: formulae with exactly 32 variables
+myFormula <- as.formula(paste(c("y ~ x0", paste0("x", 1:30)), collapse = "+"))
+ans <- update(myFormula, . ~ . - w1)
+stopifnot(identical(ans, myFormula))
+
+updateArgument <-
+    as.formula(paste(c(". ~ . ", paste0("w", 1:30)), collapse = " - "))
+ans2 <- update(myFormula, updateArgument)
+stopifnot(identical(ans2, myFormula))
+
+
+## PR#15753
+0x110p-5L
+stopifnot(.Last.value == 8.5)
+## was 272 with a garbled message in R 3.0.0 - 3.1.0.
 
 proc.time()

@@ -70,7 +70,7 @@ typedef struct yyltype
 # define YYLTYPE yyltype
 # define YYLLOC_DEFAULT(Current, Rhs, N)				\
     do									\
-      if (N)							\
+	if (N)								\
 	{								\
 	  (Current).first_line   = YYRHSLOC (Rhs, 1).first_line;	\
 	  (Current).first_column = YYRHSLOC (Rhs, 1).first_column;	\
