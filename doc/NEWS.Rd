@@ -1,7 +1,5 @@
 % -*- coding: utf-8 -*-
-\newcommand{\PR}{\Sexpr[results=rd]{tools:::Rd_expr_PR(#1)}}
 \newcommand{\Rlogo}{\if{html}{\figure{../../html/logo.jpg}}\if{latex}{\figure{logo.jpg}{options: width=0.5in}}}
-\newcommand{\CRANpkg}{\href{http://CRAN.R-project.org/package=#1}{\pkg{#1}}}
 
 \name{NEWS}
 \title{R News}
@@ -12,9 +10,9 @@
     \itemize{
       \item \code{anyNA()} gains a \code{recursive} argument.
 
-      \item When \code{x} is missing and \code{names} is not false,
-      \code{Sys.getenv(x, names)} returns an object of class
-      \code{"Dlist"} and hence prints tidily.
+      \item When \code{x} is missing and \code{names} is not false
+      (including the default value), \code{Sys.getenv(x, names)} returns
+      an object of class \code{"Dlist"} and hence prints tidily.
 
       \item (Windows.)  \code{shell()} no longer consults the
       environment variable \env{SHELL}: too many systems have been
@@ -23,10 +21,10 @@
       \env{R_SHELL}, the preferred way to select a non-default shell,
       can be used instead.
 
-      \item \code{embedFonts()} now uses \code{format = "ps2write"} by
-      default for \file{.ps} and \file{.eps} files.  This is available
-      in Ghostscript 9.x (since 2010) whereas the previous default,
-      \code{format = "pswrite"}, was removed in 9.10.
+      \item \code{embedFonts()} now defaults to \code{format =
+      "ps2write"} for \file{.ps} and \file{.eps} files.  This is
+      available in Ghostscript 9.x (since 2010) whereas the previous
+      default, \code{format = "pswrite"}, was removed in 9.10.
 
       \item Some unusual arguments to \code{embedFonts()} can now be
       specified as character vectors, and the defaults have changed
@@ -54,16 +52,17 @@
       variables to be plotted against each other.
 
       \item \code{file.info(, extra_cols = FALSE)} allows a minimal set
-      of columns to be computed.
+      of columns to be computed: on some systems this can be
+      significantly faster with large file lists.
 
       \item New function \code{dir.exists()} in \pkg{base} to test
       efficiently whether one or more paths exist and are directories.
 
       \item \code{dput()} and friends gain new controls
       \samp{"hexNumeric"} and \samp{"digits17"} which output double and
-      complex quantities as, respectively, binary fractions (see
-      \code{sprintf("\%a")}) to full precision (and no noise) and as
-      decimals with up to 17 significant digits.
+      complex quantities as, respectively, binary fractions (exactly,
+      see \code{sprintf("\%a")}) and as decimals with up to 17
+      significant digits.
 
       \item \code{save()}, \code{saveRDS()} and \code{serialize()} now
       support \code{ascii = NA} which writes ASCII files using the
@@ -90,7 +89,7 @@
 
       (In part, wish of \PR{15819}.)
 
-      \item \code{printNum()} (and hence \code{format()} and
+      \item \code{printNum()} and hence \code{format()} and
       \code{formatC()} give a warning if \code{big.mark} and
       \code{decimal.mark} are set to the same value (period and comma
       are not uncommonly used for each, and this is a check that
@@ -98,6 +97,24 @@
       
       \item \code{merge()} can create a result which uses long vectors
       on 64-bit platforms.
+      
+      \item \code{dget()} gains a new argument \code{keep.source} which
+      defaults to \code{FALSE} for speed (\code{dput()} and
+      \code{dget()} are most often used for data objects where this can
+      make \code{dget()} many times faster).
+      
+      \item Packages may now use a file of common macro definitions in their
+      help files, and may import definitions from other packages.  
+      
+      \item A number of macros have been added to the new \file{share/Rd} 
+      directory for use in package overview help
+      pages, and \code{promptPackage()} now makes use of them. 
+      
+      \item \code{capabilities()} now reports if ICU is used for collation.
+
+      % TODO: Port to 3.1.1 patched
+      \item For consistency with \code{[dpqr]norm()}, and \code{[qr]lnorm()},
+      \code{[dp]lnorm(sdlog=0)} also model a point mass at \code{exp(mulog)}.
     }
   }
   
@@ -142,8 +159,8 @@
 
   \subsection{BUG FIXES}{
     \itemize{
-      \item For consistency with \code{[dpqr]lnorm()},
-      \code{rlnorm(sdlog = 0)} is an error and so returns \code{NaN}.
+      \item Fixed two obscure bugs in pairlist subassignment, reported by 
+      Radford Neal as part of pqR issue 16.
     }
   }
 }
@@ -209,6 +226,20 @@
       \code{http://} or \code{ftp://} URLs of package archives as well
       as file paths, and will download as required.  In most cases
       \code{repos = NULL} can be deduced from the extension of the URL.
+      
+      \item The warning when using partial matching with the \code{$}
+      operator on data frames is now only given when
+      \code{options("warnPartialMatchDollar")} is \code{TRUE}.
+      
+      \item Package help requests like \code{package?foo} now 
+      try the package \code{foo} whether loaded or not.
+      
+      \item General help requests now default to trying all loaded 
+      packages, not just those on the search path.
+      
+      \item Added a new function \code{promptImport}, to generate
+      a help page for a function that was imported from another package
+      (and presumably re-exported, or help would not be needed).
     }
   }
 
@@ -222,19 +253,22 @@
       \item There is a new target \command{make uninstall-libR} to
       remove an installed shared/static \file{libR}.
 
-       \command{make install-libR} now works if a sub-architecture is
-       used, although the user will need to specify \code{libdir}
-       differently for different sub-architectures.
+      \command{make install-libR} now works if a sub-architecture is
+      used, although the user will need to specify \code{libdir}
+      differently for different sub-architectures.
 
-       \item There is more extensive advice on which LaTeX packages are
-       required to install \R or to make package manuals (as done by
-       \command{R CMD check}) in the \sQuote{Writing R Extensions}
-       manual.
+      \item There is more extensive advice on which LaTeX packages are
+      required to install \R or to make package manuals (as done by
+      \command{R CMD check}) in the \sQuote{Writing R Extensions}
+      manual.
 
-       \item Compilers were handling the visibility control in
-       \file{src/extra/xz} inconsistently, so it has been simplified.
-       (\PR{15327})
-     }
+      \item Compilers/linkers were handling the visibility controls in
+      \file{src/extra/xz} inconsistently (and apparently in some cases
+      incorrectly), so it has been simplified.  (\PR{15327})
+      
+      \item (Windows)  There is updated support from the use of ICU for
+      collation: see the \sQuote{R Installation and Administration Manual}.
+    }
   }
 
   \subsection{BUG FIXES}{
@@ -359,6 +393,25 @@
       \item Attempting to use data frames of 2^31 or more rows with
       \code{merge()} or to create a merged data frame of that size now
       gives a clearer error message.
+
+      \item \code{parse()} did not check its \code{file} argument was a
+      connection if it was not a character string, so
+      e.g. \code{parse(FALSE)} attempted to read from \code{stdin}.
+
+      Nor did \code{dump()} and \code{dput()}.
+      
+      \item The \code{"help.try.all.packages"} option was ignored when
+      the shortcut syntax for help was used, e.g. \code{?foo}.  
+      
+      \item A potential segfault in string allocation has been fixed.
+      (Found by Radford Neal.)
+      
+      \item Potential memory protection errors in \code{sort()} and 
+      \code{D()} have been fixed. (Found by Radford Neal.)
+      
+      \item Fixed a lack of error checking in graphics event functions.
+      (Found by Radford Neal; a different patch used here than the
+      one in pqR.)
     }
   }
 }

@@ -15,7 +15,7 @@
 dput(x, file = "",
      control = c("keepNA", "keepInteger", "showAttributes"))
 
-dget(file)
+dget(file, keep.source = FALSE)
 }
 \arguments{
   \item{x}{an object.}
@@ -23,6 +23,8 @@ dget(file)
     \link{connection}. \code{""} indicates output to the console.}
   \item{control}{character vector indicating deparsing options.
     See \code{\link{.deparseOpts}} for their description.}
+  \item{keep.source}{logical: should the source formatting be retained when
+    parsing functions, if possible?}
 }
 \details{
   \code{dput} opens \code{file} and deparses the object \code{x} into
@@ -41,9 +43,11 @@ dget(file)
   \code{dput} will warn if fewer characters were written to a file than
   expected, which may indicate a full or corrupt file system.
 
-  To display saved source rather than deparsing the internal representation
-  include \code{"useSource"} in \code{control}.  \R currently saves
-  source only for function definitions.
+  To display saved source rather than deparsing the internal
+  representation include \code{"useSource"} in \code{control}.  \R
+  currently saves source only for function definitions.  If you do not
+  care about source representation (e.g. for a data object), for speed
+  set \code{options(keep.source = FALSE}) when calling \code{source}.
 }
 \value{
   For \code{dput}, the first argument invisibly.
@@ -51,6 +55,12 @@ dget(file)
   For \code{dget}, the object created.
 }
 \note{
+  This is \bold{not} a good way to transfer objects between \R sessions.
+  \code{\link{dump}} is better, but the function \code{\link{save}} is
+  designed to be used for transporting \R data, and will work with \R
+  objects that \code{dput} does not handle correctly as well as being
+  much faster.
+  
   To avoid the risk of a source attribute out of sync with the actual
   function definition, the source attribute of a function will never
   be written as an attribute.
