@@ -1867,7 +1867,7 @@ SEXP termsform(SEXP args)
 	    if (GetBit(CAR(call), i)) {
 		if (l > 0)
 		    l += 1;
-		l += (int) strlen(CHAR(STRING_ELT(varnames, i - 1)));
+		l += (int) CHARLEN(STRING_ELT(varnames, i - 1));
 	    }
 	}
 	char cbuf[l+1];

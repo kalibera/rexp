@@ -716,7 +716,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
     else {
-	if(strlen(CHAR(PRINTNAME(CAR(cptr->call)))) >= 512)
+	if(CHARLEN(PRINTNAME(CAR(cptr->call))) >= 512)
 	   error(_("call name too long in '%s'"),
 		 EncodeChar(PRINTNAME(CAR(cptr->call))));
 	snprintf(b, 512, "%s", CHAR(PRINTNAME(CAR(cptr->call))));
@@ -794,7 +794,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* for Ops we need `method' to be a vector */
 	PROTECT(method = duplicate(method));
 	for(j = 0; j < length(method); j++) {
-	    if (strlen(CHAR(STRING_ELT(method,j))))
+	    if (CHARLEN(STRING_ELT(method,j)))
 		SET_STRING_ELT(method, j,  mkChar(buf));
 	}
     } else

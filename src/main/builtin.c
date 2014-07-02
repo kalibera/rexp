@@ -409,7 +409,7 @@ SEXP attribute_hidden do_envirName(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* Uses R_alloc but called by a .Internal.  Result may be R_alloc-ed */
 static const char *trChar(SEXP x)
 {
-    size_t n = strlen(CHAR(x));
+    size_t n = CHARLEN(x);
     cetype_t ienc = getCharCE(x);
 
     if (ienc == CE_BYTES) {

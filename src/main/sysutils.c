@@ -158,7 +158,7 @@ wchar_t *filenameToWchar(const SEXP fn, const Rboolean expand)
     char *outbuf;
     size_t inb, outb, res;
 
-    if(!strlen(CHAR(fn))) {
+    if(!CHARLEN(fn)) {
 	wcscpy(filename, L"");
 	return filename;
     }

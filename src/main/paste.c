@@ -155,7 +155,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	    k = xlength(VECTOR_ELT(x, j));
 	    if (k > 0) {
 		if(use_Bytes)
-		    pwidth += strlen(CHAR(STRING_ELT(VECTOR_ELT(x, j), i % k)));
+		    pwidth += CHARLEN(STRING_ELT(VECTOR_ELT(x, j), i % k));
 		else if(use_UTF8)
 		    pwidth += strlen(translateCharUTF8(STRING_ELT(VECTOR_ELT(x, j), i % k)));
 		else
@@ -238,7 +238,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 		pwidth += strlen(translateCharUTF8(STRING_ELT(ans, i)));
 		vmaxset(vmax);
 	    } else /* already translated */
-		pwidth += strlen(CHAR(STRING_ELT(ans, i)));
+		pwidth += CHARLEN(STRING_ELT(ans, i));
 	pwidth += (nx - 1) * sepw;
 	if (pwidth > INT_MAX)
 	    error(_("result would exceed 2^31-1 bytes"));

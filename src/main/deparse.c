@@ -233,7 +233,7 @@ static SEXP deparse1WithCutoff(SEXP call, Rboolean abbrev, int cutoff,
 	char data[14];
 	strncpy(data, CHAR(STRING_ELT(svec, 0)), 10);
 	data[10] = '\0';
-	if (strlen(CHAR(STRING_ELT(svec, 0))) > 10) strcat(data, "...");
+	if (CHARLEN(STRING_ELT(svec, 0)) > 10) strcat(data, "...");
 	svec = mkString(data);
     } else if(need_ellipses) {
 	SET_STRING_ELT(svec, R_BrowseLines, mkChar("  ..."));
@@ -276,7 +276,7 @@ SEXP deparse1line(SEXP call, Rboolean abbrev)
 	for (len = 0, i = 0; i < length(temp); i++) {
 	    SEXP s = STRING_ELT(temp, i);
 	    cetype_t thisenc = getCharCE(s);
-	    len += strlen(CHAR(s));  // FIXME: check for overflow?
+	    len += CHARLEN(s);  // FIXME: check for overflow?
 	    if (thisenc != CE_NATIVE) 
 	    	enc = thisenc; /* assume only one non-native encoding */ 
 	}    
@@ -367,7 +367,7 @@ SEXP attribute_hidden do_dput(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else {
 	    res = Rconn_printf(con, "%s\n", CHAR(STRING_ELT(tval, i)));
 	    if(!havewarned &&
-	       res < strlen(CHAR(STRING_ELT(tval, i))) + 1)
+	       res < CHARLEN(STRING_ELT(tval, i)) + 1)
 		warning(_("wrote too few characters"));
 	}
     UNPROTECT(1); /* tval */
@@ -467,7 +467,7 @@ SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
 		for (j = 0; j < LENGTH(tval); j++) {
 		    res = Rconn_printf(con, "%s\n", CHAR(STRING_ELT(tval, j)));
 		    if(!havewarned &&
-		       res < strlen(CHAR(STRING_ELT(tval, j))) + 1)
+		       res < CHARLEN(STRING_ELT(tval, j)) + 1)
 			warning(_("wrote too few characters"));
 		}
 		o = CDR(o);

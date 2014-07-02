@@ -523,7 +523,7 @@ static int get_col_width(DEstruct DE, int col)
 	if (isNull(tmp)) return fw;
 	/* don't use NA labels */
 	lab = STRING_ELT(DE->names, col - 1);
-	if(lab != NA_STRING) w = strlen(CHAR(lab)); else w = fw;
+	if(lab != NA_STRING) w = CHARLEN(lab); else w = fw;
 	PrintDefaults();
 	for (i = 0; i < INTEGER(DE->lens)[col - 1]; i++) {
 	    strp = EncodeElement(tmp, i, 0, '.');

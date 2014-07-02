@@ -760,7 +760,7 @@ SEXP attribute_hidden do_tolower(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (STRING_ELT(x, i) == NA_STRING)
 		SET_STRING_ELT(y, i, NA_STRING);
 	    else {
-		xi = CallocCharBuf(strlen(CHAR(STRING_ELT(x, i))));
+		xi = CallocCharBuf(CHARLEN(STRING_ELT(x, i)));
 		strcpy(xi, translateChar(STRING_ELT(x, i)));
 		for (p = xi; *p != '\0'; p++)
 		    *p = (char) (ul ? toupper(*p) : tolower(*p));

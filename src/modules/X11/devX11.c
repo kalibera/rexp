@@ -1753,7 +1753,7 @@ static char *SaveFontSpec(SEXP sxp, int offset)
     char *s;
     if(!isString(sxp) || length(sxp) <= offset)
 	error(_("invalid font specification"));
-    s = R_alloc(strlen(CHAR(STRING_ELT(sxp, offset)))+1, sizeof(char));
+    s = R_alloc(CHARLEN(STRING_ELT(sxp, offset))+1, sizeof(char));
     strcpy(s, CHAR(STRING_ELT(sxp, offset)));
     return s;
 }
@@ -2737,7 +2737,7 @@ Rboolean X11DeviceDriver(pDevDesc dd,
 			 const char *family)
 {
     pX11Desc xd;
-    const char *fn;
+    SEXP fn;
 
     xd = Rf_allocX11DeviceDesc(pointsize);
     if(!xd) return FALSE;
@@ -2771,16 +2771,18 @@ Rboolean X11DeviceDriver(pDevDesc dd,
 #endif
 
     if(!useCairo) {
-	if(strlen(fn = CHAR(STRING_ELT(sfonts, 0))) > 499) {
+	fn = STRING_ELT(sfonts, 0);
+	if(CHARLEN(fn) > 499) {
 	    strcpy(xd->basefontfamily, fontname);
 	    strcpy(xd->fontfamily, fontname);
 	} else {
-	    strcpy(xd->basefontfamily, fn);
-	    strcpy(xd->fontfamily, fn);
+	    strcpy(xd->basefontfamily, CHAR(fn));
+	    strcpy(xd->fontfamily, CHAR(fn));
 	}
-	if(strlen(fn = CHAR(STRING_ELT(sfonts, 1))) > 499)
+	fn = STRING_ELT(sfonts, 1);
+	if(CHARLEN(fn) > 499)
 	    strcpy(xd->symbolfamily, symbolname);
-	else strcpy(xd->symbolfamily, fn);
+	else strcpy(xd->symbolfamily, CHAR(fn));
     } else strcpy(xd->basefontfamily, family);
 
     /*	Start the Device Driver and Hardcopy.  */

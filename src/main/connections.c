@@ -1225,7 +1225,7 @@ SEXP attribute_hidden do_fifo(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "block");
     enc = CADDDR(args);
     if(!isString(enc) || length(enc) != 1 ||
-       strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
+       CHARLEN(STRING_ELT(enc, 0)) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
     if(strlen(file) == 0) {
@@ -1391,7 +1391,7 @@ SEXP attribute_hidden do_pipe(SEXP call, SEXP op, SEXP args, SEXP env)
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
     enc = CADDR(args);
     if(!isString(enc) || length(enc) != 1 ||
-       strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
+       CHARLEN(STRING_ELT(enc, 0)) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
 
     ncon = NextConnection();
@@ -2001,7 +2001,7 @@ SEXP attribute_hidden do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "open");
     enc = CADDR(args);
     if(!isString(enc) || length(enc) != 1 ||
-       strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
+       CHARLEN(STRING_ELT(enc, 0)) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
     if(type < 2) {
 	compress = asInteger(CADDDR(args));
@@ -3158,7 +3158,7 @@ SEXP attribute_hidden do_sockconn(SEXP call, SEXP op, SEXP args, SEXP env)
     args = CDR(args);
     enc = CAR(args);
     if(!isString(enc) || length(enc) != 1 ||
-       strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
+       CHARLEN(STRING_ELT(enc, 0)) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
     args = CDR(args);
     timeout = asInteger(CAR(args));
@@ -3215,7 +3215,7 @@ SEXP attribute_hidden do_unz(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "open");
     enc = CADDR(args);
     if(!isString(enc) || length(enc) != 1 ||
-       strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
+       CHARLEN(STRING_ELT(enc, 0)) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
     ncon = NextConnection();
@@ -4108,7 +4108,7 @@ SEXP attribute_hidden do_writebin(SEXP call, SEXP op, SEXP args, SEXP env)
 	    size_t np, outlen = 0;
 	    if(useBytes)
 		for(i = 0; i < len; i++)
-		    outlen += strlen(CHAR(STRING_ELT(object, i))) + 1;
+		    outlen += CHARLEN(STRING_ELT(object, i)) + 1;
 	    else
 		for(i = 0; i < len; i++)
 		    outlen += strlen(translateChar0(STRING_ELT(object, i))) + 1;
@@ -4513,7 +4513,7 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
 	    /* This is not currently needed, just future-proofing in case
 	       the logic gets changed */
 	    if(useBytes)
-		tlen = strlen(CHAR(STRING_ELT(object, i)));
+		tlen = CHARLEN(STRING_ELT(object, i));
 	    else
 		tlen = strlen(translateChar(STRING_ELT(object, i)));
 	    if (tlen > len) len = tlen;
@@ -4553,7 +4553,8 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
     for(i = 0; i < n; i++) {
 	len = INTEGER(nchars)[i];
 	si = STRING_ELT(object, i);
-	if(strlen(CHAR(si)) < LENGTH(si)) {
+#if 0
+	if(strlen(CHAR(si)) < LENGTH(si)) { /* NOTE that now always LENGTH(si) == strlen(CHAR(si)), because zeros are not allowed in a CHARSXP */
 	    if(len > LENGTH(si)) {
 		warning(_("writeChar: more bytes requested than are in the string - will zero-pad"));
 	    }
@@ -4572,6 +4573,7 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
 	    } else
 		buf += len;
 	} else {
+#endif
 	    if(useBytes)
 		s = CHAR(si);
 	    else
@@ -4612,7 +4614,9 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
 	    } else
 		buf += lenb;
 	}
+#if 0
     }
+#endif
     if(!wasopen) {endcontext(&cntxt); con->close(con);}
     if(isRaw) {
 	R_Visible = TRUE;
@@ -4994,7 +4998,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "block");
     enc = CADDDR(args);
     if(!isString(enc) || length(enc) != 1 ||
-       strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
+       CHARLEN(STRING_ELT(enc, 0)) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
     if(PRIMVAL(op)) {
 	raw = asLogical(CAD4R(args));

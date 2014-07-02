@@ -1815,7 +1815,7 @@ static SEXP installAssignFcnSymbol(SEXP fun)
     char buf[ASSIGNBUFSIZ];
 
     /* install the symbol */
-    if(strlen(CHAR(PRINTNAME(fun))) + 3 > ASSIGNBUFSIZ)
+    if(CHARLEN(PRINTNAME(fun)) + 3 > ASSIGNBUFSIZ)
 	error(_("overlong name in '%s'"), EncodeChar(PRINTNAME(fun)));
     sprintf(buf, "%s<-", CHAR(PRINTNAME(fun)));
     SEXP val = install(buf);
@@ -2745,7 +2745,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     /* check whether we are processing the default method */
     if ( isSymbol(CAR(call)) ) {
-	if(strlen(CHAR(PRINTNAME(CAR(call)))) >= 512)
+	if(CHARLEN(PRINTNAME(CAR(call))) >= 512)
 	   error(_("call name too long in '%s'"), EncodeChar(PRINTNAME(CAR(call))));
 	sprintf(lbuf, "%s", CHAR(PRINTNAME(CAR(call))) );
 	pt = strtok(lbuf, ".");

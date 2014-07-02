@@ -871,16 +871,18 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "usetz");
     tz = getAttrib(x, install("tzone"));
 
-    const char *tz1;
-    if (!isNull(tz) && strlen(tz1 = CHAR(STRING_ELT(tz, 0)))) {
-	/* If the format includes %Z or %z
-	   we need to try to set TZ accordingly */
-	int needTZ = 0;
-	for(R_xlen_t i = 0; i < m; i++) {
-	    const char *p = translateChar(STRING_ELT(sformat, i));
-	    if (strstr(p, "%Z") || strstr(p, "%z")) {needTZ = 1; break;}
-	}
-	if(needTZ) settz = set_tz(tz1, oldtz);
+    if (!isNull(tz)) {
+        SEXP tz1 = STRING_ELT(tz, 0);
+        if (CHARLEN(tz1)) {
+	    /* If the format includes %Z or %z
+            we need to try to set TZ accordingly */
+            int needTZ = 0;
+            for(R_xlen_t i = 0; i < m; i++) {
+	        const char *p = translateChar(STRING_ELT(sformat, i));
+	        if (strstr(p, "%Z") || strstr(p, "%z")) {needTZ = 1; break;}
+            }
+            if(needTZ) settz = set_tz(CHAR(tz1), oldtz);
+        }
     }
 
     /* workaround for glibc/FreeBSD/MacOS X strftime: they have

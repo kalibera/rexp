@@ -648,7 +648,7 @@ verrorcall_dflt(SEXP call, const char *format, va_list ap)
 	if (skip != NA_INTEGER) {
 	    PROTECT(srcloc = GetSrcLoc(R_GetCurrentSrcref(skip)));
 	    protected++;
-	    len = strlen(CHAR(STRING_ELT(srcloc, 0)));
+	    len = CHARLEN(STRING_ELT(srcloc, 0));
 	    if (len)
 		snprintf(tmp2, BUFSIZE,  _("Error in %s (from %s) : "), 
 			 dcall, CHAR(STRING_ELT(srcloc, 0)));

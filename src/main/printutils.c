@@ -446,8 +446,8 @@ const char *EncodeString(SEXP s, int w, int quote, Rprt_adj justify)
 
     if (s == NA_STRING) {
 	p = quote ? CHAR(R_print.na_string) : CHAR(R_print.na_string_noquote);
-	cnt = i = (int)(quote ? strlen(CHAR(R_print.na_string)) :
-			strlen(CHAR(R_print.na_string_noquote)));
+	cnt = i = (int)(quote ? CHARLEN(R_print.na_string) :
+			CHARLEN(R_print.na_string_noquote));
 	quote = 0;
     } else {
 #ifdef Win32

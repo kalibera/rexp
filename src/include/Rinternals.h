@@ -419,6 +419,9 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define ENVFLAGS(x)	((x)->sxpinfo.gp)	/* for environments */
 #define SET_ENVFLAGS(x,v)	(((x)->sxpinfo.gp)=(v))
 
+/* Char Access Macros */
+#define CHARLEN(x)	(((VECSEXP) (x))->vecsxp.length) /* CHAR vectors are always short */
+
 #else /* not USE_RINTERNALS */
 
 typedef struct SEXPREC *SEXP;
@@ -608,6 +611,10 @@ void SET_PRENV(SEXP x, SEXP v);
 void SET_PRVALUE(SEXP x, SEXP v);
 void SET_PRCODE(SEXP x, SEXP v);
 void SET_PRSEEN(SEXP x, int v);
+
+/* Char Access Functions */
+int (CHARLEN)(SEXP x);
+
 
 /* Hashing Functions */
 /* There are macro versions in Defn.h */

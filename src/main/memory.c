@@ -3585,6 +3585,14 @@ void (SET_PRVALUE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRVALUE(x), v); CHECK_OLD_TO_
 void (SET_PRCODE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRCODE(x), v); CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
 
+/* Char Accessors */
+int (CHARLEN)(SEXP x) {
+    if(TYPEOF(x) != CHARSXP)
+       error("Value of CHARLEN() must be a 'CHARSXP' not a '%s'",
+	     type2char(TYPEOF(x)));
+    return LENGTH(CHK2(x));
+}
+
 /* Hashing Accessors */
 #ifdef TESTING_WRITE_BARRIER
 attribute_hidden
@@ -3756,7 +3764,7 @@ SEXP do_Rprofmem(SEXP args)
     append_mode = asLogical(CADR(args));
     filename = STRING_ELT(CAR(args), 0);
     threshold = (R_size_t) REAL(CADDR(args))[0];
-    if (strlen(CHAR(filename)))
+    if (CHARLEN(filename))
 	R_InitMemReporting(filename, append_mode, threshold);
     else
 	R_EndMemReporting();

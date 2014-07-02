@@ -89,8 +89,8 @@ void PrintDefaults(void)
 {
     R_print.na_string = NA_STRING;
     R_print.na_string_noquote = mkChar("<NA>");
-    R_print.na_width = (int) strlen(CHAR(R_print.na_string));
-    R_print.na_width_noquote = (int) strlen(CHAR(R_print.na_string_noquote));
+    R_print.na_width = (int) CHARLEN(R_print.na_string);
+    R_print.na_width_noquote = (int) CHARLEN(R_print.na_string_noquote);
     R_print.quote = 1;
     R_print.right = Rprt_adj_left;
     R_print.digits = GetOptionDigits();
@@ -148,7 +148,7 @@ SEXP attribute_hidden do_prmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid 'na.print' specification"));
 	R_print.na_string = R_print.na_string_noquote = STRING_ELT(naprint, 0);
 	R_print.na_width = R_print.na_width_noquote =
-	    (int) strlen(CHAR(R_print.na_string));
+	    (int) CHARLEN(R_print.na_string);
     }
 
     if (length(rowlab) == 0) rowlab = R_NilValue;
@@ -254,7 +254,7 @@ SEXP attribute_hidden do_printdefault(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid 'na.print' specification"));
 	R_print.na_string = R_print.na_string_noquote = STRING_ELT(naprint, 0);
 	R_print.na_width = R_print.na_width_noquote =
-	    (int) strlen(CHAR(R_print.na_string));
+	    (int) CHARLEN(R_print.na_string);
     }
     args = CDR(args);
 
@@ -598,7 +598,7 @@ static void printList(SEXP s, SEXP env)
 	while (TYPEOF(s) == LISTSXP) {
 	    if (i > 1) Rprintf("\n");
 	    if (TAG(s) != R_NilValue && isSymbol(TAG(s))) {
-		if (taglen + strlen(CHAR(PRINTNAME(TAG(s)))) > TAGBUFLEN) {
+		if (taglen + CHARLEN(PRINTNAME(TAG(s))) > TAGBUFLEN) {
 		    if (taglen <= TAGBUFLEN)
 			sprintf(ptag, "$...");
 		} else {

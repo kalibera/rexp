@@ -602,7 +602,7 @@ static char *SaveFontSpec(SEXP sxp, int offset)
     char *s;
     if(!isString(sxp) || length(sxp) <= offset)
 	error(_("invalid font specification"));
-    s = R_alloc(strlen(CHAR(STRING_ELT(sxp, offset)))+1, sizeof(char));
+    s = R_alloc(CHARLEN(STRING_ELT(sxp, offset))+1, sizeof(char));
     strcpy(s, CHAR(STRING_ELT(sxp, offset)));
     return s;
 }

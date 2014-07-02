@@ -1304,7 +1304,7 @@ SEXP attribute_hidden do_fileexists(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (STRING_ELT(file, i) != NA_STRING) {
 #ifdef Win32
 	    /* Package XML sends arbitrarily long strings to file.exists! */
-	    size_t len = strlen(CHAR(STRING_ELT(file, i)));
+	    size_t len = CHARLEN(STRING_ELT(file, i));
 	    if (len > MAX_PATH)
 		LOGICAL(ans)[i] = FALSE;
 	    else
