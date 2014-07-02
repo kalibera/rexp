@@ -1468,7 +1468,7 @@ static void popupclose(control c)
 
     buf[BUFSIZE-1] = '\0';
     strncpy(buf, GA_gettext(varname), BUFSIZE-1);
-    if(!strlen(buf)) {
+    if(strempty(buf)) {
 	askok(G_("column names cannot be blank"));
 	return;
     }

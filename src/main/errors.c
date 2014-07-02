@@ -276,7 +276,7 @@ void warning(const char *format, ...)
     Rvsnprintf(buf, min(BUFSIZE, R_WarnLength+1), format, ap);
     va_end(ap);
     p = buf + strlen(buf) - 1;
-    if(strlen(buf) > 0 && *p == '\n') *p = '\0';
+    if(!strempty(buf) && *p == '\n') *p = '\0';
     RprintTrunc(buf);
     if (c && (c->callflag & CTXT_BUILTIN)) c = c->nextcontext;
     warningcall(c ? c->call : R_NilValue, "%s", buf);
@@ -372,7 +372,7 @@ static void vwarningcall_dflt(SEXP call, const char *format, va_list ap)
 	REprintf(" %s\n", buf);
 	if(R_ShowWarnCalls && call != R_NilValue) {
 	    tr = R_ConciseTraceback(call, 0);
-	    if (strlen(tr)) {REprintf(_("Calls:")); REprintf(" %s\n", tr);}
+	    if (!strempty(tr)) {REprintf(_("Calls:")); REprintf(" %s\n", tr);}
 	}
     }
     else if(w == 0) {	/* collect them */
@@ -968,7 +968,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	    rho = CDR(rho);
 	}
-	if(strlen(domain)) {
+	if(!strempty(domain)) {
 	    size_t len = strlen(domain)+3;
 	    R_CheckStack2(len);
 	    buf = (char *) alloca(len);
@@ -980,7 +980,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if(isLogical(CAR(args)) && LENGTH(CAR(args)) == 1 && LOGICAL(CAR(args))[0] == NA_LOGICAL) ;
     else errorcall(call, _("invalid '%s' value"), "domain");
 
-    if(strlen(domain)) {
+    if(!strempty(domain)) {
 	PROTECT(ans = allocVector(STRSXP, n));
 	for(i = 0; i < n; i++) {
 	    int ihead = 0, itail = 0;
@@ -1001,7 +1001,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 		head[ihead] = '\0';
 		tmp += ihead;
 		}
-	    if(strlen(tmp))
+	    if(!strempty(tmp))
 		for(p = tmp+strlen(tmp)-1;
 		    p >= tmp && (*p == ' ' || *p == '\t' || *p == '\n');
 		    p--, itail++) ;
@@ -1011,7 +1011,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 		strcpy(tail, tmp+strlen(tmp)-itail);
 		tmp[strlen(tmp)-itail] = '\0';
 	    }
-	    if(strlen(tmp)) {
+	    if(!strempty(tmp)) {
 #ifdef DEBUG_GETTEXT
 		REprintf("translating '%s' in domain '%s'\n", tmp, domain);
 #endif
@@ -1071,7 +1071,7 @@ SEXP attribute_hidden do_ngettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	    rho = CDR(rho);
 	}
-	if(strlen(domain)) {
+	if(!strempty(domain)) {
 	    size_t len = strlen(domain)+3;
 	    R_CheckStack2(len);
 	    buf = (char *) alloca(len);
@@ -1084,7 +1084,7 @@ SEXP attribute_hidden do_ngettext(SEXP call, SEXP op, SEXP args, SEXP rho)
     else errorcall(call, _("invalid '%s' value"), "domain");
 
     /* libintl seems to malfunction if given a message of "" */
-    if(strlen(domain) && length(STRING_ELT(msg1, 0))) {
+    if(!strempty(domain) && length(STRING_ELT(msg1, 0))) {
 	char *fmt = dngettext(domain,
 			      translateChar(STRING_ELT(msg1, 0)),
 			      translateChar(STRING_ELT(msg2, 0)),
@@ -1423,7 +1423,7 @@ static char * R_ConciseTraceback(SEXP call, int skip)
 			memcpy(buf, "... ", 4);
 			too_many = TRUE;
 			top = this;
-		    } else if(strlen(buf)) {
+		    } else if(!strempty(buf)) {
 			nl = strlen(this);
 			memmove(buf+nl+4, buf, strlen(buf)+1);
 			memcpy(buf, this, strlen(this));

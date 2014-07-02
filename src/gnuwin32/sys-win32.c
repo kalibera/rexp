@@ -76,12 +76,12 @@ const char *R_ExpandFileName(const char *s)
     if(HaveHOME < 0) {
 	HaveHOME = 0;
 	p = getenv("R_USER"); /* should be set so the rest is a safety measure */
-	if(p && strlen(p) && strlen(p) < PATH_MAX) {
+	if(p && !strempty(p) && strlen(p) < PATH_MAX) {
 	    strcpy(UserHOME, p);
 	    HaveHOME = 1;
 	} else {
 	    p = getenv("HOME");
-	    if(p && strlen(p) && strlen(p) < PATH_MAX) {
+	    if(p && !strempty(p) && strlen(p) < PATH_MAX) {
 		strcpy(UserHOME, p);
 		HaveHOME = 1;
 	    } else {

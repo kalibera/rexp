@@ -842,7 +842,7 @@ static void printAttributes(SEXP s, SEXP env, Rboolean useSlots)
     if (a != R_NilValue) {
 	strcpy(save, tagbuf);
 	/* remove the tag if it looks like a list not an attribute */
-	if (strlen(tagbuf) > 0 &&
+	if (!strempty(tagbuf) &&
 	    *(tagbuf + strlen(tagbuf) - 1) != ')')
 	    tagbuf[0] = '\0';
 	ptag = tagbuf + strlen(tagbuf);

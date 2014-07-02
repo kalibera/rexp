@@ -101,7 +101,7 @@ printer newprinter(double width, double height, const char *name)
     double dd,AL;
     int ww,hh,x0,y0;
 
-    if(strlen(name)) {
+    if(!strempty(name)) {
 	OSVERSIONINFO verinfo;
 	verinfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	GetVersionEx(&verinfo);

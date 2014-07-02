@@ -132,7 +132,7 @@ void parseError(SEXP call, int linenum)
     len = length(context);
     if (linenum) {
 	getParseFilename(filename, sizeof(filename)-2);
-	if (strlen(filename)) strcpy(filename + strlen(filename), ":");
+	if (!strempty(filename)) strcpy(filename + strlen(filename), ":");
 
 	switch (len) {
 	case 0:

@@ -641,6 +641,9 @@ typedef int PROTECT_INDEX;
 #define PROTECT_WITH_INDEX(x,i) R_ProtectWithIndex(x,i)
 #define REPROTECT(x,i) R_Reprotect(x,i)
 
+/* Miscellaneous Definitions */
+#define strempty(s)	(*(s) == 0)
+
 /* Evaluation Environment */
 LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */
 

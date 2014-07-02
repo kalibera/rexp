@@ -702,7 +702,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if(strlen(ss) >= 512)
 		error(_("method name too long in '%s'"), ss);
 	    snprintf(b, 512, "%s", ss);
-	    if(strlen(b)) break;
+	    if(!strempty(b)) break;
 	}
 	/* for binary operators check that the second argument's method
 	   is the same or absent */
@@ -711,7 +711,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if(strlen(ss) >= 512)
 		error(_("method name too long in '%s'"), ss);
 	    snprintf(bb, 512, "%s", ss);
-	    if (strlen(bb) && strcmp(b,bb))
+	    if (!strempty(bb) && strcmp(b,bb))
 		warning(_("Incompatible methods ignored"));
 	}
     }
@@ -794,7 +794,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* for Ops we need `method' to be a vector */
 	PROTECT(method = duplicate(method));
 	for(j = 0; j < length(method); j++) {
-	    if (strlen(CHAR(STRING_ELT(method,j))))
+	    if (!strempty(CHAR(STRING_ELT(method,j))))
 		SET_STRING_ELT(method, j,  mkChar(buf));
 	}
     } else
@@ -945,7 +945,7 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
     SEXP cl = getAttrib(x, R_ClassSymbol);
     const char *class = CHAR(asChar(cl));
     for (ans = 0; ; ans++) {
-	if (!strlen(valid[ans])) // empty string
+	if (strempty(valid[ans])) // empty string
 	    break;
 	if (!strcmp(class, valid[ans])) return ans;
     }
@@ -970,7 +970,7 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 	for(i=0; i < length(superCl); i++) {
 	    const char *s_class = CHAR(STRING_ELT(superCl, i));
 	    for (ans = 0; ; ans++) {
-		if (!strlen(valid[ans]))
+		if (strempty(valid[ans]))
 		    break;
 		if (!strcmp(s_class, valid[ans])) {
 		    UNPROTECT(1);

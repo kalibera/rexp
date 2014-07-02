@@ -390,7 +390,7 @@ static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 	    }
 	    ok = FALSE;
 	    if(IS_GENERIC(vl)) {
-	      if(strlen(pkg)) {
+	      if(!strempty(pkg)) {
 		  gpackage = PACKAGE_SLOT(vl);
 		  check_single_string(gpackage, FALSE, "The \"package\" slot in generic function object");
 		  ok = !strcmp(pkg, CHAR(STRING_ELT(gpackage, 0)));
@@ -411,7 +411,7 @@ static SEXP get_generic(SEXP symbol, SEXP rho, SEXP package)
 	vl = SYMVALUE(symbol);
 	if(IS_GENERIC(vl)) {
 	    generic = vl;
-	    if(strlen(pkg)) {
+	    if(!strempty(pkg)) {
 		gpackage = PACKAGE_SLOT(vl);
 		check_single_string(gpackage, FALSE, "The \"package\" slot in generic function object");
 		if(strcmp(pkg, CHAR(STRING_ELT(gpackage, 0)))) generic = R_UnboundValue;

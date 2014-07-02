@@ -47,14 +47,14 @@ static char *subterm(char *s)
     s[strlen(s) - 1] = '\0';
     s += 2;
     s = rmspace(s);
-    if(!strlen(s)) return "";
+    if(strempty(s)) return "";
     p = strchr(s, '-');
     if(p) {
 	q = p + 1; /* start of value */
 	if(p - s > 1 && *(p-1) == ':') *(p-1) = '\0'; else *p = '\0';
     } else q = NULL;
     p = getenv(s);
-    if(p && strlen(p)) return p; /* variable was set and non-empty */
+    if(p && !strempty(p)) return p; /* variable was set and non-empty */
     return q ? subterm(q) : (char *) "";
 }
 
@@ -84,7 +84,7 @@ static char *findterm(char *s)
     static char ans[1000];
     int nans;
 
-    if(!strlen(s)) return "";
+    if(strempty(s)) return "";
     ans[0] = '\0';
     while(1) {
 	/* Look for ${...}, taking care to look for inner matches */
@@ -162,7 +162,7 @@ int process_Renviron(const char *filename)
     while(fgets(sm, BUF_SIZE, fp)) {
         sm[BUF_SIZE-1] = '\0';
 	s = rmspace(sm);
-	if(strlen(s) == 0 || s[0] == '#') continue;
+	if(strempty(s) || s[0] == '#') continue;
 	if(!(p = strchr(s, '='))) {
 	    errs++;
 	    if(strlen(msg) < MSG_SIZE) {
@@ -174,7 +174,7 @@ int process_Renviron(const char *filename)
 	lhs = rmspace(s);
 	rhs = findterm(rmspace(p+1));
 	/* set lhs = rhs */
-	if(strlen(lhs) && strlen(rhs)) Putenv(lhs, rhs);
+	if(!strempty(lhs) && !strempty(rhs)) Putenv(lhs, rhs);
     }
     fclose(fp);
     if (errs) {

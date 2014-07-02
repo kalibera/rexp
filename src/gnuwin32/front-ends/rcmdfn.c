@@ -167,7 +167,7 @@ int rcmdfn (int cmdarg, int argc, char **argv)
 		fprintf(stderr, "command line too long\n");
 		return(27);
 	    }
-	    if(strchr(argv[i], ' ') || !strlen(argv[i])) {
+	    if(strchr(argv[i], ' ') || strempty(argv[i])) {
 		strcat(cmd, "\"");
 		strcat(cmd, argv[i]);
 		strcat(cmd, "\"");
@@ -205,7 +205,7 @@ int rcmdfn (int cmdarg, int argc, char **argv)
 
 	/* process the command line */
 	cmd_extra[0] = '\0';
-	if((p = getenv("R_BATCH_OPTIONS")) && strlen(p)) {
+	if((p = getenv("R_BATCH_OPTIONS")) && !strempty(p)) {
 	    if(1+strlen(p) >= CMD_LEN) {
 		fprintf(stderr, "command line too long\n");
 		return(27);

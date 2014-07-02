@@ -1031,7 +1031,7 @@ SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
     if (n_input <= 100 || n_target <= 100) {
         for (R_xlen_t i = 0; i < n_input; i++) {
             const char *ss = in[i];
-            if (strlen(ss) == 0) continue;
+            if (strempty(ss)) continue;
             for (int j = 0; j < n_target; j++) {
                 if (no_dups && used[j]) continue;
                 if (strcmp(ss, tar[j]) == 0) {
@@ -1049,7 +1049,7 @@ SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
         data.nomatch = 0;
         DoHashing(target, &data);
         for (R_xlen_t i = 0; i < n_input; i++) {
-            if (strlen(in[i]) == 0) /* don't look up "" */
+            if (strempty(in[i])) /* don't look up "" */
                 continue;
             int j = Lookup(target, input, i, &data);
             if ((j == 0) || (no_dups && used[j - 1])) continue;

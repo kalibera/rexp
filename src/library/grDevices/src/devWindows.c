@@ -630,7 +630,7 @@ static char* translateFontFamily(const char* family) {
     PROTECT(fontdb = findVar(install(".Windows.Fonts"), windowsenv));
     PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
     nfonts = LENGTH(fontdb);
-    if (strlen(family) > 0) {
+    if (!strempty(family)) {
 	int found = 0;
 	for (i = 0; i < nfonts && !found; i++) {
 	    const char* fontFamily = CHAR(STRING_ELT(fontnames, i));
@@ -2165,7 +2165,7 @@ static void GA_NewPage(const pGEcontext gc,
 	nextpage(xd->gawin);
     if ((xd->kind == METAFILE) && xd->needsave) {
 	char buf[600];
-	if (strlen(xd->filename) == 0)
+	if (strempty(xd->filename))
 	    error(_("a clipboard metafile can store only one figure."));
 	else {
 	    del(xd->gawin);
@@ -2299,7 +2299,7 @@ static void GA_Activate(pDevDesc dd)
 
     if (xd->replaying || (xd->kind!=SCREEN))
 	return;
-    if(strlen(xd->title)) {
+    if(!strempty(xd->title)) {
 	snprintf(t, 140, xd->title, ndevNumber(dd) + 1);
 	t[139] = '\0';
     } else {
@@ -2327,7 +2327,7 @@ static void GA_Deactivate(pDevDesc dd)
 
     if (xd->replaying || (xd->kind != SCREEN))
 	return;
-    if(strlen(xd->title)) {
+    if(!strempty(xd->title)) {
 	snprintf(t, 140, xd->title, ndevNumber(dd) + 1);
 	t[139] = '\0';
     } else {

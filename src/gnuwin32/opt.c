@@ -115,9 +115,9 @@ int optread(char *opt[], const char sep)
     *p = '\0';
     opt[0] = rmspace(s);
     opt[1] = rmspace(p + 1);
-    if (strlen(opt[0]) && strlen(opt[1]))
+    if (!strempty(opt[0]) && !strempty(opt[1]))
 	return 2;
-    else if (strlen(opt[0]))
+    else if (!strempty(opt[0]))
 	return 3;
     else
 	return 1;

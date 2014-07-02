@@ -995,7 +995,7 @@ SEXP attribute_hidden do_encodeString(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(LENGTH(s) != 1 || TYPEOF(s) != STRSXP)
 	error(_("invalid '%s' value"), "quote");
     cs = translateChar(STRING_ELT(s, 0));
-    if(strlen(cs) > 0) quote = cs[0];
+    if(!strempty(cs)) quote = cs[0];
     if(strlen(cs) > 1)
 	warning(_("only the first character of 'quote' will be used"));
     justify = asInteger(CADDDR(args));

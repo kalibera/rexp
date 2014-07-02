@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 	    exit(0);
 	}
 	if(strcmp(argv[1], "--version") == 0) {
-	    if(strlen(R_STATUS) == 0)
+	    if(!*R_STATUS)
 		fprintf(stderr, "R scripting front-end version %s.%s (%s-%s-%s)\n", 
 			R_MAJOR, R_MINOR, R_YEAR, R_MONTH, R_DAY);
 	    else 
