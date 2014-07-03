@@ -1189,10 +1189,10 @@ static void get_locale_strings(void)
     /* in locales where these are unused, they may be empty:
        better not to reset them then */
     strftime(buff, 10, "%p", &tm);
-    if(!strempty(buff)) strcpy(am_pm[0], buff);
+    if(!R_strempty(buff)) strcpy(am_pm[0], buff);
     tm.tm_hour = 13;
     strftime(buff, 10, "%p", &tm);
-    if(!strempty(buff)) strcpy(am_pm[1], buff);
+    if(!R_strempty(buff)) strcpy(am_pm[1], buff);
     locale_strings_set = 1;
 }
 

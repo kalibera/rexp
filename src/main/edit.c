@@ -133,7 +133,7 @@ SEXP do_edit(SEXP call, SEXP op, SEXP args, SEXP rho)
     ed = CAR(args);
     if (!isString(ed)) errorcall(call, _("argument 'editor' type not valid"));
     cmd = translateChar(STRING_ELT(ed, 0));
-    if (strempty(cmd)) errorcall(call, _("argument 'editor' is not set"));
+    if (R_strempty(cmd)) errorcall(call, _("argument 'editor' is not set"));
     editcmd = R_alloc(strlen(cmd) + strlen(filename) + 6, sizeof(char));
 #ifdef Win32
     if (!strcmp(cmd,"internal")) {

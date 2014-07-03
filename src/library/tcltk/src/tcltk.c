@@ -214,7 +214,7 @@ SEXP dotTclObjv(SEXP args)
     for (objc = 0, i = 0; i < length(avec); i++){
 	if (!isNull(VECTOR_ELT(avec, i)))
 	    objc++;
-	if (!isNull(nm) && !strempty(translateChar(STRING_ELT(nm, i))))
+	if (!isNull(nm) && !R_strempty(translateChar(STRING_ELT(nm, i))))
 	    objc++;
     }
 
@@ -223,7 +223,7 @@ SEXP dotTclObjv(SEXP args)
     for (objc = i = 0; i < length(avec); i++){
 	const char *s;
 	char *tmp;
-	if (!isNull(nm) && !strempty(s = translateChar(STRING_ELT(nm, i)))){
+	if (!isNull(nm) && !R_strempty(s = translateChar(STRING_ELT(nm, i)))){
 	    tmp = calloc(strlen(s)+2, sizeof(char));
 	    *tmp = '-';
 	    strcpy(tmp+1, s);

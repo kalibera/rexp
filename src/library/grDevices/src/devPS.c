@@ -1501,7 +1501,7 @@ findDeviceCIDFont(const char *name, cidfontlist fontlist, int *index)
     Rprintf("? cidfontlist %s\n", (fontlist) ? "found" : "not found");
 #endif
 
-    if (!strempty(name)) {
+    if (!R_strempty(name)) {
 	while (fontlist && !found) {
 #ifdef DEBUG_PS
 	    Rprintf("findDeviceCIDFont=%s\n", name);
@@ -1542,7 +1542,7 @@ findDeviceFont(const char *name, type1fontlist fontlist, int *index)
      * was created.
      * This will (MUST) be the first font in the device
      */
-    if (!strempty(name)) {
+    if (!R_strempty(name)) {
 	while (fontlist && !found) {
 	    found = !strcmp(name, fontlist->family->fxname);
 	    if (found)
@@ -1652,7 +1652,7 @@ static Rboolean isType1Font(const char *family, const char *fontdbname,
      *
      * If loading font, send NULL for defaultFont
      */
-    if (strempty(family)) {
+    if (R_strempty(family)) {
 	if (defaultFont)
 	    return TRUE;
 	else
@@ -1671,7 +1671,7 @@ static Rboolean isCIDFont(const char *family, const char *fontdbname,
      *
      * If loading font, send NULL for defaultCIDFont
      */
-    if (strempty(family)) {
+    if (R_strempty(family)) {
 	if (defaultCIDFont)
 	    return TRUE;
 	else
@@ -3292,7 +3292,7 @@ PSDeviceDriver(pDevDesc dd, const char *file, const char *paper,
 	error(_("'command' is too long"));
     }
     strcpy(pd->command, cmd);
-    if (printit && strempty(cmd)) {
+    if (printit && R_strempty(cmd)) {
 	PS_cleanup(4, dd, pd);
 	error(_("'postscript(print.it=TRUE)' used with an empty 'print' command"));
     }
@@ -3305,7 +3305,7 @@ PSDeviceDriver(pDevDesc dd, const char *file, const char *paper,
     if(!strcmp(pd->papername, "Default") ||
        !strcmp(pd->papername, "default")) {
 	SEXP s = STRING_ELT(GetOption1(install("papersize")), 0);
-	if(s != NA_STRING && !strempty(CHAR(s)))
+	if(s != NA_STRING && !R_strempty(CHAR(s)))
 	    strcpy(pd->papername, CHAR(s));
 	else strcpy(pd->papername, "a4");
     }
@@ -3556,8 +3556,8 @@ static Rboolean PS_Open(pDevDesc dd, PostScriptDesc *pd)
 {
     char buf[512];
 
-    if (strempty(pd->filename)) {
-	if(strempty(pd->command)) return FALSE;
+    if (R_strempty(pd->filename)) {
+	if(R_strempty(pd->command)) return FALSE;
 	errno = 0;
 	pd->psfp = R_popen(pd->command, "w");
 	pd->open_type = 1;
@@ -4805,7 +4805,7 @@ XFigDeviceDriver(pDevDesc dd, const char *file, const char *paper,
     if(!strcmp(pd->papername, "Default") ||
        !strcmp(pd->papername, "default")) {
 	SEXP s = STRING_ELT(GetOption1(install("papersize")), 0);
-	if(s != NA_STRING && !strempty(CHAR(s)))
+	if(s != NA_STRING && !R_strempty(CHAR(s)))
 	    strcpy(pd->papername, CHAR(s));
 	else strcpy(pd->papername, "A4");
     }
@@ -4965,7 +4965,7 @@ static Rboolean XFig_Open(pDevDesc dd, XFigDesc *pd)
 {
     char buf[512], *tmp;
 
-    if (strempty(pd->filename)) {
+    if (R_strempty(pd->filename)) {
 	XFig_cleanup(dd, pd);
 	error(_("empty file name"));
 	return FALSE;
@@ -6077,7 +6077,7 @@ PDFDeviceDriver(pDevDesc dd, const char *file, const char *paper,
     if(!strcmp(pd->papername, "Default") ||
        !strcmp(pd->papername, "default")) {
 	SEXP s = STRING_ELT(GetOption1(install("papersize")), 0);
-	if(s != NA_STRING && !strempty(CHAR(s)))
+	if(s != NA_STRING && !R_strempty(CHAR(s)))
 	    strcpy(pd->papername, CHAR(s));
 	else strcpy(pd->papername, "a4");
     }
@@ -7606,7 +7606,7 @@ static int PDFfontNumber(const char *family, int face, PDFDesc *pd)
     /* DingBats is font 1 */
     int num = 1;
 
-    if (!strempty(family)) {
+    if (!R_strempty(family)) {
 	int fontIndex, cidfontIndex;
 	/*
 	 * Try to find font in already loaded fonts
@@ -7959,7 +7959,7 @@ static FontMetricInfo
 *PDFCIDsymbolmetricInfo(const char *family, PDFDesc *pd)
 {
     FontMetricInfo *result = NULL;
-    if (!strempty(family)) {
+    if (!R_strempty(family)) {
 	int dontcare;
 	/*
 	 * Find the family in pd->cidfonts
@@ -7994,7 +7994,7 @@ static FontMetricInfo
 *PDFmetricInfo(const char *family, int face, PDFDesc *pd)
 {
     FontMetricInfo *result = NULL;
-    if (!strempty(family)) {
+    if (!R_strempty(family)) {
 	int dontcare;
 	/*
 	 * Find the family in pd->fonts
@@ -8041,7 +8041,7 @@ static char
     char *result = (pd->fonts) ? pd->fonts->family->encoding->convname : "latin1";
     /* pd->fonts is NULL when CIDfonts are used */
 
-    if (!strempty(family)) {
+    if (!R_strempty(family)) {
 	int dontcare;
 	/*
 	 * Find the family in pd->fonts

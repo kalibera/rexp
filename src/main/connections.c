@@ -240,7 +240,7 @@ void set_iconv(Rconnection con)
 
     /* need to test if this is text, open for reading to writing or both,
        and set inconv and/or outconv */
-    if(!con->text || strempty(con->encname) ||
+    if(!con->text || R_strempty(con->encname) ||
        strcmp(con->encname, "native.enc") == 0) {
 	con->UTF8out = FALSE;
 	return;
@@ -562,7 +562,7 @@ static Rboolean file_open(Rconnection con)
 #endif
     int mlen = (int) strlen(con->mode); // short
 
-    if(strempty(con->description)) {
+    if(R_strempty(con->description)) {
 	temp = TRUE;
 	name = R_tmpnam("Rf", R_TempDir);
     } else name = R_ExpandFileName(con->description);
@@ -848,7 +848,7 @@ static Rboolean fifo_open(Rconnection con)
     struct stat sb;
     Rboolean temp = FALSE;
 
-    if(strempty(con->description)) {
+    if(R_strempty(con->description)) {
 	temp = TRUE;
 	name = R_tmpnam("Rf", R_TempDir);
     } else name = R_ExpandFileName(con->description);
@@ -1228,21 +1228,21 @@ SEXP attribute_hidden do_fifo(SEXP call, SEXP op, SEXP args, SEXP env)
        strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
-    if(strempty(file)) {
-	if(strempty(open)) open ="w+";
+    if(R_strempty(file)) {
+	if(R_strempty(open)) open ="w+";
 	if(strcmp(open, "w+") != 0 && strcmp(open, "w+b") != 0) {
 	    open ="w+";
 	    warning(_("fifo(\"\") only supports open = \"w+\" and open = \"w+b\": using the former"));
 	}
     }
     ncon = NextConnection();
-    con = Connections[ncon] = newfifo(file, !strempty(open) ? open : "r");
+    con = Connections[ncon] = newfifo(file, !R_strempty(open) ? open : "r");
     con->blocking = block;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(!strempty(open)) {
+    if(!R_strempty(open)) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -1406,7 +1406,7 @@ SEXP attribute_hidden do_pipe(SEXP call, SEXP op, SEXP args, SEXP env)
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(!strempty(open)) {
+    if(!R_strempty(open)) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -2056,7 +2056,7 @@ SEXP attribute_hidden do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(!strempty(open)) {
+    if(!R_strempty(open)) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -2847,7 +2847,7 @@ static void outtext_close(Rconnection con)
     if(this->namesymbol &&
        findVarInFrame3(env, this->namesymbol, FALSE) != R_UnboundValue)
 	R_unLockBinding(this->namesymbol, env);
-    if(!strempty(this->lastline)) {
+    if(!R_strempty(this->lastline)) {
 	PROTECT(tmp = xlengthgets(this->data, ++this->len));
 	SET_STRING_ELT(tmp, this->len - 1, mkCharLocal(this->lastline));
 	if(this->namesymbol) defineVar(this->namesymbol, tmp, env);
@@ -3069,7 +3069,7 @@ SEXP attribute_hidden do_textconnection(SEXP call, SEXP op, SEXP args, SEXP env)
     if (type == NA_INTEGER)
 	error(_("invalid '%s' argument"), "encoding");
     ncon = NextConnection();
-    if(strempty(open) || strncmp(open, "r", 1) == 0) {
+    if(R_strempty(open) || strncmp(open, "r", 1) == 0) {
 	if(!isString(stext))
 	    error(_("invalid '%s' argument"), "text");
 	con = Connections[ncon] = newtext(desc, stext, type);
@@ -3171,7 +3171,7 @@ SEXP attribute_hidden do_sockconn(SEXP call, SEXP op, SEXP args, SEXP env)
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(!strempty(open)) {
+    if(!R_strempty(open)) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -3224,7 +3224,7 @@ SEXP attribute_hidden do_unz(SEXP call, SEXP op, SEXP args, SEXP env)
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(!strempty(open)) {
+    if(!R_strempty(open)) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);
@@ -3271,7 +3271,7 @@ SEXP attribute_hidden do_open(SEXP call, SEXP op, SEXP args, SEXP env)
     if(block == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "blocking");
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
-    if(!strempty(open)) strcpy(con->mode, open);
+    if(!R_strempty(open)) strcpy(con->mode, open);
     con->blocking = block;
     success = con->open(con);
     if(!success) {
@@ -5021,8 +5021,8 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
     } else {
 	if(PRIMVAL(op)) { /* call to file() */
-	    if(strempty(url)) {
-		if(strempty(open)) open ="w+";
+	    if(R_strempty(url)) {
+		if(R_strempty(open)) open ="w+";
 		if(strcmp(open, "w+") != 0 && strcmp(open, "w+b") != 0) {
 		    open ="w+";
 		    warning(_("file(\"\") only supports open = \"w+\" and open = \"w+b\": using the former"));
@@ -5097,7 +5097,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
     con->ex_ptr = PROTECT(R_MakeExternalPtr(con->id, install("connection"), R_NilValue));
 
     /* open it if desired */
-    if(!strempty(open)) {
+    if(!R_strempty(open)) {
 	Rboolean success = con->open(con);
 	if(!success) {
 	    con_destroy(ncon);

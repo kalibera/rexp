@@ -848,7 +848,7 @@ int Rgui_Edit(const char *filename, int enc, const char *title,
 	R_ShowMessage(G_("Unable to create editor window"));
 	return 1;
     }
-    if (!strempty(filename)) {
+    if (!R_strempty(filename)) {
 	editor_load_file(c, filename, enc);
 	editor_set_title(c, title);
     }

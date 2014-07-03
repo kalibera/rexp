@@ -431,7 +431,7 @@ char *askfilesavewithdir(const char *title, const char *default_name,
     ofn.nMaxFile        = BUFSIZE;
     ofn.lpstrFileTitle  = NULL;
     ofn.nMaxFileTitle   = _MAX_FNAME + _MAX_EXT;
-    if(dir && !strempty(dir)) {
+    if(dir && !R_strempty(dir)) {
 	strcpy(cwd, dir);
 	/* This should have been set to use backslashes in the caller */
 	ofn.lpstrInitialDir = cwd;

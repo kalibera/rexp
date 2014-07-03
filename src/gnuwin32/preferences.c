@@ -505,7 +505,7 @@ static void load(button b) /* button callback */
 
     getChoices(&newGUI);
     if (loadRconsole(&newGUI, optf)) {
-        if (!strempty(newGUI.warning)) askok(newGUI.warning);
+        if (!R_strempty(newGUI.warning)) askok(newGUI.warning);
 	cleanup();
 	showDialog(&newGUI);
     }

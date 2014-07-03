@@ -132,7 +132,7 @@ QuartzDesc_t QuartzBitmap_DeviceCreate(void *dd, QuartzFunctions_t *fn, QuartzPa
     double mydpi[2] = { 72.0, 72.0 }; /* fall-back to 72dpi if none was specified */
     QuartzDesc_t ret = NULL;
     if (!qf) qf = fn;
-    if(!type || strempty(type)) type = "public.png";
+    if(!type || R_strempty(type)) type = "public.png";
     if (!dpi) dpi=mydpi;
 
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_4

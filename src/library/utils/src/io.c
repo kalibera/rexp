@@ -93,7 +93,7 @@ static R_INLINE int isNAstring(const char *buf, int mode, LocalData *d)
 {
     int i;
 
-    if(!mode && strempty(buf)) return 1;
+    if(!mode && R_strempty(buf)) return 1;
     for (i = 0; i < length(d->NAstrings); i++)
 	if (!strcmp(CHAR(STRING_ELT(d->NAstrings, i)), buf)) return 1;
     return 0;
@@ -343,7 +343,7 @@ SEXP countfields(SEXP args)
 
     if (isString(quotes)) {
 	const char *sc = translateChar(STRING_ELT(quotes, 0));
-	if (!strempty(sc)) data.quoteset = strdup(sc);
+	if (!R_strempty(sc)) data.quoteset = strdup(sc);
 	else data.quoteset = "";
     } else if (isNull(quotes))
 	data.quoteset = "";
@@ -617,7 +617,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Find the first non-NA entry (empty => NA) */
     for (i = 0; i < len; i++) {
 	tmp = CHAR(STRING_ELT(cvec, i));
-	if (!(STRING_ELT(cvec, i) == NA_STRING || strempty(tmp)
+	if (!(STRING_ELT(cvec, i) == NA_STRING || R_strempty(tmp)
 	      || isNAstring(tmp, 1, &data) || isBlankString(tmp)))
 	    break;
     }
@@ -629,7 +629,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(rval = allocVector(LGLSXP, len));
 	for (i = 0; i < len; i++) {
 	    tmp = CHAR(STRING_ELT(cvec, i));
-	    if (STRING_ELT(cvec, i) == NA_STRING || strempty(tmp)
+	    if (STRING_ELT(cvec, i) == NA_STRING || R_strempty(tmp)
 		|| isNAstring(tmp, 1, &data) || isBlankString(tmp))
 		LOGICAL(rval)[i] = NA_LOGICAL;
 	    else {
@@ -651,7 +651,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(rval = allocVector(INTSXP, len));
 	for (i = 0; i < len; i++) {
 	    tmp = CHAR(STRING_ELT(cvec, i));
-	    if (STRING_ELT(cvec, i) == NA_STRING || strempty(tmp)
+	    if (STRING_ELT(cvec, i) == NA_STRING || R_strempty(tmp)
 		|| isNAstring(tmp, 1, &data) || isBlankString(tmp))
 		INTEGER(rval)[i] = NA_INTEGER;
 	    else {
@@ -670,7 +670,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(rval = allocVector(REALSXP, len));
 	for (i = 0; i < len; i++) {
 	    tmp = CHAR(STRING_ELT(cvec, i));
-	    if (STRING_ELT(cvec, i) == NA_STRING || strempty(tmp)
+	    if (STRING_ELT(cvec, i) == NA_STRING || R_strempty(tmp)
 		|| isNAstring(tmp, 1, &data) || isBlankString(tmp))
 		REAL(rval)[i] = NA_REAL;
 	    else {
@@ -689,7 +689,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(rval = allocVector(CPLXSXP, len));
 	for (i = 0; i < len; i++) {
 	    tmp = CHAR(STRING_ELT(cvec, i));
-	    if (STRING_ELT(cvec, i) == NA_STRING || strempty(tmp)
+	    if (STRING_ELT(cvec, i) == NA_STRING || R_strempty(tmp)
 		|| isNAstring(tmp, 1, &data) || isBlankString(tmp))
 		COMPLEX(rval)[i].r = COMPLEX(rval)[i].i = NA_REAL;
 	    else {
@@ -827,7 +827,7 @@ SEXP readtablehead(SEXP args)
     if (blskip == NA_LOGICAL) blskip = 1;
     if (isString(quotes)) {
 	const char *sc = translateChar(STRING_ELT(quotes, 0));
-	if (!strempty(sc)) data.quoteset = strdup(sc);
+	if (!R_strempty(sc)) data.quoteset = strdup(sc);
 	else data.quoteset = "";
     } else if (isNull(quotes))
 	data.quoteset = "";

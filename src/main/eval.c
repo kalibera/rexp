@@ -254,7 +254,7 @@ static void doprof(int sig)  /* sig is ignored in Windows */
     for (int i = prevnum; i < R_Line_Profiling; i++)
 	fprintf(R_ProfileOutfile, "#File %d: %s\n", i, R_Srcfiles[i-1]);
 
-    if(!strempty(buf))
+    if(!R_strempty(buf))
 	fprintf(R_ProfileOutfile, "%s\n", buf);
 
 #ifndef Win32

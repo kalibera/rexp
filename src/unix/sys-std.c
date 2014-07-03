@@ -552,7 +552,7 @@ static void readline_handler(char *line)
 	return;
     if (line[0]) {
 # ifdef HAVE_READLINE_HISTORY_H
-	if (!strempty(line) && rl_top->readline_addtohistory)
+	if (!R_strempty(line) && rl_top->readline_addtohistory)
 	    add_history(line);
 # endif
 	/* We need to append a \n if the completed line would fit in the
@@ -850,7 +850,7 @@ Rstd_ReadConsole(const char *prompt, unsigned char *buf, int len,
 	    buf[--ll] = '\0';
 	}
 	/* translate if necessary */
-	if(!strempty(R_StdinEnc) && strcmp(R_StdinEnc, "native.enc")) {
+	if(!R_strempty(R_StdinEnc) && strcmp(R_StdinEnc, "native.enc")) {
 	    size_t res, inb = strlen((char *)buf), onb = len;
 	    /* NB: this is somewhat dangerous.  R's main loop and
 	       scan will not call it with a larger value, but
@@ -1134,7 +1134,7 @@ Rstd_ShowFiles(int nfile,		/* number of files */
     char buf[1024];
 
     if (nfile > 0) {
-	if (pager == NULL || strempty(pager)) pager = "more";
+	if (pager == NULL || R_strempty(pager)) pager = "more";
 	filename = R_tmpnam(NULL, R_TempDir); /* mallocs result */
 	if ((tfp = R_fopen(filename, "w")) != NULL) {
 	    for(i = 0; i < nfile; i++) {

@@ -565,7 +565,7 @@ static int set_tz(const char *tz, char *oldtz)
 
 static void reset_tz(char *tz)
 {
-    if(!strempty(tz)) {
+    if(!R_strempty(tz)) {
 #ifdef HAVE_SETENV
 	if(setenv("TZ", tz, 1)) warning(_("problem with setting timezone"));
 #elif defined(HAVE_PUTENV)
@@ -674,7 +674,7 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isString((stz = CADR(args))) || LENGTH(stz) != 1)
 	error(_("invalid '%s' value"), "tz");
     tz = CHAR(STRING_ELT(stz, 0));
-    if(strempty(tz)) {
+    if(R_strempty(tz)) {
 	/* do a direct look up here as this does not otherwise
 	   work on Windows */
 	char *p = getenv("TZ");
@@ -685,7 +685,7 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     PROTECT(stz); /* it might be new */
     if(strcmp(tz, "GMT") == 0  || strcmp(tz, "UTC") == 0) isgmt = 1;
-    if(!isgmt && !strempty(tz)) settz = set_tz(tz, oldtz);
+    if(!isgmt && !R_strempty(tz)) settz = set_tz(tz, oldtz);
 #ifdef USE_INTERNAL_MKTIME
     else R_tzsetwall(); // to get the system timezone recorded
 #else
@@ -777,7 +777,7 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' value"), "tz");
 
     tz = CHAR(STRING_ELT(stz, 0));
-    if(strempty(tz)) {
+    if(R_strempty(tz)) {
 	/* do a direct look up here as this does not otherwise
 	   work on Windows */
 	char *p = getenv("TZ");
@@ -788,7 +788,7 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     PROTECT(stz); /* it might be new */
     if(strcmp(tz, "GMT") == 0  || strcmp(tz, "UTC") == 0) isgmt = 1;
-    if(!isgmt && !strempty(tz)) settz = set_tz(tz, oldtz);
+    if(!isgmt && !R_strempty(tz)) settz = set_tz(tz, oldtz);
 #ifdef USE_INTERNAL_MKTIME
     else R_tzsetwall(); // to get the system timezone recorded
 #else
@@ -872,7 +872,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     tz = getAttrib(x, install("tzone"));
 
     const char *tz1;
-    if (!isNull(tz) && !strempty(tz1 = CHAR(STRING_ELT(tz, 0)))) {
+    if (!isNull(tz) && !R_strempty(tz1 = CHAR(STRING_ELT(tz, 0)))) {
 	/* If the format includes %Z or %z
 	   we need to try to set TZ accordingly */
 	int needTZ = 0;
@@ -989,7 +989,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 		if(UseTZ) {
 		    if(LENGTH(x) >= 10) {
 			const char *p = CHAR(STRING_ELT(VECTOR_ELT(x, 9), i));
-			if(!strempty(p)) {strcat(buff, " "); strcat(buff, p);}
+			if(!R_strempty(p)) {strcat(buff, " "); strcat(buff, p);}
 		    } else if(!isNull(tz)) {
 			int ii = 0;
 			if(LENGTH(tz) == 3) {
@@ -998,7 +998,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 			    else ii = 0; /* Use base timezone name */
 			}
 			const char *p = CHAR(STRING_ELT(tz, ii));
-			if(!strempty(p)) {strcat(buff, " "); strcat(buff, p);}
+			if(!R_strempty(p)) {strcat(buff, " "); strcat(buff, p);}
 		    }
 		}
 		SET_STRING_ELT(ans, i, mkChar(buff));
@@ -1029,7 +1029,7 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isString((stz = CADDR(args))) || LENGTH(stz) != 1)
 	error(_("invalid '%s' value"), "tz");
     tz = CHAR(STRING_ELT(stz, 0));
-    if(strempty(tz)) {
+    if(R_strempty(tz)) {
 	/* do a direct look up here as this does not otherwise
 	   work on Windows */
 	char *p = getenv("TZ");
@@ -1040,7 +1040,7 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     PROTECT(stz); /* it might be new */
     if(strcmp(tz, "GMT") == 0  || strcmp(tz, "UTC") == 0) isgmt = 1;
-    if(!isgmt && !strempty(tz)) settz = set_tz(tz, oldtz);
+    if(!isgmt && !R_strempty(tz)) settz = set_tz(tz, oldtz);
 #ifdef USE_INTERNAL_MKTIME
     else R_tzsetwall(); // to get the system timezone recorded
 #else
@@ -1050,7 +1050,7 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
     // in case this gets changed by conversions.
     if (isgmt) {
 	PROTECT(tzone = mkString(tz));
-    } else if(!strempty(tz)) {
+    } else if(!R_strempty(tz)) {
 	PROTECT(tzone = allocVector(STRSXP, 3));
 	SET_STRING_ELT(tzone, 0, mkChar(tz));
 	SET_STRING_ELT(tzone, 1, mkChar(R_tzname[0]));

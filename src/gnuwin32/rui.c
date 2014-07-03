@@ -600,7 +600,7 @@ static void menuhelpsearch(control m)
 
     if (!ConsoleAcceptCmd) return;
     s = askstring(G_("Search help"), olds);
-    if (s && !strempty(s)) {
+    if (s && !R_strempty(s)) {
 	snprintf(cmd, 1024, "help.search(\"%s\")", s);
 	if (strlen(s) > 255) s[255] = '\0';
 	strcpy(olds, s);
@@ -615,7 +615,7 @@ static void menusearchRsite(control m)
 
     if (!ConsoleAcceptCmd) return;
     s = askstring(G_("Search for words in help list archives and documentation"), olds);
-    if (s && !strempty(s)) {
+    if (s && !R_strempty(s)) {
 	snprintf(cmd, 1024, "RSiteSearch(\"%s\")", s);
 	if (strlen(s) > 255) s[255] = '\0';
 	strcpy(olds, s);
@@ -817,7 +817,7 @@ void readconsolecfg()
     Rwin_graphicsx = gui.grx;
     Rwin_graphicsy = gui.gry;
 
-    if(!strempty(gui.language)) {
+    if(!R_strempty(gui.language)) {
 	char *buf = malloc(50);
 	snprintf(buf, 50, "LANGUAGE=%s", gui.language);
 	putenv(buf);

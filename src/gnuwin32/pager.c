@@ -555,9 +555,9 @@ pager newpager(const char *title,
     /*    if (ismdi()) pagerMultiple = 1;*/
     strncpy(wtitle, title, PAGERMAXTITLE);
     wtitle[PAGERMAXTITLE] = '\0';
-    if(!strempty(header) &&
+    if(!R_strempty(header) &&
        ((strlen(header) + strlen(wtitle) + 4) < PAGERMAXTITLE)) {
-	if(!strempty(wtitle)) strcat(wtitle, " - ");
+	if(!R_strempty(wtitle)) strcat(wtitle, " - ");
 	strcat(wtitle, header);
     }
     if (!pagerMultiple)

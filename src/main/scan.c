@@ -468,7 +468,7 @@ static R_INLINE int isNAstring(const char *buf, int mode, LocalData *d)
 {
     int i;
 
-    if(!mode && strempty(buf)) return 1;
+    if(!mode && R_strempty(buf)) return 1;
     for (i = 0; i < length(d->NAstrings); i++)
 	if (!strcmp(CHAR(STRING_ELT(d->NAstrings, i)), buf)) return 1;
     return 0;
@@ -590,7 +590,7 @@ static SEXP scanVector(SEXPTYPE type, int maxitems, int maxlines,
 	    copyVector(ans, bns);
 	}
 	buffer = fillBuffer(type, strip, &bch, d, &strBuf);
-	if (nprev == n && strempty(buffer) &&
+	if (nprev == n && R_strempty(buffer) &&
 	    ((blskip && bch =='\n') || bch == R_EOF)) {
 	    if (d->ttyflag || bch == R_EOF)
 		break;
@@ -898,7 +898,7 @@ SEXP attribute_hidden do_scan(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (isString(quotes)) {
 	const char *sc = translateChar(STRING_ELT(quotes, 0));
-	if (!strempty(sc)) data.quoteset = strdup(sc);
+	if (!R_strempty(sc)) data.quoteset = strdup(sc);
 	else data.quoteset = "";
     } else if (isNull(quotes))
 	data.quoteset = "";

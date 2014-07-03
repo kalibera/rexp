@@ -326,7 +326,7 @@ FileReadConsole(const char *prompt, char *buf, int len, int addhistory)
     }
     if (fgets(buf, len, ifp ? ifp : stdin) == NULL) return 0;
     /* translate if necessary */
-    if(!strempty(R_StdinEnc) && strcmp(R_StdinEnc, "native.enc")) {
+    if(!R_strempty(R_StdinEnc) && strcmp(R_StdinEnc, "native.enc")) {
 	size_t res, inb = strlen(buf), onb = len;
 	const char *ib = buf; 
 	char obuf[len+1], *ob = obuf;
@@ -530,7 +530,7 @@ int R_ShowFiles(int nfile, const char **file, const char **headers,
     char  buf[1024];
 
     if (nfile > 0) {
-	if (pager == NULL || strempty(pager))
+	if (pager == NULL || R_strempty(pager))
 	    pager = "internal";
 	for (i = 0; i < nfile; i++) {
 	    if(!access(file[i], R_OK)) {
@@ -597,7 +597,7 @@ int R_EditFiles(int nfile, const char **file, const char **title,
     char  buf[1024];
 
     if (nfile > 0) {
-	if (editor == NULL || strempty(editor))
+	if (editor == NULL || R_strempty(editor))
 	    editor = "internal";
 	for (i = 0; i < nfile; i++) {
 	    if (!strcmp(editor, "internal")) {
@@ -1065,7 +1065,7 @@ int cmdlineoptions(int ac, char **av)
 		}
 	    } else if(CharacterMode == RTerm && !strcmp(*av, "-e")) {
 		ac--; av++;
-		if (!ac || strempty(*av)) {
+		if (!ac || R_strempty(*av)) {
 		    snprintf(s, 1024,
 			    _("option '%s' requires a non-empty argument"),
 			    "-e");
@@ -1106,7 +1106,7 @@ int cmdlineoptions(int ac, char **av)
 	    }
 	}
     }
-    if(!strempty(cmdlines)) {
+    if(!R_strempty(cmdlines)) {
 	if(ifp) R_Suicide(_("cannot use -e with -f or --file"));
 	Rp->R_Interactive = FALSE;
 	Rp->ReadConsole = FileReadConsole;

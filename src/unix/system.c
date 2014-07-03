@@ -381,7 +381,7 @@ int Rf_initialize_R(int ac, char **av)
 	}
     }
 
-    if(!strempty(cmdlines)) { /* had at least one -e option */
+    if(!R_strempty(cmdlines)) { /* had at least one -e option */
 	size_t res;
 	if(ifp) R_Suicide(_("cannot use -e with -f or --file"));
 	ifp = tmpfile();

@@ -642,7 +642,7 @@ typedef int PROTECT_INDEX;
 #define REPROTECT(x,i) R_Reprotect(x,i)
 
 /* Miscellaneous Definitions */
-#define strempty(s)	(*(s) == 0)
+#define R_strempty(s)	(*(s) == 0)
 
 /* Evaluation Environment */
 LibExtern SEXP	R_GlobalEnv;	    /* The "global" environment */

@@ -131,7 +131,7 @@ void attribute_hidden PrintVersion_part_1(char *s, size_t len)
     char tmp[128];
 
     PrintVersionString(s, len);
-    if(!strempty(R_NICK)) {
+    if(!R_strempty(R_NICK)) {
 	char nick[128];
 	snprintf(nick, 128, " -- \"%s\"", R_NICK);
 	strcat(s, nick);
@@ -140,6 +140,6 @@ void attribute_hidden PrintVersion_part_1(char *s, size_t len)
 	      R_YEAR);
 /*  strcat(s, "ISBN 3-900051-07-0\n");  */
     SPRINTF_2("Platform: %s", R_PLATFORM);
-    if(!strempty(R_ARCH)) { SPRINTF_2("/%s", R_ARCH); }
+    if(!R_strempty(R_ARCH)) { SPRINTF_2("/%s", R_ARCH); }
     SPRINTF_2(" (%d-bit)\n", 8*(int)sizeof(void *));
 }

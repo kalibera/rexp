@@ -159,7 +159,7 @@ SEXP in_loadRconsole(SEXP sfile)
 	error(_("invalid '%s' argument"), "file");
     getActive(&gui);  /* Will get defaults if there's no active console */
     if (loadRconsole(&gui, translateChar(STRING_ELT(sfile, 0)))) applyGUI(&gui);
-    if (!strempty(gui.warning)) warning(gui.warning);
+    if (!R_strempty(gui.warning)) warning(gui.warning);
     vmaxset(vmax);
     return R_NilValue;
 }
