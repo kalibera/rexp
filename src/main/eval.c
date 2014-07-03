@@ -781,7 +781,7 @@ static SEXP R_compileExpr(SEXP expr, SEXP rho)
 
     packsym = install("compiler");
     funsym = install("compile");
-    quotesym = install("quote");
+    quotesym = R_QuoteSymbol;
 
     PROTECT(fcall = lang3(R_DoubleColonSymbol, packsym, funsym));
     PROTECT(qexpr = lang2(quotesym, expr));
@@ -1759,9 +1759,9 @@ void attribute_hidden R_initAsignSymbols(void)
     R_ReplaceFunsTable = R_NewHashedEnv(R_EmptyEnv, ScalarInteger(1099));
     R_PreserveObject(R_ReplaceFunsTable);
 
-    R_SubsetSym = install("[");
+    R_SubsetSym = R_BracketSymbol;
     R_SubassignSym = install("[<-");
-    R_Subset2Sym = install("[[");
+    R_Subset2Sym = R_Bracket2Symbol;
     R_Subassign2Sym = install("[[<-");
     R_DollarGetsSymbol = install("$<-");
     R_valueSym = install("value");

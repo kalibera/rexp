@@ -564,7 +564,7 @@ static SEXP lang2str(SEXP obj, SEXPTYPE t)
     eq_sym = install("=");
     gets_sym = install("<-");
     lpar_sym = install("(");
-    lbrace_sym = install("{");
+    lbrace_sym = R_BraceSymbol;
     call_sym = install("call");
   }
   if(isSymbol(symb)) {
@@ -1280,7 +1280,7 @@ SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(ap = list3(R_NilValue, R_NilValue, R_NilValue));
     SET_TAG(ap,  install("x"));
     SET_TAG(CDR(ap), install("which"));
-    SET_TAG(CDDR(ap), install("exact"));
+    SET_TAG(CDDR(ap), R_ExactSymbol);
     argList = matchArgs(ap, args, call);
     UNPROTECT(1); /* ap */
     PROTECT(argList);

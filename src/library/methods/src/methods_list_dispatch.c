@@ -48,7 +48,7 @@ static SEXP R_selectByPackage(SEXP f, SEXP classes, int nargs);
 
 /* objects, mostly symbols, that are initialized once to save a little time */
 static int initialized = 0;
-static SEXP s_dot_Methods, s_skeleton, s_expression, s_function,
+static SEXP s_skeleton, s_expression, s_function,
     s_getAllMethods, s_objectsEnv, s_MethodsListSelect,
     s_sys_dot_frame, s_sys_dot_call, s_sys_dot_function, s_generic,
     s_missing, s_generic_dot_skeleton, s_subset_gets, s_element_gets,
@@ -92,7 +92,6 @@ SEXP R_initMethodDispatch(SEXP envir)
     if(initialized)
 	return(envir);
 
-    s_dot_Methods = install(".Methods");
     s_skeleton = install("skeleton");
     s_expression = install("expression");
     s_function = install("function");
@@ -461,7 +460,7 @@ SEXP R_standardGeneric(SEXP fname, SEXP ev, SEXP fdef)
     switch(TYPEOF(fdef)) {
     case CLOSXP:
         f_env = CLOENV(fdef);
-	PROTECT(mlist = findVar(s_dot_Methods, f_env)); nprotect++;
+	PROTECT(mlist = findVar(R_dot_Methods, f_env)); nprotect++;
 	if(mlist == R_UnboundValue)
             mlist = R_NilValue;
 	break;
@@ -905,14 +904,13 @@ static SEXP dots_class(SEXP ev, int *checkerrP)
 {
     static SEXP call = NULL; SEXP  ee;
     if(call == NULL) {
-	SEXP dotFind, f, R_dots;
+	SEXP dotFind, f;
 	dotFind = install(".dotsClass");
 	f = findFun(dotFind, R_MethodsNamespace);
-	R_dots = install("...");
 	call = allocVector(LANGSXP, 2);
 	R_PreserveObject(call);
 	SETCAR(call,f); ee = CDR(call);
-	SETCAR(ee, R_dots);
+	SETCAR(ee, R_DotsSymbol);
     }
     return R_tryEvalSilent(call, ev, checkerrP);
 }
@@ -935,7 +933,7 @@ static SEXP do_mtable(SEXP fdef, SEXP ev)
 
 SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 {
-    static SEXP R_mtable = NULL, R_allmtable, R_sigargs, R_siglength, R_dots;
+    static SEXP R_mtable = NULL, R_allmtable, R_sigargs, R_siglength;
     int nprotect = 0;
     SEXP mtable, classes, thisClass = R_NilValue /* -Wall */, sigargs, 
 	siglength, f_env = R_NilValue, method, f, val = R_NilValue;
@@ -947,7 +945,6 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	R_allmtable = install(".AllMTable");
 	R_sigargs = install(".SigArgs");
 	R_siglength = install(".SigLength");
-	R_dots = install("...");
     }
     switch(TYPEOF(fdef)) {
     case CLOSXP:
@@ -986,7 +983,7 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	else {
 	    /*  get its class */
 	    SEXP arg; int check_err;
-	    if(arg_sym == R_dots) {
+	    if(arg_sym == R_DotsSymbol) {
 		thisClass = dots_class(ev, &check_err);
 	    }
 	    else {

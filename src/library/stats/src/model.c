@@ -947,8 +947,7 @@ SEXP updateform(SEXP old, SEXP new)
 
     SET_ATTRIB(_new, R_NilValue);
     SET_OBJECT(_new, 0);
-    SEXP DotEnvSymbol = install(".Environment");
-    setAttrib(_new, DotEnvSymbol, getAttrib(old, DotEnvSymbol));
+    setAttrib(_new, R_DotEnvSymbol, getAttrib(old, R_DotEnvSymbol));
 
     UNPROTECT(1);
     return _new;
@@ -1975,7 +1974,7 @@ SEXP termsform(SEXP args)
     a = CDR(a);
 
     SETCAR(a, mkString("terms"));
-    SET_TAG(a, install("class"));
+    SET_TAG(a, R_ClassSymbol);
     SET_OBJECT(ans, 1);
 
     SETCDR(a, R_NilValue);  /* truncate if necessary */

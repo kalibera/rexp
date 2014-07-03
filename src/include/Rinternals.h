@@ -669,12 +669,15 @@ LibExtern SEXP	R_BracketSymbol;    /* "[" */
 LibExtern SEXP	R_BraceSymbol;      /* "{" */
 LibExtern SEXP	R_ClassSymbol;	    /* "class" */
 LibExtern SEXP	R_DeviceSymbol;     /* ".Device" */
+LibExtern SEXP	R_DevicesSymbol;    /* ".Devices" */
 LibExtern SEXP	R_DimNamesSymbol;   /* "dimnames" */
 LibExtern SEXP	R_DimSymbol;	    /* "dim" */
 LibExtern SEXP	R_DollarSymbol;	    /* "$" */
 LibExtern SEXP	R_DotsSymbol;	    /* "..." */
 LibExtern SEXP	R_DropSymbol;	    /* "drop" */
+LibExtern SEXP	R_DotEnvSymbol;     /* ".Environment" */
 LibExtern SEXP	R_LastvalueSymbol;  /* ".Last.value" */
+LibExtern SEXP	R_dot_Methods;	    /* ".Methods" */
 LibExtern SEXP	R_LevelsSymbol;	    /* "levels" */
 LibExtern SEXP	R_ModeSymbol;	    /* "mode" */
 LibExtern SEXP	R_NameSymbol;	    /* "name" */

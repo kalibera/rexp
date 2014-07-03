@@ -80,7 +80,6 @@ Rcomplex Rf_ComplexFromReal(double, int*);
 				  Memory.h, PrtUtil.h, Utils.h */
 #undef CALLED_FROM_DEFN_H
 extern0 SEXP	R_CommentSymbol;    /* "comment" */
-extern0 SEXP	R_DotEnvSymbol;     /* ".Environment" */
 extern0 SEXP	R_ExactSymbol;	    /* "exact" */
 extern0 SEXP	R_RecursiveSymbol;  /* "recursive" */
 extern0 SEXP	R_WholeSrcrefSymbol;   /* "wholeSrcref" */
@@ -92,7 +91,6 @@ extern0 SEXP    R_ConnIdSymbol;  /* "conn_id" */
 extern0 SEXP    R_DevicesSymbol;  /* ".Devices" */
 
 extern0 SEXP    R_dot_Generic;  /* ".Generic" */
-extern0 SEXP    R_dot_Methods;  /* ".Methods" */
 extern0 SEXP    R_dot_Group;  /* ".Group" */
 extern0 SEXP    R_dot_Class;  /* ".Class" */
 extern0 SEXP    R_dot_GenericCallEnv;  /* ".GenericCallEnv" */
