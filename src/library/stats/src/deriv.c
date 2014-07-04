@@ -940,7 +940,7 @@ SEXP deriv(SEXP args)
     /* tag: */
     tag = CAR(args);
     if (!isString(tag) || length(tag) < 1
-	|| length(STRING_ELT(tag, 0)) < 1 || length(STRING_ELT(tag, 0)) > 60)
+	|| CHARLEN(STRING_ELT(tag, 0)) < 1 || CHARLEN(STRING_ELT(tag, 0)) > 60)
 	error(_("invalid tag"));
     args = CDR(args);
     /* hessian: */

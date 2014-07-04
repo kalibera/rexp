@@ -74,7 +74,7 @@ SEXP attribute_hidden getParseContext(void)
 	last = i;
     }
     /* get rid of empty line after last newline */
-    if (nread && !length(STRING_ELT(ans, nread-1))) {
+    if (nread && !CHARLEN(STRING_ELT(ans, nread-1))) {
     	nread--;
     	R_ParseContextLine--;
     }

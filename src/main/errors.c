@@ -1084,7 +1084,7 @@ SEXP attribute_hidden do_ngettext(SEXP call, SEXP op, SEXP args, SEXP rho)
     else errorcall(call, _("invalid '%s' value"), "domain");
 
     /* libintl seems to malfunction if given a message of "" */
-    if(strlen(domain) && length(STRING_ELT(msg1, 0))) {
+    if(strlen(domain) && CHARLEN(STRING_ELT(msg1, 0))) {
 	char *fmt = dngettext(domain,
 			      translateChar(STRING_ELT(msg1, 0)),
 			      translateChar(STRING_ELT(msg2, 0)),
