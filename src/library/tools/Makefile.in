@@ -37,8 +37,8 @@ all: Makefile DESCRIPTION
 	  $(INSTALL_DATA) all.R $(top_builddir)/library/$(pkg)/R/$(pkg); \
 	  fi \
 	fi
-	@$(ECHO) "tools:::.install_package_description('.', '"$(top_builddir)/library/${pkg}"')" | \
-	  R_DEFAULT_PACKAGES=NULL $(R_EXE) > /dev/null
+	$(ECHO) "tools:::.install_package_description('.', '"$(top_builddir)/library/${pkg}"')" | \
+	  R_DEFAULT_PACKAGES=NULL $(R_EXE)
 
 mkR: mkR1
 
@@ -47,17 +47,17 @@ include $(top_srcdir)/share/make/basepkg.mk
 $(top_builddir)/library/$(pkg)/R/$(pkg).rdb: all.R $(top_srcdir)/share/licenses/license.db
 	@$(ECHO) "byte-compiling package '$(pkg)'"
 	@$(INSTALL_DATA) all.R $(top_builddir)/library/$(pkg)/R/$(pkg)
-	@(cat $(srcdir)/R/makeLazyLoad.R; \
+	(cat $(srcdir)/R/makeLazyLoad.R; \
 	  $(ECHO) "makeLazyLoading(\"$(pkg)\")") | \
-	  R_COMPILE_PKGS=1 R_COMPILER_SUPPRESS_ALL=1 \
-	  R_DEFAULT_PACKAGES=NULL LC_ALL=C $(R_EXE) > /dev/null
+	  R_COMPILE_PKGS=1 \
+	  R_DEFAULT_PACKAGES=NULL LC_ALL=C $(R_EXE)
 
 Rsimple: mkR mkRsimple
 
 Rlazy: mkR mkRsimple
 	@$(INSTALL_DATA) all.R $(top_builddir)/library/$(pkg)/R/$(pkg)
-	@(cat $(srcdir)/R/makeLazyLoad.R; \
+	(cat $(srcdir)/R/makeLazyLoad.R; \
 	  $(ECHO) "makeLazyLoading(\"$(pkg)\")") | \
-	  R_DEFAULT_PACKAGES=NULL LC_ALL=C $(R_EXE) > /dev/null
+	  R_DEFAULT_PACKAGES=NULL LC_ALL=C $(R_EXE)
 
 Rlazycomp: mkR mkRsimple mklazycomp
