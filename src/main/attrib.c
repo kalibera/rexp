@@ -1606,7 +1606,7 @@ SEXP R_do_slot(SEXP obj, SEXP name) {
 		    UNPROTECT(1);
 		    error(_("cannot get a slot (\"%s\") from an object of type \"%s\""),
 			  translateChar(asChar(input)),
-			  CHAR(type2str(TYPEOF(obj))));
+			  type2char(TYPEOF(obj)));
 		}
 	    }
 	    else classString = R_NilValue; /* make sure it is initialized */
