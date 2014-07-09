@@ -847,6 +847,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define InitOptions		Rf_InitOptions
 # define InitStringHash		Rf_InitStringHash
 # define InitTempDir		Rf_InitTempDir
+# define InitTypeTables		Rf_InitTypeTables
 # define initStack		Rf_initStack
 # define IntegerFromComplex	Rf_IntegerFromComplex
 # define IntegerFromLogical	Rf_IntegerFromLogical
@@ -1048,6 +1049,7 @@ void InitOptions(void);
 void InitStringHash(void);
 void Init_R_Variables(SEXP);
 void InitTempDir(void);
+void InitTypeTables(void);
 void initStack(void);
 void internalTypeCheck(SEXP, SEXP, SEXPTYPE);
 Rboolean isMethodsDispatchOn(void);
