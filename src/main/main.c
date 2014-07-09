@@ -797,6 +797,7 @@ void setup_Rmainloop(void)
     InitEd();
     InitGraphics();
     InitS3DefaultTypes();
+    InitTypeTables();
     
     R_Is_Running = 1;
     R_check_locale();
