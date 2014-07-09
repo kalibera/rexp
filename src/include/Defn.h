@@ -707,7 +707,7 @@ extern0   Rboolean WinUTF8out  INI_as(FALSE);  /* Use UTF-8 for output */
 extern0   void WinCheckUTF8(void);
 #endif
 
-extern char OutDec	INI_as('.');  /* decimal point used for output */
+extern char* OutDec	INI_as(".");  /* decimal point used for output */
 extern0 Rboolean R_DisableNLinBrowser	INI_as(FALSE);
 extern0 char R_BrowserLastCommand	INI_as('n');
 
@@ -803,6 +803,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define ComplexFromReal	Rf_ComplexFromReal
 # define ComplexFromString	Rf_ComplexFromString
 # define copyMostAttribNoTs	Rf_copyMostAttribNoTs
+# define currentTime		Rf_currentTime
 # define CustomPrintValue	Rf_CustomPrintValue
 # define DataFrameClass		Rf_DataFrameClass
 # define ddfindVar		Rf_ddfindVar
@@ -814,7 +815,9 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define DispatchOrEval		Rf_DispatchOrEval
 # define DispatchAnyOrEval      Rf_DispatchAnyOrEval
 # define dynamicfindVar		Rf_dynamicfindVar
+# define EncodeChar             Rf_EncodeChar
 # define EncodeRaw              Rf_EncodeRaw
+# define EncodeReal2            Rf_EncodeReal2
 # define EncodeString           Rf_EncodeString
 # define EnsureString 		Rf_EnsureString
 # define endcontext		Rf_endcontext
@@ -896,6 +899,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define RealFromLogical	Rf_RealFromLogical
 # define RealFromString		Rf_RealFromString
 # define Seql			Rf_Seql
+# define sexptype2char		Rf_sexptype2char
 # define Scollate		Rf_Scollate
 # define sortVector		Rf_sortVector
 # define SrcrefPrompt		Rf_SrcrefPrompt
@@ -908,6 +912,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define StrToInternal		Rf_StrToInternal
 # define strmat2intmat		Rf_strmat2intmat
 # define substituteList		Rf_substituteList
+# define TimeToSeed		Rf_TimeToSeed
 # define tsConform		Rf_tsConform
 # define tspgets		Rf_tspgets
 # define type2symbol		Rf_type2symbol
@@ -1001,6 +1006,7 @@ void check_stack_balance(SEXP op, int save);
 void CleanEd(void);
 void copyMostAttribNoTs(SEXP, SEXP);
 void CustomPrintValue(SEXP, SEXP);
+double currentTime(void);
 void DataFrameClass(SEXP);
 SEXP ddfindVar(SEXP, SEXP);
 SEXP deparse1(SEXP,Rboolean,int);
@@ -1113,6 +1119,7 @@ void ssort(SEXP*,int);
 int StrToInternal(const char *);
 SEXP strmat2intmat(SEXP, SEXP, SEXP);
 SEXP substituteList(SEXP, SEXP);
+unsigned int TimeToSeed(void);
 Rboolean tsConform(SEXP,SEXP);
 SEXP tspgets(SEXP, SEXP);
 SEXP type2symbol(SEXPTYPE);
@@ -1190,6 +1197,7 @@ void UNIMPLEMENTED_TYPE(const char *s, SEXP x);
 void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);
+int Rf_AdobeSymbol2ucs2(int n);
 
 typedef unsigned short ucs2_t;
 size_t mbcsToUcs2(const char *in, ucs2_t *out, int nout, int enc);
@@ -1213,6 +1221,21 @@ Rboolean mbcsValid(const char *str);
 Rboolean utf8Valid(const char *str);
 char *Rf_strchr(const char *s, int c);
 char *Rf_strrchr(const char *s, int c);
+
+SEXP fixup_NaRm(SEXP args); /* summary.c */
+void invalidate_cached_recodings(void);  /* from sysutils.c */
+void resetICUcollator(void); /* from util.c */
+void dt_invalidate_locale(); /* from Rstrptime.h */
+int R_OutputCon; /* from connections.c */
+int R_InitReadItemDepth, R_ReadItemDepth; /* from serialize.c */
+void get_current_mem(size_t *,size_t *,size_t *); /* from memory.c */
+unsigned long get_duplicate_counter(void);  /* from duplicate.c */
+extern void reset_duplicate_counter(void);  /* from duplicate.c */
+
+// Unix and Windows versions
+double R_getClockIncrement(void);
+void R_getProcTime(double *data);
+
 
 #ifdef Win32
 void R_fixslash(char *s);
