@@ -687,7 +687,7 @@ static SEXP createDefaultClass(SEXP part1, SEXP part2, SEXP part3) {
     if (part2 != R_NilValue) size++;
     if (part3 != R_NilValue) size++;
 
-    if (size == 0) {
+    if (size == 0 || part2 == R_NilValue) {
         return R_NilValue;
     }
     SEXP res = allocVector(STRSXP, size);
@@ -713,28 +713,37 @@ void InitS3DefaultTypes() {
     for(type = 0; type < NTYPEOF_TYPES; type++) {
         SEXP part2 = R_NilValue;
         SEXP part3 = R_NilValue;
+        int nprotected = 0;
 
         switch(type) {
             case CLOSXP:
             case SPECIALSXP:
             case BUILTINSXP:
-	        part2 = mkChar("function");
+	        part2 = PROTECT(mkChar("function"));
+	        nprotected++;
 	        break;
             case INTSXP:
 	    case REALSXP:
-	        part2 = type2str_nowarn(type);
-	        part3 = mkChar("numeric");
+	        part2 = PROTECT(type2str_nowarn(type));
+	        part3 = PROTECT(mkChar("numeric"));
+	        nprotected += 2;
 	        break;
 	    case LANGSXP:
-	        part2 = R_NilValue; /* cannot be pre-allocated, depends on the object value */
+	        /* part2 remains R_NilValue: default type cannot be pre-allocated, as it depends on the object value */
 	        break;
+            case SYMSXP:
+                part2 = PROTECT(mkChar("name"));
+                nprotected++;
+                break;
 	    default:
-	        part2 = type2str_nowarn(type);
+	        part2 = PROTECT(type2str_nowarn(type));
+	        nprotected++;
 	}
 
 	Type2DefaultClass[type].vector = createDefaultClass(R_NilValue, part2, part3);
 	Type2DefaultClass[type].matrix = createDefaultClass(mkChar("matrix"), part2, part3);
 	Type2DefaultClass[type].array = createDefaultClass(mkChar("array"), part2, part3);
+	UNPROTECT(nprotected);
     }
 }
 
@@ -760,12 +769,25 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
             default: defaultClass = Type2DefaultClass[t].array; break;
         }
 
-        if (defaultClass == R_NilValue) {
-            if (t != LANGSXP) { /* this will only happen in case of an internal error */
-                error("invalid or unsupported type in R_data_class2");
-            }
-            defaultClass = ScalarString(lang2str(obj, t));
+        if (defaultClass != R_NilValue) {
+            return defaultClass;
         }
+
+        /* now t == LANGSXP */
+        if (n == 0) {
+            return ScalarString(lang2str(obj, t));
+        }
+        SEXP part1;
+        if (n == 2) {
+            part1 = mkChar("matrix");
+        } else {
+            part1 = mkChar("array");
+        }
+        PROTECT(part1);
+        defaultClass = PROTECT(allocVector(STRSXP, 2));
+        SET_STRING_ELT(defaultClass, 0, part1);
+        SET_STRING_ELT(defaultClass, 1, lang2str(obj, t));
+        UNPROTECT(2); /* part1, defaultClass */
         return defaultClass;
     }
 }
