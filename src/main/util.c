@@ -242,15 +242,12 @@ SEXPTYPE str2type(const char *s)
     return (SEXPTYPE) -1;
 }
 
-// !!! MOVE THIS DEFINITION INTO A HEADER BEFORE MERGING
-#define NTYPES 32
-
 static struct {
     const char *cstrName;
     SEXP rcharName;
     SEXP rstrName;
     SEXP rsymName;
-} Type2Table[NTYPES];
+} Type2Table[NTYPEOF_TYPES];
 
 
 int findTypeInTypeTable(SEXPTYPE t) {
@@ -266,16 +263,16 @@ void InitTypeTables(void) {
 
     /* Type2Table */
     int type;
-    for (type = 0; type < NTYPES; type++) {
+    for (type = 0; type < NTYPEOF_TYPES; type++) {
         int j = findTypeInTypeTable(type);
 
         if (j != -1) {
             const char *cstr = TypeTable[j].str;
-            SEXP rchar = mkChar(cstr);
-            MARK_NOT_MUTABLE(rchar);
+            SEXP rchar = PROTECT(mkChar(cstr));
             SEXP rstr = ScalarString(rchar);
             MARK_NOT_MUTABLE(rstr);
             R_PreserveObject(rstr);
+            UNPROTECT(1); /* rchar */
             SEXP rsym = install(cstr);
 
             Type2Table[type].cstrName = cstr;
@@ -293,7 +290,7 @@ void InitTypeTables(void) {
 
 SEXP type2str_nowarn(SEXPTYPE t) /* returns a CHARSXP */
 {
-    if (t >= 0 && t < NTYPES) { /* FIXME: branch not really needed */
+    if (t >= 0 && t < NTYPEOF_TYPES) { /* FIXME: branch not really needed */
         SEXP res = Type2Table[t].rcharName;
         if (res != NULL) {
             return res;
@@ -316,7 +313,7 @@ SEXP type2str(SEXPTYPE t) /* returns a CHARSXP */
 
 SEXP type2rstr(SEXPTYPE t) /* returns a STRSXP */
 {
-    if (t >= 0 && t < NTYPES) { /* FIXME: branch not really needed */
+    if (t >= 0 && t < NTYPEOF_TYPES) { /* FIXME: branch not really needed */
         SEXP res = Type2Table[t].rstrName;
         if (res != NULL) {
             return res;
@@ -328,7 +325,7 @@ SEXP type2rstr(SEXPTYPE t) /* returns a STRSXP */
 
 const char *type2char(SEXPTYPE t) /* returns a char* */
 {
-    if (t >= 0 && t < NTYPES) { /* FIXME: branch not really needed */
+    if (t >= 0 && t < NTYPEOF_TYPES) { /* FIXME: branch not really needed */
         const char * res = Type2Table[t].cstrName;
         if (res != NULL) {
             return res;
@@ -343,7 +340,7 @@ const char *type2char(SEXPTYPE t) /* returns a char* */
 #ifdef UNUSED
 SEXP type2symbol(SEXPTYPE t)
 {
-    if (t >= 0 && t < NTYPES) { /* FIXME: branch not really needed */
+    if (t >= 0 && t < NTYPEOF_TYPES) { /* FIXME: branch not really needed */
         SEXP res = Type2Table[t].rsymName;
         if (res != NULL) {
             return res;
