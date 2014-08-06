@@ -21,11 +21,6 @@
       \env{R_SHELL}, the preferred way to select a non-default shell,
       can be used instead.
 
-      \item \code{embedFonts()} now defaults to \code{format =
-      "ps2write"} for \file{.ps} and \file{.eps} files.  This is
-      available in Ghostscript 9.x (since 2010) whereas the previous
-      default, \code{format = "pswrite"}, was removed in 9.10.
-
       \item Some unusual arguments to \code{embedFonts()} can now be
       specified as character vectors, and the defaults have changed
       accordingly.
@@ -70,22 +65,18 @@
       read-compatible with \code{ascii = TRUE} but avoids
       binary->decimal->binary conversions with potential loss of
       precision.  Unfortunately Windows' lack of C99 compliance means
-      that the format can be written but not read correctly there in \R
-      before 3.2.0.
+      that the format cannot be read correctly there in \R before 3.1.2.
 
       \item The default for \code{formatC(decimal.mark =)} has been
       changed to be \code{getOption("OutDec")}; this makes it more
       consistent with \code{format()} and suitable for use in print
-      methods.
-
-      \item The print methods for classes \code{"density"},
-      \code{"ecdf"}, \code{"kmeans"}, \code{"stepfun"} and
-      \code{"summary.lm"} now consult \code{getOption("OutDec")} even
-      where \code{formatC()} or \code{sprintf()} is used.
-
-      Similarly when \code{cut()}, \code{dendrogram()}, \code{plot.ts()}
-      and \code{quantile()} construct labels, and for the report from
-      \code{legend(trace = TRUE)}.
+      methods, e.g. those for classes \code{"density"}, \code{"ecdf"},
+      \code{"stepfun"} and \code{"summary.lm"}.
+      
+      \code{getOption("OutDec")} is now consulted by the print method
+      for class \code{"kmeans"}, by \code{cut()}, \code{dendrogram()},
+      \code{plot.ts()} and \code{quantile()} when constructing labels
+      and for the report from \code{legend(trace = TRUE)}.
 
       (In part, wish of \PR{15819}.)
 
@@ -109,40 +100,24 @@
       \item A number of macros have been added in the new
       \file{share/Rd} directory for use in package overview help pages,
       and \code{promptPackage()} now makes use of them.
-
-      \item \code{capabilities()} now reports if ICU is used for collation.
-
-      % TODO: Port to 3.1.1 patched
-      \item For consistency with \code{[dpqr]norm()}, and \code{[qr]lnorm()},
-      \code{[dp]lnorm(sdlog = 0)} also model a point mass at \code{exp(mulog)}.
-
-      \item \code{prettyNum(x, zero.print = *)} now also works when
-      \code{x} contains \code{NA}s.
       
       \item \code{tools::parse_Rd()} gains a new \code{permissive}
       argument which converts unrecognized macros into text.  This is
       used by \code{utils:::format.bibentry} to allow LaTeX markup to be
       ignored.
   
-      \item \code{options(OutDec=)} can now specify a multi-byte
-      character, e.g. \code{options(OutDec = "\u00b7")} in a UTF-8 locale.
+      \item \code{options(OutDec =)} can now specify a multi-byte
+      character, e.g. ,\code{options(OutDec = "\u00b7")} in a UTF-8
+      locale.
+
+      \item \code{utils::URLencode()} was updated to use unreserved and
+      reserved chararacters from RFC 3986
+      \url{http://tools.ietf.org/html/rfc3986} instead of RFC 1738.
     }
   }
 
   \subsection{INSTALLATION and INCLUDED SOFTWARE}{
     \itemize{
-      \item When building \R as a shared library, the
-      \option{-L${R_HOME}/lib${R_ARCH}} flag is placed earlier in the
-      link commands used during installation and when packages are
-      installed: this helps ensure that the current build has priority if
-      an \R shared library has already been installed by e.g.
-      \command{install-libR} in a library mentioned in \env{LDFLAGS}
-      (and not in \sQuote{your system's library directory} as
-      documented). (Wish of \PR{15790}.)
-
-      \item LaTeX package \pkg{upquote} is no longer required for \R's
-      use of \pkg{inconsolata}.
-
       \item The \code{\\donttest} sections of \R's help files can be
       tested by\cr
       \command{make check TEST_DONTTEST=TRUE}.
@@ -151,7 +126,7 @@
 
   \subsection{UTILITIES}{
     \itemize{
-      \item There is some support for testing the \code{\\dontrun} and
+      \item There is support for testing the \code{\\dontrun} and
       \code{\\donttest} parts of examples in packages.
 
       \code{tools::testInstalledPackage()} accepts new arguments
@@ -180,10 +155,74 @@
   }
 }
 \section{\Rlogo CHANGES IN R 3.1.1 patched}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{embedFonts()} now defaults to \code{format =
+      "ps2write"} for \file{.ps} and \file{.eps} files.  This is
+      available in Ghostscript 9.x (since 2010) whereas the previous
+      default, \code{format = "pswrite"}, was removed in 9.10.
+
+      \item For consistency with \code{[dpqr]norm()},
+      \code{[dp]lnorm(sdlog = 0)} model a point mass at
+      \code{exp(mulog)} rather than return \code{NaN} (for an error).
+      
+      \item \code{capabilities()} now reports if ICU is compiled in for
+      use for collation (it is only actually used if a suitable locale
+      is set for collation, and never for a \code{C} locale).
+      
+      \item (OS X only.) Package \pkg{tcltk} checks when loaded if it is
+      linked against the CRAN X11-based Tcl/Tk and if so that the Tcl/Tk
+      component and the X11 libraries are installed.  This allows more
+      informative error messages to be given.
+      
+      The \code{X11()} device and X11-based versions of the data editor
+      and viewer (invoked by \code{edit()} and \code{View()} for data
+      frames and matrices from command-line \R) check that the X11
+      libraries are installed.
+      
+      \item \code{icuSetCollate()} allows \code{locale = "default"}, and
+      \code{locale = "none"} to use OS services rather than ICU for
+      collation.
+
+      Environment variable \env{R_ICU_LOCALE} can be used to set the
+      default ICU locale, in case the one derived from the OS locale is
+      inappropriate (this is currently necessary on Windows).
+      
+      \item New function \code{icuGetCollate()} to report on the ICU
+      collation locale in use (if any).
+    }
+  }
+  
+  \subsection{INSTALLATION and INCLUDED SOFTWARE}{
+    \itemize{
+      \item The \command{configure} script reports on the more important
+      capabilities/options which are not compiled in.
+ 
+      \item When building \R as a shared library, the
+      \option{-L${R_HOME}/lib${R_ARCH}} flag is placed earlier in the
+      link commands used during installation and when packages are
+      installed: this helps ensure that the current build has priority if
+      an \R shared library has already been installed by e.g.
+      \command{install-libR} in a library mentioned in \env{LDFLAGS}
+      (and not in \sQuote{your system's library directory} as
+      documented). (Wish of \PR{15790}.)
+      
+      \item LaTeX package \pkg{upquote} is no longer required for \R's
+      use of \pkg{inconsolata}.
+    }
+  }
+  
   \subsection{BUG FIXES}{
     \itemize{
       \item \code{dmultinom()} did not handle non-finite probabilities
-      correctly. 
+      correctly.
+
+      \item \code{prettyNum(x, zero.print=*)} now also works when
+      \code{x} contains \code{NA}s.
+      
+      \item A longstanding bug in \code{nlminb()} on Windows was traced
+      to a compiler bug in gcc 4.6.3; a workaround has been put in place.
+      (\PR{15244} and \PR{15914}).
     }
   }
 }
@@ -285,7 +324,7 @@
       \command{R CMD check}) in the \sQuote{Writing R Extensions}
       manual.
 
-      \item Compilers/linkers were handling the visibility controls in
+      \item Compilers/linkers were handling the visibility control in
       \file{src/extra/xz} inconsistently (and apparently in some cases
       incorrectly), so it has been simplified.  (\PR{15327})
 

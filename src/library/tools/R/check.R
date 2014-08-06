@@ -160,7 +160,7 @@ setRlibs <-
       " R_LIBS_SITE='no_such_dir'")
 }
 
-###- The main function for "R CMD check"  {currently extends all the way to the end-of-file}
+###- The main function for "R CMD check"
 .check_packages <- function(args = NULL)
 {
     WINDOWS <- .Platform$OS.type == "windows"
@@ -820,7 +820,7 @@ setRlibs <-
                        "po", "src", "tests", "vignettes",
                        "build",       # used by R CMD build
                        ".aspell",     # used for spell checking packages
-                       "java", "tools") # common dirs in packages.
+                       "java", "tools", "noweb") # common dirs in packages.
             topfiles <- setdiff(topfiles, known)
             if (file.exists(file.path("inst", "AUTHORS")))
                 topfiles <- setdiff(topfiles, "AUTHORS")
@@ -2414,7 +2414,8 @@ setRlibs <-
             }
             if (do_timings) {
                 tfile <- paste0(pkgname, "-Ex.timings")
-                times <- read.table(tfile, header = TRUE, row.names = 1L, colClasses = c("character", rep("numeric", 3)))
+		times <- read.table(tfile, header = TRUE, row.names = 1L,
+				    colClasses = c("character", rep("numeric", 3)))
                 o <- order(times[[1]]+times[[2]], decreasing = TRUE)
                 times <- times[o, ]
                 keep <- (times[[1]] + times[[2]] > 5) | (times[[3]] > 5)
@@ -3112,7 +3113,7 @@ setRlibs <-
                   grepl("inst/doc/[.](Rinstignore|build[.]timestamp)$", dots) |
                   grepl("vignettes/[.]Rinstignore$", dots) |
                   grepl("^src.*/[.]deps$", dots)
-               if (all(known))
+		if (all(known))
                     printLog(Log, "\nCRAN-pack knows about all of these\n")
                 else if (any(!known)) {
                     printLog(Log, "\nCRAN-pack does not know about\n")
@@ -4504,7 +4505,8 @@ setRlibs <-
 
     } ## end for (pkg in pkgs)
 
-} ## end{ .check_packages }
+}
+###--- end{ .check_packages }
 
 .format_lines_with_indent <-
 function(x)
@@ -4562,14 +4564,25 @@ function(package, results = NULL, details = NULL, mtnotes = NULL)
 
     summarize_details <- function(p, d) {
         if(!NROW(d)) return(character())
-        pos <- which(names(d) == "Flavor")
-        txt <- apply(d[-pos], 1L, paste, collapse = "\r")
+
+        pof <- which(names(d) == "Flavor")
+        poo <- which(names(d) == "Output")
+        ## Outputs from checking "whether package can be installed" will
+        ## have a machine-dependent final line
+        ##    See ....... for details.
+        ind <- d$Check == "whether package can be installed"
+        if(any(ind)) {
+            d[ind, poo] <-
+                sub("\nSee[^\n]*for details[.]$", "", d[ind, poo])
+        }
+        txt <- apply(d[-pof], 1L, paste, collapse = "\r")
         ## Outputs from checking "installed package size" will vary
         ## according to system.
         ind <- d$Check == "installed package size"
         if(any(ind)) {
-            pos <- c(pos, which(names(d) == "Output"))
-            txt[ind] <- apply(d[ind, -pos], 1L, paste, collapse = "\r")
+            txt[ind] <-
+                apply(d[ind, - c(pof, poo)],
+                      1L, paste, collapse = "\r")
         }
 
         ## Regularize fancy quotes.

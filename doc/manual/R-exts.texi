@@ -1228,8 +1228,7 @@ set (and note that @option{--as-cran} sets it).
 
 Subdirectory @file{exec} could contain additional executable scripts the
 package needs, typically scripts for interpreters such as the shell,
-Perl, or Tcl.  This mechanism is currently used only by a very few
-packages.  NB: only files (and not directories) under @file{exec} are
+Perl, or Tcl.  NB: only files (and not directories) under @file{exec} are
 installed (and those with names starting with a dot are ignored), and
 they are all marked as executable (mode @code{755}, moderated by
 @samp{umask}) on POSIX platforms.  Note too that this is not suitable
@@ -1330,21 +1329,32 @@ is included in the @file{src} subdirectory and discussed elsewhere in
 this document.
 
 Subdirectory @file{exec} could be used for scripts for interpreters such
-as the shell (e.g.@: @CRANpkg{arulesSequences}), BUGS, Java, JavaScript,
-Matlab, Perl (@CRANpkg{FEST}), php (@CRANpkg{amap}), Python or Tcl, or
-even @R{}.  However, it seems more common to use the @file{inst}
-directory, for example @file{AMA/inst/java}, @file{WriteXLS/inst/Perl},
-@file{Amelia/inst/tklibs}, @file{NMF/inst/matlab} and
-@file{emdbook/inst/BUGS}.
+as the shell, BUGS, JavaScript, Matlab, Perl, php (@CRANpkg{amap}),
+Python or Tcl (@CRANpkg{Simile}), or even @R{}.  However, it seems more
+common to use the @file{inst} directory, for example
+@file{WriteXLS/inst/Perl}, @file{NMF/inst/m-files},
+@file{RnavGraph/inst/tcl}, @file{RProtoBuf/inst/python} and
+@file{emdbook/inst/BUGS} and @file{gridSVG/inst/js}.
+
+Java code is a special case: except for very small programs,
+@file{.java} files should be byte-compiled (to a @file{.class} file) and
+distributed as part of a @file{.jar} file: the conventional location for
+the @file{.jar} file(s) is @file{inst/java}.  It is desirable (and
+required under an Open Source license) to make the Java source files
+available: this is best done in a top-level @file{java} directory in the
+package---the source files should not be installed.
 
 If your package requires one of these interpreters or an extension then
 this should be declared in the @samp{SystemRequirements} field of its
-@file{DESCRIPTION} file.  Windows and Mac users should be aware that the
-Tcl extensions @samp{BWidget} and @samp{Tktable} which are currently
-included with the @R{} for Windows and OS X installers @emph{are}
-extensions and do need to be declared.  @samp{Tktable} did ship as part
-of the X11-based Tcl/Tk provided on @acronym{CRAN} for OS X prior to
-@R{} 3.0.0, but you will need to tell your users how to make use of it:
+@file{DESCRIPTION} file.  (Users of Java most often do so @emph{via}
+@CRANpkg{rJava}, when depending on/importing that suffices.)
+
+Windows and Mac users should be aware that the Tcl extensions
+@samp{BWidget} and @samp{Tktable} which are currently included with the
+@R{} for Windows and in the OS X installers @emph{are} extensions and do
+need to be declared.  @samp{Tktable} did ship as part of the X11-based
+Tcl/Tk provided on @acronym{CRAN} for OS X prior to @R{} 3.0.0, but you
+will need to tell your users how to make use of it:
 
 @example
 > addTclPath('/usr/local/lib/Tktable2.9')
@@ -3013,7 +3023,9 @@ unless a file @file{index.html} exists in directory
 the package.  If you do supply a @file{inst/doc/index.html} file it
 should contain relative links only to files under the installed
 @file{doc} directory, or perhaps (not really an index) to @HTML{} help
-files or to the @file{DESCRIPTION} file.
+files or to the @file{DESCRIPTION} file, and be valid @HTML{} as
+confirmed via the @uref{http://validator.w3.org, W3C Markup Validation
+Service} or @uref{http://validator.nu/, Validator.nu}.
 
 Sweave/Stangle allows the document to specify the @code{split=TRUE}
 option to create a single @R{} file for each code chunk: this will not
@@ -4226,10 +4238,10 @@ makefiles, watch out in particular for dependencies on the toolchain's
 runtime DLLs such as @file{libgfortran}, @file{libstdc++} and
 @file{libgcc_s}.
 
-For OS X, using @code{R CMD otool -L} on the package's shared objects in
+For OS X, using @code{R CMD otool -L} on the package's shared object(s) in
 the @file{libs} directory will show what they depend on: watch for any
 dependencies in @file{/usr/local/lib}, notably
-@file{libgfortran.2.dylib}.
+@file{libgfortran.2.dylib} or @file{libgfortran.3.dylib}.
 
 Many people (including the @acronym{CRAN} package repository) will not
 accept source packages containing binary files as the latter are a
@@ -7133,6 +7145,13 @@ Note that memory access errors may be seen with LAPACK, BLAS and
 Java-using packages: some at least of these seem to be intentional, and
 some are related to passing characters to Fortran.
 
+Some of these tools can detect mismatched allocation and deallocation.
+C++ programmers should note that memory allocated by @code{new []} must
+be freed by @code{delete []}, other uses of @code{new} by @code{delete},
+and memory allocated by @code{malloc}, @code{calloc} and @code{realloc}
+by @code{free}.  Some platforms will tolerate mismatches (perhaps with
+memory leaks) but others will segfault.
+
 @menu
 * Using gctorture::             
 * Using valgrind::              
@@ -7406,9 +7425,10 @@ With @command{gcc} additional control is available @emph{via} the
 @option{--params} flag: see its @command{man} page.  For some builds on
 @code{x86_64} Linux this includes enabling the leak sanitizer
 (@uref{https://code.google.com/p/address-sanitizer/wiki/LeakSanitizer}),
-which might even be enabled by default: this means any leaks give the
-process a failure error status (by default @code{23}).  To disable this
-and some strict checking use
+which might even be enabled by default@footnote{it was the @command{gcc}
+trunk in mid-2014.} when any leaks give the process a failure error
+status (by default @code{23}).  To disable both this and some strict
+checking use
 
 @example
 setenv ASAN_OPTIONS 'alloc_dealloc_mismatch=0:detect_leaks=0'
@@ -7426,10 +7446,6 @@ break __asan_report_error
 @node Using Undefined Behaviour Sanitizer, Other analyses with `clang', Using Address Sanitizer, Checking memory access
 @subsection Using the Undefined Behaviour Sanitizer
 
-`UBSanitizer' is a tool for C/C++ source code selected by
-@option{-fsanitize=undefined} in suitable builds
-of @command{clang}, and GCC as from 4.9.0.
-
 `Undefined behaviour' is where the language standard does not require
 particular behaviour from the compiler.  Examples include division by
 zero (where for doubles @R{} requires the
@@ -7437,22 +7453,29 @@ zero (where for doubles @R{} requires the
 of zero-length arrays, shifts too far for signed types (e.g.@: @code{int
 x, y; y = x << 31;}), out-of-range coercion, invalid C++ casts and
 mis-alignment.  Not uncommon examples of out-of-range coercion in @R{}
-are attempts to coerce a @code{NaN} to type @code{int} or
-@code{NA_INTEGER} to an unsigned type such as @code{size_t}.  Also
-common is @code{y[x - 1]} forgetting that @code{x} might be
-@code{NA_INTEGER}.
+packages are attempts to coerce a @code{NaN} or infinity to type
+@code{int} or @code{NA_INTEGER} to an unsigned type such as
+@code{size_t}.  Also common is @code{y[x - 1]} forgetting that @code{x}
+might be @code{NA_INTEGER}.
+
+`UBSanitizer' is a tool for C/C++ source code selected by
+@option{-fsanitize=undefined} in suitable builds of @command{clang}, and
+GCC as from 4.9.0.  Its runtime library is linked into each package's
+DLL, so it is less often needed to be included in @env{MAIN_LDFLAGS}.
+
+Some versions have greatly increased compilation times on a few files
+(e.g. @file{src/extra/bzip2/decompress.c} in the @R{} sources with
+@command{clang} 3.5rc1).
 
 This sanitizer can be combined with the Address Sanitizer by
-@option{-fsanitize=undefined,address}.  Its runtime library is linked
-into each package's DLL, so it is less often needed to be included in
-@env{MAIN_LDFLAGS}.
+@option{-fsanitize=undefined,address}.
 
 Finer control of what is checked can be achieved by other options: for
 @command{clang} see
 @uref{http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation}.
 The current set for @command{clang} is (on a single line):
 @example
--fsanitize=alignment,array-bounds,bool,enum,float-cast-overflow,
+-fsanitize=alignment,bounds,bool,enum,float-cast-overflow,
 float-divide-by-zero,function,integer-divide-by-zero,null,object-size,
 return,shift,signed-integer-overflow,unreachable,vla-bound,vptr
 @end example
@@ -7473,9 +7496,19 @@ In addition,
 is available as a separate option in some versions of @command{clang}
 (not enabled by @option{-fsanitize=undefined}).
 
+Pre-release versions of @command{clang} 3.5 need
+
+@example
+-fsanitize=undefined -fno-sanitize=float-divide-by-zero,vptr
+@end example
+
+@noindent
+for C++ code (in @code{CXX} and @code{CXX1X}).
+
 A smaller selection is available for GCC, currently defaulting to
 @example
--fsanitize=integer-divide-by-zero,null,return,shift,signed-integer-overflow,unreachable,vla-bound
+-fsanitize=bounds,float-cast-overflow,integer-divide-by-zero,null,return,shift,
+signed-integer-overflow,unreachable,vla-bound
 @end example
 
 @noindent
@@ -7485,7 +7518,8 @@ with
 @end example
 
 @noindent
-as a separate option not enabled by @code{-fsanitize=undefined}.  
+as a separate option not enabled by @code{-fsanitize=undefined}.  See 
+@uref{https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html}
 
 Other useful flags include
 @example
@@ -10187,10 +10221,9 @@ The C code is
 @group
 SEXP mkans(double x)
 @{
-    SEXP ans;
-    ans = PROTECT(allocVector(REALSXP, 1));
+    // no need for PROTECT() here, as REAL(.) does not allocate:
+    SEXP ans = allocVector(REALSXP, 1); 
     REAL(ans)[0] = x;
-    UNPROTECT(1);
     return ans;
 @}
 @end group
@@ -10198,8 +10231,13 @@ SEXP mkans(double x)
 @group
 double feval(double x, SEXP f, SEXP rho)
 @{
-    defineVar(install("x"), mkans(x), rho);
-    return REAL(eval(f, rho))[0];
+    // a version with (too) much PROTECT()ion .. "better safe than sorry"
+    SEXP symbol, value;
+    PROTECT(symbol = install("x"));
+    PROTECT(value = mkans(x));
+    defineVar(symbol, value, rho);
+    UNPROTECT(2);
+    return(REAL(eval(f, rho))[0]);
 @}
 @end group
 
@@ -11003,6 +11041,10 @@ by @R{}'s internal allocation mechanism.  These will only come into play
 on 64-bit systems, where the limit for @var{n} prior to @R{} 3.0.0 was
 just under 16Gb.
 
+The memory returned is only guaranteed to be aligned as required for
+@code{double} pointers: take precautions if casting to a pointer which
+needs more (e.g.@: @code{(long double *)} on some platforms).
+
 These functions should only be used in code called by @code{.C} etc,
 never from front-ends.  They are not thread-safe.
 
@@ -11042,6 +11084,9 @@ conveniently from an @code{on.exit} action in the calling @R{} function
 Do not assume that memory allocated by @code{Calloc}/@code{Realloc}
 comes from the same pool as used by @code{malloc}: in particular do not
 use @code{free} or @code{strdup} with it.
+
+Memory obtained by these functions should be aligned in the same way as
+@code{malloc}, that is `suitably aligned for any kind of variable'.
 
 These entry points need to be prefixed by @code{R_} if
 @code{STRICT_R_HEADERS} has been defined.

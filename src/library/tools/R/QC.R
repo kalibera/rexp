@@ -3575,9 +3575,9 @@ function(dfile, dir)
                 ok <- FALSE
             }
         }
-        depr <- c("Modified BSD License", "BSD")
-        if(any(status$components %in% depr)) {
-            status$deprecated <- intersect(status$components, depr)
+        patt <- "(^Modified BSD License$|^BSD$|^CC BY.* [23][.]0)"
+        if(any(ind <- grepl(patt, status$component))) {
+            status$deprecated <- status$components[ind]
             ok <- FALSE
         }
         ## Components with extensions but not extensible:
@@ -6351,10 +6351,12 @@ function(dir)
                                   lines <- readLines(fp, warn = FALSE)
                                   ## Should this use the package
                                   ## encoding?
-                                  pos <- grep("[^[:blank:]]", lines)
+                                  ## (no, as we have LICENSE files with
+                                  ## copyright signs in ASCII packages)
+                                  pos <- grep("[^[:blank:]]", lines,
+                                              useBytes = TRUE)
                                   c(p, if(len <- length(pos)) {
-                                      lines[seq(from = pos[1L],
-                                                to = pos[len])]
+                                      lines[seq(from = pos[1L], to = pos[len])]
                                   })
                               } else NULL
                           }))
@@ -6688,6 +6690,29 @@ function(dir)
         out$vignette_sources_only_in_inst_doc <- sources
     }
 
+    ## Check for Java files without sources (in the right place)
+    ## NB: this is only a basic check: that directory need
+    ## not contain all (or any) of the sources.
+    ## We might in due course want to prompt looking into it.
+    if (foss && !dir.exists(file.path(dir, "java"))) {
+        allfiles <- list.files(file.path(dir, "inst"),
+                               full.names = TRUE, recursive = TRUE)
+        allfiles <- c(allfiles,  # misused by ndtv, sisus
+                      list.files(file.path(dir, "exec"), full.names = TRUE))
+        javafiles <- grep(".*[.](class|jar)$", allfiles, value = TRUE)
+        if(length(javafiles)) out$javafiles <- javafiles
+    }
+
+    ## Check for installing Java source files
+    {
+        dotjava <- list.files(file.path(dir, "inst"), pattern = ".*[.]java$",
+                              full.names = TRUE, recursive = TRUE)
+        dotjava <- c(dotjava,  # misused by ndtv
+                     list.files(file.path(dir, "exec"), pattern = ".*[.]java$",
+                                full.names = TRUE))
+        if(length(dotjava)) out$dotjava <- dotjava
+    }
+
     ## Is this an update for a package already on CRAN?
     db <- db[(packages == package) &
              (db[, "Repository"] == CRAN) &
@@ -6921,6 +6946,12 @@ function(x, ...)
       },
       if(length(y <- x$missing_manual_pdf)) {
           "Package has help file(s) containing install/render-stage \\Sexpr{} expresssons but no prebuilt PDF manual."
+      },
+      if(length(y <- x$dotjava)) {
+          "Package installs .java files."
+      },
+      if(length(y <- x$javafiles)) {
+          "Package has FOSS license, installs .class/.jar but has no 'java' directory."
       }
       )
 }

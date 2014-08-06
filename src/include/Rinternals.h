@@ -166,6 +166,10 @@ typedef enum {
 } SEXPTYPE;
 #endif
 
+/* These are also used with the write barrier on, in attrib.c and util.c */
+#define TYPE_BITS 5
+#define MAX_NUM_SEXPTYPE (1<<TYPE_BITS)
+
 #ifdef USE_RINTERNALS
 /* This is intended for use only within R itself.
  * It defines internal structures that are otherwise only accessible
@@ -174,8 +178,10 @@ typedef enum {
  */
 
 /* Flags */
+
+
 struct sxpinfo_struct {
-    SEXPTYPE type      :  5;/* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
+    SEXPTYPE type      :  TYPE_BITS;/* ==> (FUNSXP == 99) %% 2^5 == 3 == CLOSXP
 			     * -> warning: `type' is narrower than values
 			     *              of its type
 			     * when SEXPTYPE was an enum */
@@ -674,6 +680,7 @@ LibExtern SEXP	R_DimNamesSymbol;   /* "dimnames" */
 LibExtern SEXP	R_DimSymbol;	    /* "dim" */
 LibExtern SEXP	R_DollarSymbol;	    /* "$" */
 LibExtern SEXP	R_DotsSymbol;	    /* "..." */
+LibExtern SEXP	R_baseSymbol;	    /* "base" */
 LibExtern SEXP	R_DropSymbol;	    /* "drop" */
 LibExtern SEXP	R_LastvalueSymbol;  /* ".Last.value" */
 LibExtern SEXP	R_LevelsSymbol;	    /* "levels" */
@@ -803,7 +810,9 @@ const char * Rf_translateChar(SEXP);
 const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
+SEXP Rf_type2rstr(SEXPTYPE);
 SEXP Rf_type2str(SEXPTYPE);
+SEXP Rf_type2str_nowarn(SEXPTYPE);
 #ifndef INLINE_PROTECT
 void Rf_unprotect(int);
 #endif
@@ -1184,7 +1193,9 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define translateChar0		Rf_translateChar0
 #define translateCharUTF8      	Rf_translateCharUTF8
 #define type2char		Rf_type2char
+#define type2rstr		Rf_type2rstr
 #define type2str		Rf_type2str
+#define type2str_nowarn		Rf_type2str_nowarn
 #define unprotect		Rf_unprotect
 #define unprotect_ptr		Rf_unprotect_ptr
 #define VectorToPairList	Rf_VectorToPairList
