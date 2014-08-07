@@ -1549,7 +1549,7 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (TAG(args) != R_NilValue || TAG(CDR(args)) != R_NilValue) {
 	        if (do_Math2_formals == NULL) {
                     do_Math2_formals = allocFormalsList2(install("x"), install("digits"));
-                }
+	        }
 		PROTECT(args = matchArgs(do_Math2_formals, args, call));
 		nprotect++;
 	    }
@@ -1650,7 +1650,7 @@ SEXP attribute_hidden do_log(SEXP call, SEXP op, SEXP args, SEXP env)
 	{
 	    /* match argument names if supplied */
 	    if (do_log_formals == NULL) {
-                do_log_formals = allocFormalsList2(install("x"), install("base"));
+                do_log_formals = allocFormalsList2(install("x"), R_baseSymbol);
 	    }
 	    PROTECT(args = matchArgs(do_log_formals, args, call));
 	    nprotect++;
