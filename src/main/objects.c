@@ -298,7 +298,7 @@ attribute_hidden
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, SEXP *ans)
 {
-    SEXP klass, method, sxp, sort_list;
+    SEXP klass, method, sxp;
     SEXP op;
     char buf[512];
     int i, j, nclass;
