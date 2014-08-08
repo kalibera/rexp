@@ -212,7 +212,7 @@ SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
     static SEXP do_retracemem_formals = NULL;
 
     if (do_retracemem_formals == NULL) {
-        do_retracemem_formals = allocFormalsList2(install("x"), install("previous"));
+        do_retracemem_formals = allocFormalsList2(install("x"), R_PreviousSymbol);
     }
 
     PROTECT(argList =  matchArgs(do_retracemem_formals, args, call));
