@@ -1349,7 +1349,7 @@ SEXP asCharacterFactor(SEXP x)
 	error(_("attempting to coerce non-factor"));
 
     R_xlen_t i, n = XLENGTH(x);
-    SEXP labels = getAttrib(x, install("levels"));
+    SEXP labels = getAttrib(x, R_LevelsSymbol);
     PROTECT(ans = allocVector(STRSXP, n));
     for(i = 0; i < n; i++) {
       int ii = INTEGER(x)[i];
@@ -2174,7 +2174,7 @@ SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
 	   But this takes a little time.
 	 */
 	if (do_anyNA_formals == NULL) {
-	    do_anyNA_formals = allocFormalsList2(install("x"), install("recursive"));
+	    do_anyNA_formals = allocFormalsList2(install("x"), R_RecursiveSymbol);
 	}
 	PROTECT(args = matchArgs(do_anyNA_formals, args, call));
 	if(CADR(args) ==  R_MissingArg) SETCADR(args, ScalarLogical(FALSE));
