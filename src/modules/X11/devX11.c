@@ -3008,7 +3008,7 @@ pX11Desc Rf_allocX11DeviceDesc(double ps)
 static
 Rboolean in_R_GetX11Image(int d, void *pximage, int *pwidth, int *pheight)
 {
-    SEXP dev = elt(findVar(R_DevicesSymbol, R_BaseEnv), d);
+    SEXP dev = elt(findVar(install(".Devices"), R_BaseEnv), d);
 
     if (TYPEOF(dev) != STRSXP ||
 	!(strcmp(CHAR(STRING_ELT(dev, 0)), "XImage") == 0 ||
