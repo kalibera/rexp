@@ -498,6 +498,30 @@ static SEXP fixcall(SEXP call, SEXP args)
     return call;
 }
 
+/*
+   equalS3Signature: compares "signature" and "left.right"
+   all argumebts must be non-null
+*/
+static
+Rboolean equalS3Signature(const char *signature, const char *left,
+                         const char *right) {
+
+    const char *s = signature;
+    const char *a;
+
+    for(a = left; *a; s++, a++) {
+        if (*s != *a)
+            return FALSE;
+    }
+    if (*s++ != '.')
+        return FALSE;
+    for(a = right; *a; s++, a++) {
+        if (*s != *a)
+            return FALSE;
+    }
+    return (*s == 0) ? TRUE : FALSE;
+}
+
 /* If NextMethod has any arguments the first must be the generic */
 /* the second the object and any remaining are matched with the */
 /* formals of the chosen method. */
@@ -507,9 +531,10 @@ static SEXP fixcall(SEXP call, SEXP args)
 /* This is a special .Internal */
 SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    char buf[512], b[512], bb[512], tbuf[10];
+    char tbuf[10];
     const char *sb, *sg, *sk;
-    SEXP ans, s, t, klass, method, matchedarg, generic, nextfun;
+    SEXP ans, s, t, klass, method, matchedarg, generic;
+    SEXP nextfun, nextfunSignature;
     SEXP sysp, m, formals, actuals, tmp, newcall;
     SEXP a, group, basename;
     SEXP callenv, defenv;
@@ -681,6 +706,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     else basename = group;
 
     nextfun = R_NilValue;
+    nextfunSignature = R_NilValue;
 
     /*
        Find the method currently being invoked and jump over the current call
@@ -689,45 +715,39 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 
     method = findVarInFrame3(R_GlobalContext->sysparent,
 			     R_dot_Method, TRUE);
+    const void *vmax = vmaxget(); /* needed for translateChar */
+    const char *b;
     if( method != R_UnboundValue) {
 	const char *ss;
 	if( !isString(method) )
 	    error(_("wrong value for .Method"));
 	for(i = 0; i < length(method); i++) {
-	    ss = translateChar(STRING_ELT(method, i));
-	    if(strlen(ss) >= 512)
-		error(_("method name too long in '%s'"), ss);
-	    snprintf(b, 512, "%s", ss);
-	    if(strlen(b)) break;
+	    b = translateChar(STRING_ELT(method, i));
+	    if (strlen(b)) break;
 	}
 	/* for binary operators check that the second argument's method
 	   is the same or absent */
 	for(j = i; j < length(method); j++) {
-	    const char *ss = translateChar(STRING_ELT(method, j));
-	    if(strlen(ss) >= 512)
-		error(_("method name too long in '%s'"), ss);
-	    snprintf(bb, 512, "%s", ss);
+	    const char *bb = translateChar(STRING_ELT(method, j));
 	    if (strlen(bb) && strcmp(b,bb))
 		warning(_("Incompatible methods ignored"));
 	}
     }
     else {
-	if(strlen(CHAR(PRINTNAME(CAR(cptr->call)))) >= 512)
-	   error(_("call name too long in '%s'"),
-		 EncodeChar(PRINTNAME(CAR(cptr->call))));
-	snprintf(b, 512, "%s", CHAR(PRINTNAME(CAR(cptr->call))));
+	b = CHAR(PRINTNAME(CAR(cptr->call)));
     }
 
     sb = translateChar(STRING_ELT(basename, 0));
+    Rboolean foundSignature = FALSE;
     for (j = 0; j < length(klass); j++) {
 	sk = translateChar(STRING_ELT(klass, j));
-	if(strlen(sb) + strlen(sk) + 2 > 512)
-	    error(_("class name too long in '%s'"), sb);
-	snprintf(buf, 512, "%s.%s", sb, sk);
-	if (!strcmp(buf, b)) break;
+	if (equalS3Signature(b, sb, sk)) { /*  b == sb.sk */
+	    foundSignature = TRUE;
+	    break;
+	}
     }
 
-    if (!strcmp(buf, b)) /* we found a match and start from there */
+    if (foundSignature) /* we found a match and start from there */
       j++;
     else
       j = 0;  /*no match so start with the first element of .Class */
@@ -738,17 +758,13 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     sg = translateChar(STRING_ELT(generic, 0));
     for (i = j ; i < length(klass); i++) {
 	sk = translateChar(STRING_ELT(klass, i));
-	if(strlen(sg) + strlen(sk) + 2 > 512)
-	    error(_("class name too long in '%s'"), sg);
-	snprintf(buf, 512, "%s.%s", sg, sk);
-	nextfun = R_LookupMethod(install(buf), env, callenv, defenv);
+        nextfunSignature = installS3Signature(sg, sk);
+        nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	if (isFunction(nextfun)) break;
 	if (group != R_UnboundValue) {
 	    /* if not Generic.foo, look for Group.foo */
-	    if(strlen(sb) + strlen(sk) + 2 > 512)
-		error(_("class name too long in '%s'"), sb);
-	    snprintf(buf, 512, "%s.%s", sb, sk);
-	    nextfun = R_LookupMethod(install(buf), env, callenv, defenv);
+	    nextfunSignature = installS3Signature(sb, sk);
+	    nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	    if(isFunction(nextfun))
 		break;
 	}
@@ -756,8 +772,8 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    break;
     }
     if (!isFunction(nextfun)) {
-	snprintf(buf, 512, "%s.default", sg);
-	nextfun = R_LookupMethod(install(buf), env, callenv, defenv);
+	nextfunSignature = installS3Signature(sg, "default");
+	nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	/* If there is no default method, try the generic itself,
 	   provided it is primitive or a wrapper for a .Internal
 	   function of the same name.
@@ -791,21 +807,16 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	PROTECT(method = duplicate(method));
 	for(j = 0; j < length(method); j++) {
 	    if (strlen(CHAR(STRING_ELT(method,j))))
-		SET_STRING_ELT(method, j,  mkChar(buf));
+		SET_STRING_ELT(method, j,  PRINTNAME(nextfunSignature));
 	}
     } else
-	PROTECT(method = mkString(buf));
+	PROTECT(method = PRINTNAME(nextfunSignature));
     defineVar(R_dot_Method, method, m);
     defineVar(R_dot_GenericCallEnv, callenv, m);
     defineVar(R_dot_GenericDefEnv, defenv, m);
-
-    method = install(buf);
-
     defineVar(R_dot_Generic, generic, m);
-
     defineVar(R_dot_Group, group, m);
-
-    SETCAR(newcall, method);
+    SETCAR(newcall, nextfunSignature);
 
     /* applyMethod expects that the parent of the caller is the caller
        of the generic, so fixup by brute force. This should fix
@@ -813,6 +824,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     R_GlobalContext->sysparent = callenv;
 
     ans = applyMethod(newcall, nextfun, matchedarg, env, m);
+    vmaxset(vmax);
     UNPROTECT(10);
     return(ans);
 }
