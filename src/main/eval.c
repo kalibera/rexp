@@ -2703,7 +2703,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     int i, j, nargs, lwhich, rwhich, set;
     SEXP lclass, s, t, m, lmeth, lsxp, lgr, newrho;
     SEXP rclass, rmeth, rgr, rsxp, value;
-    char generic[128];
+    char *generic;
     Rboolean useS4 = TRUE, isOps = FALSE;
 
     /* pre-test to avoid string computations when there is nothing to
@@ -2752,9 +2752,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if(!isObject(CAR(args)) && !isObject(CADR(args)))
 	return 0;
 
-    if(strlen(PRIMNAME(op)) >= 128)
-	error(_("generic name too long in '%s'"), PRIMNAME(op));
-    sprintf(generic, "%s", PRIMNAME(op) );
+    generic = PRIMNAME(op);
 
     lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
       : getAttrib(CAR(args), R_ClassSymbol);
