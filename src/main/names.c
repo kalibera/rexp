@@ -1088,6 +1088,31 @@ static void SymbolShortcuts(void)
     R_dot_GenericDefEnv = install(".GenericDefEnv");
 }
 
+
+#define N_DDVAL_SYMBOLS 65
+
+static SEXP DDVALSymbols[N_DDVAL_SYMBOLS];
+
+static SEXP createDDVALSymbol(int n) {
+    char buf[10];
+    snprintf(buf, 10, "..%d", n);
+    return install(buf);
+}
+
+static void initializeDDVALSymbols() {
+    for(int i = 0; i < N_DDVAL_SYMBOLS; i++) {
+        DDVALSymbols[i] = createDDVALSymbol(i);
+    }
+}
+
+SEXP attribute_hidden installDDVAL(int n) {
+    if (n < N_DDVAL_SYMBOLS)
+        return DDVALSymbols[n];
+
+    return createDDVALSymbol(n);
+}
+
+
 /* initialize the symbol table */
 void attribute_hidden InitNames()
 {
@@ -1136,6 +1161,7 @@ void attribute_hidden InitNames()
         SET_SPECIAL_SYMBOL(install(Spec_name[i]));
 
     R_initAsignSymbols();
+    initializeDDVALSymbols();
     R_initialize_bcode();
 }
 

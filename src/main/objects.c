@@ -531,7 +531,6 @@ Rboolean equalS3Signature(const char *signature, const char *left,
 /* This is a special .Internal */
 SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    char tbuf[10];
     const char *sb, *sg, *sk;
     SEXP ans, s, t, klass, method, matchedarg, generic;
     SEXP nextfun, nextfunSignature;
@@ -603,8 +602,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if(TYPEOF(CAR(s)) == DOTSXP) {
 		for(i = 1, a = CAR(s); a != R_NilValue;
 		    a = CDR(a), i++, m = CDR(m)) {
-		    snprintf(tbuf, 10, "..%d", i);
-		    SET_TAG(m, mkSYMSXP(mkChar(tbuf), R_UnboundValue));
+		    SET_TAG(m, installDDVAL(i));
 		    SETCAR(m, CAR(a));
 		}
 	    } else {
