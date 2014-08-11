@@ -302,7 +302,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 {
     SEXP klass, method, sxp;
     SEXP op;
-    char buf[512];
     int i, j, nclass;
     RCNTXT *cptr;
 
@@ -332,18 +331,15 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     PROTECT(klass = R_data_class2(obj));
 
     nclass = length(klass);
+    const void *vmax = vmaxget(); /* needed for translateChar */
     for (i = 0; i < nclass; i++) {
-	const void *vmax = vmaxget();
         const char *ss = translateChar(STRING_ELT(klass, i));
-	if(strlen(generic) + strlen(ss) + 2 > 512)
-	    error(_("class name too long in '%s'"), generic);
-	snprintf(buf, 512, "%s.%s", generic, ss);
-	method = install(buf);
-	vmaxset(vmax);
+	method = installS3Signature(generic, ss);
 	sxp = R_LookupMethod(method, rho, callrho, defrho);
 	if (isFunction(sxp)) {
 	    if(method == R_SortListSymbol && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
+            vmaxset(vmax);
             if (i > 0) {
 	        int ii;
 	        int ndotClass = nclass - i;
@@ -362,10 +358,8 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    return 1;
 	}
     }
-    if(strlen(generic) + strlen("default") + 2 > 512)
-	error(_("class name too long in '%s'"), generic);
-    snprintf(buf, 512, "%s.default", generic);
-    method = install(buf);
+    vmaxset(vmax);
+    method = installS3Signature(generic, "default");
     sxp = R_LookupMethod(method, rho, callrho, defrho);
     if (isFunction(sxp)) {
         *ans = dispatchMethod(op, sxp, R_NilValue, cptr, method, generic,
