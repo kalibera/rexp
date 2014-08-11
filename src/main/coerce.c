@@ -1349,7 +1349,7 @@ SEXP asCharacterFactor(SEXP x)
 	error(_("attempting to coerce non-factor"));
 
     R_xlen_t i, n = XLENGTH(x);
-    SEXP labels = getAttrib(x, install("levels"));
+    SEXP labels = getAttrib(x, R_LevelsSymbol);
     PROTECT(ans = allocVector(STRSXP, n));
     for(i = 0; i < n; i++) {
       int ii = INTEGER(x)[i];
@@ -1857,9 +1857,10 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case DOTSXP:
 	case ANYSXP:
 	case EXPRSXP:
-	case EXTPTRSXP:
-	case BCODESXP:
-	case WEAKREFSXP:
+	// Not recursive, as long as not subsettable (on the R level)
+	// case EXTPTRSXP:
+	// case BCODESXP:
+	// case WEAKREFSXP:
 	    LOGICAL(ans)[0] = 1;
 	    break;
 	default:
@@ -2158,6 +2159,7 @@ static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
 SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
+    static SEXP do_anyNA_formals = NULL;
 
     if (length(args) < 1 || length(args) > 2)
 	errorcall(call, "anyNA takes 1 or 2 arguments");
@@ -2172,15 +2174,13 @@ SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
 	/* This is a primitive, so we manage argument matching ourselves.
 	   But this takes a little time.
 	 */
-	SEXP ap, tmp;
-	PROTECT(ap = CONS(R_NilValue, CONS(R_NilValue, R_NilValue)));
-	tmp = ap;
-	SET_TAG(tmp, install("x")); tmp = CDR(tmp);
-	SET_TAG(tmp, install("recursive"));
-	PROTECT(args = matchArgs(ap, args, call));
+	if (do_anyNA_formals == NULL)
+	    do_anyNA_formals = allocFormalsList2(install("x"),
+						 R_RecursiveSymbol);
+	PROTECT(args = matchArgs(do_anyNA_formals, args, call));
 	if(CADR(args) ==  R_MissingArg) SETCADR(args, ScalarLogical(FALSE));
 	ans = ScalarLogical(anyNA(call, op, args, rho));
-	UNPROTECT(2);
+	UNPROTECT(1);
     }
     return ans;
 }
@@ -2567,13 +2567,15 @@ SEXP attribute_hidden substituteList(SEXP el, SEXP rho)
 /* This is a primitive SPECIALSXP */
 SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ap, argList, env, s, t;
+    SEXP argList, env, s, t;
+    static SEXP do_substitute_formals = NULL;
+
+    if (do_substitute_formals == NULL)
+        do_substitute_formals = allocFormalsList2(install("expr"),
+						  install("env"));
 
     /* argument matching */
-    PROTECT(ap = list2(R_NilValue, R_NilValue));
-    SET_TAG(ap,  install("expr"));
-    SET_TAG(CDR(ap), install("env"));
-    PROTECT(argList = matchArgs(ap, args, call));
+    PROTECT(argList = matchArgs(do_substitute_formals, args, call));
 
     /* set up the environment for substitution */
     if (CADR(argList) == R_MissingArg)
@@ -2592,7 +2594,7 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(env);
     PROTECT(t = CONS(duplicate(CAR(argList)), R_NilValue));
     s = substituteList(t, env);
-    UNPROTECT(4);
+    UNPROTECT(3);
     return CAR(s);
 }
 
