@@ -341,11 +341,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 		continue; /* kludge because sort.list is not a method */
             vmaxset(vmax);
             if (i > 0) {
-	        int ii;
-	        int ndotClass = nclass - i;
-		SEXP dotClass = PROTECT(allocVector(STRSXP, ndotClass));
-		for(j = 0, ii = i; j < ndotClass; j++, ii++)
-		      SET_STRING_ELT(dotClass, j, STRING_ELT(klass, ii));
+		SEXP dotClass = PROTECT(stringSuffix(klass, i));
 		setAttrib(dotClass, R_PreviousSymbol, klass);
 		*ans = dispatchMethod(op, sxp, dotClass, cptr, method, generic,
 				      rho, callrho, defrho);
@@ -791,12 +787,9 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
     }
-    PROTECT(s = allocVector(STRSXP, length(klass) - i));
-    PROTECT(klass = duplicate(klass));
-    PROTECT(m = allocSExp(ENVSXP));
-    for (j = 0; j < length(s); j++)
-	SET_STRING_ELT(s, j, duplicate(STRING_ELT(klass, i++)));
+    PROTECT(s = stringSuffix(klass, i));
     setAttrib(s, R_PreviousSymbol, klass);
+    PROTECT(m = allocSExp(ENVSXP));
     defineVar(R_dot_Class, s, m);
     /* It is possible that if a method was called directly that
 	'method' is unset */
@@ -823,7 +816,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 
     ans = applyMethod(newcall, nextfun, matchedarg, env, m);
     vmaxset(vmax);
-    UNPROTECT(10);
+    UNPROTECT(9);
     return(ans);
 }
 
