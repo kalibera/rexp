@@ -192,6 +192,7 @@ attribute_hidden
 SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 {
     SEXP val;
+    static SEXP s_S3MethodsTable = 0;
 
     if (TYPEOF(callrho) == NILSXP) {
 	error(_("use of NULL environment is defunct"));
@@ -214,8 +215,10 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	return val;
     else {
 	/* We assume here that no one registered a non-function */
+	if (!s_S3MethodsTable)
+	    s_S3MethodsTable = install(".__S3MethodsTable__.");
 	SEXP table = findVarInFrame3(defrho,
-				     install(".__S3MethodsTable__."),
+				     s_S3MethodsTable,
 				     TRUE);
 	if (TYPEOF(table) == PROMSXP) table = eval(table, R_BaseEnv);
 	if (TYPEOF(table) == ENVSXP) {
