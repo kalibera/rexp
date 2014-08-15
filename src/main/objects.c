@@ -274,6 +274,7 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 	    for (t = formals; t != R_NilValue; t = CDR(t))
 	        if (TAG(t) == TAG(s)) {
 		    matched = 1;
+		    break;
 		}
 	    if (!matched) defineVar(TAG(s), CAR(s), newrho);
 	}
@@ -486,7 +487,10 @@ static SEXP fixcall(SEXP call, SEXP args)
 	if(TAG(t) != R_NilValue) {
 		found = 0;
 		for(s = call; CDR(s) != R_NilValue; s = CDR(s))
-		    if(TAG(CDR(s)) == TAG(t)) found = 1;
+		    if(TAG(CDR(s)) == TAG(t)) {
+                        found = 1;
+                        break;
+                    }
 		if( !found ) {
 			SETCDR(s, allocList(1));
 			SET_TAG(CDR(s), TAG(t));
