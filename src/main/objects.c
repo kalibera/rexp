@@ -887,19 +887,18 @@ static SEXP inherits3(SEXP x, SEXP what, SEXP which)
 
     for(j = 0; j < nwhat; j++) {
 	const char *ss = translateChar(STRING_ELT(what, j)); int i;
-	if(isvec)
-	    INTEGER(rval)[j] = 0;
-	for(i = 0; i < nclass; i++) {
-	    if(!strcmp(translateChar(STRING_ELT(klass, i)), ss)) {
-		if(isvec)
-		    INTEGER(rval)[j] = i+1;
-		else {
-		    UNPROTECT(1);
-		    return mkTrue();
-		}
-		break;
-	    }
-	}
+        if (stringContainsTr(klass, ss)) {
+            if(isvec)
+	        INTEGER(rval)[j] = i+1;
+            else {
+                vmaxset(vmax);
+                UNPROTECT(1);
+                return mkTrue();
+            }
+        } else {
+            if(isvec)
+	        INTEGER(rval)[j] = 0;
+        }
     }
     vmaxset(vmax);
     if(!isvec) {

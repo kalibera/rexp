@@ -2664,14 +2664,13 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 
 
 /* gr needs to be protected on return from this function */
+/* updates the object if a method is found and the object is of S4 basic class */
 static void findmethod(SEXP Class, const char *group, const char *generic,
 		       SEXP *sxp,  SEXP *gr, SEXP *meth, int *which,
-		       SEXP rho)
+		       SEXP objectSlot, SEXP rho)
 {
-    int len, whichclass;
-    const void *vmax = vmaxget();
-
-    len = length(Class);
+    int whichclass;
+    int len = length(Class);
 
     /* Need to interleave looking for group and generic methods
        e.g. if class(x) is c("foo", "bar)" then x > 3 should invoke
@@ -2679,30 +2678,56 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
     */
     for (whichclass = 0 ; whichclass < len ; whichclass++) {
 	const char *ss = translateChar(STRING_ELT(Class, whichclass));
-	*meth = installS3Signature(generic, ss);
-	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
-	if (isFunction(*sxp)) {
-	    *gr = mkString("");
-	    break;
-	}
-	*meth = installS3Signature(group, ss);
-	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
-	if (isFunction(*sxp)) {
-	    *gr = mkString(group);
-	    break;
-	}
+
+	SEXP tmpMeth = installS3Signature(generic, ss);
+	SEXP tmpSXP = R_LookupMethod(tmpMeth, rho, rho, R_BaseEnv);
+	if (isFunction(tmpSXP)) {
+	    *gr = ScalarString(R_BlankString);
+	    *sxp = tmpSXP;
+	    *meth = tmpMeth;
+	} else {
+            tmpMeth = installS3Signature(group, ss);
+            tmpSXP = R_LookupMethod(tmpMeth, rho, rho, R_BaseEnv);
+            if (isFunction(tmpSXP)) {
+                *gr = mkString(group);
+                *sxp = tmpSXP;
+                *meth = tmpMeth;
+            } else
+                continue;
+        }
+        /* found a method */
+
+        if (whichclass == 0) break;
+
+        SEXP object = CAR(objectSlot);
+        if (IS_S4_OBJECT(object) && isBasicClass(ss)) {
+
+            /* This and the similar test below implement the strategy
+            for S3 methods selected for S4 objects.  See ?Methods */
+
+            if (NAMED(object)) SET_NAMED(object, 2);
+            object = R_getS4DataSlot(object, S4SXP); /* the .S3Class obj. or NULL*/
+            if (object != R_NilValue) /* use the S3Part as the inherited object */
+	        SETCAR(objectSlot, object);
+        }
+        break;
     }
-    vmaxset(vmax);
     *which = whichclass;
+}
+
+static SEXP classForGroupDispatch(SEXP obj) {
+
+    return IS_S4_OBJECT(obj) ? R_data_class2(obj)
+            : getAttrib(obj, R_ClassSymbol);
 }
 
 attribute_hidden
 int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 		  SEXP *ans)
 {
-    int i, j, nargs, lwhich, rwhich, set;
-    SEXP lclass, s, t, m, lmeth, lsxp, lgr, newrho;
-    SEXP rclass, rmeth, rgr, rsxp, value;
+    int i, j, nargs, lwhich, rwhich, lengthArgs;
+    SEXP lclass, s, t, m, lmeth, lsxp, lgr, lobj, newrho;
+    SEXP rclass, rmeth, rgr, rsxp, robj, value;
     char *generic;
     Rboolean useS4 = TRUE, isOps = FALSE;
 
@@ -2712,16 +2737,31 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
        of the first two is an object -- both of these cases would be
        rejected by the code following the string examination code
        below */
-    if (args != R_NilValue && ! isObject(CAR(args)) &&
-	(CDR(args) == R_NilValue || ! isObject(CADR(args))))
-	return 0;
+
+    if (args == R_NilValue)
+        return 0; /* can this ever happen? */
+
+    lobj = CAR(args);
+    if (CDR(args) == R_NilValue) {
+        if (!isObject(lobj))
+            return 0; /* nothing to dispatch on, because there is only
+                         one argument, which is not an object */
+        lengthArgs = 1;
+        robj = R_NilValue;
+    } else {
+        robj = CADR(args);
+        if (!isObject(lobj) && !isObject(robj))
+            return 0; /* nothing to dispatch on, because neither of the
+                         two first arguments is an object */
+        lengthArgs = length(args);
+    }
 
     isOps = strcmp(group, "Ops") == 0;
 
     /* try for formal method */
-    if(length(args) == 1 && !IS_S4_OBJECT(CAR(args))) useS4 = FALSE;
-    if(length(args) == 2 &&
-       !IS_S4_OBJECT(CAR(args)) && !IS_S4_OBJECT(CADR(args))) useS4 = FALSE;
+    if(lengthArgs == 1 && !IS_S4_OBJECT(lobj)) useS4 = FALSE;
+    if(lengthArgs == 2 &&
+       !IS_S4_OBJECT(lobj) && !IS_S4_OBJECT(robj)) useS4 = FALSE;
     if(useS4) {
 	/* Remove argument names to ensure positional matching */
 	if(isOps)
@@ -2742,69 +2782,46 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     }
 
     if(isOps)
-	nargs = length(args);
+	nargs = lengthArgs;
     else
 	nargs = 1;
 
-    if( nargs == 1 && !isObject(CAR(args)) )
-	return 0;
-
-    if(!isObject(CAR(args)) && !isObject(CADR(args)))
+    if( nargs == 1 && !isObject(lobj) )
 	return 0;
 
     generic = PRIMNAME(op);
 
-    lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
-      : getAttrib(CAR(args), R_ClassSymbol);
+    lclass = classForGroupDispatch(lobj);
 
-    if( nargs == 2 )
-	rclass = IS_S4_OBJECT(CADR(args)) ? R_data_class2(CADR(args))
-      : getAttrib(CADR(args), R_ClassSymbol);
+    if( nargs == 2 ) /* ?? what if nargs > 2 */
+	rclass = classForGroupDispatch(robj);
     else
 	rclass = R_NilValue;
 
     lsxp = R_NilValue; lgr = R_NilValue; lmeth = R_NilValue;
     rsxp = R_NilValue; rgr = R_NilValue; rmeth = R_NilValue;
 
+    const void *vmax = vmaxget(); /* needed for translateChar in findMethod */
     findmethod(lclass, group, generic, &lsxp, &lgr, &lmeth, &lwhich,
-	       rho);
+	       args, rho); /* note: this may outdate lobj */
     PROTECT(lgr);
-    const void *vmax = vmaxget();
-    if(isFunction(lsxp) && IS_S4_OBJECT(CAR(args)) && lwhich > 0
-       && isBasicClass(translateChar(STRING_ELT(lclass, lwhich)))) {
-	/* This and the similar test below implement the strategy
-	 for S3 methods selected for S4 objects.  See ?Methods */
-	value = CAR(args);
-	if(NAMED(value)) SET_NAMED(value, 2);
-	value = R_getS4DataSlot(value, S4SXP); /* the .S3Class obj. or NULL*/
-	if(value != R_NilValue) /* use the S3Part as the inherited object */
-	    SETCAR(args, value);
-    }
 
-    if( nargs == 2 )
+    if( nargs == 2 ) /* ?? what if nargs > 2 */
 	findmethod(rclass, group, generic, &rsxp, &rgr, &rmeth,
-		   &rwhich, rho);
+		   &rwhich, CDR(args), rho);
+                   /* note: this may outdate robj */
     else
 	rwhich = 0;
-
-    if(isFunction(rsxp) && IS_S4_OBJECT(CADR(args)) && rwhich > 0
-       && isBasicClass(translateChar(STRING_ELT(rclass, rwhich)))) {
-	value = CADR(args);
-	if(NAMED(value)) SET_NAMED(value, 2);
-	value = R_getS4DataSlot(value, S4SXP);
-	if(value != R_NilValue) SETCADR(args, value);
-    }
+    PROTECT(rgr);
     vmaxset(vmax);
 
-    PROTECT(rgr);
-
-    if( !isFunction(lsxp) && !isFunction(rsxp) ) {
+    if( lsxp == R_NilValue && rsxp == R_NilValue ) {
 	UNPROTECT(2);
 	return 0; /* no generic or group method so use default*/
     }
 
     if( lsxp != rsxp ) {
-	if ( isFunction(lsxp) && isFunction(rsxp) ) {
+	if ( lsxp != R_NilValue && rsxp != R_NilValue ) {
 	    /* special-case some methods involving difftime */
 	    const char *lname = CHAR(PRINTNAME(lmeth)),
 		*rname = CHAR(PRINTNAME(rmeth));
@@ -2823,12 +2840,13 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	    }
 	}
 	/* if the right hand side is the one */
-	if( !isFunction(lsxp) ) { /* copy over the righthand stuff */
+	if( lsxp == R_NilValue ) { /* copy over the righthand stuff */
 	    lsxp = rsxp;
 	    lmeth = rmeth;
 	    lgr = rgr;
 	    lclass = rclass;
 	    lwhich = rwhich;
+	    lobj = robj;
 	}
     }
 
@@ -2836,25 +2854,26 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     PROTECT(newrho = allocSExp(ENVSXP));
     PROTECT(m = allocVector(STRSXP,nargs));
-    vmax = vmaxget();
-    s = args;
-    for (i = 0 ; i < nargs ; i++) {
-	t = IS_S4_OBJECT(CAR(s)) ? R_data_class2(CAR(s))
-	  : getAttrib(CAR(s), R_ClassSymbol);
-	set = 0;
-	if (isString(t)) {
-	    for (j = 0 ; j < length(t) ; j++) {
-		if (!strcmp(translateChar(STRING_ELT(t, j)),
-			    translateChar(STRING_ELT(lclass, lwhich)))) {
-		    SET_STRING_ELT(m, i, PRINTNAME(lmeth));
-		    set = 1;
-		    break;
-		}
-	    }
-	}
-	if( !set )
+
+    vmax = vmaxget(); /* needed for translateChar, stringContainsTr */
+    const char *dispatchClassName = translateChar(STRING_ELT(lclass, lwhich));
+    for (i = 0, s = args ; i < nargs ; i++, s = CDR(s)) {
+        SEXP arg = CAR(s);
+        if (arg == lobj) {
+            /* avoid re-checking the argument dispatched on */
+            SET_STRING_ELT(m, i, PRINTNAME(lmeth));
+            continue;
+        }
+        if (arg == robj)
+            /* avoid re-computing class for the second dispatch argument */
+            t = rclass;
+        else
+            t = classForGroupDispatch(CAR(s));
+
+	if (isString(t) && stringContainsTr(t, dispatchClassName))
+	    SET_STRING_ELT(m, i, PRINTNAME(lmeth));
+	else
 	    SET_STRING_ELT(m, i, R_BlankString);
-	s = CDR(s);
     }
     vmaxset(vmax);
 
