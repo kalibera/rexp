@@ -3540,7 +3540,19 @@ setRlibs <-
         res <- .check_package_CRAN_incoming(pkgdir)
         if(length(res)) {
             out <- format(res)
-            if(length(res$bad_package)) {
+            if((length(out) == 1L) &&
+               grepl("^Maintainer: ", out)) {
+                ## Special-case when there is only the maintainer
+                ## address to note (if at all).
+                maintainer <- res$Maintainer
+                if(nzchar(maintainer) &&
+                   identical(maintainer,
+                             Sys.getenv("_R_CHECK_MAINTAINER_ADDRESS_"))) {
+                    resultLog(Log, "OK")
+                    out <- character()
+                }
+                else resultLog(Log, "Note_to_CRAN_maintainers")
+            } else if(length(res$bad_package)) {
                 errorLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
                 do_exit(1L)
@@ -3595,6 +3607,23 @@ setRlibs <-
                          wrapLog(msg_NAMESPACE)
                          do_exit(1L)
                      })
+            OK <- TRUE
+            ## Look for empty importFrom
+            imp <- ns$imports
+            lens <- sapply(imp, length)
+            imp <- imp[lens == 2L]
+            nm <- sapply(imp, "[[", 1)
+            lens <- sapply(imp, function(x) length(x[[2]]))
+            bad <- nm[lens == 0L]
+            if(length(bad)) {
+                OK <- FALSE
+                msg <- if(length(bad) == 1L)
+                    sprintf("  Namespace with empty importFrom: %s", sQuote(bad))
+                else
+                    paste("  Namespaces with empty importFrom:",
+                          .pretty_format(sort(bad)), sep = "\n")
+                noteLog(Log, msg)
+            }
             nS3methods <- nrow(ns$S3methods)
             if (nS3methods > 500L) {
                 ## check that this is installable in R 3.0.1
@@ -3618,13 +3647,13 @@ setRlibs <-
                     if(status != 0L)  break
                 }
                 if (status == 0L) {
+                    OK <- FALSE
                     msg <- sprintf("R < 3.0.2 had a limit of 500 registered S3 methods: found %d",
                                    nS3methods)
                     noteLog(Log, msg)
-                } else
-                    resultLog(Log, "OK")
-            } else
-                resultLog(Log, "OK")
+                }
+            }
+            if(OK) resultLog(Log, "OK")
         }
 
         checkingLog(Log, "package dependencies")
@@ -4133,6 +4162,7 @@ setRlibs <-
         if(is.na(prev)) Sys.setenv("_R_CHECK_LIMIT_CORES_" = "TRUE")
         prev <- Sys.getenv("_R_CHECK_SCREEN_DEVICE_", NA)
         if(is.na(prev)) Sys.setenv("_R_CHECK_SCREEN_DEVICE_" = "stop")
+        Sys.setenv("_R_CHECK_CODE_USAGE_WITHOUT_LOADING_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE

@@ -305,7 +305,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 {
     SEXP klass, method, sxp;
     SEXP op;
-    int i, j, nclass;
+    int i, nclass;
     RCNTXT *cptr;
 
     /* Get the context which UseMethod was called from. */
@@ -338,6 +338,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     for (i = 0; i < nclass; i++) {
         const char *ss = translateChar(STRING_ELT(klass, i));
 	method = installS3Signature(generic, ss);
+	vmaxset(vmax);
 	sxp = R_LookupMethod(method, rho, callrho, defrho);
 	if (isFunction(sxp)) {
 	    if(method == R_SortListSymbol && CLOENV(sxp) == R_BaseNamespace)
@@ -357,7 +358,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    return 1;
 	}
     }
-    vmaxset(vmax);
     method = installS3Signature(generic, "default");
     sxp = R_LookupMethod(method, rho, callrho, defrho);
     if (isFunction(sxp)) {
@@ -713,9 +713,8 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     method = findVarInFrame3(R_GlobalContext->sysparent,
 			     R_dot_Method, TRUE);
     const void *vmax = vmaxget(); /* needed for translateChar */
-    const char *b;
+    const char *b = NULL;
     if( method != R_UnboundValue) {
-	const char *ss;
 	if( !isString(method) )
 	    error(_("wrong value for .Method"));
 	for(i = 0; i < length(method); i++) {
@@ -756,7 +755,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     for (i = j ; i < length(klass); i++) {
 	sk = translateChar(STRING_ELT(klass, i));
         nextfunSignature = installS3Signature(sg, sk);
-        nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
+	nextfun = R_LookupMethod(nextfunSignature, env, callenv, defenv);
 	if (isFunction(nextfun)) break;
 	if (group != R_UnboundValue) {
 	    /* if not Generic.foo, look for Group.foo */
