@@ -335,8 +335,8 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     PROTECT(klass = R_data_class2(obj));
 
     nclass = length(klass);
-    const void *vmax = vmaxget(); /* needed for translateChar */
     for (i = 0; i < nclass; i++) {
+        const void *vmax = vmaxget();
         const char *ss = translateChar(STRING_ELT(klass, i));
 	method = installS3Signature(generic, ss);
 	vmaxset(vmax);
@@ -344,7 +344,6 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	if (isFunction(sxp)) {
 	    if(method == R_SortListSymbol && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
-            vmaxset(vmax);
             if (i > 0) {
 		SEXP dotClass = PROTECT(stringSuffix(klass, i));
 		setAttrib(dotClass, R_PreviousSymbol, klass);
