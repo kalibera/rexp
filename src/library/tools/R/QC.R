@@ -3761,25 +3761,30 @@ function(x, ...)
 function(package, lib.loc = NULL)
 {
     is_base <- package == "base"
+
+    check_without_loading <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_CODE_USAGE_WITHOUT_LOADING_",
+                                         "FALSE"))
+
     if(!is_base) {
-        .load_package_quietly(package, lib.loc)
-
-        .eval_with_capture({
-            ## avoid warnings about code in other packages the package
-            ## uses
-            desc <- readRDS(file.path(find.package(package, NULL),
-                                       "Meta", "package.rds"))
-            pkgs1 <- sapply(desc$Suggests, "[[", "name")
-            pkgs2 <- sapply(desc$Enhances, "[[", "name")
-            for(pkg in unique(c(pkgs1, pkgs2)))
-                ## tcltk warns if no DISPLAY variable
-		##, errors if not compiled in
-                suppressWarnings(suppressMessages(try(require(pkg,
-                                                              character.only = TRUE,
-                                                              quietly = TRUE),
-                                                      silent = TRUE)))
-        }, type = "output")
-
+        if(!check_without_loading) {
+            .load_package_quietly(package, lib.loc)
+            .eval_with_capture({
+                ## avoid warnings about code in other packages the package
+                ## uses
+                desc <- readRDS(file.path(find.package(package, NULL),
+                                          "Meta", "package.rds"))
+                pkgs1 <- sapply(desc$Suggests, "[[", "name")
+                pkgs2 <- sapply(desc$Enhances, "[[", "name")
+                for(pkg in unique(c(pkgs1, pkgs2)))
+                    ## tcltk warns if no DISPLAY variable
+                    ##, errors if not compiled in
+                    suppressWarnings(suppressMessages(try(require(pkg,
+                                                                  character.only = TRUE,
+                                                                  quietly = TRUE),
+                                                          silent = TRUE)))
+            }, type = "output")
+        }
         runif(1) # create .Random.seed
         compat <- new.env(hash=TRUE)
         if(.Platform$OS.type != "unix") {
@@ -3889,6 +3894,7 @@ function(package, lib.loc = NULL)
         }
         attach(compat, name="compat", pos = length(search()),
                warn.conflicts = FALSE)
+        on.exit(detach("compat"))
     }
 
     ## A simple function for catching the output from the codetools
@@ -3935,15 +3941,22 @@ function(package, lib.loc = NULL)
                    config_val_to_logical)
     }
     ## look for globalVariables declaration in package
-    .glbs <- utils::globalVariables(,package)
+    .glbs <- suppressMessages(utils::globalVariables(,package))
     if(length(.glbs))
         ## codetools doesn't allow adding to its default
         args$suppressUndefined <-
             c(codetools:::dfltSuppressUndefined, .glbs)
 
-    args <- c(list(package, report = foo), args)
-    suppressMessages(do.call(codetools::checkUsagePackage, args))
-    suppressMessages(do.call(checkMethodUsagePackage, args))
+    if(check_without_loading) {
+        env <- getNamespace(package)
+        args <- c(list(env, report = foo), args)
+        suppressMessages(do.call(codetools::checkUsageEnv, args))
+        suppressMessages(do.call(checkMethodUsageEnv, args))
+    } else {
+        args <- c(list(package, report = foo), args)
+        suppressMessages(do.call(codetools::checkUsagePackage, args))
+        suppressMessages(do.call(checkMethodUsagePackage, args))
+    }
 
     out <- unique(out)
     class(out) <- "check_code_usage_in_package"
@@ -4925,7 +4938,7 @@ function(x, ...)
               unlist(Map(.fmt_entries_for_file, x, names(x)),
                      use.names = FALSE),
               if(has_bad_wrong_args)
-              strwrap(gettextf("Package detach functions should have one arguments with names starting with %s.", sQuote("lib")),
+              strwrap(gettextf("Package detach functions should have one argument with name starting with %s.", sQuote("lib")),
                       exdent = 2L),
               if(length(call))
               strwrap(gettextf("Package detach functions should not call %s.",
@@ -5178,9 +5191,10 @@ function(package, dir, lib.loc = NULL)
         setdiff(.get_standard_package_names()$base,
                 c("methods", "stats4"))
     ## It helps to know if non-default standard packages are require()d
-    default_package_names<-
-        setdiff(standard_package_names,
-                c("grid", "splines", "tcltk", "tools"))
+    ## but safer to list them: compiler & parallel got included for years
+    ## Some people depend on 'base'!
+    default_package_names <-
+        c("base", "datasets", "grDevices", "graphics", "stats", "utils")
     depends_suggests <- c(depends, suggests, enhances, pkg_name, default_package_names)
     imports <- c(imports, depends, suggests, enhances, pkg_name,
                  standard_package_names)
@@ -5287,7 +5301,6 @@ function(package, dir, lib.loc = NULL)
 
     for(i in seq_along(exprs)) find_bad_exprs(exprs[[i]])
 
-    depends_not_import <- character()
     if(length(ns)) {
         imp <- c(ns$imports, ns$importClasses, ns$importMethods)
         if (length(imp)) {
@@ -5296,7 +5309,9 @@ function(package, dir, lib.loc = NULL)
         }
     } else imp <- character()
     bad_imp <- setdiff(imports0, all_imports)
-    depends_not_import <- setdiff(depends, c(imp, standard_package_names))
+
+    ## All the non-default packages need to be imported from.
+    depends_not_import <- setdiff(depends, c(imp, default_package_names))
 
     methods_message <-
         if(uses_methods && !"methods" %in% c(depends, imports))
@@ -5348,7 +5363,10 @@ function(package, dir, lib.loc = NULL)
             } else NULL
             if (!inherits(value, "error")) {
                 exps <- c(ls(envir = getNamespaceInfo(p, "exports"),
-                             all.names = TRUE), extras[[p]])
+                             all.names = TRUE),
+                          ls(envir = getNamespaceInfo(p, "lazydata"),
+                             all.names = TRUE),
+                          extras[[p]])
                 this2 <- setdiff(this, exps)
                 if(length(this2))
                     imp2un <- c(imp2un, paste(p, this2, sep = "::"))

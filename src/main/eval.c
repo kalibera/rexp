@@ -234,7 +234,7 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 	    if(strlen(buf) < PROFLINEMAX) {
 		strcat(buf, "\"");
 		strcat(buf, TYPEOF(fun) == SYMSXP ? CHAR(PRINTNAME(fun)) :
-			"<Anonymous>");
+		       "<Anonymous>");
 		strcat(buf, "\" ");
 		if (R_Line_Profiling)
 		    lineprof(buf, cptr->srcref);
@@ -697,8 +697,9 @@ void SrcrefPrompt(const char * prefix, SEXP srcref)
 	if (TYPEOF(srcfile) == ENVSXP) {
 	    SEXP filename = findVar(install("filename"), srcfile);
 	    if (isString(filename) && length(filename)) {
-		Rprintf(_("%s at %s#%d: "), prefix, CHAR(STRING_ELT(filename, 0)),
-					    asInteger(srcref));
+		Rprintf(_("%s at %s#%d: "), prefix,
+			CHAR(STRING_ELT(filename, 0)),
+			asInteger(srcref));
 		return;
 	    }
 	}
@@ -724,6 +725,11 @@ static int R_disable_bytecode = 0;
 
 void attribute_hidden R_init_jit_enabled(void)
 {
+    /* Need to force the lazy loading promise to avoid recursive
+       promise evaluation when JIT is enabled. Might be better to do
+       this in baseloader.R. */
+    eval(install(".ArgsEnv"), R_BaseEnv);
+
     if (R_jit_enabled <= 0) {
 	char *enable = getenv("R_ENABLE_JIT");
 	if (enable != NULL) {
@@ -1040,7 +1046,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     else {
 	PROTECT(tmp = eval(body, newrho));
     }
-
+    cntxt.returnValue = tmp;
     endcontext(&cntxt);
 
     if (RDEBUG(op)) {
@@ -1137,7 +1143,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     else {
 	PROTECT(tmp = eval(body, newrho));
     }
-
+    cntxt.returnValue = tmp; /* make it available to on.exit */
     endcontext(&cntxt);
 
     if (RDEBUG(op)) {
@@ -1353,9 +1359,9 @@ SEXP attribute_hidden do_if(SEXP call, SEXP op, SEXP args, SEXP rho)
 	Stmt = CAR(CDR(args));
     else {
 	if (length(args) > 2)
-	   Stmt = CAR(CDR(CDR(args)));
+	    Stmt = CAR(CDR(CDR(args)));
 	else
-	   vis = 1;
+	    vis = 1;
     }
     if( !vis && RDEBUG(rho) && !BodyHasBraces(Stmt) && !R_GlobalContext->browserfinish) {
 	SrcrefPrompt("debug", R_Srcref);
@@ -1415,7 +1421,7 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if ( !isSymbol(sym) ) errorcall(call, _("non-symbol loop variable"));
 
-    if (R_jit_enabled > 2 && ! R_PendingPromises) {
+    if (R_jit_enabled > 2) {
 	R_compileAndExecute(call, rho);
 	return R_NilValue;
     }
@@ -1538,11 +1544,10 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
 
-    if (R_jit_enabled > 2 && ! R_PendingPromises) {
+    if (R_jit_enabled > 2) {
 	R_compileAndExecute(call, rho);
 	return R_NilValue;
     }
-
 
     dbg = RDEBUG(rho);
     body = CADR(args);
@@ -1580,7 +1585,7 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
 
-    if (R_jit_enabled > 2 && ! R_PendingPromises) {
+    if (R_jit_enabled > 2) {
 	R_compileAndExecute(call, rho);
 	return R_NilValue;
     }
@@ -2169,7 +2174,7 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 	}
 	else {
 	    if (CAR(el) == R_MissingArg ||
-		 (isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)))
+		(isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)))
 		ev = CONS_NR(R_MissingArg, R_NilValue);
 	    else
 		ev = CONS_NR(eval(CAR(el), rho), R_NilValue);
@@ -2666,7 +2671,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 /* gr needs to be protected on return from this function */
 static void findmethod(SEXP Class, const char *group, const char *generic,
 		       SEXP *sxp,  SEXP *gr, SEXP *meth, int *which,
-		       char *buf, SEXP rho)
+		       SEXP rho)
 {
     int len, whichclass;
     const void *vmax = vmaxget();
@@ -2679,19 +2684,13 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
     */
     for (whichclass = 0 ; whichclass < len ; whichclass++) {
 	const char *ss = translateChar(STRING_ELT(Class, whichclass));
-	if(strlen(generic) + strlen(ss) + 2 > 512)
-	    error(_("class name too long in '%s'"), generic);
-	sprintf(buf, "%s.%s", generic, ss);
-	*meth = install(buf);
+	*meth = installS3Signature(generic, ss);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
 	    *gr = mkString("");
 	    break;
 	}
-	if(strlen(group) + strlen(ss) + 2 > 512)
-	    error(_("class name too long in '%s'"), group);
-	sprintf(buf, "%s.%s", group, ss);
-	*meth = install(buf);
+	*meth = installS3Signature(group, ss);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
 	    *gr = mkString(group);
@@ -2709,7 +2708,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     int i, j, nargs, lwhich, rwhich, set;
     SEXP lclass, s, t, m, lmeth, lsxp, lgr, newrho;
     SEXP rclass, rmeth, rgr, rsxp, value;
-    char lbuf[512], rbuf[512], generic[128], *pt;
+    char *generic;
     Rboolean useS4 = TRUE, isOps = FALSE;
 
     /* pre-test to avoid string computations when there is nothing to
@@ -2742,13 +2741,8 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     /* check whether we are processing the default method */
     if ( isSymbol(CAR(call)) ) {
-	if(strlen(CHAR(PRINTNAME(CAR(call)))) >= 512)
-	   error(_("call name too long in '%s'"), EncodeChar(PRINTNAME(CAR(call))));
-	sprintf(lbuf, "%s", CHAR(PRINTNAME(CAR(call))) );
-	pt = strtok(lbuf, ".");
-	pt = strtok(NULL, ".");
-
-	if( pt != NULL && !strcmp(pt, "default") )
+	const char *cstr = strchr(CHAR(PRINTNAME(CAR(call))), '.');
+	if (cstr && !strcmp(cstr + 1, "default"))
 	    return 0;
     }
 
@@ -2763,9 +2757,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if(!isObject(CAR(args)) && !isObject(CADR(args)))
 	return 0;
 
-    if(strlen(PRIMNAME(op)) >= 128)
-	error(_("generic name too long in '%s'"), PRIMNAME(op));
-    sprintf(generic, "%s", PRIMNAME(op) );
+    generic = PRIMNAME(op);
 
     lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
       : getAttrib(CAR(args), R_ClassSymbol);
@@ -2780,7 +2772,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     rsxp = R_NilValue; rgr = R_NilValue; rmeth = R_NilValue;
 
     findmethod(lclass, group, generic, &lsxp, &lgr, &lmeth, &lwhich,
-	       lbuf, rho);
+	       rho);
     PROTECT(lgr);
     const void *vmax = vmaxget();
     if(isFunction(lsxp) && IS_S4_OBJECT(CAR(args)) && lwhich > 0
@@ -2796,7 +2788,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     if( nargs == 2 )
 	findmethod(rclass, group, generic, &rsxp, &rgr, &rmeth,
-		   &rwhich, rbuf, rho);
+		   &rwhich, rho);
     else
 	rwhich = 0;
 
@@ -2842,7 +2834,6 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	    lgr = rgr;
 	    lclass = rclass;
 	    lwhich = rwhich;
-	    strcpy(lbuf, rbuf);
 	}
     }
 
@@ -2860,7 +2851,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	    for (j = 0 ; j < length(t) ; j++) {
 		if (!strcmp(translateChar(STRING_ELT(t, j)),
 			    translateChar(STRING_ELT(lclass, lwhich)))) {
-		    SET_STRING_ELT(m, i, mkChar(lbuf));
+		    SET_STRING_ELT(m, i, PRINTNAME(lmeth));
 		    set = 1;
 		    break;
 		}
@@ -3309,8 +3300,8 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 } while(0)
 #else
 /* these reuse one of the two values on the top of the stack if it is
-   of the right type and has NAMED = 0. It is known that both of these
-   will have length one and have no attributes. */
+   of the right type and has no references. It is known that both of
+   these will have length one and have no attributes. */
 # define DO_FAST_BINOP(op,a,b) do {					\
 	SKIP_OP();							\
 	SEXP sa = R_BCNodeStackTop[-2];					\
@@ -3371,7 +3362,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP __value__ = (v); \
   R_bcstack_t *__ntop__ = R_BCNodeStackTop + 1; \
   if (__ntop__ > R_BCNodeStackEnd) nodeStackOverflow(); \
-  __ntop__[-1] = __value__; \
+  SETSTACK(0, __value__); \
   R_BCNodeStackTop = __ntop__; \
 } while (0)
 
@@ -4015,28 +4006,28 @@ static R_INLINE void VECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *si,
 {
     SEXP idx, args, value;
     SEXP vec = GETSTACK_PTR(sx);
-    int i = bcStackIndex(si) - 1;
+    R_xlen_t i = bcStackIndex(si) - 1;
 
     if (ATTRIB(vec) == R_NilValue && i >= 0) {
 	switch (TYPEOF(vec)) {
 	case REALSXP:
-	    if (LENGTH(vec) <= i) break;
+	    if (XLENGTH(vec) <= i) break;
 	    SETSTACK_REAL_PTR(sv, REAL(vec)[i]);
 	    return;
 	case INTSXP:
-	    if (LENGTH(vec) <= i) break;
+	    if (XLENGTH(vec) <= i) break;
 	    SETSTACK_INTEGER_PTR(sv, INTEGER(vec)[i]);
 	    return;
 	case LGLSXP:
-	    if (LENGTH(vec) <= i) break;
+	    if (XLENGTH(vec) <= i) break;
 	    SETSTACK_LOGICAL_PTR(sv, LOGICAL(vec)[i]);
 	    return;
 	case CPLXSXP:
-	    if (LENGTH(vec) <= i) break;
+	    if (XLENGTH(vec) <= i) break;
 	    SETSTACK_PTR(sv, ScalarComplex(COMPLEX(vec)[i]));
 	    return;
 	case RAWSXP:
-	    if (LENGTH(vec) <= i) break;
+	    if (XLENGTH(vec) <= i) break;
 	    SETSTACK_PTR(sv, ScalarRaw(RAW(vec)[i]));
 	    return;
 	}
@@ -4078,30 +4069,30 @@ static R_INLINE void DO_MATSUBSET(SEXP rho)
     SEXP dim = getMatrixDim(mat);
 
     if (dim != R_NilValue) {
-	int i = bcStackIndex(R_BCNodeStackTop - 2);
-	int j = bcStackIndex(R_BCNodeStackTop - 1);
-	int nrow = INTEGER(dim)[0];
-	int ncol = INTEGER(dim)[1];
+	R_xlen_t i = bcStackIndex(R_BCNodeStackTop - 2);
+	R_xlen_t j = bcStackIndex(R_BCNodeStackTop - 1);
+	R_xlen_t nrow = INTEGER(dim)[0];
+	R_xlen_t ncol = INTEGER(dim)[1];
 	if (i > 0 && j > 0 && i <= nrow && j <= ncol) {
-	    int k = i - 1 + nrow * (j - 1);
+	    R_xlen_t k = i - 1 + nrow * (j - 1);
 	    switch (TYPEOF(mat)) {
 	    case REALSXP:
-		if (LENGTH(mat) <= k) break;
+		if (XLENGTH(mat) <= k) break;
 		R_BCNodeStackTop -= 2;
 		SETSTACK_REAL(-1, REAL(mat)[k]);
 		return;
 	    case INTSXP:
-		if (LENGTH(mat) <= k) break;
+		if (XLENGTH(mat) <= k) break;
 		R_BCNodeStackTop -= 2;
 		SETSTACK_INTEGER(-1, INTEGER(mat)[k]);
 		return;
 	    case LGLSXP:
-		if (LENGTH(mat) <= k) break;
+		if (XLENGTH(mat) <= k) break;
 		R_BCNodeStackTop -= 2;
 		SETSTACK_LOGICAL(-1, LOGICAL(mat)[k]);
 		return;
 	    case CPLXSXP:
-		if (LENGTH(mat) <= k) break;
+		if (XLENGTH(mat) <= k) break;
 		R_BCNodeStackTop -= 2;
 		SETSTACK(-1, ScalarComplex(COMPLEX(mat)[k]));
 		return;
@@ -4162,7 +4153,7 @@ static R_INLINE void SETVECSUBSET_PTR(R_bcstack_t *sx, R_bcstack_t *srhs,
 	SET_NAMED(vec, 0);
 
     if (ATTRIB(vec) == R_NilValue) {
-	int i = bcStackIndex(si);
+	R_xlen_t i = bcStackIndex(si);
 	if (i > 0) {
 	    scalar_value_t v;
 	    int typev = bcStackScalar(srhs, &v);
@@ -4208,14 +4199,14 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
     dim = getMatrixDim(mat);
 
     if (dim != R_NilValue) {
-	int i = bcStackIndex(R_BCNodeStackTop - 2);
-	int j = bcStackIndex(R_BCNodeStackTop - 1);
-	int nrow = INTEGER(dim)[0];
-	int ncol = INTEGER(dim)[1];
+	R_xlen_t i = bcStackIndex(R_BCNodeStackTop - 2);
+	R_xlen_t j = bcStackIndex(R_BCNodeStackTop - 1);
+	R_xlen_t nrow = INTEGER(dim)[0];
+	R_xlen_t ncol = INTEGER(dim)[1];
 	if (i > 0 && j > 0 && i <= nrow && j <= ncol) {
 	    scalar_value_t v;
 	    int typev = bcStackScalar(R_BCNodeStackTop - 3, &v);
-	    int k = i - 1 + nrow * (j - 1);
+	    R_xlen_t k = i - 1 + nrow * (j - 1);
 	    if (setElementFromScalar(mat, k, typev, &v)) {
 		R_BCNodeStackTop -= 3;
 		SETSTACK(-1, mat);
@@ -4241,7 +4232,7 @@ static R_INLINE void DO_SETMATSUBSET(SEXP rho)
 
 #define FIXUP_SCALAR_LOGICAL(callidx, arg, op) do { \
 	SEXP val = GETSTACK(-1); \
-	if (TYPEOF(val) != LGLSXP || LENGTH(val) != 1) { \
+	if (TYPEOF(val) != LGLSXP || XLENGTH(val) != 1) { \
 	    if (!isNumber(val))	\
 		errorcall(VECTOR_ELT(constants, callidx), \
 			  _("invalid %s type in 'x %s y'"), arg, op);	\
@@ -4373,7 +4364,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       if (R_BCNodeStackTop + n > R_BCNodeStackEnd)
 	  nodeStackOverflow();
       while (n > 0) {
-	  *R_BCNodeStackTop = R_NilValue;
+	  SETSTACK(0, R_NilValue);
 	  R_BCNodeStackTop++;
 	  n--;
       }
@@ -5145,6 +5136,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
        value = BCNPOP();
        if (!isVector(value) || length(value) != 1)
 	   errorcall(call, _("EXPR must be a length 1 vector"));
+       if (isFactor(value))
+	   warningcall(call,
+		       _("EXPR is a \"factor\", treated as integer.\n"
+			 " Consider using '%s' instead."),
+		       "switch(as.character( * ), ...)");
        if (TYPEOF(value) == STRSXP) {
 	   int i, n, which;
 	   if (names == R_NilValue)
@@ -5643,4 +5639,15 @@ SEXP attribute_hidden do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rh
 	    R_num_math_threads = R_max_num_math_threads;
     }
     return ScalarInteger(old);
+}
+
+SEXP attribute_hidden do_returnValue(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP val;
+    checkArity(op, args);
+    if (R_ExitContext && (val = R_ExitContext->returnValue)){
+        MARK_NOT_MUTABLE(val);
+        return val;
+    }
+    return CAR(args); /* default */
 }

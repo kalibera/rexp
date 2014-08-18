@@ -201,7 +201,7 @@ FUNTAB R_FunTab[] =
 {"oldClass",	do_class,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
 {"class",	R_do_data_class,0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{".cache_class",	R_do_data_class,	1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{".cache_class",R_do_data_class,1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"class<-",	R_do_set_class,	0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"unclass",	do_unclass,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"names",	do_names,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -681,9 +681,10 @@ FUNTAB R_FunTab[] =
 {"recordGraphics", do_recordGraphics, 0, 211,     3,      {PP_FOREIGN, PREC_FN,	0}},
 {"dyn.load",	do_dynload,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"dyn.unload",	do_dynunload,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"ls",		do_ls,		1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"ls",		do_ls,		1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"typeof",	do_typeof,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"eval",	do_eval,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"returnValue",   do_returnValue,0,     11,     1,      {PP_FUNCALL, PREC_FN,	0}},
 {"sys.parent",	do_sys,		1,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.call",	do_sys,		2,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sys.frame",	do_sys,		3,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -715,7 +716,7 @@ FUNTAB R_FunTab[] =
 {"bodyCode",	do_bodyCode,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"environment",	do_envir,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"environmentName",do_envirName,0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
-{"env2list",	do_env2list,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"env2list",	do_env2list,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"reg.finalizer",do_regFinaliz,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"options",	do_options,	0,	211,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"sink",	do_sink,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
@@ -1059,7 +1060,7 @@ static void SymbolShortcuts(void)
     R_RowNamesSymbol = install("row.names");
     R_SeedsSymbol = install(".Random.seed");
     R_SortListSymbol = install("sort.list");
-    R_SourceSymbol = install("source");   /* Still present for back compatibility, but not used */
+    R_SourceSymbol = install("source");   /* Still present for use in methods package, not used elsewhere */
     R_TspSymbol = install("tsp");
     /* ../include/Defn.h , i.e. non-public : */
     R_CommentSymbol = install("comment");
@@ -1087,6 +1088,31 @@ static void SymbolShortcuts(void)
     R_dot_GenericCallEnv = install(".GenericCallEnv");
     R_dot_GenericDefEnv = install(".GenericDefEnv");
 }
+
+
+#define N_DDVAL_SYMBOLS 65
+
+static SEXP DDVALSymbols[N_DDVAL_SYMBOLS];
+
+static SEXP createDDVALSymbol(int n) {
+    char buf[10];
+    snprintf(buf, 10, "..%d", n);
+    return install(buf);
+}
+
+static void initializeDDVALSymbols() {
+    for(int i = 0; i < N_DDVAL_SYMBOLS; i++) {
+        DDVALSymbols[i] = createDDVALSymbol(i);
+    }
+}
+
+SEXP attribute_hidden installDDVAL(int n) {
+    if (n < N_DDVAL_SYMBOLS)
+        return DDVALSymbols[n];
+
+    return createDDVALSymbol(n);
+}
+
 
 /* initialize the symbol table */
 void attribute_hidden InitNames()
@@ -1136,6 +1162,7 @@ void attribute_hidden InitNames()
         SET_SPECIAL_SYMBOL(install(Spec_name[i]));
 
     R_initAsignSymbols();
+    initializeDDVALSymbols();
     R_initialize_bcode();
 }
 
@@ -1165,6 +1192,37 @@ SEXP install(const char *name)
 
     R_SymbolTable[i] = CONS(sym, R_SymbolTable[i]);
     return (sym);
+}
+
+#define maxLength 512
+attribute_hidden
+SEXP installS3Signature(const char *className, const char *methodName) {
+
+    const char *src;
+    char signature[maxLength];
+
+    int i = 0;
+    for(src = className; *src; src++) {
+        if (i == maxLength)
+            error(_("class name too long in '%s'"), className);
+        signature[i++] = *src;
+    }
+
+    if (i == maxLength)
+        error(_("class name too long in '%s'"), className);
+    signature[i++] = '.';
+
+    for(src = methodName; *src; src++) {
+        if (i == maxLength)
+            error(_("class name too long in '%s'"), className);
+        signature[i++] = *src;
+    }
+
+    if (i == maxLength)
+        error(_("class name too long in '%s'"), className);
+    signature[i] = 0;
+
+    return install(signature);
 }
 
 
