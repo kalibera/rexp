@@ -2668,11 +2668,23 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     return 0;
 }
 
+static R_INLINE void updateObjFromS4Slot(SEXP objSlot, const char *className) {
+    SEXP obj = CAR(objSlot);
+
+    if(IS_S4_OBJECT(obj) && isBasicClass(className)) {
+	/* This and the similar test below implement the strategy
+	 for S3 methods selected for S4 objects.  See ?Methods */
+	if(NAMED(obj)) SET_NAMED(obj, 2);
+	obj = R_getS4DataSlot(obj, S4SXP); /* the .S3Class obj. or NULL*/
+	if(obj != R_NilValue) /* use the S3Part as the inherited object */
+	    SETCAR(objSlot, obj);
+    }
+}
 
 /* gr needs to be protected on return from this function */
 static void findmethod(SEXP Class, const char *group, const char *generic,
 		       SEXP *sxp,  SEXP *gr, SEXP *meth, int *which,
-		       SEXP rho)
+		       SEXP objSlot, SEXP rho)
 {
     int len, whichclass;
     const void *vmax = vmaxget();
@@ -2689,12 +2701,14 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
 	    *gr = mkString("");
+	    if (whichclass > 0) updateObjFromS4Slot(objSlot, ss);
 	    break;
 	}
 	*meth = installS3Signature(group, ss);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
 	    *gr = mkString(group);
+	    if (whichclass > 0) updateObjFromS4Slot(objSlot, ss);
 	    break;
 	}
     }
@@ -2774,40 +2788,20 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     rsxp = R_NilValue; rgr = R_NilValue; rmeth = R_NilValue;
 
     findmethod(lclass, group, generic, &lsxp, &lgr, &lmeth, &lwhich,
-	       rho);
+	       args, rho);
     PROTECT(lgr);
-    const void *vmax = vmaxget();
-    if(isFunction(lsxp) && IS_S4_OBJECT(CAR(args)) && lwhich > 0
-       && isBasicClass(translateChar(STRING_ELT(lclass, lwhich)))) {
-	/* This and the similar test below implement the strategy
-	 for S3 methods selected for S4 objects.  See ?Methods */
-	value = CAR(args);
-	if(NAMED(value)) SET_NAMED(value, 2);
-	value = R_getS4DataSlot(value, S4SXP); /* the .S3Class obj. or NULL*/
-	if(value != R_NilValue) /* use the S3Part as the inherited object */
-	    SETCAR(args, value);
-    }
 
     if( nargs == 2 )
 	findmethod(rclass, group, generic, &rsxp, &rgr, &rmeth,
-		   &rwhich, rho);
+		   &rwhich, CDR(args), rho);
     else
 	rwhich = 0;
-
-    if(isFunction(rsxp) && IS_S4_OBJECT(CADR(args)) && rwhich > 0
-       && isBasicClass(translateChar(STRING_ELT(rclass, rwhich)))) {
-	value = CADR(args);
-	if(NAMED(value)) SET_NAMED(value, 2);
-	value = R_getS4DataSlot(value, S4SXP);
-	if(value != R_NilValue) SETCADR(args, value);
-    }
-    vmaxset(vmax);
 
     PROTECT(rgr);
 
     if( !isFunction(lsxp) && !isFunction(rsxp) ) {
 	UNPROTECT(2);
-	return 0; /* no generic or group method so use default*/
+	return 0; /* no generic or group method so use default */
     }
 
     if( lsxp != rsxp ) {
@@ -2843,7 +2837,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     PROTECT(newrho = allocSExp(ENVSXP));
     PROTECT(m = allocVector(STRSXP,nargs));
-    vmax = vmaxget();
+    const void *vmax = vmaxget();
     s = args;
     const char *dispatchClassName = translateChar(STRING_ELT(lclass, lwhich));
     for (i = 0 ; i < nargs ; i++) {
