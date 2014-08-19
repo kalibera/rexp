@@ -2702,6 +2702,12 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
     *which = whichclass;
 }
 
+static SEXP classForGroupDispatch(SEXP obj) {
+
+    return IS_S4_OBJECT(obj) ? R_data_class2(obj)
+            : getAttrib(obj, R_ClassSymbol);
+}
+
 attribute_hidden
 int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 		  SEXP *ans)
@@ -2755,17 +2761,12 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if( nargs == 1 && !isObject(CAR(args)) )
 	return 0;
 
-    if(!isObject(CAR(args)) && !isObject(CADR(args)))
-	return 0;
-
     generic = PRIMNAME(op);
 
-    lclass = IS_S4_OBJECT(CAR(args)) ? R_data_class2(CAR(args))
-      : getAttrib(CAR(args), R_ClassSymbol);
+    lclass = classForGroupDispatch(CAR(args));
 
     if( nargs == 2 )
-	rclass = IS_S4_OBJECT(CADR(args)) ? R_data_class2(CADR(args))
-      : getAttrib(CADR(args), R_ClassSymbol);
+	rclass = classForGroupDispatch(CADR(args));
     else
 	rclass = R_NilValue;
 
@@ -2844,22 +2845,13 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     PROTECT(m = allocVector(STRSXP,nargs));
     vmax = vmaxget();
     s = args;
+    const char *dispatchClassName = translateChar(STRING_ELT(lclass, lwhich));
     for (i = 0 ; i < nargs ; i++) {
-	t = IS_S4_OBJECT(CAR(s)) ? R_data_class2(CAR(s))
-	  : getAttrib(CAR(s), R_ClassSymbol);
-	set = 0;
-	if (isString(t)) {
-	    for (j = 0 ; j < length(t) ; j++) {
-		if (!strcmp(translateChar(STRING_ELT(t, j)),
-			    translateChar(STRING_ELT(lclass, lwhich)))) {
-		    SET_STRING_ELT(m, i, PRINTNAME(lmeth));
-		    set = 1;
-		    break;
-		}
-	    }
-	}
-	if( !set )
-	    SET_STRING_ELT(m, i, R_BlankString);
+	t = classForGroupDispatch(CAR(s));
+	if (isString(t) && (stringPositionTr(t, dispatchClassName) >= 0))
+	    SET_STRING_ELT(m, i, PRINTNAME(lmeth));
+        else
+            SET_STRING_ELT(m, i, R_BlankString);
 	s = CDR(s);
     }
     vmaxset(vmax);
