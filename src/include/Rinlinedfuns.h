@@ -684,6 +684,21 @@ INLINE_FUN SEXP mkString(const char *s)
     return t;
 }
 
+/* index of a given C string in (translated) R string vector  */
+/* allocates from the stack - should be surrounded by vmaxget/vmaxset */
+INLINE_FUN int
+stringPositionTr(SEXP string, const char *translatedElement) {
+
+    int slen = LENGTH(string);
+    int i;
+
+    for (i = 0 ; i < slen; i++) {
+        if (!strcmp(translateChar(STRING_ELT(string, i)), translatedElement))
+            return i;
+    }
+    return -1; /* not found */
+}
+
 /* duplicate RHS value of complex assignment if necessary to prevent cycles */
 INLINE_FUN SEXP R_FixupRHS(SEXP x, SEXP y)
 {
