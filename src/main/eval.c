@@ -2726,7 +2726,7 @@ attribute_hidden
 int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 		  SEXP *ans)
 {
-    int i, j, nargs, lwhich, rwhich, set;
+    int i, nargs, lwhich, rwhich;
     SEXP lclass, s, t, m, lmeth, lsxp, lgr, newrho;
     SEXP rclass, rmeth, rgr, rsxp, value;
     char *generic;
