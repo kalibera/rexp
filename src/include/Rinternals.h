@@ -287,21 +287,7 @@ typedef struct VECTOR_SEXPREC {
     struct vecsxp_struct vecsxp;
 } VECTOR_SEXPREC, *VECSEXP;
 
-// alignment increased for R 3.2.0: previous only for doubles.
-#include <complex.h>
-// avoid namespace pollution, at least on OS X
-#ifndef R_USE_COMPLEX
-# undef I
-#endif
-typedef union {
-    VECTOR_SEXPREC s;
-    double dbl_align;
-    double complex dcpl_align;
-#ifdef HAVE_LONG_DOUBLE
-    long double ldbl_align;
-#endif
-} SEXPREC_ALIGN;
-
+typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 /* General Cons Cell Attributes */
 #define ATTRIB(x)	((x)->attrib)
@@ -381,8 +367,6 @@ typedef union {
 # define IS_LONG_VEC(x) 0
 # define IS_SCALAR(x, type) (TYPEOF(x) == (type) && LENGTH(x) == 1)
 #endif
-#define IS_SIMPLE_SCALAR(x, type) \
-    (IS_SCALAR(x, type) && ATTRIB(x) == R_NilValue)
 
 /* Under the generational allocator the data for vector nodes comes
    immediately after the node structure, so the data address is a
@@ -468,6 +452,9 @@ Rboolean (Rf_isObject)(SEXP s);
 
 # define IS_SCALAR(x, type) (TYPEOF(x) == (type) && XLENGTH(x) == 1)
 #endif /* USE_RINTERNALS */
+
+#define IS_SIMPLE_SCALAR(x, type) \
+    (IS_SCALAR(x, type) && ATTRIB(x) == R_NilValue)
 
 #define NAMEDMAX 2
 #define INCREMENT_NAMED(x) do {				\
@@ -837,6 +824,7 @@ SEXP Rf_protect(SEXP);
 SEXP Rf_setAttrib(SEXP, SEXP, SEXP);
 void Rf_setSVector(SEXP*, int, SEXP);
 void Rf_setVar(SEXP, SEXP, SEXP);
+SEXP Rf_stringSuffix(SEXP, int);
 SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
@@ -1228,6 +1216,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define setVar			Rf_setVar
 #define shallow_duplicate	Rf_shallow_duplicate
 #define str2type		Rf_str2type
+#define stringSuffix		Rf_stringSuffix
 #define StringBlank		Rf_StringBlank
 #define substitute		Rf_substitute
 #define translateChar		Rf_translateChar

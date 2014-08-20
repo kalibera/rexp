@@ -1,4 +1,4 @@
-% -*- coding: utf-8 -*-
+f% -*- coding: utf-8 -*-
 \newcommand{\Rlogo}{\if{html}{\figure{../../html/logo.jpg}}\if{latex}{\figure{logo.jpg}{options: width=0.5in}}}
 
 \name{NEWS}
@@ -171,11 +171,6 @@
       \item Entry points \code{rbinom_mu}, \code{rnbinom_mu} and
       \code{rmultinom} are remapped (by default).  This requires
       packages using them to be re-installed.
-      
-      \item The alignment of memory allocated by \code{R_alloc} is now
-      guaranteed to be sufficient for C types \code{double complex} and
-      \code{long double}.  Packages using \code{USE_RINTERNALS} may need
-      to be re-installed on some platforms.
     }
   }
 
@@ -183,6 +178,9 @@
     \itemize{
       \item Fixed two obscure bugs in pairlist subassignment, reported by
       Radford Neal as part of pqR issue 16.
+
+      \item Fixes for bugs in handling empty arguments and argument
+      matching by name in \code{log()}.
     }
   }
 }
@@ -268,7 +266,7 @@
       
       \item \code{edit()} (and hence \code{fix()}) failed if 
       an object had a non-character attribute named \code{"source"}
-      (an attribute that had been used in \R prior to version 2.15.0).
+      (an attribute that had been used in \R prior to version 2.14.0).
 
       \item \code{callGeneric()} could fail if the generic had
         \code{\dots} as a formal argument. (\PR{15937}).
