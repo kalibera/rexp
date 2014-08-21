@@ -1066,6 +1066,8 @@ Rboolean R_compute_identical(SEXP, SEXP, int);
    e.g.  arglist = Rf_lang2(x,y)  or  Rf_lang3(x,y,z) */
 void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean decreasing);
 
+int R_Newhashpjw(const char *);
+
 #ifndef R_NO_REMAP
 #define acopy_string		Rf_acopy_string
 #define alloc3DArray            Rf_alloc3DArray
@@ -1126,6 +1128,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define GetOption		Rf_GetOption
 #define GetRowNames		Rf_GetRowNames
 #define gsetVar			Rf_gsetVar
+#define hashChar		Rf_hashChar
 #define inherits		Rf_inherits
 #define install			Rf_install
 #define installDDVAL		Rf_installDDVAL
@@ -1250,6 +1253,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 SEXP     Rf_allocVector(SEXPTYPE, R_xlen_t);
 Rboolean Rf_conformable(SEXP, SEXP);
 SEXP	 Rf_elt(SEXP, int);
+int	 Rf_hashChar(SEXP);
 Rboolean Rf_inherits(SEXP, const char *);
 Rboolean Rf_isArray(SEXP);
 Rboolean Rf_isFactor(SEXP);

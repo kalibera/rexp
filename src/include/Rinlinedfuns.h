@@ -699,6 +699,20 @@ stringPositionTr(SEXP string, const char *translatedElement) {
     return -1; /* not found */
 }
 
+/* get hash code (newhashpjw used for symbol table) for given CHARSXP */
+INLINE_FUN int hashChar(SEXP charSXP) {
+    int hashcode;
+
+    if (HASHASH(charSXP)) {
+        hashcode = HASHVALUE(charSXP);
+    } else {
+        hashcode = R_Newhashpjw(CHAR(charSXP));
+        SET_HASHVALUE(charSXP, hashcode);
+        SET_HASHASH(charSXP, 1);
+    }
+    return hashcode;
+}
+
 /* duplicate RHS value of complex assignment if necessary to prevent cycles */
 INLINE_FUN SEXP R_FixupRHS(SEXP x, SEXP y)
 {

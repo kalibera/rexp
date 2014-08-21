@@ -75,6 +75,26 @@ Rcomplex Rf_ComplexFromLogical(int, int*);
 Rcomplex Rf_ComplexFromInteger(int, int*);
 Rcomplex Rf_ComplexFromReal(double, int*);
 
+/* CHARSXP charset bits */
+#define BYTES_MASK (1<<1)
+#define LATIN1_MASK (1<<2)
+#define UTF8_MASK (1<<3)
+/* (1<<4) is taken by S4_OBJECT_MASK */
+#define CACHED_MASK (1<<5)
+#define ASCII_MASK (1<<6)
+#define HASHASH_MASK 1
+/**** HASHASH uses the first bit -- see HASHASH_MASK defined below */
+
+#ifdef USE_RINTERNALS
+/* Hashing Macros */
+#define HASHASH(x)      ((x)->sxpinfo.gp & HASHASH_MASK)
+#define HASHVALUE(x)    TRUELENGTH(x)
+#define SET_HASHASH(x,v) ((v) ? (((x)->sxpinfo.gp) |= HASHASH_MASK) : \
+			  (((x)->sxpinfo.gp) &= (~HASHASH_MASK)))
+#define SET_HASHVALUE(x,v) SET_TRUELENGTH(x, v)
+#endif /* USE_RINTERNALS */
+
+
 #define CALLED_FROM_DEFN_H 1
 #include <Rinternals.h>		/*-> Arith.h, Boolean.h, Complex.h, Error.h,
 				  Memory.h, PrtUtil.h, Utils.h */
@@ -104,15 +124,6 @@ extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
  /* writable char access for R internal use only */
 #define CHAR_RW(x)	((char *) CHAR(x))
 
-/* CHARSXP charset bits */
-#define BYTES_MASK (1<<1)
-#define LATIN1_MASK (1<<2)
-#define UTF8_MASK (1<<3)
-/* (1<<4) is taken by S4_OBJECT_MASK */
-#define CACHED_MASK (1<<5)
-#define ASCII_MASK (1<<6)
-#define HASHASH_MASK 1
-/**** HASHASH uses the first bit -- see HASHASH_MASK defined below */
 
 #ifdef USE_RINTERNALS
 # define IS_BYTES(x) ((x)->sxpinfo.gp & BYTES_MASK)
@@ -384,12 +395,6 @@ typedef struct {
 #define PRSEEN(x)	((x)->sxpinfo.gp)
 #define SET_PRSEEN(x,v)	(((x)->sxpinfo.gp)=(v))
 
-/* Hashing Macros */
-#define HASHASH(x)      ((x)->sxpinfo.gp & HASHASH_MASK)
-#define HASHVALUE(x)    TRUELENGTH(x)
-#define SET_HASHASH(x,v) ((v) ? (((x)->sxpinfo.gp) |= HASHASH_MASK) : \
-			  (((x)->sxpinfo.gp) &= (~HASHASH_MASK)))
-#define SET_HASHVALUE(x,v) SET_TRUELENGTH(x, v)
 
 /* Vector Heap Structure */
 typedef struct {
@@ -1104,7 +1109,6 @@ SEXP R_data_class2(SEXP);
 char *R_LibraryFileName(const char *, char *, size_t);
 SEXP R_LoadFromFile(FILE*, int);
 SEXP R_NewHashedEnv(SEXP, SEXP);
-extern int R_Newhashpjw(const char *);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
 void R_RestoreGlobalEnv(void);
