@@ -794,6 +794,7 @@ int Rf_GetOptionDigits(void);
 int Rf_GetOptionWidth(void);
 SEXP Rf_GetRowNames(SEXP);
 void Rf_gsetVar(SEXP, SEXP, SEXP);
+int Rf_hashChar(SEXP);
 SEXP Rf_install(const char *);
 SEXP Rf_installDDVAL(int i);
 SEXP Rf_installS3Signature(const char *, const char *);
@@ -1126,6 +1127,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define GetOption		Rf_GetOption
 #define GetRowNames		Rf_GetRowNames
 #define gsetVar			Rf_gsetVar
+#define hashChar		Rf_hashChar
 #define inherits		Rf_inherits
 #define install			Rf_install
 #define installDDVAL		Rf_installDDVAL

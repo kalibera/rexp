@@ -173,6 +173,20 @@ Rboolean R_envHasNoSpecialSymbols (SEXP env)
     return TRUE;
 }
 
+attribute_hidden int hashChar(SEXP charSXP) {
+    int hashcode;
+
+    if (HASHASH(charSXP)) {
+        hashcode = HASHVALUE(charSXP);
+    } else {
+        hashcode = R_Newhashpjw(CHAR(charSXP));
+        SET_HASHVALUE(charSXP, hashcode);
+        SET_HASHASH(charSXP, 1);
+    }
+    return hashcode;
+}
+
+
 /*----------------------------------------------------------------------
 
   Hash Tables
@@ -505,12 +519,7 @@ static SEXP R_HashFrame(SEXP rho)
     table = HASHTAB(rho);
     frame = FRAME(rho);
     while (!ISNULL(frame)) {
-	if( !HASHASH(PRINTNAME(TAG(frame))) ) {
-	    SET_HASHVALUE(PRINTNAME(TAG(frame)),
-			  R_Newhashpjw(CHAR(PRINTNAME(TAG(frame)))));
-	    SET_HASHASH(PRINTNAME(TAG(frame)), 1);
-	}
-	hashcode = HASHVALUE(PRINTNAME(TAG(frame))) % HASHSIZE(table);
+	hashcode = hashChar(PRINTNAME(TAG(frame))) % HASHSIZE(table);
 	chain = VECTOR_ELT(table, hashcode);
 	/* If using a primary slot then increase HASHPRI */
 	if (ISNULL(chain)) SET_HASHPRI(table, HASHPRI(table) + 1);
@@ -687,12 +696,7 @@ void attribute_hidden InitGlobalEnv()
 #ifdef USE_GLOBAL_CACHE
 static int hashIndex(SEXP symbol, SEXP table)
 {
-    SEXP c = PRINTNAME(symbol);
-    if( !HASHASH(c) ) {
-	SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	SET_HASHASH(c, 1);
-    }
-    return HASHVALUE(c) % HASHSIZE(table);
+    return hashChar(PRINTNAME(symbol)) % HASHSIZE(table);
 }
 
 static void R_FlushGlobalCache(SEXP sym)
@@ -830,7 +834,6 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, int *found)
 void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 {
     int hashcode;
-    SEXP c;
 
     if (rho == R_BaseNamespace)
 	error(_("cannot unbind in the base namespace"));
@@ -853,12 +856,7 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
     }
     else {
 	/* This case is currently unused */
-	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashChar(PRINTNAME(symbol)) % HASHSIZE(HASHTAB(rho));
 	R_HashDelete(hashcode, symbol, HASHTAB(rho));
 	/* we have no record here if deletion worked */
 	if (rho == R_GlobalEnv) R_DirtyImage = 1;
@@ -925,12 +923,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 	return frame;
     }
     else {
-	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c,  1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashChar(PRINTNAME(symbol)) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_NilValue' if not found */
 	return R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
     }
@@ -993,7 +986,7 @@ void R_SetVarLocValue(R_varloc_t vl, SEXP value)
 SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean doGet)
 {
     int hashcode;
-    SEXP frame, c;
+    SEXP frame;
 
     if (TYPEOF(rho) == NILSXP)
 	error(_("use of NULL environment is defunct"));
@@ -1029,12 +1022,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean doGet)
 	}
     }
     else {
-	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashChar(PRINTNAME(symbol)) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_UnboundValue' if not found */
 	return(R_HashGet(hashcode, symbol, HASHTAB(rho)));
     }
@@ -1046,7 +1034,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean doGet)
 static Rboolean existsVarInFrame(SEXP rho, SEXP symbol)
 {
     int hashcode;
-    SEXP frame, c;
+    SEXP frame;
 
     if (TYPEOF(rho) == NILSXP)
 	error(_("use of NULL environment is defunct"));
@@ -1078,12 +1066,7 @@ static Rboolean existsVarInFrame(SEXP rho, SEXP symbol)
 	}
     }
     else {
-	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashChar(PRINTNAME(symbol)) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_UnboundValue' if not found */
 	return R_HashExists(hashcode, symbol, HASHTAB(rho));
     }
@@ -1415,7 +1398,7 @@ SEXP findFun(SEXP symbol, SEXP rho)
 void defineVar(SEXP symbol, SEXP value, SEXP rho)
 {
     int hashcode;
-    SEXP frame, c;
+    SEXP frame;
 
     /* R_DirtyImage should only be set if assigning to R_GlobalEnv. */
     if (rho == R_GlobalEnv) R_DirtyImage = 1;
@@ -1464,12 +1447,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 	    SET_TAG(FRAME(rho), symbol);
 	}
 	else {
-	    c = PRINTNAME(symbol);
-	    if( !HASHASH(c) ) {
-		SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-		SET_HASHASH(c, 1);
-	    }
-	    hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	    hashcode = hashChar(PRINTNAME(symbol)) % HASHSIZE(HASHTAB(rho));
 	    R_HashSet(hashcode, symbol, HASHTAB(rho), value,
 		      FRAME_IS_LOCKED(rho));
 	    if (R_HashSizeCheck(HASHTAB(rho)))
@@ -1491,7 +1469,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 static SEXP setVarInFrame(SEXP rho, SEXP symbol, SEXP value)
 {
     int hashcode;
-    SEXP frame, c;
+    SEXP frame;
 
     /* R_DirtyImage should only be set if assigning to R_GlobalEnv. */
     if (rho == R_GlobalEnv) R_DirtyImage = 1;
@@ -1528,12 +1506,7 @@ static SEXP setVarInFrame(SEXP rho, SEXP symbol, SEXP value)
 	}
     } else {
 	/* Do the hash table thing */
-	c = PRINTNAME(symbol);
-	if( !HASHASH(c) ) {
-	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
-	    SET_HASHASH(c, 1);
-	}
-	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	hashcode = hashChar(PRINTNAME(symbol)) % HASHSIZE(HASHTAB(rho));
 	frame = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
 	if (frame != R_NilValue) {
 	    if (rho == R_GlobalEnv) R_DirtyImage = 1;
@@ -1760,10 +1733,7 @@ SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (i = 0; i < LENGTH(name); i++) {
 	done = 0;
 	tsym = installTrChar(STRING_ELT(name, i));
-	if( !HASHASH(PRINTNAME(tsym)) )
-	    hashcode = R_Newhashpjw(CHAR(PRINTNAME(tsym)));
-	else
-	    hashcode = HASHVALUE(PRINTNAME(tsym));
+	hashcode = hashChar(PRINTNAME(tsym));
 	tenv = envarg;
 	while (tenv != R_EmptyEnv) {
 	    done = RemoveVariable(tsym, hashcode, tenv);
@@ -3347,10 +3317,7 @@ SEXP attribute_hidden do_unregNS(SEXP call, SEXP op, SEXP args, SEXP rho)
     name = checkNSname(call, CAR(args));
     if (findVarInFrame(R_NamespaceRegistry, name) == R_UnboundValue)
 	errorcall(call, _("namespace not registered"));
-    if( !HASHASH(PRINTNAME(name)))
-	hashcode = R_Newhashpjw(CHAR(PRINTNAME(name)));
-    else
-	hashcode = HASHVALUE(PRINTNAME(name));
+    hashcode = hashChar(PRINTNAME(name));
     RemoveVariable(name, hashcode, R_NamespaceRegistry);
     return R_NilValue;
 }
