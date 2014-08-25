@@ -4162,7 +4162,7 @@ setRlibs <-
         if(is.na(prev)) Sys.setenv("_R_CHECK_LIMIT_CORES_" = "TRUE")
         prev <- Sys.getenv("_R_CHECK_SCREEN_DEVICE_", NA)
         if(is.na(prev)) Sys.setenv("_R_CHECK_SCREEN_DEVICE_" = "stop")
-        Sys.setenv("_R_CHECK_CODE_USAGE_WITHOUT_LOADING_" = "TRUE")
+        Sys.setenv("_R_CHECK_CODE_USAGE_VIA_NAMESPACES_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
@@ -4519,6 +4519,7 @@ setRlibs <-
                 }
             }
         }
+        messageLog(Log, "DONE")
         if ((Log$warnings > 0L) || (Log$notes > 0L)) {
             message(""); summaryLog(Log)
         }
