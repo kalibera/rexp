@@ -842,7 +842,7 @@ next_char:
 	    R_AllocStringBuffer(2*cbuff->bufsize, cbuff);
 	    goto top_of_loop;
 	}
-	if (ttype = NT_FROM_UTF8) {
+	if (ttype == NT_FROM_UTF8) {
 	    /* if starting in UTF-8, use \uxxxx */
 	    /* This must be the first byte */
 	    size_t clen;
