@@ -1382,7 +1382,7 @@ static R_INLINE int SubAssignArgs(SEXP args, SEXP *x, SEXP *s, SEXP *y)
 /* Version of DispatchOrEval for "[" and friends that speeds up simple cases.
    Also defined in subset.c */
 static R_INLINE
-int R_DispatchOrEvalSP(SEXP call, SEXP op, const char *generic, SEXP args,
+int R_DispatchOrEvalSP(SEXP call, SEXP op, SEXP generic, SEXP args,
 		    SEXP rho, SEXP *ans)
 {
     SEXP prom = NULL;
@@ -1422,7 +1422,7 @@ SEXP attribute_hidden do_subassign(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* We evaluate the first argument and attempt to dispatch on it. */
     /* If the dispatch fails, we "drop through" to the default code below. */
 
-    if(R_DispatchOrEvalSP(call, op, "[<-", args, rho, &ans))
+    if(R_DispatchOrEvalSP(call, op, R_SubassignChar, args, rho, &ans))
 /*     if(DispatchAnyOrEval(call, op, "[<-", args, rho, &ans, 0, 0)) */
       return(ans);
 
@@ -1556,7 +1556,7 @@ SEXP attribute_hidden do_subassign2(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
 
-    if(R_DispatchOrEvalSP(call, op, "[[<-", args, rho, &ans))
+    if(R_DispatchOrEvalSP(call, op, R_Subassign2Char, args, rho, &ans))
 /*     if(DispatchAnyOrEval(call, op, "[[<-", args, rho, &ans, 0, 0)) */
       return(ans);
 
@@ -1911,7 +1911,7 @@ SEXP attribute_hidden do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
     /* replace the second argument with a string */
     SETCADR(args, input);
 
-    if(R_DispatchOrEvalSP(call, op, "$<-", args, env, &ans))
+    if(R_DispatchOrEvalSP(call, op, R_DollarAssignChar, args, env, &ans))
       return(ans);
 
     if (! iS)

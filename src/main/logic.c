@@ -53,7 +53,7 @@ SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
     arg2 = CADR(args);
 
     if (ATTRIB(arg1) != R_NilValue || ATTRIB(arg2) != R_NilValue) {
-	if (DispatchGroup("Ops",call, op, args, env, &ans))
+	if (DispatchGroup(R_OpsChar, call, op, args, env, &ans))
 	    return ans;
     }
     else if (argc == 1 && IS_SCALAR(arg1, LGLSXP)) {
@@ -421,7 +421,7 @@ SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(call2 = shallow_duplicate(call));
     SETCDR(call2, args);
 
-    if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
+    if (DispatchGroup(R_SummaryChar, call2, op, args, env, &ans)) {
 	UNPROTECT(2);
 	return(ans);
     }

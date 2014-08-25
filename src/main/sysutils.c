@@ -920,6 +920,21 @@ const char *translateChar(SEXP x)
     return p;
 }
 
+/* Translates a CHARSXP into a native CHARSXP. */
+attribute_hidden
+SEXP translateCharChar(SEXP x) {
+    if(TYPEOF(x) != CHARSXP)
+	error(_("'%s' must be called on a CHARSXP"), "translateChar");
+    nttype_t t = needsTranslation(x);
+    if (t == NT_NONE) return x;
+
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    translateToNative(CHAR(x), &cbuff, t);
+    SEXP c = mkChar(cbuff.data);
+    R_FreeStringBuffer(&cbuff);
+    return c;
+}
+
 SEXP installTrChar(SEXP x)
 {
     if(TYPEOF(x) != CHARSXP)

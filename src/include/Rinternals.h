@@ -797,7 +797,7 @@ void Rf_gsetVar(SEXP, SEXP, SEXP);
 SEXP Rf_install(const char *);
 SEXP Rf_installChar(SEXP);
 SEXP Rf_installDDVAL(int i);
-SEXP Rf_installS3Signature(const char *, const char *);
+SEXP Rf_installS3Signature(SEXP, SEXP);
 Rboolean Rf_isFree(SEXP);
 Rboolean Rf_isOrdered(SEXP);
 Rboolean Rf_isUnordered(SEXP);
@@ -830,6 +830,7 @@ SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
 const char * Rf_translateChar(SEXP);
+SEXP Rf_translateCharChar(SEXP);
 const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
@@ -856,7 +857,7 @@ const char *R_curErrorBuf();
 Rboolean Rf_isS4(SEXP);
 SEXP Rf_asS4(SEXP, Rboolean, int);
 SEXP Rf_S3Class(SEXP);
-int Rf_isBasicClass(const char *);
+int Rf_isBasicClass(SEXP);
 
 Rboolean R_cycle_detected(SEXP s, SEXP child);
 
@@ -1223,6 +1224,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define StringBlank		Rf_StringBlank
 #define substitute		Rf_substitute
 #define translateChar		Rf_translateChar
+#define translateCharChar	Rf_translateCharChar
 #define translateChar0		Rf_translateChar0
 #define translateCharUTF8      	Rf_translateCharUTF8
 #define type2char		Rf_type2char

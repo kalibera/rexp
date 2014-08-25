@@ -100,6 +100,51 @@ extern0 SEXP    R_dot_GenericDefEnv;  /* ".GenericDefEnv" */
 
 extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 
+/* CHARSXP shortcuts */
+
+extern0 SEXP	R_AnyNaChar; /* "anyNA" */
+extern0 SEXP	R_AsCharacterChar; /* "as.character" */
+extern0 SEXP	R_AsComplexChar; /* "as.complex" */
+extern0 SEXP	R_AsDoubleChar; /* "as.double" */
+extern0 SEXP	R_AsEnvironmentChar; /* "as.environment" */
+extern0 SEXP	R_AsIntegerChar; /* "as.integer" */
+extern0 SEXP	R_AsLogicalChar; /* "as.logical" */
+extern0 SEXP	R_AsRawChar; /* "as.raw" */
+extern0 SEXP	R_AsVectorChar; /* "as.vector" */
+extern0 SEXP	R_CChar; /* "c" */
+extern0 SEXP	R_ComplexChar; /* "Complex" */
+extern0 SEXP	R_DefaultChar; /* "default" */
+extern0 SEXP	R_DimChar; /* "dim" */
+extern0 SEXP	R_DimAssignChar; /* "dim<-" */
+extern0 SEXP	R_DimnamesChar; /* "dimnames" */
+extern0 SEXP	R_DimnamesAssignChar; /* "dimnames<-" */
+extern0 SEXP	R_DollarChar; /* "$" */
+extern0 SEXP	R_DollarAssignChar; /* "$<-" */
+extern0 SEXP	R_FieldAssignChar; /* "@<-" */
+extern0 SEXP	R_IsArrayChar; /* "is.array" */
+extern0 SEXP	R_IsFiniteChar; /* "is.finite" */
+extern0 SEXP	R_IsInfiniteChar; /* "is.infinite" */
+extern0 SEXP	R_IsMatrixChar; /* "is.matrix" */
+extern0 SEXP	R_IsNaChar; /* "is.na" */
+extern0 SEXP	R_IsNanChar; /* "is.nan" */
+extern0 SEXP	R_IsNumericChar; /* "is.numeric" */
+extern0 SEXP	R_IsUnsortedChar; /* "is.unsorted" */
+extern0 SEXP	R_LengthChar; /* "length" */
+extern0 SEXP	R_LengthAssignChar; /* "length<-" */
+extern0 SEXP	R_LevelsAssignChar; /* "levels<-" */
+extern0 SEXP	R_MathChar; /* "Math" */
+extern0 SEXP	R_NamesChar; /* "names" */
+extern0 SEXP	R_NamesAssignChar; /* "names<-" */
+extern0 SEXP	R_OpsChar; /* "Ops" */
+extern0 SEXP	R_RepChar; /* "rep" */
+extern0 SEXP	R_SeqChar; /* "seq" */
+extern0 SEXP	R_SubassignChar; /* "[<-" */
+extern0 SEXP	R_Subassign2Char; /* "[[<-" */
+extern0 SEXP	R_SubsetChar; /* "[" */
+extern0 SEXP	R_Subset2Char; /* "[[" */
+extern0 SEXP	R_SummaryChar; /* "Summary" */
+extern0 SEXP	R_UnlistChar; /* "unlist" */
+extern0 SEXP	R_XtfrmChar; /* "xtfrm" */
 
  /* writable char access for R internal use only */
 #define CHAR_RW(x)	((char *) CHAR(x))
@@ -1018,9 +1063,9 @@ SEXP deparse1(SEXP,Rboolean,int);
 SEXP deparse1w(SEXP,Rboolean,int);
 SEXP deparse1line(SEXP,Rboolean);
 SEXP deparse1s(SEXP call);
-int DispatchAnyOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
-int DispatchOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
-int DispatchGroup(const char *, SEXP,SEXP,SEXP,SEXP,SEXP*);
+int DispatchAnyOrEval(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*, int, int);
+int DispatchOrEval(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*, int, int);
+int DispatchGroup(SEXP, SEXP,SEXP,SEXP,SEXP,SEXP*);
 SEXP duplicated(SEXP, Rboolean);
 R_xlen_t any_duplicated(SEXP, Rboolean);
 R_xlen_t any_duplicated3(SEXP, SEXP, Rboolean);
@@ -1135,7 +1180,7 @@ void unbindVar(SEXP, SEXP);
 void unmarkPhase(void);
 #endif
 SEXP R_LookupMethod(SEXP, SEXP, SEXP, SEXP);
-int usemethod(const char *, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
+int usemethod(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
 SEXP vectorIndex(SEXP, SEXP, int, int, int, SEXP, Rboolean);
 
 #ifdef R_USE_SIGNALS

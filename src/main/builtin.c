@@ -891,7 +891,7 @@ SEXP attribute_hidden do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
     x = CAR(args);
 
     if (PRIMVAL(op)) { /* xlength<- */
-	if(isObject(x) && DispatchOrEval(call, op, "length<-", args,
+	if(isObject(x) && DispatchOrEval(call, op, R_LengthAssignChar, args,
 					 rho, &ans, 0, 1))
 	    return(ans);
 	if (!isVector(x) && !isVectorizable(x))
@@ -901,7 +901,7 @@ SEXP attribute_hidden do_lengthgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 	R_xlen_t len = asVecSize(CADR(args));
 	return xlengthgets(x, len);
     }
-    if(isObject(x) && DispatchOrEval(call, op, "length<-", args,
+    if(isObject(x) && DispatchOrEval(call, op, R_LengthAssignChar, args,
 				     rho, &ans, 0, 1))
 	return(ans);
     if (!isVector(x) && !isVectorizable(x))

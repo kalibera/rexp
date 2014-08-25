@@ -1117,6 +1117,51 @@ SEXP attribute_hidden installDDVAL(int n) {
     return createDDVALSymbol(n);
 }
 
+static void CharShortcuts(void) {
+    R_AnyNaChar = mkChar("anyNA"); R_PreserveObject(R_AnyNaChar);
+    R_AsCharacterChar = mkChar("as.character"); R_PreserveObject(R_AsCharacterChar);
+    R_AsComplexChar = mkChar("as.complex"); R_PreserveObject(R_AsComplexChar);
+    R_AsDoubleChar = mkChar("as.double"); R_PreserveObject(R_AsDoubleChar);
+    R_AsEnvironmentChar = mkChar("as.environment"); R_PreserveObject(R_AsEnvironmentChar);
+    R_AsIntegerChar = mkChar("as.integer"); R_PreserveObject(R_AsIntegerChar);
+    R_AsLogicalChar = mkChar("as.logical"); R_PreserveObject(R_AsLogicalChar);
+    R_AsRawChar = mkChar("as.raw"); R_PreserveObject(R_AsRawChar);
+    R_AsVectorChar = mkChar("as.vector"); R_PreserveObject(R_AsVectorChar);
+    R_CChar = mkChar("c"); R_PreserveObject(R_CChar);
+    R_ComplexChar = mkChar("Complex"); R_PreserveObject(R_ComplexChar);
+    R_DefaultChar = mkChar("default"); R_PreserveObject(R_DefaultChar);
+    R_DimChar = mkChar("dim"); R_PreserveObject(R_DimChar);
+    R_DimAssignChar = mkChar("dim<-"); R_PreserveObject(R_DimAssignChar);
+    R_DimnamesChar = mkChar("dimnames"); R_PreserveObject(R_DimnamesChar);
+    R_DimnamesAssignChar = mkChar("dimnames<-"); R_PreserveObject(R_DimnamesAssignChar);
+    R_DollarChar = mkChar("$"); R_PreserveObject(R_DollarChar);
+    R_DollarAssignChar = mkChar("$<-"); R_PreserveObject(R_DollarAssignChar);
+    R_FieldAssignChar = mkChar("@<-"); R_PreserveObject(R_FieldAssignChar);
+    R_IsArrayChar = mkChar("is.array"); R_PreserveObject(R_IsArrayChar);
+    R_IsFiniteChar = mkChar("is.finite"); R_PreserveObject(R_IsFiniteChar);
+    R_IsInfiniteChar = mkChar("is.infinite"); R_PreserveObject(R_IsInfiniteChar);
+    R_IsMatrixChar = mkChar("is.matrix"); R_PreserveObject(R_IsMatrixChar);
+    R_IsNaChar = mkChar("is.na"); R_PreserveObject(R_IsNaChar);
+    R_IsNanChar = mkChar("is.nan"); R_PreserveObject(R_IsNanChar);
+    R_IsNumericChar = mkChar("is.numeric"); R_PreserveObject(R_IsNumericChar);
+    R_IsUnsortedChar = mkChar("is.unsorted"); R_PreserveObject(R_IsUnsortedChar);
+    R_LengthChar = mkChar("length"); R_PreserveObject(R_LengthChar);
+    R_LengthAssignChar = mkChar("length<-"); R_PreserveObject(R_LengthAssignChar);
+    R_LevelsAssignChar = mkChar("levels<-"); R_PreserveObject(R_LevelsAssignChar);
+    R_MathChar = mkChar("Math"); R_PreserveObject(R_MathChar);
+    R_NamesChar = mkChar("names"); R_PreserveObject(R_NamesChar);
+    R_NamesAssignChar = mkChar("names<-"); R_PreserveObject(R_NamesAssignChar);
+    R_OpsChar = mkChar("Ops"); R_PreserveObject(R_OpsChar);
+    R_RepChar = mkChar("rep"); R_PreserveObject(R_RepChar);
+    R_SeqChar = mkChar("seq"); R_PreserveObject(R_SeqChar);
+    R_SubassignChar = mkChar("[<-"); R_PreserveObject(R_SubassignChar);
+    R_Subassign2Char = mkChar("[[<-"); R_PreserveObject(R_Subassign2Char);
+    R_SubsetChar = mkChar("["); R_PreserveObject(R_SubsetChar);
+    R_Subset2Char = mkChar("[["); R_PreserveObject(R_Subset2Char);
+    R_SummaryChar = mkChar("Summary"); R_PreserveObject(R_SummaryChar);
+    R_UnlistChar = mkChar("unlist"); R_PreserveObject(R_UnlistChar);
+    R_XtfrmChar = mkChar("xtfrm"); R_PreserveObject(R_XtfrmChar);
+}
 
 /* initialize the symbol table */
 void attribute_hidden InitNames()
@@ -1157,6 +1202,7 @@ void attribute_hidden InitNames()
     /* Set up a set of globals so that a symbol table search can be
        avoided when matching something like dim or dimnames. */
     SymbolShortcuts();
+    CharShortcuts();
 
     /*  Builtin Functions */
     for (int i = 0; R_FunTab[i].name; i++) installFunTab(i);
@@ -1236,34 +1282,24 @@ SEXP installChar(SEXP charSXP)
     return (sym);
 }
 
-#define maxLength 512
 attribute_hidden
-SEXP installS3Signature(const char *className, const char *methodName) {
+SEXP installS3Signature(SEXP klass, SEXP method) {
 
+    const char *className = CHAR(klass);
+    const char *methodName = CHAR(method);
     const char *src;
-    char signature[maxLength];
+    char signature[LENGTH(klass) + LENGTH(method) + 2];
 
     int i = 0;
-    for(src = className; *src; src++) {
-        if (i == maxLength)
-            error(_("class name too long in '%s'"), className);
+    for(src = className; *src; src++)
         signature[i++] = *src;
-    }
 
-    if (i == maxLength)
-        error(_("class name too long in '%s'"), className);
     signature[i++] = '.';
 
-    for(src = methodName; *src; src++) {
-        if (i == maxLength)
-            error(_("class name too long in '%s'"), className);
+    for(src = methodName; *src; src++)
         signature[i++] = *src;
-    }
 
-    if (i == maxLength)
-        error(_("class name too long in '%s'"), className);
     signature[i] = 0;
-
     return install(signature);
 }
 

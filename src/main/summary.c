@@ -462,7 +462,7 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(call2 = shallow_duplicate(call));
     SETCDR(call2, args);
 
-    if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
+    if (DispatchGroup(R_SummaryChar, call2, op, args, env, &ans)) {
 	UNPROTECT(2);
 	return(ans);
     }
@@ -773,7 +773,7 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(call2 = shallow_duplicate(call));
     SETCDR(call2, args);
 
-    if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
+    if (DispatchGroup(R_SummaryChar, call2, op, args, env, &ans)) {
 	UNPROTECT(2);
 	return(ans);
     }

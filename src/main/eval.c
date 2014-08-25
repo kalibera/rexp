@@ -2484,7 +2484,7 @@ static SEXP evalArgs(SEXP el, SEXP rho, int dropmissing, SEXP call, int n)
  * immediately, rather than after the call to R_possible_dispatch.
  */
 attribute_hidden
-int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
+int DispatchAnyOrEval(SEXP call, SEXP op, SEXP generic, SEXP args,
 		      SEXP rho, SEXP *ans, int dropmissing, int argsevald)
 {
     if(R_has_methods(op)) {
@@ -2527,7 +2527,7 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
  * at large in the world.
  */
 attribute_hidden
-int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
+int DispatchOrEval(SEXP call, SEXP op, SEXP generic, SEXP args,
 		   SEXP rho, SEXP *ans, int dropmissing, int argsevald)
 {
 /* DispatchOrEval is called very frequently, most often in cases where
@@ -2668,10 +2668,10 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     return 0;
 }
 
-static R_INLINE void updateObjFromS4Slot(SEXP objSlot, const char *className) {
+static R_INLINE void updateObjFromS4Slot(SEXP objSlot, SEXP klass) {
     SEXP obj = CAR(objSlot);
 
-    if(IS_S4_OBJECT(obj) && isBasicClass(className)) {
+    if(IS_S4_OBJECT(obj) && isBasicClass(klass)) {
 	/* This and the similar test below implement the strategy
 	 for S3 methods selected for S4 objects.  See ?Methods */
 	if(NAMED(obj)) SET_NAMED(obj, 2);
@@ -2682,7 +2682,7 @@ static R_INLINE void updateObjFromS4Slot(SEXP objSlot, const char *className) {
 }
 
 /* gr needs to be protected on return from this function */
-static void findmethod(SEXP Class, const char *group, const char *generic,
+static void findmethod(SEXP Class, SEXP group, SEXP generic,
 		       SEXP *sxp,  SEXP *gr, SEXP *meth, int *which,
 		       SEXP objSlot, SEXP rho)
 {
@@ -2696,7 +2696,7 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
        "Ops.foo" rather than ">.bar"
     */
     for (whichclass = 0 ; whichclass < len ; whichclass++) {
-	const char *ss = translateChar(STRING_ELT(Class, whichclass));
+	SEXP ss = translateCharChar(STRING_ELT(Class, whichclass));
 	*meth = installS3Signature(generic, ss);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
@@ -2707,7 +2707,7 @@ static void findmethod(SEXP Class, const char *group, const char *generic,
 	*meth = installS3Signature(group, ss);
 	*sxp = R_LookupMethod(*meth, rho, rho, R_BaseEnv);
 	if (isFunction(*sxp)) {
-	    *gr = mkString(group);
+	    *gr = ScalarString(group);
 	    if (whichclass > 0) updateObjFromS4Slot(objSlot, ss);
 	    break;
 	}
@@ -2723,13 +2723,13 @@ static SEXP classForGroupDispatch(SEXP obj) {
 }
 
 attribute_hidden
-int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
+int DispatchGroup(SEXP group, SEXP call, SEXP op, SEXP args, SEXP rho,
 		  SEXP *ans)
 {
     int i, nargs, lwhich, rwhich;
     SEXP lclass, s, t, m, lmeth, lsxp, lgr, newrho;
     SEXP rclass, rmeth, rgr, rsxp, value;
-    char *generic;
+    SEXP generic;
     Rboolean useS4 = TRUE, isOps = FALSE;
 
     /* pre-test to avoid string computations when there is nothing to
@@ -2742,7 +2742,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	(CDR(args) == R_NilValue || ! isObject(CADR(args))))
 	return 0;
 
-    isOps = strcmp(group, "Ops") == 0;
+    isOps = strcmp(CHAR(group), "Ops") == 0;
 
     /* try for formal method */
     if(length(args) == 1 && !IS_S4_OBJECT(CAR(args))) useS4 = FALSE;
@@ -2775,7 +2775,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if( nargs == 1 && !isObject(CAR(args)) )
 	return 0;
 
-    generic = PRIMNAME(op);
+    generic = mkChar(PRIMNAME(op)); /* !! avoid this */
 
     lclass = classForGroupDispatch(CAR(args));
 
@@ -2818,7 +2818,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 		lsxp = R_NilValue;
 	    else {
 		warning(_("Incompatible methods (\"%s\", \"%s\") for \"%s\""),
-			lname, rname, generic);
+			lname, rname, CHAR(generic));
 		UNPROTECT(2);
 		return 0;
 	    }
@@ -2852,7 +2852,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     defineVar(R_dot_Method, m, newrho);
     UNPROTECT(1);
-    defineVar(R_dot_Generic, mkString(generic), newrho);
+    defineVar(R_dot_Generic, ScalarString(generic), newrho);
     defineVar(R_dot_Group, lgr, newrho);
     defineVar(R_dot_Class, stringSuffix(lclass, lwhich), newrho);
     defineVar(R_dot_GenericCallEnv, rho, newrho);
@@ -3173,7 +3173,7 @@ static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	SEXP args, ans;
 	args = CONS_NR(x, CONS_NR(y, R_NilValue));
 	PROTECT(args);
-	if (DispatchGroup("Ops", call, op, args, rho, &ans)) {
+	if (DispatchGroup(R_OpsChar, call, op, args, rho, &ans)) {
 	    UNPROTECT(1);
 	    return ans;
 	}
@@ -3189,7 +3189,7 @@ static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
 	SEXP args, ans;
 	args = CONS_NR(x, R_NilValue);
 	PROTECT(args);
-	if (DispatchGroup("Ops", call, op, args, rho, &ans)) {
+	if (DispatchGroup(R_OpsChar, call, op, args, rho, &ans)) {
 	    UNPROTECT(1);
 	    return ans;
 	}
@@ -3210,7 +3210,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	SEXP args, ans;
 	args = CONS_NR(x, CONS_NR(y, R_NilValue));
 	PROTECT(args);
-	if (DispatchGroup("Ops", call, op, args, rho, &ans)) {
+	if (DispatchGroup(R_OpsChar, call, op, args, rho, &ans)) {
 	    UNPROTECT(1);
 	    return ans;
 	}
@@ -3759,12 +3759,12 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	    SET_TAG(__cell__, t);			\
     } while (0)
 
-static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
+static int tryDispatch(SEXP generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
 {
   RCNTXT cntxt;
   SEXP pargs, rho1;
   int dispatched = FALSE;
-  SEXP op = SYMVALUE(install(generic)); /**** avoid this */
+  SEXP op = SYMVALUE(installChar(generic)); /**** avoid this */
 
   PROTECT(pargs = promiseArgs(CDR(call), rho));
   SET_PRVALUE(CAR(pargs), x);
@@ -3793,7 +3793,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   return dispatched;
 }
 
-static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
+static int tryAssignDispatch(SEXP generic, SEXP call, SEXP lhs, SEXP rhs,
 			     SEXP rho, SEXP *pv)
 {
     int result;
@@ -5019,16 +5019,16 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 #endif
 	NEXT();
       }
-    OP(STARTSUBSET, 2): DO_STARTDISPATCH("[");
+    OP(STARTSUBSET, 2): DO_STARTDISPATCH(R_SubsetChar);
     OP(DFLTSUBSET, 0): DO_DFLTDISPATCH(do_subset_dflt, R_SubsetSym);
-    OP(STARTSUBASSIGN, 2): DO_START_ASSIGN_DISPATCH("[<-");
+    OP(STARTSUBASSIGN, 2): DO_START_ASSIGN_DISPATCH(R_SubassignChar);
     OP(DFLTSUBASSIGN, 0):
       DO_DFLT_ASSIGN_DISPATCH(do_subassign_dflt, R_SubassignSym);
-    OP(STARTC, 2): DO_STARTDISPATCH("c");
+    OP(STARTC, 2): DO_STARTDISPATCH(R_CChar);
     OP(DFLTC, 0): DO_DFLTDISPATCH(do_c_dflt, R_CSym);
-    OP(STARTSUBSET2, 2): DO_STARTDISPATCH("[[");
+    OP(STARTSUBSET2, 2): DO_STARTDISPATCH(R_Subset2Char);
     OP(DFLTSUBSET2, 0): DO_DFLTDISPATCH(do_subset2_dflt, R_Subset2Sym);
-    OP(STARTSUBASSIGN2, 2): DO_START_ASSIGN_DISPATCH("[[<-");
+    OP(STARTSUBASSIGN2, 2): DO_START_ASSIGN_DISPATCH(R_Subassign2Char);
     OP(DFLTSUBASSIGN2, 0):
       DO_DFLT_ASSIGN_DISPATCH(do_subassign2_dflt, R_Subassign2Sym);
     OP(DOLLAR, 2):
@@ -5042,7 +5042,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    PROTECT(ncall = duplicate(call));
 	    /**** hack to avoid evaluating the symbol */
 	    SETCAR(CDDR(ncall), ScalarString(PRINTNAME(symbol)));
-	    dispatched = tryDispatch("$", ncall, x, rho, &value);
+	    dispatched = tryDispatch(R_DollarChar, ncall, x, rho, &value);
 	    UNPROTECT(1);
 	}
 	if (dispatched)
@@ -5070,7 +5070,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    SETCAR(CDDR(ncall), ScalarString(PRINTNAME(symbol)));
 	    prom = mkRHSPROMISE(CADDDR(ncall), rhs);
 	    SETCAR(CDR(CDDR(ncall)), prom);
-	    dispatched = tryDispatch("$<-", ncall, x, rho, &value);
+	    dispatched = tryDispatch(R_DollarAssignChar, ncall, x, rho, &value);
 	    UNPROTECT(1);
 	}
 	if (! dispatched)
@@ -5352,14 +5352,14 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       value = BCNPOP();
       findcontext(CTXT_BROWSER | CTXT_FUNCTION, rho, value);
     }
-    OP(STARTSUBSET_N, 2): DO_STARTDISPATCH_N("[");
-    OP(STARTSUBASSIGN_N, 2): DO_START_ASSIGN_DISPATCH_N("[<-");
+    OP(STARTSUBSET_N, 2): DO_STARTDISPATCH_N(R_SubsetChar);
+    OP(STARTSUBASSIGN_N, 2): DO_START_ASSIGN_DISPATCH_N(R_SubassignChar);
     OP(VECSUBSET2, 1): DO_VECSUBSET(rho, TRUE); NEXT();
     OP(MATSUBSET2, 1): DO_MATSUBSET(rho, TRUE); NEXT();
     OP(VECSUBASSIGN2, 1): DO_VECSUBASSIGN(rho, TRUE); NEXT();
     OP(MATSUBASSIGN2, 1): DO_MATSUBASSIGN(rho, TRUE); NEXT();
-    OP(STARTSUBSET2_N, 2): DO_STARTDISPATCH_N("[[");
-    OP(STARTSUBASSIGN2_N, 2): DO_START_ASSIGN_DISPATCH_N("[[<-");
+    OP(STARTSUBSET2_N, 2): DO_STARTDISPATCH_N(R_Subset2Char);
+    OP(STARTSUBASSIGN2_N, 2): DO_START_ASSIGN_DISPATCH_N(R_Subassign2Char);
     OP(SUBSET_N, 2): DO_SUBSET_N(rho, FALSE); NEXT();
     OP(SUBSET2_N, 2): DO_SUBSET_N(rho, TRUE); NEXT();
     OP(SUBASSIGN_N, 2): DO_SUBASSIGN_N(rho, FALSE); NEXT();
