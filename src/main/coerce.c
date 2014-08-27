@@ -407,7 +407,7 @@ static SEXP coerceToSymbol(SEXP v)
 	UNIMPLEMENTED_TYPE("coerceToSymbol", v);
     }
     if (warn) CoercionWarning(warn);/*2000/10/23*/
-    ans = install(CHAR(ans));
+    ans = installChar(ans);
     UNPROTECT(1);
     return ans;
 }
@@ -1255,7 +1255,7 @@ SEXP CreateTag(SEXP x)
 	&& length(STRING_ELT(x, 0)) >= 1) {
 	x = installTrChar(STRING_ELT(x, 0));
     } else
-	x = install(CHAR(STRING_ELT(deparse1(x, 1, SIMPLEDEPARSE), 0)));
+	x = installChar(STRING_ELT(deparse1(x, 1, SIMPLEDEPARSE), 0));
     return x;
 }
 
@@ -1725,7 +1725,7 @@ SEXP attribute_hidden do_typeof(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* Define many of the <primitive> "is.xxx" functions :
-   Note that  isNull, isNumeric, etc are defined in util.c or Rinlinedfuns.h
+   Note that  isNull, isNumeric, etc are defined in util.c or ../include/Rinlinedfuns.h
 */
 SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2605,7 +2605,7 @@ SEXP attribute_hidden do_quote(SEXP call, SEXP op, SEXP args, SEXP rho)
     check1arg(args, call, "expr");
     SEXP val = CAR(args);
     /* Make sure expression has NAMED == 2 before being returning
-       in to avoid modification of source code */
+       in order to avoid modification of source code */
     if (NAMED(val) != 2) SET_NAMED(val, 2);
     return(val);
 }

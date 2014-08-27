@@ -732,7 +732,7 @@ static void R_FlushGlobalCacheFromUserTable(SEXP udb)
     names = tb->objects(tb);
     n = length(names);
     for(i = 0; i < n ; i++)
-	R_FlushGlobalCache(Rf_install(CHAR(STRING_ELT(names,i))));
+	R_FlushGlobalCache(Rf_installChar(STRING_ELT(names,i)));
 }
 
 static void R_AddGlobalCache(SEXP symbol, SEXP place)
@@ -1772,8 +1772,7 @@ SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    tenv = CDR(tenv);
 	}
 	if (!done)
-	    warning(_("object '%s' not found"),
-		    EncodeChar(PRINTNAME(tsym)));
+	    warning(_("object '%s' not found"), EncodeChar(PRINTNAME(tsym)));
     }
     return R_NilValue;
 }
@@ -1854,8 +1853,7 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 		  CHAR(PRINTNAME(t1)));
 	if (rval == R_UnboundValue) {
 	    if (gmode == ANYSXP)
-		error(_("object '%s' not found"),
-		      EncodeChar(PRINTNAME(t1)));
+		error(_("object '%s' not found"), EncodeChar(PRINTNAME(t1)));
 	    else
 		error(_("object '%s' of mode '%s' was not found"),
 		      CHAR(PRINTNAME(t1)),

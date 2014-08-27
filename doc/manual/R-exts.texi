@@ -3950,6 +3950,13 @@ calls may come from external software and may never be called, but
 package authors are often mistaken about that.
 
 @item
+Compiled code should not call the system random number generators such
+as @code{rand}, @code{drand48} and @code{random}, but rather use the
+interfaces to @R{}'s RNGs described in @ref{Random numbers}.  In
+particular, if more than one package initializes the system RNG (e.g.@:
+@emph{via} @code{srand}), they will interfere with each other.
+
+@item
 Errors in memory allocation and reading/writing outside arrays are very
 common causes of crashes (e.g., segfaults) on some machines.
 See @ref{Checking memory access} for tools which can be used to look for this.
@@ -9643,7 +9650,7 @@ SEXP getvar(SEXP name, SEXP rho)
 	error("name is not a single string");
     if(!isEnvironment(rho))
 	error("rho should be an environment");
-    ans = findVar(install(CHAR(STRING_ELT(name, 0))), rho);
+    ans = findVar(installChar(STRING_ELT(name, 0)), rho);
     Rprintf("first value is %f\n", REAL(ans)[0]);
     return R_NilValue;
 @}
@@ -10393,7 +10400,7 @@ SEXP numeric_deriv(SEXP args)
 
 @group
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) @{
-	par = PROTECT(findVar(install(CHAR(STRING_ELT(theta, i))), rho));
+	par = PROTECT(findVar(installChar(STRING_ELT(theta, i)), rho));
 	tt = REAL(par)[0];
 	xx = fabs(tt);
 	delta = (xx < 1) ? eps : xx*eps;
@@ -10460,7 +10467,7 @@ applicable.)
 @example
 @group
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) @{
-	par = PROTECT(findVar(install(CHAR(STRING_ELT(theta, i))), rho));
+	par = PROTECT(findVar(installChar(STRING_ELT(theta, i)), rho));
 @end group
 @end example
 
@@ -12253,7 +12260,7 @@ is configured and recorded in header @file{Rconfig.h} (included by
 Unix-alikes with a recent compiler, but not supported on OS X nor
 Windows.  Minimizing the visibility of symbols in a shared library will
 both speed up its loading (unlikely to be significant) and reduce the
-possibility of linking to the wrong entry points of the same name.
+possibility of linking to other entry points of the same name.
 
 C/C++ entry points prefixed by @code{attribute_hidden} will not be
 visible in the shared object.  There is no comparable mechanism for
