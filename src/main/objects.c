@@ -223,7 +223,8 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	if (TYPEOF(table) == PROMSXP) table = eval(table, R_BaseEnv);
 	if (TYPEOF(table) == ENVSXP) {
 	    val = findVarInFrame3(table, method, TRUE);
-	    if (TYPEOF(val) == PROMSXP) val = eval(val, rho);
+	    if (TYPEOF(val) == PROMSXP)
+	        val = eval(val, rho /* ? could be R_GlobalEnv */);
 	    if (val != R_UnboundValue) return val;
 	}
 	return R_UnboundValue;
@@ -466,6 +467,184 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	errorcall(call, _("no applicable method for '%s' applied to an object of class \"%s\""),
 		  translateChar(STRING_ELT(generic, 0)), cl);
+    }
+    /* Not reached */
+    return R_NilValue;
+}
+
+static SEXP GetObjectFromArgList(SEXP formals, SEXP args) /*based on GetObject*/
+{
+    SEXP s, b, tag;
+
+    tag = TAG(formals);
+    if (tag != R_NilValue && tag != R_DotsSymbol) {
+	s = NULL;
+	/** exact matches **/
+	for (b = args ; b != R_NilValue ; b = CDR(b))
+	    if (TAG(b) != R_NilValue && pmatch(tag, TAG(b), 1)) {
+		if (s != NULL)
+		    error(_("formal argument \"%s\" matched by multiple actual arguments"), tag);
+		else
+		    s = CAR(b);
+	    }
+
+	if (s == NULL)
+	    /** partial matches **/
+	    for (b = args ; b != R_NilValue ; b = CDR(b))
+		if (TAG(b) != R_NilValue && pmatch(tag, TAG(b), 0)) {
+		    if ( s != NULL)
+			error(_("formal argument \"%s\" matched by multiple actual arguments"), tag);
+		    else
+			s = CAR(b);
+		}
+	if (s == NULL)
+	    /** first untagged argument **/
+	    for (b = args ; b != R_NilValue ; b = CDR(b))
+		if (TAG(b) == R_NilValue )
+		{
+		    s = CAR(b);
+		    break;
+		}
+	if (s == NULL)
+	    s = CAR(args);
+/*
+	    error("failed to match argument for dispatch");
+*/
+    }
+    else
+	s = CAR(args);
+
+    if (TYPEOF(s) == PROMSXP) {
+	if (PRVALUE(s) == R_UnboundValue)
+	    s = eval(s, R_BaseEnv);
+	else
+	    s = PRVALUE(s);
+    }
+    return(s);
+}
+
+static
+SEXP dispatchSimpleS3Generic(SEXP call, SEXP op, SEXP args, SEXP sxp, SEXP dotClass, SEXP method,
+		    const char *generic, SEXP callrho, SEXP defrho) {
+
+    SEXP newrho = PROTECT(allocSExp(ENVSXP));
+
+    if( RDEBUG(op) || RSTEP(op) ) {
+        SET_RSTEP(sxp, 1);
+    }
+    defineVar(R_dot_Generic, mkString(generic), newrho);
+    defineVar(R_dot_Class, dotClass, newrho);
+    defineVar(R_dot_Method, ScalarString(PRINTNAME(method)), newrho);
+    defineVar(R_dot_GenericCallEnv, callrho, newrho);
+    defineVar(R_dot_GenericDefEnv, defrho, newrho);
+
+    SEXP newcall =  PROTECT(duplicate(call));
+    SETCAR(newcall, method);
+    SEXP ans = applyClosure(newcall, sxp, args, callrho, newrho);
+    UNPROTECT(2); /* newrho, newcall */
+
+    return ans;
+}
+
+static int useSimpleS3GenericInner(const char *generic, SEXP obj, SEXP call, SEXP op, SEXP args,
+	      SEXP callrho, SEXP defrho, SEXP *ans)
+{
+    SEXP klass, method, sxp;
+    int i, nclass;
+
+    PROTECT(klass = R_data_class2(obj));
+
+    nclass = length(klass);
+    for (i = 0; i < nclass; i++) {
+        const void *vmax = vmaxget();
+        const char *ss = translateChar(STRING_ELT(klass, i));
+	method = installS3Signature(generic, ss);
+	vmaxset(vmax);
+	sxp = R_LookupMethod(method, R_GlobalEnv, callrho, defrho);
+	if (isFunction(sxp)) {
+	    if(method == R_SortListSymbol && CLOENV(sxp) == R_BaseNamespace)
+		continue; /* kludge because sort.list is not a method */
+            if (i > 0) {
+		SEXP dotClass = PROTECT(stringSuffix(klass, i));
+		setAttrib(dotClass, R_PreviousSymbol, klass);
+		*ans = dispatchSimpleS3Generic(call, op, args, sxp, dotClass, method, generic,
+				      callrho, defrho);
+		UNPROTECT(1); /* dotClass */
+	    } else {
+	        *ans = dispatchSimpleS3Generic(call, op, args, sxp, klass, method, generic,
+				      callrho, defrho);
+            }
+	    UNPROTECT(1); /* klass */
+	    return 1;
+	}
+    }
+    method = installS3Signature(generic, "default");
+    sxp = R_LookupMethod(method, R_GlobalEnv, callrho, defrho);
+    if (isFunction(sxp)) {
+        *ans = dispatchSimpleS3Generic(call, op, args, sxp, R_NilValue, method, generic,
+			      callrho, defrho);
+	UNPROTECT(1); /* klass */
+	return 1;
+    }
+    UNPROTECT(1); /* klass */
+    return 0;
+}
+
+/*
+call is the call to a closure, which just calls UseMethod(string)
+op is that closure
+args
+env are from that call
+*/
+SEXP attribute_hidden useSimpleS3Generic(SEXP call, SEXP op, SEXP args, SEXP callenv, SEXP generic)
+{
+    SEXP ans, obj;
+    SEXP defenv;
+
+    /* get environments needed for dispatching.
+       callenv = environment from which the generic was called (env)
+       defenv = environment where the generic was defined */
+
+    if (!strcmp(CHAR(PRINTNAME(CAR(call))), CHAR(generic)))
+        defenv = CLOENV(op);
+    else {
+        /* it would be tempting to just always use
+                 defenv = CLOENV(op);
+           but that won't work for wrappers, such as
+                 mycoef <- function(object, ....) UseMethod("coef")
+        */
+        SEXP val = findVar1(installTrChar(generic),
+		   CLOENV(op), FUNSXP, TRUE); /* That has evaluated promises */
+        if(TYPEOF(val) == CLOSXP) defenv = CLOENV(val);
+        else defenv = R_BaseNamespace;
+    }
+
+    PROTECT(obj = GetObjectFromArgList(FORMALS(op), args));
+
+    if (useSimpleS3GenericInner(translateChar(generic), obj, call, op, args,
+		 callenv, defenv, &ans) == 1) {
+	UNPROTECT(1); /* obj */
+	return ans;
+    }
+    else {
+	SEXP klass;
+	int nclass;
+	char cl[1000];
+	PROTECT(klass = R_data_class2(obj));
+	nclass = length(klass);
+	if (nclass == 1)
+	    strcpy(cl, translateChar(STRING_ELT(klass, 0)));
+	else {
+	    int i;
+	    strcpy(cl, "c('");
+	    for (i = 0; i < nclass; i++) {
+		if (i > 0) strcat(cl, "', '");
+		strcat(cl, translateChar(STRING_ELT(klass, i)));
+	    }
+	    strcat(cl, "')");
+	}
+	errorcall(call, _("no applicable method for '%s' applied to an object of class \"%s\""),
+		  translateChar(generic), cl);
     }
     /* Not reached */
     return R_NilValue;

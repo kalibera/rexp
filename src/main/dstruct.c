@@ -67,6 +67,39 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
     return result;
 }
 
+SEXP attribute_hidden getSimpleS3GenericName(SEXP closure) {
+
+    SEXP body = BODY(closure);
+    if (TYPEOF(body) == BCODESXP) {
+        body = R_ClosureExpr(closure);
+    }
+    if (TYPEOF(body) != LANGSXP) return R_NilValue;
+    SEXP sym = CAR(body);
+    SEXP lis = CDR(body);
+    if (sym == R_BraceSymbol) {
+        /* { UseMethod("str") } */
+        if (TYPEOF(lis) != LISTSXP || CDR(lis) != R_NilValue)
+            return R_NilValue;
+        body = CAR(lis);
+        if (TYPEOF(body) != LANGSXP) return R_NilValue;
+        sym = CAR(body);
+        lis = CDR(body);
+    }
+    /* UseMethod("str") */
+    if (sym != R_UseMethodSymbol) return R_NilValue;
+    if (TYPEOF(lis) != LISTSXP || TAG(lis) != R_NilValue
+            || CDR(lis) != R_NilValue)
+        return R_NilValue;
+    SEXP str = CAR(lis);
+    if (TYPEOF(str) != STRSXP || LENGTH(str) != 1) return R_NilValue;
+    return STRING_ELT(str, 0);
+}
+
+Rboolean attribute_hidden isSimpleS3Generic(SEXP closure) {
+    if (getSimpleS3GenericName(closure) != R_NilValue) return TRUE;
+    else return FALSE;
+}
+
 /* This is called by function() {}, where an invalid
    body should be impossible. When called from
    other places (eg do_asfunction) they
@@ -108,6 +141,10 @@ SEXP attribute_hidden mkCLOSXP(SEXP formals, SEXP body, SEXP rho)
 	SET_CLOENV(c, R_GlobalEnv);
     else
 	SET_CLOENV(c, rho);
+
+    if (isSimpleS3Generic(c))
+        SET_SIMPLE_S3GENERIC_CLOSURE(c);
+
     UNPROTECT(3);
     return c;
 }

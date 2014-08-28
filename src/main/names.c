@@ -1091,6 +1091,7 @@ static void SymbolShortcuts(void)
     R_dot_Class = install(".Class");
     R_dot_GenericCallEnv = install(".GenericCallEnv");
     R_dot_GenericDefEnv = install(".GenericDefEnv");
+    R_UseMethodSymbol = install("UseMethod");
 }
 
 
@@ -1215,6 +1216,8 @@ SEXP installChar(SEXP charSXP)
     for (sym = R_SymbolTable[i]; sym != R_NilValue; sym = CDR(sym))
         if (strcmp(CHAR(charSXP), CHAR(PRINTNAME(CAR(sym)))) == 0) return (CAR(sym));
     /* Create a new symbol node and link it into the table. */
+    if (TYPEOF(charSXP) != CHARSXP)
+        error(_("'%s' must be called on a CHARSXP"), "installChar");
     int len = LENGTH(charSXP);
     if (len == 0)
         error(_("attempt to use zero-length variable name"));

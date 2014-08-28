@@ -97,6 +97,7 @@ extern0 SEXP    R_dot_Group;  /* ".Group" */
 extern0 SEXP    R_dot_Class;  /* ".Class" */
 extern0 SEXP    R_dot_GenericCallEnv;  /* ".GenericCallEnv" */
 extern0 SEXP    R_dot_GenericDefEnv;  /* ".GenericDefEnv" */
+extern0 SEXP    R_UseMethodSymbol;  /* "UseMethod" */
 
 extern0 SEXP	R_StringHash;       /* Global hash of CHARSXPs */
 
@@ -923,6 +924,7 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 # define type2symbol		Rf_type2symbol
 # define unbindVar		Rf_unbindVar
 # define usemethod		Rf_usemethod
+# define useSimpleS3Generic	Rf_useSimpleS3Generic
 # define ucstomb		Rf_ucstomb
 # define ucstoutf8		Rf_ucstoutf8
 # define utf8toucs		Rf_utf8toucs
@@ -1136,6 +1138,7 @@ void unmarkPhase(void);
 #endif
 SEXP R_LookupMethod(SEXP, SEXP, SEXP, SEXP);
 int usemethod(const char *, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
+SEXP useSimpleS3Generic(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP vectorIndex(SEXP, SEXP, int, int, int, SEXP, Rboolean);
 
 #ifdef R_USE_SIGNALS

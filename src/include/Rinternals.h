@@ -324,6 +324,12 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define SET_S4_OBJECT(x) (((x)->sxpinfo.gp) |= S4_OBJECT_MASK)
 #define UNSET_S4_OBJECT(x) (((x)->sxpinfo.gp) &= ~S4_OBJECT_MASK)
 
+/* S3 bits for closures */
+#define SIMPLE_S3GENERIC_CLOSURE_MASK ((unsigned short)(1<<5))
+#define IS_SIMPLE_S3GENERIC_CLOSURE(x) ((x)->sxpinfo.gp & SIMPLE_S3GENERIC_CLOSURE_MASK)
+#define SET_SIMPLE_S3GENERIC_CLOSURE(x) (((x)->sxpinfo.gp) |= SIMPLE_S3GENERIC_CLOSURE_MASK)
+#define UNSET_SIMPLE_S3GENERIC_CLOSURE(x) (((x)->sxpinfo.gp) &= ~SIMPLE_S3GENERIC_CLOSURE_MASK)
+
 /* Vector Access Macros */
 #ifdef LONG_VECTOR_SUPPORT
     R_len_t R_BadLongVector(SEXP, const char *, int);
@@ -531,6 +537,11 @@ void DUPLICATE_ATTRIB(SEXP to, SEXP from);
 int (IS_S4_OBJECT)(SEXP x);
 void (SET_S4_OBJECT)(SEXP x);
 void (UNSET_S4_OBJECT)(SEXP x);
+
+/* S3 generic testing */
+int (IS_SIMPLE_S3GENERIC_CLOSURE)(SEXP x);
+void (SET_SIMPLE_S3GENERIC_CLOSURE)(SEXP x);
+void (UNSET_SIMPLE_S3GENERIC_CLOSURE)(SEXP x);
 
 /* Vector Access Functions */
 int  (LENGTH)(SEXP x);
@@ -794,12 +805,14 @@ int Rf_GetOptionDigits(void);
 int Rf_GetOptionWidth(void);
 SEXP Rf_GetRowNames(SEXP);
 void Rf_gsetVar(SEXP, SEXP, SEXP);
+SEXP Rf_getSimpleS3GenericName(SEXP);
 SEXP Rf_install(const char *);
 SEXP Rf_installChar(SEXP);
 SEXP Rf_installDDVAL(int i);
 SEXP Rf_installS3Signature(const char *, const char *);
 Rboolean Rf_isFree(SEXP);
 Rboolean Rf_isOrdered(SEXP);
+Rboolean Rf_isSimpleS3Generic(SEXP);
 Rboolean Rf_isUnordered(SEXP);
 Rboolean Rf_isUnsorted(SEXP, Rboolean);
 SEXP Rf_lengthgets(SEXP, R_len_t);
@@ -1126,6 +1139,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define GetOptionWidth		Rf_GetOptionWidth
 #define GetOption		Rf_GetOption
 #define GetRowNames		Rf_GetRowNames
+#define getSimpleS3GenericName	Rf_getSimpleS3GenericName
 #define gsetVar			Rf_gsetVar
 #define inherits		Rf_inherits
 #define install			Rf_install
@@ -1157,6 +1171,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define isPrimitive		Rf_isPrimitive
 #define isReal			Rf_isReal
 #define isS4			Rf_isS4
+#define isSimpleS3Generic	Rf_isSimpleS3Generic
 #define isString		Rf_isString
 #define isTs			Rf_isTs
 #define isUnordered		Rf_isUnordered

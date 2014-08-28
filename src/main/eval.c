@@ -869,6 +869,13 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedenv)
     SEXP f, a, tmp;
     RCNTXT cntxt;
 
+    if (IS_SIMPLE_S3GENERIC_CLOSURE(op) && FRAME(suppliedenv) == R_NilValue) {
+        SEXP generic = getSimpleS3GenericName(op);
+        if (generic != R_NilValue)
+            return useSimpleS3Generic(call, op, arglist, rho, generic);
+        else
+            UNSET_SIMPLE_S3GENERIC_CLOSURE(op);
+    }
     /* formals = list of formal parameters */
     /* actuals = values to be bound to formals */
     /* arglist = the tagged list of arguments */
