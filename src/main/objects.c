@@ -540,7 +540,7 @@ SEXP dispatchSimpleS3Generic(SEXP call, SEXP op, SEXP args, SEXP sxp, SEXP dotCl
 
     SEXP newcall =  PROTECT(duplicate(call));
     SETCAR(newcall, method);
-    SEXP ans = applyClosure(newcall, sxp, args, callrho, newrho);
+    SEXP ans = applyMethod(newcall, sxp, args, callrho, newrho);
     UNPROTECT(2); /* newrho, newcall */
 
     return ans;
