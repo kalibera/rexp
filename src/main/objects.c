@@ -304,26 +304,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     /* Get the context which UseMethod was called from. */
 
     cptr = R_GlobalContext;
-    if ( !(cptr->callflag & CTXT_FUNCTION) || cptr->cloenv != rho)
-	error(_("'UseMethod' used in an inappropriate fashion"));
-
-    op = CAR(cptr->call);
-    switch (TYPEOF(op)) {
-    case SYMSXP:
-	PROTECT(op = findFun(op, cptr->sysparent));
-	break;
-    case LANGSXP:
-	PROTECT(op = eval(op, cptr->sysparent));
-	break;
-    case CLOSXP:
-    case BUILTINSXP:
-    case SPECIALSXP:
-	PROTECT(op);
-	break;
-    default:
-	error(_("invalid generic function in 'usemethod'"));
-    }
-
+    op = cptr->callfun;
     PROTECT(klass = R_data_class2(obj));
 
     nclass = length(klass);
@@ -346,7 +327,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	        *ans = dispatchMethod(op, sxp, klass, cptr, method, generic,
 				      rho, callrho, defrho);
             }
-	    UNPROTECT(2); /* op, klass */
+	    UNPROTECT(1); /* klass */
 	    return 1;
 	}
     }
@@ -355,10 +336,10 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     if (isFunction(sxp)) {
         *ans = dispatchMethod(op, sxp, R_NilValue, cptr, method, generic,
 			      rho, callrho, defrho);
-	UNPROTECT(2); /* op, klass */
+	UNPROTECT(1); /* klass */
 	return 1;
     }
-    UNPROTECT(2); /* op, klass */
+    UNPROTECT(1); /* klass */
     cptr->callflag = CTXT_RETURN;
     return 0;
 }
@@ -480,7 +461,7 @@ static SEXP fixcall(SEXP call, SEXP args)
 
 /*
    equalS3Signature: compares "signature" and "left.right"
-   all argumebts must be non-null
+   all arguments must be non-null
 */
 static
 Rboolean equalS3Signature(const char *signature, const char *left,
