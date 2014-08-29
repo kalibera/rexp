@@ -186,20 +186,20 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
     SEXP val;
     static SEXP s_S3MethodsTable = NULL;
 
-    if (TYPEOF(callrho) == NILSXP) {
-	error(_("use of NULL environment is defunct"));
-	callrho = R_BaseEnv;
-    } else
-	if (TYPEOF(callrho) != ENVSXP)
-	    error(_("bad generic call environment"));
-    if (TYPEOF(defrho) == NILSXP) {
+    if (TYPEOF(callrho) != ENVSXP) {
+        if (TYPEOF(callrho) == NILSXP)
 	    error(_("use of NULL environment is defunct"));
-	    defrho = R_BaseEnv;
-    } else
-	if (TYPEOF(defrho) != ENVSXP)
-	    error(_("bad generic definition environment"));
+        else
+	    error(_("bad generic call environment"));
+    }
     if (defrho == R_BaseEnv)
 	defrho = R_BaseNamespace;
+    else if (TYPEOF(defrho) != ENVSXP) {
+        if (TYPEOF(defrho) == NILSXP)
+            error(_("use of NULL environment is defunct"));
+        else
+            error(_("bad generic definition environment"));
+    }
 
     /* This evaluates promises */
     val = findVar1(method, callrho, FUNSXP, TRUE);
@@ -216,7 +216,7 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	if (TYPEOF(table) == ENVSXP) {
 	    val = findVarInFrame3(table, method, TRUE);
 	    if (TYPEOF(val) == PROMSXP) val = eval(val, rho);
-	    if (val != R_UnboundValue) return val;
+	    return val;
 	}
 	return R_UnboundValue;
     }
