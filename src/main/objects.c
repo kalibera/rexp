@@ -33,16 +33,9 @@
 
 static SEXP GetObject(RCNTXT *cptr)
 {
-    SEXP s, sysp, b, formals, funcall, tag;
-    sysp = R_GlobalContext->sysparent;
+    SEXP s, b, formals, tag;
 
-    PROTECT(funcall = R_syscall(0, cptr));
-
-    if ( TYPEOF(CAR(funcall)) == SYMSXP )
-	PROTECT(b = findFun(CAR(funcall), sysp));
-    else
-	PROTECT(b = eval(CAR(funcall), sysp));
-    /**** use R_sysfunction here instead */
+    PROTECT(b = R_sysfunction(0, cptr));
     if (TYPEOF(b) != CLOSXP) error(_("generic 'function' is not a function"));
     formals = FORMALS(b);
 
@@ -84,7 +77,7 @@ static SEXP GetObject(RCNTXT *cptr)
     else
 	s = CAR(cptr->promargs);
 
-    UNPROTECT(2);
+    UNPROTECT(1);
     if (TYPEOF(s) == PROMSXP) {
 	if (PRVALUE(s) == R_UnboundValue)
 	    s = eval(s, R_BaseEnv);
