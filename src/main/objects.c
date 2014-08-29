@@ -681,7 +681,7 @@ static SEXP fixcall(SEXP call, SEXP args)
 
 /*
    equalS3Signature: compares "signature" and "left.right"
-   all argumebts must be non-null
+   all arguments must be non-null
 */
 static
 Rboolean equalS3Signature(const char *signature, const char *left,
