@@ -35,7 +35,7 @@ static SEXP GetObject(RCNTXT *cptr)
 {
     SEXP s, b, formals, tag;
 
-    PROTECT(b = R_sysfunction(0, cptr));
+    b = cptr->callfun;
     if (TYPEOF(b) != CLOSXP) error(_("generic 'function' is not a function"));
     formals = FORMALS(b);
 
@@ -77,7 +77,6 @@ static SEXP GetObject(RCNTXT *cptr)
     else
 	s = CAR(cptr->promargs);
 
-    UNPROTECT(1);
     if (TYPEOF(s) == PROMSXP) {
 	if (PRVALUE(s) == R_UnboundValue)
 	    s = eval(s, R_BaseEnv);
