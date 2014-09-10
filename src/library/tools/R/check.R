@@ -1352,9 +1352,8 @@ setRlibs <-
                             "They are not part of the API,",
                             "for use only by R itself",
                             "and subject to change without notice.")
-                else if(any(grepl("with DUP = FALSE:", out)))
-                    wrapLog("DUP = FALSE is deprecated and may be",
-                            "disabled in future versions of R.")
+                else if(any(grepl("with DUP:", out)))
+                    wrapLog("DUP is no longer supported and will be ignored.")
                 else
                     wrapLog("See the chapter 'System and foreign language interfaces' of the 'Writing R Extensions' manual.\n")
             } else resultLog(Log, "OK")
@@ -2164,8 +2163,10 @@ setRlibs <-
             ## If we have named objects then we have symbols.rds and
             ## will not be picking up symbols just in system libraries.
             haveObjs <- any(grepl("^ *Object", out))
-            if(haveObjs && any(grepl("(abort|assert|exit)", out)) &&
-               !pkgname %in% c("multicore", "parallel")) # these need to call exit
+            pat <- paste("possibly from",
+                         sQuote("(abort|assert|exit|_exit|_Exit)"))
+            if(haveObjs && any(grepl(pat, out)) &&
+               !pkgname %in% c("parallel", "fork")) # need _exit in forked child
                 warningLog(Log)
             else noteLog(Log)
             printLog0(Log, paste(c(out, ""), collapse = "\n"))
@@ -2410,9 +2411,9 @@ setRlibs <-
                 cmd <- paste0("invisible(tools::Rdiff('",
                               exout, "', '", exsave, "',TRUE,TRUE))")
                 out <- R_runR(cmd, R_opts2)
+                resultLog(Log, "OK")
                 if(length(out))
                     printLog0(Log, paste(c("", out, ""), collapse = "\n"))
-                resultLog(Log, "OK")
             }
             if (do_timings) {
                 tfile <- paste0(pkgname, "-Ex.timings")
@@ -3284,12 +3285,16 @@ setRlibs <-
                              ": warning: .* \\[-Wformat-security\\]",
                              ": warning: .* \\[-Wheader-guard\\]",
                              ": warning: .* \\[-Wpointer-arith\\]",
-                             ": warning: .* \\[-Wunsequenced\\]")
+                             ": warning: .* \\[-Wunsequenced\\]",
+                             ": warning: .* \\[-Wvla-extension\\]",
+                             ": warning: format string contains '[\\]0'",
+                             ": warning: .* \\[-Wc[+][+]11-long-long\\]",
+                             ": warning: empty macro arguments are a C99 feature"
+                             )
 
                 warn_re <- paste0("(", paste(warn_re, collapse = "|"), ")")
 
                 lines <- grep(warn_re, lines, value = TRUE, useBytes = TRUE)
-
 
                 ## Ignore install-time readLines() warnings about
                 ## files with incomplete final lines.  Most of these

@@ -79,6 +79,8 @@ so_symbol_names_table <-
       ## http://refspecs.freestandards.org/LSB_4.0.0/LSB-Core-generic/LSB-Core-generic/baselib---assert-fail-1.html
       "linux, C, gcc, assert, __assert_fail",
       "linux, C, gcc, exit, exit",
+      "linux, C, gcc, _exit, _exit",
+      "linux, C, gcc, _Exit, _Exit",
       "linux, C, gcc, printf, printf",
       "linux, C, gcc, printf, puts",
       "linux, C, gcc, puts, puts",
@@ -89,6 +91,7 @@ so_symbol_names_table <-
       "linux, C++, gxx, std::cout, _ZSt4cout",
       "linux, C++, gxx, std::cerr, _ZSt4cerr",
       "linux, C, gcc, rand, rand",
+      "linux, C, gcc, rand_r, rand_r",
       "linux, C, gcc, srand, srand",
       "linux, C, gcc, srandom, srandom",
       "linux, C, gcc, srand48, srand48",
@@ -103,6 +106,8 @@ so_symbol_names_table <-
       "osx, C, gcc, abort, _abort",
       "osx, C, gcc, assert, ___assert_rtn",
       "osx, C, gcc, exit, _exit",
+      "osx, C, gcc, _exit, __exit",
+      "osx, C, gcc, _Exit, __Exit",
       "osx, C, gcc, printf, _printf",
       "osx, C, gcc, printf, _puts",
       "osx, C, gcc, puts, _puts",
@@ -113,6 +118,7 @@ so_symbol_names_table <-
       "osx, C++, gxx, std::cout, __ZSt4cout",
       "osx, C++, gxx, std::cerr, __ZSt4cerr",
       "osx, C, gcc, rand, _rand",
+      "osx, C, gcc, rand_r, _rand_r",
       "osx, C, gcc, srand, _srand",
       "osx, C, gcc, srandom, _srandom",
       "osx, C, gcc, srand48, _srand48",
@@ -127,6 +133,8 @@ so_symbol_names_table <-
       "freebsd, C, gcc, abort, abort",
       "freebsd, C, gcc, assert, __assert",
       "freebsd, C, gcc, exit, exit",
+      "freebsd, C, gcc, _exit, _exit",
+      "freebsd, C, gcc, _Exit, _Exit",
       "freebsd, C, gcc, printf, printf",
       "freebsd, C, gcc, printf, puts",
       "freebsd, C, gcc, puts, puts",
@@ -149,6 +157,8 @@ so_symbol_names_table <-
       "solaris, C, solcc, abort, abort",
       "solaris, C, solcc, assert, __assert_c99",
       "solaris, C, solcc, exit, exit",
+      "solaris, C, solcc, _exit, _exit",
+      "solaris, C, solcc, _Exit, _Exit",
       "solaris, C, solcc, printf, printf",
       "solaris, C, solcc, putchar, putchar",
       "solaris, C, solcc, puts, puts",
@@ -156,6 +166,7 @@ so_symbol_names_table <-
       "solaris, C++, solCC, std::cout, __1cDstdEcout_",
       "solaris, C++, solCC, std::cerr, __1cDstdEcerr_",
       "solaris, C, gcc, rand, rand",
+      "solaris, C, gcc, rand_r, rand_r",
       "solaris, C, gcc, srand, srand",
       "solaris, C, gcc, srandom, srandom",
       "solaris, C, gcc, srand48, srand48",
@@ -181,12 +192,15 @@ so_symbol_names_table <-
       "windows, Fortran, gfortran, runtime, abort",
       "windows, C, gcc, assert, _assert",
       "windows, C, gcc, exit, exit",
+      "windows, C, gcc, _exit, _exit",
+      "windows, C, gcc, _Exit, _Exit",
       "windows, C, gcc, printf, printf",
       "windows, C, gcc, printf, puts",
       "windows, C, gcc, puts, puts",
       "windows, C, gcc, putchar, putchar",
       "windows, C, gcc, vprintf, vprintf",
       "windows, C, gcc, rand, rand",
+      "windows, C, gcc, rand_r, rand_r",
       "windows, C, gcc, srand, srand",
       "windows, C, gcc, srandom, srandom",
       "windows, C, gcc, srand48, srand48",
@@ -447,7 +461,7 @@ if(.Platform$OS.type == "windows") {
             so <- attr(x, "file")
             osnames_in_objects <- unique(as.character(unlist(symbols)))
             x <- x[!is.na(match(x[, "osname"], osnames_in_objects)), , drop = FALSE]
-            attr(x, "file") <- so
+            attr(x, "file") <- .file_path_relative_to_dir(so, dir, TRUE)
 
             attr(x, "objects") <-
                 split(rep.int(names(symbols), sapply(symbols, length)),
@@ -475,7 +489,10 @@ if(.Platform$OS.type == "windows") {
         } else NULL
         nAPIs <- lapply(lapply(so_files, check_so_symbols, rarch = "i386"),
                         function(x) if(length(z <- attr(x, "nonAPI")))
-                        structure(z, file = attr(x, "file"),
+                        structure(z,
+                                  file =
+                                  .file_path_relative_to_dir(attr(x, "file"),
+                                                             dir, TRUE),
                                   class = "check_nonAPI_calls"))
 
         bad <- c(bad, Filter(length, nAPIs))
@@ -498,7 +515,10 @@ if(.Platform$OS.type == "windows") {
         } else NULL
         nAPIs <- lapply(lapply(so_files, check_so_symbols, rarch = "x64"),
                         function(x) if(length(z <- attr(x, "nonAPI")))
-                        structure(z, file = attr(x, "file"),
+                        structure(z,
+                                  file =
+                                  .file_path_relative_to_dir(attr(x, "file"),
+                                                             dir, TRUE),
                                   class = "check_nonAPI_calls"))
 
         bad2 <- c(bad2, Filter(length, nAPIs))
@@ -533,7 +553,7 @@ if(.Platform$OS.type == "windows") {
             ## for class "check_so_symbols".)
             osnames_in_objects <- unique(as.character(unlist(symbols)))
             x <- x[!is.na(match(x[, "osname"], osnames_in_objects)), , drop = FALSE]
-            attr(x, "file") <- so
+            attr(x, "file") <- .file_path_relative_to_dir(so, dir, TRUE)
             attr(x, "objects") <-
                 split(rep.int(names(symbols), sapply(symbols, length)),
                       unlist(symbols))
@@ -560,7 +580,10 @@ if(.Platform$OS.type == "windows") {
             cat("Note: information on .o files is not available\n")
         nAPIs <- lapply(lapply(so_files, check_so_symbols),
                         function(x) if(length(z <- attr(x, "nonAPI")))
-                        structure(z, file = attr(x, "file"),
+                        structure(z,
+                                  file =
+                                  .file_path_relative_to_dir(attr(x, "file"),
+                                                             dir, TRUE),
                                   class = "check_nonAPI_calls"))
 
         bad <- c(bad, Filter(length, nAPIs))

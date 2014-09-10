@@ -3080,13 +3080,7 @@ SEXP do_subassign2_dflt(SEXP, SEXP, SEXP, SEXP);
 
 #define SETSTACK_INTEGER(i, v) SETSTACK_INTEGER_PTR(R_BCNodeStackTop + (i), v)
 
-#define SETSTACK_LOGICAL_PTR(s, v) do { \
-    int __ssl_v__ = (v); \
-    if (__ssl_v__ == NA_LOGICAL) \
-	SETSTACK_PTR(s, ScalarLogical(NA_LOGICAL)); \
-    else \
-	SETSTACK_PTR(s, __ssl_v__ ? R_TrueValue : R_FalseValue); \
-} while(0)
+#define SETSTACK_LOGICAL_PTR(s, v) SETSTACK_PTR(s, ScalarLogical(v))
 
 #define SETSTACK_LOGICAL(i, v) SETSTACK_LOGICAL_PTR(R_BCNodeStackTop + (i), v)
 
@@ -3097,15 +3091,23 @@ typedef union { double dval; int ival; } scalar_value_t;
    one and no attributes.  If so, the type is returned as the function
    value and the value is returned in the structure pointed to by the
    second argument; if not, then zero is returned as the function
-   value. */
-static R_INLINE int bcStackScalar(R_bcstack_t *s, scalar_value_t *v)
+   value. The boxed value can be returned through a pointer argument
+   if it is suitable for re-use. */
+static R_INLINE int bcStackScalarEx(R_bcstack_t *s, scalar_value_t *v,
+				    SEXP *pv)
 {
     SEXP x = *s;
     if (IS_SIMPLE_SCALAR(x, REALSXP)) {
+#ifndef NO_SAVE_ALLOC
+	if (pv && NO_REFERENCES(x)) *pv = x;
+#endif
 	v->dval = REAL(x)[0];
 	return REALSXP;
     }
     else if (IS_SIMPLE_SCALAR(x, INTSXP)) {
+#ifndef NO_SAVE_ALLOC
+	if (pv && NO_REFERENCES(x)) *pv = x;
+#endif
 	v->ival = INTEGER(x)[0];
 	return INTSXP;
     }
@@ -3115,6 +3117,8 @@ static R_INLINE int bcStackScalar(R_bcstack_t *s, scalar_value_t *v)
     }
     else return 0;
 }
+
+#define bcStackScalar(s, v) bcStackScalarEx(s, v, NULL)
 
 #define DO_FAST_RELOP2(op,a,b) do { \
     SKIP_OP(); \
@@ -3259,14 +3263,14 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 #define Relop2(opval,opsym) NewBuiltin2(cmp_relop,opval,opsym,rho)
 
 #ifdef NO_SAVE_ALLOC
-# define DO_FAST_BINOP(op,a,b) do { \
+# define DO_FAST_BINOP(op,a,b,v) do {		\
     SKIP_OP(); \
     SETSTACK_REAL(-2, (a) op (b)); \
     R_BCNodeStackTop--; \
     NEXT(); \
 } while (0)
 
-# define DO_FAST_BINOP_INT(op, a, b) do { \
+# define DO_FAST_BINOP_INT(op, a, b, v) do {	    \
     double dval = ((double) (a)) op ((double) (b)); \
     if (dval <= INT_MAX && dval >= INT_MIN + 1) { \
 	SKIP_OP(); \
@@ -3279,32 +3283,28 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 /* these reuse one of the two values on the top of the stack if it is
    of the right type and has no references. It is known that both of
    these will have length one and have no attributes. */
-# define DO_FAST_BINOP(op,a,b) do {					\
+# define DO_FAST_BINOP(op, a, b, ans) do {				\
 	SKIP_OP();							\
-	SEXP sa = R_BCNodeStackTop[-2];					\
-	SEXP sb = R_BCNodeStackTop[-1];					\
-	SEXP ans;							\
-	if (NO_REFERENCES(sa) && TYPEOF(sa) == REALSXP) ans = sa;	\
-	else if (NO_REFERENCES(sb) && TYPEOF(sb) == REALSXP) ans = sb;	\
-	else ans = allocVector(REALSXP, 1);				\
-	REAL(ans)[0] = (a) op (b);					\
-	SETSTACK(-2, ans);						\
+	double dval = (a) op (b);					\
+	if (ans) {							\
+	    REAL(ans)[0] = dval;					\
+	    SETSTACK(-2, ans);						\
+	}								\
+	else SETSTACK_REAL(-2, dval);					\
 	R_BCNodeStackTop--;						\
 	NEXT();								\
     } while (0)
 
-# define DO_FAST_BINOP_INT(op, a, b) do { \
-	double dval = ((double) (a)) op ((double) (b)); \
-	if (dval <= INT_MAX && dval >= INT_MIN + 1) {	\
+# define DO_FAST_BINOP_INT(op, a, b, ans) do {				\
+	double dval = ((double) (a)) op ((double) (b));			\
+	if (dval <= INT_MAX && dval >= INT_MIN + 1) {			\
+	    int val = (int) dval;					\
 	    SKIP_OP();							\
-	    SEXP sa = R_BCNodeStackTop[-2];				\
-	    SEXP sb = R_BCNodeStackTop[-1];				\
-	    SEXP ans;							\
-	    if (NO_REFERENCES(sa) && TYPEOF(sa) == INTSXP) ans = sa;	\
-	    else if (NO_REFERENCES(sb) && TYPEOF(sb) == INTSXP) ans = sb; \
-	    else ans = allocVector(INTSXP, 1);				\
-	    INTEGER(ans)[0] = (int) dval;				\
-	    SETSTACK(-2, ans);						\
+	    if (ans) {							\
+		INTEGER(ans)[0] = val;					\
+		SETSTACK(-2, ans);					\
+	    }								\
+	    else SETSTACK_INTEGER(-2, val);				\
 	    R_BCNodeStackTop--;						\
 	    NEXT();							\
 	}								\
@@ -3314,22 +3314,24 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 # define FastBinary(op,opval,opsym) do { \
     scalar_value_t vx; \
     scalar_value_t vy; \
-    int typex = bcStackScalar(R_BCNodeStackTop - 2, &vx); \
-    int typey = bcStackScalar(R_BCNodeStackTop - 1, &vy); \
+    SEXP sa = NULL; \
+    SEXP sb = NULL; \
+    int typex = bcStackScalarEx(R_BCNodeStackTop - 2, &vx, &sa);	\
+    int typey = bcStackScalarEx(R_BCNodeStackTop - 1, &vy, &sb);	\
     if (typex == REALSXP) { \
 	if (typey == REALSXP) \
-	    DO_FAST_BINOP(op, vx.dval, vy.dval); \
+	    DO_FAST_BINOP(op, vx.dval, vy.dval, sa ? sa : sb);	\
 	else if (typey == INTSXP && vy.ival != NA_INTEGER) \
-	    DO_FAST_BINOP(op, vx.dval, vy.ival); \
+	    DO_FAST_BINOP(op, vx.dval, vy.ival, sa);	   \
     } \
     else if (typex == INTSXP && vx.ival != NA_INTEGER) { \
 	if (typey == REALSXP) \
-	    DO_FAST_BINOP(op, vx.ival, vy.dval); \
+	    DO_FAST_BINOP(op, vx.ival, vy.dval, sb);	     \
 	else if (typey == INTSXP && vy.ival != NA_INTEGER) { \
 	    if (opval == DIVOP) \
-		DO_FAST_BINOP(op, (double) vx.ival, (double) vy.ival); \
+		DO_FAST_BINOP(op, (double) vx.ival, (double) vy.ival, NULL); \
 	    else \
-		DO_FAST_BINOP_INT(op, vx.ival, vy.ival); \
+		DO_FAST_BINOP_INT(op, vx.ival, vy.ival, sa ? sa : sb);	\
 	} \
     } \
     Arith2(opval, opsym); \
@@ -3916,7 +3918,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   NEXT(); \
 } while(0)
 #define DO_ISTYPE(type) do { \
-  SETSTACK(-1, TYPEOF(GETSTACK(-1)) == type ? mkTrue() : mkFalse()); \
+  SETSTACK(-1, TYPEOF(GETSTACK(-1)) == type ? R_TrueValue : R_FalseValue); \
   NEXT(); \
 } while (0)
 #define isNumericOnly(x) (isNumeric(x) && ! isLogical(x))
@@ -4475,10 +4477,16 @@ static R_INLINE void checkForMissings(SEXP args, SEXP call)
    true BUILTIN from a .Internal. LT */
 #define IS_TRUE_BUILTIN(x) ((R_FunTab[PRIMOFFSET(x)].eval % 100 )/10 == 0)
 
-static R_INLINE SEXP BUMPREFCNT(SEXP x)
+static R_INLINE Rboolean GETSTACK_LOGICAL_NO_NA_PTR(R_bcstack_t *s, int callidx,
+						    SEXP constants) 
 {
-    INCREMENT_REFCNT(x);
-    return x;
+    SEXP value = GETSTACK_PTR(s); 
+    if (IS_SCALAR(value, LGLSXP) && LOGICAL(value)[0] != NA_LOGICAL)
+	return LOGICAL(value)[0];
+    else {
+	SEXP call = VECTOR_ELT(constants, callidx);
+	return asLogicalNoNA(value, call);
+    }
 }
 
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
@@ -4568,10 +4576,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	int callidx = GETOP();
 	int label = GETOP();
-	int cond;
-	SEXP call = VECTOR_ELT(constants, callidx);
-	value = BCNPOP();
-	cond = asLogicalNoNA(value, call);
+	Rboolean cond = GETSTACK_LOGICAL_NO_NA_PTR(R_BCNodeStackTop - 1,
+						   callidx, constants);
+	BCNPOP_IGNORE_VALUE();
 	if (! cond) {
 	    BC_CHECK_SIGINT(); /**** only on back branch?*/
 	    pc = codebase + label;
@@ -4709,15 +4716,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(LDCONST, 1):
       R_Visible = TRUE;
       value = VECTOR_ELT(constants, GETOP());
-      /* make sure NAMED = 2 -- lower values might be safe in some cases but
-	 not in general, especially if the constant pool was created by
-	 unserializing a compiled expression. */
-      /*if (NAMED(value) < 2) SET_NAMED(value, 2);*/
-      BCNPUSH(duplicate(value));
+      MARK_NOT_MUTABLE(value);
+      BCNPUSH(value);
       NEXT();
     OP(LDNULL, 0): R_Visible = TRUE; BCNPUSH(R_NilValue); NEXT();
-    OP(LDTRUE, 0): R_Visible = TRUE; BCNPUSH(mkTrue()); NEXT();
-    OP(LDFALSE, 0): R_Visible = TRUE; BCNPUSH(mkFalse()); NEXT();
+    OP(LDTRUE, 0): R_Visible = TRUE; BCNPUSH(R_TrueValue); NEXT();
+    OP(LDFALSE, 0): R_Visible = TRUE; BCNPUSH(R_FalseValue); NEXT();
     OP(GETVAR, 1): DO_GETVAR(FALSE, FALSE);
     OP(DDVAL, 1): DO_GETVAR(TRUE, FALSE);
     OP(SETVAR, 1):
@@ -4867,11 +4871,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  be defensive against bad package C code */
     OP(PUSHCONSTARG, 1):
       value = VECTOR_ELT(constants, GETOP());
-      PUSHCALLARG(BUMPREFCNT(duplicate(value)));
+      MARK_NOT_MUTABLE(value);
+      PUSHCALLARG(value);
       NEXT();
     OP(PUSHNULLARG, 0): PUSHCALLARG(R_NilValue); NEXT();
-    OP(PUSHTRUEARG, 0): PUSHCALLARG(BUMPREFCNT(mkTrue())); NEXT();
-    OP(PUSHFALSEARG, 0): PUSHCALLARG(BUMPREFCNT(mkFalse())); NEXT();
+    OP(PUSHTRUEARG, 0): PUSHCALLARG(R_TrueValue); NEXT();
+    OP(PUSHFALSEARG, 0): PUSHCALLARG(R_FalseValue); NEXT();
     OP(CALL, 1):
       {
 	SEXP fun = CALL_FRAME_FUN();
@@ -5084,7 +5089,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(ISINTEGER, 0): {
 	SEXP arg = GETSTACK(-1);
 	Rboolean test = (TYPEOF(arg) == INTSXP) && ! inherits(arg, "factor");
-	SETSTACK(-1, test ? mkTrue() : mkFalse());
+	SETSTACK(-1, test ? R_TrueValue : R_FalseValue);
 	NEXT();
       }
     OP(ISDOUBLE, 0): DO_ISTYPE(REALSXP);

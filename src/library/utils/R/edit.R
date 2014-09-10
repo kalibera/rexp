@@ -31,6 +31,13 @@ check_for_XQuartz <- function()
 
 dataentry <- function (data, modes)
 {
+    check <- Sys.getenv("_R_CHECK_SCREEN_DEVICE_", "")
+    msg <- "dataentry() should not be used in examples etc"
+    if (identical(check, "stop"))
+        stop(msg, domain = NA)
+    else if (identical(check, "warn"))
+        warning(msg, immediate. = TRUE, noBreaks. = TRUE, domain = NA)
+
     if(!is.list(data) || !length(data) || !all(sapply(data, is.vector)))
         stop("invalid 'data' argument")
     if(!is.list(modes) ||
@@ -42,6 +49,13 @@ dataentry <- function (data, modes)
 
 View <- function (x, title)
 {
+    check <- Sys.getenv("_R_CHECK_SCREEN_DEVICE_", "")
+    msg <- "View() should not be used in examples etc"
+    if (identical(check, "stop"))
+        stop(msg, domain = NA)
+    else if (identical(check, "warn"))
+        warning(msg, immediate. = TRUE, noBreaks. = TRUE, domain = NA)
+
     ## could multi-line deparse with maliciously-designed inputs
     if(missing(title)) title <- paste("Data:", deparse(substitute(x))[1])
     as.num.or.char <- function(x)
@@ -68,7 +82,7 @@ edit.default <-
               editor = getOption("editor"), ...)
 {
     if (is.null(title)) title <- deparse(substitute(name))
-    if (is.function(editor)) invisible(editor(name, file, title))
+    if (is.function(editor)) invisible(editor(name = name, file = file, title = title))
     else .External2(C_edit, name, file, title, editor)
 }
 

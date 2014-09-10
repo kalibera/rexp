@@ -2059,7 +2059,7 @@ function(package, dir, file, lib.loc = NULL,
             if(deparse(e[[1L]])[1L] %in% FF_funs) {
                 if(registration) check_registration(e, fr)
                 dup <- e[["DUP"]]
-                if(identical(dup, FALSE))
+                if(!is.null(dup) && !identical(dup, TRUE))
                     dup_false <<- c(dup_false, e)
                 this <- ""
                 this <- parg <- e[["PACKAGE"]]
@@ -2261,8 +2261,8 @@ function(x, ...)
     z3 <- attr(x, "dup_false")
      if (length(z3)) {
     	msg <- ngettext(length(z3),
-    		        "Call with DUP = FALSE:",
-    		        "Calls with DUP = FALSE:",
+    		        "Call with DUP:",
+    		        "Calls with DUP:",
     		        domain = NA)
         res <- c(res, msg)
         for (i in seq_along(z3)) {
@@ -3948,7 +3948,7 @@ function(package, lib.loc = NULL)
             c(codetools:::dfltSuppressUndefined, .glbs)
 
     if(check_without_loading) {
-        env <- getNamespace(package)
+        env <- suppressWarnings(suppressMessages(getNamespace(package)))
         args <- c(list(env, report = foo), args)
         suppressMessages(do.call(codetools::checkUsageEnv, args))
         suppressMessages(do.call(checkMethodUsageEnv, args))
@@ -4208,7 +4208,8 @@ function(pkgDir)
     non_ASCII <- where <- character()
     latin1 <- utf8 <- bytes <- 0L
     ## avoid messages about loading packages that started with r48409
-    suppressPackageStartupMessages({
+    ## (and some more ...)
+    suppressMessages({
         for(ds in ls(envir = dataEnv, all.names = TRUE))
             check_one(get(ds, envir = dataEnv), ds)
     })
@@ -6657,7 +6658,7 @@ function(dir)
     BUGS <- character()
     for (field in c("Depends", "Imports", "Suggests")) {
         p <- strsplit(meta[field], " *, *")[[1L]]
-        p2 <- grep("^(multicore|snow|igraph0)( |\\(|$)", p, value = TRUE)
+        p2 <- grep("^(multicore|snow|igraph0|doSNOW)( |\\(|$)", p, value = TRUE)
         uses <- c(uses, p2)
         p2 <- grep("^(BRugs|R2OpenBUGS|R2WinBUGS)( |\\(|$)", p, value = TRUE)
         BUGS <- c(BUGS, p2)
