@@ -1469,11 +1469,11 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 		if (length(s) != length(args)) error(_("dispatch error"));
 		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 		    SET_PRVALUE(CAR(b), CAR(a));
-		value =  applyClosure(call, value, s, rho, R_BaseEnv);
+		value =  applyClosure(call, value, s, rho, R_NilValue);
 		UNPROTECT(1);
 		return value;
 	    } else
-		return applyClosure(call, value, args, rho, R_BaseEnv);
+		return applyClosure(call, value, args, rho, R_NilValue);
 	}
 	/* else, need to perform full method search */
     }
@@ -1488,10 +1488,10 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	if (length(s) != length(args)) error(_("dispatch error"));
 	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 	    SET_PRVALUE(CAR(b), CAR(a));
-	value = applyClosure(call, fundef, s, rho, R_BaseEnv);
+	value = applyClosure(call, fundef, s, rho, R_NilValue);
 	UNPROTECT(1);
     } else
-	value = applyClosure(call, fundef, args, rho, R_BaseEnv);
+	value = applyClosure(call, fundef, args, rho, R_NilValue);
     prim_methods[offset] = current;
     if(value == deferred_default_object)
 	return NULL;

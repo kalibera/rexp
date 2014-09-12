@@ -671,7 +671,7 @@ SEXP eval(SEXP e, SEXP rho)
 	}
 	else if (TYPEOF(op) == CLOSXP) {
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));
-	    tmp = applyClosure(e, op, tmp, rho, R_BaseEnv);
+	    tmp = applyClosure(e, op, tmp, rho, R_NilValue);
 	    UNPROTECT(1);
 	}
 	else
@@ -2465,7 +2465,7 @@ SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
     if (TYPEOF(s) != CLOSXP)
 	error(_("'Recall' called from outside a closure"));
-    ans = applyClosure(cptr->call, s, args, cptr->sysparent, R_BaseEnv);
+    ans = applyClosure(cptr->call, s, args, cptr->sysparent, R_NilValue);
     UNPROTECT(1);
     return ans;
 }
@@ -4898,7 +4898,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  value = applyClosure(call, fun, args, rho, R_NilValue);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -5241,7 +5241,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = CALL_FRAME_ARGS();
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  value = applyClosure(call, fun, args, rho, R_NilValue);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -5281,7 +5281,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = CALL_FRAME_ARGS();
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_BaseEnv);
+	  value = applyClosure(call, fun, args, rho, R_NilValue);
 	  break;
 	default: error(_("bad function"));
 	}
