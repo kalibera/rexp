@@ -1480,6 +1480,56 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 
 /*----------------------------------------------------------------------
 
+  addMissingVarsToNewEnv
+
+  Add given variables (addVars - pairlist) to given environment (env) unless
+  they are already there.  Env is a "new" environment, created by
+  NewEnvironment, as in applyClosure (so it list based).  Vars are re-used,
+  must not be used by the caller anymore.  The implementation is performance
+  optimized towards the common case that the variables are not present in
+  env.
+
+  Note that the order of variables in the resulting environment will not be
+  the same as if the variables were added one-by-one using defineVar.
+*/
+
+attribute_hidden
+void addMissingVarsToNewEnv(SEXP env, SEXP addVars)
+{
+    if (addVars == R_NilValue) return;
+
+    SEXP envVars = FRAME(env);
+    SEXP aprev = R_NilValue;
+    SEXP av;
+
+    /* those remove vars from addVars that exist in envVars */
+    for(av = addVars; av != R_NilValue ; av = CDR(av)) {
+        SEXP atag = TAG(av);
+        SEXP ev;
+        for(ev = envVars; ev != R_NilValue; ev = CDR(ev)) {
+            if (TAG(ev) == atag) {
+                if (aprev == R_NilValue) addVars = CDR(av);
+                else SETCDR(aprev, CDR(av));
+                break;
+            }
+        }
+        if (ev == R_NilValue) aprev = av;
+    }
+    /* append addVars to envVars */
+    if (envVars == R_NilValue) SET_FRAME(env, addVars);
+    else {
+        SEXP ev = envVars;
+        SEXP eprev = ev;
+        for(ev = CDR(ev); ev != R_NilValue;) {
+            eprev = ev;
+            ev = CDR(ev);
+        }
+        SETCDR(eprev, addVars);
+    }
+}
+
+/*----------------------------------------------------------------------
+
   setVarInFrame
 
   Assign a new value to an existing symbol in a frame.
