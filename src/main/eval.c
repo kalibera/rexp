@@ -938,8 +938,10 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars1
 
     /*  Fix up any extras that were supplied by usemethod. */
 
-    addMissingVarsToNewEnv(newrho, suppliedvars1);
-    addMissingVarsToNewEnv(newrho, suppliedvars2);
+    if (suppliedvars1 != R_NilValue) {
+        addMissingVarsToNewEnv(newrho, suppliedvars1);
+    if (suppliedvars2 != R_NilValue) {
+        addMissingVarsToNewEnv(newrho, suppliedvars2);
 
     if (R_envHasNoSpecialSymbols(newrho))
 	SET_NO_SPECIAL_SYMBOLS(newrho);

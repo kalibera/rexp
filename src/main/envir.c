@@ -1496,8 +1496,6 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 attribute_hidden
 void addMissingVarsToNewEnv(SEXP env, SEXP addVars)
 {
-    if (addVars == R_NilValue) return;
-
     SEXP envVars = FRAME(env);
     SEXP aprev = R_NilValue;
     SEXP av;
