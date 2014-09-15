@@ -94,7 +94,7 @@ static SEXP GetObject(RCNTXT *cptr)
     return(s);
 }
 
-static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newvars, SEXP propvars)
+static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newvars)
 {
     SEXP ans;
     if (TYPEOF(op) == SPECIALSXP) {
@@ -123,7 +123,7 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newvars, S
 	vmaxset(vmax);
     }
     else if (TYPEOF(op) == CLOSXP) {
-	ans = applyClosure(call, op, args, rho, newvars, propvars);
+	ans = applyClosure(call, op, args, rho, newvars);
     }
     else
 	ans = R_NilValue;  /* for -Wall */
@@ -285,10 +285,17 @@ static
 SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 		    const char *generic, SEXP rho, SEXP callrho, SEXP defrho) {
 
+    SEXP newvars = PROTECT(createS3Vars(
+        mkString(generic),
+        NULL,
+        dotClass,
+        ScalarString(PRINTNAME(method)),
+        callrho,
+        defrho
+    ));
+
     /* Create a new environment without any */
     /* of the formals to the generic in it. */
-
-    SEXP propvars = R_NilValue;
 
     if (TYPEOF(op) == CLOSXP) {
 	SEXP formals = FORMALS(op);
@@ -303,15 +310,9 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 		    break;
 		}
 	    if (!matched) {
-	        SEXP v;
-	        if (propvars == R_NilValue) {
-	            v = CONS(CAR(s), propvars);
-	            propvars = PROTECT(v);
-                } else {
-	            v = CONS(CAR(s), R_NilValue);
-	            SETCDR(propvars, v);
-                }
-                SET_TAG(v, TAG(s));
+	        UNPROTECT(1); /* newvars */
+	        newvars = PROTECT(CONS(CAR(s), newvars));
+	        SET_TAG(newvars, TAG(s));
             }
 	}
     }
@@ -320,22 +321,12 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
         SET_RSTEP(sxp, 1);
     }
 
-    SEXP newvars = PROTECT(createS3Vars(
-        mkString(generic),
-        NULL,
-        dotClass,
-        ScalarString(PRINTNAME(method)),
-        callrho,
-        defrho
-    ));
-
     SEXP newcall =  PROTECT(duplicate(cptr->call));
     SETCAR(newcall, method);
     R_GlobalContext->callflag = CTXT_GENERIC;
     SEXP matchedarg = PROTECT(cptr->promargs);
-    SEXP ans = applyMethod(newcall, sxp, matchedarg, rho, newvars, propvars);
+    SEXP ans = applyMethod(newcall, sxp, matchedarg, rho, newvars);
     R_GlobalContext->callflag = CTXT_RETURN;
-    if (propvars != R_NilValue) UNPROTECT(1);
     UNPROTECT(3); /* newvars, newcall, matchedarg */
 
     return ans;
@@ -863,7 +854,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
        PR#15267 --pd */
     R_GlobalContext->sysparent = callenv;
 
-    ans = applyMethod(newcall, nextfun, matchedarg, env, newvars, R_NilValue);
+    ans = applyMethod(newcall, nextfun, matchedarg, env, newvars);
     vmaxset(vmax);
     UNPROTECT(9);
     return(ans);
@@ -1513,11 +1504,11 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 		if (length(s) != length(args)) error(_("dispatch error"));
 		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 		    SET_PRVALUE(CAR(b), CAR(a));
-		value =  applyClosure(call, value, s, rho, R_NilValue, R_NilValue);
+		value =  applyClosure(call, value, s, rho, R_NilValue);
 		UNPROTECT(1);
 		return value;
 	    } else
-		return applyClosure(call, value, args, rho, R_NilValue, R_NilValue);
+		return applyClosure(call, value, args, rho, R_NilValue);
 	}
 	/* else, need to perform full method search */
     }
@@ -1532,10 +1523,10 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	if (length(s) != length(args)) error(_("dispatch error"));
 	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 	    SET_PRVALUE(CAR(b), CAR(a));
-	value = applyClosure(call, fundef, s, rho, R_NilValue, R_NilValue);
+	value = applyClosure(call, fundef, s, rho, R_NilValue);
 	UNPROTECT(1);
     } else
-	value = applyClosure(call, fundef, args, rho, R_NilValue, R_NilValue);
+	value = applyClosure(call, fundef, args, rho, R_NilValue);
     prim_methods[offset] = current;
     if(value == deferred_default_object)
 	return NULL;

@@ -1484,45 +1484,48 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 
   Add given variables (addVars - pairlist) to given environment (env) unless
   they are already there.  Env is a "new" environment, created by
-  NewEnvironment, as in applyClosure (so it list based).  Vars are re-used,
-  must not be used by the caller anymore.  The implementation is performance
-  optimized towards the common case that the variables are not present in
-  env.
+  NewEnvironment, as in applyClosure (so it list-based).  Slots for vars are
+  re-used.  The addVars list itself can have duplicit variables.
 
-  Note that the order of variables in the resulting environment will not be
-  the same as if the variables were added one-by-one using defineVar.
+  The implementation is performance optimized towards the common case that
+  the variables from addVars are not present in env and that addVars do not
+  have duplicit variables.
 */
 
 attribute_hidden
 void addMissingVarsToNewEnv(SEXP env, SEXP addVars)
 {
-    SEXP envVars = FRAME(env);
-    SEXP aprev = R_NilValue;
-    SEXP av;
+    if (addVars == R_NilValue) return;
 
-    /* those remove vars from addVars that exist in envVars */
-    for(av = addVars; av != R_NilValue ; av = CDR(av)) {
-        SEXP atag = TAG(av);
-        SEXP ev;
-        for(ev = envVars; ev != R_NilValue; ev = CDR(ev)) {
-            if (TAG(ev) == atag) {
-                if (aprev == R_NilValue) addVars = CDR(av);
-                else SETCDR(aprev, CDR(av));
-                break;
-            }
-        }
-        if (ev == R_NilValue) aprev = av;
+    /* append variables from env after addVars */
+    SEXP aprev = addVars;
+    SEXP a = CDR(addVars);
+    while (a != R_NilValue) {
+        aprev = a;
+        a = CDR(a);
     }
-    /* append addVars to envVars */
-    if (envVars == R_NilValue) SET_FRAME(env, addVars);
-    else {
-        SEXP ev = envVars;
-        SEXP eprev = ev;
-        for(ev = CDR(ev); ev != R_NilValue;) {
-            eprev = ev;
-            ev = CDR(ev);
+    SETCDR(aprev, FRAME(env));
+    SET_FRAME(env, addVars);
+
+    /* remove duplicates - a variable listed later has precedence over a
+       variable listed sooner */
+    SEXP end;
+    for(end = CDR(addVars); end != R_NilValue; end = CDR(end)) {
+        SEXP endTag = TAG(end);
+        SEXP sprev = R_NilValue;
+        SEXP s;
+        for(s = addVars; s != end; s = CDR(s)) {
+            if (TAG(s) == endTag) {
+                /* remove variable s from the list, because it is overriden by end */
+                if (sprev == R_NilValue) {
+                    addVars = CDR(s);
+                    SET_FRAME(env, addVars);
+                    continue;
+                } else
+                    SETCDR(sprev, CDR(s));
+            }
+            sprev = s;
         }
-        SETCDR(eprev, addVars);
     }
 }
 
