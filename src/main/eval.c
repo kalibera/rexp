@@ -944,6 +944,9 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     if (R_envHasNoSpecialSymbols(newrho))
 	SET_NO_SPECIAL_SYMBOLS(newrho);
 
+    /*  Terminate the previous context and start a new one with the
+        correct environment. */
+
     endcontext(&cntxt);
 
     /*  If we have a generic function we need to use the sysparent of
