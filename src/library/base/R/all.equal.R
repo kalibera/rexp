@@ -23,8 +23,10 @@ all.equal.default <-
 {
     ## Really a dispatcher given mode() of args :
     ## use data.class as unlike class it does not give "integer"
-    if(is.language(target) || is.function(target) || is.environment(target))
+    if(is.language(target) || is.function(target))
 	return(all.equal.language(target, current, ...))
+    if(is.environment(target) || is.environment(current))# both: unclass() fails on env.
+	return(all.equal.environment(target, current, ...))
     if(is.recursive(target))
 	return(all.equal.list(target, current, ...))
     msg <- switch (mode(target),
@@ -144,7 +146,41 @@ all.equal.character <-
     else msg
 }
 
-## visible, so need to test both args
+## In 'base' these are all visible, so need to test both args:
+
+all.equal.envRefClass <- function (target, current, all.names=NA, ...) {
+    if(!is (target, "envRefClass")) return("'target' is not an envRefClass")
+    if(!is(current, "envRefClass")) return("'current' is not an envRefClass")
+    if(!isTRUE(ae <- all.equal(class(target), class(current), ...)) ||
+       !identical(cld <- target$getClass(), current$getClass()))
+	return(sprintf("Classes differ%s",
+		       if(!isTRUE(ae)) paste(":", ae, collapse=" ")else ""))
+    flds <- names(cld@fieldClasses)
+    asL <- function(O) sapply(flds, function(ch) O[[ch]], simplify = FALSE)
+    ## ## ?setRefClass explicitly says users should not use ".<foo>" fields:
+    ## if(is.na(all.names)) all.names <- FALSE
+    ## ## try preventing infinite recursion by not looking at  .self :
+    ## T <- function(ls) ls[is.na(match(names(ls), c(".self", methods:::.envRefMethods)))]
+    ## asL <- function(E) T(as.list(as.environment(E), all.names=all.names, sorted=TRUE))
+    n <- all.equal.list(asL(target), asL(current), ...)
+    ## Can have slots (apart from '.xData'), though not recommended; check these:
+    sns <- names(cld@slots); sns <- sns[sns != ".xData"]
+    msg <- if(length(sns)) {
+	L <- lapply(sns, function(sn)
+	    all.equal(slot(target, sn), slot(current, sn), ...))
+	unlist(L[vapply(L, is.character, NA)])
+    }
+    if(is.character(n)) msg <- c(msg, n)
+    if(is.null(msg)) TRUE else msg
+}
+
+all.equal.environment <- function (target, current, all.names=TRUE, ...) {
+    if(!is.environment (target)) return( "'target' is not an environment")
+    if(!is.environment(current)) return("'current' is not an environment")
+    all.equal.list(as.list(target , all.names=all.names, sorted=TRUE),
+                   as.list(current, all.names=all.names, sorted=TRUE), ...)
+}
+
 all.equal.factor <- function(target, current, ..., check.attributes = TRUE)
 {
     if(!inherits(target, "factor"))
