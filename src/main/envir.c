@@ -1482,14 +1482,14 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 
   addMissingVarsToNewEnv
 
-  Add given variables (addVars - pairlist) to given environment (env) unless
+  Add given variables (addVars - list) to given environment (env) unless
   they are already there.  Env is a "new" environment, created by
   NewEnvironment, as in applyClosure (so it list-based).  Slots for vars are
   re-used.  The addVars list itself can have duplicit variables.
 
   The implementation is performance optimized towards the common case that
-  the variables from addVars are not present in env and that addVars do not
-  have duplicit variables.
+  the variables from addVars are not present in env and that addVars does
+  not have duplicit variables.
 */
 
 attribute_hidden
@@ -1516,15 +1516,14 @@ void addMissingVarsToNewEnv(SEXP env, SEXP addVars)
         SEXP s;
         for(s = addVars; s != end; s = CDR(s)) {
             if (TAG(s) == endTag) {
-                /* remove variable s from the list, because it is overriden by end */
+                /* remove variable s from the list, because it is overriden by "end" */
                 if (sprev == R_NilValue) {
                     addVars = CDR(s);
                     SET_FRAME(env, addVars);
-                    continue;
                 } else
                     SETCDR(sprev, CDR(s));
-            }
-            sprev = s;
+            } else
+                sprev = s;
         }
     }
 }
