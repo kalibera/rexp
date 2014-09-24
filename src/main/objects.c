@@ -271,12 +271,13 @@ SEXP createS3Vars(SEXP dotGeneric, SEXP dotGroup, SEXP dotClass, SEXP dotMethod,
                   SEXP dotGenericCallEnv, SEXP dotGenericDefEnv) {
 
     SEXP v = R_NilValue;
-    v = addS3Var(v, R_dot_Generic, dotGeneric);
-    v = addS3Var(v, R_dot_Group, dotGroup);
-    v = addS3Var(v, R_dot_Class, dotClass);
-    v = addS3Var(v, R_dot_Method, dotMethod);
-    v = addS3Var(v, R_dot_GenericCallEnv, dotGenericCallEnv);
     v = addS3Var(v, R_dot_GenericDefEnv, dotGenericDefEnv);
+    v = addS3Var(v, R_dot_GenericCallEnv, dotGenericCallEnv);
+    v = addS3Var(v, R_dot_Group, dotGroup);
+    v = addS3Var(v, R_dot_Method, dotMethod);
+    v = addS3Var(v, R_dot_Class, dotClass);
+    v = addS3Var(v, R_dot_Generic, dotGeneric);
+
     return v;
 }
 
