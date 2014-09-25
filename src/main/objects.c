@@ -287,10 +287,10 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 		    const char *generic, SEXP rho, SEXP callrho, SEXP defrho) {
 
     SEXP newvars = PROTECT(createS3Vars(
-        mkString(generic),
+        PROTECT(mkString(generic)),
         NULL,
         dotClass,
-        ScalarString(PRINTNAME(method)),
+        PROTECT(ScalarString(PRINTNAME(method))),
         callrho,
         defrho
     ));
@@ -328,7 +328,7 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
     SEXP matchedarg = PROTECT(cptr->promargs);
     SEXP ans = applyMethod(newcall, sxp, matchedarg, rho, newvars);
     R_GlobalContext->callflag = CTXT_RETURN;
-    UNPROTECT(3); /* newvars, newcall, matchedarg */
+    UNPROTECT(5); /* newvars, "generic", "method", newcall, matchedarg */
 
     return ans;
 }

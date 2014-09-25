@@ -2841,9 +2841,9 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     vmaxset(vmax);
 
     newvars = PROTECT(createS3Vars(
-        mkString(generic),
+        PROTECT(mkString(generic)),
         lgr,
-        stringSuffix(lclass, lwhich),
+        PROTECT(stringSuffix(lclass, lwhich)),
         m,
         rho,
         R_BaseEnv
@@ -2865,7 +2865,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     }
 
     *ans = applyClosure(t, lsxp, s, rho, newvars);
-    UNPROTECT(6);
+    UNPROTECT(8);
     return 1;
 }
 
