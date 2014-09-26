@@ -325,10 +325,10 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
     SEXP newcall =  PROTECT(duplicate(cptr->call));
     SETCAR(newcall, method);
     R_GlobalContext->callflag = CTXT_GENERIC;
-    SEXP matchedarg = PROTECT(cptr->promargs);
+    SEXP matchedarg = PROTECT(cptr->promargs); /* ? is this PROTECT needed ? */
     SEXP ans = applyMethod(newcall, sxp, matchedarg, rho, newvars);
     R_GlobalContext->callflag = CTXT_RETURN;
-    UNPROTECT(5); /* newvars, "generic", "method", newcall, matchedarg */
+    UNPROTECT(5); /* "generic,method", newvars, newcall, matchedarg */
 
     return ans;
 }
