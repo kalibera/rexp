@@ -677,7 +677,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     generic = findVarInFrame3(sysp, R_dot_Generic, TRUE);
     if (generic == R_UnboundValue)
 	generic = eval(CAR(args), env);
-    if( generic == R_NilValue )
+    if (generic == R_NilValue)
 	error(_("generic function not specified"));
     PROTECT(generic);
 
@@ -712,8 +712,8 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     method = findVarInFrame3(sysp, R_dot_Method, TRUE);
     const void *vmax = vmaxget(); /* needed for translateChar */
     const char *b = NULL;
-    if( method != R_UnboundValue) {
-	if( !isString(method) )
+    if (method != R_UnboundValue) {
+	if (!isString(method))
 	    error(_("wrong value for .Method"));
 	for(i = 0; i < length(method); i++) {
 	    b = translateChar(STRING_ELT(method, i));
@@ -735,7 +735,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean foundSignature = FALSE;
     for (j = 0; j < length(klass); j++) {
 	sk = translateChar(STRING_ELT(klass, j));
-	if (equalS3Signature(b, sb, sk)) { /*  b == sb.sk */
+	if (equalS3Signature(b, sb, sk)) { /* b == sb.sk */
 	    foundSignature = TRUE;
 	    break;
 	}
@@ -744,7 +744,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     if (foundSignature) /* we found a match and start from there */
       j++;
     else
-      j = 0;  /*no match so start with the first element of .Class */
+      j = 0;  /* no match so start with the first element of .Class */
 
     /* we need the value of i on exit from the for loop to figure out
 	   how many classes to drop. */
