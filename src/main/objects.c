@@ -577,11 +577,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     else if (defenv == R_UnboundValue) defenv = R_GlobalEnv;
 
     /* set up the arglist */
-    if (TYPEOF(CAR(cptr->call)) == CLOSXP)
-	// e.g., in do.call(function(x) NextMethod('foo'),list())
-	s = CAR(cptr->call);
-    else
-	s = R_LookupMethod(CAR(cptr->call), env, callenv, defenv);
+    s = cptr->callfun;
 
     if (TYPEOF(s) != CLOSXP){ /* R_LookupMethod looked for a function */
 	if (s == R_UnboundValue)
@@ -673,7 +669,13 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 			    R_dot_Class, TRUE);
 
     if (klass == R_UnboundValue) {
-	s = GetObject(cptr);
+	s = CAR(actuals);
+	if (TYPEOF(s) == PROMSXP) {
+	    if (PRVALUE(s) == R_UnboundValue)
+	        s = eval(s, R_BaseEnv);
+            else
+	        s = PRVALUE(s);
+	}
 	if (!isObject(s)) error(_("object not specified"));
 	klass = getAttrib(s, R_ClassSymbol);
     }
