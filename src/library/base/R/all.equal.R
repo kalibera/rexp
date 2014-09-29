@@ -148,14 +148,26 @@ all.equal.character <-
 
 ## In 'base' these are all visible, so need to test both args:
 
-all.equal.envRefClass <- function (target, current, all.names=NA, ...) {
+all.equal.envRefClass <- function (target, current, ...) {
     if(!is (target, "envRefClass")) return("'target' is not an envRefClass")
     if(!is(current, "envRefClass")) return("'current' is not an envRefClass")
-    if(!isTRUE(ae <- all.equal(class(target), class(current), ...)) ||
-       !identical(cld <- target$getClass(), current$getClass()))
-	return(sprintf("Classes differ%s",
-		       if(!isTRUE(ae)) paste(":", ae, collapse=" ")else ""))
-    flds <- names(cld@fieldClasses)
+    if(!isTRUE(ae <- all.equal(class(target), class(current), ...)))
+	return(sprintf("Classes differ: %s", paste(ae, collapse=" ")))
+    getCl <- function(x) { cl <- tryCatch(x$getClass(), error=function(e) NULL)
+			   if(is.null(cl)) class(x) else cl }
+    if(!identical(cld <- getCl(target), c2 <- getCl(current))) {
+	hasCA <- any("check.attributes" == names(list(...)))
+	ae <-
+	    if(hasCA) all.equal(cld, c2, ...)
+	    else all.equal(cld, c2, check.attributes=FALSE, ...)
+        if(isTRUE(ae) && !hasCA) ae <- all.equal(cld, c2, ...)
+	return(sprintf("Class definitions are not identical%s",
+		       if(isTRUE(ae)) "" else paste(":", ae, collapse=" ")))
+    }
+    if(!isS4(cld)) ## prototype / incomplete
+	return(if(identical(target, current)) TRUE
+	       else "different prototypical 'envRefClass' objects")
+    flds <- names(cld@fieldClasses) ## else NULL
     asL <- function(O) sapply(flds, function(ch) O[[ch]], simplify = FALSE)
     ## ## ?setRefClass explicitly says users should not use ".<foo>" fields:
     ## if(is.na(all.names)) all.names <- FALSE
@@ -177,8 +189,35 @@ all.equal.envRefClass <- function (target, current, all.names=NA, ...) {
 all.equal.environment <- function (target, current, all.names=TRUE, ...) {
     if(!is.environment (target)) return( "'target' is not an environment")
     if(!is.environment(current)) return("'current' is not an environment")
-    all.equal.list(as.list(target , all.names=all.names, sorted=TRUE),
-                   as.list(current, all.names=all.names, sorted=TRUE), ...)
+    ae.run <- dynGet("__all.eq.E__", NULL)
+    if(is.null(ae.run))
+	"__all.eq.E__" <- environment() # -> 5 visible + 6 ".<..>" objects
+    else { ## ae.run contains previous target, current, ..
+
+	## If we exactly match one of these, we return TRUE here,
+	## otherwise, divert to all.equal(as.list(.), ...) below
+
+	## needs recursive function -- a loop with  em <- em$mm	 destroys the env!
+	do1 <- function(em) {
+	    if(identical(target, em$target) && identical(current, em$current))
+		TRUE
+	    else if(!is.null(em$ mm)) ## recurse
+		do1(em$ mm)
+	    else {
+		## add the new (target, current) pair, and return FALSE
+		e <- new.env(parent = emptyenv())
+		e$target  <- target
+		e$current <- current
+		em$ mm <- e
+		FALSE
+	    }
+	}
+
+	if(do1(ae.run)) return(TRUE)
+	## else, continue:
+    }
+    all.equal.list(as.list.environment(target , all.names=all.names, sorted=TRUE),
+		   as.list.environment(current, all.names=all.names, sorted=TRUE), ...)
 }
 
 all.equal.factor <- function(target, current, ..., check.attributes = TRUE)

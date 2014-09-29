@@ -17,7 +17,7 @@ stopifnot(z == c(101, 204, 309, 104, 210, 318))
 ## https://stat.ethz.ch/pipermail/r-devel/2013-January/065700.html
 x <- 1:6
 y <- split(x, 1:2)
-class(x) <- "A"
+class(x) <- "ABC" ## class(x) <- "A" creates an invalid object
 yy <- split(x, 1:2)
 stopifnot(identical(y, yy))
 ## were different in R < 3.0.0
@@ -68,7 +68,7 @@ ftable(m)
 ## Artificial example [was "infinite loop" on x86_64; PR#15364]
 rr <- c(rep(-0.4, 5), rep(-0.4- 1.11e-16, 14), -.5)
 r. <- signif(rr, 12)
-try ( k3 <- kmeans(rr, 3, trace=2) ) ## Warning: Quick-Transfer.. steps exceed
+k3 <- kmeans(rr, 3, trace=2) ## Warning: Quick-Transfer.. steps exceed
 try ( k. <- kmeans(r., 3) ) # after rounding, have only two distinct points
       k. <- kmeans(r., 2)   # fine
 
@@ -464,14 +464,73 @@ L0 <- list()
 stopifnot(identical(L0, as.list(as.environment(L0))))
 ## as.env..() did not work, and as.list(..) gave non-NULL names in R <= 3.1.1
 
-## all.equal() for environments
-RR <- setRefClass("Ex", fields = list(info = "character"))
-m1 <- RR$new(); m2 <- RR$new(); m3 <- RR$new(info = "3.14"); m4 <- RR$new(info="I")
-ee <- emptyenv()
-stopifnot(all.equal(ee,ee), identical(ee,ee), identical(m3,m3), !identical(m1,m2),
-          all.equal(m1,m2), !isTRUE(all.equal(m1,m3)), !isTRUE(all.equal(m1,m4))
-          )
+## all.equal() for environments and refClass()es
+RR <- setRefClass("Ex", fields = list(nr = "numeric"))
+m1 <- RR$new(); m2 <- RR$new(); m3 <- RR$new(nr = pi); m4 <- RR$new(nr=3.14159)
+ee <- emptyenv(); e2 <- new.env()
+stopifnot(all.equal(ee,ee), identical(ee,ee), !identical(ee,e2), all.equal(ee,e2),
+	  identical(m3,m3), !identical(m1,m2),
+	  all.equal(m1,m2), !isTRUE(all.equal(m1,m3)), !isTRUE(all.equal(m1,m4)),
+	  all.equal(m3,m4, tol=1e-6), grepl("relative difference", all.equal(m3,m4)),
+	  TRUE)
 ## did not work in R <= 3.1.1
+e3 <- new.env()
+e3$p <- "p"; e2$p <- "p"; ae.p <- all.equal(e2,e3)
+e3$q <- "q";              ae.q <- all.equal(e2,e3)
+e2$q <- "Q";              ae.Q <- all.equal(e2,e3)
+stopifnot(ae.p, grepl("^Length", ae.q), grepl("string mismatch", ae.Q))
+e2$q <- "q"; e2$r <- pi; e3$r <- 3.14159265
+stopifnot(all.equal(e2,e3),
+	  grepl("relative difference", all.equal(e2,e3, tol=1e-10)))
+g <- globalenv() # so it now contains itself
+l <- list(e = g)
+stopifnot(all.equal(g,g),
+	  all.equal(l,l))
+## these ran into infinite recursion error.
 
+
+## 0-length consistency of options(), PR#15979
+stopifnot(identical(options(list()), options(NULL)))
+## options(list()) failed in R <= 3.1.1
+
+
+## merge.dendrogram(), PR#15648
+mkDend <- function(n, lab, rGen = function(n) 1+round(16*abs(rnorm(n)))) {
+    stopifnot(is.numeric(n), length(n) == 1, n >= 1, is.character(lab))
+    a <- matrix(rGen(n*n), n, n)
+    colnames(a) <- rownames(a) <- paste0(lab, 1:n)
+    as.dendrogram(hclust(as.dist(a + t(a))))
+}
+set.seed(7)
+da <- mkDend(4, "A")
+db <- mkDend(3, "B")
+d.ab <- merge(da, db)
+hcab <- as.hclust(d.ab)
+stopifnot(hcab$order == c(2, 4, 1, 3, 7, 5, 6),
+	  hcab$labels == c(paste0("A", 1:4), paste0("B", 1:3)))
+## was wrong in R <= 3.1.1
+
+
+## envRefClass prototypes are a bit special -- broke all.equal() for baseenv()
+rc <- getClass("refClass")
+rp <- rc@prototype
+str(rp) ## failed
+rp ## show() failed ..
+(ner <- new("envRefClass")) # show() failed
+stopifnot(all.equal(rp,rp), all.equal(ner,ner))
+be <- baseenv()
+system.time(stopifnot(all.equal(be,be)))## <- takes a few sec's
+stopifnot(
+    grepl("not identical.*character", print(all.equal(rp, ner))),
+    grepl("not identical.*character", print(all.equal(ner, rp))))
+system.time(stopifnot(all.equal(globalenv(), globalenv())))
+## Much of the above failed in  R <= 3.2.0
+
+## while did not protect its argument, which caused an error
+## under gctorture, PR#15990
+gctorture()
+suppressWarnings(while(c(FALSE, TRUE)) 1)
+gctorture(FALSE)
+## gave an error because the test got released when the warning was generated.
 
 proc.time()

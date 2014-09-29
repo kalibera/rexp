@@ -133,6 +133,9 @@
       \code{t(x) \%*\% y} in these cases (also reported by Radford Neal).
       Similarly, \code{tcrossprod(x,y)} and \code{\%*\%} work in more
       cases with vector arguments.
+
+      \item An experimental utility \code{dynGet()} useful for detecting
+      cycles, aka infinite recursions.
     }
   }
 
@@ -245,6 +248,9 @@
       \item \code{utils::URLencode()} was updated to use unreserved and
       reserved characters from RFC 3986,
       \url{http://tools.ietf.org/html/rfc3986}, instead of RFC 1738.
+
+      \item \code{unique(warnings())} now works, as does 
+      \code{c(warnings())}.
     }
   }
 
@@ -264,6 +270,21 @@
 
       \item LaTeX package \pkg{upquote} is no longer required for \R's
       use of \pkg{inconsolata}.
+
+      \item (Windows only) If both 32 and 64 bit versions of \R are
+      installed, the \file{bin/R.exe} and \file{bin/Rscript.exe} executables
+      now run 64 bit \R.  (To run 32 bit \R, overwrite these files
+      with copies of \file{bin/i386/Rfe.exe}.)
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item Running \command{R CMD check} with
+      \env{_R_CHECK_DEPENDS_ONLY_} true now makes the
+      \samp{VignetteBuilder} packages available even if they are
+      listed in \samp{Suggests}, since they are needed to recognise and
+      process non-Sweave vignettes.
     }
   }
 
@@ -324,6 +345,32 @@
 
       \item Several \pkg{tcltk} functions failed when run in unusual
       environments. (\PR{15970})
+
+      \item \code{options(list())} now works (trivially). (\PR{15979})
+
+      \item \code{merge(<dendrogram>, ..)} now works correctly for two
+      `independent' dendrograms (\PR{15648}), and still compatibly via
+      \code{adjust = "auto"} e.g. for two branches of an existing
+      dendrogram.
+
+      \item The \code{plot} method for \code{"hclust"} objects gets an
+      optional argument \code{check};  When that is true, as per
+      default, it checks more carefully for valid input.
+
+      \item (Windows only) If a user chose to install 64 bit \R but not
+      32 bit \R, the \file{bin/R} and \file{bin/Rscript} executables
+      failed to run.  (\PR{15981})
+
+      \item Various possible buffer overruns have been prevented,
+      and missed memory protection added. (\PR{15990})
+
+      \item \command{Rscript} no longer passes \code{--args} to
+      \command{R} when there are no extra (\dQuote{user}) arguments.
+
+      \item objects like \code{getClass("refClass")@prototype} now
+      \code{print()} and \code{str()} without error.
+
+      \item \code{identical()} now also looks at the S4 bit.
     }
   }
 }

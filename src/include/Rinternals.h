@@ -744,6 +744,7 @@ typedef struct R_allocator R_allocator_t;
 /* Other Internally Used Functions, excluding those which are inline-able*/
 
 char * Rf_acopy_string(const char *);
+void Rf_addMissingVarsToNewEnv(SEXP, SEXP);
 SEXP Rf_alloc3DArray(SEXPTYPE, int, int, int);
 SEXP Rf_allocArray(SEXPTYPE, SEXP);
 SEXP Rf_allocFormalsList2(SEXP sym1, SEXP sym2);
@@ -1034,6 +1035,10 @@ int R_has_slot(SEXP obj, SEXP name);
 /* class definition, new objects (objects.c) */
 SEXP R_do_MAKE_CLASS(const char *what);
 SEXP R_getClassDef  (const char *what);
+SEXP R_getClassDef_R(SEXP what);
+Rboolean R_has_methods_attached(void);
+Rboolean R_isVirtualClass(SEXP class_def, SEXP env);
+Rboolean R_extends  (SEXP class1, SEXP class2, SEXP env);
 SEXP R_do_new_object(SEXP class_def);
 /* supporting  a C-level version of  is(., .) : */
 int R_check_class_and_super(SEXP x, const char **valid, SEXP rho);
@@ -1069,6 +1074,7 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 
 #ifndef R_NO_REMAP
 #define acopy_string		Rf_acopy_string
+#define addMissingVarsToNewEnv	Rf_addMissingVarsToNewEnv
 #define alloc3DArray            Rf_alloc3DArray
 #define allocArray		Rf_allocArray
 #define allocFormalsList2	Rf_allocFormalsList2
