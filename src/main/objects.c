@@ -688,18 +688,19 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("generic function not specified"));
 
     /* determine whether we are in a Group dispatch */
-
-    group = findVarInFrame3(sysp, R_dot_Group, TRUE);
-    if (group == R_UnboundValue) PROTECT(group = mkString(""));
-    else PROTECT(group);
-
-    if (!isString(group) || length(group) != 1)
-	error(_("invalid 'group' argument found in 'NextMethod'"));
-
     /* determine the root: either the group or the generic will be it */
 
-    if (CHAR(STRING_ELT(group, 0))[0] == '\0') basename = generic;
-    else basename = group;
+    group = findVarInFrame3(sysp, R_dot_Group, TRUE);
+    if (group == R_UnboundValue) {
+	PROTECT(group = mkString(""));
+	basename = generic;
+    } else {
+	PROTECT(group);
+	if (!isString(group) || length(group) != 1)
+            error(_("invalid 'group' argument found in 'NextMethod'"));
+	if (CHAR(STRING_ELT(group, 0))[0] == '\0') basename = generic;
+	else basename = group;
+    }
 
     nextfun = R_NilValue;
     nextfunSignature = R_NilValue;
