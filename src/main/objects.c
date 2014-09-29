@@ -570,7 +570,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     if (TYPEOF(callenv) == PROMSXP)
 	callenv = eval(callenv, R_BaseEnv);
     else if (callenv == R_UnboundValue)
-	    callenv = env;
+	callenv = env;
     defenv = findVarInFrame3(R_GlobalContext->sysparent,
 			     R_dot_GenericDefEnv, TRUE);
     if (TYPEOF(defenv) == PROMSXP) defenv = eval(defenv, R_BaseEnv);
@@ -582,10 +582,12 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	s = CAR(cptr->call);
     else
 	s = R_LookupMethod(CAR(cptr->call), env, callenv, defenv);
-    if (s == R_UnboundValue)
-	error(_("no calling generic was found: was a method called directly?"));
+
     if (TYPEOF(s) != CLOSXP){ /* R_LookupMethod looked for a function */
-	errorcall(R_NilValue,
+	if (s == R_UnboundValue)
+	    error(_("no calling generic was found: was a method called directly?"));
+	else
+	    errorcall(R_NilValue,
 		  _("'function' is not a function, but of type %d"),
 		  TYPEOF(s));
     }
