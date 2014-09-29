@@ -669,13 +669,9 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 			    R_dot_Class, TRUE);
 
     if (klass == R_UnboundValue) {
-	s = CAR(actuals);
-	if (TYPEOF(s) == PROMSXP) {
-	    if (PRVALUE(s) == R_UnboundValue)
-	        s = eval(s, R_BaseEnv);
-            else
-	        s = PRVALUE(s);
-	}
+	/* we can get the object from actuals directly, but this
+	   branch seems to be very cold if not dead */
+	s = GetObject(cptr);
 	if (!isObject(s)) error(_("object not specified"));
 	klass = getAttrib(s, R_ClassSymbol);
     }
