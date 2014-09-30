@@ -692,15 +692,15 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 
     group = findVarInFrame3(sysp, R_dot_Group, TRUE);
     if (group == R_UnboundValue) {
-	PROTECT(group = mkString(""));
+	group = R_BlankScalarString;
 	basename = generic;
     } else {
-	PROTECT(group);
 	if (!isString(group) || length(group) != 1)
             error(_("invalid 'group' argument found in 'NextMethod'"));
 	if (CHAR(STRING_ELT(group, 0))[0] == '\0') basename = generic;
 	else basename = group;
     }
+    PROTECT(group);
 
     nextfun = R_NilValue;
     nextfunSignature = R_NilValue;
