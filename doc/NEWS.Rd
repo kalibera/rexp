@@ -22,7 +22,7 @@
       can be used instead.
 
       \item Some unusual arguments to \code{embedFonts()} can now be
-      specified as character vectors, and the defaults have changed
+      specified as character vectors, and the defaults have been changed
       accordingly.
 
       \item Functions in the \code{Summary} group duplicate less.
@@ -31,7 +31,7 @@
       \item (Unix-alikes.) \code{system(cmd, input = )} now uses
       \sQuote{shell-execution-environment} redirection, which will be
       more natural if \code{cmd} is not a single command (but requires a
-      POSIX-compliant shell). (\PR{15508})
+      POSIX-compliant shell). (Wish of \PR{15508})
 
       \item \code{read.fwf()} and \code{read.DIF()} gain a
       \code{fileEncoding} argument, for convenience.
@@ -63,7 +63,7 @@
 
       \item \code{save()}, \code{saveRDS()} and \code{serialize()} now
       support \code{ascii = NA} which writes ASCII files using
-      \code{sprintf("\%a")}) for double/complex quantities.  This is
+      \code{sprintf("\%a")} for double/complex quantities.  This is
       read-compatible with \code{ascii = TRUE} but avoids
       binary->decimal->binary conversions with potential loss of
       precision.  Unfortunately the Windows C runtime's lack of C99
@@ -136,6 +136,15 @@
 
       \item An experimental utility \code{dynGet()} useful for detecting
       cycles, aka infinite recursions.
+
+      \item The byte code compiler and interpreter now include new
+      instructions that allow many scalar subsetting and assignment and
+      scalar arithmetic operations to be handled more efficiently. This
+      can result in significant performance improvements in scalar
+      numerical code.
+
+      \item \code{apply(m, 2, identity)} is now the same as the matrix
+      \code{m} when it has \emph{named} row names.
     }
   }
 
@@ -173,10 +182,10 @@
       \code{tools::toHTML()} methods is now
       \sQuote{\acronym{XHTML} 1.0 Strict}.
 
-      \item The compiler utility function \code{setCompilerOptions} now
-      returns the old values invisibly. The initial optimization level
-      can also be set with the environment variable
-      \env{R_COMPILER_OPTIMIZE}
+      \item The compiler utility function \code{setCompilerOptions()}
+      now returns the old values invisibly. The initial optimization
+      level can also be set with the environment variable
+      \env{R_COMPILER_OPTIMIZE}.
     }
   }
 
@@ -203,7 +212,7 @@
       \item Fixes for bugs in handling empty arguments and argument
       matching by name in \code{log()}.
 
-      \item \code{all.equal()} gets a method for \code{environment}s and
+      \item \code{all.equal()} gains a method for \code{environment}s and
       \code{refClass}es.
     }
   }
@@ -249,7 +258,7 @@
       reserved characters from RFC 3986,
       \url{http://tools.ietf.org/html/rfc3986}, instead of RFC 1738.
 
-      \item \code{unique(warnings())} now works, as does 
+      \item \code{unique(warnings())} now works, as does
       \code{c(warnings())}.
     }
   }
@@ -328,9 +337,9 @@
 
       \item \code{getAnywhere("C_pbinom")} now works correctly.
 
-      \item The \code{confint()} function failed on results of
-      \code{nls()} fits that specified parameter limits despite using
-      an algorithm other than \code{"port"}.  (\PR{15960})
+      \item The \code{confint()} method for \code{nls()} fits failed it
+      these has specified parameter limits despite using an algorithm
+      other than \code{"port"}.  (\PR{15960})
 
       \item Subclassing an S4 class failed if the class required
       arguments to the generator, through its \code{initialize()} method.
@@ -371,6 +380,24 @@
       \code{print()} and \code{str()} without error.
 
       \item \code{identical()} now also looks at the S4 bit.
+
+      \item \code{hist(x, breaks)} is more robust in adding a small fuzz
+      to few breaks when some are very large. (\PR{15899})
+
+      \item \code{sub()} and \code{gsub()} did not handle regular
+      expressions like \code{"\\s{2,}"} properly if the text
+      contained \code{NA} or non-ascii elements in a UTF-8
+      locale.  Part of this was due to a bug in the TRE library.
+      (\PR{16009})
+
+      \item \code{RShowDoc("NEWS")} now displays the pdf version.
+
+      \item matrices and arrays with last dimension zero did not print
+      at all or incompletely.  (\PR{16012})
+      
+      \item \code{plot.histogram()} and hence \code{hist()} now respect
+      the \code{xaxs}, \code{yaxs} and \code{lab} graphics parameters.
+      (\PR{16021})
     }
   }
 }

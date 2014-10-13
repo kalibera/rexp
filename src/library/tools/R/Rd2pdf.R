@@ -30,6 +30,9 @@
 .DESCRIPTION_to_latex <- function(descfile, outfile, version = "Unknown")
 {
     desc <- read.dcf(descfile)[1, ]
+    ## Using
+    ##   desc <- .read_description(descfile)
+    ## would preserve leading white space in Description and Author ...
     if (is.character(outfile)) {
         out <- file(outfile, "a")
         on.exit(close(out))
@@ -827,10 +830,13 @@ setEncoding2, "
     setwd(build_dir)
 
     res <- try(texi2pdf('Rd2.tex', quiet = FALSE, index = index))
-    if (inherits(res, "try-error")) {
-        message("Error in running tools::texi2pdf()")
-        do_cleanup()
-        q("no", status = 1L, runLast = FALSE)
+    if(inherits(res, "try-error")) {
+        res <- try(texi2pdf('Rd2.tex', quiet = FALSE, index = index))
+        if(inherits(res, "try-error")) {
+            message("Error in running tools::texi2pdf()")
+            do_cleanup()
+            q("no", status = 1L, runLast = FALSE)
+        }
     }
 
     setwd(startdir)
