@@ -390,3 +390,155 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
     UNPROTECT(1);
     return(actuals);
 }
+
+
+/* Patch promargs (given as 'supplied') to be promises for the respective
+   actuals in the given environment 'cloenv'. This is used by NextMethod to
+   allow patching of arguments to the current closure before dispatching to
+   the next method. The implementation is based on matchArgs, but there is
+   no error/warning checking, assuming that has already been done by a call
+   to matchArgs when invoking the current closure.
+*/
+
+static R_INLINE
+void mapVariable(SEXP suppliedSlot, SEXP name, int *sargmissing, SEXP cloenv) {
+    SEXP value = CAR(suppliedSlot);
+    if (value == R_MissingArg) {
+        value = findVarInFrame3(cloenv, name, TRUE);
+        if (value == R_MissingArg) return;
+    } else {
+        if (sargmissing) *sargmissing = 0;
+    }
+    SETCAR(suppliedSlot, mkPROMISE(name, cloenv));
+}
+
+SEXP attribute_hidden patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
+{
+    int i, seendots, farg_i, sarg_i;
+    SEXP f, a, b, prsupplied;
+
+    int nformals = length(formals);
+    int fargused[nformals ? nformals : 1]; // avoid undefined behaviour
+    memset(fargused, 0, sizeof(fargused));
+
+    /* Shallow-duplicate supplied arguments */
+    int nsupplied = length(supplied);
+    PROTECT(prsupplied = allocList(nsupplied));
+    for(b = supplied, a = prsupplied; b != R_NilValue; b = CDR(b), a = CDR(a)) {
+        SETCAR(a, CAR(b));
+        SET_ARGUSED(a, 0);
+        SET_TAG(a,TAG(b));
+    }
+
+    /* We do not use the MISSING bits of prsupplied, because they may overlap
+       with the ARGUSED bits */
+    int samLength = nsupplied ? nsupplied : 1;
+    int sargmissing[samLength];
+    for(sarg_i = 0; sarg_i < samLength; sarg_i++) sargmissing[sarg_i] = 1;
+
+    /* First pass: exact matches by tag */
+
+    f = formals;
+    farg_i = 0;
+    while (f != R_NilValue) {
+	if (TAG(f) != R_DotsSymbol) {
+	    sarg_i = 0;
+	    for (b = prsupplied; b != R_NilValue; b = CDR(b)) {
+		if (TAG(b) != R_NilValue && pmatch(TAG(f), TAG(b), 1)) {
+		    mapVariable(b, TAG(f), &sargmissing[sarg_i], cloenv);
+		    SET_ARGUSED(b, 2);
+		    fargused[farg_i] = 2;
+		    break; /* Previous invocation of matchArgs */
+                           /* ensured unique matches */
+		}
+		sarg_i++;
+	    }
+	}
+	f = CDR(f);
+        farg_i++;
+    }
+
+    /* Second pass: partial matches based on tags */
+    /* An exact match is required after first ... */
+    /* The location of the first ... is saved in "dots" */
+
+    seendots = 0;
+    f = formals;
+    farg_i = 0;
+    while (f != R_NilValue) {
+	if (fargused[farg_i] == 0) {
+	    if (TAG(f) == R_DotsSymbol && !seendots) {
+		seendots = 1;
+	    } else {
+		sarg_i = 0;
+		for (b = prsupplied; b != R_NilValue; b = CDR(b)) {
+		    if (!ARGUSED(b) && TAG(b) != R_NilValue &&
+			pmatch(TAG(f), TAG(b), seendots)) {
+
+                        mapVariable(b, TAG(f), &sargmissing[sarg_i], cloenv);
+			SET_ARGUSED(b, 1);
+			fargused[farg_i] = 1;
+			break; /* Previous invocation of matchArgs */
+                               /* ensured unique matches */
+		    }
+		    sarg_i++;
+		}
+	    }
+	}
+	f = CDR(f);
+        farg_i++;
+    }
+
+    /* Third pass: matches based on order */
+    /* All args specified in tag=value form */
+    /* have now been matched.  If we find ... */
+    /* we gobble up all the remaining args. */
+    /* Otherwise we bind untagged values in */
+    /* order to any unmatched formals. */
+
+    f = formals;
+    b = prsupplied;
+    seendots = 0;
+    sarg_i = 0;
+
+    while (f != R_NilValue && b != R_NilValue && !seendots) {
+	if (TAG(f) == R_DotsSymbol) {
+	    /* Skip ... matching until all tags done */
+	    seendots = 1;
+	    f = CDR(f);
+	} else if (sargmissing[sarg_i] == 0) {
+	    /* Already matched by tag */
+	    /* skip to next formal */
+	    f = CDR(f);
+	    b = CDR(b);
+	    sarg_i++;
+	} else if (ARGUSED(b) || TAG(b) != R_NilValue) {
+	    /* This value used or tagged, skip to next value */
+	    /* The second test above is needed because we */
+	    /* shouldn't consider tagged values for positional */
+	    /* matches. */
+	    /* The formal being considered remains the same */
+	    b = CDR(b);
+	    sarg_i++;
+	} else {
+	    /* We have a positional match */
+	    mapVariable(b, TAG(f), &sargmissing[sarg_i], cloenv);
+	    SET_ARGUSED(b, 1);
+	    b = CDR(b);
+	    sarg_i++;
+	    f = CDR(f);
+	}
+    }
+
+    if (0 && seendots) { /* FIXME: is this needed? */
+	/* Gobble up all unused actuals */
+	i = 1;
+	for(a = prsupplied; a != R_NilValue ; a = CDR(a))
+	    if(!ARGUSED(a))
+                mapVariable(a, installDDVAL(i++), NULL, cloenv);
+    }
+
+    /* Previous invocation of matchArgs ensured all args are used */
+    UNPROTECT(1);
+    return(prsupplied);
+}
