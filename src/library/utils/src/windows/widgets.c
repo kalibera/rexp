@@ -258,7 +258,7 @@ SEXP chooseDir(SEXP def, SEXP caption)
 	error(_("'caption' must be a character string"));
     p = askcdstring(translateChar(STRING_ELT(caption, 0)), path);
 
-    SEXP ans = PROTECT(allocVector(STRSXP, 1));
+    SEXP ans; PROTECT(ans = allocVector(STRSXP, 1));
     SET_STRING_ELT(ans, 0, p ? mkChar(p): NA_STRING);
     UNPROTECT(1);
     return ans;

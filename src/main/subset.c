@@ -807,7 +807,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	    if(!drop || len > 1) {
 		// must grab these before the dim is set.
-		SEXP nm = PROTECT(getAttrib(ans, R_NamesSymbol));
+		SEXP nm; PROTECT(nm = getAttrib(ans, R_NamesSymbol));
 		PROTECT(attr = allocVector(INTSXP, 1));
 		INTEGER(attr)[0] = length(ans);
 		setAttrib(ans, R_DimSymbol, attr);

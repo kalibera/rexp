@@ -2679,7 +2679,7 @@ SEXP R_lsInternal3(SEXP env, Rboolean all, Rboolean sorted)
 	error(_("invalid '%s' argument"), "envir");
 
     /* Step 2 : Allocate and Fill the Result */
-    SEXP ans = PROTECT(allocVector(STRSXP, k));
+    SEXP ans; PROTECT(ans = allocVector(STRSXP, k));
     k = 0;
     if (env == R_BaseEnv || env == R_BaseNamespace)
 	BuiltinNames(all, 0, ans, &k);
@@ -2760,13 +2760,15 @@ SEXP attribute_hidden do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     if(sort_nms) {
 	// return list with *sorted* names
-	SEXP sind = PROTECT(allocVector(INTSXP, k));
+	SEXP sind; PROTECT(sind = allocVector(INTSXP, k));
 	int *indx = INTEGER(sind);
 	for (int i = 0; i < k; i++) indx[i] = i;
 	orderVector1(indx, k, names, /* nalast */ TRUE, /* decreasing */ FALSE,
 		     R_NilValue);
-	SEXP ans2   = PROTECT(allocVector(VECSXP, k));
-	SEXP names2 = PROTECT(allocVector(STRSXP, k));
+	SEXP ans2;
+	PROTECT(ans2 = allocVector(VECSXP, k));
+	SEXP names2;
+	PROTECT(names2 = allocVector(STRSXP, k));
 	for(int i = 0; i < k; i++) {
 	    SET_STRING_ELT(names2, i, STRING_ELT(names, indx[i]));
 	    SET_VECTOR_ELT(ans2,   i, VECTOR_ELT(ans,   indx[i]));

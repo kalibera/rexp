@@ -2069,9 +2069,9 @@ static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (isList && length(args) > 1) recursive = asLogical(CADR(args));
     if (OBJECT(x) || (isList && !recursive)) {
-	SEXP e0 = PROTECT(lang2(install("is.na"), x));
-	SEXP e = PROTECT(lang2(install("any"), e0));
-	SEXP res = PROTECT(eval(e, env));
+	SEXP e0; PROTECT(e0 = lang2(install("is.na"), x));
+	SEXP e; PROTECT(e = lang2(install("any"), e0));
+	SEXP res; PROTECT(res = eval(e, env));
 	int ans = asLogical(res);
 	UNPROTECT(3);
 	return ans == 1; // so NA answer is false.

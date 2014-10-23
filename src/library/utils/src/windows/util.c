@@ -111,7 +111,7 @@ SEXP dllversion(SEXP path)
 	error(_("invalid '%s' argument"), "path");
     dll = filenameToWchar(STRING_ELT(path, 0), FALSE);
     dwVerInfoSize = GetFileVersionInfoSizeW(dll, &dwVerHnd);
-    SEXP ans = PROTECT(allocVector(STRSXP, 2));
+    SEXP ans; PROTECT(ans = allocVector(STRSXP, 2));
     SET_STRING_ELT(ans, 0, mkChar(""));
     SET_STRING_ELT(ans, 1, mkChar(""));
     if (dwVerInfoSize) {

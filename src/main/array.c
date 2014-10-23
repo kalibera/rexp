@@ -1641,7 +1641,7 @@ SEXP attribute_hidden do_backsolve(SEXP call, SEXP op, SEXP args, SEXP rho)
 		  i + 1);
     }
 
-    SEXP ans = PROTECT(allocMatrix(REALSXP, k, ncb));
+    SEXP ans; PROTECT(ans = allocMatrix(REALSXP, k, ncb));
     if (k > 0 && ncb > 0) {
        /* copy (part) cols of b to ans */
 	for(R_xlen_t j = 0; j < ncb; j++)
@@ -1662,7 +1662,7 @@ SEXP attribute_hidden do_maxcol(SEXP call, SEXP op, SEXP args, SEXP rho)
     int method = asInteger(CADR(args));
     int nr = nrows(m), nc = ncols(m), nprot = 1;
     if (TYPEOF(m) != REALSXP) {PROTECT(m = coerceVector(m, REALSXP)); nprot++;}
-    SEXP ans = PROTECT(allocVector(INTSXP, nr));
+    SEXP ans; PROTECT(ans = allocVector(INTSXP, nr));
     R_max_col(REAL(m), &nr, &nc, INTEGER(ans), &method);
     UNPROTECT(nprot);
     return ans;

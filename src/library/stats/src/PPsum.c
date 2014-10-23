@@ -48,7 +48,7 @@ SEXP intgrt_vec(SEXP x, SEXP xi, SEXP slag)
     x = PROTECT(coerceVector(x, REALSXP));
     xi = PROTECT(coerceVector(xi, REALSXP));
     int n = LENGTH(x), lag = asInteger(slag);
-    SEXP ans = PROTECT(allocVector(REALSXP, n + lag));
+    SEXP ans; PROTECT(ans = allocVector(REALSXP, n + lag));
     double *rx = REAL(x), *y = REAL(ans);
     Memzero(y, n + lag); Memcpy(y, REAL(xi), lag);
     for (int i = lag; i < lag + n; i++) y[i] = rx[i - lag] + y[i - lag];

@@ -75,10 +75,10 @@ SEXP ksmooth(SEXP x, SEXP y, SEXP xp, SEXP skrn, SEXP sbw)
     y = PROTECT(coerceVector(y, REALSXP));
     xp = PROTECT(coerceVector(xp, REALSXP));
     R_xlen_t nx = XLENGTH(x), np = XLENGTH(xp);
-    SEXP yp = PROTECT(allocVector(REALSXP, np));
+    SEXP yp; PROTECT(yp = allocVector(REALSXP, np));
 
     BDRksmooth(REAL(x), REAL(y), nx, REAL(xp), REAL(yp), np, krn, bw);
-    SEXP ans = PROTECT(allocVector(VECSXP, 2));
+    SEXP ans; PROTECT(ans = allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ans, 0, xp);
     SET_VECTOR_ELT(ans, 1, yp);
     SEXP nm = allocVector(STRSXP, 2);

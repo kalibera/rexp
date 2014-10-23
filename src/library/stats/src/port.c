@@ -308,14 +308,14 @@ int F77_NAME(stopx)(void)
 static
 double* check_gv(SEXP gr, SEXP hs, SEXP rho, int n, double *gv, double *hv)
 {
-    SEXP gval = PROTECT(coerceVector(eval(gr, rho), REALSXP));
+    SEXP gval; PROTECT(gval = coerceVector(eval(gr, rho), REALSXP));
     if (LENGTH(gval) != n)
 	error(_("gradient function must return a numeric vector of length %d"), n);
     Memcpy(gv, REAL(gval), n);
     for (int i = 0; i < n; i++)
 	if(ISNAN(gv[i])) error("NA/NaN gradient evaluation");
     if (hv) {
-	SEXP hval = PROTECT(eval(hs, rho));
+	SEXP hval; PROTECT(hval = eval(hs, rho));
 	SEXP dim = getAttrib(hval, R_DimSymbol);
 	int i, j, pos;
 	double *rhval = REAL(hval);
@@ -481,7 +481,7 @@ static R_INLINE SEXP getFunc(SEXP list, char *enm, char *lnm)
 
 static void neggrad(SEXP gf, SEXP rho, SEXP gg)
 {
-    SEXP val = PROTECT(eval(gf, rho));
+    SEXP val; PROTECT(val = eval(gf, rho));
     int *dims = INTEGER(getAttrib(val, R_DimSymbol)),
 	*gdims = INTEGER(getAttrib(gg, R_DimSymbol));
     int i, ntot = gdims[0] * gdims[1];
@@ -507,7 +507,7 @@ static void neggrad(SEXP gf, SEXP rho, SEXP gg)
 static
 SEXP eval_check_store(SEXP fcn, SEXP rho, SEXP vv)
 {
-    SEXP v = PROTECT(eval(fcn, rho));
+    SEXP v; PROTECT(v = eval(fcn, rho));
     if (TYPEOF(v) != TYPEOF(vv) || LENGTH(v) != LENGTH(vv))
 	error(_("fcn produced mode %d, length %d - wanted mode %d, length %d"),
 	      TYPEOF(v), LENGTH(v), TYPEOF(vv), LENGTH(vv));

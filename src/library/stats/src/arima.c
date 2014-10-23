@@ -93,7 +93,7 @@ KalmanLike(SEXP sy, SEXP mod, SEXP sUP, SEXP op, SEXP update)
 	PROTECT(ans = allocVector(VECSXP, 3));
 	SET_VECTOR_ELT(ans, 1, resid = allocVector(REALSXP, n));
 	SET_VECTOR_ELT(ans, 2, states = allocMatrix(REALSXP, n, p));
-	SEXP nm = PROTECT(allocVector(STRSXP, 3));
+	SEXP nm; PROTECT(nm = allocVector(STRSXP, 3));
 	SET_STRING_ELT(nm, 0, mkChar("values"));
 	SET_STRING_ELT(nm, 1, mkChar("resid"));
 	SET_STRING_ELT(nm, 2, mkChar("states"));
@@ -203,7 +203,7 @@ KalmanSmooth(SEXP sy, SEXP mod, SEXP sUP)
     PROTECT(ssPn = duplicate(sPn)); Pnew = REAL(ssPn);
 
     PROTECT(res = allocVector(VECSXP, 2));
-    SEXP nm = PROTECT(allocVector(STRSXP, 2));
+    SEXP nm; PROTECT(nm = allocVector(STRSXP, 2));
     SET_STRING_ELT(nm, 0, mkChar("smooth"));
     SET_STRING_ELT(nm, 1, mkChar("var"));
     setAttrib(res, R_NamesSymbol, nm);
@@ -389,7 +389,7 @@ KalmanFore(SEXP nahead, SEXP mod, SEXP update)
     SET_VECTOR_ELT(res, 0, forecasts = allocVector(REALSXP, n));
     SET_VECTOR_ELT(res, 1, se = allocVector(REALSXP, n));
     {
-	SEXP nm = PROTECT(allocVector(STRSXP, 2));
+	SEXP nm; PROTECT(nm = allocVector(STRSXP, 2));
 	SET_STRING_ELT(nm, 0, mkChar("pred"));
 	SET_STRING_ELT(nm, 1, mkChar("var"));
 	setAttrib(res, R_NamesSymbol, nm);
@@ -904,8 +904,8 @@ SEXP getQ0bis(SEXP sPhi, SEXP sTheta, SEXP sTol)
 
     if( p > 0 ) {
 	int r2 = max(p + q, p + 1);
-	SEXP sgam = PROTECT(allocMatrix(REALSXP, r2, r2)),
-	    sg = PROTECT(allocVector(REALSXP, r2));
+	SEXP sgam; PROTECT(sgam = allocMatrix(REALSXP, r2, r2));
+	SEXP sg; PROTECT(sg = allocVector(REALSXP, r2));
 	double *gam = REAL(sgam);
 	double *g = REAL(sg);
 	double *tphi = (double *) R_alloc(p + 1, sizeof(double));
@@ -938,8 +938,8 @@ SEXP getQ0bis(SEXP sPhi, SEXP sTheta, SEXP sTol)
      * FIXME: call these directly here, possibly even use 'info' instead of error(.)
      * e.g., in case of exact singularity.
      */
-	SEXP callS = PROTECT(lang4(install("solve.default"), sgam, sg, sTol)),
-	    su = PROTECT(eval(callS, R_BaseEnv));
+	SEXP callS; PROTECT(callS = lang4(install("solve.default"), sgam, sg, sTol));
+	SEXP su; PROTECT(su = eval(callS, R_BaseEnv));
 	double *u = REAL(su);
     /* SX = A SU A^T */
     /* A[i,j]  = ttheta[j-i] */

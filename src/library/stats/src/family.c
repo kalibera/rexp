@@ -58,7 +58,7 @@ static R_INLINE double x_d_opx(double x) {return x/(1 + x);}
 SEXP logit_link(SEXP mu)
 {
     int i, n = LENGTH(mu);
-    SEXP ans = PROTECT(duplicate(mu));
+    SEXP ans; PROTECT(ans = duplicate(mu));
     double *rans = REAL(ans), *rmu=REAL(mu);
 
     if (!n || !isReal(mu))
@@ -71,7 +71,7 @@ SEXP logit_link(SEXP mu)
 
 SEXP logit_linkinv(SEXP eta)
 {
-    SEXP ans = PROTECT(duplicate(eta));
+    SEXP ans; PROTECT(ans = duplicate(eta));
     int i, n = LENGTH(eta);
     double *rans = REAL(ans), *reta = REAL(eta);
 
@@ -89,7 +89,7 @@ SEXP logit_linkinv(SEXP eta)
 
 SEXP logit_mu_eta(SEXP eta)
 {
-    SEXP ans = PROTECT(duplicate(eta));
+    SEXP ans; PROTECT(ans = duplicate(eta));
     int i, n = LENGTH(eta);
     double *rans = REAL(ans), *reta = REAL(eta);
 

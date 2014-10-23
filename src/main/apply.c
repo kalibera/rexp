@@ -43,7 +43,7 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     FUN = CADR(args);
     Rboolean realIndx = n > INT_MAX;
 
-    SEXP ans = PROTECT(allocVector(VECSXP, n));
+    SEXP ans; PROTECT(ans = allocVector(VECSXP, n));
     SEXP names = getAttrib(XX, R_NamesSymbol);
     if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
 
@@ -54,7 +54,7 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
        protection of its args internally), but not both of them,
        since the computation of one may destroy the other */
     
-    SEXP ind = PROTECT(allocVector(realIndx ? REALSXP : INTSXP, 1));
+    SEXP ind; PROTECT(ind = allocVector(realIndx ? REALSXP : INTSXP, 1));
     SEXP tmp;
     /* The R level code has ensured that XX is a vector.
        If it is atomic we can speed things up slightly by
@@ -66,8 +66,8 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	tmp = PROTECT(LCONS(R_Bracket2Symbol,
 			    LCONS(X, LCONS(ind, R_NilValue))));
-    SEXP R_fcall = PROTECT(LCONS(FUN,
-				 LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
+    SEXP R_fcall = LCONS(FUN, LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue)));
+    PROTECT(R_fcall);
 
     for(R_xlen_t i = 0; i < n; i++) {
 	if (realIndx) REAL(ind)[0] = (double)(i + 1);

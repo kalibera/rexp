@@ -458,7 +458,7 @@ void GEaddDevice2(pGEDevDesc gdd, const char *name)
 
 void GEaddDevice2f(pGEDevDesc gdd, const char *name, const char *file)
 {
-    SEXP f = PROTECT(mkString(name));
+    SEXP f; PROTECT(f = mkString(name));
     if(file) setAttrib(f, install("filepath"), mkString(file));
     gsetVar(R_DeviceSymbol, f, R_BaseEnv);
     UNPROTECT(1);
@@ -507,7 +507,7 @@ void attribute_hidden InitGraphics(void)
     }
 
     /* init .Device and .Devices */
-    SEXP s = PROTECT(mkString("null device"));
+    SEXP s; PROTECT(s = mkString("null device"));
     gsetVar(R_DeviceSymbol, s, R_BaseEnv);
     s = PROTECT(mkString("null device"));
     gsetVar(R_DevicesSymbol, CONS(s, R_NilValue), R_BaseEnv);

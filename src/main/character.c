@@ -1359,7 +1359,7 @@ SEXP attribute_hidden stringSuffix(SEXP string, int fromIndex) {
     int origLen = LENGTH(string);
     int newLen = origLen - fromIndex;
 
-    SEXP res = PROTECT(allocVector(STRSXP, newLen));
+    SEXP res; PROTECT(res = allocVector(STRSXP, newLen));
     int i;
     for(i = 0; i < newLen; i++) {
         SET_STRING_ELT(res, i, STRING_ELT(string, fromIndex++));

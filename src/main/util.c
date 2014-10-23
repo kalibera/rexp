@@ -267,7 +267,7 @@ void InitTypeTables(void) {
 
         if (j != -1) {
             const char *cstr = TypeTable[j].str;
-            SEXP rchar = PROTECT(mkChar(cstr));
+            SEXP rchar; PROTECT(rchar = mkChar(cstr));
             SEXP rstr = ScalarString(rchar);
             MARK_NOT_MUTABLE(rstr);
             R_PreserveObject(rstr);
@@ -2274,7 +2274,7 @@ SEXP attribute_hidden do_formatC(SEXP call, SEXP op, SEXP args, SEXP rho)
     int digits = asInteger(CAR(args)); args = CDR(args);
     const char *fmt = CHAR(STRING_ELT(CAR(args), 0)); args = CDR(args);
     const char *flag = CHAR(STRING_ELT(CAR(args), 0)); args = CDR(args);
-    SEXP i_strlen = PROTECT(coerceVector(CAR(args), INTSXP));
+    SEXP i_strlen; PROTECT(i_strlen = coerceVector(CAR(args), INTSXP));
     char **cptr = (char **) R_alloc(n, sizeof(char*));
     for (R_xlen_t i = 0; i < n; i++) {
 	int ix = INTEGER(i_strlen)[i] + 2;
@@ -2289,7 +2289,7 @@ SEXP attribute_hidden do_formatC(SEXP call, SEXP op, SEXP args, SEXP rho)
     default: error("unsupported type ");
     }
     str_signif(px, n, type, width, digits, fmt, flag, cptr);
-    SEXP ans = PROTECT(allocVector(STRSXP, n));
+    SEXP ans; PROTECT(ans = allocVector(STRSXP, n));
     for (R_xlen_t i = 0; i < n; i++) SET_STRING_ELT(ans, i, mkChar(cptr[i]));
     UNPROTECT(2);
     return ans;

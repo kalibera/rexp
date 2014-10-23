@@ -713,10 +713,10 @@ SEXP attribute_hidden R_unary(SEXP call, SEXP op, SEXP s1)
 static SEXP logical_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 {
     R_xlen_t n = XLENGTH(s1);
-    SEXP ans = PROTECT(allocVector(INTSXP, n));
-    SEXP names = PROTECT(getAttrib(s1, R_NamesSymbol));
-    SEXP dim = PROTECT(getAttrib(s1, R_DimSymbol));
-    SEXP dimnames = PROTECT(getAttrib(s1, R_DimNamesSymbol));
+    SEXP ans; PROTECT(ans = allocVector(INTSXP, n));
+    SEXP names; PROTECT(names = getAttrib(s1, R_NamesSymbol));
+    SEXP dim; PROTECT(dim = getAttrib(s1, R_DimSymbol));
+    SEXP dimnames; PROTECT(dimnames = getAttrib(s1, R_DimNamesSymbol));
     if(names != R_NilValue) setAttrib(ans, R_NamesSymbol, names);
     if(dim != R_NilValue) setAttrib(ans, R_DimSymbol, dim);
     if(dimnames != R_NilValue) setAttrib(ans, R_DimNamesSymbol, dimnames);

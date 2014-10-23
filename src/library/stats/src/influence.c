@@ -33,17 +33,17 @@ SEXP influence(SEXP mqr, SEXP do_coef, SEXP e, SEXP stol)
     int docoef = asLogical(do_coef);
     double tol = asReal(stol);
 
-    SEXP hat = PROTECT(allocVector(REALSXP, n));
+    SEXP hat; PROTECT(hat = allocVector(REALSXP, n));
     double *rh = REAL(hat);
     SEXP coefficients;
     if(docoef) coefficients = PROTECT(allocMatrix(REALSXP, n, k));
     else coefficients = PROTECT(allocVector(REALSXP, 0));
-    SEXP sigma = PROTECT(allocVector(REALSXP, n));
+    SEXP sigma; PROTECT(sigma = allocVector(REALSXP, n));
     F77_CALL(lminfl)(REAL(qr), &n, &n, &k, &docoef, REAL(qraux),
 		     REAL(e), rh, REAL(coefficients), REAL(sigma), &tol);
 
     for (int i = 0; i < n; i++) if (rh[i] > 1. - tol) rh[i] = 1.;
-    SEXP ans = PROTECT(allocVector(VECSXP, docoef ? 4 : 3));
+    SEXP ans; PROTECT(ans = allocVector(VECSXP, docoef ? 4 : 3));
     SEXP nm = allocVector(STRSXP, docoef ? 4 : 3);
     setAttrib(ans, R_NamesSymbol, nm);
     int m = 0;

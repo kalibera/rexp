@@ -69,9 +69,9 @@ SEXP pacf1(SEXP acf, SEXP lmax)
 {
     int lagmax = asInteger(lmax);
     acf = PROTECT(coerceVector(acf, REALSXP));
-    SEXP ans = PROTECT(allocVector(REALSXP, lagmax));
+    SEXP ans; PROTECT(ans = allocVector(REALSXP, lagmax));
     uni_pacf(REAL(acf), REAL(ans), lagmax);
-    SEXP d = PROTECT(allocVector(INTSXP, 3));
+    SEXP d; PROTECT(d = allocVector(INTSXP, 3));
     INTEGER(d)[0] = lagmax;
     INTEGER(d)[1] = INTEGER(d)[2] = 1;
     setAttrib(ans, R_DimSymbol, d);
@@ -312,7 +312,7 @@ SEXP ar2ma(SEXP ar, SEXP npsi)
 {
     ar = PROTECT(coerceVector(ar, REALSXP));
     int p = LENGTH(ar), ns = asInteger(npsi), ns1 = ns + p + 1;
-    SEXP psi = PROTECT(allocVector(REALSXP, ns1));
+    SEXP psi; PROTECT(psi = allocVector(REALSXP, ns1));
     artoma(p, REAL(ar), REAL(psi), ns1);
     SEXP ans = lengthgets(psi, ns);
     UNPROTECT(2);

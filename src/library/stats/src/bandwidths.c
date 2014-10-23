@@ -106,7 +106,7 @@ SEXP bw_den(SEXP nbin, SEXP sx)
 {
     int nb = asInteger(nbin), n = LENGTH(sx);
     double xmin, xmax, rang, dd, *x = REAL(sx);
-    SEXP sc = PROTECT(allocVector(INTSXP, nb));
+    SEXP sc; PROTECT(sc = allocVector(INTSXP, nb));
     int *cnt = INTEGER(sc);
 
     for (int i = 0; i < nb; i++) cnt[i] = 0;
@@ -124,7 +124,7 @@ SEXP bw_den(SEXP nbin, SEXP sx)
 	    cnt[abs(ii - jj)]++;
 	}
     }
-    SEXP ans = PROTECT(allocVector(VECSXP, 2));
+    SEXP ans; PROTECT(ans = allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ans, 0, ScalarReal(dd));
     SET_VECTOR_ELT(ans, 1, sc);
     UNPROTECT(2);

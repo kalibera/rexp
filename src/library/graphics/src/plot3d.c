@@ -1461,7 +1461,7 @@ static void contour(SEXP x, int nx, SEXP y, int ny, SEXP z,
     double xStart, yStart;
     double dx, dy, dxy;
     double labelHeight;
-    SEXP label1 = PROTECT(allocVector(REALSXP, 8));
+    SEXP label1; PROTECT(label1 = allocVector(REALSXP, 8));
     SEXP label2;
     SEXP lab;
     Rboolean gotLabel = FALSE;

@@ -203,7 +203,7 @@ SEXP hsv(SEXP h, SEXP s, SEXP v, SEXP a)
     if (max < ns) max = ns;
     if (max < nv) max = nv;
     if (max < na) max = na;
-    SEXP c = PROTECT(allocVector(STRSXP, max));
+    SEXP c; PROTECT(c = allocVector(STRSXP, max));
     if(max == 0) return(c);
 
     if(isNull(a)) {
@@ -331,7 +331,7 @@ SEXP hcl(SEXP h, SEXP c, SEXP l, SEXP a, SEXP sfixup)
     if (max < nc) max = nc;
     if (max < nl) max = nl;
     if (max < na) max = na;
-    SEXP ans = PROTECT(allocVector(STRSXP, max));
+    SEXP ans; PROTECT(ans = allocVector(STRSXP, max));
     if (isNull(a)) {
 	for (i = 0; i < max; i++) {
 	    H = REAL(h)[i % nh];
@@ -419,7 +419,7 @@ SEXP rgb(SEXP r, SEXP g, SEXP b, SEXP a, SEXP MCV, SEXP nam)
     PROTECT(nam = coerceVector(nam, STRSXP));
     if (length(nam) != 0 && length(nam) != l_max)
 	error(_("invalid 'names' vector"));
-    SEXP c = PROTECT(allocVector(STRSXP, l_max));
+    SEXP c; PROTECT(c = allocVector(STRSXP, l_max));
 
     if(mV == 255.0) {
 	if(isNull(a)) {
@@ -1520,7 +1520,7 @@ SEXP palette(SEXP val)
 /* A version using 'rcolor' type */
 SEXP palette2(SEXP val)
 {
-    SEXP ans = PROTECT(allocVector(INTSXP, PaletteSize));
+    SEXP ans; PROTECT(ans = allocVector(INTSXP, PaletteSize));
     int n = length(val), *ians = INTEGER(ans); 
     for (int i = 0; i < PaletteSize; i++) ians[i] = (int)Palette[i];
     if (n) {
@@ -1539,7 +1539,7 @@ SEXP colors(void)
     int n;
 
     for (n = 0; ColorDataBase[n].name != NULL; n++) ;
-    SEXP ans = PROTECT(allocVector(STRSXP, n));
+    SEXP ans; PROTECT(ans = allocVector(STRSXP, n));
     for (n = 0; ColorDataBase[n].name != NULL; n++)
 	SET_STRING_ELT(ans, n, mkChar(ColorDataBase[n].name));
     UNPROTECT(1);
