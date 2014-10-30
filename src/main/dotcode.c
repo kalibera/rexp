@@ -1357,7 +1357,6 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 			  R_RegisteredNativeSymbol *symbol,
 			  SEXP env)
 {
-    int numProtects = 0;
     DllInfo *info;
     DL_FUNC fun = NULL;
 
@@ -1369,7 +1368,6 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 	    dll->obj = eval(e, R_GlobalEnv);
 	    UNPROTECT(1);
 	} else dll->obj = Rf_getCallingDLL();
-	PROTECT(dll->obj); numProtects++;
     }
 
     if(inherits(dll->obj, "DLLInfo")) {
@@ -1380,8 +1378,6 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 	    error(_("NULL value for DLLInfoReference when looking for DLL"));
 	fun = R_dlsym(info, name, symbol);
     }
-
-    if(numProtects) UNPROTECT(numProtects);
 
     return fun;
 }

@@ -284,11 +284,15 @@ static
 SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 		    const char *generic, SEXP rho, SEXP callrho, SEXP defrho) {
 
+    SEXP stringGeneric = mkString(generic);
+    PROTECT(stringGeneric);
+    SEXP stringMethod = ScalarString(PRINTNAME(method));
+    PROTECT(stringMethod);
     SEXP newvars = createS3Vars(
-        PROTECT(mkString(generic)),
+        stringGeneric,
         R_BlankScalarString,
         dotClass,
-        PROTECT(ScalarString(PRINTNAME(method))),
+        stringMethod,
         callrho,
         defrho
     );

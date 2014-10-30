@@ -622,9 +622,10 @@ SEXP eval(SEXP e, SEXP rho)
 	if (TYPEOF(op) == SPECIALSXP) {
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
-	    PROTECT(CDR(e));
+	    SEXP specialArgs = CDR(e);
+	    PROTECT(specialArgs);
 	    R_Visible = flag != 1;
-	    tmp = PRIMFUN(op) (e, op, CDR(e), rho);
+	    tmp = PRIMFUN(op) (e, op, specialArgs, rho);
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
 		char *nm = PRIMNAME(op);
@@ -2845,14 +2846,20 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     }
     vmaxset(vmax);
 
-    newvars = PROTECT(createS3Vars(
-        PROTECT(mkString(generic)),
+    SEXP stringGeneric = mkString(generic);
+    PROTECT(stringGeneric);
+    SEXP newclass = stringSuffix(lclass, lwhich);
+    PROTECT(newclass);
+
+    newvars = createS3Vars(
+        stringGeneric,
         lgr,
-        PROTECT(stringSuffix(lclass, lwhich)),
+        newclass,
         m,
         rho,
         R_BaseEnv
-    ));
+    );
+    PROTECT(newvars);
 
     PROTECT(t = LCONS(lmeth, CDR(call)));
 

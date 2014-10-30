@@ -1090,8 +1090,8 @@ static SEXP NewPlotHistory(int n)
 
     PROTECT(vDL = allocVector(VECSXP, 5));
     for (i = 0; i < 4; i++)
-	PROTECT(SET_VECTOR_ELT(vDL, i, allocVector(INTSXP, 1)));
-    PROTECT(SET_pHISTORY (allocVector(VECSXP, n)));
+	SET_VECTOR_ELT(vDL, i, allocVector(INTSXP, 1));
+    SET_pHISTORY (allocVector(VECSXP, n));
     pMAGIC = PLOTHISTORYMAGIC;
     pNUMPLOTS = 0;
     pMAXPLOTS = n;
@@ -1101,7 +1101,7 @@ static SEXP NewPlotHistory(int n)
     PROTECT(class = mkString("SavedPlots"));
     classgets(vDL, class);
     SETDL;
-    UNPROTECT(7);
+    UNPROTECT(2);
     return vDL;
 }
 
