@@ -353,12 +353,12 @@ SEXP LogLin(SEXP dtab, SEXP conf, SEXP table, SEXP start,
 	maxit = asInteger(iter), 
 	nlast, ifault;
     double maxdev = asReal(eps);
-    SEXP fit; PROTECT(fit = TYPEOF(start) == REALSXP ? duplicate(start) :
+    SEXP fit; VAPROTECT(fit, TYPEOF(start) == REALSXP ? duplicate(start) :
 		       coerceVector(start, REALSXP));
-    SEXP locmar; PROTECT(locmar = allocVector(INTSXP, ncon));
-    SEXP marg; PROTECT(marg = allocVector(REALSXP, nmar));
-    SEXP u; PROTECT(u = allocVector(REALSXP, ntab));
-    SEXP dev; PROTECT(dev = allocVector(REALSXP, maxit));
+    SEXP locmar; VAPROTECT(locmar, allocVector(INTSXP, ncon));
+    SEXP marg; VAPROTECT(marg, allocVector(REALSXP, nmar));
+    SEXP u; VAPROTECT(u, allocVector(REALSXP, ntab));
+    SEXP dev; VAPROTECT(dev, allocVector(REALSXP, maxit));
     dtab = PROTECT(coerceVector(dtab, INTSXP));
     conf = PROTECT(coerceVector(conf, INTSXP));
     table = PROTECT(coerceVector(table, REALSXP));
@@ -377,7 +377,7 @@ SEXP LogLin(SEXP dtab, SEXP conf, SEXP table, SEXP start,
 	break;
     }
 
-    SEXP ans; PROTECT(ans = allocVector(VECSXP, 3));
+    SEXP ans; VAPROTECT(ans, allocVector(VECSXP, 3));
     SEXP nm;
     SET_VECTOR_ELT(ans, 0, fit);
     SET_VECTOR_ELT(ans, 1, dev);

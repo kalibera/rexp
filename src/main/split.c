@@ -47,7 +47,7 @@ SEXP attribute_hidden do_split(SEXP call, SEXP op, SEXP args, SEXP env)
 	warning(_("data length is not a multiple of split variable"));
     nm = getAttrib(x, R_NamesSymbol);
     have_names = nm != R_NilValue;
-    PROTECT(counts = allocVector(INTSXP, nlevs));
+    VAPROTECT(counts, allocVector(INTSXP, nlevs));
     for (int i = 0; i < nlevs; i++) INTEGER(counts)[i] = 0;
     for (R_xlen_t i = 0; i < nobs; i++) {
 	int j = INTEGER(f)[i % nfac];
@@ -60,7 +60,7 @@ SEXP attribute_hidden do_split(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Allocate a generic vector to hold the results. */
     /* The i-th element will hold the split-out data */
     /* for the ith group. */
-    PROTECT(vec = allocVector(VECSXP, nlevs));
+    VAPROTECT(vec, allocVector(VECSXP, nlevs));
     for (R_xlen_t i = 0;  i < nlevs; i++) {
 	SET_VECTOR_ELT(vec, i, allocVector(TYPEOF(x), INTEGER(counts)[i]));
 	setAttrib(VECTOR_ELT(vec, i), R_LevelsSymbol,

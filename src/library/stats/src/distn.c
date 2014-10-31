@@ -53,15 +53,15 @@
     na = XLENGTH(sa);				\
     nb = XLENGTH(sb);				\
     if ((na == 0) || (nb == 0))	{		\
-	PROTECT(sy = allocVector(REALSXP, 0));	\
+	VAPROTECT(sy, allocVector(REALSXP, 0));	\
 	if (na == 0) DUPLICATE_ATTRIB(sy, sa);	\
 	UNPROTECT(1);				\
 	return(sy);				\
     }						\
     n = (na < nb) ? nb : na;			\
-    PROTECT(sa = coerceVector(sa, REALSXP));	\
-    PROTECT(sb = coerceVector(sb, REALSXP));	\
-    PROTECT(sy = allocVector(REALSXP, n));	\
+    VAPROTECT(sa, coerceVector(sa, REALSXP));	\
+    VAPROTECT(sb, coerceVector(sb, REALSXP));	\
+    VAPROTECT(sy, allocVector(REALSXP, n));	\
     a = REAL(sa);				\
     b = REAL(sb);				\
     y = REAL(sy);				\
@@ -189,10 +189,10 @@ DEFMATH2_2(qsignrank)
     n = na;							\
     if (n < nb) n = nb;						\
     if (n < nc) n = nc;						\
-    PROTECT(sa = coerceVector(sa, REALSXP));			\
-    PROTECT(sb = coerceVector(sb, REALSXP));			\
-    PROTECT(sc = coerceVector(sc, REALSXP));			\
-    PROTECT(sy = allocVector(REALSXP, n));			\
+    VAPROTECT(sa, coerceVector(sa, REALSXP));			\
+    VAPROTECT(sb, coerceVector(sb, REALSXP));			\
+    VAPROTECT(sc, coerceVector(sc, REALSXP));			\
+    VAPROTECT(sy, allocVector(REALSXP, n));			\
     a = REAL(sa);						\
     b = REAL(sb);						\
     c = REAL(sc);						\
@@ -348,11 +348,11 @@ DEFMATH3_2(qwilcox)
     if (n < nb) n = nb;							\
     if (n < nc) n = nc;							\
     if (n < nd) n = nd;							\
-    PROTECT(sa = coerceVector(sa, REALSXP));				\
-    PROTECT(sb = coerceVector(sb, REALSXP));				\
-    PROTECT(sc = coerceVector(sc, REALSXP));				\
-    PROTECT(sd = coerceVector(sd, REALSXP));				\
-    PROTECT(sy = allocVector(REALSXP, n));				\
+    VAPROTECT(sa, coerceVector(sa, REALSXP));				\
+    VAPROTECT(sb, coerceVector(sb, REALSXP));				\
+    VAPROTECT(sc, coerceVector(sc, REALSXP));				\
+    VAPROTECT(sd, coerceVector(sd, REALSXP));				\
+    VAPROTECT(sy, allocVector(REALSXP, n));				\
     a = REAL(sa);							\
     b = REAL(sb);							\
     c = REAL(sc);							\

@@ -30,7 +30,7 @@ source(const char *name)
 {
     SEXP e;
 
-    PROTECT(e = lang2(install("source"), mkString(name)));
+    VAPROTECT(e, lang2(install("source"), mkString(name)));
     R_tryEval(e, R_GlobalEnv, NULL);
     UNPROTECT(1);
 }
@@ -50,7 +50,7 @@ bar1()
     SEXP fun, pch;
     SEXP e;
 
-    PROTECT(e = allocVector(LANGSXP, 4));
+    VAPROTECT(e, allocVector(LANGSXP, 4));
     fun = findFun(install("foo"), R_GlobalEnv);
     if(fun == R_NilValue) {
 	fprintf(stderr, "No definition for function foo. Source foo.R and save the session.\n");

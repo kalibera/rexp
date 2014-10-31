@@ -213,8 +213,8 @@ SEXP nextn(SEXP n, SEXP factors)
     SEXP f, ans;
     int i, nn, nf;
 
-    PROTECT(n = coerceVector(n, INTSXP));
-    PROTECT(f = coerceVector(factors, INTSXP));
+    VAPROTECT(n, coerceVector(n, INTSXP));
+    VAPROTECT(f, coerceVector(factors, INTSXP));
     nn = LENGTH(n);
     nf = LENGTH(f);
 

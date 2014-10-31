@@ -302,7 +302,7 @@ SEXP Win_dataentry(SEXP args)
     for(i = 0, cnt = 0; i < DE->xmaxused; i++)
 	if(!isNull(VECTOR_ELT(DE->work, i))) cnt++;
     if (cnt < DE->xmaxused) {
-	PROTECT(work2 = allocVector(VECSXP, cnt)); nprotect++;
+	VAPROTECT(work2, allocVector(VECSXP, cnt)); nprotect++;
 	for(i = 0, j = 0; i < DE->xmaxused; i++) {
 	    if(!isNull(VECTOR_ELT(DE->work, i))) {
 		SET_VECTOR_ELT(work2, j, VECTOR_ELT(DE->work, i));

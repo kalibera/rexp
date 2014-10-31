@@ -134,15 +134,15 @@ SEXP Win_selectlist(SEXP args)
     if(multiple) {
 	if (done == 1) { /* Finish */
 	    for(i = 0; i < n; i++)  if(isselected(f_list, i)) nsel++;
-	    PROTECT(ans = allocVector(STRSXP, nsel));
+	    VAPROTECT(ans, allocVector(STRSXP, nsel));
 	    for(i = 0, j = 0; i < n; i++)
 		if(isselected(f_list, i))
 		    SET_STRING_ELT(ans, j++, mkChar(clist[i]));
 	} else { /* cancel */
-	    PROTECT(ans = allocVector(STRSXP, 0));
+	    VAPROTECT(ans, allocVector(STRSXP, 0));
 	}
     } else
-	PROTECT(ans = mkString(selected));
+	VAPROTECT(ans, mkString(selected));
 
     cleanup();
     show(RConsole);
@@ -215,8 +215,8 @@ SEXP chooseFiles(SEXP def, SEXP caption, SEXP smulti, SEXP filters, SEXP sindex)
     }
 
     SEXP ans;
-    if (count < 2) PROTECT(ans = allocVector(STRSXP, count));
-    else PROTECT(ans = allocVector(STRSXP, count-1));
+    if (count < 2) VAPROTECT(ans, allocVector(STRSXP, count));
+    else VAPROTECT(ans, allocVector(STRSXP, count-1));
 
     switch (count) {
     case 0: break;
@@ -258,7 +258,7 @@ SEXP chooseDir(SEXP def, SEXP caption)
 	error(_("'caption' must be a character string"));
     p = askcdstring(translateChar(STRING_ELT(caption, 0)), path);
 
-    SEXP ans; PROTECT(ans = allocVector(STRSXP, 1));
+    SEXP ans; VAPROTECT(ans, allocVector(STRSXP, 1));
     SET_STRING_ELT(ans, 0, p ? mkChar(p): NA_STRING);
     UNPROTECT(1);
     return ans;

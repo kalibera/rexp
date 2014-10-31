@@ -262,7 +262,7 @@ static SEXP ziplist(const char *zipname)
         error("error %d with zipfile in unzGetGlobalInfo", err);
     nfiles = (int) gi.number_entry;
     /* name, length, datetime */
-    PROTECT(ans = allocVector(VECSXP, 3));
+    VAPROTECT(ans, allocVector(VECSXP, 3));
     SET_VECTOR_ELT(ans, 0, names = allocVector(STRSXP, nfiles));
     SET_VECTOR_ELT(ans, 1, lengths = allocVector(REALSXP, nfiles));
     SET_VECTOR_ELT(ans, 2, dates = allocVector(STRSXP, nfiles));
@@ -353,9 +353,9 @@ SEXP Runzip(SEXP args)
 	error(_("invalid '%s' argument"), "setTime");
 
     if (ntopics > 0)
-	PROTECT(names = allocVector(STRSXP, ntopics));
+	VAPROTECT(names, allocVector(STRSXP, ntopics));
     else
-	PROTECT(names = allocVector(STRSXP, 5000));
+	VAPROTECT(names, allocVector(STRSXP, 5000));
     rc = zipunzip(zipname, dest, ntopics, topics, &names, &nnames, 
 		  overwrite, junk, setTime);
     if (rc != UNZ_OK)
@@ -379,8 +379,8 @@ SEXP Runzip(SEXP args)
 	default:
 	    warning(_("error %d in extracting from zip file"), rc);
 	}
-    PROTECT(ans = ScalarInteger(rc));
-    PROTECT(names = lengthgets(names, nnames));
+    VAPROTECT(ans, ScalarInteger(rc));
+    VAPROTECT(names, lengthgets(names, nnames));
     setAttrib(ans, install("extracted"), names);
     UNPROTECT(3);
     vmaxset(vmax);

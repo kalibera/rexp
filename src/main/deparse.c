@@ -227,7 +227,7 @@ static SEXP deparse1WithCutoff(SEXP call, Rboolean abbrev, int cutoff,
 	    need_ellipses = TRUE;
 	}
     }
-    PROTECT(svec = allocVector(STRSXP, localData.linenumber));
+    VAPROTECT(svec, allocVector(STRSXP, localData.linenumber));
     deparse2(call, svec, &localData);
     if (abbrev) {
 	char data[14];
@@ -265,7 +265,7 @@ SEXP deparse1line(SEXP call, Rboolean abbrev)
     Rboolean backtick=TRUE;
     int lines;
 
-    PROTECT(temp = deparse1WithCutoff(call, abbrev, MAX_Cutoff, backtick,
+    VAPROTECT(temp, deparse1WithCutoff(call, abbrev, MAX_Cutoff, backtick,
 			     SIMPLEDEPARSE, -1));
     if ((lines = length(temp)) > 1) {
 	char *buf;
@@ -326,7 +326,7 @@ SEXP attribute_hidden do_dput(SEXP call, SEXP op, SEXP args, SEXP rho)
     tval = CAR(args);
     saveenv = R_NilValue;	/* -Wall */
     if (TYPEOF(tval) == CLOSXP) {
-	PROTECT(saveenv = CLOENV(tval));
+	VAPROTECT(saveenv, CLOENV(tval));
 	SET_CLOENV(tval, R_GlobalEnv);
     }
     opts = SHOWATTRIBUTES;
@@ -406,7 +406,7 @@ SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
     evaluate = asLogical(CAD4R(args));
     if (!evaluate) opts |= DELAYPROMISES;
 
-    PROTECT(o = objs = allocList(nobjs));
+    VAPROTECT(o, objs = allocList(nobjs));
 
     for (j = 0, nout = 0; j < nobjs; j++, o = CDR(o)) {
 	SET_TAG(o, installTrChar(STRING_ELT(names, j)));
@@ -416,7 +416,7 @@ SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else nout++;
     }
     o = objs;
-    PROTECT(outnames = allocVector(STRSXP, nout));
+    VAPROTECT(outnames, allocVector(STRSXP, nout));
     if(nout > 0) {
 	if(INTEGER(file)[0] == 1) {
 	    for (i = 0, nout = 0; i < nobjs; i++) {
@@ -776,7 +776,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	    d->opts = localOpts;
 	    print2buff(">", d);
 	} else {
-	    PROTECT(s = eval(s, R_EmptyEnv)); /* eval uses env of promise */
+	    VAPROTECT(s, eval(s, R_EmptyEnv)); /* eval uses env of promise */
 	    deparse2buff(s, d);
 	    UNPROTECT(1);
 	}
@@ -1483,8 +1483,8 @@ static void src2buff1(SEXP srcref, LocalParseData *d)
     const void *vmax = vmaxget();
     PROTECT(srcref);
 
-    PROTECT(srcref = lang2(install("as.character"), srcref));
-    PROTECT(srcref = eval(srcref, R_BaseEnv));
+    VAPROTECT(srcref, lang2(install("as.character"), srcref));
+    VAPROTECT(srcref, eval(srcref, R_BaseEnv));
     n = length(srcref);
     for(i = 0 ; i < n ; i++) {
 	print2buff(translateChar(STRING_ELT(srcref, i)), d);

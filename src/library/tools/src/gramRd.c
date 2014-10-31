@@ -3119,7 +3119,7 @@ yyreturn:
 static SEXP xxpushMode(int newmode, int newitem, int neweqn)
 {
     SEXP ans;
-    PROTECT(ans = allocVector(INTSXP, 7));
+    VAPROTECT(ans, allocVector(INTSXP, 7));
     
     INTEGER(ans)[0] = parseState.xxmode;		/* Lexer mode */
     INTEGER(ans)[1] = parseState.xxitemType;	/* What is \item? */
@@ -3178,10 +3178,10 @@ static SEXP xxnewlist(SEXP item)
 #if DEBUGVALS
     Rprintf("xxnewlist(item=%p)", item);
 #endif    
-    PROTECT(tmp = NewList());
+    VAPROTECT(tmp, NewList());
     if (item) {
     	int flag = getDynamicFlag(item);
-    	PROTECT(ans = GrowList(tmp, item));
+    	VAPROTECT(ans, GrowList(tmp, item));
     	setDynamicFlag(ans, flag);
     	UNPROTECT_PTR(tmp);
     	UNPROTECT_PTR(item);
@@ -3244,7 +3244,7 @@ static SEXP xxlist(SEXP oldlist, SEXP item)
 #if DEBUGVALS
     Rprintf("xxlist(oldlist=%p, item=%p)", oldlist, item);
 #endif
-    PROTECT(ans = GrowList(oldlist, item));
+    VAPROTECT(ans, GrowList(oldlist, item));
     UNPROTECT_PTR(item);
     UNPROTECT_PTR(oldlist);
     setDynamicFlag(ans, flag);
@@ -3261,14 +3261,14 @@ static SEXP xxmarkup(SEXP header, SEXP body, int flag, YYLTYPE *lloc)
     Rprintf("xxmarkup(header=%p, body=%p)", header, body);    
 #endif
     if (isNull(body)) 
-        PROTECT(ans = allocVector(VECSXP, 0));
+        VAPROTECT(ans, allocVector(VECSXP, 0));
     else {
         flag |= getDynamicFlag(body);
-	PROTECT(ans = PairToVectorList(CDR(body)));
+	VAPROTECT(ans, PairToVectorList(CDR(body)));
     	UNPROTECT_PTR(body);	
     }
     if (isNull(header))
-    	PROTECT(header = mkString("LIST"));
+    	VAPROTECT(header, mkString("LIST"));
     	
     setAttrib(ans, install("Rd_tag"), header);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
@@ -3292,9 +3292,9 @@ static SEXP xxnewcommand(SEXP cmd, SEXP name, SEXP defn, YYLTYPE *lloc)
     thename = CADR(name);
     thedefn = CADR(defn);
     if (TYPEOF(thedefn) == STRSXP)
-    	PROTECT(thedefn = mkString(CHAR(STRING_ELT(thedefn,0))));
+    	VAPROTECT(thedefn, mkString(CHAR(STRING_ELT(thedefn,0))));
     else
-    	PROTECT(thedefn = mkString(""));
+    	VAPROTECT(thedefn, mkString(""));
     if (warnDups) {
 	prev = findVar(installChar(STRING_ELT(thename, 0)), parseState.xxMacroList);
     	if (prev != R_UnboundValue && strcmp(CHAR(STRING_ELT(cmd,0)), "\\renewcommand")) {
@@ -3311,7 +3311,7 @@ static SEXP xxnewcommand(SEXP cmd, SEXP name, SEXP defn, YYLTYPE *lloc)
     	snprintf(buffer, sizeof(buffer), _("At most 4 arguments are allowed for user defined macros."));
 	yyerror(buffer);
     }
-    PROTECT(ans = ScalarInteger(USERMACRO + maxarg));
+    VAPROTECT(ans, ScalarInteger(USERMACRO + maxarg));
     setAttrib(ans, install("Rd_tag"), cmd);
     setAttrib(ans, install("definition"), thedefn);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
@@ -3337,7 +3337,7 @@ static SEXP xxusermacro(SEXP macro, SEXP args, YYLTYPE *lloc)
     Rprintf("xxusermacro(macro=%p, args=%p)", macro, args);
 #endif
     len = length(args)-1;
-    PROTECT(ans = allocVector(STRSXP, len + 1));
+    VAPROTECT(ans, allocVector(STRSXP, len + 1));
     value = UserMacroLookup(CHAR(STRING_ELT(macro,0)));
     if (TYPEOF(value) == STRSXP)
     	SET_STRING_ELT(ans, 0, STRING_ELT(value, 0));
@@ -3381,7 +3381,7 @@ static SEXP xxOptionmarkup(SEXP header, SEXP option, SEXP body, int flag, YYLTYP
     Rprintf("xxOptionmarkup(header=%p, option=%p, body=%p)", header, option, body);    
 #endif
     flag |= getDynamicFlag(body);
-    PROTECT(ans = PairToVectorList(CDR(body)));
+    VAPROTECT(ans, PairToVectorList(CDR(body)));
     UNPROTECT_PTR(body);	
     setAttrib(ans, install("Rd_tag"), header);
     UNPROTECT_PTR(header);
@@ -3403,7 +3403,7 @@ static SEXP xxmarkup2(SEXP header, SEXP body1, SEXP body2, int argcount, int fla
     Rprintf("xxmarkup2(header=%p, body1=%p, body2=%p)", header, body1, body2);        
 #endif
     
-    PROTECT(ans = allocVector(VECSXP, argcount));
+    VAPROTECT(ans, allocVector(VECSXP, argcount));
     if (!isNull(body1)) {
     	int flag1 = getDynamicFlag(body1);
     	SET_VECTOR_ELT(ans, 0, PairToVectorList(CDR(body1)));
@@ -3437,7 +3437,7 @@ static SEXP xxmarkup3(SEXP header, SEXP body1, SEXP body2, SEXP body3, int flag,
     Rprintf("xxmarkup2(header=%p, body1=%p, body2=%p, body3=%p)", header, body1, body2, body3);        
 #endif
     
-    PROTECT(ans = allocVector(VECSXP, 3));
+    VAPROTECT(ans, allocVector(VECSXP, 3));
     if (!isNull(body1)) {
     	int flag1 = getDynamicFlag(body1);
     	SET_VECTOR_ELT(ans, 0, PairToVectorList(CDR(body1)));
@@ -3613,7 +3613,7 @@ static SEXP makeSrcref(YYLTYPE *lloc, SEXP srcfile)
 {
     SEXP val;
     
-    PROTECT(val = allocVector(INTSXP, 6));
+    VAPROTECT(val, allocVector(INTSXP, 6));
     INTEGER(val)[0] = lloc->first_line;
     INTEGER(val)[1] = lloc->first_byte;
     INTEGER(val)[2] = lloc->last_line;
@@ -3631,7 +3631,7 @@ static SEXP mkString2(const char *s, size_t len)
     SEXP t;
     cetype_t enc = CE_UTF8;
 
-    PROTECT(t = allocVector(STRSXP, 1));
+    VAPROTECT(t, allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharLenCE(s, (int) len, enc));
     UNPROTECT(1);
     return t;
@@ -3920,10 +3920,10 @@ static SEXP InstallKeywords()
     int i, num;
     SEXP result, name, val;
     num = sizeof(keywords)/sizeof(keywords[0]);
-    PROTECT(result = R_NewHashedEnv(R_EmptyEnv, ScalarInteger(num)));
+    VAPROTECT(result, R_NewHashedEnv(R_EmptyEnv, ScalarInteger(num)));
     for (i = 0; keywords[i].name; i++) {
-        PROTECT(name = install(keywords[i].name));
-        PROTECT(val = ScalarInteger(keywords[i].token));
+        VAPROTECT(name, install(keywords[i].name));
+        VAPROTECT(val, ScalarInteger(keywords[i].token));
     	defineVar(name, val, result);
     	UNPROTECT(2);
     }
@@ -4112,7 +4112,7 @@ static int token(void)
         yylloc.last_line = 0;
         yylloc.last_column = 0;
         yylloc.last_byte = 0;
-    	PROTECT(yylval = mkString(""));
+    	VAPROTECT(yylval, mkString(""));
         c = parseState.xxinitvalue;
     	parseState.xxinitvalue = 0;
     	return(c);
@@ -4205,7 +4205,7 @@ static int mkText(int c)
     };
 stop:
     if (c != '\n') xxungetc(c); /* newline causes a break, but we keep it */
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    VAPROTECT(yylval, mkString2(stext, bp - stext));
     if(stext != st0) free(stext);
     return TEXT;
 }
@@ -4221,7 +4221,7 @@ static int mkComment(int c)
     
     xxungetc(c);
     
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    VAPROTECT(yylval, mkString2(stext, bp - stext));
     if(stext != st0) free(stext);    
     return COMMENT;
 }
@@ -4323,7 +4323,7 @@ static int mkCode(int c)
     	c = xxgetc();
     }
     if (c != '\n') xxungetc(c);
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    VAPROTECT(yylval, mkString2(stext, bp - stext));
     if(stext != st0) free(stext);
     return RCODE; 
 }
@@ -4362,7 +4362,7 @@ static int mkMarkup(int c)
     	    }
         }
     }
-    PROTECT(yylval = mkString2(stext, bp - stext - 1));
+    VAPROTECT(yylval, mkString2(stext, bp - stext - 1));
     if(stext != st0) free(stext);
     xxungetc(c);
     return retval;
@@ -4381,7 +4381,7 @@ static int mkIfdef(int c)
     xxungetc(c);
     
     retval = KeywordLookup(stext);
-    PROTECT(yylval = mkString2(stext, bp - stext - 1));
+    VAPROTECT(yylval, mkString2(stext, bp - stext - 1));
     
     switch (retval) {
     case ENDIF:  /* eat chars to the end of the line */
@@ -4445,7 +4445,7 @@ static int mkVerb(int c)
     	c = xxgetc();
     };
     if (c != '\n') xxungetc(c);
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    VAPROTECT(yylval, mkString2(stext, bp - stext));
     if(stext != st0) free(stext);
     return VERB;  
 }
@@ -4686,7 +4686,7 @@ SEXP C_deparseRd(SEXP e, SEXP state)
     	*out++ = *c;
     }
     *out = '\0';
-    PROTECT(result = allocVector(VECSXP, 2));
+    VAPROTECT(result, allocVector(VECSXP, 2));
     SET_VECTOR_ELT(result, 0, ScalarString(mkChar(outbuf)));
     SET_VECTOR_ELT(result, 1, duplicate(state));
     R_chk_free(outbuf);

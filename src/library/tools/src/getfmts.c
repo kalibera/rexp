@@ -55,7 +55,7 @@ SEXP getfmts(SEXP format)
     Rboolean use_UTF8;
     const void *vmax = vmaxget();
     
-    SEXP res; PROTECT(res = allocVector(STRSXP, MAXNARGS));
+    SEXP res; VAPROTECT(res, allocVector(STRSXP, MAXNARGS));
     
 #define SET_RESULT(n, s) {						\
      if (n >= MAXNARGS) error(_("only %d arguments are allowed"), MAXNARGS); \

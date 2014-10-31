@@ -48,7 +48,7 @@
 #define DUPLICATE_ATOMIC_VECTOR(type, fun, to, from, deep) do {	\
   R_xlen_t __n__ = XLENGTH(from); \
   PROTECT(from); \
-  PROTECT(to = allocVector(TYPEOF(from), __n__)); \
+  VAPROTECT(to, allocVector(TYPEOF(from), __n__)); \
   if (__n__ == 1) fun(to)[0] = fun(from)[0]; \
   else { \
       R_xlen_t __this; \
@@ -67,7 +67,7 @@
 #define DUPLICATE_ATOMIC_VECTOR(type, fun, to, from, deep) do {	\
   R_xlen_t __n__ = XLENGTH(from); \
   PROTECT(from); \
-  PROTECT(to = allocVector(TYPEOF(from), __n__)); \
+  VAPROTECT(to, allocVector(TYPEOF(from), __n__)); \
   if (__n__ == 1) fun(to)[0] = fun(from)[0]; \
   else memcpy(fun(to), fun(from), __n__ * sizeof(type)); \
   DUPLICATE_ATTRIB(to, from, deep); \
@@ -291,7 +291,7 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	    SET_BODY(s, BODY(new_s));
 	    R_jit_enabled = old_enabled;
 	}
-	PROTECT(t = allocSExp(CLOSXP));
+	VAPROTECT(t, allocSExp(CLOSXP));
 	SET_FORMALS(t, FORMALS(s));
 	SET_BODY(t, BODY(s));
 	SET_CLOENV(t, CLOENV(s));
@@ -305,14 +305,14 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	break;
     case LANGSXP:
 	PROTECT(s);
-	PROTECT(t = duplicate_list(s, deep));
+	VAPROTECT(t, duplicate_list(s, deep));
 	SET_TYPEOF(t, LANGSXP);
 	DUPLICATE_ATTRIB(t, s, deep);
 	UNPROTECT(2);
 	break;
     case DOTSXP:
 	PROTECT(s);
-	PROTECT(t = duplicate_list(s, deep));
+	VAPROTECT(t, duplicate_list(s, deep));
 	SET_TYPEOF(t, DOTSXP);
 	DUPLICATE_ATTRIB(t, s, deep);
 	UNPROTECT(2);
@@ -324,7 +324,7 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
     case VECSXP:
 	n = XLENGTH(s);
 	PROTECT(s);
-	PROTECT(t = allocVector(TYPEOF(s), n));
+	VAPROTECT(t, allocVector(TYPEOF(s), n));
 	for(i = 0 ; i < n ; i++)
 	    SET_VECTOR_ELT(t, i, duplicate_child(VECTOR_ELT(s, i), deep));
 	DUPLICATE_ATTRIB(t, s, deep);
@@ -347,7 +347,7 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	break;
     case S4SXP:
 	PROTECT(s);
-	PROTECT(t = allocS4Object());
+	VAPROTECT(t, allocS4Object());
 	DUPLICATE_ATTRIB(t, s, deep);
 	UNPROTECT(2);
 	break;
@@ -420,7 +420,7 @@ void copyListMatrix(SEXP s, SEXP t, Rboolean byrow)
     pt = t;
     if(byrow) {
 	R_xlen_t NR = nr;
-	PROTECT(tmp = allocVector(STRSXP, ns));
+	VAPROTECT(tmp, allocVector(STRSXP, ns));
 	for (i = 0; i < nr; i++)
 	    for (j = 0; j < nc; j++) {
 		SET_STRING_ELT(tmp, i + j * NR, duplicate(CAR(pt)));

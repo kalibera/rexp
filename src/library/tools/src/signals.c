@@ -34,9 +34,9 @@ SEXP ps_kill(SEXP spid, SEXP ssignal)
 {
     SEXP sspid, sres;
     int *pid, *res, signal = asInteger(ssignal);
-    PROTECT(sspid = coerceVector(spid, INTSXP));
+    VAPROTECT(sspid, coerceVector(spid, INTSXP));
     unsigned int ns = LENGTH(sspid);
-    PROTECT(sres = allocVector(LGLSXP, ns));
+    VAPROTECT(sres, allocVector(LGLSXP, ns));
     pid = INTEGER(sspid);
     res = INTEGER(sres);
 #if !defined(_WIN32) && !defined(HAVE_KILL)
@@ -70,9 +70,9 @@ SEXP ps_priority(SEXP spid, SEXP svalue)
     SEXP sspid, sres;
     int *pid, *res, val;
     val = asInteger(svalue);
-    PROTECT(sspid = coerceVector(spid, INTSXP));
+    VAPROTECT(sspid, coerceVector(spid, INTSXP));
     unsigned int ns = LENGTH(sspid);
-    PROTECT(sres = allocVector(INTSXP, ns));
+    VAPROTECT(sres, allocVector(INTSXP, ns));
     pid = INTEGER(sspid);
     res = INTEGER(sres);
     for (int i = 0; i < ns; i++) {
@@ -98,9 +98,9 @@ SEXP ps_priority(SEXP spid, SEXP svalue)
     SEXP sspid, sres;
     int *pid, *res, val;
     val = asInteger(svalue);
-    PROTECT(sspid = coerceVector(spid, INTSXP));
+    VAPROTECT(sspid, coerceVector(spid, INTSXP));
     unsigned int ns = LENGTH(sspid);
-    PROTECT(sres = allocVector(INTSXP, ns));
+    VAPROTECT(sres, allocVector(INTSXP, ns));
     pid = INTEGER(sspid);
     res = INTEGER(sres);
     for (int i = 0; i < ns; i++) {

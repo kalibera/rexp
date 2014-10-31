@@ -11,10 +11,10 @@ eval_R_command(const char *funcName, int argc, char *argv[])
     int errorOccurred;
     init_R(argc, argv);
 
-    PROTECT(arg = allocVector(INTSXP, 10));
+    VAPROTECT(arg, allocVector(INTSXP, 10));
     for(i = 0; i < LENGTH(arg); i++) INTEGER(arg)[i]  = i + 1;
 
-    PROTECT(e = lang2(install(funcName), arg));
+    VAPROTECT(e, lang2(install(funcName), arg));
 
     /* Evaluate the call to the R function.
        Ignore the return value.

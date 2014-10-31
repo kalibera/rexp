@@ -64,11 +64,11 @@ SEXP Cdqrls(SEXP x, SEXP y, SEXP tol, SEXP chk)
 
     /* These lose attributes, so do after we have extracted dims */
     if (TYPEOF(x) != REALSXP) {
-	PROTECT(x = coerceVector(x, REALSXP));
+	VAPROTECT(x, coerceVector(x, REALSXP));
 	nprotect++;
     }
     if (TYPEOF(y) != REALSXP) {
-	PROTECT(y = coerceVector(y, REALSXP));
+	VAPROTECT(y, coerceVector(y, REALSXP));
 	nprotect++;
     }
 
@@ -82,18 +82,18 @@ SEXP Cdqrls(SEXP x, SEXP y, SEXP tol, SEXP chk)
 
     const char *ansNms[] = {"qr", "coefficients", "residuals", "effects",
 			    "rank", "pivot", "qraux", "tol", "pivoted", ""};
-    PROTECT(ans = mkNamed(VECSXP, ansNms));
+    VAPROTECT(ans, mkNamed(VECSXP, ansNms));
     SET_VECTOR_ELT(ans, 0, qr = duplicate(x));
     coefficients = (ny > 1) ? allocMatrix(REALSXP, p, ny) : allocVector(REALSXP, p);
     PROTECT(coefficients);
     SET_VECTOR_ELT(ans, 1, coefficients);
     SET_VECTOR_ELT(ans, 2, residuals = duplicate(y));
     SET_VECTOR_ELT(ans, 3, effects = duplicate(y));
-    PROTECT(pivot = allocVector(INTSXP, p));
+    VAPROTECT(pivot, allocVector(INTSXP, p));
     int *ip = INTEGER(pivot);
     for(int i = 0; i < p; i++) ip[i] = i+1;
     SET_VECTOR_ELT(ans, 5, pivot);
-    PROTECT(qraux = allocVector(REALSXP, p));
+    VAPROTECT(qraux, allocVector(REALSXP, p));
     SET_VECTOR_ELT(ans, 6, qraux);
     SET_VECTOR_ELT(ans, 7, tol);
 

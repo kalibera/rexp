@@ -143,10 +143,10 @@ SEXP ApproxTest(SEXP x, SEXP y, SEXP method, SEXP sf)
 SEXP Approx(SEXP x, SEXP y, SEXP v, SEXP method, 
 	    SEXP yleft, SEXP yright, SEXP sf)
 {
-    SEXP xout; PROTECT(xout = coerceVector(v, REALSXP));
+    SEXP xout; VAPROTECT(xout, coerceVector(v, REALSXP));
     int nx = LENGTH(x), nout = LENGTH(xout), m = asInteger(method);
     double yl = asReal(yleft), yr = asReal(yright), f = asReal(sf);
-    SEXP yout; PROTECT(yout = allocVector(REALSXP, nout));
+    SEXP yout; VAPROTECT(yout, allocVector(REALSXP, nout));
     R_approxfun(REAL(x), REAL(y), nx, REAL(xout), REAL(yout), nout, 
 		m, yl, yr, f);
     UNPROTECT(2);

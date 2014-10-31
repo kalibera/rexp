@@ -332,7 +332,7 @@ SEXP in_RX11_dataentry(SEXP call, SEXP op, SEXP args, SEXP rho)
     DE->crow = 1;
     DE->colmin = 1;
     DE->rowmin = 1;
-    PROTECT(ssNA_STRING = duplicate(NA_STRING));
+    VAPROTECT(ssNA_STRING, duplicate(NA_STRING));
     nprotect++;
     DE->bwidth = 5;
     DE->hht = 30;
@@ -410,7 +410,7 @@ SEXP in_RX11_dataentry(SEXP call, SEXP op, SEXP args, SEXP rho)
     for(i = 0, cnt = 0; i < DE->xmaxused; i++)
 	if(!isNull(VECTOR_ELT(DE->work, i))) cnt++;
     if (cnt < DE->xmaxused) {
-	PROTECT(work2 = allocVector(VECSXP, cnt)); nprotect++;
+	VAPROTECT(work2, allocVector(VECSXP, cnt)); nprotect++;
 	for(i = 0, j = 0; i < DE->xmaxused; i++) {
 	    if(!isNull(VECTOR_ELT(DE->work, i))) {
 		SET_VECTOR_ELT(work2, j, VECTOR_ELT(DE->work, i));

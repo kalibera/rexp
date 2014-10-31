@@ -654,7 +654,7 @@ static void initialize_rlcompletion(void)
 	    int i;
 	    char *p = "try(loadNamespace('rcompgen'), silent=TRUE)";
 
-	    PROTECT(cmdSexp = mkString(p));
+	    VAPROTECT(cmdSexp, mkString(p));
 	    cmdexpr = PROTECT(R_ParseVector(cmdSexp, -1, &status, R_NilValue));
 	    if(status == PARSE_OK) {
 		for(i = 0; i < length(cmdexpr); i++)
@@ -788,7 +788,7 @@ static char *R_completion_generator(const char *text, int state)
 
 	eval(assignCall, rcompgen_rho);
 	eval(completionCall, rcompgen_rho);
-	PROTECT(completions = eval(retrieveCall, rcompgen_rho));
+	VAPROTECT(completions, eval(retrieveCall, rcompgen_rho));
 	list_index = 0;
 	ncomp = length(completions);
 	if (ncomp > 0) {

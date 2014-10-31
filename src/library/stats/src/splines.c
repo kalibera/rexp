@@ -445,7 +445,7 @@ SEXP SplineEval(SEXP xout, SEXP z)
 {
     xout = PROTECT(coerceVector(xout, REALSXP));
     int nu = LENGTH(xout);
-    SEXP yout; PROTECT(yout = allocVector(REALSXP, nu));
+    SEXP yout; VAPROTECT(yout, allocVector(REALSXP, nu));
     int method = asInteger(getListElement(z, "method")),
 	nx = asInteger(getListElement(z, "n"));
     SEXP x = getListElement(z, "x"), y = getListElement(z, "y"),

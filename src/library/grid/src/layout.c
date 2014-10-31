@@ -562,8 +562,8 @@ void calcViewportLayout(SEXP viewport,
     }
     /* Record the widths and heights in the viewport
      */
-    PROTECT(currentWidths = allocVector(REALSXP, layoutNCol(layout)));
-    PROTECT(currentHeights = allocVector(REALSXP, layoutNRow(layout)));
+    VAPROTECT(currentWidths, allocVector(REALSXP, layoutNCol(layout)));
+    VAPROTECT(currentHeights, allocVector(REALSXP, layoutNRow(layout)));
     for (i=0; i<layoutNCol(layout); i++) {
         /* Layout widths are stored in CM
          */
@@ -630,13 +630,13 @@ void calcViewportLocationFromLayout(SEXP layoutPosRow,
 	      &x, &y, &width, &height);
     /* Layout widths and heights are stored in CM
      */
-    PROTECT(vpx = unit(x, L_CM));
+    VAPROTECT(vpx, unit(x, L_CM));
     vpl->x = vpx;
-    PROTECT(vpy = unit(y, L_CM));
+    VAPROTECT(vpy, unit(y, L_CM));
     vpl->y = vpy;
-    PROTECT(vpwidth = unit(width, L_CM));
+    VAPROTECT(vpwidth, unit(width, L_CM));
     vpl->width = vpwidth;
-    PROTECT(vpheight = unit(height, L_CM));
+    VAPROTECT(vpheight, unit(height, L_CM));
     vpl->height = vpheight;
     vpl->hjust = 0;
     vpl->vjust = 0;

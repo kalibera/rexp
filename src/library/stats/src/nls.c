@@ -65,7 +65,7 @@ ConvInfoMsg(char* msg, int iter, int whystop, double fac,
     const char *nms[] = {"isConv", "finIter", "finTol",
 			 "stopCode", "stopMessage",  ""};
     SEXP ans;
-    PROTECT(ans = mkNamed(VECSXP, nms));
+    VAPROTECT(ans, mkNamed(VECSXP, nms));
 
     SET_VECTOR_ELT(ans, 0, ScalarLogical(whystop == 0)); /* isConv */
     SET_VECTOR_ELT(ans, 1, ScalarInteger(iter));	 /* finIter */
@@ -98,7 +98,7 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
     if(!isNewList(m))
 	error(_("'m' must be a list"));
 
-    PROTECT(tmp = getAttrib(control, R_NamesSymbol));
+    VAPROTECT(tmp, getAttrib(control, R_NamesSymbol));
 
     conv = getListElement(control, tmp, "maxiter");
     if(conv == NULL || !isNumeric(conv))
@@ -164,22 +164,22 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
     conv = getListElement(m, tmp, "conv");
     if(conv == NULL || !isFunction(conv))
 	error(_("'%s' absent"), "m$conv()");
-    PROTECT(conv = lang1(conv));
+    VAPROTECT(conv, lang1(conv));
 
     incr = getListElement(m, tmp, "incr");
     if(incr == NULL || !isFunction(incr))
 	error(_("'%s' absent"), "m$incr()");
-    PROTECT(incr = lang1(incr));
+    VAPROTECT(incr, lang1(incr));
 
     deviance = getListElement(m, tmp, "deviance");
     if(deviance == NULL || !isFunction(deviance))
 	error(_("'%s' absent"), "m$deviance()");
-    PROTECT(deviance = lang1(deviance));
+    VAPROTECT(deviance, lang1(deviance));
 
     trace = getListElement(m, tmp, "trace");
     if(trace == NULL || !isFunction(trace))
 	error(_("'%s' absent"), "m$trace()");
-    PROTECT(trace = lang1(trace));
+    VAPROTECT(trace, lang1(trace));
 
     setPars = getListElement(m, tmp, "setPars");
     if(setPars == NULL || !isFunction(setPars))
@@ -189,9 +189,9 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
     getPars = getListElement(m, tmp, "getPars");
     if(getPars == NULL || !isFunction(getPars))
 	error(_("'%s' absent"), "m$getPars()");
-    PROTECT(getPars = lang1(getPars));
+    VAPROTECT(getPars, lang1(getPars));
 
-    PROTECT(pars = eval(getPars, R_GlobalEnv));
+    VAPROTECT(pars, eval(getPars, R_GlobalEnv));
     nPars = LENGTH(pars);
 
     dev = asReal(eval(deviance, R_GlobalEnv));
@@ -200,7 +200,7 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
     fac = 1.0;
     hasConverged = FALSE;
 
-    PROTECT(newPars = allocVector(REALSXP, nPars));
+    VAPROTECT(newPars, allocVector(REALSXP, nPars));
     if(printEval)
 	evaltotCnt = 1;
     for (i = 0; i < maxIter; i++) {
@@ -210,7 +210,7 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
 	    hasConverged = TRUE;
 	    break;
 	}
-	PROTECT(newIncr = eval(incr, R_GlobalEnv));
+	VAPROTECT(newIncr, eval(incr, R_GlobalEnv));
 
 	if(printEval)
 	    evalCnt = 1;
@@ -225,7 +225,7 @@ nls_iter(SEXP m, SEXP control, SEXP doTraceArg)
 	    for(j = 0; j < nPars; j++)
 		REAL(newPars)[j] = REAL(pars)[j] + fac * REAL(newIncr)[j];
 
-	    PROTECT(tmp = lang2(setPars, newPars));
+	    VAPROTECT(tmp, lang2(setPars, newPars));
 	    if (asLogical(eval(tmp, R_GlobalEnv))) { /* singular gradient */
 		UNPROTECT(11);
 
@@ -292,19 +292,19 @@ numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
     } else
 	if(!isEnvironment(rho))
 	    error(_("'rho' should be an environment"));
-    PROTECT(dir = coerceVector(dir, REALSXP));
+    VAPROTECT(dir, coerceVector(dir, REALSXP));
     if(TYPEOF(dir) != REALSXP || LENGTH(dir) != LENGTH(theta))
 	error(_("'dir' is not a numeric vector of the correct length"));
     rDir = REAL(dir);
 
-    PROTECT(pars = allocVector(VECSXP, LENGTH(theta)));
+    VAPROTECT(pars, allocVector(VECSXP, LENGTH(theta)));
 
-    PROTECT(ans = duplicate(eval(expr, rho)));
+    VAPROTECT(ans, duplicate(eval(expr, rho)));
 
     if(!isReal(ans)) {
 	SEXP temp = coerceVector(ans, REALSXP);
 	UNPROTECT(1);
-	PROTECT(ans = temp);
+	VAPROTECT(ans, temp);
     }
     for(i = 0; i < LENGTH(ans); i++) {
 	if (!R_FINITE(REAL(ans)[i]))
@@ -325,7 +325,7 @@ numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
 	lengthTheta += LENGTH(VECTOR_ELT(pars, i));
     }
     vmaxset(vmax);
-    PROTECT(gradient = allocMatrix(REALSXP, LENGTH(ans), lengthTheta));
+    VAPROTECT(gradient, allocMatrix(REALSXP, LENGTH(ans), lengthTheta));
 
     for(i = 0, start = 0; i < LENGTH(theta); i++) {
 	for(j = 0; j < LENGTH(VECTOR_ELT(pars, i)); j++, start += LENGTH(ans)) {
@@ -336,7 +336,7 @@ numeric_deriv(SEXP expr, SEXP theta, SEXP rho, SEXP dir)
 	    xx = fabs(origPar);
 	    delta = (xx == 0) ? eps : xx*eps;
 	    REAL(VECTOR_ELT(pars, i))[j] += rDir[i] * delta;
-	    PROTECT(ans_del = eval(expr, rho));
+	    VAPROTECT(ans_del, eval(expr, rho));
 	    if(!isReal(ans_del)) ans_del = coerceVector(ans_del, REALSXP);
 	    UNPROTECT(1);
 	    for(k = 0; k < LENGTH(ans); k++) {

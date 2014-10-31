@@ -74,7 +74,7 @@ static int rt_completion(char *buf, int offset, int *loc)
 	   != R_UnboundValue) completion_available = 1;
 	else { /* Then try to load it */
 	    char *p = "try(loadNamespace('utils'), silent=TRUE)";
-	    PROTECT(cmdSexp = mkString(p));
+	    VAPROTECT(cmdSexp, mkString(p));
 	    cmdexpr = PROTECT(R_ParseVector(cmdSexp, -1, &status, R_NilValue));
 	    if(status == PARSE_OK) {
 		for(i = 0; i < length(cmdexpr); i++)
@@ -102,7 +102,7 @@ static int rt_completion(char *buf, int offset, int *loc)
     snprintf(cmd, len,
 	     "utils:::.win32consoleCompletion(\"%s\", %d)",
 	     pline, cursor_position);
-    PROTECT(cmdSexp = mkString(cmd));
+    VAPROTECT(cmdSexp, mkString(cmd));
     cmdexpr = PROTECT(R_ParseVector(cmdSexp, -1, &status, R_NilValue));
     if (status != PARSE_OK) {
 	UNPROTECT(2);

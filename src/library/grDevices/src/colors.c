@@ -183,9 +183,9 @@ SEXP hsv(SEXP h, SEXP s, SEXP v, SEXP a)
     double hh, ss, vv, aa, r=0., g=0., b=0.; /* -Wall */
     R_xlen_t i, max, nh, ns, nv, na = 1;
 
-    PROTECT(h = coerceVector(h,REALSXP));
-    PROTECT(s = coerceVector(s,REALSXP));
-    PROTECT(v = coerceVector(v,REALSXP));
+    VAPROTECT(h, coerceVector(h,REALSXP));
+    VAPROTECT(s, coerceVector(s,REALSXP));
+    VAPROTECT(v, coerceVector(v,REALSXP));
     if (!isNull(a)) {
 	a = coerceVector(a, REALSXP);
 	na = XLENGTH(a);
@@ -203,7 +203,7 @@ SEXP hsv(SEXP h, SEXP s, SEXP v, SEXP a)
     if (max < ns) max = ns;
     if (max < nv) max = nv;
     if (max < na) max = na;
-    SEXP c; PROTECT(c = allocVector(STRSXP, max));
+    SEXP c; VAPROTECT(c, allocVector(STRSXP, max));
     if(max == 0) return(c);
 
     if(isNull(a)) {
@@ -311,9 +311,9 @@ SEXP hcl(SEXP h, SEXP c, SEXP l, SEXP a, SEXP sfixup)
     int ir, ig, ib;
     int fixup;
 
-    PROTECT(h = coerceVector(h, REALSXP));
-    PROTECT(c = coerceVector(c, REALSXP));
-    PROTECT(l = coerceVector(l, REALSXP));
+    VAPROTECT(h, coerceVector(h, REALSXP));
+    VAPROTECT(c, coerceVector(c, REALSXP));
+    VAPROTECT(l, coerceVector(l, REALSXP));
     if (!isNull(a)) {
 	a = coerceVector(a, REALSXP);
 	na = XLENGTH(a);
@@ -331,7 +331,7 @@ SEXP hcl(SEXP h, SEXP c, SEXP l, SEXP a, SEXP sfixup)
     if (max < nc) max = nc;
     if (max < nl) max = nl;
     if (max < na) max = na;
-    SEXP ans; PROTECT(ans = allocVector(STRSXP, max));
+    SEXP ans; VAPROTECT(ans, allocVector(STRSXP, max));
     if (isNull(a)) {
 	for (i = 0; i < max; i++) {
 	    H = REAL(h)[i % nh];
@@ -392,14 +392,14 @@ SEXP rgb(SEXP r, SEXP g, SEXP b, SEXP a, SEXP MCV, SEXP nam)
     if(!R_FINITE(mV) || mV == 0.)
 	error(_("invalid value of 'maxColorValue'"));
     if(mV == 255.) {
-	PROTECT(r = coerceVector(r, INTSXP));
-	PROTECT(g = coerceVector(g, INTSXP));
-	PROTECT(b = coerceVector(b, INTSXP));
+	VAPROTECT(r, coerceVector(r, INTSXP));
+	VAPROTECT(g, coerceVector(g, INTSXP));
+	VAPROTECT(b, coerceVector(b, INTSXP));
 	if(!isNull(a)) a = coerceVector(a, INTSXP);
     } else {
-	PROTECT(r = coerceVector(r, REALSXP));
-	PROTECT(g = coerceVector(g, REALSXP));
-	PROTECT(b = coerceVector(b, REALSXP));
+	VAPROTECT(r, coerceVector(r, REALSXP));
+	VAPROTECT(g, coerceVector(g, REALSXP));
+	VAPROTECT(b, coerceVector(b, REALSXP));
 	if(!isNull(a)) a = coerceVector(a, REALSXP);
 	max_1 = (mV == 1.);
     }
@@ -416,10 +416,10 @@ SEXP rgb(SEXP r, SEXP g, SEXP b, SEXP a, SEXP MCV, SEXP nam)
     if (l_max < nb) l_max = nb;
     if (l_max < na) l_max = na;
 
-    PROTECT(nam = coerceVector(nam, STRSXP));
+    VAPROTECT(nam, coerceVector(nam, STRSXP));
     if (length(nam) != 0 && length(nam) != l_max)
 	error(_("invalid 'names' vector"));
-    SEXP c; PROTECT(c = allocVector(STRSXP, l_max));
+    SEXP c; VAPROTECT(c, allocVector(STRSXP, l_max));
 
     if(mV == 255.0) {
 	if(isNull(a)) {
@@ -472,7 +472,7 @@ SEXP gray(SEXP lev, SEXP a)
     if(!isNull(a)) a = coerceVector(a,REALSXP);
     PROTECT(a);
     nlev = LENGTH(lev);
-    PROTECT(ans = allocVector(STRSXP, nlev));
+    VAPROTECT(ans, allocVector(STRSXP, nlev));
     if(isNull(a)) {
 	for (i = 0; i < nlev; i++) {
 	    level = REAL(lev)[i];
@@ -514,9 +514,9 @@ SEXP RGB2hsv(SEXP rgb)
     n = INTEGER(dd)[1];
 
     ans = PROTECT(allocMatrix(REALSXP, 3, n));
-    PROTECT(dmns = allocVector(VECSXP, 2));
+    VAPROTECT(dmns, allocVector(VECSXP, 2));
     /* row names: */
-    PROTECT(names = allocVector(STRSXP, 3));
+    VAPROTECT(names, allocVector(STRSXP, 3));
     SET_STRING_ELT(names, 0, mkChar("h"));
     SET_STRING_ELT(names, 1, mkChar("s"));
     SET_STRING_ELT(names, 2, mkChar("v"));
@@ -558,9 +558,9 @@ SEXP col2rgb(SEXP colors, SEXP alpha)
     int n = LENGTH(colors);
 
     /* First set up the output matrix */
-    PROTECT(ans = allocMatrix(INTSXP, 3+alph, n));
-    PROTECT(dmns = allocVector(VECSXP, 2));
-    PROTECT(names = allocVector(STRSXP, 3+alph));
+    VAPROTECT(ans, allocMatrix(INTSXP, 3+alph, n));
+    VAPROTECT(dmns, allocVector(VECSXP, 2));
+    VAPROTECT(names, allocVector(STRSXP, 3+alph));
     SET_STRING_ELT(names, 0, mkChar("red"));
     SET_STRING_ELT(names, 1, mkChar("green"));
     SET_STRING_ELT(names, 2, mkChar("blue"));
@@ -1491,7 +1491,7 @@ SEXP palette(SEXP val)
 
     if (!isString(val)) error(_("invalid argument type"));
     /* Record the current palette */
-    PROTECT(ans = allocVector(STRSXP, PaletteSize));
+    VAPROTECT(ans, allocVector(STRSXP, PaletteSize));
     for (i = 0; i < PaletteSize; i++)
 	SET_STRING_ELT(ans, i, mkChar(incol2name(Palette[i])));
     if ((n = length(val)) == 1) {
@@ -1520,7 +1520,7 @@ SEXP palette(SEXP val)
 /* A version using 'rcolor' type */
 SEXP palette2(SEXP val)
 {
-    SEXP ans; PROTECT(ans = allocVector(INTSXP, PaletteSize));
+    SEXP ans; VAPROTECT(ans, allocVector(INTSXP, PaletteSize));
     int n = length(val), *ians = INTEGER(ans); 
     for (int i = 0; i < PaletteSize; i++) ians[i] = (int)Palette[i];
     if (n) {
@@ -1539,7 +1539,7 @@ SEXP colors(void)
     int n;
 
     for (n = 0; ColorDataBase[n].name != NULL; n++) ;
-    SEXP ans; PROTECT(ans = allocVector(STRSXP, n));
+    SEXP ans; VAPROTECT(ans, allocVector(STRSXP, n));
     for (n = 0; ColorDataBase[n].name != NULL; n++)
 	SET_STRING_ELT(ans, n, mkChar(ColorDataBase[n].name));
     UNPROTECT(1);

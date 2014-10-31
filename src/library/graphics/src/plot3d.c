@@ -192,7 +192,7 @@ SEXP C_filledcontour(SEXP args)
 
     if (nc < 1) error(_("no contour values"));
 
-    PROTECT(scol = FixupCol(CAR(args), R_TRANWHITE));
+    VAPROTECT(scol, FixupCol(CAR(args), R_TRANWHITE));
     ncol = length(scol);
 
     /* Shorthand Pointers */
@@ -289,7 +289,7 @@ SEXP C_image(SEXP args)
     sz = PROTECT(coerceVector(CAR(args), INTSXP));
     args = CDR(args);
 
-    PROTECT(sc = FixupCol(CAR(args), R_TRANWHITE));
+    VAPROTECT(sc, FixupCol(CAR(args), R_TRANWHITE));
     nc = LENGTH(sc);
 
     /* Shorthand Pointers */
@@ -941,8 +941,8 @@ static void PerspAxis(double *x, double *y, double *z,
 	       0.1, 10, 2, dd);
 	break;
     case 2: /* "detailed": normal ticks as per 2D plots */
-	PROTECT(at = CreateAtVector(axp, range, 7, FALSE));
-	PROTECT(lab = labelformat(at));
+	VAPROTECT(at, CreateAtVector(axp, range, 7, FALSE));
+	VAPROTECT(lab, labelformat(at));
 	for (i=0; i<length(at); i++) {
 	    switch (axisType) {
 	    case 0:
@@ -1081,28 +1081,28 @@ SEXP C_persp(SEXP args)
     if (length(args) < 24)  /* 24 plus any inline par()s */
 	error(_("too few parameters"));
 
-    PROTECT(x = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(x, coerceVector(CAR(args), REALSXP));
     if (length(x) < 2) error(_("invalid '%s' argument"), "x");
     args = CDR(args);
 
-    PROTECT(y = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(y, coerceVector(CAR(args), REALSXP));
     if (length(y) < 2) error(_("invalid '%s' argument"), "y");
     args = CDR(args);
 
-    PROTECT(z = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(z, coerceVector(CAR(args), REALSXP));
     if (!isMatrix(z) || nrows(z) != length(x) || ncols(z) != length(y))
 	error(_("invalid '%s' argument"), "z");
     args = CDR(args);
 
-    PROTECT(xlim = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(xlim, coerceVector(CAR(args), REALSXP));
     if (length(xlim) != 2) error(_("invalid '%s' argument"), "xlim");
     args = CDR(args);
 
-    PROTECT(ylim = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(ylim, coerceVector(CAR(args), REALSXP));
     if (length(ylim) != 2) error(_("invalid '%s' argument"), "ylim");
     args = CDR(args);
 
-    PROTECT(zlim = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(zlim, coerceVector(CAR(args), REALSXP));
     if (length(zlim) != 2) error(_("invalid '%s' argument"), "zlim");
     args = CDR(args);
 
@@ -1174,11 +1174,11 @@ SEXP C_persp(SEXP args)
     GNewPlot(GRecording(call, dd));
 #endif
 
-    PROTECT(col = FixupCol(col, gpptr(dd)->bg));
+    VAPROTECT(col, FixupCol(col, gpptr(dd)->bg));
     ncol = LENGTH(col);
     if (ncol < 1) error(_("invalid '%s' specification"), "col");
     if(!R_OPAQUE(INTEGER(col)[0])) DoLighting = FALSE;
-    PROTECT(border = FixupCol(border, gpptr(dd)->fg));
+    VAPROTECT(border, FixupCol(border, gpptr(dd)->fg));
     if (length(border) < 1)
 	error(_("invalid '%s' specification"), "border");
 
@@ -1220,8 +1220,8 @@ SEXP C_persp(SEXP args)
        We order the facets by depth and then draw them back to front.
        This is the "painters" algorithm. */
 
-    PROTECT(depth = allocVector(REALSXP, (nrows(z) - 1)*(ncols(z) - 1)));
-    PROTECT(indx = allocVector(INTSXP, (nrows(z) - 1)*(ncols(z) - 1)));
+    VAPROTECT(depth, allocVector(REALSXP, (nrows(z) - 1)*(ncols(z) - 1)));
+    VAPROTECT(indx, allocVector(INTSXP, (nrows(z) - 1)*(ncols(z) - 1)));
     DepthOrder(REAL(z), REAL(x), REAL(y), nrows(z), ncols(z),
 	       REAL(depth), INTEGER(indx));
 
@@ -1254,8 +1254,8 @@ SEXP C_persp(SEXP args)
     GRestorePars(dd);
     UNPROTECT(10);
 
-    PROTECT(x = allocVector(REALSXP, 16));
-    PROTECT(y = allocVector(INTSXP, 2));
+    VAPROTECT(x, allocVector(REALSXP, 16));
+    VAPROTECT(y, allocVector(INTSXP, 2));
     for (i = 0; i < 4; i++)
 	for (j = 0; j < 4; j++)
 	    REAL(x)[i + j * 4] = VT[i][j];
@@ -1461,7 +1461,7 @@ static void contour(SEXP x, int nx, SEXP y, int ny, SEXP z,
     double xStart, yStart;
     double dx, dy, dxy;
     double labelHeight;
-    SEXP label1; PROTECT(label1 = allocVector(REALSXP, 8));
+    SEXP label1; VAPROTECT(label1, allocVector(REALSXP, 8));
     SEXP label2;
     SEXP lab;
     Rboolean gotLabel = FALSE;
@@ -1571,7 +1571,7 @@ static void contour(SEXP x, int nx, SEXP y, int ny, SEXP z,
 		    enc = getCharCE(STRING_ELT(labels, cnum % numl));
 		}
 		else {
-		    PROTECT(lab = allocVector(REALSXP, 1));
+		    VAPROTECT(lab, allocVector(REALSXP, 1));
 		    REAL(lab)[0] = zc;
 		    lab = labelformat(lab);
 		    strcpy(&buffer[1], CHAR(STRING_ELT(lab, 0))); /* ASCII */
@@ -1902,7 +1902,7 @@ SEXP C_contour(SEXP args)
     if (method < 1 || method > 3)
 	error(_("invalid '%s' value"), "method");
 
-    PROTECT(vfont = FixupVFont(CAR(args)));
+    VAPROTECT(vfont, FixupVFont(CAR(args)));
     if (!isNull(vfont)) {
 	strncpy(familysave, gpptr(dd)->family, 201);
 	strncpy(gpptr(dd)->family, "Her ", 201);
@@ -1913,15 +1913,15 @@ SEXP C_contour(SEXP args)
     args = CDR(args);
 
     rawcol = CAR(args);
-    PROTECT(col = FixupCol(rawcol, R_TRANWHITE));
+    VAPROTECT(col, FixupCol(rawcol, R_TRANWHITE));
     ncol = length(col);
     args = CDR(args);
 
-    PROTECT(lty = FixupLty(CAR(args), gpptr(dd)->lty));
+    VAPROTECT(lty, FixupLty(CAR(args), gpptr(dd)->lty));
     nlty = length(lty);
     args = CDR(args);
 
-    PROTECT(lwd = FixupLwd(CAR(args), gpptr(dd)->lwd));
+    VAPROTECT(lwd, FixupLwd(CAR(args), gpptr(dd)->lwd));
     nlwd = length(lwd);
     args = CDR(args);
 

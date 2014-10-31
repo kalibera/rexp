@@ -140,7 +140,7 @@ SEXP devcap(SEXP args)
 
     args = CDR(args);
 
-    PROTECT(ans = allocVector(INTSXP, 9));
+    VAPROTECT(ans, allocVector(INTSXP, 9));
     INTEGER(ans)[i] = dd->haveTransparency;
     INTEGER(ans)[++i] = dd->haveTransparentBg;
     /* These will be NULL if the device does not define them */
@@ -187,7 +187,7 @@ SEXP devcapture(SEXP args)
     nrow = INTEGER(getAttrib(raster, R_DimSymbol))[0];
     ncol = INTEGER(getAttrib(raster, R_DimSymbol))[1];
         
-    PROTECT(image = allocVector(STRSXP, size));
+    VAPROTECT(image, allocVector(STRSXP, size));
     rint = INTEGER(raster);
     for (i = 0; i < size; i++) {
 	col = i % ncol + 1;
@@ -196,7 +196,7 @@ SEXP devcapture(SEXP args)
 		       mkChar(col2name(rint[i])));
     }
         
-    PROTECT(idim = allocVector(INTSXP, 2));
+    VAPROTECT(idim, allocVector(INTSXP, 2));
     INTEGER(idim)[0] = nrow;
     INTEGER(idim)[1] = ncol;
     setAttrib(image, R_DimSymbol, idim);

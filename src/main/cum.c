@@ -159,7 +159,7 @@ SEXP attribute_hidden do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
     if (isComplex(CAR(args))) {
 	t = CAR(args);
 	n = XLENGTH(t);
-	PROTECT(s = allocVector(CPLXSXP, n));
+	VAPROTECT(s, allocVector(CPLXSXP, n));
 	setAttrib(s, R_NamesSymbol, getAttrib(t, R_NamesSymbol));
 	UNPROTECT(1);
 	if(n == 0) return s;
@@ -185,9 +185,9 @@ SEXP attribute_hidden do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     } else if( ( isInteger(CAR(args)) || isLogical(CAR(args)) ) &&
 	       PRIMVAL(op) != 2) {
-	PROTECT(t = coerceVector(CAR(args), INTSXP));
+	VAPROTECT(t, coerceVector(CAR(args), INTSXP));
 	n = XLENGTH(t);
-	PROTECT(s = allocVector(INTSXP, n));
+	VAPROTECT(s, allocVector(INTSXP, n));
 	setAttrib(s, R_NamesSymbol, getAttrib(t, R_NamesSymbol));
 	UNPROTECT(2);
 	if(n == 0) return s;
@@ -206,9 +206,9 @@ SEXP attribute_hidden do_cum(SEXP call, SEXP op, SEXP args, SEXP env)
 	    errorcall(call, _("unknown cumxxx function"));
 	}
     } else {
-	PROTECT(t = coerceVector(CAR(args), REALSXP));
+	VAPROTECT(t, coerceVector(CAR(args), REALSXP));
 	n = XLENGTH(t);
-	PROTECT(s = allocVector(REALSXP, n));
+	VAPROTECT(s, allocVector(REALSXP, n));
 	setAttrib(s, R_NamesSymbol, getAttrib(t, R_NamesSymbol));
 	UNPROTECT(2);
 	if(n == 0) return s;

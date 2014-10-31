@@ -51,9 +51,9 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
     lt = getAttrib(t, R_LevelsSymbol);
     nls = LENGTH(ls);
     nlt = LENGTH(lt);
-    PROTECT(a = allocVector(INTSXP, n));
-    PROTECT(rs = coerceVector(s, INTSXP));
-    PROTECT(rt = coerceVector(t, INTSXP));
+    VAPROTECT(a, allocVector(INTSXP, n));
+    VAPROTECT(rs, coerceVector(s, INTSXP));
+    VAPROTECT(rt, coerceVector(t, INTSXP));
     for (i = 0; i < n; i++) {
 	int vs = INTEGER(rs)[i];
 	int vt = INTEGER(rt)[i];
@@ -64,7 +64,7 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
     }
     UNPROTECT(2);
     if (!isNull(ls) && !isNull(lt)) {
-	PROTECT(la = allocVector(STRSXP, nls * nlt));
+	VAPROTECT(la, allocVector(STRSXP, nls * nlt));
 	k = 0;
 	/* FIXME: possibly UTF-8 version */
 	for (i = 0; i < nls; i++) {
@@ -82,7 +82,7 @@ static SEXP cross_colon(SEXP call, SEXP s, SEXP t)
 	setAttrib(a, R_LevelsSymbol, la);
 	UNPROTECT(1);
     }
-    PROTECT(la = mkString("factor"));
+    VAPROTECT(la, mkString("factor"));
     setAttrib(a, R_ClassSymbol, la);
     UNPROTECT(2);
     R_FreeStringBufferL(&cbuff);
@@ -181,7 +181,7 @@ static SEXP rep2(SEXP s, SEXP ncopy)
     int j;
     SEXP a, t;
 
-    PROTECT(t = coerceVector(ncopy, INTSXP));
+    VAPROTECT(t, coerceVector(ncopy, INTSXP));
 
     nc = xlength(ncopy);
     na = 0;
@@ -197,7 +197,7 @@ static SEXP rep2(SEXP s, SEXP ncopy)
 	ratio = na/nc; // average no of replications
 	if (ratio > 1000U) ni = 1000U;
 	} */
-    PROTECT(a = allocVector(TYPEOF(s), na));
+    VAPROTECT(a, allocVector(TYPEOF(s), na));
     n = 0;
     switch (TYPEOF(s)) {
     case LGLSXP:
@@ -265,7 +265,7 @@ static SEXP rep3(SEXP s, R_xlen_t ns, R_xlen_t na)
     R_xlen_t i, j;
     SEXP a;
 
-    PROTECT(a = allocVector(TYPEOF(s), na));
+    VAPROTECT(a, allocVector(TYPEOF(s), na));
 
     // i % ns is slow, especially with long R_xlen_t
     switch (TYPEOF(s)) {
@@ -342,7 +342,7 @@ SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     nc = xlength(ncopy); // might be 0
     if (nc == xlength(s)) 
-	PROTECT(a = rep2(s, ncopy));
+	VAPROTECT(a, rep2(s, ncopy));
     else {
 	if (nc != 1) error(_("invalid '%s' value"), "times");
 	
@@ -356,7 +356,7 @@ SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid '%s' value"), "times");
 #endif
 	R_xlen_t ns = xlength(s);
-	PROTECT(a = rep3(s, ns, nc * ns));
+	VAPROTECT(a, rep3(s, ns, nc * ns));
     }
 
 #ifdef _S4_rep_keepClass
@@ -369,10 +369,10 @@ SEXP attribute_hidden do_rep_int(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (inherits(s, "factor")) {
 	SEXP tmp;
 	if(inherits(s, "ordered")) {
-	    PROTECT(tmp = allocVector(STRSXP, 2));
+	    VAPROTECT(tmp, allocVector(STRSXP, 2));
 	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
 	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
-	} else PROTECT(tmp = mkString("factor"));
+	} else VAPROTECT(tmp, mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
 	UNPROTECT(1);
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
@@ -410,12 +410,12 @@ SEXP attribute_hidden do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho)
     ns = xlength(s);
     if (ns == 0) {
 	SEXP a;
-	PROTECT(a = duplicate(s));
+	VAPROTECT(a, duplicate(s));
 	if(na > 0) a = xlengthgets(a, na);
 	UNPROTECT(1);
 	return a;
     }
-    PROTECT(a = rep3(s, ns, na));
+    VAPROTECT(a, rep3(s, ns, na));
 
 #ifdef _S4_rep_keepClass
     if(IS_S4_OBJECT(s)) { /* e.g. contains = "list" */
@@ -427,10 +427,10 @@ SEXP attribute_hidden do_rep_len(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (inherits(s, "factor")) {
 	SEXP tmp;
 	if(inherits(s, "ordered")) {
-	    PROTECT(tmp = allocVector(STRSXP, 2));
+	    VAPROTECT(tmp, allocVector(STRSXP, 2));
 	    SET_STRING_ELT(tmp, 0, mkChar("ordered"));
 	    SET_STRING_ELT(tmp, 1, mkChar("factor"));
-	} else PROTECT(tmp = mkString("factor"));
+	} else VAPROTECT(tmp, mkString("factor"));
 	setAttrib(a, R_ClassSymbol, tmp);
 	UNPROTECT(1);
 	setAttrib(a, R_LevelsSymbol, getAttrib(s, R_LevelsSymbol));
@@ -449,7 +449,7 @@ static SEXP rep4(SEXP x, SEXP times, R_xlen_t len, int each, R_xlen_t nt)
     // faster code for common special case
     if (each == 1 && nt == 1) return rep3(x, lx, len);
 
-    PROTECT(a = allocVector(TYPEOF(x), len));
+    VAPROTECT(a, allocVector(TYPEOF(x), len));
 
     switch (TYPEOF(x)) {
     case LGLSXP:
@@ -597,7 +597,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return(ans);
 
     /* This has evaluated all the non-missing arguments into ans */
-    PROTECT(args = ans);
+    VAPROTECT(args, ans);
 
     /* This is a primitive, and we have not dispatched to a method
        so we manage the argument matching ourselves.  We pretend this is
@@ -607,7 +607,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
         do_rep_formals = allocFormalsList5(install("x"), install("times"),
 					   install("length.out"),
 					   install("each"), R_DotsSymbol);
-    PROTECT(args = matchArgs(do_rep_formals, args, call));
+    VAPROTECT(args, matchArgs(do_rep_formals, args, call));
 
     x = CAR(args);
     /* supported in R 2.15.x */
@@ -641,7 +641,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(len > 0 && x == R_NilValue) 
 	    warningcall(call, "'x' is NULL so the result will be NULL");
 	SEXP a;
-	PROTECT(a = duplicate(x));
+	VAPROTECT(a, duplicate(x));
 	if(len != NA_INTEGER && len > 0) a = xlengthgets(a, len);
 	UNPROTECT(3);
 	return a;
@@ -658,8 +658,8 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	nt = 1;
     } else {
 	R_xlen_t sum = 0;
-	if(CADR(args) == R_MissingArg) PROTECT(times = ScalarInteger(1));
-	else PROTECT(times = coerceVector(CADR(args), INTSXP));
+	if(CADR(args) == R_MissingArg) VAPROTECT(times, ScalarInteger(1));
+	else VAPROTECT(times, coerceVector(CADR(args), INTSXP));
 	nprotect++;
 	nt = XLENGTH(times);
 	if(nt != 1 && nt != lx * each)
@@ -685,7 +685,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SEXP xn = getAttrib(x, R_NamesSymbol);
 
-    PROTECT(ans = rep4(x, times, len, each, nt));
+    VAPROTECT(ans, rep4(x, times, len, each, nt));
     if (length(xn) > 0)
 	setAttrib(ans, R_NamesSymbol, rep4(xn, times, len, each, nt));
 
@@ -730,7 +730,7 @@ SEXP attribute_hidden do_seq(SEXP call, SEXP op, SEXP args, SEXP rho)
         do_seq_formals = allocFormalsList6(install("from"), install("to"),
 					   install("by"), install("length.out"),
 					   install("along.with"), R_DotsSymbol);
-    PROTECT(args = matchArgs(do_seq_formals, args, call));
+    VAPROTECT(args, matchArgs(do_seq_formals, args, call));
 
     from = CAR(args); args = CDR(args);
     to = CAR(args); args = CDR(args);

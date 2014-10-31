@@ -703,21 +703,21 @@ static SEXP corcov(SEXP x, SEXP y, SEXP na_method, SEXP skendall, Rboolean cor)
     if (empty_err && !LENGTH(x))
 	error(_("'x' is empty"));
 
-    if (ansmat) PROTECT(ans = allocMatrix(REALSXP, ncx, ncy));
-    else PROTECT(ans = allocVector(REALSXP, ncx * ncy));
+    if (ansmat) VAPROTECT(ans, allocMatrix(REALSXP, ncx, ncy));
+    else VAPROTECT(ans, allocVector(REALSXP, ncx * ncy));
     sd_0 = FALSE;
     if (isNull(y)) {
 	if (everything) { /* NA's are propagated */
-	    PROTECT(xm = allocVector(REALSXP, ncx));
-	    PROTECT(ind = allocVector(LGLSXP, ncx));
+	    VAPROTECT(xm, allocVector(REALSXP, ncx));
+	    VAPROTECT(ind, allocVector(LGLSXP, ncx));
 	    find_na_1(n, ncx, REAL(x), /* --> has_na[] = */ LOGICAL(ind));
 	    cov_na_1 (n, ncx, REAL(x), REAL(xm), LOGICAL(ind), REAL(ans), &sd_0, cor, kendall);
 
 	    UNPROTECT(2);
 	}
 	else if (!pair) { /* all | complete "var" */
-	    PROTECT(xm = allocVector(REALSXP, ncx));
-	    PROTECT(ind = allocVector(INTSXP, n));
+	    VAPROTECT(xm, allocVector(REALSXP, ncx));
+	    VAPROTECT(ind, allocVector(INTSXP, n));
 	    complete1(n, ncx, REAL(x), INTEGER(ind), na_fail);
 	    cov_complete1(n, ncx, REAL(x), REAL(xm),
 			  INTEGER(ind), REAL(ans), &sd_0, cor, kendall);
@@ -737,10 +737,10 @@ static SEXP corcov(SEXP x, SEXP y, SEXP na_method, SEXP skendall, Rboolean cor)
     else { /* Co[vr] (x, y) */
 	if (everything) {
 	    SEXP has_na_y;
-	    PROTECT(xm = allocVector(REALSXP, ncx));
-	    PROTECT(ym = allocVector(REALSXP, ncy));
-	    PROTECT(ind      = allocVector(LGLSXP, ncx));
-	    PROTECT(has_na_y = allocVector(LGLSXP, ncy));
+	    VAPROTECT(xm, allocVector(REALSXP, ncx));
+	    VAPROTECT(ym, allocVector(REALSXP, ncy));
+	    VAPROTECT(ind, allocVector(LGLSXP, ncx));
+	    VAPROTECT(has_na_y, allocVector(LGLSXP, ncy));
 
 	    find_na_2(n, ncx, ncy, REAL(x), REAL(y), INTEGER(ind), INTEGER(has_na_y));
 	    cov_na_2 (n, ncx, ncy, REAL(x), REAL(y), REAL(xm), REAL(ym),
@@ -748,9 +748,9 @@ static SEXP corcov(SEXP x, SEXP y, SEXP na_method, SEXP skendall, Rboolean cor)
 	    UNPROTECT(4);
 	}
 	else if (!pair) { /* all | complete */
-	    PROTECT(xm = allocVector(REALSXP, ncx));
-	    PROTECT(ym = allocVector(REALSXP, ncy));
-	    PROTECT(ind = allocVector(INTSXP, n));
+	    VAPROTECT(xm, allocVector(REALSXP, ncx));
+	    VAPROTECT(ym, allocVector(REALSXP, ncy));
+	    VAPROTECT(ind, allocVector(INTSXP, n));
 	    complete2(n, ncx, ncy, REAL(x), REAL(y), INTEGER(ind), na_fail);
 	    cov_complete2(n, ncx, ncy, REAL(x), REAL(y), REAL(xm), REAL(ym),
 			  INTEGER(ind), REAL(ans), &sd_0, cor, kendall);
@@ -772,7 +772,7 @@ static SEXP corcov(SEXP x, SEXP y, SEXP na_method, SEXP skendall, Rboolean cor)
 	if (isNull(y)) {
 	    x = getAttrib(x, R_DimNamesSymbol);
 	    if (!isNull(x) && !isNull(VECTOR_ELT(x, 1))) {
-		PROTECT(ind = allocVector(VECSXP, 2));
+		VAPROTECT(ind, allocVector(VECSXP, 2));
 		SET_VECTOR_ELT(ind, 0, duplicate(VECTOR_ELT(x, 1)));
 		SET_VECTOR_ELT(ind, 1, duplicate(VECTOR_ELT(x, 1)));
 		setAttrib(ans, R_DimNamesSymbol, ind);
@@ -784,7 +784,7 @@ static SEXP corcov(SEXP x, SEXP y, SEXP na_method, SEXP skendall, Rboolean cor)
 	    y = getAttrib(y, R_DimNamesSymbol);
 	    if ((length(x) >= 2 && !isNull(VECTOR_ELT(x, 1))) ||
 		(length(y) >= 2 && !isNull(VECTOR_ELT(y, 1)))) {
-		PROTECT(ind = allocVector(VECSXP, 2));
+		VAPROTECT(ind, allocVector(VECSXP, 2));
 		if (length(x) >= 2 && !isNull(VECTOR_ELT(x, 1)))
 		    SET_VECTOR_ELT(ind, 0, duplicate(VECTOR_ELT(x, 1)));
 		if (length(y) >= 2 && !isNull(VECTOR_ELT(y, 1)))

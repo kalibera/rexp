@@ -247,7 +247,7 @@ StringAnswer(SEXP x, struct BindData *data, SEXP call)
 	    StringAnswer(VECTOR_ELT(x, i), data, call);
 	break;
     default:
-	PROTECT(x = coerceVector(x, STRSXP));
+	VAPROTECT(x, coerceVector(x, STRSXP));
 	for (i = 0; i < XLENGTH(x); i++)
 	    SET_STRING_ELT(data->ans_ptr, data->ans_length++, STRING_ELT(x, i));
 	UNPROTECT(1);
@@ -585,7 +585,7 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
     /* sequence and create the new basename string. */
 
     if (tag != R_NilValue) {
-	PROTECT(base = NewBase(base, tag));
+	VAPROTECT(base, NewBase(base, tag));
 	savefirstpos = nameData->firstpos;
 	saveseqno = nameData->seqno;
 	savecount = nameData->count;
@@ -596,14 +596,14 @@ static void NewExtractNames(SEXP v, SEXP base, SEXP tag, int recurse,
     else saveseqno = 0;
 
     n = xlength(v);
-    PROTECT(names = getAttrib(v, R_NamesSymbol));
+    VAPROTECT(names, getAttrib(v, R_NamesSymbol));
 
     switch(TYPEOF(v)) {
     case NILSXP:
 	break;
     case LISTSXP:
 	for (i = 0; i < n; i++) {
-	    PROTECT(namei = ItemName(names, i));
+	    VAPROTECT(namei, ItemName(names, i));
 	    if (recurse) {
 		NewExtractNames(CAR(v), base, namei, recurse, data, nameData);
 	    }
@@ -751,7 +751,7 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
     recurse = 0;
     /* this was only done for length(args) > 1 prior to 1.5.0,
        _but_ `recursive' might be the only argument */
-    PROTECT(args = ExtractOptionals(args, &recurse, &usenames, call));
+    VAPROTECT(args, ExtractOptionals(args, &recurse, &usenames, call));
 
     /* Determine the type of the returned value. */
     /* The strategy here is appropriate because the */
@@ -786,7 +786,7 @@ SEXP attribute_hidden do_c_dflt(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Allocate the return value and set up to pass through */
     /* the arguments filling in values of the returned object. */
 
-    PROTECT(ans = allocVector(mode, data.ans_length));
+    VAPROTECT(ans, allocVector(mode, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
     t = args;
@@ -856,7 +856,7 @@ SEXP attribute_hidden do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     /* By default we recurse, but this can be over-ridden */
     /* by an optional "recursive" argument. */
 
-    PROTECT(args = CAR(ans));
+    VAPROTECT(args, CAR(ans));
     int recurse = asLogical(CADR(ans));
     int usenames = asLogical(CADDR(ans));
     int lenient = TRUE; // was (implicitly!) FALSE  up to R 3.0.1
@@ -911,7 +911,7 @@ SEXP attribute_hidden do_unlist(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Allocate the return value and set up to pass through */
     /* the arguments filling in values of the returned object. */
 
-    PROTECT(ans = allocVector(mode, data.ans_length));
+    VAPROTECT(ans, allocVector(mode, data.ans_length));
     data.ans_ptr = ans;
     data.ans_length = 0;
     t = args;
@@ -1021,13 +1021,13 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
      *	  drop through to the default code.
      */
 
-    PROTECT(args = promiseArgs(args, env));
+    VAPROTECT(args, promiseArgs(args, env));
 
     generic = ((PRIMVAL(op) == 1) ? "cbind" : "rbind");
     klass = "";
     method = R_NilValue;
     for (a = args; a != R_NilValue && compatible; a = CDR(a)) {
-	PROTECT(obj = eval(CAR(a), env));
+	VAPROTECT(obj, eval(CAR(a), env));
 	if (isObject(obj)) {
 	    int i;
 	    classlist = getAttrib(obj, R_ClassSymbol);
@@ -1224,7 +1224,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     if (mnames || nnames == rows)
 	have_rnames = TRUE;
 
-    PROTECT(result = allocMatrix(mode, rows, cols));
+    VAPROTECT(result, allocMatrix(mode, rows, cols));
     R_xlen_t n = 0; // index, possibly of long vector
 
     if (mode == STRSXP) {
@@ -1256,7 +1256,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		case STRSXP:
 		case VECSXP:
 		case LISTSXP:
-		    PROTECT(u = coerceVector(u, mode));
+		    VAPROTECT(u, coerceVector(u, mode));
 		    k = LENGTH(u);
 		    if (k > 0) {
 			idx = (!umatrix) ? rows : k;
@@ -1336,7 +1336,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     /* Adjustment of dimnames attributes. */
     if (have_cnames || have_rnames) {
 	SEXP nam, tnam,v;
-	PROTECT(dn = allocVector(VECSXP, 2));
+	VAPROTECT(dn, allocVector(VECSXP, 2));
 	if (have_cnames)
 	    nam = SET_VECTOR_ELT(dn, 1, allocVector(STRSXP, cols));
 	else
@@ -1471,7 +1471,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     if (mnames || nnames == cols)
 	have_cnames = TRUE;
 
-    PROTECT(result = allocMatrix(mode, rows, cols));
+    VAPROTECT(result, allocMatrix(mode, rows, cols));
 
     R_xlen_t n = 0;
 
@@ -1495,7 +1495,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	    u = PRVALUE(CAR(t));
  	    int umatrix = isMatrix(u), urows = umatrix ? nrows(u) : 1; /* coercing to VECSXP will lose these. PR#15468 */
 	    if (umatrix || length(u) >= lenmin) {
-		PROTECT(u = coerceVector(u, mode));
+		VAPROTECT(u, coerceVector(u, mode));
 		k = LENGTH(u);
 		idx = umatrix ? urows : (k > 0);
 		for (i = 0; i < idx; i++)
@@ -1586,7 +1586,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     /* Adjustment of dimnames attributes. */
     if (have_rnames || have_cnames) {
 	SEXP nam, tnam,v;
-	PROTECT(dn = allocVector(VECSXP, 2));
+	VAPROTECT(dn, allocVector(VECSXP, 2));
 	if (have_rnames)
 	    nam = SET_VECTOR_ELT(dn, 0, allocVector(STRSXP, rows));
 	else

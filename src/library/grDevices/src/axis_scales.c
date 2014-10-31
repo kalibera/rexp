@@ -57,7 +57,7 @@ SEXP R_GAxisPars(SEXP usr, SEXP is_log, SEXP nintLog)
     GAxisPars(&min, &max, &n, logflag, 0);// axis = 0 :<==> do not warn.. [TODO!]
     // -> ../../../main/graphics.c
 
-    PROTECT(ans = mkNamed(VECSXP, nms));
+    VAPROTECT(ans, mkNamed(VECSXP, nms));
     SET_VECTOR_ELT(ans, 0, (axp = allocVector(REALSXP, 2)));// protected
     SET_VECTOR_ELT(ans, 1, ScalarInteger(n));
     REAL(axp)[0] = min;

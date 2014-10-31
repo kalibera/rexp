@@ -101,19 +101,19 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!con->canread) error(_("cannot read from this connection"));
 
     args = CDR(args);
-    PROTECT(what = coerceVector(CAR(args), STRSXP)); /* argument fields */
+    VAPROTECT(what, coerceVector(CAR(args), STRSXP)); /* argument fields */
     nwhat = LENGTH(what);
     dynwhat = (nwhat == 0);
 
     args = CDR(args);
-    PROTECT(fold_excludes = coerceVector(CAR(args), STRSXP));
+    VAPROTECT(fold_excludes, coerceVector(CAR(args), STRSXP));
     has_fold_excludes = (LENGTH(fold_excludes) > 0);
 
     buf = (char *) malloc(buflen);
     if(!buf) error(_("could not allocate memory for 'read.dcf'"));
     nret = 20;
     /* it is easier if we first have a record per column */
-    PROTECT(retval = allocMatrixNA(STRSXP, LENGTH(what), nret));
+    VAPROTECT(retval, allocMatrixNA(STRSXP, LENGTH(what), nret));
 
     /* These used to use [:blank:] but that can match \xa0 as part of
        a UTF-8 character (and is nbspace on Windows). */ 
@@ -136,7 +136,7 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 		k++;
 		if(k > nret - 1){
 		    nret *= 2;
-		    PROTECT(retval2 = allocMatrixNA(STRSXP, LENGTH(what), nret));
+		    VAPROTECT(retval2, allocMatrixNA(STRSXP, LENGTH(what), nret));
 		    transferVector(retval2, retval);
 		    UNPROTECT_PTR(retval);
 		    retval = retval2;
@@ -226,8 +226,8 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 			/* A previously unseen field and we are
 			 * recording all fields */
 			field_skip = FALSE;
-			PROTECT(what2 = allocVector(STRSXP, nwhat+1));
-			PROTECT(retval2 = allocMatrixNA(STRSXP,
+			VAPROTECT(what2, allocVector(STRSXP, nwhat+1));
+			VAPROTECT(retval2, allocMatrixNA(STRSXP,
 							nrows(retval)+1,
 							ncols(retval)));
 			if(nwhat > 0) {
@@ -296,11 +296,11 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!blank_skip) k++;
 
     /* and now transpose the whole matrix */
-    PROTECT(retval2 = allocMatrixNA(STRSXP, k, LENGTH(what)));
+    VAPROTECT(retval2, allocMatrixNA(STRSXP, k, LENGTH(what)));
     copyMatrix(retval2, retval, 1);
 
-    PROTECT(dimnames = allocVector(VECSXP, 2));
-    PROTECT(dims = allocVector(INTSXP, 2));
+    VAPROTECT(dimnames, allocVector(VECSXP, 2));
+    VAPROTECT(dims, allocVector(INTSXP, 2));
     INTEGER(dims)[0] = k;
     INTEGER(dims)[1] = LENGTH(what);
     SET_VECTOR_ELT(dimnames, 1, what);
@@ -316,7 +316,7 @@ static SEXP allocMatrixNA(SEXPTYPE mode, int nrow, int ncol)
     int k;
     SEXP retval;
 
-    PROTECT(retval = allocMatrix(mode, nrow, ncol));
+    VAPROTECT(retval, allocMatrix(mode, nrow, ncol));
     for(k = 0; k < LENGTH(retval); k++)
 	SET_STRING_ELT(retval, k, NA_STRING);
     UNPROTECT(1);

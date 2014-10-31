@@ -368,7 +368,7 @@ static void init_PS_PDF(void)
     initS = findVarInFrame3(grNS, install("initPSandPDFfonts"), TRUE);
     if(initS == R_UnboundValue)
 	error("missing initPSandPDFfonts() in grDevices namespace: this should not happen");
-    PROTECT(call = lang1(initS));
+    VAPROTECT(call, lang1(initS));
     eval(call, R_GlobalEnv);
     UNPROTECT(1);
 }
@@ -622,13 +622,13 @@ static char* translateFontFamily(const char* family) {
     char* result = NULL;
     PROTECT_INDEX xpi;
 
-    PROTECT(graphicsNS = R_FindNamespace(ScalarString(mkChar("grDevices"))));
+    VAPROTECT(graphicsNS, R_FindNamespace(ScalarString(mkChar("grDevices"))));
     PROTECT_WITH_INDEX(windowsenv = findVar(install(".WindowsEnv"),
 					    graphicsNS), &xpi);
     if(TYPEOF(windowsenv) == PROMSXP)
 	REPROTECT(windowsenv = eval(windowsenv, graphicsNS), xpi);
-    PROTECT(fontdb = findVar(install(".Windows.Fonts"), windowsenv));
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    VAPROTECT(fontdb, findVar(install(".Windows.Fonts"), windowsenv));
+    VAPROTECT(fontnames, getAttrib(fontdb, R_NamesSymbol));
     nfonts = LENGTH(fontdb);
     if (strlen(family) > 0) {
 	int found = 0;
@@ -1088,7 +1088,7 @@ static SEXP NewPlotHistory(int n)
     SEXP  vDL, class;
     int   i;
 
-    PROTECT(vDL = allocVector(VECSXP, 5));
+    VAPROTECT(vDL, allocVector(VECSXP, 5));
     for (i = 0; i < 4; i++)
 	SET_VECTOR_ELT(vDL, i, allocVector(INTSXP, 1));
     SET_pHISTORY (allocVector(VECSXP, n));
@@ -1098,7 +1098,7 @@ static SEXP NewPlotHistory(int n)
     pCURRENTPOS = -1;
     for (i = 0; i < n; i++)
 	SET_VECTOR_ELT(pHISTORY, i, R_NilValue);
-    PROTECT(class = mkString("SavedPlots"));
+    VAPROTECT(class, mkString("SavedPlots"));
     classgets(vDL, class);
     SETDL;
     UNPROTECT(2);
@@ -1110,10 +1110,10 @@ static SEXP GrowthPlotHistory(SEXP vDL)
     SEXP  vOLD;
     int   i, oldNPlots, oldCurrent;
 
-    PROTECT(vOLD = pHISTORY);
+    VAPROTECT(vOLD, pHISTORY);
     oldNPlots = pNUMPLOTS;
     oldCurrent = pCURRENTPOS;
-    PROTECT(vDL = NewPlotHistory(pMAXPLOTS + GROWTH));
+    VAPROTECT(vDL, NewPlotHistory(pMAXPLOTS + GROWTH));
     for (i = 0; i < oldNPlots; i++)
 	SET_VECTOR_ELT(pHISTORY, i, VECTOR_ELT(vOLD, i));
     pNUMPLOTS = oldNPlots;
@@ -1145,7 +1145,7 @@ static void AddtoPlotHistory(SEXP snapshot, int replace)
     else
 	where = pNUMPLOTS;
 
-    PROTECT(class = mkString("recordedplot"));
+    VAPROTECT(class, mkString("recordedplot"));
     classgets(snapshot, class);
     SET_VECTOR_ELT(pHISTORY, where, snapshot);
     pCURRENTPOS = where;
@@ -2084,7 +2084,7 @@ static void GA_Resize(pDevDesc dd)
 	    xd->rescale_factor *= rf;
 	    {
 		SEXP scale;
-		PROTECT(scale = ScalarReal(rf));
+		VAPROTECT(scale, ScalarReal(rf));
 		GEhandleEvent(GE_ScalePS, dd, scale);
 		UNPROTECT(1);
 	    }
@@ -2983,7 +2983,7 @@ static SEXP GA_Cap(pDevDesc dd)
 
 	    screenData = getpixels(img);
 
-	    PROTECT(raster = allocVector(INTSXP, size));
+	    VAPROTECT(raster, allocVector(INTSXP, size));
 
 	    /* Copy each byte of screen to an R matrix.
 	     * The ARGB32 needs to be converted to R's ABGR32 */
@@ -2993,7 +2993,7 @@ static SEXP GA_Cap(pDevDesc dd)
 				 screenData[i*4 + 1],
 				 screenData[i*4 + 0],
 				 255);
-	    PROTECT(dim = allocVector(INTSXP, 2));
+	    VAPROTECT(dim, allocVector(INTSXP, 2));
 	    INTEGER(dim)[0] = height;
 	    INTEGER(dim)[1] = width;
 	    setAttrib(raster, R_DimSymbol, dim);

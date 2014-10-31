@@ -43,8 +43,8 @@ static Rboolean deviceChanged(double devWidthCM, double devHeightCM,
 {
     Rboolean result = FALSE;
     SEXP pvpDevWidthCM, pvpDevHeightCM;
-    PROTECT(pvpDevWidthCM = VECTOR_ELT(currentvp, PVP_DEVWIDTHCM));
-    PROTECT(pvpDevHeightCM = VECTOR_ELT(currentvp, PVP_DEVHEIGHTCM));
+    VAPROTECT(pvpDevWidthCM, VECTOR_ELT(currentvp, PVP_DEVWIDTHCM));
+    VAPROTECT(pvpDevHeightCM, VECTOR_ELT(currentvp, PVP_DEVHEIGHTCM));
     if (fabs(REAL(pvpDevWidthCM)[0] - devWidthCM) > 1e-6) {
 	result = TRUE;
 	REAL(pvpDevWidthCM)[0] = devWidthCM;
@@ -90,7 +90,7 @@ void dirtyGridDevice(pGEDevDesc dd) {
 	/* Record the fact that this device has now received grid output
 	 */
 	gsd = (SEXP) dd->gesd[gridRegisterIndex]->systemSpecific;
-	PROTECT(griddev = allocVector(LGLSXP, 1));
+	VAPROTECT(griddev, allocVector(LGLSXP, 1));
 	LOGICAL(griddev)[0] = TRUE;
 	SET_VECTOR_ELT(gsd, GSS_GRIDDEVICE, griddev);
 	UNPROTECT(1);
@@ -215,7 +215,7 @@ SEXP doSetViewport(SEXP vp,
                In other words, 'clip=TRUE' + 'rot=15' = 'clip=FALSE'
             */
             SEXP parentClip;
-            PROTECT(parentClip = viewportClipRect(viewportParent(vp)));
+            VAPROTECT(parentClip, viewportClipRect(viewportParent(vp)));
             xx1 = REAL(parentClip)[0];
             yy1 = REAL(parentClip)[1];
             xx2 = REAL(parentClip)[2];
@@ -235,10 +235,10 @@ SEXP doSetViewport(SEXP vp,
 		    transform[i][j] = 
 			REAL(viewportTransform(vp))[i + 3*j];
 	    if (!topLevelVP) {
-		PROTECT(x1 = unit(0, L_NPC));
-		PROTECT(y1 = unit(0, L_NPC));
-		PROTECT(x2 = unit(1, L_NPC));
-		PROTECT(y2 = unit(1, L_NPC));
+		VAPROTECT(x1, unit(0, L_NPC));
+		VAPROTECT(y1, unit(0, L_NPC));
+		VAPROTECT(x2, unit(1, L_NPC));
+		VAPROTECT(y2, unit(1, L_NPC));
 	    } else {
 		/* Special case for top-level viewport.
 		 * Set clipping region outside device boundaries.
@@ -247,10 +247,10 @@ SEXP doSetViewport(SEXP vp,
 		 * limits are actually within its physical limits
 		 * (e.g., PostScript)
 		 */
-	        PROTECT(x1 = unit(-.5, L_NPC));
-		PROTECT(y1 = unit(-.5, L_NPC));
-		PROTECT(x2 = unit(1.5, L_NPC));
-		PROTECT(y2 = unit(1.5, L_NPC));
+	        VAPROTECT(x1, unit(-.5, L_NPC));
+		VAPROTECT(y1, unit(-.5, L_NPC));
+		VAPROTECT(x2, unit(1.5, L_NPC));
+		VAPROTECT(y2, unit(1.5, L_NPC));
 	    }
 	    getViewportContext(vp, &vpc);
 	    gcontextFromViewport(vp, &gc, dd);
@@ -282,14 +282,14 @@ SEXP doSetViewport(SEXP vp,
 	 * for the top-level viewport, else *BOOM*!
 	 */
 	SEXP parentClip;
-	PROTECT(parentClip = viewportClipRect(viewportParent(vp)));
+	VAPROTECT(parentClip, viewportClipRect(viewportParent(vp)));
 	xx1 = REAL(parentClip)[0];
 	yy1 = REAL(parentClip)[1];
 	xx2 = REAL(parentClip)[2];
 	yy2 = REAL(parentClip)[3];
 	UNPROTECT(1);
     }
-    PROTECT(currentClip = allocVector(REALSXP, 4));
+    VAPROTECT(currentClip, allocVector(REALSXP, 4));
     REAL(currentClip)[0] = xx1;
     REAL(currentClip)[1] = yy1;
     REAL(currentClip)[2] = xx2;
@@ -298,10 +298,10 @@ SEXP doSetViewport(SEXP vp,
     /*
      * Save the current device size
      */
-    PROTECT(widthCM = allocVector(REALSXP, 1));
+    VAPROTECT(widthCM, allocVector(REALSXP, 1));
     REAL(widthCM)[0] = devWidthCM;
     SET_VECTOR_ELT(vp, PVP_DEVWIDTHCM, widthCM);
-    PROTECT(heightCM = allocVector(REALSXP, 1));
+    VAPROTECT(heightCM, allocVector(REALSXP, 1));
     REAL(heightCM)[0] = devHeightCM;
     SET_VECTOR_ELT(vp, PVP_DEVHEIGHTCM, heightCM);
     UNPROTECT(3);
@@ -319,13 +319,13 @@ SEXP L_setviewport(SEXP invp, SEXP hasParent)
      * Duplicate the viewport passed in because we are going
      * to modify it to hell and gone.
      */
-    PROTECT(vp = duplicate(invp));
+    VAPROTECT(vp, duplicate(invp));
     /* 
      * Call R function pushedvp() 
      */
-    PROTECT(fcall = lang2(install("pushedvp"),
+    VAPROTECT(fcall, lang2(install("pushedvp"),
 			  vp));
-    PROTECT(pushedvp = eval(fcall, R_gridEvalEnv)); 
+    VAPROTECT(pushedvp, eval(fcall, R_gridEvalEnv)); 
     pushedvp = doSetViewport(pushedvp, !LOGICAL(hasParent)[0], TRUE, dd);
     /* Set the value of the current viewport for the current device
      * Need to do this in here so that redrawing via R BASE display
@@ -350,9 +350,9 @@ SEXP L_setviewport(SEXP invp, SEXP hasParent)
 static Rboolean noChildren(SEXP children) 
 {
     SEXP result, fcall;
-    PROTECT(fcall = lang2(install("no.children"),
+    VAPROTECT(fcall, lang2(install("no.children"),
 			  children));
-    PROTECT(result = eval(fcall, R_gridEvalEnv)); 
+    VAPROTECT(result, eval(fcall, R_gridEvalEnv)); 
     UNPROTECT(2);
     return LOGICAL(result)[0];
 }
@@ -360,9 +360,9 @@ static Rboolean noChildren(SEXP children)
 static Rboolean childExists(SEXP name, SEXP children) 
 {
     SEXP result, fcall;
-    PROTECT(fcall = lang3(install("child.exists"),
+    VAPROTECT(fcall, lang3(install("child.exists"),
 			  name, children));
-    PROTECT(result = eval(fcall, R_gridEvalEnv)); 
+    VAPROTECT(result, eval(fcall, R_gridEvalEnv)); 
     UNPROTECT(2);
     return LOGICAL(result)[0];
 }
@@ -370,9 +370,9 @@ static Rboolean childExists(SEXP name, SEXP children)
 static SEXP childList(SEXP children) 
 {
     SEXP result, fcall;
-    PROTECT(fcall = lang2(install("child.list"),
+    VAPROTECT(fcall, lang2(install("child.list"),
 			  children));
-    PROTECT(result = eval(fcall, R_gridEvalEnv)); 
+    VAPROTECT(result, eval(fcall, R_gridEvalEnv)); 
     UNPROTECT(2);
     return result;    
 }
@@ -413,8 +413,8 @@ static SEXP findInChildren(SEXP name, SEXP strict, SEXP children, int depth)
     }
     if (!found) {
 	SEXP temp, zeroDepth;
-	PROTECT(temp = allocVector(VECSXP, 2));
-	PROTECT(zeroDepth = allocVector(INTSXP, 1));
+	VAPROTECT(temp, allocVector(VECSXP, 2));
+	VAPROTECT(zeroDepth, allocVector(INTSXP, 1));
 	INTEGER(zeroDepth)[0] = 0;
 	SET_VECTOR_ELT(temp, 0, zeroDepth);
 	SET_VECTOR_ELT(temp, 1, R_NilValue);
@@ -441,10 +441,10 @@ find.viewport <- function(name, pvp) {
 static SEXP findViewport(SEXP name, SEXP strict, SEXP vp, int depth) 
 {
     SEXP result, zeroDepth, curDepth;
-    PROTECT(result = allocVector(VECSXP, 2));
-    PROTECT(zeroDepth = allocVector(INTSXP, 1));
+    VAPROTECT(result, allocVector(VECSXP, 2));
+    VAPROTECT(zeroDepth, allocVector(INTSXP, 1));
     INTEGER(zeroDepth)[0] = 0;
-    PROTECT(curDepth = allocVector(INTSXP, 1));
+    VAPROTECT(curDepth, allocVector(INTSXP, 1));
     INTEGER(curDepth)[0] = depth;
     /* 
      * If there are no children, we fail
@@ -492,7 +492,7 @@ SEXP L_downviewport(SEXP name, SEXP strict)
      */
     SEXP found, vp;
     int depth = 1;
-    PROTECT(found = findViewport(name, strict, gvp, depth));
+    VAPROTECT(found, findViewport(name, strict, gvp, depth));
     if (INTEGER(VECTOR_ELT(found, 0))[0]) {
 	vp = doSetViewport(VECTOR_ELT(found, 1), FALSE, FALSE, dd);
 	/* Set the value of the current viewport for the current device
@@ -524,9 +524,9 @@ SEXP L_downviewport(SEXP name, SEXP strict)
 static Rboolean pathMatch(SEXP path, SEXP pathsofar, SEXP strict) 
 {
     SEXP result, fcall;
-    PROTECT(fcall = lang4(install("pathMatch"),
+    VAPROTECT(fcall, lang4(install("pathMatch"),
 			  path, pathsofar, strict));
-    PROTECT(result = eval(fcall, R_gridEvalEnv)); 
+    VAPROTECT(result, eval(fcall, R_gridEvalEnv)); 
     UNPROTECT(2);
     return LOGICAL(result)[0];    
 }
@@ -537,9 +537,9 @@ static SEXP growPath(SEXP pathsofar, SEXP name)
     if (isNull(pathsofar))
 	result = name;
     else {
-	PROTECT(fcall = lang3(install("growPath"),
+	VAPROTECT(fcall, lang3(install("growPath"),
 			      pathsofar, name));
-	PROTECT(result = eval(fcall, R_gridEvalEnv)); 
+	VAPROTECT(result, eval(fcall, R_gridEvalEnv)); 
 	UNPROTECT(2);
     }
     return result;    
@@ -560,9 +560,9 @@ static SEXP findvppathInChildren(SEXP path, SEXP name,
     PROTECT(result);
     while (count < n && !found) {
 	SEXP vp, newpathsofar;
-	PROTECT(vp = findVar(installChar(STRING_ELT(childnames, count)),
+	VAPROTECT(vp, findVar(installChar(STRING_ELT(childnames, count)),
 			     children));
-	PROTECT(newpathsofar = growPath(pathsofar,
+	VAPROTECT(newpathsofar, growPath(pathsofar,
 					VECTOR_ELT(vp, VP_NAME)));
 	result = findvppath(path, name, strict, newpathsofar, vp, depth);
 	found = INTEGER(VECTOR_ELT(result, 0))[0] > 0;
@@ -571,8 +571,8 @@ static SEXP findvppathInChildren(SEXP path, SEXP name,
     }
     if (!found) {
 	SEXP temp, zeroDepth;
-	PROTECT(temp = allocVector(VECSXP, 2));
-	PROTECT(zeroDepth = allocVector(INTSXP, 1));
+	VAPROTECT(temp, allocVector(VECSXP, 2));
+	VAPROTECT(zeroDepth, allocVector(INTSXP, 1));
 	INTEGER(zeroDepth)[0] = 0;
 	SET_VECTOR_ELT(temp, 0, zeroDepth);
 	SET_VECTOR_ELT(temp, 1, R_NilValue);
@@ -587,10 +587,10 @@ static SEXP findvppath(SEXP path, SEXP name, SEXP strict,
 		       SEXP pathsofar, SEXP vp, int depth) 
 {
     SEXP result, zeroDepth, curDepth;
-    PROTECT(result = allocVector(VECSXP, 2));
-    PROTECT(zeroDepth = allocVector(INTSXP, 1));
+    VAPROTECT(result, allocVector(VECSXP, 2));
+    VAPROTECT(zeroDepth, allocVector(INTSXP, 1));
     INTEGER(zeroDepth)[0] = 0;
-    PROTECT(curDepth = allocVector(INTSXP, 1));
+    VAPROTECT(curDepth, allocVector(INTSXP, 1));
     INTEGER(curDepth)[0] = depth;
     /* 
      * If there are no children, we fail
@@ -636,7 +636,7 @@ SEXP L_downvppath(SEXP path, SEXP name, SEXP strict)
      */
     SEXP found, vp;
     int depth = 1;
-    PROTECT(found = findvppath(path, name, strict, R_NilValue, gvp, depth));
+    VAPROTECT(found, findvppath(path, name, strict, R_NilValue, gvp, depth));
     if (INTEGER(VECTOR_ELT(found, 0))[0]) {
 	vp = doSetViewport(VECTOR_ELT(found, 1), FALSE, FALSE, dd);
 	/* Set the value of the current viewport for the current device
@@ -710,9 +710,9 @@ SEXP L_unsetviewport(SEXP n)
     {
 	SEXP fcall, false, t;
 	PROTECT(gvp); PROTECT(newvp);
-	PROTECT(false = allocVector(LGLSXP, 1));
+	VAPROTECT(false, allocVector(LGLSXP, 1));
 	LOGICAL(false)[0] = FALSE;
-	PROTECT(fcall = lang4(install("remove"), 
+	VAPROTECT(fcall, lang4(install("remove"), 
 			      VECTOR_ELT(gvp, VP_NAME),
 			      VECTOR_ELT(newvp, PVP_CHILDREN),
 			      false));
@@ -848,7 +848,7 @@ SEXP L_getDLelt(SEXP index)
      */
     pGEDevDesc dd = getDevice();
     SEXP dl, result;
-    PROTECT(dl = gridStateElement(dd, GSS_DL));
+    VAPROTECT(dl, gridStateElement(dd, GSS_DL));
     result = VECTOR_ELT(dl, INTEGER(index)[0]);
     UNPROTECT(1);
     return result;
@@ -863,7 +863,7 @@ SEXP L_setDLelt(SEXP value)
      */
     pGEDevDesc dd = getDevice();
     SEXP dl;
-    PROTECT(dl = gridStateElement(dd, GSS_DL));
+    VAPROTECT(dl, gridStateElement(dd, GSS_DL));
     SET_VECTOR_ELT(dl, INTEGER(gridStateElement(dd, GSS_DLINDEX))[0], value);
     UNPROTECT(1);
     return R_NilValue;
@@ -1110,7 +1110,7 @@ SEXP L_convert(SEXP x, SEXP whatfrom,
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
     nx = unitLength(x);
-    PROTECT(answer = allocVector(REALSXP, nx));
+    VAPROTECT(answer, allocVector(REALSXP, nx));
     for (i=0; i<nx; i++) {
         gcontextFromgpar(currentgp, i, &gc, dd);
         TOunit = INTEGER(unitto)[i % LENGTH(unitto)];
@@ -1301,7 +1301,7 @@ SEXP L_layoutRegion(SEXP layoutPosRow, SEXP layoutPosCol) {
     /* 
      * The result is a numeric containing left, bottom, width, and height
      */
-    PROTECT(answer = allocVector(REALSXP, 4));
+    VAPROTECT(answer, allocVector(REALSXP, 4));
     /* 
      * NOTE:  We are assuming here that calcViewportLocationFromLayout
      * returns the allocated region with a ("left", "bottom") 
@@ -1560,8 +1560,8 @@ static void hullEdge(double *x, double *y, int n,
         }
     }
     n = n + adjust;
-    PROTECT(xin = allocVector(REALSXP, n));
-    PROTECT(yin = allocVector(REALSXP, n));
+    VAPROTECT(xin, allocVector(REALSXP, n));
+    VAPROTECT(yin, allocVector(REALSXP, n));
     for (i=0; i<n; i++) {
         REAL(xin)[i] = xkeep[i];
         REAL(yin)[i] = ykeep[i];
@@ -1569,9 +1569,9 @@ static void hullEdge(double *x, double *y, int n,
     /*
      * Determine convex hull
      */
-    PROTECT(chullFn = findFun(install("chull"), R_gridEvalEnv));
-    PROTECT(R_fcall = lang3(chullFn, xin, yin));
-    PROTECT(hull = eval(R_fcall, R_gridEvalEnv));
+    VAPROTECT(chullFn, findFun(install("chull"), R_gridEvalEnv));
+    VAPROTECT(R_fcall, lang3(chullFn, xin, yin));
+    VAPROTECT(hull, eval(R_fcall, R_gridEvalEnv));
     nh = LENGTH(hull);
     hx = (double *) R_alloc(nh, sizeof(double));
     hy = (double *) R_alloc(nh, sizeof(double));
@@ -1732,8 +1732,8 @@ SEXP L_moveTo(SEXP x, SEXP y)
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
-    PROTECT(prevloc = gridStateElement(dd, GSS_PREVLOC));
-    PROTECT(devloc = gridStateElement(dd, GSS_CURRLOC));
+    VAPROTECT(prevloc, gridStateElement(dd, GSS_PREVLOC));
+    VAPROTECT(devloc, gridStateElement(dd, GSS_CURRLOC));
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -1774,8 +1774,8 @@ SEXP L_lineTo(SEXP x, SEXP y, SEXP arrow)
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
-    PROTECT(prevloc = gridStateElement(dd, GSS_PREVLOC));
-    PROTECT(devloc = gridStateElement(dd, GSS_CURRLOC));
+    VAPROTECT(prevloc, gridStateElement(dd, GSS_PREVLOC));
+    VAPROTECT(devloc, gridStateElement(dd, GSS_CURRLOC));
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -1949,7 +1949,7 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
      * Number of xsplines
      */
     np = LENGTH(index);
-    PROTECT(tracePts = allocVector(VECSXP, np));
+    VAPROTECT(tracePts, allocVector(VECSXP, np));
     nloc = 0;
     for (i=0; i<np; i++) {
 	const void *vmax;
@@ -1999,7 +1999,7 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
 		    error(_("non-finite control point in Xspline"));
 	    }
 	}
-	PROTECT(points = GEXspline(nx, xx, yy, ss,
+	VAPROTECT(points, GEXspline(nx, xx, yy, ss,
 				   LOGICAL(o)[0], LOGICAL(rep)[0],
 				   draw, &gc, dd));
         {
@@ -2039,9 +2039,9 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
                 int count = end - start + 1;
                 double *keepXptr, *keepYptr;
                 SEXP keepPoints, keepX, keepY;
-                PROTECT(keepPoints = allocVector(VECSXP, 2));
-                PROTECT(keepX = allocVector(REALSXP, count));
-                PROTECT(keepY = allocVector(REALSXP, count));
+                VAPROTECT(keepPoints, allocVector(VECSXP, 2));
+                VAPROTECT(keepX, allocVector(REALSXP, count));
+                VAPROTECT(keepY, allocVector(REALSXP, count));
                 keepXptr = REAL(keepX);
                 keepYptr = REAL(keepY);
                 for (k=start; k<(end + 1); k++) {
@@ -2096,7 +2096,7 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
 	vmaxset(vmax);
     }
     if (!draw && !trace && nloc > 0) {
-	PROTECT(result = allocVector(REALSXP, 4));
+	VAPROTECT(result, allocVector(REALSXP, 4));
 	/*
 	 * If there is more than one xspline, just produce edge
 	 * based on bounding rect of all xsplines
@@ -2303,7 +2303,7 @@ SEXP L_arrows(SEXP x1, SEXP x2, SEXP xnm1, SEXP xn,
 	 * x1 will be NULL
 	 */
 	if (isNull(x1)) 
-	    PROTECT(devloc = gridStateElement(dd, GSS_CURRLOC));
+	    VAPROTECT(devloc, gridStateElement(dd, GSS_CURRLOC));
 	if (first) {
 	    if (isNull(x1)) {
 		xx1 = REAL(devloc)[0];
@@ -2667,14 +2667,14 @@ static SEXP gridRect(SEXP x, SEXP y, SEXP w, SEXP h,
 		double dw, dh;
 		SEXP zeroInches, xadjInches, yadjInches, wwInches, hhInches;
 		int tmpcol;
-                PROTECT(zeroInches = unit(0, L_INCHES));
+                VAPROTECT(zeroInches, unit(0, L_INCHES));
 		/* Find bottom-left location */
 		justification(ww, hh, 
 			      REAL(hjust)[i % LENGTH(hjust)], 
 			      REAL(vjust)[i % LENGTH(vjust)], 
 			      &xadj, &yadj);
-		PROTECT(xadjInches = unit(xadj, L_INCHES));
-		PROTECT(yadjInches = unit(yadj, L_INCHES));
+		VAPROTECT(xadjInches, unit(xadj, L_INCHES));
+		VAPROTECT(yadjInches, unit(yadj, L_INCHES));
 		transformDimn(xadjInches, yadjInches, 0, vpc, &gc,
 			      vpWidthCM, vpHeightCM,
 			      dd, rotationAngle,
@@ -2682,7 +2682,7 @@ static SEXP gridRect(SEXP x, SEXP y, SEXP w, SEXP h,
 		xxx[0] = xx + dw;
 		yyy[0] = yy + dh;
 		/* Find top-left location */
-		PROTECT(hhInches = unit(hh, L_INCHES));
+		VAPROTECT(hhInches, unit(hh, L_INCHES));
 		transformDimn(zeroInches, hhInches, 0, vpc, &gc,
 			      vpWidthCM, vpHeightCM,
 			      dd, rotationAngle,
@@ -2690,7 +2690,7 @@ static SEXP gridRect(SEXP x, SEXP y, SEXP w, SEXP h,
 		xxx[1] = xxx[0] + dw;
 		yyy[1] = yyy[0] + dh;
 		/* Find top-right location */
-		PROTECT(wwInches = unit(ww, L_INCHES));
+		VAPROTECT(wwInches, unit(ww, L_INCHES));
 		transformDimn(wwInches, hhInches, 0, vpc, &gc,
 			      vpWidthCM, vpHeightCM,
 			      dd, rotationAngle,
@@ -2967,8 +2967,8 @@ SEXP L_raster(SEXP raster, SEXP x, SEXP y, SEXP w, SEXP h,
                           REAL(hjust)[i % LENGTH(hjust)], 
                           REAL(vjust)[i % LENGTH(vjust)], 
                           &xadj, &yadj);
-            PROTECT(xadjInches = unit(xadj, L_INCHES));
-            PROTECT(yadjInches = unit(yadj, L_INCHES));
+            VAPROTECT(xadjInches, unit(xadj, L_INCHES));
+            VAPROTECT(yadjInches, unit(yadj, L_INCHES));
             transformDimn(xadjInches, yadjInches, 0, vpc, &gc,
                           vpWidthCM, vpHeightCM,
                           dd, rotationAngle,
@@ -3010,7 +3010,7 @@ SEXP L_cap()
      * to be BY COLUMN (though the dimensions are correct) */
     SEXP image, idim;
     
-    PROTECT(raster = GECap(dd));
+    VAPROTECT(raster, GECap(dd));
     /* Non-complying devices will return NULL */
     if (isNull(raster)) {
         image = raster;
@@ -3019,7 +3019,7 @@ SEXP L_cap()
         nrow = INTEGER(getAttrib(raster, R_DimSymbol))[0];
         ncol = INTEGER(getAttrib(raster, R_DimSymbol))[1];
         
-        PROTECT(image = allocVector(STRSXP, size));
+        VAPROTECT(image, allocVector(STRSXP, size));
         rint = INTEGER(raster);
         for (i=0; i<size; i++) {
             col = i % ncol + 1;
@@ -3028,7 +3028,7 @@ SEXP L_cap()
                            mkChar(col2name(rint[i])));
         }
         
-        PROTECT(idim = allocVector(INTSXP, 2));
+        VAPROTECT(idim, allocVector(INTSXP, 2));
         INTEGER(idim)[0] = nrow;
         INTEGER(idim)[1] = ncol;
         setAttrib(image, R_DimSymbol, idim);
@@ -3108,7 +3108,7 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
     }
     /* The label can be a string or an expression
      */
-    PROTECT(txt = label);
+    VAPROTECT(txt, label);
     if (isSymbol(txt) || isLanguage(txt))
 	txt = coerceVector(txt, EXPRSXP);
     else if (!isExpression(txt))
@@ -3431,7 +3431,7 @@ SEXP L_clip(SEXP x, SEXP y, SEXP w, SEXP h, SEXP hjust, SEXP vjust)
 	     * by THIS clipGrob (NOT to the current
 	     * viewport's previous setting)
 	     */
-	    PROTECT(currentClip = allocVector(REALSXP, 4));
+	    VAPROTECT(currentClip, allocVector(REALSXP, 4));
 	    REAL(currentClip)[0] = xx;
 	    REAL(currentClip)[1] = yy;
 	    REAL(currentClip)[2] = xx + ww;
@@ -3502,7 +3502,7 @@ SEXP L_locator() {
      */
     pGEDevDesc dd = getDevice();
     GEMode(2, dd);
-    PROTECT(answer = allocVector(REALSXP, 2));
+    VAPROTECT(answer, allocVector(REALSXP, 2));
     /*
      * Get a mouse click
      * Fails if user did not click mouse button 1
@@ -3654,9 +3654,9 @@ SEXP L_stringMetric(SEXP label)
     PROTECT(txt);
     n = LENGTH(txt);
     vmax = vmaxget();
-    PROTECT(ascent = allocVector(REALSXP, n));
-    PROTECT(descent = allocVector(REALSXP, n));
-    PROTECT(width = allocVector(REALSXP, n));
+    VAPROTECT(ascent, allocVector(REALSXP, n));
+    VAPROTECT(descent, allocVector(REALSXP, n));
+    VAPROTECT(width, allocVector(REALSXP, n));
     if (n > 0) {
 	for (i=0; i<n; i++) {
 	    gcontextFromgpar(currentgp, i, &gc, dd);
@@ -3681,7 +3681,7 @@ SEXP L_stringMetric(SEXP label)
                 REAL(gridStateElement(dd, GSS_SCALE))[0];
 	}
     }
-    PROTECT(result = allocVector(VECSXP, 3));
+    VAPROTECT(result, allocVector(VECSXP, 3));
     SET_VECTOR_ELT(result, 0, ascent);
     SET_VECTOR_ELT(result, 1, descent);
     SET_VECTOR_ELT(result, 2, width);    

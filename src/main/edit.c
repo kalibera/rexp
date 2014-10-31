@@ -171,11 +171,11 @@ SEXP do_edit(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 
     if (asLogical(GetOption1(install("keep.source")))) {
-	PROTECT(Rfn = findFun(install("readLines"), R_BaseEnv));
-	PROTECT(src = lang2(Rfn, ScalarString(mkChar(R_ExpandFileName(filename)))));
-	PROTECT(src = eval(src, R_BaseEnv));
-	PROTECT(Rfn = findFun(install("srcfilecopy"), R_BaseEnv));
-	PROTECT(srcfile = lang3(Rfn, ScalarString(mkChar("<tmp>")), src));
+	VAPROTECT(Rfn, findFun(install("readLines"), R_BaseEnv));
+	VAPROTECT(src, lang2(Rfn, ScalarString(mkChar(R_ExpandFileName(filename)))));
+	VAPROTECT(src, eval(src, R_BaseEnv));
+	VAPROTECT(Rfn, findFun(install("srcfilecopy"), R_BaseEnv));
+	VAPROTECT(srcfile, lang3(Rfn, ScalarString(mkChar("<tmp>")), src));
 	srcfile = eval(srcfile, R_BaseEnv);
 	UNPROTECT(5);
     } else

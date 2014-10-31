@@ -207,7 +207,7 @@ SEXP C_BinCount(SEXP x, SEXP breaks, SEXP right, SEXP lowest)
     int sr = asLogical(right), sl = asLogical(lowest);
     if (sr == NA_INTEGER) error(_("invalid '%s' argument"), "right");
     if (sl == NA_INTEGER) error(_("invalid '%s' argument"), "include.lowest");
-    SEXP counts; PROTECT(counts = allocVector(INTSXP, nB - 1));
+    SEXP counts; VAPROTECT(counts, allocVector(INTSXP, nB - 1));
     C_bincount(REAL(x), n, REAL(breaks), nB, INTEGER(counts), sr, sl);
     UNPROTECT(3);
     return counts;

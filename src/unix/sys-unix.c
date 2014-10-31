@@ -269,7 +269,7 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 		buf[read - 1] = '\0'; /* chop final CR */
 	    tchar = mkChar(buf);
 	    UNPROTECT(1);
-	    PROTECT(tlist = CONS(tchar, tlist));
+	    VAPROTECT(tlist, CONS(tchar, tlist));
 	}
 	res = pclose(fp);
 #ifdef HAVE_SYS_WAIT_H
@@ -346,7 +346,7 @@ SEXP attribute_hidden do_sysinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
     char *login;
 
     checkArity(op, args);
-    PROTECT(ans = allocVector(STRSXP, 8));
+    VAPROTECT(ans, allocVector(STRSXP, 8));
     if(uname(&name) == -1) {
 	UNPROTECT(1);
 	return R_NilValue;
@@ -376,7 +376,7 @@ SEXP attribute_hidden do_sysinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
     SET_STRING_ELT(ans, 7, mkChar("unknown"));
 #endif
-    PROTECT(ansnames = allocVector(STRSXP, 8));
+    VAPROTECT(ansnames, allocVector(STRSXP, 8));
     SET_STRING_ELT(ansnames, 0, mkChar("sysname"));
     SET_STRING_ELT(ansnames, 1, mkChar("release"));
     SET_STRING_ELT(ansnames, 2, mkChar("version"));

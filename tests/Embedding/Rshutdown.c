@@ -25,7 +25,7 @@ callLength(SEXP obj)
     int errorOccurred;
     int len = -1;
 
-    PROTECT(e = lang2(install("length"), obj));
+    VAPROTECT(e, lang2(install("length"), obj));
     val = R_tryEval(e, R_GlobalEnv, &errorOccurred);
     len = INTEGER(val)[0];
     UNPROTECT(1);

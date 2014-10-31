@@ -90,7 +90,7 @@ static R_INLINE SEXP random1(SEXP sn, SEXP sa, ran1 fn, SEXPTYPE type)
 	error(_("invalid arguments"));
     }
     n = resultLength(sn);
-    PROTECT(x = allocVector(type, n));
+    VAPROTECT(x, allocVector(type, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
@@ -100,7 +100,7 @@ static R_INLINE SEXP random1(SEXP sn, SEXP sa, ran1 fn, SEXPTYPE type)
         fillWithNAs(x, n, type);
     } else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(sa, REALSXP));
+	VAPROTECT(a, coerceVector(sa, REALSXP));
 	GetRNGstate();
 	double *ra = REAL(a);
 	errno = 0;
@@ -161,7 +161,7 @@ static R_INLINE SEXP random2(SEXP sn, SEXP sa, SEXP sb, ran2 fn, SEXPTYPE type)
 	error(_("invalid arguments"));
     }
     n = resultLength(sn);
-    PROTECT(x = allocVector(type, n));
+    VAPROTECT(x, allocVector(type, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
@@ -173,8 +173,8 @@ static R_INLINE SEXP random2(SEXP sn, SEXP sa, SEXP sb, ran2 fn, SEXPTYPE type)
     }
     else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(sa, REALSXP));
-	PROTECT(b = coerceVector(sb, REALSXP));
+	VAPROTECT(a, coerceVector(sa, REALSXP));
+	VAPROTECT(b, coerceVector(sb, REALSXP));
 	GetRNGstate();
 	double *ra = REAL(a), *rb = REAL(b);
 	if (type == INTSXP) {
@@ -242,7 +242,7 @@ static R_INLINE SEXP random3(SEXP sn, SEXP sa, SEXP sb, SEXP sc, ran3 fn,
 	error(_("invalid arguments"));
     }
     n = resultLength(sn);
-    PROTECT(x = allocVector(type, n));
+    VAPROTECT(x, allocVector(type, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
@@ -255,9 +255,9 @@ static R_INLINE SEXP random3(SEXP sn, SEXP sa, SEXP sb, SEXP sc, ran3 fn,
     }
     else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(sa, REALSXP));
-	PROTECT(b = coerceVector(sb, REALSXP));
-	PROTECT(c = coerceVector(sc, REALSXP));
+	VAPROTECT(a, coerceVector(sa, REALSXP));
+	VAPROTECT(b, coerceVector(sb, REALSXP));
+	VAPROTECT(c, coerceVector(sc, REALSXP));
 	GetRNGstate();
 	double *ra = REAL(a), *rb = REAL(b), *rc = REAL(c);
 	errno = 0;
@@ -337,7 +337,7 @@ SEXP do_rmultinom(SEXP sn, SEXP ssize, SEXP prob)
     /* check and make sum = 1: */
     FixupProb(REAL(prob), k);
     GetRNGstate();
-    PROTECT(ans = allocMatrix(INTSXP, k, n));/* k x n : natural for columnwise store */
+    VAPROTECT(ans, allocMatrix(INTSXP, k, n));/* k x n : natural for columnwise store */
     for(i=ik = 0; i < n; i++, ik += k) {
 //	if ((i+1) % NINTERRUPT) R_CheckUserInterrupt();
 	rmultinom(size, REAL(prob), k, &INTEGER(ans)[ik]);
@@ -346,7 +346,7 @@ SEXP do_rmultinom(SEXP sn, SEXP ssize, SEXP prob)
     if(!isNull(nms = getAttrib(prob, R_NamesSymbol))) {
 	SEXP dimnms;
 	PROTECT(nms);
-	PROTECT(dimnms = allocVector(VECSXP, 2));
+	VAPROTECT(dimnms, allocVector(VECSXP, 2));
 	SET_VECTOR_ELT(dimnms, 0, nms);
 	setAttrib(ans, R_DimNamesSymbol, dimnms);
 	UNPROTECT(2);
@@ -399,12 +399,12 @@ SEXP r2dtable(SEXP n, SEXP r, SEXP c)
 
     jwork = (int *) R_alloc(nc, sizeof(int));
 
-    PROTECT(ans = allocVector(VECSXP, n_of_samples));
+    VAPROTECT(ans, allocVector(VECSXP, n_of_samples));
 
     GetRNGstate();
 
     for(i = 0; i < n_of_samples; i++) {
-	PROTECT(tmp = allocMatrix(INTSXP, nr, nc));
+	VAPROTECT(tmp, allocMatrix(INTSXP, nr, nc));
 	rcont2(&nr, &nc, row_sums, col_sums, &n_of_cases, fact,
 	       jwork, INTEGER(tmp));
 	SET_VECTOR_ELT(ans, i, tmp);

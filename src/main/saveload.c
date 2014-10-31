@@ -1110,8 +1110,8 @@ static void NewDataSave (SEXP s, FILE *fp, OutputRoutines *m, SaveLoadData *d)
     OutputCtxtData cinfo;
     cinfo.fp = fp; cinfo.methods = m;  cinfo.data = d;
 
-    PROTECT(sym_table = MakeHashTable());
-    PROTECT(env_table = MakeHashTable());
+    VAPROTECT(sym_table, MakeHashTable());
+    VAPROTECT(env_table, MakeHashTable());
     NewMakeLists(s, sym_table, env_table);
     FixHashEntries(sym_table);
     FixHashEntries(env_table);
@@ -1185,7 +1185,7 @@ static SEXP NewReadVec(SEXPTYPE type, SEXP sym_table, SEXP env_table, FILE *fp, 
     SEXP my_vec;
 
     length = m->InInteger(fp, d);
-    PROTECT(my_vec = allocVector(type, length));
+    VAPROTECT(my_vec, allocVector(type, length));
     switch(type) {
     case CHARSXP:
 	my_vec = InCHARSXP(fp, m, d);
@@ -1235,32 +1235,32 @@ static SEXP NewReadItem (SEXP sym_table, SEXP env_table, FILE *fp,
     switch (type) {
     case SYMSXP:
 	pos = m->InInteger(fp, d);
-	PROTECT(s = pos ? VECTOR_ELT(sym_table, pos - 1) : R_NilValue);
+	VAPROTECT(s, pos ? VECTOR_ELT(sym_table, pos - 1) : R_NilValue);
 	break;
     case ENVSXP:
 	pos = m->InInteger(fp, d);
-	PROTECT(s = pos ? VECTOR_ELT(env_table, pos - 1) : R_NilValue);
+	VAPROTECT(s, pos ? VECTOR_ELT(env_table, pos - 1) : R_NilValue);
 	break;
     case LISTSXP:
     case LANGSXP:
     case CLOSXP:
     case PROMSXP:
     case DOTSXP:
-	PROTECT(s = allocSExp(type));
+	VAPROTECT(s, allocSExp(type));
 	SET_TAG(s, NewReadItem(sym_table, env_table, fp, m, d));
 	SETCAR(s, NewReadItem(sym_table, env_table, fp, m, d));
 	SETCDR(s, NewReadItem(sym_table, env_table, fp, m, d));
 	/*UNPROTECT(1);*/
 	break;
     case EXTPTRSXP:
-	PROTECT(s = allocSExp(type));
+	VAPROTECT(s, allocSExp(type));
 	R_SetExternalPtrAddr(s, NULL);
 	R_SetExternalPtrProtected(s, NewReadItem(sym_table, env_table, fp, m, d));
 	R_SetExternalPtrTag(s, NewReadItem(sym_table, env_table, fp, m, d));
 	/*UNPROTECT(1);*/
 	break;
     case WEAKREFSXP:
-	PROTECT(s = R_MakeWeakRef(R_NilValue, R_NilValue, R_NilValue, FALSE));
+	VAPROTECT(s, R_MakeWeakRef(R_NilValue, R_NilValue, R_NilValue, FALSE));
 	break;
     case SPECIALSXP:
     case BUILTINSXP:
@@ -1268,9 +1268,9 @@ static SEXP NewReadItem (SEXP sym_table, SEXP env_table, FILE *fp,
 	int index = StrToInternal(m->InString(fp, d));
 	if (index == NA_INTEGER) {
 	    warning(_("unrecognized internal function name \"%s\""), d->buffer.data); 
-	    PROTECT(s = R_NilValue);
+	    VAPROTECT(s, R_NilValue);
 	} else
-	    PROTECT(s = mkPRIMSXP(index, type == BUILTINSXP));
+	    VAPROTECT(s, mkPRIMSXP(index, type == BUILTINSXP));
 	break;
     case CHARSXP:
     case LGLSXP:
@@ -1280,7 +1280,7 @@ static SEXP NewReadItem (SEXP sym_table, SEXP env_table, FILE *fp,
     case STRSXP:
     case VECSXP:
     case EXPRSXP:
-	PROTECT(s = NewReadVec(type, sym_table, env_table, fp, m, d));
+	VAPROTECT(s, NewReadVec(type, sym_table, env_table, fp, m, d));
 	break;
     case BCODESXP:
 	error(_("cannot read byte code objects from version 1 workspaces"));
@@ -1322,8 +1322,8 @@ static SEXP NewDataLoad (FILE *fp, InputRoutines *m, SaveLoadData *d)
     env_count = m->InInteger(fp, d);
 
     /* Allocate the symbol and environment tables */
-    PROTECT(sym_table = allocVector(VECSXP, sym_count));
-    PROTECT(env_table = allocVector(VECSXP, env_count));
+    VAPROTECT(sym_table, allocVector(VECSXP, sym_count));
+    VAPROTECT(env_table, allocVector(VECSXP, env_count));
 
     /* Read back and install symbols */
     for (count = 0; count < sym_count; ++count) {
@@ -1968,7 +1968,7 @@ SEXP attribute_hidden do_save(SEXP call, SEXP op, SEXP args, SEXP env)
     cntxt.cenddata = fp;
 
     len = length(CAR(args));
-    PROTECT(s = allocList(len));
+    VAPROTECT(s, allocList(len));
 
     t = s;
     for (j = 0; j < len; j++, t = CDR(t)) {
@@ -2007,7 +2007,7 @@ static SEXP RestoreToEnv(SEXP ans, SEXP aenv)
     if (TYPEOF(ans) == VECSXP) {
 	int i;
 	PROTECT(ans);
-	PROTECT(names = getAttrib(ans, R_NamesSymbol)); /* PROTECT needed?? */
+	VAPROTECT(names, getAttrib(ans, R_NamesSymbol)); /* PROTECT needed?? */
 	if (TYPEOF(names) != STRSXP || LENGTH(names) != LENGTH(ans))
 	    error(_("not a valid named list"));
 	for (i = 0; i < LENGTH(ans); i++) {
@@ -2029,7 +2029,7 @@ static SEXP RestoreToEnv(SEXP ans, SEXP aenv)
     PROTECT(ans);
     a = ans;
     while (a != R_NilValue) {a = CDR(a); cnt++;}
-    PROTECT(names = allocVector(STRSXP, cnt));
+    VAPROTECT(names, allocVector(STRSXP, cnt));
     cnt = 0;
     a = ans;
     while (a != R_NilValue) {
@@ -2081,7 +2081,7 @@ SEXP attribute_hidden do_load(SEXP call, SEXP op, SEXP args, SEXP env)
     cntxt.cend = &saveload_cleanup;
     cntxt.cenddata = fp;
 
-    PROTECT(val = R_LoadSavedData(fp, aenv));
+    VAPROTECT(val, R_LoadSavedData(fp, aenv));
 
     /* end the context after anything that could raise an error but before
        closing the file so it doesn't get done twice */
@@ -2163,7 +2163,7 @@ void R_SaveGlobalEnvToFile(const char *name)
     else {
 	SEXP args, call;
 	args = LCONS(ScalarString(mkChar(name)), R_NilValue);
-	PROTECT(call = LCONS(sym, args));
+	VAPROTECT(call, LCONS(sym, args));
 	eval(call, R_GlobalEnv);
 	UNPROTECT(1);
     }
@@ -2184,9 +2184,9 @@ void R_RestoreGlobalEnvFromFile(const char *name, Rboolean quiet)
     else {
 	SEXP args, call, sQuiet;
 	sQuiet = quiet ? mkTrue() : mkFalse();
-	PROTECT(args = LCONS(sQuiet, R_NilValue));
+	VAPROTECT(args, LCONS(sQuiet, R_NilValue));
 	args = LCONS(ScalarString(mkChar(name)), args);
-	PROTECT(call = LCONS(sym, args));
+	VAPROTECT(call, LCONS(sym, args));
 	eval(call, R_GlobalEnv);
 	UNPROTECT(2);
     }
@@ -2299,7 +2299,7 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     R_InitConnOutPStream(&out, con, type, version, NULL, NULL);
 
     len = length(list);
-    PROTECT(s = allocList(len));
+    VAPROTECT(s, allocList(len));
 
     t = s;
     for (j = 0; j < len; j++, t = CDR(t)) {
@@ -2373,7 +2373,7 @@ SEXP attribute_hidden do_loadFromConn2(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_InitConnInPStream(&in, con, R_pstream_any_format, NULL, NULL);
 	/* PROTECT is paranoia: some close() method might allocate */
 	R_InitReadItemDepth = R_ReadItemDepth = -asInteger(CADDR(args));
-	PROTECT(res = RestoreToEnv(R_Unserialize(&in), aenv));
+	VAPROTECT(res, RestoreToEnv(R_Unserialize(&in), aenv));
 	R_ReadItemDepth = 0;
 	if(!wasopen) {endcontext(&cntxt); con->close(con);}
 	UNPROTECT(1);

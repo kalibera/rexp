@@ -135,7 +135,7 @@ SEXP codeFilesAppend(SEXP f1, SEXP f2)
 	error(_("invalid '%s' argument"), "file2");
     if (n2 < 1) return allocVector(LGLSXP, 0);
     n = (n1 > n2) ? n1 : n2; // will be n2.
-    SEXP ans; PROTECT(ans = allocVector(LGLSXP, n));
+    SEXP ans; VAPROTECT(ans, allocVector(LGLSXP, n));
     for (int i = 0; i < n; i++) LOGICAL(ans)[i] = 0;  /* all FALSE */
     FILE *fp1, *fp2;
     char buf[APPENDBUFSIZE];

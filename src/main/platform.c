@@ -73,8 +73,8 @@ static void Init_R_Machine(SEXP rho)
 	   &R_AccuracyInfo.xmax);
 
     R_dec_min_exponent = (int) floor(log10(R_AccuracyInfo.xmin)); /* smallest decimal exponent */
-    PROTECT(ans = allocVector(VECSXP, 18));
-    PROTECT(nms = allocVector(STRSXP, 18));
+    VAPROTECT(ans, allocVector(VECSXP, 18));
+    VAPROTECT(nms, allocVector(STRSXP, 18));
     SET_STRING_ELT(nms, 0, mkChar("double.eps"));
     SET_VECTOR_ELT(ans, 0, ScalarReal(R_AccuracyInfo.eps));
 
@@ -151,8 +151,8 @@ static void Init_R_Platform(SEXP rho)
 {
     SEXP value, names;
 
-    PROTECT(value = allocVector(VECSXP, 8));
-    PROTECT(names = allocVector(STRSXP, 8));
+    VAPROTECT(value, allocVector(VECSXP, 8));
+    VAPROTECT(names, allocVector(STRSXP, 8));
     SET_STRING_ELT(names, 0, mkChar("OS.type"));
     SET_STRING_ELT(names, 1, mkChar("file.sep"));
     SET_STRING_ELT(names, 2, mkChar("dynlib.ext"));
@@ -395,7 +395,7 @@ SEXP attribute_hidden do_fileappend(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (n2 < 1)
 	return allocVector(LGLSXP, 0);
     n = (n1 > n2) ? n1 : n2;
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     for (int i = 0; i < n; i++) LOGICAL(ans)[i] = 0;  /* all FALSE */
     if (n1 == 1) { /* common case */
 	FILE *fp1, *fp2;
@@ -449,7 +449,7 @@ SEXP attribute_hidden do_filecreate(SEXP call, SEXP op, SEXP args, SEXP rho)
     show = asLogical(CADR(args));
     if (show == NA_LOGICAL) show = 0;
     n = length(fn);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     for (i = 0; i < n; i++) {
 	LOGICAL(ans)[i] = 0;
 	if (STRING_ELT(fn, i) == NA_STRING) continue;
@@ -474,7 +474,7 @@ SEXP attribute_hidden do_fileremove(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isString(f))
 	error(_("invalid first filename"));
     n = length(f);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     for (i = 0; i < n; i++) {
 	if (STRING_ELT(f, i) != NA_STRING) {
 	    LOGICAL(ans)[i] =
@@ -560,7 +560,7 @@ SEXP attribute_hidden do_filesymlink(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 
 #ifdef HAVE_SYMLINK
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     for (i = 0; i < n; i++) {
 	if (STRING_ELT(f1, i%n1) == NA_STRING ||
 	    STRING_ELT(f2, i%n2) == NA_STRING)
@@ -633,7 +633,7 @@ SEXP attribute_hidden do_filelink(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return allocVector(LGLSXP, 0);
     n = (n1 > n2) ? n1 : n2;
 #ifdef HAVE_LINK
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     for (i = 0; i < n; i++) {
 	if (STRING_ELT(f1, i%n1) == NA_STRING ||
 	    STRING_ELT(f2, i%n2) == NA_STRING)
@@ -707,7 +707,7 @@ SEXP attribute_hidden do_filerename(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("invalid '%s' argument"), "to");
     if (n2 != n1)
 	error(_("'from' and 'to' are of different lengths"));
-    PROTECT(ans = allocVector(LGLSXP, n1));
+    VAPROTECT(ans, allocVector(LGLSXP, n1));
     for (i = 0; i < n1; i++) {
 	if (STRING_ELT(f1, i) == NA_STRING ||
 	    STRING_ELT(f2, i) == NA_STRING) {
@@ -802,8 +802,8 @@ SEXP attribute_hidden do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 	ncols = 7;
 #endif
     }
-    PROTECT(ans = allocVector(VECSXP, ncols));
-    PROTECT(ansnames = allocVector(STRSXP, ncols));
+    VAPROTECT(ans, allocVector(VECSXP, ncols));
+    VAPROTECT(ansnames, allocVector(STRSXP, ncols));
     fsize = SET_VECTOR_ELT(ans, 0, allocVector(REALSXP, n));
     SET_STRING_ELT(ansnames, 0, mkChar("size"));
     isdir = SET_VECTOR_ELT(ans, 1, allocVector(LGLSXP, n));
@@ -953,7 +953,7 @@ SEXP attribute_hidden do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
     setAttrib(ans, R_NamesSymbol, ansnames);
-    PROTECT(xxclass = mkString("octmode"));
+    VAPROTECT(xxclass, mkString("octmode"));
     classgets(mode, xxclass);
     UNPROTECT(3);
     return ans;
@@ -974,7 +974,7 @@ SEXP attribute_hidden do_direxists(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isString(fn))
 	error(_("invalid filename argument"));
     int n = length(fn);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     for (int i = 0; i < n; i++) {
 #ifdef Win32
 	wchar_t *wfn = filenameToWchar(STRING_ELT(fn, i), TRUE);
@@ -1361,7 +1361,7 @@ SEXP attribute_hidden do_fileaccess(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (mode & 1) modemask |= X_OK;
     if (mode & 2) modemask |= W_OK;
     if (mode & 4) modemask |= R_OK;
-    PROTECT(ans = allocVector(INTSXP, n));
+    VAPROTECT(ans, allocVector(INTSXP, n));
     for (i = 0; i < n; i++)
 	if (STRING_ELT(fn, i) != NA_STRING) {
 	    INTEGER(ans)[i] =
@@ -1820,7 +1820,7 @@ SEXP attribute_hidden do_setlocale(SEXP call, SEXP op, SEXP args, SEXP rho)
 	p = NULL; /* -Wall */
 	error(_("invalid '%s' argument"), "category");
     }
-    PROTECT(ans = allocVector(STRSXP, 1));
+    VAPROTECT(ans, allocVector(STRSXP, 1));
     if (p) SET_STRING_ELT(ans, 0, mkChar(p));
     else  {
 	SET_STRING_ELT(ans, 0, mkChar(""));
@@ -1842,8 +1842,8 @@ SEXP attribute_hidden do_localeconv(SEXP call, SEXP op, SEXP args, SEXP rho)
     int i = 0;
     char buff[20];
 
-    PROTECT(ans = allocVector(STRSXP, 18));
-    PROTECT(ansnames = allocVector(STRSXP, 18));
+    VAPROTECT(ans, allocVector(STRSXP, 18));
+    VAPROTECT(ansnames, allocVector(STRSXP, 18));
     SET_STRING_ELT(ans, i, mkChar(lc->decimal_point));
     SET_STRING_ELT(ansnames, i++, mkChar("decimal_point"));
     SET_STRING_ELT(ans, i, mkChar(lc->thousands_sep));
@@ -1904,7 +1904,7 @@ SEXP attribute_hidden do_pathexpand(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isString(fn))
 	error(_("invalid '%s' argument"), "path");
     n = length(fn);
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
         SEXP tmp = STRING_ELT(fn, i);
         if (tmp != NA_STRING) {
@@ -1964,8 +1964,8 @@ SEXP attribute_hidden do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
 
-    PROTECT(ans = allocVector(LGLSXP, 16));
-    PROTECT(ansnames = allocVector(STRSXP, 16));
+    VAPROTECT(ans, allocVector(LGLSXP, 16));
+    VAPROTECT(ansnames, allocVector(STRSXP, 16));
 
     SET_STRING_ELT(ansnames, i, mkChar("jpeg"));
 #ifdef HAVE_JPEG
@@ -2417,7 +2417,7 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     fn = CAR(args);
     nfiles = length(fn);
-    PROTECT(ans = allocVector(LGLSXP, nfiles));
+    VAPROTECT(ans, allocVector(LGLSXP, nfiles));
     if (nfiles > 0) {
 	args = CDR(args);
 	if (!isString(fn))
@@ -2637,7 +2637,7 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     fn = CAR(args);
     nfiles = length(fn);
-    PROTECT(ans = allocVector(LGLSXP, nfiles));
+    VAPROTECT(ans, allocVector(LGLSXP, nfiles));
     if (nfiles > 0) {
 	args = CDR(args);
 	if (!isString(fn))
@@ -2705,8 +2705,8 @@ SEXP attribute_hidden do_l10n_info(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
     SEXP ans, names;
     checkArity(op, args);
-    PROTECT(ans = allocVector(VECSXP, len));
-    PROTECT(names = allocVector(STRSXP, len));
+    VAPROTECT(ans, allocVector(VECSXP, len));
+    VAPROTECT(names, allocVector(STRSXP, len));
     SET_STRING_ELT(names, 0, mkChar("MBCS"));
     SET_STRING_ELT(names, 1, mkChar("UTF-8"));
     SET_STRING_ELT(names, 2, mkChar("Latin-1"));
@@ -2736,7 +2736,7 @@ SEXP attribute_hidden do_syschmod(SEXP call, SEXP op, SEXP args, SEXP env)
     if (!isString(paths))
 	error(_("invalid '%s' argument"), "paths");
     n = LENGTH(paths);
-    PROTECT(smode = coerceVector(CADR(args), INTSXP));
+    VAPROTECT(smode, coerceVector(CADR(args), INTSXP));
     modes = INTEGER(smode);
     m = LENGTH(smode);
     if(!m && n) error(_("'mode' must be of length at least one"));
@@ -2746,7 +2746,7 @@ SEXP attribute_hidden do_syschmod(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef HAVE_UMASK
     um = umask(0); umask(um);
 #endif
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     for (i = 0; i < n; i++) {
 	mode_t mode = (mode_t) modes[i % m];
 	if (mode == NA_INTEGER) mode = 0777;
@@ -2781,7 +2781,7 @@ SEXP attribute_hidden do_syschmod(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "paths");
     n = LENGTH(paths);
     warning("insufficient OS support on this platform");
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     for (i = 0; i < n; i++) LOGICAL(ans)[i] = 0;
     UNPROTECT(1);
     return ans;
@@ -2809,7 +2809,7 @@ SEXP attribute_hidden do_sysumask(SEXP call, SEXP op, SEXP args, SEXP env)
     warning(_("insufficient OS support on this platform"));
     R_Visible = FALSE;
 #endif
-    PROTECT(ans = ScalarInteger(res));
+    VAPROTECT(ans, ScalarInteger(res));
     setAttrib(ans, R_ClassSymbol, mkString("octmode"));
     UNPROTECT(1);
     return ans;
@@ -2830,7 +2830,7 @@ SEXP attribute_hidden do_readlink(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isString(paths))
 	error(_("invalid '%s' argument"), "paths");
     n = LENGTH(paths);
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
 #ifdef HAVE_READLINK
     for (i = 0; i < n; i++) {
 	memset(buf, 0, PATH_MAX+1);
@@ -2851,8 +2851,8 @@ SEXP attribute_hidden do_Cstack_info(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP ans, nms;
 
     checkArity(op, args);
-    PROTECT(ans = allocVector(INTSXP, 4));
-    PROTECT(nms = allocVector(STRSXP, 4));
+    VAPROTECT(ans, allocVector(INTSXP, 4));
+    VAPROTECT(nms, allocVector(STRSXP, 4));
     /* FIXME: could be out of range */
     INTEGER(ans)[0] = (R_CStackLimit == -1) ? NA_INTEGER : (int) R_CStackLimit;
     INTEGER(ans)[1] = (R_CStackLimit == -1) ? NA_INTEGER : (int)

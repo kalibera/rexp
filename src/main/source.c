@@ -51,7 +51,7 @@ SEXP attribute_hidden getParseContext(void)
     }
 
     nn = 16; /* initially allocate space for 16 lines */
-    PROTECT(ans = allocVector(STRSXP, nn));
+    VAPROTECT(ans, allocVector(STRSXP, nn));
     c = context[last];
     nread = 0;
     while(c) {
@@ -62,7 +62,7 @@ SEXP attribute_hidden getParseContext(void)
 		SET_STRING_ELT(ans2, i, STRING_ELT(ans, i));
 	    nn *= 2;
 	    UNPROTECT(1); /* old ans */
-	    PROTECT(ans = ans2);
+	    VAPROTECT(ans, ans2);
 	}
 	i = last;
 	while((c = context[i++])) {
@@ -77,7 +77,7 @@ SEXP attribute_hidden getParseContext(void)
     	nread--;
     	R_ParseContextLine--;
     }
-    PROTECT(ans2 = allocVector(STRSXP, nread));
+    VAPROTECT(ans2, allocVector(STRSXP, nread));
     for(i = 0; i < nread; i++)
 	SET_STRING_ELT(ans2, i, STRING_ELT(ans, i));
     UNPROTECT(2);
@@ -90,7 +90,7 @@ static void getParseFilename(char* buffer, size_t buflen)
     if (R_ParseErrorFile) {
     	if (isEnvironment(R_ParseErrorFile)) {
 	    SEXP filename;
-	    PROTECT(filename = findVar(install("filename"), R_ParseErrorFile));
+	    VAPROTECT(filename, findVar(install("filename"), R_ParseErrorFile));
 	    if (isString(filename) && length(filename)) {
 	        strncpy(buffer, CHAR(STRING_ELT(filename, 0)), buflen - 1);
                 buffer[buflen - 1] = '\0';
@@ -110,7 +110,7 @@ static SEXP tabExpand(SEXP strings)
     const char *input;
     SEXP result;
     PROTECT(strings);
-    PROTECT(result = allocVector(STRSXP, length(strings)));
+    VAPROTECT(result, allocVector(STRSXP, length(strings)));
     for (i = 0; i < length(strings); i++) {
     	input = CHAR(STRING_ELT(strings, i));
     	for (b = buffer; *input && (b-buffer < 192); input++) {
@@ -131,7 +131,7 @@ void parseError(SEXP call, int linenum)
     SEXP context;
     int len, width;
     char filename[128], buffer[10];
-    PROTECT(context = tabExpand(getParseContext()));
+    VAPROTECT(context, tabExpand(getParseContext()));
     len = length(context);
     if (linenum) {
 	getParseFilename(filename, sizeof(filename)-2);
@@ -215,7 +215,7 @@ SEXP attribute_hidden do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
     if (num == 0)
 	return(allocVector(EXPRSXP, 0));
 
-    PROTECT(text = coerceVector(CAR(args), STRSXP));
+    VAPROTECT(text, coerceVector(CAR(args), STRSXP));
     if(length(CAR(args)) && !length(text))
 	errorcall(call, _("coercion of 'text' to character was unsuccessful"));
     args = CDR(args);
@@ -238,7 +238,7 @@ SEXP attribute_hidden do_parse(SEXP call, SEXP op, SEXP args, SEXP env)
     if (prompt == R_NilValue)
 	PROTECT(prompt);
     else
-	PROTECT(prompt = coerceVector(prompt, STRSXP));
+	VAPROTECT(prompt, coerceVector(prompt, STRSXP));
 
     if (length(text) > 0) {
 	/* If 'text' has known encoding then we can be sure it will be

@@ -122,7 +122,7 @@ static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
 	warning(_("assignment outside vector/list limits (extending from %d to %d)"),
 		len, newlen);
     PROTECT(x);
-    PROTECT(newx = allocVector(TYPEOF(x), newlen));
+    VAPROTECT(newx, allocVector(TYPEOF(x), newlen));
 
     /* Copy the elements into place. */
     switch(TYPEOF(x)) {
@@ -173,7 +173,7 @@ static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
     /* Adjust the attribute list. */
     names = getAttrib(x, R_NamesSymbol);
     if (!isNull(names)) {
-	PROTECT(newnames = allocVector(STRSXP, newlen));
+	VAPROTECT(newnames, allocVector(STRSXP, newlen));
 	for (i = 0; i < len; i++)
 	    SET_STRING_ELT(newnames, i, STRING_ELT(names, i));
 	for (i = len; i < newlen; i++)
@@ -192,7 +192,7 @@ static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
 static SEXP embedInVector(SEXP v)
 {
     SEXP ans;
-    PROTECT(ans = allocVector(VECSXP, 1));
+    VAPROTECT(ans, allocVector(VECSXP, 1));
     SET_VECTOR_ELT(ans, 0, v);
     UNPROTECT(1);
     return (ans);
@@ -410,7 +410,7 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
     len = xlength(x);
     lenw = xlength(which);
     /* calculate the length of the result */
-    PROTECT(include = allocVector(INTSXP, len));
+    VAPROTECT(include, allocVector(INTSXP, len));
     for (i = 0; i < len; i++)
 	INTEGER(include)[i] = 1;
     for (i = 0; i < lenw; i++) {
@@ -425,7 +425,7 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
 	UNPROTECT(1);
 	return x;
     }
-    PROTECT(xnew = allocVector(TYPEOF(x), ii));
+    VAPROTECT(xnew, allocVector(TYPEOF(x), ii));
     ii = 0;
     for (i = 0; i < len; i++) {
 	if (INTEGER(include)[i] == 1) {
@@ -435,7 +435,7 @@ static SEXP DeleteListElements(SEXP x, SEXP which)
     }
     xnames = getAttrib(x, R_NamesSymbol);
     if (xnames != R_NilValue) {
-	PROTECT(xnewnames = allocVector(STRSXP, ii));
+	VAPROTECT(xnewnames, allocVector(STRSXP, ii));
 	ii = 0;
 	for (i = 0; i < len; i++) {
 	    if (INTEGER(include)[i] == 1) {
@@ -494,7 +494,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     }
 
     stretch = 1;
-    PROTECT(indx = makeSubscript(x, s, &stretch, R_NilValue));
+    VAPROTECT(indx, makeSubscript(x, s, &stretch, R_NilValue));
     n = xlength(indx);
     if(xlength(y) > 1)
 	for(i = 0; i < n; i++)
@@ -529,7 +529,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* objects.  A full duplication is wasteful. */
 
     if (x == y)
-	PROTECT(y = shallow_duplicate(y));
+	VAPROTECT(y, shallow_duplicate(y));
     else
 	PROTECT(y);
 
@@ -734,7 +734,7 @@ static SEXP VectorAssign(SEXP call, SEXP x, SEXP s, SEXP y)
 	    }
 	}
 	else {
-	    PROTECT(oldnames = allocVector(STRSXP, nx));
+	    VAPROTECT(oldnames, allocVector(STRSXP, nx));
 	    for (i = 0; i < nx; i++)
 		SET_STRING_ELT(oldnames, i, R_BlankString);
 	    for (i = 0; i < n; i++) {
@@ -808,7 +808,7 @@ static SEXP MatrixAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* objects.  A full duplication is wasteful. */
 
     if (x == y)
-	PROTECT(y = shallow_duplicate(y));
+	VAPROTECT(y, shallow_duplicate(y));
     else
 	PROTECT(y);
 
@@ -1033,7 +1033,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     SEXP dims, tmp;
     const void *vmax = vmaxget();
 
-    PROTECT(dims = getAttrib(x, R_DimSymbol));
+    VAPROTECT(dims, getAttrib(x, R_DimSymbol));
     if (dims == R_NilValue || (k = LENGTH(dims)) != length(s))
 	error(_("incorrect number of subscripts"));
 
@@ -1099,7 +1099,7 @@ static SEXP ArrayAssign(SEXP call, SEXP x, SEXP s, SEXP y)
     /* objects.  A full duplication is wasteful. */
 
     if (x == y)
-	PROTECT(y = shallow_duplicate(y));
+	VAPROTECT(y, shallow_duplicate(y));
     else
 	PROTECT(y);
 
@@ -1262,8 +1262,8 @@ static SEXP SimpleListAssign(SEXP call, SEXP x, SEXP s, SEXP y, int ind)
     if (length(s) > 1)
 	error(_("invalid number of subscripts to list assign"));
 
-    PROTECT(sub = GetOneIndex(sub, ind));
-    PROTECT(indx = makeSubscript(x, sub, &stretch, R_NilValue));
+    VAPROTECT(sub, GetOneIndex(sub, ind));
+    VAPROTECT(indx, makeSubscript(x, sub, &stretch, R_NilValue));
 
     n = length(indx);
     if (n > 1)
@@ -1281,7 +1281,7 @@ static SEXP SimpleListAssign(SEXP call, SEXP x, SEXP s, SEXP y, int ind)
 	    for(i = 0; i < LENGTH(t); i++, z = CDR(z))
 		SET_TAG(z, installTrChar(STRING_ELT(t, i)));
 	}
-	PROTECT(x = listAppend(x, yi));
+	VAPROTECT(x, listAppend(x, yi));
 	nx = (int) stretch;
     }
     else PROTECT(x);
@@ -1307,8 +1307,8 @@ static SEXP listRemove(SEXP x, SEXP s, int ind)
     R_xlen_t stretch=0;
     const void *vmax = vmaxget();
     nx = length(x);
-    PROTECT(s = GetOneIndex(s, ind));
-    PROTECT(s = makeSubscript(x, s, &stretch, R_NilValue));
+    VAPROTECT(s, GetOneIndex(s, ind));
+    VAPROTECT(s, makeSubscript(x, s, &stretch, R_NilValue));
     ns = length(s);
     indx = (int*) R_alloc(nx, sizeof(int));
     for (i = 0; i < nx; i++) indx[i] = 1;
@@ -1452,7 +1452,7 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     oldtype = 0;
     if (TYPEOF(x) == LISTSXP || TYPEOF(x) == LANGSXP) {
 	oldtype = TYPEOF(x);
-	PROTECT(x = PairToVectorList(x));
+	VAPROTECT(x, PairToVectorList(x));
     }
     else if (xlength(x) == 0) {
 	if (xlength(y) == 0) {
@@ -1461,7 +1461,7 @@ SEXP attribute_hidden do_subassign_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	else {
 	    /* bug PR#2590 coerce only if null */
-	    if(isNull(x)) PROTECT(x = coerceVector(x, TYPEOF(y)));
+	    if(isNull(x)) VAPROTECT(x, coerceVector(x, TYPEOF(y)));
 	    else PROTECT(x);
 	}
     }
@@ -1525,14 +1525,14 @@ static SEXP DeleteOneVectorListItem(SEXP x, R_xlen_t which)
     R_xlen_t i, k, n;
     n = xlength(x);
     if (0 <= which && which < n) {
-	PROTECT(y = allocVector(TYPEOF(x), n - 1));
+	VAPROTECT(y, allocVector(TYPEOF(x), n - 1));
 	k = 0;
 	for (i = 0 ; i < n; i++)
 	    if(i != which)
 		SET_VECTOR_ELT_NR(y, k++, VECTOR_ELT(x, i));
 	xnames = getAttrib(x, R_NamesSymbol);
 	if (xnames != R_NilValue) {
-	    PROTECT(ynames = allocVector(STRSXP, n - 1));
+	    VAPROTECT(ynames, allocVector(STRSXP, n - 1));
 	    k = 0;
 	    for (i = 0 ; i < n; i++)
 		if(i != which)
@@ -1587,9 +1587,9 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	UNPROTECT(1);
 	if (length(y) == 1)
-	    PROTECT(x = allocVector(TYPEOF(y), 0));
+	    VAPROTECT(x, allocVector(TYPEOF(y), 0));
 	else
-	    PROTECT(x = allocVector(VECSXP, 0));
+	    VAPROTECT(x, allocVector(VECSXP, 0));
     }
 
     /* Ensure that the LHS is a local variable. */
@@ -1663,7 +1663,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else {
 	    if (ndims != nsubs)
 		error(_("[[ ]] improper number of subscripts"));
-	    PROTECT(indx = allocVector(INTSXP, ndims));
+	    VAPROTECT(indx, allocVector(INTSXP, ndims));
 	    names = getAttrib(x, R_DimNamesSymbol);
 	    for (i = 0; i < ndims; i++) {
 		INTEGER(indx)[i] = (int)
@@ -1817,7 +1817,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (stretch && newname != R_NilValue) {
 	    names = getAttrib(x, R_NamesSymbol);
 	    if (names == R_NilValue) {
-		PROTECT(names = allocVector(STRSXP, length(x)));
+		VAPROTECT(names, allocVector(STRSXP, length(x)));
 		SET_STRING_ELT(names, offset, newname);
 		setAttrib(x, R_NamesSymbol, names);
 		UNPROTECT(1);
@@ -1841,7 +1841,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else {
 	    if (ndims != nsubs)
 		error(_("[[ ]] improper number of subscripts"));
-	    PROTECT(indx = allocVector(INTSXP, ndims));
+	    VAPROTECT(indx, allocVector(INTSXP, ndims));
 	    names = getAttrib(x, R_DimNamesSymbol);
 	    for (i = 0; i < ndims; i++) {
 		INTEGER(indx)[i] = (int)
@@ -2027,8 +2027,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		if (imatch >= 0) {
 		    SEXP ans, ansnames;
 		    int ii;
-		    PROTECT(ans = allocVector(type, nx - 1));
-		    PROTECT(ansnames = allocVector(STRSXP, nx - 1));
+		    VAPROTECT(ans, allocVector(type, nx - 1));
+		    VAPROTECT(ansnames, allocVector(STRSXP, nx - 1));
 		    for (i = 0, ii = 0; i < nx; i++)
 			if (i != imatch) {
 			    SET_VECTOR_ELT(ans, ii, VECTOR_ELT(x, i));
@@ -2066,8 +2066,8 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		/* Enlarge the list, add the new element */
 		/* and finally, adjust the attributes. */
 		SEXP ans, ansnames;
-		PROTECT(ans = allocVector(VECSXP, nx + 1));
-		PROTECT(ansnames = allocVector(STRSXP, nx + 1));
+		VAPROTECT(ans, allocVector(VECSXP, nx + 1));
+		VAPROTECT(ansnames, allocVector(STRSXP, nx + 1));
 		for (i = 0; i < nx; i++)
 		    SET_VECTOR_ELT_NR(ans, i, VECTOR_ELT(x, i));
 		if (isNull(names)) {

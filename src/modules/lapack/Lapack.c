@@ -122,8 +122,8 @@ static SEXP La_svd(SEXP jobu, SEXP x, SEXP s, SEXP u, SEXP vt)
     if (info != 0)
 	error(_("error code %d from Lapack routine '%s'"), info, "dgesdd");
 
-    SEXP val; PROTECT(val = allocVector(VECSXP, 3));
-    SEXP nm; PROTECT(nm = allocVector(STRSXP, 3));
+    SEXP val; VAPROTECT(val, allocVector(VECSXP, 3));
+    SEXP nm; VAPROTECT(nm, allocVector(STRSXP, 3));
     SET_STRING_ELT(nm, 0, mkChar("d"));
     SET_STRING_ELT(nm, 1, mkChar("u"));
     SET_STRING_ELT(nm, 2, mkChar("vt"));
@@ -164,7 +164,7 @@ static SEXP La_rs(SEXP x, SEXP only_values)
 	Memcpy(rx, REAL(x), (size_t) n * n);
     }
     PROTECT(x);
-    SEXP values; PROTECT(values = allocVector(REALSXP, n));
+    SEXP values; VAPROTECT(values, allocVector(REALSXP, n));
     rvalues = REAL(values);
 
     if (!ov) {
@@ -287,8 +287,8 @@ static SEXP La_rg(SEXP x, SEXP only_values)
 	    complexValues = TRUE;
 	    break;
 	}
-    SEXP ret; PROTECT(ret = allocVector(VECSXP, 2));
-    SEXP nm; PROTECT(nm = allocVector(STRSXP, 2));
+    SEXP ret; VAPROTECT(ret, allocVector(VECSXP, 2));
+    SEXP nm; VAPROTECT(nm, allocVector(STRSXP, 2));
     SET_STRING_ELT(nm, 0, mkChar("values"));
     SET_STRING_ELT(nm, 1, mkChar("vectors"));
     setAttrib(ret, R_NamesSymbol, nm);
@@ -335,7 +335,7 @@ static SEXP La_dlange(SEXP A, SEXP type)
 
     typNorm[0] = La_norm_type(CHAR(asChar(type)));
 
-    SEXP val; PROTECT(val = allocVector(REALSXP, 1));
+    SEXP val; VAPROTECT(val, allocVector(REALSXP, 1));
     if(*typNorm == 'I') work = (double *) R_alloc(m, sizeof(double));
     REAL(val)[0] = F77_CALL(dlange)(typNorm, &m, &n, REAL(A), &m, work);
 
@@ -362,7 +362,7 @@ static SEXP La_dgecon(SEXP A, SEXP norm)
 
     typNorm[0] = La_rcond_type(CHAR(asChar(norm)));
 
-    SEXP val; PROTECT(val = allocVector(REALSXP, 1));
+    SEXP val; VAPROTECT(val, allocVector(REALSXP, 1));
     work = (double *) R_alloc((*typNorm == 'I' && m > 4*(size_t)n) ? m : 4*(size_t)n,
 			      sizeof(double));
     iwork = (int *) R_alloc(m, sizeof(int));
@@ -417,7 +417,7 @@ static SEXP La_dtrcon(SEXP A, SEXP norm)
     typNorm[0] = La_rcond_type(CHAR(asChar(norm)));
 
     nprot++;
-    SEXP val; PROTECT(val = allocVector(REALSXP, 1));
+    SEXP val; VAPROTECT(val, allocVector(REALSXP, 1));
 
     F77_CALL(dtrcon)(typNorm, "U", "N", &n, REAL(A), &n,
 		     REAL(val),
@@ -447,7 +447,7 @@ static SEXP La_zgecon(SEXP A, SEXP norm)
 
     typNorm[0] = La_rcond_type(CHAR(asChar(norm)));
 
-    SEXP val; PROTECT(val = allocVector(REALSXP, 1));
+    SEXP val; VAPROTECT(val, allocVector(REALSXP, 1));
 
     rwork = (double *) R_alloc(2*(size_t)n, sizeof(Rcomplex));
     anorm = F77_CALL(zlange)(typNorm, &n, &n, COMPLEX(A), &n, rwork);
@@ -545,7 +545,7 @@ static SEXP La_solve_cmplx(SEXP A, SEXP Bin)
 	if(p2 != n)
 	    error(_("'b' (%d x %d) must be compatible with 'a' (%d x %d)"),
 		  p2, p, n, n);
-	PROTECT(B = allocMatrix(CPLXSXP, n, p));
+	VAPROTECT(B, allocMatrix(CPLXSXP, n, p));
 	SEXP Bindn =  getAttrib(Bin, R_DimNamesSymbol);
 	if (!isNull(Adn) || !isNull(Bindn)) {
 	    Bdn = allocVector(VECSXP, 2);
@@ -559,7 +559,7 @@ static SEXP La_solve_cmplx(SEXP A, SEXP Bin)
 	if(length(Bin) != n)
 	    error(_("'b' (%d x %d) must be compatible with 'a' (%d x %d)"),
 		  length(Bin), p, n, n);	
-	PROTECT(B = allocVector(CPLXSXP, n));
+	VAPROTECT(B, allocVector(CPLXSXP, n));
 	if (!isNull(Adn)) setAttrib(B, R_NamesSymbol, VECTOR_ELT(Adn, 1));
     }
     Bin = PROTECT(coerceVector(Bin, CPLXSXP));
@@ -603,13 +603,13 @@ static SEXP La_qr_cmplx(SEXP Ain)
     SEXP Adn = getAttrib(Ain, R_DimNamesSymbol);
     Adims = INTEGER(coerceVector(getAttrib(Ain, R_DimSymbol), INTSXP));
     m = Adims[0]; n = Adims[1];
-    SEXP A; PROTECT(A = allocMatrix(CPLXSXP, m, n));
+    SEXP A; VAPROTECT(A, allocMatrix(CPLXSXP, m, n));
     Memcpy(COMPLEX(A), COMPLEX(Ain), (size_t)m * n);
     rwork = (double *) R_alloc(2*(size_t)n, sizeof(double));
 
-    SEXP jpvt; PROTECT(jpvt = allocVector(INTSXP, n));
+    SEXP jpvt; VAPROTECT(jpvt, allocVector(INTSXP, n));
     for (i = 0; i < n; i++) INTEGER(jpvt)[i] = 0;
-    SEXP tau; PROTECT(tau = allocVector(CPLXSXP, m < n ? m : n));
+    SEXP tau; VAPROTECT(tau, allocVector(CPLXSXP, m < n ? m : n));
     lwork = -1;
     F77_CALL(zgeqp3)(&m, &n, COMPLEX(A), &m, INTEGER(jpvt), COMPLEX(tau),
 		     &tmp, &lwork, rwork, &info);
@@ -621,8 +621,8 @@ static SEXP La_qr_cmplx(SEXP Ain)
 		     work, &lwork, rwork, &info);
     if (info != 0)
 	error(_("error code %d from Lapack routine '%s'"), info, "zgeqp3");
-    SEXP val; PROTECT(val = allocVector(VECSXP, 4));
-    SEXP nm; PROTECT(nm = allocVector(STRSXP, 4));
+    SEXP val; VAPROTECT(val, allocVector(VECSXP, 4));
+    SEXP nm; VAPROTECT(nm, allocVector(STRSXP, 4));
     SET_STRING_ELT(nm, 0, mkChar("qr"));
     SET_STRING_ELT(nm, 1, mkChar("rank"));
     SET_STRING_ELT(nm, 2, mkChar("qraux"));
@@ -785,8 +785,8 @@ static SEXP La_svd_cmplx(SEXP jobu, SEXP x, SEXP s, SEXP u, SEXP v)
     if (info != 0)
 	error(_("error code %d from Lapack routine '%s'"), info, "zgesdd");
 
-    SEXP val; PROTECT(val = allocVector(VECSXP, 3));
-    SEXP nm; PROTECT(nm = allocVector(STRSXP, 3));
+    SEXP val; VAPROTECT(val, allocVector(VECSXP, 3));
+    SEXP nm; VAPROTECT(nm, allocVector(STRSXP, 3));
     SET_STRING_ELT(nm, 0, mkChar("d"));
     SET_STRING_ELT(nm, 1, mkChar("u"));
     SET_STRING_ELT(nm, 2, mkChar("vt"));
@@ -818,10 +818,10 @@ static SEXP La_rs_cmplx(SEXP xin, SEXP only_values)
     if (ov == NA_LOGICAL) error(_("invalid '%s' argument"), "only.values");
     if (ov) jobv[0] = 'N'; else jobv[0] = 'V';
 
-    SEXP x; PROTECT(x = allocMatrix(CPLXSXP, n, n));
+    SEXP x; VAPROTECT(x, allocMatrix(CPLXSXP, n, n));
     rx = COMPLEX(x);
     Memcpy(rx, COMPLEX(xin), (size_t) n * n);
-    SEXP values; PROTECT(values = allocVector(REALSXP, n));
+    SEXP values; VAPROTECT(values, allocVector(REALSXP, n));
     rvalues = REAL(values);
 
     rwork = (double *) R_alloc((3*(size_t)n-2) > 1 ? 3*(size_t)n-2 : 1, 
@@ -881,10 +881,10 @@ static SEXP La_rg_cmplx(SEXP x, SEXP only_values)
     left = right = (Rcomplex *) 0;
     if (!ov) {
 	jobVR[0] = 'V';
-	PROTECT(val = allocMatrix(CPLXSXP, n, n));
+	VAPROTECT(val, allocMatrix(CPLXSXP, n, n));
 	right = COMPLEX(val);
     }
-    PROTECT(values = allocVector(CPLXSXP, n));
+    VAPROTECT(values, allocVector(CPLXSXP, n));
     rwork = (double *) R_alloc(2*(size_t)n, sizeof(double));
     /* ask for optimal size of work array */
     lwork = -1;
@@ -925,7 +925,7 @@ static SEXP La_chol(SEXP A, SEXP pivot, SEXP stol)
 {
     if (!isMatrix(A)) error(_("'a' must be a numeric matrix"));
 
-    SEXP ans; PROTECT(ans = isReal(A) ? duplicate(A): coerceVector(A, REALSXP));
+    SEXP ans; VAPROTECT(ans, isReal(A) ? duplicate(A): coerceVector(A, REALSXP));
     SEXP adims = getAttrib(A, R_DimSymbol);
     if (TYPEOF(adims) != INTSXP) error("non-integer dims");
     int m = INTEGER(adims)[0], n = INTEGER(adims)[1];
@@ -950,7 +950,7 @@ static SEXP La_chol(SEXP A, SEXP pivot, SEXP stol)
 	}
     } else {
 	double tol = asReal(stol);
-	SEXP piv; PROTECT(piv = allocVector(INTSXP, m));
+	SEXP piv; VAPROTECT(piv, allocVector(INTSXP, m));
 	int *ip = INTEGER(piv);
 	double *work = (double *) R_alloc(2 * (size_t)m, sizeof(double));
 	int rank, info;
@@ -967,7 +967,7 @@ static SEXP La_chol(SEXP A, SEXP pivot, SEXP stol)
 	SEXP cn, dn = getAttrib(ans, R_DimNamesSymbol);
 	if (!isNull(dn) && !isNull(cn = VECTOR_ELT(dn, 1))) {
 	    // need to pivot the colnames
-	    SEXP dn2; PROTECT(dn2 = duplicate(dn));
+	    SEXP dn2; VAPROTECT(dn2, duplicate(dn));
 	    SEXP cn2 = VECTOR_ELT(dn2, 1);
 	    for(int i = 0; i < m; i++) 
 		SET_STRING_ELT(cn2, i, STRING_ELT(cn, ip[i] - 1)); // base 1
@@ -1052,7 +1052,7 @@ static SEXP La_solve(SEXP A, SEXP Bin, SEXP tolin)
 	if(p2 != n)
 	    error(_("'b' (%d x %d) must be compatible with 'a' (%d x %d)"),
 		  p2, p, n, n);
-	PROTECT(B = allocMatrix(REALSXP, n, p));
+	VAPROTECT(B, allocMatrix(REALSXP, n, p));
 	SEXP Bindn =  getAttrib(Bin, R_DimNamesSymbol);
 	// This is somewhat odd, but Matrix relies on dropping NULL dimnames
 	if (!isNull(Adn) || !isNull(Bindn)) {
@@ -1068,10 +1068,10 @@ static SEXP La_solve(SEXP A, SEXP Bin, SEXP tolin)
 	if(length(Bin) != n)
 	    error(_("'b' (%d x %d) must be compatible with 'a' (%d x %d)"),
 		  length(Bin), p, n, n);	
-	PROTECT(B = allocVector(REALSXP, n));
+	VAPROTECT(B, allocVector(REALSXP, n));
 	if (!isNull(Adn)) setAttrib(B, R_NamesSymbol, VECTOR_ELT(Adn, 1));
     }
-    PROTECT(Bin = coerceVector(Bin, REALSXP));
+    VAPROTECT(Bin, coerceVector(Bin, REALSXP));
     Memcpy(REAL(B), REAL(Bin), (size_t)n * p);
     
     int *ipiv = (int *) R_alloc(n, sizeof(int));
@@ -1123,9 +1123,9 @@ static SEXP La_qr(SEXP Ain)
 	Memcpy(REAL(A), REAL(Ain), (size_t)m * n);
     }
 
-    SEXP jpvt; PROTECT(jpvt = allocVector(INTSXP, n));
+    SEXP jpvt; VAPROTECT(jpvt, allocVector(INTSXP, n));
     for (int i = 0; i < n; i++) INTEGER(jpvt)[i] = 0;
-    SEXP tau; PROTECT(tau = allocVector(REALSXP, m < n ? m : n));
+    SEXP tau; VAPROTECT(tau, allocVector(REALSXP, m < n ? m : n));
     int info, lwork = -1;
     double tmp;
     F77_CALL(dgeqp3)(&m, &n, REAL(A), &m, INTEGER(jpvt), REAL(tau),
@@ -1138,8 +1138,8 @@ static SEXP La_qr(SEXP Ain)
 		     work, &lwork, &info);
     if (info < 0)
 	error(_("error code %d from Lapack routine '%s'"), info, "dgeqp3");
-    SEXP val; PROTECT(val = allocVector(VECSXP, 4));
-    SEXP nm; PROTECT(nm = allocVector(STRSXP, 4));
+    SEXP val; VAPROTECT(val, allocVector(VECSXP, 4));
+    SEXP nm; VAPROTECT(nm, allocVector(STRSXP, 4));
     SET_STRING_ELT(nm, 0, mkChar("qr"));
     SET_STRING_ELT(nm, 1, mkChar("rank"));
     SET_STRING_ELT(nm, 2, mkChar("qraux"));
@@ -1244,7 +1244,7 @@ static SEXP det_ge_real(SEXP Ain, SEXP logarithm)
 
     if (!isMatrix(Ain)) error(_("'a' must be a numeric matrix"));
     if (useLog == NA_LOGICAL) error(_("argument 'logarithm' must be logical"));
-    SEXP A; PROTECT(A = isReal(Ain) ? duplicate(Ain): coerceVector(Ain, REALSXP));
+    SEXP A; VAPROTECT(A, isReal(Ain) ? duplicate(Ain): coerceVector(Ain, REALSXP));
     int *Adims = INTEGER(coerceVector(getAttrib(Ain, R_DimSymbol), INTSXP));
     int n = Adims[0];
     if (Adims[1] != n) error(_("'a' must be a square matrix"));
@@ -1281,8 +1281,8 @@ static SEXP det_ge_real(SEXP Ain, SEXP logarithm)
 	    }
 	}
     }
-    SEXP val; PROTECT(val = allocVector(VECSXP, 2));
-    SEXP nm; PROTECT(nm = allocVector(STRSXP, 2));
+    SEXP val; VAPROTECT(val, allocVector(VECSXP, 2));
+    SEXP nm; VAPROTECT(nm, allocVector(STRSXP, 2));
     SET_STRING_ELT(nm, 0, mkChar("modulus"));
     SET_STRING_ELT(nm, 1, mkChar("sign"));
     setAttrib(val, R_NamesSymbol, nm);

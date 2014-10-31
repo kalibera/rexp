@@ -69,9 +69,9 @@ SEXP pacf1(SEXP acf, SEXP lmax)
 {
     int lagmax = asInteger(lmax);
     acf = PROTECT(coerceVector(acf, REALSXP));
-    SEXP ans; PROTECT(ans = allocVector(REALSXP, lagmax));
+    SEXP ans; VAPROTECT(ans, allocVector(REALSXP, lagmax));
     uni_pacf(REAL(acf), REAL(ans), lagmax);
-    SEXP d; PROTECT(d = allocVector(INTSXP, 3));
+    SEXP d; VAPROTECT(d, allocVector(INTSXP, 3));
     INTEGER(d)[0] = lagmax;
     INTEGER(d)[1] = INTEGER(d)[2] = 1;
     setAttrib(ans, R_DimSymbol, d);
@@ -271,7 +271,7 @@ SEXP arma0_kfore(SEXP pG, SEXP pd, SEXP psd, SEXP nahead)
     SEXP res, x, var;
     GET_STARMA;
 
-    PROTECT(res = allocVector(VECSXP, 2));
+    VAPROTECT(res, allocVector(VECSXP, 2));
     SET_VECTOR_ELT(res, 0, x = allocVector(REALSXP, il));
     SET_VECTOR_ELT(res, 1, var = allocVector(REALSXP, il));
 
@@ -312,7 +312,7 @@ SEXP ar2ma(SEXP ar, SEXP npsi)
 {
     ar = PROTECT(coerceVector(ar, REALSXP));
     int p = LENGTH(ar), ns = asInteger(npsi), ns1 = ns + p + 1;
-    SEXP psi; PROTECT(psi = allocVector(REALSXP, ns1));
+    SEXP psi; VAPROTECT(psi, allocVector(REALSXP, ns1));
     artoma(p, REAL(ar), REAL(psi), ns1);
     SEXP ans = lengthgets(psi, ns);
     UNPROTECT(2);
@@ -467,7 +467,7 @@ ARMAtoMA(SEXP ar, SEXP ma, SEXP lag_max)
 
     if(m <= 0 || m == NA_INTEGER)
 	error(_("invalid value of lag.max"));
-    PROTECT(res = allocVector(REALSXP, m));
+    VAPROTECT(res, allocVector(REALSXP, m));
     psi = REAL(res);
     for(i = 0; i < m; i++) {
 	tmp = (i < q) ? theta[i] : 0.0;

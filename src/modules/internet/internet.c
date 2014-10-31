@@ -80,11 +80,11 @@ static Rboolean url_open(Rconnection con)
 	SEXP sheaders, agentFun;
 	const char *headers;
 #ifdef USE_WININET
-	PROTECT(agentFun = lang2(install("makeUserAgent"), ScalarLogical(0)));
+	VAPROTECT(agentFun, lang2(install("makeUserAgent"), ScalarLogical(0)));
 #else
-	PROTECT(agentFun = lang1(install("makeUserAgent")));
+	VAPROTECT(agentFun, lang1(install("makeUserAgent")));
 #endif
-	PROTECT(sheaders = eval(agentFun, R_FindNamespace(mkString("utils"))));
+	VAPROTECT(sheaders, eval(agentFun, R_FindNamespace(mkString("utils"))));
 
 	if(TYPEOF(sheaders) == NILSXP)
 	    headers = NULL;
@@ -302,11 +302,11 @@ static SEXP in_do_download(SEXP args)
     if(cacheOK == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "cacheOK");
 #ifdef USE_WININET
-    PROTECT(agentFun = lang2(install("makeUserAgent"), ScalarLogical(0)));
+    VAPROTECT(agentFun, lang2(install("makeUserAgent"), ScalarLogical(0)));
 #else
-    PROTECT(agentFun = lang1(install("makeUserAgent")));
+    VAPROTECT(agentFun, lang1(install("makeUserAgent")));
 #endif
-    PROTECT(sheaders = eval(agentFun, R_FindNamespace(mkString("utils"))));
+    VAPROTECT(sheaders, eval(agentFun, R_FindNamespace(mkString("utils"))));
     UNPROTECT(1);
     if(TYPEOF(sheaders) == NILSXP)
 	headers = NULL;

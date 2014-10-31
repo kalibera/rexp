@@ -106,7 +106,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	    /* formerly in R code: moved to C for speed */
 	    SEXP call, xj = VECTOR_ELT(x, j);
 	    if(OBJECT(xj)) { /* method dispatch */
-		PROTECT(call = lang2(install("as.character"), xj));
+		VAPROTECT(call, lang2(install("as.character"), xj));
 		SET_VECTOR_ELT(x, j, eval(call, env));
 		UNPROTECT(1);
 	    } else if (isSymbol(xj))
@@ -123,7 +123,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     if(maxlen == 0)
 	return (!isNull(collapse)) ? mkString("") : allocVector(STRSXP, 0);
 
-    PROTECT(ans = allocVector(STRSXP, maxlen));
+    VAPROTECT(ans, allocVector(STRSXP, maxlen));
 
     for (i = 0; i < maxlen; i++) {
 	/* Strategy for marking the encoding: if all inputs (including
@@ -269,7 +269,7 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if(known_to_be_latin1) ienc = CE_LATIN1;
 	    if(known_to_be_utf8) ienc = CE_UTF8;
 	}
-	PROTECT(ans = allocVector(STRSXP, 1));
+	VAPROTECT(ans, allocVector(STRSXP, 1));
 	SET_STRING_ELT(ans, 0, mkCharCE(cbuf, ienc));
     }
     R_FreeStringBufferL(&cbuff);
@@ -309,7 +309,7 @@ SEXP attribute_hidden do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 	    /* formerly in R code: moved to C for speed */
 	    SEXP call, xj = VECTOR_ELT(x, j);
 	    if(OBJECT(xj)) { /* method dispatch */
-		PROTECT(call = lang2(install("as.character"), xj));
+		VAPROTECT(call, lang2(install("as.character"), xj));
 		SET_VECTOR_ELT(x, j, eval(call, env));
 		UNPROTECT(1);
 	    } else if (isSymbol(xj))
@@ -326,7 +326,7 @@ SEXP attribute_hidden do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     if(nzero || maxlen == 0) return allocVector(STRSXP, 0);
 
-    PROTECT(ans = allocVector(STRSXP, maxlen));
+    VAPROTECT(ans, allocVector(STRSXP, maxlen));
 
     for (i = 0; i < maxlen; i++) {
 	pwidth = 0;
@@ -433,12 +433,12 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
     if(sci != NA_INTEGER) R_print.scipen = sci;
 
     if ((n = XLENGTH(x)) <= 0) {
-	PROTECT(y = allocVector(STRSXP, 0));
+	VAPROTECT(y, allocVector(STRSXP, 0));
     } else {
 	switch (TYPEOF(x)) {
 
 	case LGLSXP:
-	    PROTECT(y = allocVector(STRSXP, n));
+	    VAPROTECT(y, allocVector(STRSXP, n));
 	    if (trim) w = 0; else formatLogical(LOGICAL(x), n, &w);
 	    w = imax2(w, wd);
 	    for (i = 0; i < n; i++) {
@@ -448,7 +448,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 	    break;
 
 	case INTSXP:
-	    PROTECT(y = allocVector(STRSXP, n));
+	    VAPROTECT(y, allocVector(STRSXP, n));
 	    if (trim) w = 0;
 	    else formatInteger(INTEGER(x), n, &w);
 	    w = imax2(w, wd);
@@ -462,7 +462,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 	    formatReal(REAL(x), n, &w, &d, &e, nsmall);
 	    if (trim) w = 0;
 	    w = imax2(w, wd);
-	    PROTECT(y = allocVector(STRSXP, n));
+	    VAPROTECT(y, allocVector(STRSXP, n));
 	    for (i = 0; i < n; i++) {
 		strp = EncodeReal0(REAL(x)[i], w, d, e, OutDec);
 		SET_STRING_ELT(y, i, mkChar(strp));
@@ -473,7 +473,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 	    formatComplex(COMPLEX(x), n, &w, &d, &e, &wi, &di, &ei, nsmall);
 	    if (trim) wi = w = 0;
 	    w = imax2(w, wd); wi = imax2(wi, wd);
-	    PROTECT(y = allocVector(STRSXP, n));
+	    VAPROTECT(y, allocVector(STRSXP, n));
 	    for (i = 0; i < n; i++) {
 		strp = EncodeComplex(COMPLEX(x)[i], w, d, e, wi, di, ei, OutDec);
 		SET_STRING_ELT(y, i, mkChar(strp));
@@ -491,7 +491,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 
 	    /* This is clumsy, but it saves rewriting and re-testing
 	       this complex code */
-	    PROTECT(xx = duplicate(x));
+	    VAPROTECT(xx, duplicate(x));
 	    for (i = 0; i < n; i++) {
 		SEXP tmp =  STRING_ELT(xx, i);
 		if(IS_BYTES(tmp)) {
@@ -527,7 +527,7 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
 		} else if (na) cnt  = imax2(cnt, R_print.na_width + imax2(0, w-R_print.na_width));
 	    R_CheckStack2(cnt+1);
 	    char buff[cnt+1];
-	    PROTECT(y = allocVector(STRSXP, n));
+	    VAPROTECT(y, allocVector(STRSXP, n));
 	    for (i = 0; i < n; i++) {
 		if(!na && STRING_ELT(xx, i) == NA_STRING) {
 		    SET_STRING_ELT(y, i, NA_STRING);

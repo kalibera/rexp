@@ -19,17 +19,17 @@ doSplinesExample()
     SEXP e;
     int errorOccurred;
 
-    PROTECT(e = lang2(install("library"), mkString("splines")));
+    VAPROTECT(e, lang2(install("library"), mkString("splines")));
     R_tryEval(e, R_GlobalEnv, NULL);
     UNPROTECT(1);
 
-    PROTECT(e = lang2(install("options"), ScalarLogical(0)));
+    VAPROTECT(e, lang2(install("options"), ScalarLogical(0)));
     SET_TAG(CDR(e), install("example.ask"));
     PrintValue(e);
     R_tryEval(e, R_GlobalEnv, NULL);
     UNPROTECT(1);
 
-    PROTECT(e = lang2(install("example"), mkString("ns")));
+    VAPROTECT(e, lang2(install("example"), mkString("ns")));
     R_tryEval(e, R_GlobalEnv, &errorOccurred);
     UNPROTECT(1);
 }

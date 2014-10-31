@@ -787,7 +787,7 @@ SEXP do_syswhich(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isString(nm))
 	error(_("'names' is not a character vector"));
     n = LENGTH(nm);
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for(i = 0; i < n; i++) {
 	if (STRING_ELT(nm, i) == NA_STRING) {
 	    SET_STRING_ELT(ans, i, NA_STRING);

@@ -147,7 +147,7 @@ SEXP attribute_hidden do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("too many elements specified"));
 #endif
 
-    PROTECT(ans = allocMatrix(TYPEOF(vals), nr, nc));
+    VAPROTECT(ans, allocMatrix(TYPEOF(vals), nr, nc));
     if(lendat) {
 	if (isVector(vals))
 	    copyMatrix(ans, vals, byrow);
@@ -208,8 +208,8 @@ SEXP allocMatrix(SEXPTYPE mode, int nrow, int ncol)
 	error(_("allocMatrix: too many elements specified"));
 #endif
     n = ((R_xlen_t) nrow) * ncol;
-    PROTECT(s = allocVector(mode, n));
-    PROTECT(t = allocVector(INTSXP, 2));
+    VAPROTECT(s, allocVector(mode, n));
+    VAPROTECT(t, allocVector(INTSXP, 2));
     INTEGER(t)[0] = nrow;
     INTEGER(t)[1] = ncol;
     setAttrib(s, R_DimSymbol, t);
@@ -239,8 +239,8 @@ SEXP alloc3DArray(SEXPTYPE mode, int nrow, int ncol, int nface)
 	error(_("'alloc3Darray': too many elements specified"));
 #endif
     n = ((R_xlen_t) nrow) * ncol * nface;
-    PROTECT(s = allocVector(mode, n));
-    PROTECT(t = allocVector(INTSXP, 3));
+    VAPROTECT(s, allocVector(mode, n));
+    VAPROTECT(t, allocVector(INTSXP, 3));
     INTEGER(t)[0] = nrow;
     INTEGER(t)[1] = ncol;
     INTEGER(t)[2] = nface;
@@ -266,8 +266,8 @@ SEXP allocArray(SEXPTYPE mode, SEXP dims)
 	n *= INTEGER(dims)[i];
     }
 
-    PROTECT(dims = duplicate(dims));
-    PROTECT(array = allocVector(mode, n));
+    VAPROTECT(dims, duplicate(dims));
+    VAPROTECT(array, allocVector(mode, n));
     setAttrib(array, R_DimSymbol, dims);
     UNPROTECT(2);
     return array;
@@ -348,7 +348,7 @@ SEXP DropDims(SEXP x)
 	/* We have a lower dimensional array. */
 	SEXP newdims, dnn, newnamesnames = R_NilValue;
 	dnn = getAttrib(dimnames, R_NamesSymbol);
-	PROTECT(newdims = allocVector(INTSXP, n));
+	VAPROTECT(newdims, allocVector(INTSXP, n));
 	for (i = 0, n = 0; i < ndims; i++)
 	    if (INTEGER(dims)[i] != 1)
 		INTEGER(newdims)[n++] = INTEGER(dims)[i];
@@ -359,8 +359,8 @@ SEXP DropDims(SEXP x)
 		    VECTOR_ELT(dimnames, i) != R_NilValue)
 		    havenames = 1;
 	    if (havenames) {
-		PROTECT(newnames = allocVector(VECSXP, n));
-		PROTECT(newnamesnames = allocVector(STRSXP, n));
+		VAPROTECT(newnames, allocVector(VECSXP, n));
+		VAPROTECT(newnamesnames, allocVector(STRSXP, n));
 		for (i = 0, n = 0; i < ndims; i++) {
 		    if (INTEGER(dims)[i] != 1) {
 			if(!isNull(dnn))
@@ -789,7 +789,7 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (PRIMVAL(op) == 0) {			/* op == 0 : matprod() */
 
-	PROTECT(ans = allocMatrix(mode, nrx, ncy));
+	VAPROTECT(ans, allocMatrix(mode, nrx, ncy));
 	if (mode == CPLXSXP)
 	    cmatprod(COMPLEX(CAR(args)), nrx, ncx,
 		     COMPLEX(CADR(args)), nry, ncy, COMPLEX(ans));
@@ -797,16 +797,16 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    matprod(REAL(CAR(args)), nrx, ncx,
 		    REAL(CADR(args)), nry, ncy, REAL(ans));
 
-	PROTECT(xdims = getAttrib(CAR(args), R_DimNamesSymbol));
-	PROTECT(ydims = getAttrib(CADR(args), R_DimNamesSymbol));
+	VAPROTECT(xdims, getAttrib(CAR(args), R_DimNamesSymbol));
+	VAPROTECT(ydims, getAttrib(CADR(args), R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
 
 	    /* allocate dimnames and dimnamesnames */
 
-	    PROTECT(dimnames = allocVector(VECSXP, 2));
-	    PROTECT(dimnamesnames = allocVector(STRSXP, 2));
+	    VAPROTECT(dimnames, allocVector(VECSXP, 2));
+	    VAPROTECT(dimnamesnames, allocVector(STRSXP, 2));
 	    if (xdims != R_NilValue) {
 		if (ldx == 2 || ncx == 1) {
 		    SET_VECTOR_ELT(dimnames, 0, VECTOR_ELT(xdims, 0));
@@ -849,7 +849,7 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     else if (PRIMVAL(op) == 1) {	/* op == 1: crossprod() */
 
-	PROTECT(ans = allocMatrix(mode, ncx, ncy));
+	VAPROTECT(ans, allocMatrix(mode, ncx, ncy));
 	if (mode == CPLXSXP)
 	    if(sym)
 		ccrossprod(COMPLEX(CAR(args)), nrx, ncx,
@@ -865,19 +865,19 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 			  REAL(CADR(args)), nry, ncy, REAL(ans));
 	}
 
-	PROTECT(xdims = getAttrib(CAR(args), R_DimNamesSymbol));
+	VAPROTECT(xdims, getAttrib(CAR(args), R_DimNamesSymbol));
 	if (sym)
-	    PROTECT(ydims = xdims);
+	    VAPROTECT(ydims, xdims);
 	else
-	    PROTECT(ydims = getAttrib(CADR(args), R_DimNamesSymbol));
+	    VAPROTECT(ydims, getAttrib(CADR(args), R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
 
 	    /* allocate dimnames and dimnamesnames */
 
-	    PROTECT(dimnames = allocVector(VECSXP, 2));
-	    PROTECT(dimnamesnames = allocVector(STRSXP, 2));
+	    VAPROTECT(dimnames, allocVector(VECSXP, 2));
+	    VAPROTECT(dimnamesnames, allocVector(STRSXP, 2));
 
 	    if (xdims != R_NilValue) {
 		if (ldx == 2) {/* not nrx==1 : .. fixed, ihaka 2003-09-30 */
@@ -894,7 +894,7 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else {					/* op == 2: tcrossprod() */
 
-	PROTECT(ans = allocMatrix(mode, nrx, nry));
+	VAPROTECT(ans, allocMatrix(mode, nrx, nry));
 	if (mode == CPLXSXP)
 	    if(sym)
 		tccrossprod(COMPLEX(CAR(args)), nrx, ncx,
@@ -910,19 +910,19 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 			   REAL(CADR(args)), nry, ncy, REAL(ans));
 	}
 
-	PROTECT(xdims = getAttrib(CAR(args), R_DimNamesSymbol));
+	VAPROTECT(xdims, getAttrib(CAR(args), R_DimNamesSymbol));
 	if (sym)
-	    PROTECT(ydims = xdims);
+	    VAPROTECT(ydims, xdims);
 	else
-	    PROTECT(ydims = getAttrib(CADR(args), R_DimNamesSymbol));
+	    VAPROTECT(ydims, getAttrib(CADR(args), R_DimNamesSymbol));
 
 	if (xdims != R_NilValue || ydims != R_NilValue) {
 	    SEXP dimnames, dimnamesnames, dnx=R_NilValue, dny=R_NilValue;
 
 	    /* allocate dimnames and dimnamesnames */
 
-	    PROTECT(dimnames = allocVector(VECSXP, 2));
-	    PROTECT(dimnamesnames = allocVector(STRSXP, 2));
+	    VAPROTECT(dimnames, allocVector(VECSXP, 2));
+	    VAPROTECT(dimnamesnames, allocVector(STRSXP, 2));
 
 	    if (xdims != R_NilValue) {
 		if (ldx == 2) {
@@ -1003,7 +1003,7 @@ SEXP attribute_hidden do_transpose(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else
 	goto not_matrix;
-    PROTECT(r = allocVector(TYPEOF(a), len));
+    VAPROTECT(r, allocVector(TYPEOF(a), len));
     R_xlen_t i, j, l_1 = len-1;
     switch (TYPEOF(a)) {
     case LGLSXP:
@@ -1048,7 +1048,7 @@ SEXP attribute_hidden do_transpose(SEXP call, SEXP op, SEXP args, SEXP rho)
         UNPROTECT(1);
         goto not_matrix;
     }
-    PROTECT(dims = allocVector(INTSXP, 2));
+    VAPROTECT(dims, allocVector(INTSXP, 2));
     INTEGER(dims)[0] = ncol;
     INTEGER(dims)[1] = nrow;
     setAttrib(r, R_DimSymbol, dims);
@@ -1056,11 +1056,11 @@ SEXP attribute_hidden do_transpose(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* R <= 2.2.0: dropped list(NULL,NULL) dimnames :
      * if(rnames != R_NilValue || cnames != R_NilValue) */
     if(!isNull(dimnames)) {
-	PROTECT(dimnames = allocVector(VECSXP, 2));
+	VAPROTECT(dimnames, allocVector(VECSXP, 2));
 	SET_VECTOR_ELT(dimnames, 0, cnames);
 	SET_VECTOR_ELT(dimnames, 1, rnames);
 	if(!isNull(dimnamesnames)) {
-	    PROTECT(ndimnamesnames = allocVector(VECSXP, 2));
+	    VAPROTECT(ndimnamesnames, allocVector(VECSXP, 2));
 	    SET_VECTOR_ELT(ndimnamesnames, 1, STRING_ELT(dimnamesnames, 0));
 	    SET_VECTOR_ELT(ndimnamesnames, 0,
 			   (ldim == 2) ? STRING_ELT(dimnamesnames, 1):
@@ -1112,7 +1112,7 @@ SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isArray(a))
 	error(_("invalid first argument, must be an array"));
 
-    PROTECT(dimsa = getAttrib(a, R_DimSymbol));
+    VAPROTECT(dimsa, getAttrib(a, R_DimSymbol));
     n = LENGTH(dimsa);
     int *isa = INTEGER(dimsa);
 
@@ -1142,7 +1142,7 @@ SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 		    error(_("'perm[%d]' does not match a dimension name"), i+1);
 	    }
 	} else {
-	    PROTECT(perm = coerceVector(perm, INTSXP));
+	    VAPROTECT(perm, coerceVector(perm, INTSXP));
 	    for (i = 0; i < n; i++) pp[i] = INTEGER(perm)[i] - 1;
 	    UNPROTECT(1);
 	}
@@ -1164,14 +1164,14 @@ SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* also need to have the dimensions of r */
 
-    PROTECT(dimsr = allocVector(INTSXP, n));
+    VAPROTECT(dimsr, allocVector(INTSXP, n));
     int *isr = INTEGER(dimsr);
     for (i = 0; i < n; i++) isr[i] = isa[pp[i]];
 
     /* and away we go! iip will hold the incrementer */
 
     R_xlen_t len = XLENGTH(a);
-    PROTECT(r = allocVector(TYPEOF(a), len));
+    VAPROTECT(r, allocVector(TYPEOF(a), len));
 
     for (i = 0; i < n; iip[i++] = 0);
 
@@ -1239,14 +1239,14 @@ SEXP attribute_hidden do_aperm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* and handle the dimnames, if any */
     if (resize) {
-	PROTECT(dna = getAttrib(a, R_DimNamesSymbol));
+	VAPROTECT(dna, getAttrib(a, R_DimNamesSymbol));
 	if (dna != R_NilValue) {
 	    SEXP dnna, dnr, dnnr;
 
-	    PROTECT(dnr  = allocVector(VECSXP, n));
-	    PROTECT(dnna = getAttrib(dna, R_NamesSymbol));
+	    VAPROTECT(dnr, allocVector(VECSXP, n));
+	    VAPROTECT(dnna, getAttrib(dna, R_NamesSymbol));
 	    if (dnna != R_NilValue) {
-		PROTECT(dnnr = allocVector(STRSXP, n));
+		VAPROTECT(dnnr, allocVector(STRSXP, n));
 		for (i = 0; i < n; i++) {
 		    SET_VECTOR_ELT(dnr, i, VECTOR_ELT(dna, pp[i]));
 		    SET_STRING_ELT(dnnr, i, STRING_ELT(dnna, pp[i]));
@@ -1296,7 +1296,7 @@ SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     if (OP == 0 || OP == 1) { /* columns */
-	PROTECT(ans = allocVector(REALSXP, p));
+	VAPROTECT(ans, allocVector(REALSXP, p));
 #ifdef _OPENMP
 	int nthreads;
 	/* This gives a spurious -Wunused-but-set-variable error */
@@ -1345,7 +1345,7 @@ SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
     else { /* rows */
-	PROTECT(ans = allocVector(REALSXP, n));
+	VAPROTECT(ans, allocVector(REALSXP, n));
 
 	/* allocate scratch storage to allow accumulating by columns
 	   to improve cache hits */
@@ -1464,7 +1464,7 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     lendat = XLENGTH(vals);
     dims = CADR(args);
     dimnames = CADDR(args);
-    PROTECT(dims = coerceVector(dims, INTSXP));
+    VAPROTECT(dims, coerceVector(dims, INTSXP));
     int nd = LENGTH(dims);
     if (nd == 0) error(_("'dims' cannot be of length 0"));
     double d = 1.0;
@@ -1474,7 +1474,7 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     nans = (R_xlen_t) d;
 
-    PROTECT(ans = allocVector(TYPEOF(vals), nans));
+    VAPROTECT(ans, allocVector(TYPEOF(vals), nans));
     switch(TYPEOF(vals)) {
     case LGLSXP:
 	if (nans && lendat)
@@ -1585,7 +1585,7 @@ SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 
    if (TYPEOF(x) == CPLXSXP) {
-       PROTECT(ans = allocMatrix(CPLXSXP, nr, nc));
+       VAPROTECT(ans, allocMatrix(CPLXSXP, nr, nc));
        int nx = LENGTH(x);
        R_xlen_t NR = nr;
        Rcomplex *rx = COMPLEX(x), *ra = COMPLEX(ans), zero;
@@ -1594,10 +1594,10 @@ SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
        for (int j = 0; j < mn; j++) ra[j * (NR+1)] = rx[j % nx];
   } else {
        if(TYPEOF(x) != REALSXP) {
-	   PROTECT(x = coerceVector(x, REALSXP));
+	   VAPROTECT(x, coerceVector(x, REALSXP));
 	   nprotect++;
        }
-       PROTECT(ans = allocMatrix(REALSXP, nr, nc));
+       VAPROTECT(ans, allocMatrix(REALSXP, nr, nc));
        int nx = LENGTH(x);
        R_xlen_t NR = nr;
        double *rx = REAL(x), *ra = REAL(ans);
@@ -1629,8 +1629,8 @@ SEXP attribute_hidden do_backsolve(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (upper == NA_INTEGER) error(_("invalid '%s' argument"), "upper.tri");
     int trans = asLogical(CAR(args));
     if (trans == NA_INTEGER) error(_("invalid '%s' argument"), "transpose");
-    if (TYPEOF(r) != REALSXP) {PROTECT(r = coerceVector(r, REALSXP)); nprot++;}
-    if (TYPEOF(b) != REALSXP) {PROTECT(b = coerceVector(b, REALSXP)); nprot++;}
+    if (TYPEOF(r) != REALSXP) {VAPROTECT(r, coerceVector(r, REALSXP)); nprot++;}
+    if (TYPEOF(b) != REALSXP) {VAPROTECT(b, coerceVector(b, REALSXP)); nprot++;}
     double *rr = REAL(r);
 
     /* check for zeros on diagonal of r: only k row/cols are used. */
@@ -1641,7 +1641,7 @@ SEXP attribute_hidden do_backsolve(SEXP call, SEXP op, SEXP args, SEXP rho)
 		  i + 1);
     }
 
-    SEXP ans; PROTECT(ans = allocMatrix(REALSXP, k, ncb));
+    SEXP ans; VAPROTECT(ans, allocMatrix(REALSXP, k, ncb));
     if (k > 0 && ncb > 0) {
        /* copy (part) cols of b to ans */
 	for(R_xlen_t j = 0; j < ncb; j++)
@@ -1661,8 +1661,8 @@ SEXP attribute_hidden do_maxcol(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP m = CAR(args);
     int method = asInteger(CADR(args));
     int nr = nrows(m), nc = ncols(m), nprot = 1;
-    if (TYPEOF(m) != REALSXP) {PROTECT(m = coerceVector(m, REALSXP)); nprot++;}
-    SEXP ans; PROTECT(ans = allocVector(INTSXP, nr));
+    if (TYPEOF(m) != REALSXP) {VAPROTECT(m, coerceVector(m, REALSXP)); nprot++;}
+    SEXP ans; VAPROTECT(ans, allocVector(INTSXP, nr));
     R_max_col(REAL(m), &nr, &nc, INTEGER(ans), &method);
     UNPROTECT(nprot);
     return ans;

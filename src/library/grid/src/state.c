@@ -62,10 +62,10 @@ void initDL(pGEDevDesc dd)
     SEXP gsd = (SEXP) dd->gesd[gridRegisterIndex]->systemSpecific;
     /* The top-level viewport goes at the start of the display list
      */
-    PROTECT(dl = allocVector(VECSXP, 100));
+    VAPROTECT(dl, allocVector(VECSXP, 100));
     SET_VECTOR_ELT(dl, 0, vp);
     SET_VECTOR_ELT(gsd, GSS_DL, dl);
-    PROTECT(dlindex = allocVector(INTSXP, 1));
+    VAPROTECT(dlindex, allocVector(INTSXP, 1));
     INTEGER(dlindex)[0] = 1;
     SET_VECTOR_ELT(gsd, GSS_DLINDEX, dlindex);
     UNPROTECT(2);
@@ -174,10 +174,10 @@ static void globaliseState(SEXP state)
 {
     int index = findStateSlot();
     SEXP globalstate, indexsxp;
-    PROTECT(globalstate = findVar(install(".GRID.STATE"), R_gridEvalEnv));
+    VAPROTECT(globalstate, findVar(install(".GRID.STATE"), R_gridEvalEnv));
     /* Record the index for deglobalisation
      */
-    PROTECT(indexsxp = allocVector(INTSXP, 1));
+    VAPROTECT(indexsxp, allocVector(INTSXP, 1));
     INTEGER(indexsxp)[0] = index;
     SET_VECTOR_ELT(state, GSS_GLOBALINDEX, indexsxp);
     SET_VECTOR_ELT(globalstate, index, state);
@@ -197,7 +197,7 @@ SEXP gridCallback(GEevent task, pGEDevDesc dd, SEXP data) {
     case GE_InitState:
 	/* Create the initial grid state for a device
 	 */
-	PROTECT(gridState = createGridSystemState());
+	VAPROTECT(gridState, createGridSystemState());
 	/* Store that state with the device for easy retrieval
 	 */
 	sd = dd->gesd[gridRegisterIndex];
@@ -227,7 +227,7 @@ SEXP gridCallback(GEevent task, pGEDevDesc dd, SEXP data) {
 	break;
     case GE_RestoreState:
 	gsd = (SEXP) dd->gesd[gridRegisterIndex]->systemSpecific;
-	PROTECT(devsize = allocVector(REALSXP, 2));
+	VAPROTECT(devsize, allocVector(REALSXP, 2));
 	getDeviceSize(dd, &(REAL(devsize)[0]), &(REAL(devsize)[1]));
 	SET_VECTOR_ELT(gsd, GSS_DEVSIZE, devsize);
 	UNPROTECT(1);
@@ -269,7 +269,7 @@ SEXP gridCallback(GEevent task, pGEDevDesc dd, SEXP data) {
 		 * then we have to redraw the scene ourselves
 		 */
 		SEXP fcall;
-		PROTECT(fcall = lang1(install("draw.all")));
+		VAPROTECT(fcall, lang1(install("draw.all")));
 		eval(fcall, R_gridEvalEnv); 
 		UNPROTECT(1);
 	    }
@@ -278,7 +278,7 @@ SEXP gridCallback(GEevent task, pGEDevDesc dd, SEXP data) {
     case GE_CopyState:
 	break;
     case GE_CheckPlot:
-	PROTECT(valid = allocVector(LGLSXP, 1));
+	VAPROTECT(valid, allocVector(LGLSXP, 1));
 	LOGICAL(valid)[0] = TRUE;
 	UNPROTECT(1);
 	result = valid;
@@ -290,7 +290,7 @@ SEXP gridCallback(GEevent task, pGEDevDesc dd, SEXP data) {
 	/*
 	 * data is a numeric scale factor
 	 */
-	PROTECT(scale = allocVector(REALSXP, 1));
+	VAPROTECT(scale, allocVector(REALSXP, 1));
 	REAL(scale)[0] = REAL(gridStateElement(dd, GSS_SCALE))[0]*
 	    REAL(data)[0];
 	setGridStateElement(dd, GSS_SCALE, scale);

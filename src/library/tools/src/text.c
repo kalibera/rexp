@@ -71,8 +71,8 @@ delim_match(SEXP x, SEXP delims)
     equal_start_and_end_delims = strcmp(delim_start, delim_end) == 0;
 
     n = length(x);
-    PROTECT(ans = allocVector(INTSXP, n));
-    PROTECT(matchlen = allocVector(INTSXP, n));
+    VAPROTECT(ans, allocVector(INTSXP, n));
+    VAPROTECT(matchlen, allocVector(INTSXP, n));
 
     for(i = 0; i < n; i++) {
 	memset(&mb_st, 0, sizeof(mbstate_t));
@@ -221,7 +221,7 @@ SEXP doTabExpand(SEXP strings, SEXP starts)  /* does tab expansion for UTF-8 str
     const char *input;
     SEXP result;
     if (!buffer) error(_("out of memory"));
-    PROTECT(result = allocVector(STRSXP, length(strings)));
+    VAPROTECT(result, allocVector(STRSXP, length(strings)));
     for (i = 0; i < length(strings); i++) {
     	input = CHAR(STRING_ELT(strings, i));
     	start = INTEGER(starts)[i];

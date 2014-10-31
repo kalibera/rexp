@@ -9,7 +9,7 @@ main(int argc, char *argv[])
     argv[0] = "R";
     Rf_initEmbeddedR(argc, argv);
 
-    PROTECT(e = lang2(install("sqrt"), mkString("")));
+    VAPROTECT(e, lang2(install("sqrt"), mkString("")));
     val = R_tryEval(e, NULL, &errorOccurred); 
     if(errorOccurred) {
 	fprintf(stderr, "Caught an error calling sqrt(). Try again with a different argument.\n");fflush(stderr);

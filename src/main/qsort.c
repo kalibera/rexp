@@ -55,7 +55,7 @@ SEXP attribute_hidden do_qsort(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("argument is not a numeric vector"));
     x_real= TYPEOF(x) == REALSXP;
     x_int = !x_real && (TYPEOF(x) == INTSXP || TYPEOF(x) == LGLSXP);
-    PROTECT(sx = (x_real || x_int) ? duplicate(x) : coerceVector(x, REALSXP));
+    VAPROTECT(sx, (x_real || x_int) ? duplicate(x) : coerceVector(x, REALSXP));
     SET_ATTRIB(sx, R_NilValue);
     SET_OBJECT(sx, 0);
     indx_ret = asLogical(CADR(args));
@@ -67,11 +67,11 @@ SEXP attribute_hidden do_qsort(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(indx_ret) {
 	SEXP ans, ansnames, indx;
 	/* answer will have x = sorted x , ix = index :*/
-	PROTECT(ans = allocVector(VECSXP, 2));
-	PROTECT(ansnames = allocVector(STRSXP, 2));
+	VAPROTECT(ans, allocVector(VECSXP, 2));
+	VAPROTECT(ansnames, allocVector(STRSXP, 2));
 #ifdef LONG_VECTOR_SUPPORT
 	if (isLong) {
-	    PROTECT(indx = allocVector(REALSXP, n));
+	    VAPROTECT(indx, allocVector(REALSXP, n));
 	    double *ix = REAL(indx);
 	    for(R_xlen_t i = 0; i < n; i++) ix[i] = (double) (i+1);
 	    if(x_int) R_qsort_int_R(ivx, ix, 1, n);
@@ -79,7 +79,7 @@ SEXP attribute_hidden do_qsort(SEXP call, SEXP op, SEXP args, SEXP rho)
 	} else
 #endif
 	{
-	    PROTECT(indx = allocVector(INTSXP, n));
+	    VAPROTECT(indx, allocVector(INTSXP, n));
 	    int *ix = INTEGER(indx);
 	    int nn = (int) n;
 	    for(int i = 0; i < nn; i++) ix[i] = i+1;

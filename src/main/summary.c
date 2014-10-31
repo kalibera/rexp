@@ -411,7 +411,7 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 	switch(TYPEOF(x)) {
 	case LGLSXP:
 	case INTSXP:
-	    PROTECT(ans = allocVector(REALSXP, 1));
+	    VAPROTECT(ans, allocVector(REALSXP, 1));
 	    for (i = 0; i < n; i++) {
 		if(INTEGER(x)[i] == NA_INTEGER) {
 		    REAL(ans)[0] = R_NaReal;
@@ -423,7 +423,7 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 	    REAL(ans)[0] = (double) (s/n);
 	    break;
 	case REALSXP:
-	    PROTECT(ans = allocVector(REALSXP, 1));
+	    VAPROTECT(ans, allocVector(REALSXP, 1));
 	    for (i = 0; i < n; i++) s += REAL(x)[i];
 	    s /= n;
 	    if(R_FINITE((double)s)) {
@@ -433,7 +433,7 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
 	    REAL(ans)[0] = (double) s;
 	    break;
 	case CPLXSXP:
-	    PROTECT(ans = allocVector(CPLXSXP, 1));
+	    VAPROTECT(ans, allocVector(CPLXSXP, 1));
 	    for (i = 0; i < n; i++) {
 		s += COMPLEX(x)[i].r;
 		si += COMPLEX(x)[i].i;
@@ -458,8 +458,8 @@ SEXP attribute_hidden do_summary(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     /* match to foo(..., na.rm=FALSE) */
-    PROTECT(args = fixup_NaRm(args));
-    PROTECT(call2 = shallow_duplicate(call));
+    VAPROTECT(args, fixup_NaRm(args));
+    VAPROTECT(call2, shallow_duplicate(call));
     SETCDR(call2, args);
 
     if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
@@ -769,8 +769,8 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, a, b, prargs, call2;
 
-    PROTECT(args = fixup_NaRm(args));
-    PROTECT(call2 = shallow_duplicate(call));
+    VAPROTECT(args, fixup_NaRm(args));
+    VAPROTECT(call2, shallow_duplicate(call));
     SETCDR(call2, args);
 
     if (DispatchGroup("Summary", call2, op, args, env, &ans)) {
@@ -779,8 +779,8 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     UNPROTECT(1);
 
-    PROTECT(op = findFun(install("range.default"), env));
-    PROTECT(prargs = promiseArgs(args, R_GlobalEnv));
+    VAPROTECT(op, findFun(install("range.default"), env));
+    VAPROTECT(prargs, promiseArgs(args, R_GlobalEnv));
     for (a = args, b = prargs; a != R_NilValue; a = CDR(a), b = CDR(b))
 	SET_PRVALUE(CAR(b), CAR(a));
     ans = applyClosure(call, op, prargs, env, R_NilValue);
@@ -796,7 +796,7 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
     int i, n, indx;
 
     checkArity(op, args);
-    PROTECT(sx = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(sx, coerceVector(CAR(args), REALSXP));
     if (!isNumeric(sx))
 	error(_("non-numeric argument"));
     r = REAL(sx);
@@ -818,12 +818,12 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     i = (indx != NA_INTEGER);
-    PROTECT(ans = allocVector(INTSXP, i ? 1 : 0));
+    VAPROTECT(ans, allocVector(INTSXP, i ? 1 : 0));
     if (i) {
 	INTEGER(ans)[0] = indx + 1;
 	if (getAttrib(sx, R_NamesSymbol) != R_NilValue) { /* preserve names */
 	    SEXP ansnam;
-	    PROTECT(ansnam =
+	    VAPROTECT(ansnam,
 		    ScalarString(STRING_ELT(getAttrib(sx, R_NamesSymbol), indx)));
 	    setAttrib(ans, R_NamesSymbol, ansnam);
 	    UNPROTECT(1);
@@ -854,11 +854,11 @@ SEXP attribute_hidden do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     len = j;
-    PROTECT(ans = allocVector(INTSXP, len));
+    VAPROTECT(ans, allocVector(INTSXP, len));
     memcpy(INTEGER(ans), buf, sizeof(int) * len);
 
     if ((v_nms = getAttrib(v, R_NamesSymbol)) != R_NilValue) {
-        PROTECT(ans_nms = allocVector(STRSXP, len));
+        VAPROTECT(ans_nms, allocVector(STRSXP, len));
         for (i = 0; i < len; i++) {
             SET_STRING_ELT(ans_nms, i,
                            STRING_ELT(v_nms, INTEGER(ans)[i] - 1));
@@ -936,19 +936,19 @@ SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
 
-    PROTECT(ans = allocVector(anstype, len));
+    VAPROTECT(ans, allocVector(anstype, len));
     switch(anstype) {
     case INTSXP:
     {
 	int *r,  *ra = INTEGER(ans), tmp;
-	PROTECT(x = coerceVector(CAR(args), anstype));
+	VAPROTECT(x, coerceVector(CAR(args), anstype));
 	r = INTEGER(x);
 	n = XLENGTH(x);
 	for(i = 0; i < len; i++) ra[i] = r[i % n];
 	UNPROTECT(1);
 	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
 	    x = CAR(a);
-	    PROTECT(x = coerceVector(CAR(a), anstype));
+	    VAPROTECT(x, coerceVector(CAR(a), anstype));
 	    n = XLENGTH(x);
 	    r = INTEGER(x);
 	    for(i = 0; i < len; i++) {
@@ -974,13 +974,13 @@ SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     case REALSXP:
     {
 	double *r, *ra = REAL(ans), tmp;
-	PROTECT(x = coerceVector(CAR(args), anstype));
+	VAPROTECT(x, coerceVector(CAR(args), anstype));
 	r = REAL(x);
 	n = XLENGTH(x);
 	for(i = 0; i < len; i++) ra[i] = r[i % n];
 	UNPROTECT(1);
 	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
-	    PROTECT(x = coerceVector(CAR(a), anstype));
+	    VAPROTECT(x, coerceVector(CAR(a), anstype));
 	    n = XLENGTH(x);
 	    r = REAL(x);
 	    for(i = 0; i < len; i++) {
@@ -1003,13 +1003,13 @@ SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 	break;
     case STRSXP:
     {
-	PROTECT(x = coerceVector(CAR(args), anstype));
+	VAPROTECT(x, coerceVector(CAR(args), anstype));
 	n = XLENGTH(x);
 	for(i = 0; i < len; i++) SET_STRING_ELT(ans, i, STRING_ELT(x, i % n));
 	UNPROTECT(1);
 	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
 	    SEXP tmp, t2;
-	    PROTECT(x = coerceVector(CAR(a), anstype));
+	    VAPROTECT(x, coerceVector(CAR(a), anstype));
 	    n = XLENGTH(x);
 	    for(i = 0; i < len; i++) {
 		tmp = STRING_ELT(x, i % n);

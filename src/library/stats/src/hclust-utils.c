@@ -32,15 +32,15 @@ SEXP cutree(SEXP merge, SEXP which)
     Rboolean found_j, *sing;
     int *m_nr, *z, *i_merge, *i_which, *i_ans;
 
-    PROTECT(merge = coerceVector(merge, INTSXP)); i_merge = INTEGER(merge);
-    PROTECT(which = coerceVector(which, INTSXP)); i_which = INTEGER(which);
+    VAPROTECT(merge, coerceVector(merge, INTSXP)); i_merge = INTEGER(merge);
+    VAPROTECT(which, coerceVector(which, INTSXP)); i_which = INTEGER(which);
 
     n = nrows(merge)+1;
     /* using 1-based indices ==> "--" */
     sing = (Rboolean *) R_alloc(n, sizeof(Rboolean)); sing--;
     m_nr = (int *) R_alloc(n, sizeof(int)); m_nr--;
     z	 = (int *) R_alloc(n, sizeof(int)); z--;
-    PROTECT(ans = allocMatrix(INTSXP, n, LENGTH(which)));
+    VAPROTECT(ans, allocMatrix(INTSXP, n, LENGTH(which)));
     i_ans = INTEGER(ans);
 
     for(k = 1; k <= n; k++) {

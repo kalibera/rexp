@@ -110,7 +110,7 @@ SEXP Fisher_sim(SEXP sr, SEXP sc, SEXP sB)
     int *observed = (int *) R_alloc(nr * nc, sizeof(int));
     double *fact = (double *) R_alloc(n+1, sizeof(double));
     int *jwork = (int *) R_alloc(nc, sizeof(int));
-    SEXP ans; PROTECT(ans = allocVector(REALSXP, B));
+    SEXP ans; VAPROTECT(ans, allocVector(REALSXP, B));
     fisher_sim(&nr, &nc, isr, INTEGER(sc), &n, B, observed, fact, 
 	       jwork, REAL(ans));
     UNPROTECT(3);
@@ -128,7 +128,7 @@ SEXP chisq_sim(SEXP sr, SEXP sc, SEXP sB, SEXP E)
     int *observed = (int *) R_alloc(nr * nc, sizeof(int));
     double *fact = (double *) R_alloc(n+1, sizeof(double));
     int *jwork = (int *) R_alloc(nc, sizeof(int));
-    SEXP ans; PROTECT(ans = allocVector(REALSXP, B));
+    SEXP ans; VAPROTECT(ans, allocVector(REALSXP, B));
     chisqsim(&nr, &nc, isr, INTEGER(sc), &n, B, REAL(E), observed, fact,
 	     jwork, REAL(ans));
     UNPROTECT(4);

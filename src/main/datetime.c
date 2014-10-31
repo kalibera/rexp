@@ -670,7 +670,7 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     const char *tz = NULL;
 
     checkArity(op, args);
-    PROTECT(x = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(x, coerceVector(CAR(args), REALSXP));
     if(!isString((stz = CADR(args))) || LENGTH(stz) != 1)
 	error(_("invalid '%s' value"), "tz");
     tz = CHAR(STRING_ELT(stz, 0));
@@ -694,9 +694,9 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 
     // localtime may change tzname.
     if (isgmt) {
-	PROTECT(tzone = mkString(tz));
+	VAPROTECT(tzone, mkString(tz));
     } else {
-	PROTECT(tzone = allocVector(STRSXP, 3));
+	VAPROTECT(tzone, allocVector(STRSXP, 3));
 	SET_STRING_ELT(tzone, 0, mkChar(tz));
 	SET_STRING_ELT(tzone, 1, mkChar(R_tzname[0]));
 	SET_STRING_ELT(tzone, 2, mkChar(R_tzname[1]));
@@ -708,7 +708,7 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 #else
     int nans = 10 - isgmt;
 #endif
-    PROTECT(ans = allocVector(VECSXP, nans));
+    VAPROTECT(ans, allocVector(VECSXP, nans));
     for(int i = 0; i < 9; i++)
 	SET_VECTOR_ELT(ans, i, allocVector(i > 0 ? INTSXP : REALSXP, n));
     if(!isgmt) {
@@ -718,7 +718,7 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
     }
 
-    PROTECT(ansnames = allocVector(STRSXP, nans));
+    VAPROTECT(ansnames, allocVector(STRSXP, nans));
     for(int i = 0; i < nans; i++)
 	SET_STRING_ELT(ansnames, i, mkChar(ltnames[i]));
 
@@ -746,7 +746,7 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
     setAttrib(ans, R_NamesSymbol, ansnames);
-    PROTECT(klass = allocVector(STRSXP, 2));
+    VAPROTECT(klass, allocVector(STRSXP, 2));
     SET_STRING_ELT(klass, 0, mkChar("POSIXlt"));
     SET_STRING_ELT(klass, 1, mkChar("POSIXt"));
     classgets(ans, klass);
@@ -770,7 +770,7 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
     double tmp;
 
     checkArity(op, args);
-    PROTECT(x = duplicate(CAR(args))); /* coerced below */
+    VAPROTECT(x, duplicate(CAR(args))); /* coerced below */
     if(!isVectorList(x) || LENGTH(x) < 9)
 	error(_("invalid '%s' argument"), "x");
     if(!isString((stz = CADR(args))) || LENGTH(stz) != 1)
@@ -812,7 +812,7 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
 					  i > 0 ? INTSXP: REALSXP));
     SET_VECTOR_ELT(x, 8, coerceVector(VECTOR_ELT(x, 8), INTSXP));
 
-    PROTECT(ans = allocVector(REALSXP, n));
+    VAPROTECT(ans, allocVector(REALSXP, n));
     for(R_xlen_t i = 0; i < n; i++) {
 	double secs = REAL(VECTOR_ELT(x, 0))[i%nlen[0]], fsecs = floor(secs);
 	// avoid (int) NAN
@@ -860,7 +860,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     stm tm;
 
     checkArity(op, args);
-    PROTECT(x = duplicate(CAR(args))); /* coerced below */
+    VAPROTECT(x, duplicate(CAR(args))); /* coerced below */
     if(!isVectorList(x) || LENGTH(x) < 9)
 	error(_("invalid '%s' argument"), "x");
     if(!isString((sformat = CADR(args))) || XLENGTH(sformat) == 0)
@@ -901,7 +901,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 		error(_("zero-length component in non-empty \"POSIXlt\" structure"));
     }
     if(n > 0) N = (m > n) ? m:n; else N = 0;
-    PROTECT(ans = allocVector(STRSXP, N));
+    VAPROTECT(ans, allocVector(STRSXP, N));
     char tm_zone[20];
     Rboolean have_zone = LENGTH(x) >= 10 && LENGTH(VECTOR_ELT(x, 9)) == n;
     for(R_xlen_t i = 0; i < N; i++) {
@@ -1050,9 +1050,9 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
 
     // in case this gets changed by conversions.
     if (isgmt) {
-	PROTECT(tzone = mkString(tz));
+	VAPROTECT(tzone, mkString(tz));
     } else if(strlen(tz)) {
-	PROTECT(tzone = allocVector(STRSXP, 3));
+	VAPROTECT(tzone, allocVector(STRSXP, 3));
 	SET_STRING_ELT(tzone, 0, mkChar(tz));
 	SET_STRING_ELT(tzone, 1, mkChar(R_tzname[0]));
 	SET_STRING_ELT(tzone, 2, mkChar(R_tzname[1]));
@@ -1067,7 +1067,7 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
 #else
     int nans = 10 - isgmt;
 #endif
-    PROTECT(ans = allocVector(VECSXP, nans));
+    VAPROTECT(ans, allocVector(VECSXP, nans));
     for(int i = 0; i < 9; i++)
 	SET_VECTOR_ELT(ans, i, allocVector(i > 0 ? INTSXP : REALSXP, N));
     if(!isgmt) {
@@ -1077,7 +1077,7 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
     }
 
-    PROTECT(ansnames = allocVector(STRSXP, nans));
+    VAPROTECT(ansnames, allocVector(STRSXP, nans));
     for(int i = 0; i < nans; i++)
 	SET_STRING_ELT(ansnames, i, mkChar(ltnames[i]));
 
@@ -1149,7 +1149,7 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     setAttrib(ans, R_NamesSymbol, ansnames);
-    PROTECT(klass = allocVector(STRSXP, 2));
+    VAPROTECT(klass, allocVector(STRSXP, 2));
     SET_STRING_ELT(klass, 0, mkChar("POSIXlt"));
     SET_STRING_ELT(klass, 1, mkChar("POSIXt"));
     classgets(ans, klass);
@@ -1168,13 +1168,13 @@ SEXP attribute_hidden do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     stm tm;
 
     checkArity(op, args);
-    PROTECT(x = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(x, coerceVector(CAR(args), REALSXP));
     n = XLENGTH(x);
-    PROTECT(ans = allocVector(VECSXP, 9));
+    VAPROTECT(ans, allocVector(VECSXP, 9));
     for(int i = 0; i < 9; i++)
 	SET_VECTOR_ELT(ans, i, allocVector(i > 0 ? INTSXP : REALSXP, n));
 
-    PROTECT(ansnames = allocVector(STRSXP, 9));
+    VAPROTECT(ansnames, allocVector(STRSXP, 9));
     for(int i = 0; i < 9; i++)
 	SET_STRING_ELT(ansnames, i, mkChar(ltnames[i]));
 
@@ -1209,7 +1209,7 @@ SEXP attribute_hidden do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 	makelt(&tm, ans, i, valid, 0.0);
     }
     setAttrib(ans, R_NamesSymbol, ansnames);
-    PROTECT(klass = allocVector(STRSXP, 2));
+    VAPROTECT(klass, allocVector(STRSXP, 2));
     SET_STRING_ELT(klass, 0, mkChar("POSIXlt"));
     SET_STRING_ELT(klass, 1, mkChar("POSIXt"));
     classgets(ans, klass);
@@ -1228,7 +1228,7 @@ SEXP attribute_hidden do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
     stm tm;
 
     checkArity(op, args);
-    PROTECT(x = duplicate(CAR(args)));
+    VAPROTECT(x, duplicate(CAR(args)));
     if(!isVectorList(x) || LENGTH(x) < 9)
 	error(_("invalid '%s' argument"), "x");
 
@@ -1246,7 +1246,7 @@ SEXP attribute_hidden do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
     for(int i = 3; i < 6; i++)
 	SET_VECTOR_ELT(x, i, coerceVector(VECTOR_ELT(x, i), INTSXP));
 
-    PROTECT(ans = allocVector(REALSXP, n));
+    VAPROTECT(ans, allocVector(REALSXP, n));
     for(R_xlen_t i = 0; i < n; i++) {
 	tm.tm_sec = tm.tm_min = tm.tm_hour = 0;
 	tm.tm_mday  = INTEGER(VECTOR_ELT(x, 3))[i%nlen[3]];
@@ -1264,7 +1264,7 @@ SEXP attribute_hidden do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
 
-    PROTECT(klass = mkString("Date"));
+    VAPROTECT(klass, mkString("Date"));
     classgets(ans, klass);
     UNPROTECT(3);
     return ans;

@@ -1277,7 +1277,7 @@ SEXP attribute_hidden do_Externalgr(SEXP call, SEXP op, SEXP args, SEXP env)
     pGEDevDesc dd = GEcurrentDevice();
     Rboolean record = dd->recordGraphics;
     dd->recordGraphics = FALSE;
-    PROTECT(retval = do_External(call, op, args, env));
+    VAPROTECT(retval, do_External(call, op, args, env));
     dd->recordGraphics = record;
     if (GErecording(call, dd)) { // which is record && call != R_NilValue
 	if (!GEcheckState(dd))
@@ -1294,7 +1294,7 @@ SEXP attribute_hidden do_dotcallgr(SEXP call, SEXP op, SEXP args, SEXP env)
     pGEDevDesc dd = GEcurrentDevice();
     Rboolean record = dd->recordGraphics;
     dd->recordGraphics = FALSE;
-    PROTECT(retval = do_dotcall(call, op, args, env));
+    VAPROTECT(retval, do_dotcall(call, op, args, env));
     dd->recordGraphics = record;
     if (GErecording(call, dd)) {
 	if (!GEcheckState(dd))
@@ -1337,7 +1337,7 @@ Rf_getCallingDLL(void)
     }
     if(!found) return R_NilValue;
 
-    PROTECT(e = lang2(install("getCallingDLLe"), rho));
+    VAPROTECT(e, lang2(install("getCallingDLLe"), rho));
     ans = eval(e,  R_GlobalEnv);
     UNPROTECT(1);
     return(ans);
@@ -1364,7 +1364,7 @@ R_FindNativeSymbolFromDLL(char *name, DllReference *dll,
 	/* Rprintf("\nsearching for %s\n", name); */
 	if (env != R_NilValue) {
 	    SEXP e;
-	    PROTECT(e = lang2(install("getCallingDLLe"), env));
+	    VAPROTECT(e, lang2(install("getCallingDLLe"), env));
 	    dll->obj = eval(e, R_GlobalEnv);
 	    UNPROTECT(1);
 	} else dll->obj = Rf_getCallingDLL();
@@ -1449,10 +1449,10 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 	nargs++;
     }
 
-    PROTECT(ans = allocVector(VECSXP, nargs));
+    VAPROTECT(ans, allocVector(VECSXP, nargs));
     if (havenames) {
 	SEXP names;
-	PROTECT(names = allocVector(STRSXP, nargs));
+	VAPROTECT(names, allocVector(STRSXP, nargs));
 	for (na = 0, pa = args ; pa != R_NilValue ; pa = CDR(pa), na++) {
 	    if (TAG(pa) == R_NilValue)
 		SET_STRING_ELT(names, na, R_BlankString);
@@ -1490,7 +1490,7 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 	       until copied in the switch.
 	       But R_alloc allocates, so missed protection < R 2.15.0.
 	    */
-	    PROTECT(s = coerceVector(s, targetType));
+	    VAPROTECT(s, coerceVector(s, targetType));
 	    nprotect++;
 	}
 
@@ -2424,12 +2424,12 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 		    /* only return one string: warned on the R -> Fortran step */
 		    strncpy(buf, (char*)p, 255);
 		    buf[255] = '\0';
-		    PROTECT(s = allocVector(type, 1));
+		    VAPROTECT(s, allocVector(type, 1));
 		    SET_STRING_ELT(s, 0, mkChar(buf));
 		    UNPROTECT(1);
 		} else if (copy) {
 		    SEXP ss = arg;
-		    PROTECT(s = allocVector(type, n));
+		    VAPROTECT(s, allocVector(type, n));
 		    char **cptr = (char**) p, **cptr0 = (char**) cargs0[na];
 		    for (R_xlen_t i = 0 ; i < n ; i++) {
 			unsigned char *ptr = (unsigned char *) cptr[i];
@@ -2456,7 +2456,7 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 		    }
 		    UNPROTECT(1);
 		} else {
-		    PROTECT(s = allocVector(type, n));
+		    VAPROTECT(s, allocVector(type, n));
 		    char **cptr = (char**) p;
 		    for (R_xlen_t i = 0 ; i < n ; i++)
 			SET_STRING_ELT(s, i, mkChar(cptr[i]));
@@ -2575,7 +2575,7 @@ void call_R(char *func, long nargs, void **arguments, char **modes,
 	error("invalid argument count in call_R");
     if (nres < 0)
 	error("invalid return value count in call_R");
-    PROTECT(pcall = call = allocList((int) nargs + 1));
+    VAPROTECT(pcall, call = allocList((int) nargs + 1));
     SET_TYPEOF(call, LANGSXP);
     SETCAR(pcall, (SEXP)func);
     s = R_NilValue;		/* -Wall */
@@ -2614,7 +2614,7 @@ void call_R(char *func, long nargs, void **arguments, char **modes,
 	    SET_TAG(pcall, install(names[i]));
 	SET_NAMED(CAR(pcall), 2);
     }
-    PROTECT(s = eval(call, R_GlobalEnv));
+    VAPROTECT(s, eval(call, R_GlobalEnv));
     switch(TYPEOF(s)) {
     case LGLSXP:
     case INTSXP:

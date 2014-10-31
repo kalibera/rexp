@@ -130,14 +130,14 @@ SEXP R_initMethodDispatch(SEXP envir)
     /* Some special lists of primitive skeleton calls.
        These will be promises under lazy-loading.
     */
-    PROTECT(R_short_skeletons =
+    VAPROTECT(R_short_skeletons,
 	    findVar(install(".ShortPrimitiveSkeletons"),
 		    Methods_Namespace));
     if(TYPEOF(R_short_skeletons) == PROMSXP)
 	R_short_skeletons = eval(R_short_skeletons, Methods_Namespace);
     R_PreserveObject(R_short_skeletons);
     UNPROTECT(1);
-    PROTECT(R_empty_skeletons =
+    VAPROTECT(R_empty_skeletons,
 	    findVar(install(".EmptyPrimitiveSkeletons"),
 		    Methods_Namespace));
     if(TYPEOF(R_empty_skeletons) == PROMSXP)
@@ -342,7 +342,7 @@ static SEXP R_S_MethodsListSelect(SEXP fname, SEXP ev, SEXP mlist, SEXP f_env)
 {
     SEXP e, val; int n, check_err;
     n = isNull(f_env) ? 4 : 5;
-    PROTECT(e = allocVector(LANGSXP, n));
+    VAPROTECT(e, allocVector(LANGSXP, n));
     SETCAR(e, s_MethodsListSelect);
     val = CDR(e);
     SETCAR(val, fname);
@@ -461,13 +461,13 @@ SEXP R_standardGeneric(SEXP fname, SEXP ev, SEXP fdef)
     switch(TYPEOF(fdef)) {
     case CLOSXP:
         f_env = CLOENV(fdef);
-	PROTECT(mlist = findVar(s_dot_Methods, f_env)); nprotect++;
+	VAPROTECT(mlist, findVar(s_dot_Methods, f_env)); nprotect++;
 	if(mlist == R_UnboundValue)
             mlist = R_NilValue;
 	break;
     case SPECIALSXP: case BUILTINSXP:
         f_env = R_BaseEnv;
-	PROTECT(mlist = R_primitive_methods(fdef)); nprotect++;
+	VAPROTECT(mlist, R_primitive_methods(fdef)); nprotect++;
 	break;
     default: error(_("invalid generic function object for method selection for function '%s': expected a function or a primitive, got an object of class \"%s\""),
 		   CHAR(asChar(fsym)), class_string(fdef));
@@ -482,7 +482,7 @@ SEXP R_standardGeneric(SEXP fname, SEXP ev, SEXP fdef)
     }
     if(isNull(f)) {
 	SEXP value;
-	PROTECT(value = R_S_MethodsListSelect(fname, ev, mlist, f_env)); nprotect++;
+	VAPROTECT(value, R_S_MethodsListSelect(fname, ev, mlist, f_env)); nprotect++;
 	if(isNull(value))
 	    error(_("no direct or inherited method for function '%s' for this call"),
 		  CHAR(asChar(fname)));
@@ -570,7 +570,7 @@ static SEXP do_dispatch(SEXP fname, SEXP ev, SEXP mlist, int firstTry,
     /* check for dispatch turned off inside MethodsListSelect */
     if(isFunction(mlist))
 	return mlist;
-    PROTECT(arg_slot = R_do_slot(mlist, s_argument)); nprotect++;
+    VAPROTECT(arg_slot, R_do_slot(mlist, s_argument)); nprotect++;
     if(arg_slot == R_NilValue) {
 	error(_("object of class \"%s\" used as methods list for function '%s' ( no 'argument' slot)"),
 	      class_string(mlist), CHAR(asChar(fname)));
@@ -598,19 +598,19 @@ static SEXP do_dispatch(SEXP fname, SEXP ev, SEXP mlist, int firstTry,
 	else {
 	    /*  get its class */
 	    SEXP arg, class_obj; int check_err;
-	    PROTECT(arg = R_tryEvalSilent(arg_sym, ev, &check_err)); nprotect++;
+	    VAPROTECT(arg, R_tryEvalSilent(arg_sym, ev, &check_err)); nprotect++;
 	    if(check_err)
 		error(_("error in evaluating the argument '%s' in selecting a method for function '%s': %s"),
 		      CHAR(PRINTNAME(arg_sym)),CHAR(asChar(fname)),
 		      R_curErrorBuf());
-	    PROTECT(class_obj = R_data_class(arg, TRUE)); nprotect++;
+	    VAPROTECT(class_obj, R_data_class(arg, TRUE)); nprotect++;
 	    class = CHAR(STRING_ELT(class_obj, 0));
 	}
     }
     else {
 	/* the arg contains the class as a string */
 	SEXP arg; int check_err;
-	PROTECT(arg = R_tryEvalSilent(arg_sym, ev, &check_err)); nprotect++;
+	VAPROTECT(arg, R_tryEvalSilent(arg_sym, ev, &check_err)); nprotect++;
 	if(check_err)
 	    error(_("error in evaluating the argument '%s' in selecting a method for function '%s': %s"),
 		  CHAR(PRINTNAME(arg_sym)),CHAR(asChar(fname)),
@@ -665,10 +665,10 @@ SEXP R_nextMethodCall(SEXP matched_call, SEXP ev)
      * (this was motivated by issues with match.call; are these still
      * valid in rev. 2.12 ? )*/
     dotsDone = (findVarInFrame3(ev, R_DotsSymbol, TRUE) == R_UnboundValue);
-    {PROTECT(e = duplicate(matched_call)); nprotect++;}
+    {VAPROTECT(e, duplicate(matched_call)); nprotect++;}
     if(!dotsDone) {
 	SEXP ee = e, dots;
-	PROTECT(dots = allocVector(LANGSXP, 1)); nprotect++;
+	VAPROTECT(dots, allocVector(LANGSXP, 1)); nprotect++;
 	SETCAR(dots, R_DotsSymbol);
 	for(ee = e; CDR(ee) != R_NilValue; ee = CDR(ee));
 	SETCDR(ee, dots); /* append ... symbol, with NULL CDR() */
@@ -750,7 +750,7 @@ static SEXP R_loadMethod(SEXP def, SEXP fname, SEXP ev)
             return def;
 	SEXP e, val;
 	PROTECT(def);
-	PROTECT(e = allocVector(LANGSXP, 4));
+	VAPROTECT(e, allocVector(LANGSXP, 4));
 	SETCAR(e, R_loadMethod_name); val = CDR(e);
 	SETCAR(val, def); val = CDR(val);
 	SETCAR(val, fname); val = CDR(val);
@@ -892,7 +892,7 @@ static SEXP do_inherited_table(SEXP class_objs, SEXP fdef, SEXP mtable, SEXP ev)
 	dotFind = install(".InheritForDispatch");
 	f = findFun(dotFind, R_MethodsNamespace);
     }
-    PROTECT(e = allocVector(LANGSXP, 4));
+    VAPROTECT(e, allocVector(LANGSXP, 4));
     SETCAR(e, f); ee = CDR(e);
     SETCAR(ee, class_objs); ee = CDR(ee);
     SETCAR(ee, fdef); ee = CDR(ee);
@@ -926,7 +926,7 @@ static SEXP do_mtable(SEXP fdef, SEXP ev)
 	f = findFun(dotFind, R_MethodsNamespace);
 	R_PreserveObject(f);
     }
-    PROTECT(e = allocVector(LANGSXP, 2));
+    VAPROTECT(e, allocVector(LANGSXP, 2));
     SETCAR(e, f); ee = CDR(e);
     SETCAR(ee, fdef);
     ee = eval(e, ev);
@@ -955,7 +955,7 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
         f_env = CLOENV(fdef);
 	break;
     case SPECIALSXP: case BUILTINSXP:
-	PROTECT(fdef = R_primitive_generic(fdef)); nprotect++;
+	VAPROTECT(fdef, R_primitive_generic(fdef)); nprotect++;
 	if(TYPEOF(fdef) != CLOSXP) {
 	    error(_("failed to get the generic for the primitive \"%s\""), CHAR(asChar(fname)));
 	    return R_NilValue;
@@ -966,18 +966,18 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	error(_("expected a generic function or a primitive for dispatch, got an object of class \"%s\""),
 	      class_string(fdef));
     }
-    PROTECT(mtable = findVarInFrame(f_env, R_allmtable)); nprotect++;
+    VAPROTECT(mtable, findVarInFrame(f_env, R_allmtable)); nprotect++;
     if(mtable == R_UnboundValue) {
 	do_mtable(fdef, ev); /* Should initialize the generic */
-	PROTECT(mtable = findVarInFrame(f_env, R_allmtable)); nprotect++;
+	VAPROTECT(mtable, findVarInFrame(f_env, R_allmtable)); nprotect++;
     }
-    PROTECT(sigargs = findVarInFrame(f_env, R_sigargs)); nprotect++;
-    PROTECT(siglength = findVarInFrame(f_env, R_siglength)); nprotect++;
+    VAPROTECT(sigargs, findVarInFrame(f_env, R_sigargs)); nprotect++;
+    VAPROTECT(siglength, findVarInFrame(f_env, R_siglength)); nprotect++;
     if(sigargs == R_UnboundValue || siglength == R_UnboundValue ||
        mtable == R_UnboundValue)
 	error("generic \"%s\" seems not to have been initialized for table dispatch---need to have '.SigArgs' and '.AllMtable' assigned in its environment");
     nargs = asInteger(siglength);
-    PROTECT(classes = allocVector(VECSXP, nargs)); nprotect++;
+    VAPROTECT(classes, allocVector(VECSXP, nargs)); nprotect++;
     if (nargs > LENGTH(sigargs))
 	error("'.SigArgs' is shorter than '.SigLength' says it should be");
     for(i = 0; i < nargs; i++) {
@@ -991,7 +991,7 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 		thisClass = dots_class(ev, &check_err);
 	    }
 	    else {
-		PROTECT(arg = R_tryEvalSilent(arg_sym, ev, &check_err));
+		VAPROTECT(arg, R_tryEvalSilent(arg_sym, ev, &check_err));
 		if(!check_err)
 		    thisClass = R_data_class(arg, TRUE);
 		UNPROTECT(1); /* for arg */

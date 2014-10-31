@@ -199,7 +199,7 @@ SEXP runmed(SEXP x, SEXP stype, SEXP sk, SEXP end, SEXP print_level)
     R_xlen_t n = XLENGTH(x);
     int type = asInteger(stype), k = asInteger(sk),
 	iend = asInteger(end), pl = asInteger(print_level);
-    SEXP ans; PROTECT(ans = allocVector(REALSXP, n));
+    SEXP ans; VAPROTECT(ans, allocVector(REALSXP, n));
     if (type == 1) {
 	if (IS_LONG_VEC(x)) 
 	    error("long vectors are not supported for algorithm = \"Turlach\"");

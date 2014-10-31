@@ -168,7 +168,7 @@ SEXP attribute_hidden do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP ans, x = CAR(args);
     if(DispatchOrEval(call, op, "is.unsorted", args, rho, &ans, 0, 1))
 	return ans;
-    PROTECT(args = ans); // args evaluated now
+    VAPROTECT(args, ans); // args evaluated now
 
     int strictly = asLogical(CADR(args));
     if(strictly == NA_LOGICAL)
@@ -181,7 +181,7 @@ SEXP attribute_hidden do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(isObject(x)) {
 	// try dispatch -- fails entirely for S4: need "DispatchOrEval()" ?
 	SEXP call;
-	PROTECT(call = 	// R>  .gtn(x, strictly) :
+	VAPROTECT(call, 	// R>  .gtn(x, strictly) :
 		lang3(install(".gtn"), x, CADR(args)));
 	ans = eval(call, rho);
 	UNPROTECT(2);
@@ -331,7 +331,7 @@ SEXP attribute_hidden do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("raw vectors cannot be sorted"));
     /* we need consistent behaviour here, including dropping attibutes,
        so as from 2.3.0 we always duplicate. */
-    PROTECT(ans = duplicate(CAR(args)));
+    VAPROTECT(ans, duplicate(CAR(args)));
     SET_ATTRIB(ans, R_NilValue);  /* this is never called with names */
     SET_OBJECT(ans, 0);		  /* we may have just stripped off the class */
     sortVector(ans, decreasing);
@@ -653,9 +653,9 @@ static int equal(R_xlen_t i, R_xlen_t j, SEXP x, Rboolean nalast, SEXP rho)
     if (isObject(x) && !isNull(rho)) { /* so never any NAs */
 	/* evaluate .gt(x, i, j) */
 	SEXP si, sj, call;
-	PROTECT(si = ScalarInteger((int)i+1));
-	PROTECT(sj = ScalarInteger((int)j+1));
-	PROTECT(call = lang4(install(".gt"), x, si, sj));
+	VAPROTECT(si, ScalarInteger((int)i+1));
+	VAPROTECT(sj, ScalarInteger((int)j+1));
+	VAPROTECT(call, lang4(install(".gt"), x, si, sj));
 	c = asInteger(eval(call, rho));
 	UNPROTECT(3);
     } else {
@@ -691,9 +691,9 @@ static int greater(R_xlen_t i, R_xlen_t j, SEXP x, Rboolean nalast,
     if (isObject(x) && !isNull(rho)) { /* so never any NAs */
 	/* evaluate .gt(x, i, j) */
 	SEXP si, sj, call;
-	PROTECT(si = ScalarInteger((int)i+1));
-	PROTECT(sj = ScalarInteger((int)j+1));
-	PROTECT(call = lang4(install(".gt"), x, si, sj));
+	VAPROTECT(si, ScalarInteger((int)i+1));
+	VAPROTECT(sj, ScalarInteger((int)j+1));
+	VAPROTECT(call, lang4(install(".gt"), x, si, sj));
 	c = asInteger(eval(call, rho));
 	UNPROTECT(3);
     } else {
@@ -1243,7 +1243,7 @@ SEXP attribute_hidden do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(narg == 1) {
 #ifdef LONG_VECTOR_SUPPORT
 	    if (n > INT_MAX)  {
-		PROTECT(ans = allocVector(REALSXP, n));
+		VAPROTECT(ans, allocVector(REALSXP, n));
 		R_xlen_t *in = (R_xlen_t *) R_alloc(n, sizeof(R_xlen_t));
 		for (R_xlen_t i = 0; i < n; i++) in[i] = i;
 		orderVector1l(in, n, CAR(args), nalast, decreasing,
@@ -1252,7 +1252,7 @@ SEXP attribute_hidden do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    } else
 #endif
 	    {
-		PROTECT(ans = allocVector(INTSXP, n));
+		VAPROTECT(ans, allocVector(INTSXP, n));
 		for (R_xlen_t i = 0; i < n; i++) INTEGER(ans)[i] = (int) i;
 		orderVector1(INTEGER(ans), (int)n, CAR(args), nalast,
 			     decreasing, R_NilValue);
@@ -1261,7 +1261,7 @@ SEXP attribute_hidden do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 	} else {
 #ifdef LONG_VECTOR_SUPPORT
 	    if (n > INT_MAX)  {
-		PROTECT(ans = allocVector(REALSXP, n));
+		VAPROTECT(ans, allocVector(REALSXP, n));
 		R_xlen_t *in = (R_xlen_t *) R_alloc(n, sizeof(R_xlen_t));
 		for (R_xlen_t i = 0; i < n; i++) in[i] = i;
 		orderVectorl(in, n, CAR(args), nalast, decreasing,
@@ -1270,7 +1270,7 @@ SEXP attribute_hidden do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    } else
 #endif
 	    {
-		PROTECT(ans = allocVector(INTSXP, n));
+		VAPROTECT(ans, allocVector(INTSXP, n));
 		for (R_xlen_t i = 0; i < n; i++) INTEGER(ans)[i] = (int) i;
 		orderVector(INTEGER(ans), (int) n, args, nalast,
 			    decreasing, listgreater);
@@ -1323,10 +1323,10 @@ SEXP attribute_hidden do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if(!strcmp(ties_str, "min"))	ties_kind = MIN;
     else error(_("invalid ties.method for rank() [should never happen]"));
     if (ties_kind == AVERAGE || isLong) {
-	PROTECT(rank = allocVector(REALSXP, n));
+	VAPROTECT(rank, allocVector(REALSXP, n));
 	rk = REAL(rank);
     } else {
-	PROTECT(rank = allocVector(INTSXP, n));
+	VAPROTECT(rank, allocVector(INTSXP, n));
 	ik = INTEGER(rank);
     }
     if (n > 0) {
@@ -1483,8 +1483,8 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if(DispatchOrEval(call, op, "xtfrm", args, rho, &ans, 0, 1)) return ans;
     /* otherwise dispatch the default method */
-    PROTECT(fn = findFun(install("xtfrm.default"), rho));
-    PROTECT(prargs = promiseArgs(args, R_GlobalEnv));
+    VAPROTECT(fn, findFun(install("xtfrm.default"), rho));
+    VAPROTECT(prargs, promiseArgs(args, R_GlobalEnv));
     SET_PRVALUE(CAR(prargs), CAR(args));
     ans = applyClosure(call, fn, prargs, rho, R_NilValue);
     UNPROTECT(2);

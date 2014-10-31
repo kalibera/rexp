@@ -362,7 +362,7 @@ SEXP attribute_hidden mat2indsub(SEXP dims, SEXP s, SEXP call)
     for (int j = 0; j < LENGTH(dims); j++)  len *= INTEGER(dims)[j];
 
     if(len > R_SHORT_LEN_MAX) {
-	PROTECT(rvec = allocVector(REALSXP, nrs));
+	VAPROTECT(rvec, allocVector(REALSXP, nrs));
 	double *rv = REAL(rvec);
 	for (int i = 0; i < nrs; i++) rv[i] = 1.; // 1-based.
 	if (TYPEOF(s) == REALSXP) {
@@ -404,7 +404,7 @@ SEXP attribute_hidden mat2indsub(SEXP dims, SEXP s, SEXP call)
     } else
 #endif
     {
-	PROTECT(rvec = allocVector(INTSXP, nrs));
+	VAPROTECT(rvec, allocVector(INTSXP, nrs));
 	int *iv = INTEGER(rvec);
 	for (int i = 0; i < nrs; i++) iv[i] = 1; // 1-based.
 	s = coerceVector(s, INTSXP);
@@ -443,14 +443,14 @@ SEXP attribute_hidden strmat2intmat(SEXP s, SEXP dnamelist, SEXP call)
     int nr = nrows(s), i, j, v;
     R_xlen_t idx, NR = nr;
     SEXP dnames, snames, si, sicol, s_elt;
-    PROTECT(snames = allocVector(STRSXP, nr));
-    PROTECT(si = allocVector(INTSXP, xlength(s)));
+    VAPROTECT(snames, allocVector(STRSXP, nr));
+    VAPROTECT(si, allocVector(INTSXP, xlength(s)));
     dimgets(si, getAttrib(s, R_DimSymbol));
     for (i = 0; i < length(dnamelist); i++) {
         dnames = VECTOR_ELT(dnamelist, i);
         for (j = 0; j < nr; j++)
             SET_STRING_ELT(snames, j, STRING_ELT(s, j + (i * NR)));
-        PROTECT(sicol = match(dnames, snames, 0));
+        VAPROTECT(sicol, match(dnames, snames, 0));
         for (j = 0; j < nr; j++) {
             v = INTEGER(sicol)[j];
             idx = j + (i * NR);
@@ -535,7 +535,7 @@ static SEXP negativeSubscript(SEXP s, R_xlen_t ns, R_xlen_t nx, SEXP call)
     SEXP indx;
     R_xlen_t stretch = 0;
     R_xlen_t i;
-    PROTECT(indx = allocVector(LGLSXP, nx));
+    VAPROTECT(indx, allocVector(LGLSXP, nx));
     for (i = 0; i < nx; i++)
 	LOGICAL(indx)[i] = 1;
     for (i = 0; i < ns; i++) {
@@ -633,7 +633,7 @@ realSubscript(SEXP s, R_xlen_t ns, R_xlen_t nx, R_xlen_t *stretch, SEXP call)
 	    R_xlen_t stretch = 0;
 	    double dx;
 	    R_xlen_t i, ix;
-	    PROTECT(indx = allocVector(LGLSXP, nx));
+	    VAPROTECT(indx, allocVector(LGLSXP, nx));
 	    for (i = 0; i < nx; i++) LOGICAL(indx)[i] = 1;
 	    for (i = 0; i < ns; i++) {
 		dx = REAL(s)[i];
@@ -715,7 +715,7 @@ stringSubscript(SEXP s, R_xlen_t ns, R_xlen_t nx, SEXP names,
 
     PROTECT(s);
     PROTECT(names);
-    PROTECT(indexnames = allocVector(VECSXP, ns));
+    VAPROTECT(indexnames, allocVector(VECSXP, ns));
     nnames = nx;
     extra = nnames;
 
@@ -730,14 +730,14 @@ stringSubscript(SEXP s, R_xlen_t ns, R_xlen_t nx, SEXP names,
 	/* must be internal, so names contains a character vector */
 	/* NB: this does not behave in the same way with respect to ""
 	   and NA names: they will match */
-	PROTECT(indx = match(names, s, 0));
+	VAPROTECT(indx, match(names, s, 0));
 	/* second pass to correct this */
 	for (i = 0; i < ns; i++)
 	    if(STRING_ELT(s, i) == NA_STRING || !CHAR(STRING_ELT(s, i))[0])
 		INTEGER(indx)[i] = 0;
 	for (i = 0; i < ns; i++) SET_VECTOR_ELT(indexnames, i, R_NilValue);
     } else {
-	PROTECT(indx = allocVector(INTSXP, ns));
+	VAPROTECT(indx, allocVector(INTSXP, ns));
 	for (i = 0; i < ns; i++) {
 	    sub = 0;
 	    if (names != R_NilValue) {
@@ -811,7 +811,7 @@ int_arraySubscript(int dim, SEXP s, SEXP dims, SEXP x, SEXP call)
 	return integerSubscript(s, ns, nd, &stretch, call);
     case REALSXP:
 	/* We don't yet allow subscripts > R_SHORT_LEN_MAX */
-	PROTECT(tmp = coerceVector(s, INTSXP));
+	VAPROTECT(tmp, coerceVector(s, INTSXP));
 	tmp = integerSubscript(tmp, ns, nd, &stretch, call);
 	UNPROTECT(1);
 	return tmp;
@@ -886,7 +886,7 @@ makeSubscript(SEXP x, SEXP s, R_xlen_t *stretch, SEXP call)
 	}
     }
 
-    PROTECT(s = duplicate(s));
+    VAPROTECT(s, duplicate(s));
     SET_ATTRIB(s, R_NilValue);
     SET_OBJECT(s, 0);
 

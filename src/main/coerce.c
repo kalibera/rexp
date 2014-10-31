@@ -331,11 +331,11 @@ SEXP PairToVectorList(SEXP x)
 	len++;
     }
     PROTECT(x);
-    PROTECT(xnew = allocVector(VECSXP, len));
+    VAPROTECT(xnew, allocVector(VECSXP, len));
     for (i = 0, xptr = x; i < len; i++, xptr = CDR(xptr))
 	SET_VECTOR_ELT(xnew, i, CAR(xptr));
     if (named) {
-	PROTECT(xnames = allocVector(STRSXP, len));
+	VAPROTECT(xnames, allocVector(STRSXP, len));
 	xptr = x;
 	for (i = 0, xptr = x; i < len; i++, xptr = CDR(xptr)) {
 	    if(TAG(xptr) == R_NilValue)
@@ -358,8 +358,8 @@ SEXP VectorToPairList(SEXP x)
 
     len = length(x);
     PROTECT(x);
-    PROTECT(xnew = allocList(len)); /* limited to int */
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol));
+    VAPROTECT(xnew, allocList(len)); /* limited to int */
+    VAPROTECT(xnames, getAttrib(x, R_NamesSymbol));
     named = (xnames != R_NilValue);
     xptr = xnew;
     for (i = 0; i < len; i++) {
@@ -417,7 +417,7 @@ static SEXP coerceToLogical(SEXP v)
     SEXP ans;
     int warn = 0;
     R_xlen_t i, n;
-    PROTECT(ans = allocVector(LGLSXP, n = XLENGTH(v)));
+    VAPROTECT(ans, allocVector(LGLSXP, n = XLENGTH(v)));
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(v)){
        memtrace_report(v,ans);
@@ -469,7 +469,7 @@ static SEXP coerceToInteger(SEXP v)
     SEXP ans;
     int warn = 0;
     R_xlen_t i, n;
-    PROTECT(ans = allocVector(INTSXP, n = XLENGTH(v)));
+    VAPROTECT(ans, allocVector(INTSXP, n = XLENGTH(v)));
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(v)){
        memtrace_report(v,ans);
@@ -521,7 +521,7 @@ static SEXP coerceToReal(SEXP v)
     SEXP ans;
     int warn = 0;
     R_xlen_t i, n;
-    PROTECT(ans = allocVector(REALSXP, n = XLENGTH(v)));
+    VAPROTECT(ans, allocVector(REALSXP, n = XLENGTH(v)));
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(v)){
        memtrace_report(v,ans);
@@ -573,7 +573,7 @@ static SEXP coerceToComplex(SEXP v)
     SEXP ans;
     int warn = 0;
     R_xlen_t i, n;
-    PROTECT(ans = allocVector(CPLXSXP, n = XLENGTH(v)));
+    VAPROTECT(ans, allocVector(CPLXSXP, n = XLENGTH(v)));
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(v)){
        memtrace_report(v,ans);
@@ -626,7 +626,7 @@ static SEXP coerceToRaw(SEXP v)
     int warn = 0, tmp;
     R_xlen_t i, n;
 
-    PROTECT(ans = allocVector(RAWSXP, n = XLENGTH(v)));
+    VAPROTECT(ans, allocVector(RAWSXP, n = XLENGTH(v)));
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(v)){
        memtrace_report(v,ans);
@@ -704,7 +704,7 @@ static SEXP coerceToString(SEXP v)
     int savedigits, warn = 0;
     R_xlen_t i, n;
 
-    PROTECT(ans = allocVector(STRSXP, n = XLENGTH(v)));
+    VAPROTECT(ans, allocVector(STRSXP, n = XLENGTH(v)));
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(v)){
        memtrace_report(v,ans);
@@ -763,7 +763,7 @@ static SEXP coerceToExpression(SEXP v)
     R_xlen_t i, n;
     if (isVectorAtomic(v)) {
 	n = XLENGTH(v);
-	PROTECT(ans = allocVector(EXPRSXP, n));
+	VAPROTECT(ans, allocVector(EXPRSXP, n));
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(v)){
        memtrace_report(v,ans);
@@ -800,7 +800,7 @@ static SEXP coerceToExpression(SEXP v)
 	}
     }
     else {/* not used either */
-	PROTECT(ans = allocVector(EXPRSXP, 1));
+	VAPROTECT(ans, allocVector(EXPRSXP, 1));
 	SET_VECTOR_ELT(ans, 0, duplicate(v));
     }
     UNPROTECT(1);
@@ -812,7 +812,7 @@ static SEXP coerceToVectorList(SEXP v)
     SEXP ans, tmp;
     R_xlen_t i, n;
     n = xlength(v);
-    PROTECT(ans = allocVector(VECSXP, n));
+    VAPROTECT(ans, allocVector(VECSXP, n));
 #ifdef R_MEMORY_PROFILING
     if (RTRACE(v)){
        memtrace_report(v,ans);
@@ -879,7 +879,7 @@ static SEXP coerceToPairList(SEXP v)
     SEXP ans, ansp;
     int i, n;
     n = LENGTH(v); /* limited to len */
-    PROTECT(ansp = ans = allocList(n));
+    VAPROTECT(ansp, ans = allocList(n));
     for (i = 0; i < n; i++) {
 	switch (TYPEOF(v)) {
 	case LGLSXP:
@@ -935,14 +935,14 @@ static SEXP coercePairList(SEXP v, SEXPTYPE type)
 
     names = v;
     if (type == EXPRSXP) {
-	PROTECT(rval = allocVector(type, 1));
+	VAPROTECT(rval, allocVector(type, 1));
 	SET_VECTOR_ELT(rval, 0, v);
 	UNPROTECT(1);
 	return rval;
     }
     else if (type == STRSXP) {
 	n = length(v);
-	PROTECT(rval = allocVector(type, n));
+	VAPROTECT(rval, allocVector(type, n));
 	for (vp = v, i = 0; vp != R_NilValue; vp = CDR(vp), i++) {
 	    if (isString(CAR(vp)) && length(CAR(vp)) == 1)
 		SET_STRING_ELT(rval, i, STRING_ELT(CAR(vp), 0));
@@ -956,7 +956,7 @@ static SEXP coercePairList(SEXP v, SEXPTYPE type)
     }
     else if (isVectorizable(v)) {
 	n = length(v);
-	PROTECT(rval = allocVector(type, n));
+	VAPROTECT(rval, allocVector(type, n));
 	switch (type) {
 	case LGLSXP:
 	    for (i = 0, vp = v; i < n; i++, vp = CDR(vp))
@@ -1030,7 +1030,7 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
 
     if (type == STRSXP) {
 	n = xlength(v);
-	PROTECT(rval = allocVector(type, n));
+	VAPROTECT(rval, allocVector(type, n));
 #ifdef R_MEMORY_PROFILING
 	if (RTRACE(v)){
 	   memtrace_report(v, rval);
@@ -1059,7 +1059,7 @@ static SEXP coerceVectorList(SEXP v, SEXPTYPE type)
     }
     else if (isVectorizable(v)) {
 	n = xlength(v);
-	PROTECT(rval = allocVector(type, n));
+	VAPROTECT(rval, allocVector(type, n));
 	switch (type) {
 	case LGLSXP:
 	    for (i = 0; i < n; i++) {
@@ -1116,7 +1116,7 @@ static SEXP coerceSymbol(SEXP v, SEXPTYPE type)
 {
     SEXP rval = R_NilValue;
     if (type == EXPRSXP) {
-	PROTECT(rval = allocVector(type, 1));
+	VAPROTECT(rval, allocVector(type, 1));
 	SET_VECTOR_ELT(rval, 0, v);
 	UNPROTECT(1);
     } else if (type == CHARSXP)
@@ -1169,7 +1169,7 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 	 * special-case the first element so as not to get operators
 	 * put in backticks. */
 	n = length(v);
-	PROTECT(ans = allocVector(type, n));
+	VAPROTECT(ans, allocVector(type, n));
 	if (n == 0) break; /* Can this actually happen? */
 	i = 0;
 	op = CAR(v);
@@ -1264,9 +1264,9 @@ static SEXP asFunction(SEXP x)
     SEXP f, pf;
     int n;
     if (isFunction(x)) return x;
-    PROTECT(f = allocSExp(CLOSXP));
+    VAPROTECT(f, allocSExp(CLOSXP));
     SET_CLOENV(f, R_GlobalEnv);
-    if (MAYBE_REFERENCED(x)) PROTECT(x = duplicate(x));
+    if (MAYBE_REFERENCED(x)) VAPROTECT(x, duplicate(x));
     else PROTECT(x);
 
     if (isNull(x) || !isList(x)) {
@@ -1350,7 +1350,7 @@ SEXP asCharacterFactor(SEXP x)
 
     R_xlen_t i, n = XLENGTH(x);
     SEXP labels = getAttrib(x, R_LevelsSymbol);
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for(i = 0; i < n; i++) {
       int ii = INTEGER(x)[i];
       SET_STRING_ELT(ans, i,
@@ -1512,7 +1512,7 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (n < 1)
 	errorcall(call, _("argument must have length at least 1"));
     names = getAttrib(arglist, R_NamesSymbol);
-    PROTECT(pargs = args = allocList(n - 1));
+    VAPROTECT(pargs, args = allocList(n - 1));
     for (i = 0; i < n - 1; i++) {
 	SETCAR(pargs, VECTOR_ELT(arglist, i));
 	if (names != R_NilValue && *CHAR(STRING_ELT(names, i)) != '\0') /* ASCII */
@@ -1522,7 +1522,7 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 	pargs = CDR(pargs);
     }
     CheckFormals(args);
-    PROTECT(body = VECTOR_ELT(arglist, n-1));
+    VAPROTECT(body, VECTOR_ELT(arglist, n-1));
     /* the main (only?) thing to rule out is body being
        a function already. If we test here then
        mkCLOSXP can continue to overreact when its
@@ -1557,7 +1557,7 @@ SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(0 == (n = length(args)))
 	    errorcall(call, _("invalid length 0 argument"));
 	names = getAttrib(args, R_NamesSymbol);
-	PROTECT(ap = ans = allocList(n));
+	VAPROTECT(ap, ans = allocList(n));
 	for (i = 0; i < n; i++) {
 	    SETCAR(ap, VECTOR_ELT(args, i));
 	    if (names != R_NilValue && !StringBlank(STRING_ELT(names, i)))
@@ -1750,7 +1750,7 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    return(ans);
     }
 
-    PROTECT(ans = allocVector(LGLSXP, 1));
+    VAPROTECT(ans, allocVector(LGLSXP, 1));
 
     switch (PRIMVAL(op)) {
     case NILSXP:	/* is.null */
@@ -1911,7 +1911,7 @@ SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (streql(stype, "name"))
       stype = "symbol";
 
-    PROTECT(ans = allocVector(LGLSXP, 1));
+    VAPROTECT(ans, allocVector(LGLSXP, 1));
     if (streql(stype, "any")) {
 	/* isVector is inlined, means atomic or VECSXP or EXPRSXP */
 	LOGICAL(ans)[0] = isVector(x);
@@ -1952,7 +1952,7 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (DispatchOrEval(call, op, "is.na", args, rho, &ans, 1, 1))
 	return(ans);
-    PROTECT(args = ans);
+    VAPROTECT(args, ans);
 #ifdef stringent_is
     if (!isList(CAR(args)) && !isVector(CAR(args)))
 	errorcall_return(call, "is.na " R_MSG_list_vec);
@@ -1960,13 +1960,13 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     x = CAR(args);
     n = xlength(x);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     if (isVector(x)) {
-	PROTECT(dims = getAttrib(x, R_DimSymbol));
+	VAPROTECT(dims, getAttrib(x, R_DimSymbol));
 	if (isArray(x))
-	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
+	    VAPROTECT(names, getAttrib(x, R_DimNamesSymbol));
 	else
-	    PROTECT(names = getAttrib(x, R_NamesSymbol));
+	    VAPROTECT(names, getAttrib(x, R_NamesSymbol));
     }
     else dims = names = R_NilValue;
     switch (TYPEOF(x)) {
@@ -2069,9 +2069,9 @@ static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (isList && length(args) > 1) recursive = asLogical(CADR(args));
     if (OBJECT(x) || (isList && !recursive)) {
-	SEXP e0; PROTECT(e0 = lang2(install("is.na"), x));
-	SEXP e; PROTECT(e = lang2(install("any"), e0));
-	SEXP res; PROTECT(res = eval(e, env));
+	SEXP e0; VAPROTECT(e0, lang2(install("is.na"), x));
+	SEXP e; VAPROTECT(e, lang2(install("any"), e0));
+	SEXP res; VAPROTECT(res, eval(e, env));
 	int ans = asLogical(res);
 	UNPROTECT(3);
 	return ans == 1; // so NA answer is false.
@@ -2177,7 +2177,7 @@ SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (do_anyNA_formals == NULL)
 	    do_anyNA_formals = allocFormalsList2(install("x"),
 						 R_RecursiveSymbol);
-	PROTECT(args = matchArgs(do_anyNA_formals, args, call));
+	VAPROTECT(args, matchArgs(do_anyNA_formals, args, call));
 	if(CADR(args) ==  R_MissingArg) SETCADR(args, ScalarLogical(FALSE));
 	ans = ScalarLogical(anyNA(call, op, args, rho));
 	UNPROTECT(1);
@@ -2197,20 +2197,20 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (DispatchOrEval(call, op, "is.nan", args, rho, &ans, 1, 1))
 	return(ans);
 
-    PROTECT(args = ans);
+    VAPROTECT(args, ans);
 #ifdef stringent_is
     if (!isList(CAR(args)) && !isVector(CAR(args)))
 	errorcall_return(call, "is.nan " R_MSG_list_vec);
 #endif
     x = CAR(args);
     n = xlength(x);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     if (isVector(x)) {
-	PROTECT(dims = getAttrib(x, R_DimSymbol));
+	VAPROTECT(dims, getAttrib(x, R_DimSymbol));
 	if (isArray(x))
-	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
+	    VAPROTECT(names, getAttrib(x, R_DimNamesSymbol));
 	else
-	    PROTECT(names = getAttrib(x, R_NamesSymbol));
+	    VAPROTECT(names, getAttrib(x, R_NamesSymbol));
     }
     else dims = names = R_NilValue;
     switch (TYPEOF(x)) {
@@ -2383,7 +2383,7 @@ SEXP attribute_hidden do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (length(args) < 1) errorcall(call, _("'name' is missing"));
     check1arg(args, call, "name");
-    PROTECT(rfun = eval(CAR(args), rho));
+    VAPROTECT(rfun, eval(CAR(args), rho));
     /* zero-length string check used to be here but install gives
        better error message.
      */
@@ -2391,10 +2391,10 @@ SEXP attribute_hidden do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall_return(call, _("first argument must be a character string"));
     const char *str = translateChar(STRING_ELT(rfun, 0));
     if (streql(str, ".Internal")) error("illegal usage");
-    PROTECT(rfun = install(str));
-    PROTECT(evargs = duplicate(CDR(args)));
+    VAPROTECT(rfun, install(str));
+    VAPROTECT(evargs, duplicate(CDR(args)));
     for (rest = evargs; rest != R_NilValue; rest = CDR(rest)) {
-	PROTECT(tmp = eval(CAR(rest), rho));
+	VAPROTECT(tmp, eval(CAR(rest), rho));
 	if (MAYBE_REFERENCED(tmp)) tmp = duplicate(tmp);
 	SETCAR(rest, tmp);
 	UNPROTECT(1);
@@ -2437,7 +2437,7 @@ SEXP attribute_hidden do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = length(args);
     names = getAttrib(args, R_NamesSymbol);
 
-    PROTECT(c = call = allocList(n + 1));
+    VAPROTECT(c, call = allocList(n + 1));
     SET_TYPEOF(c, LANGSXP);
     if( isString(fun) ) {
 	const char *str = translateChar(STRING_ELT(fun, 0));
@@ -2550,7 +2550,7 @@ SEXP attribute_hidden substituteList(SEXP el, SEXP rho)
 	}
 	if (h != R_NilValue) {
 	    if (res == R_NilValue)
-		PROTECT(res = h);
+		VAPROTECT(res, h);
 	    else
 		SETCDR(p, h);
 	    /* now set 'p': dots might have expanded to a list of length > 1 */
@@ -2575,7 +2575,7 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 						  install("env"));
 
     /* argument matching */
-    PROTECT(argList = matchArgs(do_substitute_formals, args, call));
+    VAPROTECT(argList, matchArgs(do_substitute_formals, args, call));
 
     /* set up the environment for substitution */
     if (CADR(argList) == R_MissingArg)
@@ -2592,7 +2592,7 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("invalid environment specified"));
 
     PROTECT(env);
-    PROTECT(t = CONS(duplicate(CAR(argList)), R_NilValue));
+    VAPROTECT(t, CONS(duplicate(CAR(argList)), R_NilValue));
     s = substituteList(t, env);
     UNPROTECT(3);
     return CAR(s);
@@ -2684,8 +2684,8 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
     if(TYPEOF(value) != STRSXP) {
 	SEXP dup;
 	/* assumes value is protected, which it is in R_do_set_class */
-	PROTECT(dup = duplicate(value));
-	PROTECT(value = coerceVector(dup, STRSXP));
+	VAPROTECT(dup, duplicate(value));
+	VAPROTECT(value, coerceVector(dup, STRSXP));
 	nProtect += 2;
     }
     if(length(value) > 1) {
@@ -2705,14 +2705,14 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	valueString = CHAR(asChar(value)); /* ASCII */
 	whichType = class2type(valueString);
 	valueType = (whichType == -1) ? (SEXPTYPE) -1 : classTable[whichType].sexp;
-	PROTECT(cur_class = R_data_class(obj, FALSE)); nProtect++;
+	VAPROTECT(cur_class, R_data_class(obj, FALSE)); nProtect++;
 	/*  assigning type as a class deletes an explicit class attribute. */
 	if(valueType != -1) {
 	    setAttrib(obj, R_ClassSymbol, R_NilValue);
 	    if(IS_S4_OBJECT(obj)) /* NULL class is only valid for S3 objects */
 	      do_unsetS4(obj, value);
 	    if(classTable[whichType].canChange) {
-		PROTECT(obj = ascommon(call, obj, valueType));
+		VAPROTECT(obj, ascommon(call, obj, valueType));
 		nProtect++;
 	    }
 	    else if(valueType != TYPEOF(obj))
@@ -2726,7 +2726,7 @@ static SEXP R_set_class(SEXP obj, SEXP value, SEXP call)
 	      do_unsetS4(obj, value);
 	    switch(TYPEOF(obj)) {
 	    case INTSXP: case REALSXP: break;
-	    default: PROTECT(obj = coerceVector(obj, REALSXP));
+	    default: VAPROTECT(obj, coerceVector(obj, REALSXP));
 		nProtect++;
 	    }
 	}
@@ -2792,7 +2792,7 @@ SEXP attribute_hidden do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
     if(TYPEOF(obj) == type) return obj;
     if(isFactor(obj))
 	error(_("invalid to change the storage mode of a factor"));
-    PROTECT(ans = coerceVector(obj, type));
+    VAPROTECT(ans, coerceVector(obj, type));
     DUPLICATE_ATTRIB(ans, obj);
     UNPROTECT(1);
     return ans;

@@ -958,7 +958,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
     if (R_compile_pkgs && TYPEOF(s) == CLOSXP && TYPEOF(BODY(s)) != BCODESXP) {
 	SEXP new_s;
 	R_compile_pkgs = FALSE;
-	PROTECT(new_s = R_cmpfun(s));
+	VAPROTECT(new_s, R_cmpfun(s));
 	WriteItem (new_s, ref_table, stream);
 	UNPROTECT(1);
 	R_compile_pkgs = TRUE;
@@ -1185,7 +1185,7 @@ static void ScanForCircles1(SEXP s, SEXP ct)
 static SEXP ScanForCircles(SEXP s)
 {
     SEXP ct;
-    PROTECT(ct = MakeCircleHashTable());
+    VAPROTECT(ct, MakeCircleHashTable());
     ScanForCircles1(s, ct);
     UNPROTECT(1);
     return CAR(ct);
@@ -1250,7 +1250,7 @@ static void WriteBC1(SEXP s, SEXP ref_table, SEXP reps, R_outpstream_t stream)
 {
     int i, n;
     SEXP code, consts;
-    PROTECT(code = R_bcDecode(BCODE_CODE(s)));
+    VAPROTECT(code, R_bcDecode(BCODE_CODE(s)));
     WriteItem(code, ref_table, stream);
     consts = BCODE_CONSTS(s);
     n = LENGTH(consts);
@@ -1278,7 +1278,7 @@ static void WriteBC1(SEXP s, SEXP ref_table, SEXP reps, R_outpstream_t stream)
 static void WriteBC(SEXP s, SEXP ref_table, R_outpstream_t stream)
 {
     SEXP reps = ScanForCircles(s);
-    PROTECT(reps = CONS(R_NilValue, reps));
+    VAPROTECT(reps, CONS(R_NilValue, reps));
     OutInteger(stream, length(reps));
     SETCAR(reps, allocVector(INTSXP, 1));
     INTEGER(CAR(reps))[0] = 0;
@@ -1302,7 +1302,7 @@ void R_Serialize(SEXP s, R_outpstream_t stream)
     default: error(_("version %d not supported"), version);
     }
 
-    PROTECT(ref_table = MakeHashTable());
+    VAPROTECT(ref_table, MakeHashTable());
     WriteItem(s, ref_table, stream);
     UNPROTECT(1);
 }
@@ -1362,7 +1362,7 @@ static SEXP InStringVec(R_inpstream_t stream, SEXP ref_table)
     if (InInteger(stream) != 0)
 	error(_("names in persistent strings are not supported yet"));
     len = InInteger(stream);
-    PROTECT(s = allocVector(STRSXP, len));
+    VAPROTECT(s, allocVector(STRSXP, len));
     R_ReadItemDepth++;
     for (i = 0; i < len; i++)
 	SET_STRING_ELT(s, i, ReadItem(ref_table, stream));
@@ -1512,7 +1512,7 @@ static SEXP R_FindNamespace1(SEXP info)
     SEXP expr, val, where;
     PROTECT(info);
     where = PROTECT(ScalarString(mkChar(lastname)));
-    PROTECT(expr = LCONS(install("..getNamespace"), 
+    VAPROTECT(expr, LCONS(install("..getNamespace"), 
 			 LCONS(info, LCONS(where, R_NilValue))));
     val = eval(expr, R_GlobalEnv);
     UNPROTECT(3);
@@ -1544,27 +1544,27 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
     case REFSXP:
 	return GetReadRef(ref_table, InRefIndex(stream, flags));
     case PERSISTSXP:
-	PROTECT(s = InStringVec(stream, ref_table));
+	VAPROTECT(s, InStringVec(stream, ref_table));
 	s = PersistentRestore(stream, s);
 	UNPROTECT(1);
 	AddReadRef(ref_table, s);
 	return s;
     case SYMSXP:
         R_ReadItemDepth++;
-	PROTECT(s = ReadItem(ref_table, stream)); /* print name */
+	VAPROTECT(s, ReadItem(ref_table, stream)); /* print name */
 	R_ReadItemDepth--;
 	s = installChar(s);
 	AddReadRef(ref_table, s);
 	UNPROTECT(1);
 	return s;
     case PACKAGESXP:
-	PROTECT(s = InStringVec(stream, ref_table));
+	VAPROTECT(s, InStringVec(stream, ref_table));
 	s = R_FindPackageEnv(s);
 	UNPROTECT(1);
 	AddReadRef(ref_table, s);
 	return s;
     case NAMESPACESXP:
-	PROTECT(s = InStringVec(stream, ref_table));
+	VAPROTECT(s, InStringVec(stream, ref_table));
 	s = R_FindNamespace1(s);
 	AddReadRef(ref_table, s);
 	UNPROTECT(1);
@@ -1573,7 +1573,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	{
 	    int locked = InInteger(stream);
 
-	    PROTECT(s = allocSExp(ENVSXP));
+	    VAPROTECT(s, allocSExp(ENVSXP));
 
 	    /* MUST register before filling in */
 	    AddReadRef(ref_table, s);
@@ -1610,7 +1610,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	   is worth to write the code to handle this now, but if it
 	   becomes necessary we can do it without needing to change
 	   the save format. */
-	PROTECT(s = allocSExp(type));
+	VAPROTECT(s, allocSExp(type));
 	SETLEVELS(s, levs);
 	SET_OBJECT(s, objf);
 	R_ReadItemDepth++;
@@ -1638,7 +1638,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	   newly allocated value PROTECTed */
 	switch (type) {
 	case EXTPTRSXP:
-	    PROTECT(s = allocSExp(type));
+	    VAPROTECT(s, allocSExp(type));
 	    AddReadRef(ref_table, s);
 	    R_SetExternalPtrAddr(s, NULL);
 	    R_ReadItemDepth++;
@@ -1647,7 +1647,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    R_ReadItemDepth--;
 	    break;
 	case WEAKREFSXP:
-	    PROTECT(s = R_MakeWeakRef(R_NilValue, R_NilValue, R_NilValue,
+	    VAPROTECT(s, R_MakeWeakRef(R_NilValue, R_NilValue, R_NilValue,
 				      FALSE));
 	    AddReadRef(ref_table, s);
 	    break;
@@ -1662,16 +1662,16 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 		int index = StrToInternal(cbuf);
 		if (index == NA_INTEGER) {
 		    warning(_("unrecognized internal function name \"%s\""), cbuf); 
-		    PROTECT(s = R_NilValue);
+		    VAPROTECT(s, R_NilValue);
 		} else
-		    PROTECT(s = mkPRIMSXP(index, type == BUILTINSXP));
+		    VAPROTECT(s, mkPRIMSXP(index, type == BUILTINSXP));
 	    }
 	    break;
 	case CHARSXP:
 	    /* Let us suppose these will still be limited to 2^31 -1 bytes */
 	    length = InInteger(stream);
 	    if (length == -1)
-		PROTECT(s = NA_STRING);
+		VAPROTECT(s, NA_STRING);
 	    else if (length < 1000) {
 		int enc = CE_NATIVE;
 		char cbuf[length+1];
@@ -1680,7 +1680,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 		if (levs & UTF8_MASK) enc = CE_UTF8;
 		else if (levs & LATIN1_MASK) enc = CE_LATIN1;
 		else if (levs & BYTES_MASK) enc = CE_BYTES;
-		PROTECT(s = mkCharLenCE(cbuf, length, enc));
+		VAPROTECT(s, mkCharLenCE(cbuf, length, enc));
 	    } else {
 		int enc = CE_NATIVE;
 		char *cbuf = CallocCharBuf(length);
@@ -1688,29 +1688,29 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 		if (levs & UTF8_MASK) enc = CE_UTF8;
 		else if (levs & LATIN1_MASK) enc = CE_LATIN1;
 		else if (levs & BYTES_MASK) enc = CE_BYTES;
-		PROTECT(s = mkCharLenCE(cbuf, length, enc));
+		VAPROTECT(s, mkCharLenCE(cbuf, length, enc));
 		Free(cbuf);
 	    }
 	    break;
 	case LGLSXP:
 	case INTSXP:
 	    len = ReadLENGTH(stream);
-	    PROTECT(s = allocVector(type, len));
+	    VAPROTECT(s, allocVector(type, len));
 	    InIntegerVec(stream, s, len);
 	    break;
 	case REALSXP:
 	    len = ReadLENGTH(stream);
-	    PROTECT(s = allocVector(type, len));
+	    VAPROTECT(s, allocVector(type, len));
 	    InRealVec(stream, s, len);
 	    break;
 	case CPLXSXP:
 	    len = ReadLENGTH(stream);
-	    PROTECT(s = allocVector(type, len));
+	    VAPROTECT(s, allocVector(type, len));
 	    InComplexVec(stream, s, len);
 	    break;
 	case STRSXP:
 	    len = ReadLENGTH(stream);
-	    PROTECT(s = allocVector(type, len));
+	    VAPROTECT(s, allocVector(type, len));
 	    R_ReadItemDepth++;
 	    for (count = 0; count < len; ++count)
 		SET_STRING_ELT(s, count, ReadItem(ref_table, stream));
@@ -1719,7 +1719,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	case VECSXP:
 	case EXPRSXP:
 	    len = ReadLENGTH(stream);
-	    PROTECT(s = allocVector(type, len));
+	    VAPROTECT(s, allocVector(type, len));
 	    R_ReadItemDepth++;
 	    for (count = 0; count < len; ++count) {
 		if (R_ReadItemDepth <= 0) 
@@ -1729,7 +1729,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    R_ReadItemDepth--;
 	    break;
 	case BCODESXP:
-	    PROTECT(s = ReadBC(ref_table, stream));
+	    VAPROTECT(s, ReadBC(ref_table, stream));
 	    break;
 	case CLASSREFSXP:
 	    error(_("this version of R cannot read class references"));
@@ -1737,7 +1737,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    error(_("this version of R cannot read generic function references"));
 	case RAWSXP:
 	    len = ReadLENGTH(stream);
-	    PROTECT(s = allocVector(type, len));
+	    VAPROTECT(s, allocVector(type, len));
 	    {
 		R_xlen_t done, this;
 		for (done = 0; done < len; done += this) {
@@ -1747,7 +1747,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    }
 	    break;
 	case S4SXP:
-	    PROTECT(s = allocS4Object());
+	    VAPROTECT(s, allocS4Object());
 	    break;
 	default:
 	    s = R_NilValue; /* keep compiler happy */
@@ -1801,7 +1801,7 @@ static SEXP ReadBCLang(int type, SEXP ref_table, SEXP reps,
 	    case ATTRLANGSXP: type = LANGSXP; hasattr = TRUE; break;
 	    case ATTRLISTSXP: type = LISTSXP; hasattr = TRUE; break;
 	    }
-	    PROTECT(ans = allocSExp(type));
+	    VAPROTECT(ans, allocSExp(type));
 	    if (pos >= 0)
 		SET_VECTOR_ELT(reps, pos, ans);
             R_ReadItemDepth++;
@@ -1831,7 +1831,7 @@ static SEXP ReadBCConsts(SEXP ref_table, SEXP reps, R_inpstream_t stream)
     SEXP ans, c;
     int i, n;
     n = InInteger(stream);
-    PROTECT(ans = allocVector(VECSXP, n));
+    VAPROTECT(ans, allocVector(VECSXP, n));
     for (i = 0; i < n; i++) {
 	int type = InInteger(stream);
 	switch (type) {
@@ -1861,7 +1861,7 @@ static SEXP ReadBCConsts(SEXP ref_table, SEXP reps, R_inpstream_t stream)
 static SEXP ReadBC1(SEXP ref_table, SEXP reps, R_inpstream_t stream)
 {
     SEXP s;
-    PROTECT(s = allocSExp(BCODESXP));
+    VAPROTECT(s, allocSExp(BCODESXP));
     R_ReadItemDepth++;
     SETCAR(s, ReadItem(ref_table, stream)); /* code */
     R_ReadItemDepth--;
@@ -1875,7 +1875,7 @@ static SEXP ReadBC1(SEXP ref_table, SEXP reps, R_inpstream_t stream)
 static SEXP ReadBC(SEXP ref_table, R_inpstream_t stream)
 {
     SEXP reps, ans;
-    PROTECT(reps = allocVector(VECSXP, InInteger(stream)));
+    VAPROTECT(reps, allocVector(VECSXP, InInteger(stream)));
     ans = ReadBC1(ref_table, reps, stream);
     UNPROTECT(1);
     return ans;
@@ -1918,7 +1918,7 @@ SEXP R_Unserialize(R_inpstream_t stream)
     }
 
     /* Read the actual object back */
-    PROTECT(ref_table = MakeReadRefTable());
+    VAPROTECT(ref_table, MakeReadRefTable());
     obj =  ReadItem(ref_table, stream);
     UNPROTECT(1);
 
@@ -2140,7 +2140,7 @@ void R_InitConnInPStream(R_inpstream_t stream,  Rconnection con,
 static SEXP CallHook(SEXP x, SEXP fun)
 {
     SEXP val, call;
-    PROTECT(call = LCONS(fun, LCONS(x, R_NilValue)));
+    VAPROTECT(call, LCONS(fun, LCONS(x, R_NilValue)));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(1);
     return val;
@@ -2264,7 +2264,7 @@ do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!con->canread) error(_("connection not open for reading"));
 
     R_InitConnInPStream(&in, con, R_pstream_any_format, hook, fun);
-    PROTECT(ans = R_Unserialize(&in)); /* paranoia about next line */
+    VAPROTECT(ans, R_Unserialize(&in)); /* paranoia about next line */
     if(!wasopen) {endcontext(&cntxt); con->close(con);}
     UNPROTECT(1);
     return ans;
@@ -2469,7 +2469,7 @@ static SEXP CloseMemOutPStream(R_outpstream_t stream)
     if(mb->count > INT_MAX)
 	error(_("serialization is too large to store in a raw vector"));
 #endif
-    PROTECT(val = allocVector(RAWSXP, mb->count));
+    VAPROTECT(val, allocVector(RAWSXP, mb->count));
     memcpy(RAW(val), mb->buf, mb->count);
     free_mem_buffer(mb);
     UNPROTECT(1);
@@ -2750,7 +2750,7 @@ static SEXP R_getVarsFromFrame(SEXP vars, SEXP env, SEXP forcesxp)
     force = asLogical(forcesxp);
 
     len = LENGTH(vars);
-    PROTECT(val = allocVector(VECSXP, len));
+    VAPROTECT(val, allocVector(VECSXP, len));
     for (i = 0; i < len; i++) {
 	sym = installChar(STRING_ELT(vars, i));
 

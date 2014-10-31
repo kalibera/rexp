@@ -90,10 +90,10 @@ KalmanLike(SEXP sy, SEXP mod, SEXP sUP, SEXP op, SEXP update)
     // These are only used if(lop), but avoid -Wall trouble
     SEXP ans = R_NilValue, resid = R_NilValue, states = R_NilValue;
     if(lop) {
-	PROTECT(ans = allocVector(VECSXP, 3));
+	VAPROTECT(ans, allocVector(VECSXP, 3));
 	SET_VECTOR_ELT(ans, 1, resid = allocVector(REALSXP, n));
 	SET_VECTOR_ELT(ans, 2, states = allocMatrix(REALSXP, n, p));
-	SEXP nm; PROTECT(nm = allocVector(STRSXP, 3));
+	SEXP nm; VAPROTECT(nm, allocVector(STRSXP, 3));
 	SET_STRING_ELT(nm, 0, mkChar("values"));
 	SET_STRING_ELT(nm, 1, mkChar("resid"));
 	SET_STRING_ELT(nm, 2, mkChar("states"));
@@ -198,12 +198,12 @@ KalmanSmooth(SEXP sy, SEXP mod, SEXP sUP)
     double *at, *rt, *Pt, *gains, *resids, *Mt, *L, gn, *Nt;
     Rboolean var = TRUE;
 
-    PROTECT(ssa = duplicate(sa)); a = REAL(ssa);
-    PROTECT(ssP = duplicate(sP)); P = REAL(ssP);
-    PROTECT(ssPn = duplicate(sPn)); Pnew = REAL(ssPn);
+    VAPROTECT(ssa, duplicate(sa)); a = REAL(ssa);
+    VAPROTECT(ssP, duplicate(sP)); P = REAL(ssP);
+    VAPROTECT(ssPn, duplicate(sPn)); Pnew = REAL(ssPn);
 
-    PROTECT(res = allocVector(VECSXP, 2));
-    SEXP nm; PROTECT(nm = allocVector(STRSXP, 2));
+    VAPROTECT(res, allocVector(VECSXP, 2));
+    SEXP nm; VAPROTECT(nm, allocVector(STRSXP, 2));
     SET_STRING_ELT(nm, 0, mkChar("smooth"));
     SET_STRING_ELT(nm, 1, mkChar("var"));
     setAttrib(res, R_NamesSymbol, nm);
@@ -385,11 +385,11 @@ KalmanFore(SEXP nahead, SEXP mod, SEXP update)
     Pnew = (double *) R_alloc(p * p, sizeof(double));
     mm = (double *) R_alloc(p * p, sizeof(double));
     SEXP res, forecasts, se;
-    PROTECT(res = allocVector(VECSXP, 2));
+    VAPROTECT(res, allocVector(VECSXP, 2));
     SET_VECTOR_ELT(res, 0, forecasts = allocVector(REALSXP, n));
     SET_VECTOR_ELT(res, 1, se = allocVector(REALSXP, n));
     {
-	SEXP nm; PROTECT(nm = allocVector(STRSXP, 2));
+	SEXP nm; VAPROTECT(nm, allocVector(STRSXP, 2));
 	SET_STRING_ELT(nm, 0, mkChar("pred"));
 	SET_STRING_ELT(nm, 1, mkChar("var"));
 	setAttrib(res, R_NamesSymbol, nm);
@@ -480,7 +480,7 @@ SEXP ARIMA_transPars(SEXP sin, SEXP sarma, SEXP strans)
     double *in = REAL(sin), *params = REAL(sin), *phi, *theta;
     SEXP res, sPhi, sTheta;
 
-    PROTECT(res = allocVector(VECSXP, 2));
+    VAPROTECT(res, allocVector(VECSXP, 2));
     SET_VECTOR_ELT(res, 0, sPhi = allocVector(REALSXP, p));
     SET_VECTOR_ELT(res, 1, sTheta = allocVector(REALSXP, q));
     phi = REAL(sPhi);
@@ -622,7 +622,7 @@ ARIMA_Like(SEXP sy, SEXP mod, SEXP sUP, SEXP giveResid)
     if (d > 0) mm = (double *) R_alloc(rd * rd, sizeof(double));
 
     if (useResid) {
-	PROTECT(sResid = allocVector(REALSXP, n));
+	VAPROTECT(sResid, allocVector(REALSXP, n));
 	rsResid = REAL(sResid);
     }
 
@@ -730,7 +730,7 @@ ARIMA_Like(SEXP sy, SEXP mod, SEXP sUP, SEXP giveResid)
     }
 
     if (useResid) {
-	PROTECT(res = allocVector(VECSXP, 3));
+	VAPROTECT(res, allocVector(VECSXP, 3));
 	SET_VECTOR_ELT(res, 0, nres = allocVector(REALSXP, 3));
 	REAL(nres)[0] = ssq;
 	REAL(nres)[1] = sumlog;
@@ -769,7 +769,7 @@ ARIMA_CSS(SEXP sy, SEXP sarma, SEXP sPhi, SEXP sTheta,
     for (int i = 0; i < arma[6]; i++)
 	for (int l = n - 1; l >= ns; l--) w[l] -= w[l - ns];
 
-    PROTECT(sResid = allocVector(REALSXP, n));
+    VAPROTECT(sResid, allocVector(REALSXP, n));
     resid = REAL(sResid);
     if (useResid) for (int l = 0; l < ncond; l++) resid[l] = 0;
 
@@ -785,7 +785,7 @@ ARIMA_CSS(SEXP sy, SEXP sarma, SEXP sPhi, SEXP sTheta,
 	}
     }
     if (useResid) {
-	PROTECT(res = allocVector(VECSXP, 2));
+	VAPROTECT(res, allocVector(VECSXP, 2));
 	SET_VECTOR_ELT(res, 0, ScalarReal(ssq / (double) (nu)));
 	SET_VECTOR_ELT(res, 1, sResid);
 	UNPROTECT(2);
@@ -802,12 +802,12 @@ SEXP TSconv(SEXP a, SEXP b)
     SEXP ab;
     double *ra, *rb, *rab;
 
-    PROTECT(a = coerceVector(a, REALSXP));
-    PROTECT(b = coerceVector(b, REALSXP));
+    VAPROTECT(a, coerceVector(a, REALSXP));
+    VAPROTECT(b, coerceVector(b, REALSXP));
     na = LENGTH(a);
     nb = LENGTH(b);
     nab = na + nb - 1;
-    PROTECT(ab = allocVector(REALSXP, nab));
+    VAPROTECT(ab, allocVector(REALSXP, nab));
     ra = REAL(a); rb = REAL(b); rab = REAL(ab);
     for (int i = 0; i < nab; i++) rab[i] = 0.0;
     for (int i = 0; i < na; i++)
@@ -881,7 +881,7 @@ SEXP getQ0bis(SEXP sPhi, SEXP sTheta, SEXP sTol)
      *   Q0 = A1 SX A1^T + A1 SXZ A2^T + (A1 SXZ A2^T)^T + A2 A2^T ,
      * where A1 [i,j] = phi[i+j],
      *       A2 [i,j] = ttheta[i+j],  and SX, SXZ are defined below */
-    PROTECT(res = allocMatrix(REALSXP, r, r));
+    VAPROTECT(res, allocMatrix(REALSXP, r, r));
     double *P = REAL(res);
 
     /* Clean P */
@@ -904,8 +904,8 @@ SEXP getQ0bis(SEXP sPhi, SEXP sTheta, SEXP sTol)
 
     if( p > 0 ) {
 	int r2 = max(p + q, p + 1);
-	SEXP sgam; PROTECT(sgam = allocMatrix(REALSXP, r2, r2));
-	SEXP sg; PROTECT(sg = allocVector(REALSXP, r2));
+	SEXP sgam; VAPROTECT(sgam, allocMatrix(REALSXP, r2, r2));
+	SEXP sg; VAPROTECT(sg, allocVector(REALSXP, r2));
 	double *gam = REAL(sgam);
 	double *g = REAL(sg);
 	double *tphi = (double *) R_alloc(p + 1, sizeof(double));
@@ -938,8 +938,8 @@ SEXP getQ0bis(SEXP sPhi, SEXP sTheta, SEXP sTol)
      * FIXME: call these directly here, possibly even use 'info' instead of error(.)
      * e.g., in case of exact singularity.
      */
-	SEXP callS; PROTECT(callS = lang4(install("solve.default"), sgam, sg, sTol));
-	SEXP su; PROTECT(su = eval(callS, R_BaseEnv));
+	SEXP callS; VAPROTECT(callS, lang4(install("solve.default"), sgam, sg, sTol));
+	SEXP su; VAPROTECT(su, eval(callS, R_BaseEnv));
 	double *u = REAL(su);
     /* SX = A SU A^T */
     /* A[i,j]  = ttheta[j-i] */
@@ -1030,7 +1030,7 @@ SEXP getQ0(SEXP sPhi, SEXP sTheta)
 	}
     }
 
-    PROTECT(res = allocMatrix(REALSXP, r, r));
+    VAPROTECT(res, allocMatrix(REALSXP, r, r));
     double *P = REAL(res);
 
     if (r == 1) {

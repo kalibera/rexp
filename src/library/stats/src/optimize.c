@@ -209,7 +209,7 @@ struct callinfo {
 static double fcn1(double x, struct callinfo *info)
 {
     SEXP s, sx;
-    PROTECT(sx = ScalarReal(x));
+    VAPROTECT(sx, ScalarReal(x));
     SETCADR(info->R_fcall, sx);
     s = eval(info->R_fcall, info->R_env);
     UNPROTECT(1);
@@ -279,7 +279,7 @@ SEXP do_fmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     info.R_env = rho;
     PROTECT(info.R_fcall = lang2(v, R_NilValue));
-    PROTECT(res = allocVector(REALSXP, 1));
+    VAPROTECT(res, allocVector(REALSXP, 1));
     REAL(res)[0] = Brent_fmin(xmin, xmax,
 			      (double (*)(double, void*)) fcn1, &info, tol);
     UNPROTECT(2);
@@ -295,7 +295,7 @@ SEXP do_fmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 static double fcn2(double x, struct callinfo *info)
 {
     SEXP s, sx;
-    PROTECT(sx = ScalarReal(x));
+    VAPROTECT(sx, ScalarReal(x));
     SETCADR(info->R_fcall, sx);
     s = eval(info->R_fcall, info->R_env);
     UNPROTECT(1);
@@ -379,7 +379,7 @@ SEXP zeroin2(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     info.R_env = rho;
     PROTECT(info.R_fcall = lang2(v, R_NilValue)); /* the info used in fcn2() */
-    PROTECT(res = allocVector(REALSXP, 3));
+    VAPROTECT(res, allocVector(REALSXP, 3));
     REAL(res)[0] =
 	R_zeroin2(xmin, xmax, f_ax, f_bx, (double (*)(double, void*)) fcn2,
 		 (void *) &info, &tol, &iter);
@@ -853,8 +853,8 @@ SEXP nlm(SEXP call, SEXP op, SEXP args, SEXP rho)
 	optcode(code);
 
     if (want_hessian) {
-	PROTECT(value = allocVector(VECSXP, 6));
-	PROTECT(names = allocVector(STRSXP, 6));
+	VAPROTECT(value, allocVector(VECSXP, 6));
+	VAPROTECT(names, allocVector(STRSXP, 6));
 	fdhess(n, xpls, fpls, (fcn_p) fcn, state, a, n, &wrk[0], &wrk[n],
 	       ndigit, typsiz);
 	for (i = 0; i < n; i++)
@@ -862,8 +862,8 @@ SEXP nlm(SEXP call, SEXP op, SEXP args, SEXP rho)
 		a[i + j * n] = a[j + i * n];
     }
     else {
-	PROTECT(value = allocVector(VECSXP, 5));
-	PROTECT(names = allocVector(STRSXP, 5));
+	VAPROTECT(value, allocVector(VECSXP, 5));
+	VAPROTECT(names, allocVector(STRSXP, 5));
     }
     k = 0;
 

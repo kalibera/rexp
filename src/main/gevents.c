@@ -222,16 +222,16 @@ void doMouseEvent(pDevDesc dd, R_MouseEvent event,
 	  + ((buttons & middleButton) != 0)
 	  + ((buttons & rightButton) != 0);
 
-	PROTECT(bvec = allocVector(INTSXP, len));
+	VAPROTECT(bvec, allocVector(INTSXP, len));
 	i = 0;
 	if (buttons & leftButton) INTEGER(bvec)[i++] = 0;
 	if (buttons & middleButton) INTEGER(bvec)[i++] = 1;
 	if (buttons & rightButton) INTEGER(bvec)[i++] = 2;
 
-	PROTECT(sx = ScalarReal( (x - dd->left) / (dd->right - dd->left) ));
-	PROTECT(sy = ScalarReal((y - dd->bottom) / (dd->top - dd->bottom) ));
-	PROTECT(temp = lang4(handler, bvec, sx, sy));
-	PROTECT(result = eval(temp, dd->eventEnv));
+	VAPROTECT(sx, ScalarReal( (x - dd->left) / (dd->right - dd->left) ));
+	VAPROTECT(sy, ScalarReal((y - dd->bottom) / (dd->top - dd->bottom) ));
+	VAPROTECT(temp, lang4(handler, bvec, sx, sy));
+	VAPROTECT(result, eval(temp, dd->eventEnv));
 	defineVar(install("result"), result, dd->eventEnv);
 	UNPROTECT(5);	
 	R_FlushConsole();
@@ -259,9 +259,9 @@ void doKeybd(pDevDesc dd, R_KeyName rkey,
 
     if (TYPEOF(handler) == CLOSXP) {
         defineVar(install("which"), ScalarInteger(ndevNumber(dd)+1), dd->eventEnv);
-	PROTECT(skey = mkString(keyname ? keyname : keynames[rkey]));
-	PROTECT(temp = lang2(handler, skey));
-	PROTECT(result = eval(temp, dd->eventEnv));
+	VAPROTECT(skey, mkString(keyname ? keyname : keynames[rkey]));
+	VAPROTECT(temp, lang2(handler, skey));
+	VAPROTECT(result, eval(temp, dd->eventEnv));
         defineVar(install("result"), result, dd->eventEnv);
 	UNPROTECT(3);	
 	R_FlushConsole();

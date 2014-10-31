@@ -137,16 +137,16 @@ spline_value(SEXP knots, SEXP coeff, SEXP order, SEXP x, SEXP deriv)
     double *xx, *kk;
     int der, i, n, nk;
 
-    PROTECT(knots = coerceVector(knots, REALSXP));
+    VAPROTECT(knots, coerceVector(knots, REALSXP));
     kk = REAL(knots); nk = length(knots);
-    PROTECT(coeff = coerceVector(coeff, REALSXP));
-    PROTECT(x = coerceVector(x, REALSXP));
+    VAPROTECT(coeff, coerceVector(coeff, REALSXP));
+    VAPROTECT(x, coerceVector(x, REALSXP));
     n = length(x);
     xx = REAL(x);
-    PROTECT(order = coerceVector(order, INTSXP));
-    PROTECT(deriv = coerceVector(deriv, INTSXP));
+    VAPROTECT(order, coerceVector(order, INTSXP));
+    VAPROTECT(deriv, coerceVector(deriv, INTSXP));
     der = INTEGER(deriv)[0];
-    PROTECT(val = allocVector(REALSXP, n));
+    VAPROTECT(val, allocVector(REALSXP, n));
 
     /* populate the spl_struct */
 
@@ -184,12 +184,12 @@ spline_basis(SEXP knots, SEXP order, SEXP xvals, SEXP derivs)
     SEXP val, offsets;
     splPTR sp = (struct spl_struct *) R_alloc(1, sizeof(struct spl_struct));
 
-    PROTECT(knots = coerceVector(knots, REALSXP));
+    VAPROTECT(knots, coerceVector(knots, REALSXP));
     kk = REAL(knots); nk = length(knots);
-    PROTECT(order = coerceVector(order, INTSXP));
-    PROTECT(xvals = coerceVector(xvals, REALSXP));
+    VAPROTECT(order, coerceVector(order, INTSXP));
+    VAPROTECT(xvals, coerceVector(xvals, REALSXP));
     xx = REAL(xvals); nx = length(xvals);
-    PROTECT(derivs = coerceVector(derivs, INTSXP));
+    VAPROTECT(derivs, coerceVector(derivs, INTSXP));
     ders = INTEGER(derivs); nd = length(derivs);
 
     /* fill sp : */
@@ -199,8 +199,8 @@ spline_basis(SEXP knots, SEXP order, SEXP xvals, SEXP derivs)
     sp->ldel = (double *) R_alloc(sp->ordm1, sizeof(double));
     sp->knots = kk; sp->nknots = nk;
     sp->a = (double *) R_alloc(sp->order, sizeof(double));
-    PROTECT(val = allocMatrix(REALSXP, sp->order, nx));
-    PROTECT(offsets = allocVector(INTSXP, nx));
+    VAPROTECT(val, allocMatrix(REALSXP, sp->order, nx));
+    VAPROTECT(offsets, allocVector(INTSXP, nx));
 
     for(i = 0; i < nx; i++) {
 	set_cursor(sp, xx[i]);

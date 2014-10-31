@@ -611,9 +611,9 @@ SEXP eval(SEXP e, SEXP rho)
     case LANGSXP:
 	if (TYPEOF(CAR(e)) == SYMSXP)
 	    /* This will throw an error if the function is not found */
-	    PROTECT(op = findFun(CAR(e), rho));
+	    VAPROTECT(op, findFun(CAR(e), rho));
 	else
-	    PROTECT(op = eval(CAR(e), rho));
+	    VAPROTECT(op, eval(CAR(e), rho));
 
 	if(RTRACE(op) && R_current_trace_state()) {
 	    Rprintf("trace: ");
@@ -644,7 +644,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    RCNTXT cntxt;
-	    PROTECT(tmp = evalList(CDR(e), rho, e, 0));
+	    VAPROTECT(tmp, evalList(CDR(e), rho, e, 0));
 	    if (flag < 2) R_Visible = flag != 1;
 	    /* We used to insert a context only if profiling,
 	       but helps for tracebacks on .C etc. */
@@ -671,7 +671,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 	}
 	else if (TYPEOF(op) == CLOSXP) {
-	    PROTECT(tmp = promiseArgs(CDR(e), rho));
+	    VAPROTECT(tmp, promiseArgs(CDR(e), rho));
 	    tmp = applyClosure(e, op, tmp, rho, R_NilValue);
 	    UNPROTECT(1);
 	}
@@ -716,9 +716,9 @@ static void loadCompilerNamespace(void)
 {
     SEXP fun, arg, expr;
 
-    PROTECT(fun = install("getNamespace"));
-    PROTECT(arg = mkString("compiler"));
-    PROTECT(expr = lang2(fun, arg));
+    VAPROTECT(fun, install("getNamespace"));
+    VAPROTECT(arg, mkString("compiler"));
+    VAPROTECT(expr, lang2(fun, arg));
     eval(expr, R_GlobalEnv);
     UNPROTECT(3);
 }
@@ -772,8 +772,8 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
     packsym = install("compiler");
     funsym = install("tryCmpfun");
 
-    PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
-    PROTECT(call = lang2(fcall, fun));
+    VAPROTECT(fcall, lang3(R_TripleColonSymbol, packsym, funsym));
+    VAPROTECT(call, lang2(fcall, fun));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(2);
     return val;
@@ -788,9 +788,9 @@ static SEXP R_compileExpr(SEXP expr, SEXP rho)
     funsym = install("compile");
     quotesym = install("quote");
 
-    PROTECT(fcall = lang3(R_DoubleColonSymbol, packsym, funsym));
-    PROTECT(qexpr = lang2(quotesym, expr));
-    PROTECT(call = lang3(fcall, qexpr, rho));
+    VAPROTECT(fcall, lang3(R_DoubleColonSymbol, packsym, funsym));
+    VAPROTECT(qexpr, lang2(quotesym, expr));
+    VAPROTECT(call, lang3(fcall, qexpr, rho));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(3);
     return val;
@@ -804,7 +804,7 @@ static SEXP R_compileAndExecute(SEXP call, SEXP rho)
     R_jit_enabled = 0;
     PROTECT(call);
     PROTECT(rho);
-    PROTECT(code = R_compileExpr(call, rho));
+    VAPROTECT(code, R_compileExpr(call, rho));
     R_jit_enabled = old_enabled;
 
     val = bcEval(code, rho, TRUE);
@@ -906,8 +906,8 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	contains the matched pairs.  Ideally this environment sould be
 	hashed.  */
 
-    PROTECT(actuals = matchArgs(formals, arglist, call));
-    PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
+    VAPROTECT(actuals, matchArgs(formals, arglist, call));
+    VAPROTECT(newrho, NewEnvironment(formals, actuals, savedrho));
 
     /* Turn on reference counting for the binding cells so local
        assignments arguments increment REFCNT values */
@@ -997,7 +997,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 			tmp = eval(CAR(body), rho);
 	}
 	savesrcref = R_Srcref;
-	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
+	VAPROTECT(R_Srcref, getSrcref(getBlockSrcrefs(body), 0));
 	SrcrefPrompt("debug", R_Srcref);
 	PrintValue(body);
 	do_browser(call, op, R_NilValue, newrho);
@@ -1031,13 +1031,13 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(tmp = eval(body, newrho));
+	    VAPROTECT(tmp, eval(body, newrho));
 	}
 	else
-	    PROTECT(tmp = R_ReturnedValue);
+	    VAPROTECT(tmp, R_ReturnedValue);
     }
     else {
-	PROTECT(tmp = eval(body, newrho));
+	VAPROTECT(tmp, eval(body, newrho));
     }
     cntxt.returnValue = tmp;
     endcontext(&cntxt);
@@ -1097,7 +1097,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	else
 	    tmp = eval(CAR(body), rho);
 	savesrcref = R_Srcref;
-	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
+	VAPROTECT(R_Srcref, getSrcref(getBlockSrcrefs(body), 0));
 	SrcrefPrompt("debug", R_Srcref);
 	PrintValue(body);
 	do_browser(call, op, R_NilValue, newrho);
@@ -1128,13 +1128,13 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	if (R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(tmp = eval(body, newrho));
+	    VAPROTECT(tmp, eval(body, newrho));
 	}
 	else
-	    PROTECT(tmp = R_ReturnedValue);
+	    VAPROTECT(tmp, R_ReturnedValue);
     }
     else {
-	PROTECT(tmp = eval(body, newrho));
+	VAPROTECT(tmp, eval(body, newrho));
     }
     cntxt.returnValue = tmp; /* make it available to on.exit */
     endcontext(&cntxt);
@@ -1158,7 +1158,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
 
     /* create a new environment frame enclosed by the lexical
        environment of the method */
-    PROTECT(newrho = Rf_NewEnvironment(R_NilValue, R_NilValue, CLOENV(op)));
+    VAPROTECT(newrho, Rf_NewEnvironment(R_NilValue, R_NilValue, CLOENV(op)));
 
     /* copy the bindings for the formal environment from the top frame
        of the internal environment of the generic call to the new
@@ -1235,7 +1235,7 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     if ((vl = findVarInFrame3(rho, symbol, TRUE)) != R_UnboundValue) {
 	vl = eval(symbol, rho);	/* for promises */
 	if(MAYBE_SHARED(vl)) {
-	    PROTECT(vl = shallow_duplicate(vl));
+	    VAPROTECT(vl, shallow_duplicate(vl));
 	    defineVar(symbol, vl, rho);
 	    UNPROTECT(1);
 	    SET_NAMED(vl, 1);
@@ -1247,7 +1247,7 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
     if (vl == R_UnboundValue)
 	error(_("object '%s' not found"), EncodeChar(PRINTNAME(symbol)));
 
-    PROTECT(vl = shallow_duplicate(vl));
+    VAPROTECT(vl, shallow_duplicate(vl));
     defineVar(symbol, vl, rho);
     UNPROTECT(1);
     SET_NAMED(vl, 1);
@@ -1352,7 +1352,7 @@ SEXP attribute_hidden do_if(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP Cond, Stmt=R_NilValue;
     int vis=0;
 
-    PROTECT(Cond = eval(CAR(args), rho));
+    VAPROTECT(Cond, eval(CAR(args), rho));
     if (asLogicalNoNA(Cond, call))
 	Stmt = CAR(CDR(args));
     else {
@@ -1426,9 +1426,9 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(args);
     PROTECT(rho);
-    PROTECT(val = eval(val, rho));
+    VAPROTECT(val, eval(val, rho));
     defineVar(sym, R_NilValue, rho);
-    PROTECT(cell = GET_BINDING_CELL(sym, rho));
+    VAPROTECT(cell, GET_BINDING_CELL(sym, rho));
 
     /* deal with the case where we are iterating over a factor
        we need to coerce to character - then iterate */
@@ -1436,7 +1436,7 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     if ( inherits(val, "factor") ) {
 	SEXP tmp = asCharacterFactor(val);
 	UNPROTECT(1); /* val from above */
-	PROTECT(val = tmp);
+	VAPROTECT(val, tmp);
     }
 
     if (isList(val) || isNull(val))
@@ -1624,7 +1624,7 @@ SEXP attribute_hidden do_begin(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SEXP srcrefs = getBlockSrcrefs(call);
 	int i = 1;
 	while (args != R_NilValue) {
-	    PROTECT(R_Srcref = getSrcref(srcrefs, i++));
+	    VAPROTECT(R_Srcref, getSrcref(srcrefs, i++));
 	    if (RDEBUG(rho) && !R_GlobalContext->browserfinish) {
 		SrcrefPrompt("debug", R_Srcref);
 		PrintValue(CAR(args));
@@ -1715,10 +1715,10 @@ static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
     }
     else if (isLanguage(expr)) {
 	PROTECT(expr);
-	PROTECT(val = evalseq(CADR(expr), rho, forcelocal, tmploc));
+	VAPROTECT(val, evalseq(CADR(expr), rho, forcelocal, tmploc));
 	R_SetVarLocValue(tmploc, CAR(val));
-	PROTECT(nexpr = LCONS(R_GetVarLocSymbol(tmploc), CDDR(expr)));
-	PROTECT(nexpr = LCONS(CAR(expr), nexpr));
+	VAPROTECT(nexpr, LCONS(R_GetVarLocSymbol(tmploc), CDDR(expr)));
+	VAPROTECT(nexpr, LCONS(CAR(expr), nexpr));
 	nval = eval(nexpr, rho);
 	/* duplicate nval if it might be shared _or_ if the container,
 	   CAR(val), has become possibly shared by going through a
@@ -1861,7 +1861,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 	assignment is right associative i.e.  a <- b <- c is parsed as
 	a <- (b <- c).  */
 
-    PROTECT(saverhs = rhs = eval(CADR(args), rho));
+    VAPROTECT(saverhs, rhs = eval(CADR(args), rho));
     INCREMENT_REFCNT(saverhs);
 
     /*  FIXME: We need to ensure that this works for hashed
@@ -1927,7 +1927,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 		  PRIMVAL(op)==1 || PRIMVAL(op)==3, tmploc);
 
     PROTECT(lhs);
-    PROTECT(rhsprom = mkRHSPROMISE(CADR(args), rhs));
+    VAPROTECT(rhsprom, mkRHSPROMISE(CADR(args), rhs));
 
     while (isLanguage(CADR(expr))) {
 	nprot = 1; /* the PROTECT of rhs below from this iteration */
@@ -1942,14 +1942,14 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 		 CAR(CAR(expr)) == R_TripleColonSymbol) &&
 		length(CAR(expr)) == 3 && TYPEOF(CADDR(CAR(expr))) == SYMSXP) {
 		tmp = getAssignFcnSymbol(CADDR(CAR(expr)));
-		PROTECT(tmp = lang3(CAAR(expr), CADR(CAR(expr)), tmp));
+		VAPROTECT(tmp, lang3(CAAR(expr), CADR(CAR(expr)), tmp));
 		nprot++;
 	    }
 	    else
 		error(_("invalid function in complex assignment"));
 	}
 	SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
-	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
+	VAPROTECT(rhs, replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
 	rhs = eval(rhs, rho);
 	SET_PRVALUE(rhsprom, rhs);
 	SET_PRCODE(rhsprom, rhs); /* not good but is what we have been doing */
@@ -1969,14 +1969,14 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 	     CAR(CAR(expr)) == R_TripleColonSymbol) &&
 	    length(CAR(expr)) == 3 && TYPEOF(CADDR(CAR(expr))) == SYMSXP) {
 	    afun = getAssignFcnSymbol(CADDR(CAR(expr)));
-	    PROTECT(afun = lang3(CAAR(expr), CADR(CAR(expr)), afun));
+	    VAPROTECT(afun, lang3(CAAR(expr), CADR(CAR(expr)), afun));
 	    nprot++;
 	}
 	else
 	    error(_("invalid function in complex assignment"));
     }
     SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
-    PROTECT(expr = assignCall(asymSymbol[PRIMVAL(op)], CDR(lhs),
+    VAPROTECT(expr, assignCall(asymSymbol[PRIMVAL(op)], CDR(lhs),
 			      afun, R_TmpvalSymbol, CDDR(expr), rhsprom));
     expr = eval(expr, rho);
     UNPROTECT(nprot);
@@ -2082,7 +2082,7 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 		while (h != R_NilValue) {
 		    ev = CONS_NR(eval(CAR(h), rho), R_NilValue);
 		    if (head==R_NilValue)
-			PROTECT(head = ev);
+			VAPROTECT(head, ev);
 		    else
 			SETCDR(tail, ev);
 		    COPY_TAG(ev, h);
@@ -2113,7 +2113,7 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	} else {
 	    ev = CONS_NR(eval(CAR(el), rho), R_NilValue);
 	    if (head==R_NilValue)
-		PROTECT(head = ev);
+		VAPROTECT(head, ev);
 	    else
 		SETCDR(tail, ev);
 	    COPY_TAG(ev, el);
@@ -2159,7 +2159,7 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 		    else
 			ev = CONS_NR(eval(CAR(h), rho), R_NilValue);
 		    if (head==R_NilValue)
-			PROTECT(head = ev);
+			VAPROTECT(head, ev);
 		    else
 			SETCDR(tail, ev);
 		    COPY_TAG(ev, h);
@@ -2177,7 +2177,7 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 	    else
 		ev = CONS_NR(eval(CAR(el), rho), R_NilValue);
 	    if (head==R_NilValue)
-		PROTECT(head = ev);
+		VAPROTECT(head, ev);
 	    else
 		SETCDR(tail, ev);
 	    COPY_TAG(ev, el);
@@ -2202,7 +2202,7 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 {
     SEXP ans, h, tail;
 
-    PROTECT(ans = tail = CONS(R_NilValue, R_NilValue));
+    VAPROTECT(ans, tail = CONS(R_NilValue, R_NilValue));
 
     while(el != R_NilValue) {
 
@@ -2270,14 +2270,14 @@ static SEXP VectorToPairListNamed(SEXP x)
     const void *vmax = vmaxget();
 
     PROTECT(x);
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol)); /* isn't this protected via x? */
+    VAPROTECT(xnames, getAttrib(x, R_NamesSymbol)); /* isn't this protected via x? */
     named = (xnames != R_NilValue);
     if(named)
 	for (i = 0; i < length(x); i++)
 	    if (CHAR(STRING_ELT(xnames, i))[0] != '\0') len++;
 
     if(len) {
-	PROTECT(xnew = allocList(len));
+	VAPROTECT(xnew, allocList(len));
 	xptr = xnew;
 	for (i = 0; i < length(x); i++) {
 	    if (CHAR(STRING_ELT(xnames, i))[0] != '\0') {
@@ -2350,7 +2350,7 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (frame == NA_INTEGER)
 	    error(_("invalid '%s' argument of type '%s'"),
 		  "envir", type2char(TYPEOF(env)));
-	PROTECT(env = R_sysframe(frame, R_GlobalContext));
+	VAPROTECT(env, R_sysframe(frame, R_GlobalContext));
 	break;
     default:
 	error(_("invalid '%s' argument of type '%s'"),
@@ -2414,8 +2414,8 @@ SEXP attribute_hidden do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
     x = CAR(args);
     x = eval(x, rho);
     PROTECT(x);
-    PROTECT(ret = allocVector(VECSXP, 2));
-    PROTECT(nm = allocVector(STRSXP, 2));
+    VAPROTECT(ret, allocVector(VECSXP, 2));
+    VAPROTECT(nm, allocVector(STRSXP, 2));
     SET_STRING_ELT(nm, 0, mkChar("value"));
     SET_STRING_ELT(nm, 1, mkChar("visible"));
     SET_VECTOR_ELT(ret, 0, x);
@@ -2455,11 +2455,11 @@ SEXP attribute_hidden do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
        originally used to get it.
     */
     if (cptr->callfun != R_NilValue)
-	PROTECT(s = cptr->callfun);
+	VAPROTECT(s, cptr->callfun);
     else if( TYPEOF(CAR(cptr->call)) == SYMSXP)
-	PROTECT(s = findFun(CAR(cptr->call), cptr->sysparent));
+	VAPROTECT(s, findFun(CAR(cptr->call), cptr->sysparent));
     else
-	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
+	VAPROTECT(s, eval(CAR(cptr->call), cptr->sysparent));
     if (TYPEOF(s) != CLOSXP)
 	error(_("'Recall' called from outside a closure"));
     ans = applyClosure(cptr->call, s, args, cptr->sysparent, R_NilValue);
@@ -2489,7 +2489,7 @@ int DispatchAnyOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	/* Rboolean hasS4 = FALSE; */
 	int nprotect = 0, dispatch;
 	if(!argsevald) {
-	    PROTECT(argValue = evalArgs(args, rho, dropmissing, call, 0));
+	    VAPROTECT(argValue, evalArgs(args, rho, dropmissing, call, 0));
 	    nprotect++;
 	    argsevald = TRUE;
 	}
@@ -2540,7 +2540,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
     int dots = FALSE, nprotect = 0;;
 
     if( argsevald )
-	{PROTECT(x = CAR(args)); nprotect++;}
+	{VAPROTECT(x, CAR(args)); nprotect++;}
     else {
 	/* Find the object to dispatch on, dropping any leading
 	   ... arguments with missing or empty values.  If there are no
@@ -2599,10 +2599,10 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 		   multiple evaluation after the call to possible_dispatch.
 		*/
 		if (dots)
-		    PROTECT(argValue = evalArgs(argValue, rho, dropmissing,
+		    VAPROTECT(argValue, evalArgs(argValue, rho, dropmissing,
 						call, 0));
 		else {
-		    PROTECT(argValue = CONS_NR(x, evalArgs(CDR(argValue), rho,
+		    VAPROTECT(argValue, CONS_NR(x, evalArgs(CDR(argValue), rho,
 							dropmissing, call, 1)));
 		    SET_TAG(argValue, CreateTag(TAG(args)));
 		}
@@ -2619,7 +2619,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	if (pt == NULL || strcmp(pt,".default")) {
 	    RCNTXT cntxt;
 	    SEXP pargs, rho1;
-	    PROTECT(pargs = promiseArgs(args, rho)); nprotect++;
+	    VAPROTECT(pargs, promiseArgs(args, rho)); nprotect++;
 	    /* The context set up here is needed because of the way
 	       usemethod() is written.  DispatchGroup() repeats some
 	       internal usemethod() code and avoids the need for a
@@ -2635,7 +2635,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       triggered (by something very obscure, but still).
 	       Hence here and in the other usemethod() uses below a
 	       new environment rho1 is created and used.  LT */
-	    PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho)); nprotect++;
+	    VAPROTECT(rho1, NewEnvironment(R_NilValue, R_NilValue, rho)); nprotect++;
 	    SET_PRVALUE(CAR(pargs), x);
 	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
 	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, ans))
@@ -2832,7 +2832,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 
     /* we either have a group method or a class method */
 
-    PROTECT(m = allocVector(STRSXP,nargs));
+    VAPROTECT(m, allocVector(STRSXP,nargs));
     const void *vmax = vmaxget();
     s = args;
     const char *dispatchClassName = translateChar(STRING_ELT(lclass, lwhich));
@@ -2861,13 +2861,13 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     );
     PROTECT(newvars);
 
-    PROTECT(t = LCONS(lmeth, CDR(call)));
+    VAPROTECT(t, LCONS(lmeth, CDR(call)));
 
     /* the arguments have been evaluated; since we are passing them */
     /* out to a closure we need to wrap them in promises so that */
     /* they get duplicated and things like missing/substitute work. */
 
-    PROTECT(s = promiseArgs(CDR(call), rho));
+    VAPROTECT(s, promiseArgs(CDR(call), rho));
     if (length(s) != length(args))
 	error(_("dispatch error in group dispatch"));
     for (m = s ; m != R_NilValue ; m = CDR(m), args = CDR(args) ) {
@@ -4186,7 +4186,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   int dispatched = FALSE;
   SEXP op = SYMVALUE(install(generic)); /**** avoid this */
 
-  PROTECT(pargs = promiseArgs(CDR(call), rho));
+  VAPROTECT(pargs, promiseArgs(CDR(call), rho));
   SET_PRVALUE(CAR(pargs), x);
 
   /**** Minimal hack to try to handle the S4 case.  If we do the check
@@ -4203,7 +4203,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   }
 
   /* See comment at first usemethod() call in this file. LT */
-  PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho));
+  VAPROTECT(rho1, NewEnvironment(R_NilValue, R_NilValue, rho));
   begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
   if (usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, pv))
     dispatched = TRUE;
@@ -4219,7 +4219,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
     int result;
     SEXP ncall, last, prom;
 
-    PROTECT(ncall = duplicate(call));
+    VAPROTECT(ncall, duplicate(call));
     last = ncall;
     while (CDR(last) != R_NilValue)
 	last = CDR(last);
@@ -4618,7 +4618,7 @@ static R_INLINE void SUBSET_N_PTR(R_bcstack_t *sx, int rank,
     }
 
     /* fall through to the standard default handler */
-    PROTECT(args = CONS(x, getStackArgsList(rank, si)));
+    VAPROTECT(args, CONS(x, getStackArgsList(rank, si)));
     SEXP call = callidx < 0 ? consts : VECTOR_ELT(consts, callidx);
     if (subset2)
 	value = do_subset2_dflt(call, R_Subset2Sym, args, rho);
@@ -4807,7 +4807,7 @@ static R_INLINE void SUBASSIGN_N_PTR(R_bcstack_t *sx, int rank,
     value = GETSTACK_PTR(srhs);
     args = CONS_NR(value, R_NilValue);
     SET_TAG(args, R_valueSym);
-    PROTECT(args = CONS(x, addStackArgsList(rank, si, args)));
+    VAPROTECT(args, CONS(x, addStackArgsList(rank, si, args)));
     SEXP call = callidx < 0 ? consts : VECTOR_ELT(consts, callidx);
     if (subassign2)
 	x = do_subassign2_dflt(call, R_Subassign2Sym, args, rho);
@@ -5513,7 +5513,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP x = GETSTACK(-1);
 	if (isObject(x)) {
 	    SEXP ncall;
-	    PROTECT(ncall = duplicate(call));
+	    VAPROTECT(ncall, duplicate(call));
 	    /**** hack to avoid evaluating the symbol */
 	    SETCAR(CDDR(ncall), ScalarString(PRINTNAME(symbol)));
 	    dispatched = tryDispatch("$", ncall, x, rho, &value);
@@ -5539,7 +5539,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
 	if (isObject(x)) {
 	    SEXP ncall, prom;
-	    PROTECT(ncall = duplicate(call));
+	    VAPROTECT(ncall, duplicate(call));
 	    /**** hack to avoid evaluating the symbol */
 	    SETCAR(CDDR(ncall), ScalarString(PRINTNAME(symbol)));
 	    prom = mkRHSPROMISE(CADDDR(ncall), rhs);
@@ -5684,7 +5684,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  break;
 	case SPECIALSXP:
 	  /* duplicate arguments and protect */
-	  PROTECT(args = duplicate(CDR(call)));
+	  VAPROTECT(args, duplicate(CDR(call)));
 	  /* insert evaluated promise for LHS as first argument */
 	  /* promise won't be captured so don't track refrences */
 	  prom = R_mkEVPROMISE_NR(R_TmpvalSymbol, lhs);
@@ -6017,7 +6017,7 @@ static SEXP disassemble(SEXP bc)
   SEXP expr = BCODE_EXPR(bc);
   int nc = LENGTH(consts);
 
-  PROTECT(ans = allocVector(VECSXP, expr != R_NilValue ? 4 : 3));
+  VAPROTECT(ans, allocVector(VECSXP, expr != R_NilValue ? 4 : 3));
   SET_VECTOR_ELT(ans, 0, install(".Code"));
   SET_VECTOR_ELT(ans, 1, R_bcDecode(code));
   SET_VECTOR_ELT(ans, 2, allocVector(VECSXP, nc));
@@ -6062,7 +6062,7 @@ SEXP attribute_hidden do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
 
-    PROTECT(file = coerceVector(CAR(args), STRSXP));
+    VAPROTECT(file, coerceVector(CAR(args), STRSXP));
 
     if (! isValidStringF(file))
 	errorcall(call, _("bad file name"));

@@ -492,7 +492,7 @@ SEXP duplicated(SEXP x, Rboolean from_last)
     DUPLICATED_INIT;
 
     PROTECT(data.HashTable);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
 
     v = LOGICAL(ans);
 
@@ -521,7 +521,7 @@ static SEXP Duplicated(SEXP x, Rboolean from_last, int nmax)
     DUPLICATED_INIT;
 
     PROTECT(data.HashTable);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
 
     v = LOGICAL(ans);
 
@@ -575,7 +575,7 @@ static SEXP duplicated3(SEXP x, SEXP incomp, Rboolean from_last, int nmax)
     DUPLICATED_INIT;
 
     PROTECT(data.HashTable);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
 
     v = LOGICAL(ans);
 
@@ -591,7 +591,7 @@ static SEXP duplicated3(SEXP x, SEXP incomp, Rboolean from_last, int nmax)
 	}
 
     if(length(incomp)) {
-	PROTECT(incomp = coerceVector(incomp, TYPEOF(x)));
+	VAPROTECT(incomp, coerceVector(incomp, TYPEOF(x)));
 	m = length(incomp);
 	for (i = 0; i < n; i++)
 	    if(v[i]) {
@@ -616,7 +616,7 @@ R_xlen_t any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
 
     if(!m) error(_("any_duplicated3(., <0-length incomp>)"));
 
-    PROTECT(incomp = coerceVector(incomp, TYPEOF(x)));
+    VAPROTECT(incomp, coerceVector(incomp, TYPEOF(x)));
     m = length(incomp);
 
     if(from_last)
@@ -718,7 +718,7 @@ SEXP attribute_hidden do_duplicated(SEXP call, SEXP op, SEXP args, SEXP env)
 	    k++;
 
     PROTECT(dup);
-    PROTECT(ans = allocVector(TYPEOF(x), k));
+    VAPROTECT(ans, allocVector(TYPEOF(x), k));
 
     k = 0;
     switch (TYPEOF(x)) {
@@ -798,7 +798,7 @@ static SEXP HashLookup(SEXP table, SEXP x, HashData *d)
     R_xlen_t i, n;
 
     n = XLENGTH(x);
-    PROTECT(ans = allocVector(INTSXP, n));
+    VAPROTECT(ans, allocVector(INTSXP, n));
     for (i = 0; i < n; i++) {
 //	if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
 	INTEGER(ans)[i] = Lookup(table, x, i, d);
@@ -814,7 +814,7 @@ static SEXP match_transform(SEXP s, SEXP env)
 	else if(inherits(s, "POSIXlt")) { /* and maybe more classes in the future:
 					   * Call R's (generic)  as.character(s) : */
 	    SEXP call, r;
-	    PROTECT(call = lang2(install("as.character"), s));
+	    VAPROTECT(call, lang2(install("as.character"), s));
 	    r = eval(call, env);
 	    UNPROTECT(1);
 	    return r;
@@ -842,8 +842,8 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
     }
 
     int nprot = 0;
-    PROTECT(x     = match_transform(ix,     env)); nprot++;
-    PROTECT(table = match_transform(itable, env)); nprot++;
+    VAPROTECT(x, match_transform(ix,     env)); nprot++;
+    VAPROTECT(table, match_transform(itable, env)); nprot++;
     /* or should we use PROTECT_WITH_INDEX  and  REPROTECT below ? */
 
     /* Coerce to a common type; type == NILSXP is ok here.
@@ -852,9 +852,9 @@ SEXP match5(SEXP itable, SEXP ix, int nmatch, SEXP incomp, SEXP env)
      * (given that we have "Vector" or NULL) */
     if(TYPEOF(x) >= STRSXP || TYPEOF(table) >= STRSXP) type = STRSXP;
     else type = TYPEOF(x) < TYPEOF(table) ? TYPEOF(table) : TYPEOF(x);
-    PROTECT(x     = coerceVector(x,     type)); nprot++;
-    PROTECT(table = coerceVector(table, type)); nprot++;
-    if (incomp) { PROTECT(incomp = coerceVector(incomp, type)); nprot++; }
+    VAPROTECT(x, coerceVector(x,     type)); nprot++;
+    VAPROTECT(table, coerceVector(table, type)); nprot++;
+    if (incomp) { VAPROTECT(incomp, coerceVector(incomp, type)); nprot++; }
     data.nomatch = nmatch;
     HashTableSetup(table, &data, NA_INTEGER);
     if(type == STRSXP) {
@@ -1000,7 +1000,7 @@ SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 
     in = (const char **) R_alloc((size_t) n_input, sizeof(char *));
     tar = (const char **) R_alloc((size_t) n_target, sizeof(char *));
-    PROTECT(ans = allocVector(INTSXP, n_input));
+    VAPROTECT(ans, allocVector(INTSXP, n_input));
     ians = INTEGER(ans);
     if(useBytes) {
 	for(R_xlen_t i = 0; i < n_input; i++) {
@@ -1132,7 +1132,7 @@ SEXP attribute_hidden do_charmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
 
-    PROTECT(ans = allocVector(INTSXP, n_input));
+    VAPROTECT(ans, allocVector(INTSXP, n_input));
     int *ians = INTEGER(ans);
 
     const void *vmax = vmaxget();  // prudence: .Internal does this too.
@@ -1239,7 +1239,7 @@ static SEXP subDots(SEXP rho)
 	return dots;
 
     len = length(dots);
-    PROTECT(rval=allocList(len));
+    VAPROTECT(rval,allocList(len));
     for(a = dots, b = rval, i = 1; i <= len; a = CDR(a), b = CDR(b), i++) {
 	SET_TAG(b, TAG(a));
 	t = CAR(a);
@@ -1316,11 +1316,11 @@ SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
 	       context only if the call was not supplied explicitly.
 	       The documentation should also be changed to be
 	       consistent with this behavior.  LT */
-	    PROTECT(b = duplicate(cptr->callfun));
+	    VAPROTECT(b, duplicate(cptr->callfun));
 	else if ( TYPEOF(CAR(funcall)) == SYMSXP )
-	    PROTECT(b = findFun(CAR(funcall), sysp));
+	    VAPROTECT(b, findFun(CAR(funcall), sysp));
 	else
-	    PROTECT(b = eval(CAR(funcall), sysp));
+	    VAPROTECT(b, eval(CAR(funcall), sysp));
 
 	if (TYPEOF(b) != CLOSXP)
 	    error(_("unable to find a closure from within which 'match.call' was called"));
@@ -1328,7 +1328,7 @@ SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     else {
 	/* It must be a closure! */
-	PROTECT(b = CAR(args));
+	VAPROTECT(b, CAR(args));
 	if (TYPEOF(b) != CLOSXP)
 	    error(_("invalid '%s' argument"), "definition");
     }
@@ -1342,7 +1342,7 @@ SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Get the formals and match the actual args */
 
     formals = FORMALS(b);
-    PROTECT(actuals = duplicate(CDR(funcall)));
+    VAPROTECT(actuals, duplicate(CDR(funcall)));
 
     /* If there is a ... symbol then expand it out in the sysp env
        We need to take some care since the ... might be in the middle
@@ -1399,14 +1399,14 @@ SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* Handle the dots */
 
-    PROTECT(rlist = ExpandDots(rlist, expdots));
+    VAPROTECT(rlist, ExpandDots(rlist, expdots));
 
     /* Eliminate any unmatched formals and any that match R_DotSymbol */
     /* This needs to be after ExpandDots as the DOTSXP might match ... */
 
     rlist = StripUnmatched(rlist);
 
-    PROTECT(rval = allocSExp(LANGSXP));
+    VAPROTECT(rval, allocSExp(LANGSXP));
     SETCAR(rval, duplicate(CAR(funcall)));
     SETCDR(rval, rlist);
     UNPROTECT(4);
@@ -1439,9 +1439,9 @@ rowsum(SEXP x, SEXP g, SEXP uniqueg, SEXP snarm, SEXP rn)
     HashTableSetup(uniqueg, &data, NA_INTEGER);
     PROTECT(data.HashTable);
     DoHashing(uniqueg, &data);
-    PROTECT(matches = HashLookup(uniqueg, g, &data));
+    VAPROTECT(matches, HashLookup(uniqueg, g, &data));
 
-    PROTECT(ans = allocMatrix(TYPEOF(x), ng, p));
+    VAPROTECT(ans, allocMatrix(TYPEOF(x), ng, p));
 
     switch(TYPEOF(x)){
     case REALSXP:
@@ -1510,9 +1510,9 @@ rowsum_df(SEXP x, SEXP g, SEXP uniqueg, SEXP snarm, SEXP rn)
     HashTableSetup(uniqueg, &data, NA_INTEGER);
     PROTECT(data.HashTable);
     DoHashing(uniqueg, &data);
-    PROTECT(matches = HashLookup(uniqueg, g, &data));
+    VAPROTECT(matches, HashLookup(uniqueg, g, &data));
 
-    PROTECT(ans = allocVector(VECSXP, p));
+    VAPROTECT(ans, allocVector(VECSXP, p));
 
     for(int i = 0; i < p; i++) {
 	xcol = VECTOR_ELT(x,i);
@@ -1520,7 +1520,7 @@ rowsum_df(SEXP x, SEXP g, SEXP uniqueg, SEXP snarm, SEXP rn)
 	    error(_("non-numeric data frame in rowsum"));
 	switch(TYPEOF(xcol)){
 	case REALSXP:
-	    PROTECT(col = allocVector(REALSXP,ng));
+	    VAPROTECT(col, allocVector(REALSXP,ng));
 	    Memzero(REAL(col), ng);
 	    for(R_xlen_t j = 0; j < n; j++)
 		if(!narm || !ISNAN(REAL(xcol)[j]))
@@ -1529,7 +1529,7 @@ rowsum_df(SEXP x, SEXP g, SEXP uniqueg, SEXP snarm, SEXP rn)
 	    UNPROTECT(1);
 	    break;
 	case INTSXP:
-	    PROTECT(col = allocVector(INTSXP, ng));
+	    VAPROTECT(col, allocVector(INTSXP, ng));
 	    Memzero(INTEGER(col), ng);
 	    for(R_xlen_t j = 0; j < n; j++) {
 		if (INTEGER(xcol)[j] == NA_INTEGER) {
@@ -1595,7 +1595,7 @@ static SEXP duplicated2(SEXP x, HashData *d)
     n = LENGTH(x);
     HashTableSetup(x, d, NA_INTEGER);
     PROTECT(d->HashTable);
-    PROTECT(ans = allocVector(INTSXP, n));
+    VAPROTECT(ans, allocVector(INTSXP, n));
 
     int *h = INTEGER(d->HashTable);
     int *v = INTEGER(ans);
@@ -1626,7 +1626,7 @@ SEXP attribute_hidden do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isString(sep) || LENGTH(sep) != 1)
 	error(_("'sep' must be a character string"));
     csep = translateChar(STRING_ELT(sep, 0));
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     vmax = vmaxget();
     for(i = 0; i < n; i++) {
 	SET_STRING_ELT(ans, i, STRING_ELT(names, i));
@@ -1648,8 +1648,8 @@ SEXP attribute_hidden do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	for(i = 0; i < n; i++) cnts[i] = 1;
 	data.nomatch = 0;
-	PROTECT(newx = allocVector(STRSXP, 1));
-	PROTECT(dup = duplicated2(names, &data));
+	VAPROTECT(newx, allocVector(STRSXP, 1));
+	VAPROTECT(dup, duplicated2(names, &data));
 	PROTECT(data.HashTable);
 	vmax = vmaxget();
 	for(i = 1; i < n; i++) { /* first cannot be a duplicate */
@@ -1705,7 +1705,7 @@ SEXP Rf_csduplicated(SEXP x)
     n = LENGTH(x);
     HashTableSetup1(x, &data);
     PROTECT(data.HashTable);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
 
     int *v = LOGICAL(ans);
 

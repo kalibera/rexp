@@ -258,7 +258,7 @@ SEXP attribute_hidden do_tempfile(SEXP call, SEXP op, SEXP args, SEXP env)
         error(_("no 'fileext'"));
     slen = (n1 > n2) ? n1 : n2;
     slen = (n3 > slen) ? n3 : slen;
-    PROTECT(ans = allocVector(STRSXP, slen));
+    VAPROTECT(ans, allocVector(STRSXP, slen));
     for(i = 0; i < slen; i++) {
 	tn = translateChar( STRING_ELT( pattern , i%n1 ) );
 	td = translateChar( STRING_ELT( tempdir , i%n2 ) );
@@ -362,7 +362,7 @@ SEXP attribute_hidden do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
 	    n = max(n, wcslen(*w));
 	N = 3*n+1; 
 	char buf[N];
-	PROTECT(ans = allocVector(STRSXP, i));
+	VAPROTECT(ans, allocVector(STRSXP, i));
 	for (i = 0, w = _wenviron; *w != NULL; i++, w++) {
 	    wcstoutf8(buf, *w, N); buf[N-1] = '\0';
 	    SET_STRING_ELT(ans, i, mkCharCE(buf, CE_UTF8));
@@ -370,12 +370,12 @@ SEXP attribute_hidden do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
 #else
 	char **e;
 	for (i = 0, e = environ; *e != NULL; i++, e++);
-	PROTECT(ans = allocVector(STRSXP, i));
+	VAPROTECT(ans, allocVector(STRSXP, i));
 	for (i = 0, e = environ; *e != NULL; i++, e++)
 	    SET_STRING_ELT(ans, i, mkChar(*e));
 #endif
     } else {
-	PROTECT(ans = allocVector(STRSXP, i));
+	VAPROTECT(ans, allocVector(STRSXP, i));
 	for (j = 0; j < i; j++) {
 #ifdef Win32
 	    const wchar_t *wnm = wtransChar(STRING_ELT(CAR(args), j));
@@ -449,7 +449,7 @@ SEXP attribute_hidden do_setenv(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("wrong length for argument"));
 
     n = LENGTH(vars);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
 #ifdef HAVE_SETENV
     for (i = 0; i < n; i++)
 	LOGICAL(ans)[i] = setenv(translateChar(STRING_ELT(nm, i)),
@@ -525,7 +525,7 @@ SEXP attribute_hidden do_unsetenv(SEXP call, SEXP op, SEXP args, SEXP env)
     warning(_("'Sys.unsetenv' is not available on this system"));
 #endif
 
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
     for (i = 0; i < n; i++)
 	LOGICAL(ans)[i] = !getenv(translateChar(STRING_ELT(vars, i)));
     UNPROTECT(1);
@@ -575,11 +575,11 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef HAVE_ICONVLIST
 	cnt = 0;
 	iconvlist(count_one, NULL);
-	PROTECT(ans = allocVector(STRSXP, cnt));
+	VAPROTECT(ans, allocVector(STRSXP, cnt));
 	cnt = 0;
 	iconvlist(write_one, (void *)ans);
 #else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
 #endif
     } else {
 	int mark, toRaw;
@@ -627,19 +627,19 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 	isRawlist = (TYPEOF(x) == VECSXP);
 	if(isRawlist) {
 	    if(toRaw)
-		PROTECT(ans = duplicate(x));
+		VAPROTECT(ans, duplicate(x));
 	    else {
-		PROTECT(ans = allocVector(STRSXP, LENGTH(x)));
+		VAPROTECT(ans, allocVector(STRSXP, LENGTH(x)));
 		DUPLICATE_ATTRIB(ans, x);
 	    }
 	} else {   
 	    if(TYPEOF(x) != STRSXP)
 		error(_("'x' must be a character vector"));
 	    if(toRaw) {
-		PROTECT(ans = allocVector(VECSXP, LENGTH(x)));
+		VAPROTECT(ans, allocVector(VECSXP, LENGTH(x)));
 		DUPLICATE_ATTRIB(ans, x);
 	    } else 
-		PROTECT(ans = duplicate(x));
+		VAPROTECT(ans, duplicate(x));
 	}
 	R_AllocStringBuffer(0, &cbuff);  /* 0 -> default */
 	for(R_xlen_t i = 0; i < XLENGTH(x); i++) {
@@ -1668,8 +1668,8 @@ SEXP attribute_hidden do_proctime(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans, nm;
 
     checkArity(op, args);
-    PROTECT(ans = allocVector(REALSXP, 5));
-    PROTECT(nm = allocVector(STRSXP, 5));
+    VAPROTECT(ans, allocVector(REALSXP, 5));
+    VAPROTECT(nm, allocVector(STRSXP, 5));
     R_getProcTime(REAL(ans));
     SET_STRING_ELT(nm, 0, mkChar("user.self"));
     SET_STRING_ELT(nm, 1, mkChar("sys.self"));
@@ -1817,7 +1817,7 @@ SEXP attribute_hidden do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
 	initialized = TRUE;
     }
     n = initialized ? globbuf.gl_pathc : 0;
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for (i = 0; i < n; i++)
 #ifdef Win32
     {

@@ -84,7 +84,7 @@ rWishart(SEXP ns, SEXP nuP, SEXP scal)
 	error(_("'scal' must be a square, real matrix"));
     if (n <= 0) n = 1;
     // allocate early to avoid memory leaks in Callocs below.
-    PROTECT(ans = alloc3DArray(REALSXP, dims[0], dims[0], n));
+    VAPROTECT(ans, alloc3DArray(REALSXP, dims[0], dims[0], n));
     psqr = dims[0] * dims[0];
     tmp = Calloc(psqr, double);
     scCp = Calloc(psqr, double);

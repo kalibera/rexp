@@ -35,8 +35,8 @@
 /* NB: this only works in the lower half of y, but pads with zeros. */
 SEXP BinDist(SEXP sx, SEXP sw, SEXP slo, SEXP shi, SEXP sn)
 {
-    PROTECT(sx = coerceVector(sx, REALSXP)); 
-    PROTECT(sw = coerceVector(sw, REALSXP));
+    VAPROTECT(sx, coerceVector(sx, REALSXP)); 
+    VAPROTECT(sw, coerceVector(sw, REALSXP));
     int n = asInteger(sn);
     if (n == NA_INTEGER || n <= 0) error("invalid '%s' argument", "n");
     SEXP ans = allocVector(REALSXP, 2*n);

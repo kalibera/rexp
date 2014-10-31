@@ -1940,13 +1940,13 @@ SEXP GEXspline(int n, double *x, double *y, double *s, Rboolean open,
     if (npoints > 1) {
 	SEXP xpts, ypts;
 	int i;
-	PROTECT(xpts = allocVector(REALSXP, npoints));
-	PROTECT(ypts = allocVector(REALSXP, npoints));
+	VAPROTECT(xpts, allocVector(REALSXP, npoints));
+	VAPROTECT(ypts, allocVector(REALSXP, npoints));
 	for (i = 0; i < npoints; i++) {
 	    REAL(xpts)[i] = xpoints[i];
 	    REAL(ypts)[i] = ypoints[i]/asp;
 	}
-	PROTECT(result = allocVector(VECSXP, 2));
+	VAPROTECT(result, allocVector(VECSXP, 2));
 	SET_VECTOR_ELT(result, 0, xpts);
 	SET_VECTOR_ELT(result, 1, ypts);
 	UNPROTECT(3);
@@ -2836,11 +2836,11 @@ SEXP GEcreateSnapshot(pGEDevDesc dd)
      * and one spot each for the registered graphics systems
      * to put their graphics state
      */
-    PROTECT(snapshot = allocVector(VECSXP, 1 + numGraphicsSystems));
+    VAPROTECT(snapshot, allocVector(VECSXP, 1 + numGraphicsSystems));
     /* The first element of the snapshot is the display list.
      */
     if(!isNull(dd->displayList)) {
-	PROTECT(tmp = duplicate(dd->displayList));
+	VAPROTECT(tmp, duplicate(dd->displayList));
 	SET_VECTOR_ELT(snapshot, 0, tmp);
 	UNPROTECT(1);
     }
@@ -2849,7 +2849,7 @@ SEXP GEcreateSnapshot(pGEDevDesc dd)
      */
     for (i = 0; i < MAX_GRAPHICS_SYSTEMS; i++)
 	if (dd->gesd[i] != NULL) {
-	    PROTECT(state = (dd->gesd[i]->callback)(GE_SaveSnapshotState, dd,
+	    VAPROTECT(state, (dd->gesd[i]->callback)(GE_SaveSnapshotState, dd,
 						    R_NilValue));
 	    SET_VECTOR_ELT(snapshot, i + 1, state);
 	    UNPROTECT(1);
@@ -2972,16 +2972,16 @@ SEXP attribute_hidden do_recordGraphics(SEXP call, SEXP op, SEXP args, SEXP env)
     /*
      * This conversion of list to env taken from do_eval
      */
-    PROTECT(x = VectorToPairList(list));
+    VAPROTECT(x, VectorToPairList(list));
     for (xptr = x ; xptr != R_NilValue ; xptr = CDR(xptr))
 	SET_NAMED(CAR(xptr) , 2);
     /*
      * The environment passed in as the third arg is used as
      * the parent of the new evaluation environment.
      */
-    PROTECT(evalenv = NewEnvironment(R_NilValue, x, parentenv));
+    VAPROTECT(evalenv, NewEnvironment(R_NilValue, x, parentenv));
     dd->recordGraphics = FALSE;
-    PROTECT(retval = eval(code, evalenv));
+    VAPROTECT(retval, eval(code, evalenv));
     /*
      * If there is an error or user-interrupt in the above
      * evaluation, dd->recordGraphics is set to TRUE

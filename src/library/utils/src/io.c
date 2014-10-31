@@ -370,7 +370,7 @@ SEXP countfields(SEXP args)
     }
 
     blocksize = SCAN_BLOCKSIZE;
-    PROTECT(ans = allocVector(INTSXP, blocksize));
+    VAPROTECT(ans, allocVector(INTSXP, blocksize));
     nlines = 0;
     nfields = 0;
     inquote = 0;
@@ -604,11 +604,11 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* save the dim/dimnames attributes */
 
-    PROTECT(dims = getAttrib(cvec, R_DimSymbol));
+    VAPROTECT(dims, getAttrib(cvec, R_DimSymbol));
     if (isArray(cvec))
-	PROTECT(names = getAttrib(cvec, R_DimNamesSymbol));
+	VAPROTECT(names, getAttrib(cvec, R_DimNamesSymbol));
     else
-	PROTECT(names = getAttrib(cvec, R_NamesSymbol));
+	VAPROTECT(names, getAttrib(cvec, R_NamesSymbol));
 
     /* Find the first non-NA entry (empty => NA) */
     for (i = 0; i < len; i++) {
@@ -622,7 +622,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if (typeInfo.islogical) {
-	PROTECT(rval = allocVector(LGLSXP, len));
+	VAPROTECT(rval, allocVector(LGLSXP, len));
 	for (i = 0; i < len; i++) {
 	    tmp = CHAR(STRING_ELT(cvec, i));
 	    if (STRING_ELT(cvec, i) == NA_STRING || strlen(tmp) == 0
@@ -644,7 +644,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if (!done && typeInfo.isinteger) {
-	PROTECT(rval = allocVector(INTSXP, len));
+	VAPROTECT(rval, allocVector(INTSXP, len));
 	for (i = 0; i < len; i++) {
 	    tmp = CHAR(STRING_ELT(cvec, i));
 	    if (STRING_ELT(cvec, i) == NA_STRING || strlen(tmp) == 0
@@ -663,7 +663,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if (!done && typeInfo.isreal) {
-	PROTECT(rval = allocVector(REALSXP, len));
+	VAPROTECT(rval, allocVector(REALSXP, len));
 	for (i = 0; i < len; i++) {
 	    tmp = CHAR(STRING_ELT(cvec, i));
 	    if (STRING_ELT(cvec, i) == NA_STRING || strlen(tmp) == 0
@@ -682,7 +682,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if (!done && typeInfo.iscomplex) {
-	PROTECT(rval = allocVector(CPLXSXP, len));
+	VAPROTECT(rval, allocVector(CPLXSXP, len));
 	for (i = 0; i < len; i++) {
 	    tmp = CHAR(STRING_ELT(cvec, i));
 	    if (STRING_ELT(cvec, i) == NA_STRING || strlen(tmp) == 0
@@ -703,13 +703,13 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (!done) {
 	if (asIs) {
-	    PROTECT(rval = duplicate(cvec));
+	    VAPROTECT(rval, duplicate(cvec));
 	    for (i = 0; i < len; i++)
 		if(isNAstring(CHAR(STRING_ELT(rval, i)), 1, &data))
 		    SET_STRING_ELT(rval, i, NA_STRING);
 	}
 	else {
-	    PROTECT(dup = duplicated(cvec, FALSE));
+	    VAPROTECT(dup, duplicated(cvec, FALSE));
 	    j = 0;
 	    for (i = 0; i < len; i++) {
 		/* <NA> is never to be a level here */
@@ -718,7 +718,7 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
 		    j++;
 	    }
 
-	    PROTECT(levs = allocVector(STRSXP,j));
+	    VAPROTECT(levs, allocVector(STRSXP,j));
 	    j = 0;
 	    for (i = 0; i < len; i++) {
 		if (STRING_ELT(cvec, i) == NA_STRING) continue;
@@ -736,12 +736,12 @@ SEXP typeconvert(SEXP call, SEXP op, SEXP args, SEXP env)
 
 	    sortVector(levs, FALSE);
 
-	    PROTECT(a = matchE(levs, cvec, NA_INTEGER, env));
+	    VAPROTECT(a, matchE(levs, cvec, NA_INTEGER, env));
 	    for (i = 0; i < len; i++)
 		INTEGER(rval)[i] = INTEGER(a)[i];
 
 	    setAttrib(rval, R_LevelsSymbol, levs);
-	    PROTECT(a = mkString("factor"));
+	    VAPROTECT(a, mkString("factor"));
 	    setAttrib(rval, R_ClassSymbol, a);
 	    UNPROTECT(3);
 	}
@@ -862,7 +862,7 @@ SEXP readtablehead(SEXP args)
     if(!buf)
 	error(_("cannot allocate buffer in 'readTableHead'"));
 
-    PROTECT(ans = allocVector(STRSXP, nlines));
+    VAPROTECT(ans, allocVector(STRSXP, nlines));
     for(nread = 0; nread < nlines; ) {
 	nbuf = 0; empty = TRUE; skip = FALSE; firstnonwhite = TRUE;
 	if (data.ttyflag)
@@ -941,7 +941,7 @@ no_more_lines:
 		  data.con->description);
     }
     free(buf);
-    PROTECT(ans2 = allocVector(STRSXP, nread));
+    VAPROTECT(ans2, allocVector(STRSXP, nread));
     for(i = 0; i < nread; i++)
 	SET_STRING_ELT(ans2, i, STRING_ELT(ans, i));
     UNPROTECT(2);

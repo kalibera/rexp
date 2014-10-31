@@ -51,8 +51,8 @@ SEXP attribute_hidden do_version(SEXP call, SEXP op, SEXP args, SEXP env)
     char buf[128];
 
     checkArity(op, args);
-    PROTECT(value = allocVector(VECSXP,14));
-    PROTECT(names = allocVector(STRSXP,14));
+    VAPROTECT(value, allocVector(VECSXP,14));
+    VAPROTECT(names, allocVector(STRSXP,14));
 
     SET_STRING_ELT(names, 0, mkChar("platform"));
     SET_VECTOR_ELT(value, 0, mkString(R_PLATFORM));

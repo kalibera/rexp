@@ -119,7 +119,7 @@ static SEXP readRegistryKey1(HKEY hkey, const wchar_t *name)
     case REG_SZ:
     case REG_EXPAND_SZ:
     {
-	PROTECT(ans = allocVector(STRSXP, 1));
+	VAPROTECT(ans, allocVector(STRSXP, 1));
 	SET_STRING_ELT(ans, 0, mkCharUcs((wchar_t *)d));
 	UNPROTECT(1);
 	break;
@@ -133,7 +133,7 @@ static SEXP readRegistryKey1(HKEY hkey, const wchar_t *name)
 	int i, n;
 	wchar_t *p = (wchar_t *)d;
 	for (n = 0; *p; n++) { for(; *p; p++) {}; p++; }
-	PROTECT(ans = allocVector(STRSXP, n));
+	VAPROTECT(ans, allocVector(STRSXP, n));
 	for (i = 0, p = (wchar_t *)d; i < n; i++) {
 	    SET_STRING_ELT(ans, i, mkCharUcs(p));
 	    for(; *p; p++) {};
@@ -178,11 +178,11 @@ static SEXP readRegistryKey(HKEY hkey, int depth, int view)
 	      formatError(res));
     size0 = max(maxsubkeylen, maxvalnamlen) + 1;
     name = (wchar_t *) R_alloc(size0, sizeof(wchar_t));
-    PROTECT(ans = allocVector(VECSXP, nval + nsubkeys));
-    PROTECT(nm = allocVector(STRSXP, nval+ nsubkeys));
+    VAPROTECT(ans, allocVector(VECSXP, nval + nsubkeys));
+    VAPROTECT(nm, allocVector(STRSXP, nval+ nsubkeys));
     if (nval > 0) {
-	PROTECT(ans0 = allocVector(VECSXP, nval));
-	PROTECT(nm0 = allocVector(STRSXP, nval));
+	VAPROTECT(ans0, allocVector(VECSXP, nval));
+	VAPROTECT(nm0, allocVector(STRSXP, nval));
 	for (i = 0; i < nval; i++) {
 	    size = size0;
 	    res  = RegEnumValueW(hkey, i, (LPWSTR) name, &size,
@@ -192,7 +192,7 @@ static SEXP readRegistryKey(HKEY hkey, int depth, int view)
 	    SET_STRING_ELT(nm0, i, mkCharUcs(name));
 	}
 	/* now sort by name */
-	PROTECT(sind = allocVector(INTSXP, nval));  indx = INTEGER(sind);
+	VAPROTECT(sind, allocVector(INTSXP, nval));  indx = INTEGER(sind);
 	for (i = 0; i < nval; i++) indx[i] = i;
 	orderVector1(indx, nval, nm0, TRUE, FALSE, R_NilValue);
 	for (i = 0; i < nval; i++, k++) {
@@ -205,8 +205,8 @@ static SEXP readRegistryKey(HKEY hkey, int depth, int view)
 	UNPROTECT(3);
     }
     if (nsubkeys > 0) {
-	PROTECT(ans0 = allocVector(VECSXP, nsubkeys));
-	PROTECT(nm0 = allocVector(STRSXP, nsubkeys));
+	VAPROTECT(ans0, allocVector(VECSXP, nsubkeys));
+	VAPROTECT(nm0, allocVector(STRSXP, nsubkeys));
 	for (i = 0; i < nsubkeys; i++) {
 	    size = size0;
 	    res = RegEnumKeyExW(hkey, i, (LPWSTR) name, &size,
@@ -219,7 +219,7 @@ static SEXP readRegistryKey(HKEY hkey, int depth, int view)
 	    RegCloseKey(sub);
 	}
 	/* now sort by name */
-	PROTECT(sind = allocVector(INTSXP, nsubkeys));  indx = INTEGER(sind);
+	VAPROTECT(sind, allocVector(INTSXP, nsubkeys));  indx = INTEGER(sind);
 	for (i = 0; i < nsubkeys; i++) indx[i] = i;
 	orderVector1(indx, nsubkeys, nm0, TRUE, FALSE, R_NilValue);
 	for (i = 0; i < nsubkeys; i++, k++) {

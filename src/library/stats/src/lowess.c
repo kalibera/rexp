@@ -297,7 +297,7 @@ SEXP lowess(SEXP x, SEXP y, SEXP sf, SEXP siter, SEXP sdelta)
     if (!R_FINITE(delta) || delta < 0) 
 	error(_("'delta' must be finite and > 0"));
     SEXP ans;
-    PROTECT(ans = allocVector(REALSXP, nx));
+    VAPROTECT(ans, allocVector(REALSXP, nx));
     rw = (double *) R_alloc(nx, sizeof(double));
     res = (double *) R_alloc(nx, sizeof(double));
     clowess(REAL(x), REAL(y), nx, f, iter, delta, REAL(ans), rw, res);

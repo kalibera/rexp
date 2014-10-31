@@ -130,8 +130,8 @@ R_compute_identical(SEXP x, SEXP y, int flags)
 		    if(streql(tx, CHAR(PRINTNAME(TAG(ely))))) {
 			/* We need to treat row.names specially here */
 			if(streql(tx, "row.names")) {
-			    PROTECT(atrx = getAttrib(x, R_RowNamesSymbol));
-			    PROTECT(atry = getAttrib(y, R_RowNamesSymbol));
+			    VAPROTECT(atrx, getAttrib(x, R_RowNamesSymbol));
+			    VAPROTECT(atry, getAttrib(y, R_RowNamesSymbol));
 			    if(!R_compute_identical(atrx, atry, flags)) {
 				UNPROTECT(2);
 				return FALSE;

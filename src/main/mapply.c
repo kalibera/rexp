@@ -33,7 +33,7 @@ do_mapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_xlen_t *lengths, *counters, longest = 0;
 
     m = length(varyingArgs);
-    SEXP vnames; PROTECT(vnames = getAttrib(varyingArgs, R_NamesSymbol));
+    SEXP vnames; VAPROTECT(vnames, getAttrib(varyingArgs, R_NamesSymbol));
     Rboolean named = vnames != R_NilValue;
 
     lengths = (R_xlen_t *)  R_alloc(m, sizeof(R_xlen_t));
@@ -62,8 +62,8 @@ do_mapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     counters = (R_xlen_t *) R_alloc(m, sizeof(R_xlen_t));
     memset(counters, 0, m * sizeof(R_xlen_t));
 
-    SEXP mindex; PROTECT(mindex = allocVector(VECSXP, m));
-    SEXP nindex; PROTECT(nindex = allocVector(VECSXP, m));
+    SEXP mindex; VAPROTECT(mindex, allocVector(VECSXP, m));
+    SEXP nindex; VAPROTECT(nindex, allocVector(VECSXP, m));
 
     /* build a call like
        f(dots[[1]][[4]], dots[[2]][[4]], dots[[3]][[4]], d=7)
@@ -84,8 +84,8 @@ do_mapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (int j = m - 1; j >= 0; j--) {
 	SET_VECTOR_ELT(mindex, j, ScalarInteger(j + 1));
 	SET_VECTOR_ELT(nindex, j, allocVector(realIndx ? REALSXP : INTSXP, 1));
-	SEXP tmp1; PROTECT(tmp1 = lang3(R_Bracket2Symbol, Dots, VECTOR_ELT(mindex, j)));
-	SEXP tmp2; PROTECT(tmp2 = lang3(R_Bracket2Symbol, tmp1, VECTOR_ELT(nindex, j)));
+	SEXP tmp1; VAPROTECT(tmp1, lang3(R_Bracket2Symbol, Dots, VECTOR_ELT(mindex, j)));
+	SEXP tmp2; VAPROTECT(tmp2, lang3(R_Bracket2Symbol, tmp1, VECTOR_ELT(nindex, j)));
 	REPROTECT(fcall = LCONS(tmp2, fcall), fi);
 	UNPROTECT(2);
 	if (named && CHAR(STRING_ELT(vnames, j))[0] != '\0')
@@ -94,7 +94,7 @@ do_mapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     REPROTECT(fcall = LCONS(f, fcall), fi);
 
-    SEXP ans; PROTECT(ans = allocVector(VECSXP, longest));
+    SEXP ans; VAPROTECT(ans, allocVector(VECSXP, longest));
 
     for (int i = 0; i < longest; i++) {
 	for (int j = 0; j < m; j++) {

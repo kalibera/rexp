@@ -58,7 +58,7 @@ SEXP d2x2xk(SEXP sK, SEXP m, SEXP n, SEXP t, SEXP srn)
     m = PROTECT(coerceVector(m, REALSXP));
     n = PROTECT(coerceVector(n, REALSXP));
     t = PROTECT(coerceVector(t, REALSXP));
-    SEXP ans; PROTECT(ans = allocVector(REALSXP, rn));
+    SEXP ans; VAPROTECT(ans, allocVector(REALSXP, rn));
     int_d2x2xk(K, REAL(m), REAL(n), REAL(t), REAL(ans));
     UNPROTECT(4);
     return ans;

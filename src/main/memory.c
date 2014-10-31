@@ -1235,7 +1235,7 @@ static SEXP NewWeakRef(SEXP key, SEXP val, SEXP fin, Rboolean onexit)
     }
 
     PROTECT(key);
-    PROTECT(val = MAYBE_REFERENCED(val) ? duplicate(val) : val);
+    VAPROTECT(val, MAYBE_REFERENCED(val) ? duplicate(val) : val);
     PROTECT(fin);
     w = allocVector(VECSXP, WEAKREF_SIZE);
     SET_TYPEOF(w, WEAKREFSXP);
@@ -1357,7 +1357,7 @@ void R_RunWeakRefFinalizer(SEXP w)
     }
     else if (fun != R_NilValue) {
 	/* An R finalizer. */
-	PROTECT(e = LCONS(fun, LCONS(key, R_NilValue)));
+	VAPROTECT(e, LCONS(fun, LCONS(key, R_NilValue)));
 	eval(e, R_GlobalEnv);
 	UNPROTECT(1);
     }
@@ -1393,7 +1393,7 @@ static Rboolean RunFinalizers(void)
 	    begincontext(&thiscontext, CTXT_TOPLEVEL, R_NilValue, R_GlobalEnv,
 			 R_BaseEnv, R_NilValue, R_NilValue);
 	    saveToplevelContext = R_ToplevelContext;
-	    PROTECT(topExp = R_CurrentExpr);
+	    VAPROTECT(topExp, R_CurrentExpr);
 	    savestack = R_PPStackTop;
 	    if (! SETJMP(thiscontext.cjmpbuf)) {
 		R_GlobalContext = R_ToplevelContext = &thiscontext;
@@ -1946,7 +1946,7 @@ SEXP attribute_hidden do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     gc_reporting = ogc;
     /*- now return the [used , gc trigger size] for cells and heap */
-    PROTECT(value = allocVector(REALSXP, 14));
+    VAPROTECT(value, allocVector(REALSXP, 14));
     REAL(value)[0] = onsize - R_Collected;
     REAL(value)[1] = R_VSize - VHEAP_FREE();
     REAL(value)[4] = R_NSize;
@@ -2987,7 +2987,7 @@ SEXP attribute_hidden do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
     else if (vsize >= R_SIZE_T_MAX) R_MaxVSize = R_SIZE_T_MAX;
     else if (R_FINITE(vsize)) R_SetMaxVSize((R_size_t) vsize);
 
-    PROTECT(ans = allocVector(REALSXP, 2));
+    VAPROTECT(ans, allocVector(REALSXP, 2));
     tmp = R_GetMaxNSize();
     REAL(ans)[0] = (tmp < R_SIZE_T_MAX) ? tmp : NA_REAL;
     tmp = R_GetMaxVSize();
@@ -3001,8 +3001,8 @@ SEXP attribute_hidden do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP ans, nms;
     int i, tmp;
 
-    PROTECT(ans = allocVector(INTSXP, 24));
-    PROTECT(nms = allocVector(STRSXP, 24));
+    VAPROTECT(ans, allocVector(INTSXP, 24));
+    VAPROTECT(nms, allocVector(STRSXP, 24));
     for (i = 0; i < 24; i++) {
 	INTEGER(ans)[i] = 0;
 	SET_STRING_ELT(nms, i, type2str(i > LGLSXP? i+2 : i));

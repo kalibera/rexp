@@ -1022,7 +1022,7 @@ static void installFunTab(int i)
 {
     SEXP prim;
     /* prim needs to be protected since install can (and does here) allocate */
-    PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
+    VAPROTECT(prim, mkPRIMSXP(i, R_FunTab[i].eval % 10));
     if ((R_FunTab[i].eval % 100 )/10)
 	SET_INTERNAL(install(R_FunTab[i].name), prim);
     else
@@ -1358,8 +1358,8 @@ SEXP attribute_hidden do_tilde(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return duplicate(call);
     else {
 	SEXP klass;
-	PROTECT(call = duplicate(call));
-	PROTECT(klass = mkString("formula"));
+	VAPROTECT(call, duplicate(call));
+	VAPROTECT(klass, mkString("formula"));
 	setAttrib(call, R_ClassSymbol, klass);
 	setAttrib(call, R_DotEnvSymbol, rho);
 	UNPROTECT(2);

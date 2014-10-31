@@ -107,7 +107,7 @@ SEXP attribute_hidden do_setInternet2(SEXP call, SEXP op, SEXP args, SEXP env)
     int newUseInternet2;
     SEXP newval, retval;
     
-    PROTECT(retval = ScalarLogical(UseInternet2));
+    VAPROTECT(retval, ScalarLogical(UseInternet2));
     
     checkArity(op, args);
     newval = CAR(args);
@@ -259,7 +259,7 @@ SEXP Rsockread(SEXP ssock, SEXP smaxlen)
 	(*ptr->sockread)(&sock, abuf, &maxlen);
     else
 	error(_("socket routines cannot be loaded"));
-    SEXP ans; PROTECT(ans = allocVector(STRSXP, 1));
+    SEXP ans; VAPROTECT(ans, allocVector(STRSXP, 1));
     SET_STRING_ELT(ans, 0, mkCharLen(buf, maxlen));
     UNPROTECT(1);
     return ans;
@@ -301,8 +301,8 @@ SEXP Rsocklisten(SEXP ssock)
 	(*ptr->socklisten)(&sock, abuf, &len);
     else
 	error(_("socket routines cannot be loaded"));
-    SEXP ans; PROTECT(ans = ScalarInteger(sock)); // The socket being listened on
-    SEXP host; PROTECT(host = allocVector(STRSXP, 1));
+    SEXP ans; VAPROTECT(ans, ScalarInteger(sock)); // The socket being listened on
+    SEXP host; VAPROTECT(host, allocVector(STRSXP, 1));
     SET_STRING_ELT(host, 0, mkChar(buf));
     setAttrib(ans, install("host"), host);
     UNPROTECT(2);

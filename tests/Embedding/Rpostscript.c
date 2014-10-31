@@ -16,21 +16,21 @@ main(int argc, char *argv[])
     init_R(argc, argv);
 
     /* postscript() */
-    PROTECT(e = lang1(install("postscript")));
+    VAPROTECT(e, lang1(install("postscript")));
     eval(e, R_GlobalEnv);
     UNPROTECT(1);
 
     /* expression 1:100 */
 
     /*  1:100 */
-    PROTECT(e1 = lang3(install(":"), ScalarInteger(1), ScalarInteger(100)));
-    PROTECT(e = lang2(install("plot"), e1));
+    VAPROTECT(e1, lang3(install(":"), ScalarInteger(1), ScalarInteger(100)));
+    VAPROTECT(e, lang2(install("plot"), e1));
     /* plot( 1:100 )*/
     eval(e, R_GlobalEnv);
     UNPROTECT(2);
 
     /* q() */
-    PROTECT(e = lang2(install("q"), mkString("no")));
+    VAPROTECT(e, lang2(install("q"), mkString("no")));
     eval(e, R_GlobalEnv);
     UNPROTECT(1);
 

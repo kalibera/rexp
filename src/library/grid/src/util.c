@@ -254,7 +254,7 @@ SEXP L_CreateSEXPPtr(SEXP s)
     /* Allocate a list of length one on the R heap
      */
     SEXP data, result;
-    PROTECT(data = allocVector(VECSXP, 1));
+    VAPROTECT(data, allocVector(VECSXP, 1));
     SET_VECTOR_ELT(data, 0, s);
     result = R_MakeExternalPtr(data, R_NilValue, data);
     UNPROTECT(1);

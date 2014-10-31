@@ -144,7 +144,7 @@ int addContourLines(double *x, int nx, double *y, int ny,
 		 * So that users can extract components using
 		 * meaningful names
 		 */
-		PROTECT(names = allocVector(STRSXP, 3));
+		VAPROTECT(names, allocVector(STRSXP, 3));
 		SET_STRING_ELT(names, 0, mkChar("level"));
 		SET_STRING_ELT(names, 1, mkChar("x"));
 		SET_STRING_ELT(names, 2, mkChar("y"));

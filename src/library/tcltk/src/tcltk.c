@@ -322,7 +322,7 @@ SEXP RTcl_ObjAsCharVector(SEXP args)
     if (ret != TCL_OK)
 	return RTcl_StringFromObj(args);
 
-    PROTECT(ans = allocVector(STRSXP, count));
+    VAPROTECT(ans, allocVector(STRSXP, count));
     for (i = 0 ; i < count ; i++) {
 	char *s;
 	Tcl_DString s_ds;
@@ -517,7 +517,7 @@ SEXP RTcl_ObjAsRawVector(SEXP args)
     if (Tcl_ListObjGetElements(RTcl_interp, obj, &count, &elem)
 	!= TCL_OK) return R_NilValue;
 
-    PROTECT(ans = allocVector(VECSXP, count));
+    VAPROTECT(ans, allocVector(VECSXP, count));
     for (i = 0 ; i < count ; i++) {
 	el = allocVector(RAWSXP, nb);
 	SET_VECTOR_ELT(ans, i, el);

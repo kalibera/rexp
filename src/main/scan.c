@@ -558,7 +558,7 @@ static SEXP scanVector(SEXPTYPE type, int maxitems, int maxlines,
     else blocksize = SCAN_BLOCKSIZE;
 
     R_AllocStringBuffer(0, &strBuf);
-    PROTECT(ans = allocVector(type, blocksize));
+    VAPROTECT(ans, allocVector(type, blocksize));
 
     nprev = 0; n = 0; linesread = 0; bch = 1;
 
@@ -676,7 +676,7 @@ static SEXP scanFrame(SEXP what, int maxitems, int maxlines, int flush,
     else blksize = SCAN_BLOCKSIZE;
 
     R_AllocStringBuffer(0, &buf);
-    PROTECT(ans = allocVector(VECSXP, nc));
+    VAPROTECT(ans, allocVector(VECSXP, nc));
     for (i = 0; i < nc; i++) {
 	w = VECTOR_ELT(what, i);
 	if (!isNull(w)) {
@@ -1001,7 +1001,7 @@ SEXP attribute_hidden do_readln(SEXP call, SEXP op, SEXP args, SEXP rho)
 	ConsolePrompt[0] = '\0'; /* precaution */
 	PROTECT(prompt);
     } else {
-	PROTECT(prompt = coerceVector(prompt, STRSXP));
+	VAPROTECT(prompt, coerceVector(prompt, STRSXP));
 	if(length(prompt) > 0) {
 	    strncpy(ConsolePrompt, translateChar(STRING_ELT(prompt, 0)),
 		    CONSOLE_PROMPT_SIZE - 1);

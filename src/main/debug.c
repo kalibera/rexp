@@ -34,7 +34,7 @@ SEXP attribute_hidden do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
 #define find_char_fun \
     if (isValidString(CAR(args))) {				\
 	SEXP s;							\
-	PROTECT(s = installTrChar(STRING_ELT(CAR(args), 0)));	\
+	VAPROTECT(s, installTrChar(STRING_ELT(CAR(args), 0)));	\
 	SETCAR(args, findFun(s, rho));				\
 	UNPROTECT(1);						\
     }
@@ -215,7 +215,7 @@ SEXP attribute_hidden do_retracemem(SEXP call, SEXP op, SEXP args, SEXP rho)
         do_retracemem_formals = allocFormalsList2(install("x"),
 						  R_PreviousSymbol);
 
-    PROTECT(argList =  matchArgs(do_retracemem_formals, args, call));
+    VAPROTECT(argList,  matchArgs(do_retracemem_formals, args, call));
     if(CAR(argList) == R_MissingArg) SETCAR(argList, R_NilValue);
     if(CADR(argList) == R_MissingArg) SETCAR(CDR(argList), R_NilValue);
 

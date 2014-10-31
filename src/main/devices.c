@@ -145,7 +145,7 @@ pGEDevDesc GEcurrentDevice(void)
 	    */
 	    defdev = findVar(devName, R_GlobalEnv);
 	    if(defdev != R_UnboundValue) {
-		PROTECT(defdev = lang1(devName));
+		VAPROTECT(defdev, lang1(devName));
 		eval(defdev, R_GlobalEnv);
 		UNPROTECT(1);
 	    } else {
@@ -158,14 +158,14 @@ pGEDevDesc GEcurrentDevice(void)
 					 install("grDevices"));
 		if(ns != R_UnboundValue &&
 		   findVar(devName, ns) != R_UnboundValue) {
-		    PROTECT(defdev = lang1(devName));
+		    VAPROTECT(defdev, lang1(devName));
 		    eval(defdev, ns);
 		    UNPROTECT(1);
 		} else
 		    error(_("no active or default device"));
 	    }
 	} else if(TYPEOF(defdev) == CLOSXP) {
-	    PROTECT(defdev = lang1(defdev));
+	    VAPROTECT(defdev, lang1(defdev));
 	    eval(defdev, R_GlobalEnv);
 	    UNPROTECT(1);
 	} else
@@ -298,7 +298,7 @@ void removeDevice(int devNum, Rboolean findNext)
 
 	if(findNext) {
 	    /* maintain .Devices */
-	    PROTECT(s = getSymbolValue(R_DevicesSymbol));
+	    VAPROTECT(s, getSymbolValue(R_DevicesSymbol));
 	    for (i = 0; i < devNum; i++) s = CDR(s);
 	    SETCAR(s, mkString(""));
 	    UNPROTECT(1);
@@ -398,7 +398,7 @@ void GEaddDevice(pGEDevDesc gdd)
     SEXP s, t;
     pGEDevDesc oldd;
 
-    PROTECT(s = getSymbolValue(R_DevicesSymbol));
+    VAPROTECT(s, getSymbolValue(R_DevicesSymbol));
 
     if (!NoDevices())  {
 	oldd = GEcurrentDevice();
@@ -458,7 +458,7 @@ void GEaddDevice2(pGEDevDesc gdd, const char *name)
 
 void GEaddDevice2f(pGEDevDesc gdd, const char *name, const char *file)
 {
-    SEXP f; PROTECT(f = mkString(name));
+    SEXP f; VAPROTECT(f, mkString(name));
     if(file) setAttrib(f, install("filepath"), mkString(file));
     gsetVar(R_DeviceSymbol, f, R_BaseEnv);
     UNPROTECT(1);
@@ -507,7 +507,7 @@ void attribute_hidden InitGraphics(void)
     }
 
     /* init .Device and .Devices */
-    SEXP s; PROTECT(s = mkString("null device"));
+    SEXP s; VAPROTECT(s, mkString("null device"));
     gsetVar(R_DeviceSymbol, s, R_BaseEnv);
     s = PROTECT(mkString("null device"));
     gsetVar(R_DevicesSymbol, CONS(s, R_NilValue), R_BaseEnv);

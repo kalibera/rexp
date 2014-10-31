@@ -115,8 +115,8 @@ SEXP modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Assemble the base data frame. */
 
-    PROTECT(data = allocVector(VECSXP, nvars + nactualdots));
-    PROTECT(names = allocVector(STRSXP, nvars + nactualdots));
+    VAPROTECT(data, allocVector(VECSXP, nvars + nactualdots));
+    VAPROTECT(names, allocVector(STRSXP, nvars + nactualdots));
 
     for (i = 0; i < nvars; i++) {
 	SET_VECTOR_ELT(data, i, VECTOR_ELT(variables, i));
@@ -171,16 +171,16 @@ SEXP modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* To do this we must attach "class"  and */
     /* "row.names" attributes */
 
-    PROTECT(tmp = mkString("data.frame"));
+    VAPROTECT(tmp, mkString("data.frame"));
     setAttrib(data, R_ClassSymbol, tmp);
     UNPROTECT(1);
     if (length(row_names) == nr) {
 	setAttrib(data, R_RowNamesSymbol, row_names);
     } else {
 	/*
-	PROTECT(row_names = allocVector(INTSXP, nr));
+	VAPROTECT(row_names, allocVector(INTSXP, nr));
 	for (i = 0; i < nr; i++) INTEGER(row_names)[i] = i+1; */
-	PROTECT(row_names = allocVector(INTSXP, 2));
+	VAPROTECT(row_names, allocVector(INTSXP, 2));
 	INTEGER(row_names)[0] = NA_INTEGER;
 	INTEGER(row_names)[1] = nr;
 	setAttrib(data, R_RowNamesSymbol, row_names);
@@ -191,8 +191,8 @@ SEXP modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Need to save and restore 'most' attributes */
 
     if (subset != R_NilValue) {
-	PROTECT(tmp=install("[.data.frame"));
-	PROTECT(tmp=LCONS(tmp,list4(data,subset,R_MissingArg,mkFalse())));
+	VAPROTECT(tmp,install("[.data.frame"));
+	VAPROTECT(tmp,LCONS(tmp,list4(data,subset,R_MissingArg,mkFalse())));
 	data = eval(tmp, rho);
 	UNPROTECT(2);
     }
@@ -209,8 +209,8 @@ SEXP modelframe(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (isString(na_action) && length(na_action) > 0)
 	    na_action = installTrChar(STRING_ELT(na_action, 0));
 	PROTECT(na_action);
-	PROTECT(tmp = lang2(na_action, data));
-	PROTECT(ans = eval(tmp, rho));
+	VAPROTECT(tmp, lang2(na_action, data));
+	VAPROTECT(ans, eval(tmp, rho));
 	if (!isNewList(ans) || length(ans) != length(data))
 	    error(_("invalid result from na.action"));
 	/* need to transfer _all but tsp and dim_ attributes, possibly lost
@@ -355,7 +355,7 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* variables in the model data frame and the number of model terms. */
 
     nVar = nterms = 0;		/* -Wall */
-    PROTECT(factors = duplicate(getAttrib(terms, install("factors"))));
+    VAPROTECT(factors, duplicate(getAttrib(terms, install("factors"))));
     if (length(factors) == 0) {
 	/* if (intrcept == 0)
 	   error("invalid model (zero parameters).");*/
@@ -391,7 +391,7 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     nn = n = nrows(VECTOR_ELT(vars, 0));
     /* This could be generated, so need to protect it */
-    PROTECT(rnames = getAttrib(vars, R_RowNamesSymbol));
+    VAPROTECT(rnames, getAttrib(vars, R_RowNamesSymbol));
 
     /* This section of the code checks the types of the variables
        in the model frame.  Note that it should really only check
@@ -403,10 +403,10 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
        integer (including factor), numeric and complex.
      */
 
-    PROTECT(variable = allocVector(VECSXP, nVar));
-    PROTECT(nlevs = allocVector(INTSXP, nVar));
-    PROTECT(ordered = allocVector(LGLSXP, nVar));
-    PROTECT(columns = allocVector(INTSXP, nVar));
+    VAPROTECT(variable, allocVector(VECSXP, nVar));
+    VAPROTECT(nlevs, allocVector(INTSXP, nVar));
+    VAPROTECT(ordered, allocVector(LGLSXP, nVar));
+    VAPROTECT(columns, allocVector(INTSXP, nVar));
 
     for (i = 0; i < nVar; i++) {
 	var_i = SET_VECTOR_ELT(variable, i, VECTOR_ELT(vars, i));
@@ -471,10 +471,10 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* the required arguments at call time.  The calls have the following */
     /* form: (contrast.type nlevs contrasts) */
 
-    PROTECT(contr1 = allocVector(VECSXP, nVar));
-    PROTECT(contr2 = allocVector(VECSXP, nVar));
+    VAPROTECT(contr1, allocVector(VECSXP, nVar));
+    VAPROTECT(contr2, allocVector(VECSXP, nVar));
 
-    PROTECT(expr = allocList(3));
+    VAPROTECT(expr, allocList(3));
     SET_TYPEOF(expr, LANGSXP);
     SETCAR(expr, install("contrasts"));
     SETCADDR(expr, allocVector(LGLSXP, 1));
@@ -527,7 +527,7 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Note that "count" holds a count of how many columns there are */
     /* for each term in the model and "nc" gives the total column count. */
 
-    PROTECT(count = allocVector(INTSXP, nterms));
+    VAPROTECT(count, allocVector(INTSXP, nterms));
     if (intrcept)
 	dnc = 1;
     else
@@ -564,7 +564,7 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Record which columns of the design matrix are associated */
     /* with which model terms. */
 
-    PROTECT(assign = allocVector(INTSXP, nc));
+    VAPROTECT(assign, allocVector(INTSXP, nc));
     k = 0;
     if (intrcept) INTEGER(assign)[k++] = 0;
     for (j = 0; j < nterms; j++) {
@@ -578,7 +578,7 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Create column labels for the matrix columns. */
 
-    PROTECT(xnames = allocVector(STRSXP, nc));
+    VAPROTECT(xnames, allocVector(STRSXP, nc));
 
 
     /* Here we loop over the terms in the model and, within each */
@@ -667,7 +667,7 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Allocate and compute the design matrix. */
 
-    PROTECT(x = allocMatrix(REALSXP, n, nc));
+    VAPROTECT(x, allocMatrix(REALSXP, n, nc));
     double *rx = REAL(x);
 
 #ifdef R_MEMORY_PROFILING
@@ -743,7 +743,7 @@ SEXP modelmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	jstart = jnext;
     }
-    PROTECT(tnames = allocVector(VECSXP, 2));
+    VAPROTECT(tnames, allocVector(VECSXP, 2));
     SET_VECTOR_ELT(tnames, 0, rnames);
     SET_VECTOR_ELT(tnames, 1, xnames);
     setAttrib(x, R_DimNamesSymbol, tnames);
@@ -906,7 +906,7 @@ SEXP updateform(SEXP old, SEXP new)
     /* formulae may be part of the parse tree */
     /* and we don't want to modify it. */
 
-    PROTECT(_new = duplicate(new));
+    VAPROTECT(_new, duplicate(new));
 
     /* Check of new and old formulae. */
     if (TYPEOF(old) != LANGSXP ||
@@ -1331,7 +1331,7 @@ static SEXP EncodeVars(SEXP);/* defined below */
 
 static SEXP PlusTerms(SEXP left, SEXP right)
 {
-    PROTECT(left = EncodeVars(left));
+    VAPROTECT(left, EncodeVars(left));
     right = EncodeVars(right);
     UNPROTECT(1);
     return TrimRepeats(listAppend(left, right));
@@ -1345,9 +1345,9 @@ static SEXP PlusTerms(SEXP left, SEXP right)
 static SEXP InteractTerms(SEXP left, SEXP right)
 {
     SEXP term, l, r, t;
-    PROTECT(left = EncodeVars(left));
-    PROTECT(right = EncodeVars(right));
-    PROTECT(term = allocList(length(left) * length(right)));
+    VAPROTECT(left, EncodeVars(left));
+    VAPROTECT(right, EncodeVars(right));
+    VAPROTECT(term, allocList(length(left) * length(right)));
     t = term;
     for (l = left; l != R_NilValue; l = CDR(l))
 	for (r = right; r != R_NilValue; r = CDR(r)) {
@@ -1366,9 +1366,9 @@ static SEXP InteractTerms(SEXP left, SEXP right)
 static SEXP CrossTerms(SEXP left, SEXP right)
 {
     SEXP term, l, r, t;
-    PROTECT(left = EncodeVars(left));
-    PROTECT(right = EncodeVars(right));
-    PROTECT(term = allocList(length(left) * length(right)));
+    VAPROTECT(left, EncodeVars(left));
+    VAPROTECT(right, EncodeVars(right));
+    VAPROTECT(term, allocList(length(left) * length(right)));
     t = term;
     for (l = left; l != R_NilValue; l = CDR(l))
 	for (r = right; r != R_NilValue; r = CDR(r)) {
@@ -1394,11 +1394,11 @@ static SEXP PowerTerms(SEXP left, SEXP right)
     if (ip==NA_INTEGER || ip <= 1)
 	error(_("invalid power in formula"));
     term = R_NilValue;		/* -Wall */
-    PROTECT(left = EncodeVars(left));
+    VAPROTECT(left, EncodeVars(left));
     right = left;
     for (i=1; i < ip; i++)  {
 	PROTECT(right);
-	PROTECT(term = allocList(length(left) * length(right)));
+	VAPROTECT(term, allocList(length(left) * length(right)));
 	t = term;
 	for (l = left; l != R_NilValue; l = CDR(l))
 	    for (r = right; r != R_NilValue; r = CDR(r)) {
@@ -1421,9 +1421,9 @@ static SEXP InTerms(SEXP left, SEXP right)
 {
     SEXP term, t;
     int i;
-    PROTECT(left = EncodeVars(left));
-    PROTECT(right = EncodeVars(right));
-    PROTECT(term = AllocTerm());
+    VAPROTECT(left, EncodeVars(left));
+    VAPROTECT(right, EncodeVars(right));
+    VAPROTECT(term, AllocTerm());
     /* Bitwise or of all terms on right */
     for (t = right; t != R_NilValue; t = CDR(t)) {
 	for (i = 0; i < nwords; i++)
@@ -1445,9 +1445,9 @@ static SEXP NestTerms(SEXP left, SEXP right)
 {
     SEXP term, t;
     int i;
-    PROTECT(left = EncodeVars(left));
-    PROTECT(right = EncodeVars(right));
-    PROTECT(term = AllocTerm());
+    VAPROTECT(left, EncodeVars(left));
+    VAPROTECT(right, EncodeVars(right));
+    VAPROTECT(term, AllocTerm());
     /* Bitwise or of all terms on left */
     for (t = left; t != R_NilValue; t = CDR(t)) {
 	for (i = 0; i < nwords; i++)
@@ -1470,9 +1470,9 @@ static SEXP NestTerms(SEXP left, SEXP right)
 static SEXP DeleteTerms(SEXP left, SEXP right)
 {
     SEXP t;
-    PROTECT(left = EncodeVars(left));
+    VAPROTECT(left, EncodeVars(left));
     parity = 1-parity;
-    PROTECT(right = EncodeVars(right));
+    VAPROTECT(right, EncodeVars(right));
     parity = 1-parity;
     for (t = right; t != R_NilValue; t = CDR(t))
 	left = StripTerm(CAR(t), left);
@@ -1519,7 +1519,7 @@ static SEXP EncodeVars(SEXP formula)
 			      c);
 		term = AllocTerm();
 		SetBit(term, InstallVar(install(c)), 1);
-		if(i == 0) PROTECT(v = r = cons(term, R_NilValue));
+		if(i == 0) VAPROTECT(v, r = cons(term, R_NilValue));
 		else {SETCDR(v, CONS(term, R_NilValue)); v = CDR(v);}
 	    }
 	    UNPROTECT(1);
@@ -1663,7 +1663,7 @@ SEXP termsform(SEXP args)
 
     haveDot = FALSE;
 
-    PROTECT(ans = duplicate(CAR(args)));
+    VAPROTECT(ans, duplicate(CAR(args)));
 
     /* The formula will be returned, modified if haveDot becomes TRUE */
 
@@ -1718,7 +1718,7 @@ SEXP termsform(SEXP args)
     intercept = 1;
     parity = 1;
     response = 0;
-    PROTECT(varlist = LCONS(install("list"), R_NilValue));
+    VAPROTECT(varlist, LCONS(install("list"), R_NilValue));
     ExtractVars(CAR(args), 1);
     UNPROTECT(1);
     SETCAR(a, varlist);
@@ -1745,14 +1745,14 @@ SEXP termsform(SEXP args)
     /* FIXME: this is also the point where nesting */
     /* needs to be taken care of. */
 
-    PROTECT(formula = EncodeVars(CAR(args)));
+    VAPROTECT(formula, EncodeVars(CAR(args)));
 
     nvar = length(varlist) - 1; /* need to recompute, in case
 				   EncodeVars stretched it */
 
     /* Step 2a: Compute variable names */
 
-    PROTECT(varnames = allocVector(STRSXP, nvar));
+    VAPROTECT(varnames, allocVector(STRSXP, nvar));
     for (v = CDR(varlist), i = 0; v != R_NilValue; v = CDR(v))
 	SET_STRING_ELT(varnames, i++, STRING_ELT(deparse1line(CAR(v), 0), 0));
 
@@ -1796,13 +1796,13 @@ SEXP termsform(SEXP args)
     /* Step 3: Reorder the model terms by BitCount, otherwise
        preserving their order. */
 
-    PROTECT(ord = allocVector(INTSXP, nterm));
+    VAPROTECT(ord, allocVector(INTSXP, nterm));
     {
 	SEXP sCounts;
 	int *counts, bitmax = 0, *iord = INTEGER(ord), m = 0;
 
-	PROTECT(pattern = allocVector(VECSXP, nterm));
-	PROTECT(sCounts = allocVector(INTSXP, nterm));
+	VAPROTECT(pattern, allocVector(VECSXP, nterm));
+	VAPROTECT(sCounts, allocVector(INTSXP, nterm));
 	counts = INTEGER(sCounts);
 	for (call = formula, n = 0; call != R_NilValue; call = CDR(call), n++) {
 	    SET_VECTOR_ELT(pattern, n, CAR(call));
@@ -1839,7 +1839,7 @@ SEXP termsform(SEXP args)
 	a = CDR(a);
 	for (i = 0; i < nterm * nvar; i++)
 	    INTEGER(pattern)[i] = 0;
-	PROTECT(term = AllocTerm());
+	VAPROTECT(term, AllocTerm());
 	n = 0;
 	for (call = formula; call != R_NilValue; call = CDR(call)) {
 	    for (i = 1; i <= nvar; i++) {
@@ -1859,7 +1859,7 @@ SEXP termsform(SEXP args)
 
     /* Step 5: Compute term labels */
 
-    PROTECT(termlabs = allocVector(STRSXP, nterm));
+    VAPROTECT(termlabs, allocVector(STRSXP, nterm));
     n = 0;
     for (call = formula; call != R_NilValue; call = CDR(call)) {
 	l = 0;
@@ -1884,7 +1884,7 @@ SEXP termsform(SEXP args)
 	SET_STRING_ELT(termlabs, n, mkChar(cbuf));
 	n++;
     }
-    PROTECT(v = allocVector(VECSXP, 2));
+    VAPROTECT(v, allocVector(VECSXP, 2));
     SET_VECTOR_ELT(v, 0, varnames);
     SET_VECTOR_ELT(v, 1, termlabs);
     if (nterm > 0)
@@ -1899,7 +1899,7 @@ SEXP termsform(SEXP args)
     if (specials != R_NilValue) {
 	const void *vmax = vmaxget();
 	i = length(specials);
-	PROTECT(v = allocList(i));
+	VAPROTECT(v, allocList(i));
 	for (j = 0, t = v; j < i; j++, t = CDR(t)) {
 	    const char *ss = translateChar(STRING_ELT(specials, j));
 	    SET_TAG(t, install(ss));

@@ -225,40 +225,40 @@ SEXP attribute_hidden do_relop_dflt(SEXP call, SEXP op, SEXP x, SEXP y)
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
 		errorcall(call, _("non-conformable arrays"));
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    VAPROTECT(dims, getAttrib(x, R_DimSymbol));
 	}
 	else if (xarray) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    VAPROTECT(dims, getAttrib(x, R_DimSymbol));
 	}
 	else /*(yarray)*/ {
-	    PROTECT(dims = getAttrib(y, R_DimSymbol));
+	    VAPROTECT(dims, getAttrib(y, R_DimSymbol));
 	}
-	PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
-	PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
+	VAPROTECT(xnames, getAttrib(x, R_DimNamesSymbol));
+	VAPROTECT(ynames, getAttrib(y, R_DimNamesSymbol));
     }
     else {
-	PROTECT(dims = R_NilValue);
-	PROTECT(xnames = getAttrib(x, R_NamesSymbol));
-	PROTECT(ynames = getAttrib(y, R_NamesSymbol));
+	VAPROTECT(dims, R_NilValue);
+	VAPROTECT(xnames, getAttrib(x, R_NamesSymbol));
+	VAPROTECT(ynames, getAttrib(y, R_NamesSymbol));
     }
     if (xts || yts) {
 	if (xts && yts) {
 	    if (!tsConform(x, y))
 		errorcall(call, _("non-conformable time series"));
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    VAPROTECT(tsp, getAttrib(x, R_TspSymbol));
+	    VAPROTECT(klass, getAttrib(x, R_ClassSymbol));
 	}
 	else if (xts) {
 	    if (xlength(x) < xlength(y))
 		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    VAPROTECT(tsp, getAttrib(x, R_TspSymbol));
+	    VAPROTECT(klass, getAttrib(x, R_ClassSymbol));
 	}
 	else /*(yts)*/ {
 	    if (xlength(y) < xlength(x))
 		ErrorMessage(call, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(y, R_TspSymbol));
-	    PROTECT(klass = getAttrib(y, R_ClassSymbol));
+	    VAPROTECT(tsp, getAttrib(y, R_TspSymbol));
+	    VAPROTECT(klass, getAttrib(y, R_ClassSymbol));
 	}
     }
     if (mismatch)
@@ -563,7 +563,7 @@ static SEXP string_relop(RELOP_TYPE code, SEXP s1, SEXP s2)
     n = (n1 > n2) ? n1 : n2;
     PROTECT(s1);
     PROTECT(s2);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    VAPROTECT(ans, allocVector(LGLSXP, n));
 
     switch (code) {
     case EQOP:

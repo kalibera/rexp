@@ -162,14 +162,14 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if(STRING_ELT(pat, 0) == NA_STRING) {
 	if(opt_value) {
-	    PROTECT(ans = allocVector(STRSXP, n));
+	    VAPROTECT(ans, allocVector(STRSXP, n));
 	    for(i = 0; i < n; i++)
 		SET_STRING_ELT(ans, i, NA_STRING);
 	    SEXP nms = getAttrib(vec, R_NamesSymbol);
 	    if(!isNull(nms))
 		setAttrib(ans, R_NamesSymbol, nms);
 	} else {
-	    PROTECT(ans = allocVector(INTSXP, n));
+	    VAPROTECT(ans, allocVector(INTSXP, n));
 	    for(i = 0; i < n; i++)
 		INTEGER(ans)[i] = NA_INTEGER;
 	}
@@ -178,10 +178,10 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if(useBytes)
-	PROTECT(call = lang3(install("nchar"), pat,
+	VAPROTECT(call, lang3(install("nchar"), pat,
 			     ScalarString(mkChar("bytes"))));
     else
-	PROTECT(call = lang3(install("nchar"), pat,
+	VAPROTECT(call, lang3(install("nchar"), pat,
 			     ScalarString(mkChar("chars"))));
     patlen = asInteger(eval(call, env));
     UNPROTECT(1);
@@ -212,7 +212,7 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
     
     /* Matching. */
     n = LENGTH(vec);
-    PROTECT(ind = allocVector(LGLSXP, n));
+    VAPROTECT(ind, allocVector(LGLSXP, n));
     nmatches = 0;
     for (i = 0 ; i < n ; i++) {
 //	if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
@@ -252,7 +252,7 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     if(opt_value) {
-	PROTECT(ans = allocVector(STRSXP, nmatches));
+	VAPROTECT(ans, allocVector(STRSXP, nmatches));
 	SEXP nmold = getAttrib(vec, R_NamesSymbol), nm;
 	for (j = i = 0 ; i < n ; i++) {
 	    if(LOGICAL(ind)[i])
@@ -269,14 +269,14 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 #ifdef LONG_VECTOR_SUPPORT
     else if (n > INT_MAX) {
-	PROTECT(ans = allocVector(REALSXP, nmatches));
+	VAPROTECT(ans, allocVector(REALSXP, nmatches));
 	for (j = i = 0 ; i < n ; i++)
 	    if(LOGICAL(ind)[i] == 1)
 		REAL(ans)[j++] = (double)(i + 1);
     }
 #endif
     else {
-	PROTECT(ans = allocVector(INTSXP, nmatches));
+	VAPROTECT(ans, allocVector(INTSXP, nmatches));
 	for (j = i = 0 ; i < n ; i++)
 	    if(LOGICAL(ind)[i] == 1)
 		INTEGER(ans)[j++] = (int)(i + 1);
@@ -311,10 +311,10 @@ adist_full(SEXP x, SEXP y, double *costs, Rboolean opt_counts)
     cost_del = costs[1];
     cost_sub = costs[2];
 
-    PROTECT(ans = allocMatrix(REALSXP, nx, ny));
+    VAPROTECT(ans, allocMatrix(REALSXP, nx, ny));
     if(opt_counts) {
-	PROTECT(counts = alloc3DArray(INTSXP, nx, ny, 3));
-	PROTECT(trafos = allocMatrix(STRSXP, nx, ny));
+	VAPROTECT(counts, alloc3DArray(INTSXP, nx, ny, 3));
+	VAPROTECT(trafos, allocMatrix(STRSXP, nx, ny));
 	buf = Calloc(buflen, char);
     }
 
@@ -445,7 +445,7 @@ adist_full(SEXP x, SEXP y, double *costs, Rboolean opt_counts)
     x = getAttrib(x, R_NamesSymbol);
     y = getAttrib(y, R_NamesSymbol);
     if(!isNull(x) || !isNull(y)) {
-	PROTECT(dimnames = allocVector(VECSXP, 2));	    
+	VAPROTECT(dimnames, allocVector(VECSXP, 2));	    
 	SET_VECTOR_ELT(dimnames, 0, x);
 	SET_VECTOR_ELT(dimnames, 1, y);
 	setAttrib(ans, R_DimNamesSymbol, dimnames);
@@ -454,8 +454,8 @@ adist_full(SEXP x, SEXP y, double *costs, Rboolean opt_counts)
 
     if(opt_counts) {
 	Free(buf);
-	PROTECT(dimnames = allocVector(VECSXP, 3));
-	PROTECT(names = allocVector(STRSXP, 3));
+	VAPROTECT(dimnames, allocVector(VECSXP, 3));
+	VAPROTECT(names, allocVector(STRSXP, 3));
 	SET_STRING_ELT(names, 0, mkChar("ins"));
 	SET_STRING_ELT(names, 1, mkChar("del"));
 	SET_STRING_ELT(names, 2, mkChar("sub"));
@@ -466,7 +466,7 @@ adist_full(SEXP x, SEXP y, double *costs, Rboolean opt_counts)
 	setAttrib(ans, install("counts"), counts);
 	UNPROTECT(2);
 	if(!isNull(x) || !isNull(y)) {
-	    PROTECT(dimnames = allocVector(VECSXP, 2));	    
+	    VAPROTECT(dimnames, allocVector(VECSXP, 2));	    
 	    SET_VECTOR_ELT(dimnames, 0, x);
 	    SET_VECTOR_ELT(dimnames, 1, y);
 	    setAttrib(trafos, R_DimNamesSymbol, dimnames);
@@ -581,10 +581,10 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
     params.cost_del = INTEGER(opt_costs)[1];
     params.cost_subst = INTEGER(opt_costs)[2];
 
-    PROTECT(ans = allocMatrix(REALSXP, nx, ny));
+    VAPROTECT(ans, allocMatrix(REALSXP, nx, ny));
     if(opt_counts) {
-	PROTECT(counts = alloc3DArray(INTSXP, nx, ny, 3));
-	PROTECT(offsets = alloc3DArray(INTSXP, nx, ny, 2));
+	VAPROTECT(counts, alloc3DArray(INTSXP, nx, ny, 3));
+	VAPROTECT(offsets, alloc3DArray(INTSXP, nx, ny, 2));
     }
 
     /* wtransChar and translateChar can R_alloc */
@@ -695,15 +695,15 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
     x = getAttrib(x, R_NamesSymbol);
     y = getAttrib(y, R_NamesSymbol);
     if(!isNull(x) || !isNull(y)) {
-	PROTECT(dimnames = allocVector(VECSXP, 2));	    
+	VAPROTECT(dimnames, allocVector(VECSXP, 2));	    
 	SET_VECTOR_ELT(dimnames, 0, x);
 	SET_VECTOR_ELT(dimnames, 1, y);
 	setAttrib(ans, R_DimNamesSymbol, dimnames);
 	UNPROTECT(1);
     }
     if(opt_counts) {
-	PROTECT(dimnames = allocVector(VECSXP, 3));
-	PROTECT(names = allocVector(STRSXP, 3));
+	VAPROTECT(dimnames, allocVector(VECSXP, 3));
+	VAPROTECT(names, allocVector(STRSXP, 3));
 	SET_STRING_ELT(names, 0, mkChar("ins"));
 	SET_STRING_ELT(names, 1, mkChar("del"));
 	SET_STRING_ELT(names, 2, mkChar("sub"));
@@ -713,8 +713,8 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
 	setAttrib(counts, R_DimNamesSymbol, dimnames);
 	setAttrib(ans, install("counts"), counts);
 	UNPROTECT(2);
-	PROTECT(dimnames = allocVector(VECSXP, 3));
-	PROTECT(names = allocVector(STRSXP, 2));
+	VAPROTECT(dimnames, allocVector(VECSXP, 3));
+	VAPROTECT(names, allocVector(STRSXP, 2));
 	SET_STRING_ELT(names, 0, mkChar("first"));
 	SET_STRING_ELT(names, 1, mkChar("last"));
 	SET_VECTOR_ELT(dimnames, 0, x);
@@ -807,10 +807,10 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     
     if(useBytes)
-	PROTECT(call = lang3(install("nchar"), pat,
+	VAPROTECT(call, lang3(install("nchar"), pat,
 			     ScalarString(mkChar("bytes"))));
     else
-	PROTECT(call = lang3(install("nchar"), pat,
+	VAPROTECT(call, lang3(install("nchar"), pat,
 			     ScalarString(mkChar("chars"))));
     patlen = asInteger(eval(call, env));
     UNPROTECT(1);
@@ -841,12 +841,12 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
     amatch_regaparams(&params, patlen,
 		      REAL(opt_bounds), INTEGER(opt_costs));
 
-    PROTECT(ans = allocVector(VECSXP, n));
+    VAPROTECT(ans, allocVector(VECSXP, n));
 
     for(i = 0; i < n; i++) {
 //	if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
 	if(STRING_ELT(vec, i) == NA_STRING) {
-	    PROTECT(matchpos = ScalarInteger(NA_INTEGER));
+	    VAPROTECT(matchpos, ScalarInteger(NA_INTEGER));
 	    setAttrib(matchpos, install("match.length"),
 		      ScalarInteger(NA_INTEGER));
 	    SET_VECTOR_ELT(ans, i, matchpos);
@@ -875,8 +875,8 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 		vmaxset(vmax);		
 	    }
 	    if(rc == REG_OK) {
-		PROTECT(matchpos = allocVector(INTSXP, nmatch));
-		PROTECT(matchlen = allocVector(INTSXP, nmatch));
+		VAPROTECT(matchpos, allocVector(INTSXP, nmatch));
+		VAPROTECT(matchlen, allocVector(INTSXP, nmatch));
 		for(j = 0; j < match.nmatch; j++) {
 		    so = match.pmatch[j].rm_so;
 		    INTEGER(matchpos)[j] = so + 1;
@@ -892,8 +892,8 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
 		/* No match (or could there be an error?). */
 		/* Alternatively, could return nmatch -1 values.
 		*/
-		PROTECT(matchpos = ScalarInteger(-1));
-		PROTECT(matchlen = ScalarInteger(-1));
+		VAPROTECT(matchpos, ScalarInteger(-1));
+		VAPROTECT(matchlen, ScalarInteger(-1));
 		setAttrib(matchpos, install("match.length"), matchlen);
 		SET_VECTOR_ELT(ans, i, matchpos);
 		UNPROTECT(2);

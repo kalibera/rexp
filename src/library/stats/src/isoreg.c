@@ -31,7 +31,7 @@ SEXP isoreg(SEXP y)
 
     /* unneeded: y = coerceVector(y, REALSXP); */
 
-    PROTECT(ans = mkNamed(VECSXP, anms));
+    VAPROTECT(ans, mkNamed(VECSXP, anms));
 
     SET_VECTOR_ELT(ans, 0, y);
     SET_VECTOR_ELT(ans, 1, yc = allocVector(REALSXP, n+1));

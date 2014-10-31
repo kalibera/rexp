@@ -434,7 +434,7 @@ void PutRNGstate()
 
     len_seed = RNG_Table[RNG_kind].n_seed;
 
-    PROTECT(seeds = allocVector(INTSXP, len_seed + 1));
+    VAPROTECT(seeds, allocVector(INTSXP, len_seed + 1));
 
     INTEGER(seeds)[0] = RNG_kind + 100 * N01_kind;
     for(j = 0; j < len_seed; j++)
@@ -503,7 +503,7 @@ SEXP attribute_hidden do_RNGkind (SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op,args);
     GetRNGstate(); /* might not be initialized */
-    PROTECT(ans = allocVector(INTSXP, 2));
+    VAPROTECT(ans, allocVector(INTSXP, 2));
     INTEGER(ans)[0] = RNG_kind;
     INTEGER(ans)[1] = N01_kind;
     rng = CAR(args);
@@ -767,8 +767,8 @@ static void RNG_Init_R_KT(Int32 seed)
     fun = findVar1(install(".TAOCP1997init"), R_BaseEnv, CLOSXP, FALSE);
     if(fun == R_UnboundValue)
 	error("function '.TAOCP1997init' is missing");
-    PROTECT(sseed = ScalarInteger((int)(seed % 1073741821)));
-    PROTECT(call = lang2(fun, sseed));
+    VAPROTECT(sseed, ScalarInteger((int)(seed % 1073741821)));
+    VAPROTECT(call, lang2(fun, sseed));
     ans = eval(call, R_GlobalEnv);
     memcpy(dummy, INTEGER(ans), 100*sizeof(int));
     UNPROTECT(2);

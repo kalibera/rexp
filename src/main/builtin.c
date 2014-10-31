@@ -119,8 +119,8 @@ SEXP attribute_hidden do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     for(i = 0; i < XLENGTH(names); i++) {
 	SEXP name = installChar(STRING_ELT(names, i));
-	PROTECT(val = eval(VECTOR_ELT(values, i), eenv));
-	PROTECT(expr0 = duplicate(expr));
+	VAPROTECT(val, eval(VECTOR_ELT(values, i), eenv));
+	VAPROTECT(expr0, duplicate(expr));
 	SETCAR(CDR(expr0), val);
 	defineVar(name, mkPROMISE(expr0, eenv), aenv);
 	UNPROTECT(2);
@@ -139,7 +139,7 @@ SEXP attribute_hidden do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (do_onexit_formals == NULL)
         do_onexit_formals = allocFormalsList2(install("expr"), install("add"));
 
-    PROTECT(argList =  matchArgs(do_onexit_formals, args, call));
+    VAPROTECT(argList,  matchArgs(do_onexit_formals, args, call));
     if (CAR(argList) == R_MissingArg) code = R_NilValue;
     else code = CAR(argList);
     if (CADR(argList) != R_MissingArg) {
@@ -161,7 +161,7 @@ SEXP attribute_hidden do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (addit && (oldcode = ctxt->conexit) != R_NilValue ) {
 	    if ( CAR(oldcode) != R_BraceSymbol )
 	    {
-		PROTECT(tmp = allocList(3));
+		VAPROTECT(tmp, allocList(3));
 		SETCAR(tmp, R_BraceSymbol);
 		SETCADR(tmp, oldcode);
 		SETCADDR(tmp, code);
@@ -171,7 +171,7 @@ SEXP attribute_hidden do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	    else
 	    {
-		PROTECT(tmp = allocList(1));
+		VAPROTECT(tmp, allocList(1));
 		SETCAR(tmp, code);
 		ctxt->conexit = listAppend(duplicate(oldcode),tmp);
 		UNPROTECT(1);
@@ -190,7 +190,7 @@ SEXP attribute_hidden do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op,args);
     if (TYPEOF(CAR(args)) == STRSXP && length(CAR(args))==1) {
-	PROTECT(s = installTrChar(STRING_ELT(CAR(args), 0)));
+	VAPROTECT(s, installTrChar(STRING_ELT(CAR(args), 0)));
 	SETCAR(args, findFun(s, rho));
 	UNPROTECT(1);
     }
@@ -213,7 +213,7 @@ SEXP attribute_hidden do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
 			   &xp);
 
 	if (TYPEOF(env) == PROMSXP) REPROTECT(env = eval(env, R_BaseEnv), xp);
-	PROTECT(s2 = findVarInFrame3(env, install(nm), TRUE));
+	VAPROTECT(s2, findVarInFrame3(env, install(nm), TRUE));
 	if(s2 != R_UnboundValue) {
 	    s = duplicate(s2);
 	    SET_CLOENV(s, R_GlobalEnv);
@@ -224,7 +224,7 @@ SEXP attribute_hidden do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
 	REPROTECT(env = findVarInFrame3(R_BaseEnv, install(".GenericArgsEnv"),
 					TRUE), xp);
 	if (TYPEOF(env) == PROMSXP) REPROTECT(env = eval(env, R_BaseEnv), xp);
-	PROTECT(s2 = findVarInFrame3(env, install(nm), TRUE));
+	VAPROTECT(s2, findVarInFrame3(env, install(nm), TRUE));
 	if(s2 != R_UnboundValue) {
 	    s = allocSExp(CLOSXP);
 	    SET_FORMALS(s, FORMALS(s2));
@@ -333,7 +333,7 @@ SEXP attribute_hidden do_newenv(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if( hash ) {
 	args = CDR(args);
-	PROTECT(size = coerceVector(CAR(args), INTSXP));
+	VAPROTECT(size, coerceVector(CAR(args), INTSXP));
 	if (INTEGER(size)[0] == NA_INTEGER)
 	    INTEGER(size)[0] = 0; /* so it will use the internal default */
 	ans = R_NewHashedEnv(enclos, size);
@@ -675,8 +675,8 @@ SEXP attribute_hidden do_makelist(SEXP call, SEXP op, SEXP args, SEXP rho)
 	n++;
     }
 
-    PROTECT(list = allocVector(VECSXP, n));
-    PROTECT(names = havenames ? allocVector(STRSXP, n) : R_NilValue);
+    VAPROTECT(list, allocVector(VECSXP, n));
+    VAPROTECT(names, havenames ? allocVector(STRSXP, n) : R_NilValue);
     for (i = 0; i < n; i++) {
 	if (havenames) {
 	    if (TAG(args) != R_NilValue)
@@ -703,7 +703,7 @@ SEXP attribute_hidden do_expression(SEXP call, SEXP op, SEXP args, SEXP rho)
     int i, n, named;
     named = 0;
     n = length(args);
-    PROTECT(ans = allocVector(EXPRSXP, n));
+    VAPROTECT(ans, allocVector(EXPRSXP, n));
     a = args;
     for (i = 0; i < n; i++) {
 	if(MAYBE_REFERENCED(CAR(a)))
@@ -714,7 +714,7 @@ SEXP attribute_hidden do_expression(SEXP call, SEXP op, SEXP args, SEXP rho)
 	a = CDR(a);
     }
     if (named) {
-	PROTECT(nms = allocVector(STRSXP, n));
+	VAPROTECT(nms, allocVector(STRSXP, n));
 	a = args;
 	for (i = 0; i < n; i++) {
 	    if (TAG(a) != R_NilValue)
@@ -791,8 +791,8 @@ SEXP xlengthgets(SEXP x, R_xlen_t len)
     lenx = xlength(x);
     if (lenx == len)
 	return (x);
-    PROTECT(rval = allocVector(TYPEOF(x), len));
-    PROTECT(xnames = getAttrib(x, R_NamesSymbol));
+    VAPROTECT(rval, allocVector(TYPEOF(x), len));
+    VAPROTECT(xnames, getAttrib(x, R_NamesSymbol));
     if (xnames != R_NilValue)
 	names = allocVector(STRSXP, len);
     else names = R_NilValue;	/*- just for -Wall --- should we do this ? */
@@ -927,7 +927,7 @@ static SEXP expandDots(SEXP el, SEXP rho)
     SEXP ans, tail;
 
     PROTECT(el); /* in do_switch, this is already protected */
-    PROTECT(ans = tail = CONS(R_NilValue, R_NilValue));
+    VAPROTECT(ans, tail = CONS(R_NilValue, R_NilValue));
 
     while (el != R_NilValue) {
 	if (CAR(el) == R_DotsSymbol) {
@@ -959,8 +959,8 @@ static SEXP setDflt(SEXP arg, SEXP dflt)
 {
     if (dflt) {
     	SEXP dflt1, dflt2;
-    	PROTECT(dflt1 = deparse1line(dflt, TRUE));
-    	PROTECT(dflt2 = deparse1line(CAR(arg), TRUE));
+    	VAPROTECT(dflt1, deparse1line(dflt, TRUE));
+    	VAPROTECT(dflt2, deparse1line(CAR(arg), TRUE));
     	error(_("duplicate 'switch' defaults: '%s' and '%s'"),
 	      CHAR(STRING_ELT(dflt1, 0)), CHAR(STRING_ELT(dflt2, 0)));
     	UNPROTECT(2); /* won't get here, but just for good form */
@@ -996,7 +996,7 @@ SEXP attribute_hidden do_switch(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (nargs < 1) errorcall(call, _("'EXPR' is missing"));
     check1arg(args, call, "EXPR");
-    PROTECT(x = eval(CAR(args), rho));
+    VAPROTECT(x, eval(CAR(args), rho));
     if (!isVector(x) || length(x) != 1)
 	errorcall(call, _("EXPR must be a length 1 vector"));
     if (isFactor(x))
@@ -1007,7 +1007,7 @@ SEXP attribute_hidden do_switch(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (nargs > 1) {
 	/* There is a complication: if called from lapply
 	   there may be a ... argument */
-	PROTECT(w = expandDots(CDR(args), rho));
+	VAPROTECT(w, expandDots(CDR(args), rho));
 	if (isString(x)) {
 	    for (y = w; y != R_NilValue; y = CDR(y)) {
 		if (TAG(y) != R_NilValue) {

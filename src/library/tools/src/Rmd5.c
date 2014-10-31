@@ -35,7 +35,7 @@ SEXP Rmd5(SEXP files)
     unsigned char resblock[16];
 
     if(!isString(files)) error(_("argument 'files' must be character"));
-    PROTECT(ans = allocVector(STRSXP, nfiles));
+    VAPROTECT(ans, allocVector(STRSXP, nfiles));
     for(i = 0; i < nfiles; i++) {
 	path = translateChar(STRING_ELT(files, i));
 #ifdef _WIN32

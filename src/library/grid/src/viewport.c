@@ -351,10 +351,10 @@ void calcViewportTransform(SEXP vp, SEXP parent, Rboolean incremental,
     /* Record all of the answers in the viewport
      * (the layout calculations are done within calcViewportLayout)
      */
-    PROTECT(currentWidthCM = ScalarReal(vpWidthCM));
-    PROTECT(currentHeightCM = ScalarReal(vpHeightCM));
-    PROTECT(currentRotation = ScalarReal(rotationAngle));
-    PROTECT(currentTransform = allocMatrix(REALSXP, 3, 3));
+    VAPROTECT(currentWidthCM, ScalarReal(vpWidthCM));
+    VAPROTECT(currentHeightCM, ScalarReal(vpHeightCM));
+    VAPROTECT(currentRotation, ScalarReal(rotationAngle));
+    VAPROTECT(currentTransform, allocMatrix(REALSXP, 3, 3));
     for (i=0; i<3; i++)
 	for (j=0; j<3; j++)
 	    REAL(currentTransform)[i + 3*j] = transform[i][j];
@@ -371,19 +371,19 @@ void initVP(pGEDevDesc dd)
     SEXP xscale, yscale;
     SEXP currentgp = gridStateElement(dd, GSS_GPAR);
     SEXP gsd = (SEXP) dd->gesd[gridRegisterIndex]->systemSpecific;
-    PROTECT(vpfnname = findFun(install("grid.top.level.vp"), R_gridEvalEnv));
-    PROTECT(vpfn = lang1(vpfnname));
-    PROTECT(vp = eval(vpfn, R_GlobalEnv));
+    VAPROTECT(vpfnname, findFun(install("grid.top.level.vp"), R_gridEvalEnv));
+    VAPROTECT(vpfn, lang1(vpfnname));
+    VAPROTECT(vp, eval(vpfn, R_GlobalEnv));
     /* 
      * Set the "native" scale of the top viewport to be the
      * natural device coordinate system (e.g., points in 
      * postscript, pixels in X11, ...)
      */
-    PROTECT(xscale = allocVector(REALSXP, 2));
+    VAPROTECT(xscale, allocVector(REALSXP, 2));
     REAL(xscale)[0] = dd->dev->left;
     REAL(xscale)[1] = dd->dev->right;
     SET_VECTOR_ELT(vp, VP_XSCALE, xscale);
-    PROTECT(yscale = allocVector(REALSXP, 2));
+    VAPROTECT(yscale, allocVector(REALSXP, 2));
     REAL(yscale)[0] = dd->dev->bottom;
     REAL(yscale)[1] = dd->dev->top;
     SET_VECTOR_ELT(vp, VP_YSCALE, yscale);

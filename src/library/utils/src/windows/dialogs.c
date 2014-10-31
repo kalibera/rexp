@@ -214,7 +214,7 @@ SEXP winMenuNames(SEXP call, SEXP op, SEXP args, SEXP env)
 
     nmenus = numwinmenus();
 
-    PROTECT(menuNames = allocVector(STRSXP, nmenus));
+    VAPROTECT(menuNames, allocVector(STRSXP, nmenus));
 
     for (i = 0; i < nmenus; i++) {
 	SET_STRING_ELT(menuNames, i, mkChar(getusermenuname(i)));
@@ -248,8 +248,8 @@ SEXP winMenuItems(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall(call, msgbuf);
     }
 
-    PROTECT(ans = allocVector(STRSXP, items->numItems));
-    PROTECT(ansnames = allocVector(STRSXP, items->numItems));
+    VAPROTECT(ans, allocVector(STRSXP, items->numItems));
+    VAPROTECT(ansnames, allocVector(STRSXP, items->numItems));
     for (i = 0; i < items->numItems; i++) {
 	SET_STRING_ELT(ans, i, mkChar(items->mItems[i]->action));
 	SET_STRING_ELT(ansnames, i, mkChar(items->mItems[i]->name));

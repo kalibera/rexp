@@ -1085,8 +1085,8 @@ SEXP C_par(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (isNewList(args)) {
 	SEXP oldnames, newnames, tag, val;
 	int i;
-	PROTECT(newnames = allocVector(STRSXP, nargs));
-	PROTECT(value = allocVector(VECSXP, nargs));
+	VAPROTECT(newnames, allocVector(STRSXP, nargs));
+	VAPROTECT(value, allocVector(VECSXP, nargs));
 	oldnames = getAttrib(args, R_NamesSymbol);
 	for (i = 0 ; i < nargs ; i++) {
 	    if (oldnames != R_NilValue)

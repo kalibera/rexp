@@ -74,7 +74,7 @@ static double fminfn(int n, double *p, void *ex)
     OptStruct OS = (OptStruct) ex;
     PROTECT_INDEX ipx;
 
-    PROTECT(x = allocVector(REALSXP, n));
+    VAPROTECT(x, allocVector(REALSXP, n));
     if(!isNull(OS->names)) setAttrib(x, R_NamesSymbol, OS->names);
     for (i = 0; i < n; i++) {
 	if (!R_FINITE(p[i])) error(_("non-finite value supplied by optim"));
@@ -100,7 +100,7 @@ static void fmingr(int n, double *p, double *df, void *ex)
     PROTECT_INDEX ipx;
 
     if (!isNull(OS->R_gcall)) { /* analytical derivatives */
-	PROTECT(x = allocVector(REALSXP, n));
+	VAPROTECT(x, allocVector(REALSXP, n));
 	if(!isNull(OS->names)) setAttrib(x, R_NamesSymbol, OS->names);
 	for (i = 0; i < n; i++) {
 	    if (!R_FINITE(p[i]))
@@ -117,7 +117,7 @@ static void fmingr(int n, double *p, double *df, void *ex)
 	    df[i] = REAL(s)[i] * (OS->parscale[i])/(OS->fnscale);
 	UNPROTECT(2);
     } else { /* numerical derivatives */
-	PROTECT(x = allocVector(REALSXP, n));
+	VAPROTECT(x, allocVector(REALSXP, n));
 	setAttrib(x, R_NamesSymbol, OS->names);
 	SET_NAMED(x, 2); // in case f tries to change it
 	for (i = 0; i < n; i++) REAL(x)[i] = p[i] * (OS->parscale[i]);
@@ -209,15 +209,15 @@ SEXP optim(SEXP call, SEXP op, SEXP args, SEXP rho)
     tmp = getListElement(options, "parscale");
     if (LENGTH(tmp) != npar)
 	error(_("'parscale' is of the wrong length"));
-    PROTECT(tmp = coerceVector(tmp, REALSXP));
+    VAPROTECT(tmp, coerceVector(tmp, REALSXP));
     OS->parscale = vect(npar);
     for (i = 0; i < npar; i++) OS->parscale[i] = REAL(tmp)[i];
     UNPROTECT(1);
     for (i = 0; i < npar; i++)
 	dpar[i] = REAL(par)[i] / (OS->parscale[i]);
-    PROTECT(res = allocVector(VECSXP, 5));
+    VAPROTECT(res, allocVector(VECSXP, 5));
     SEXP names;
-    PROTECT(names = allocVector(STRSXP, 5));
+    VAPROTECT(names, allocVector(STRSXP, 5));
     SET_STRING_ELT(names, 0, mkChar("par"));
     SET_STRING_ELT(names, 1, mkChar("value"));
     SET_STRING_ELT(names, 2, mkChar("counts"));
@@ -225,15 +225,15 @@ SEXP optim(SEXP call, SEXP op, SEXP args, SEXP rho)
     SET_STRING_ELT(names, 4, mkChar("message"));
     setAttrib(res, R_NamesSymbol, names);
     UNPROTECT(1);
-    PROTECT(value = allocVector(REALSXP, 1));
-    PROTECT(counts = allocVector(INTSXP, 2));
+    VAPROTECT(value, allocVector(REALSXP, 1));
+    VAPROTECT(counts, allocVector(INTSXP, 2));
     SEXP countnames;
-    PROTECT(countnames = allocVector(STRSXP, 2));
+    VAPROTECT(countnames, allocVector(STRSXP, 2));
     SET_STRING_ELT(countnames, 0, mkChar("function"));
     SET_STRING_ELT(countnames, 1, mkChar("gradient"));
     setAttrib(counts, R_NamesSymbol, countnames);
     UNPROTECT(1);
-    PROTECT(conv = allocVector(INTSXP, 1));
+    VAPROTECT(conv, allocVector(INTSXP, 1));
     abstol = asReal(getListElement(options, "abstol"));
     reltol = asReal(getListElement(options, "reltol"));
     maxit = asInteger(getListElement(options, "maxit"));
@@ -284,7 +284,7 @@ SEXP optim(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (LENGTH(ndeps) != npar)
 		error(_("'ndeps' is of the wrong length"));
 	    OS->ndeps = vect(npar);
-	    PROTECT(ndeps = coerceVector(ndeps, REALSXP));
+	    VAPROTECT(ndeps, coerceVector(ndeps, REALSXP));
 	    for (i = 0; i < npar; i++) OS->ndeps[i] = REAL(ndeps)[i];
 	    UNPROTECT(1);
 	}
@@ -309,7 +309,7 @@ SEXP optim(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (LENGTH(ndeps) != npar)
 		error(_("'ndeps' is of the wrong length"));
 	    OS->ndeps = vect(npar);
-	    PROTECT(ndeps = coerceVector(ndeps, REALSXP));
+	    VAPROTECT(ndeps, coerceVector(ndeps, REALSXP));
 	    for (i = 0; i < npar; i++) OS->ndeps[i] = REAL(ndeps)[i];
 	    UNPROTECT(1);
 	}
@@ -339,7 +339,7 @@ SEXP optim(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (LENGTH(ndeps) != npar)
 		error(_("'ndeps' is of the wrong length"));
 	    OS->ndeps = vect(npar);
-	    PROTECT(ndeps = coerceVector(ndeps, REALSXP));
+	    VAPROTECT(ndeps, coerceVector(ndeps, REALSXP));
 	    for (i = 0; i < npar; i++) OS->ndeps[i] = REAL(ndeps)[i];
 	    UNPROTECT(1);
 	}
@@ -363,7 +363,7 @@ SEXP optim(SEXP call, SEXP op, SEXP args, SEXP rho)
 	for (i = 0; i < npar; i++)
 	    REAL(par)[i] = dpar[i] * (OS->parscale[i]);
 	UNPROTECT(1); /* OS->R_gcall */
-	PROTECT(smsg = mkString(msg));
+	VAPROTECT(smsg, mkString(msg));
 	SET_VECTOR_ELT(res, 4, smsg);
 	UNPROTECT(1);
     } else
@@ -403,12 +403,12 @@ SEXP optimhess(SEXP call, SEXP op, SEXP args, SEXP rho)
     tmp = getListElement(options, "parscale");
     if (LENGTH(tmp) != npar)
 	error(_("'parscale' is of the wrong length"));
-    PROTECT(tmp = coerceVector(tmp, REALSXP));
+    VAPROTECT(tmp, coerceVector(tmp, REALSXP));
     OS->parscale = vect(npar);
     for (i = 0; i < npar; i++) OS->parscale[i] = REAL(tmp)[i];
     UNPROTECT(1);
     PROTECT(OS->R_fcall = lang2(fn, R_NilValue));
-    PROTECT(par = coerceVector(par, REALSXP));
+    VAPROTECT(par, coerceVector(par, REALSXP));
     if (!isNull(gr)) {
 	if (!isFunction(gr)) error(_("'gr' is not a function"));
 	PROTECT(OS->R_gcall = lang2(gr, R_NilValue));
@@ -418,10 +418,10 @@ SEXP optimhess(SEXP call, SEXP op, SEXP args, SEXP rho)
     ndeps = getListElement(options, "ndeps");
     if (LENGTH(ndeps) != npar) error(_("'ndeps' is of the wrong length"));
     OS->ndeps = vect(npar);
-    PROTECT(ndeps = coerceVector(ndeps, REALSXP));
+    VAPROTECT(ndeps, coerceVector(ndeps, REALSXP));
     for (i = 0; i < npar; i++) OS->ndeps[i] = REAL(ndeps)[i];
     UNPROTECT(1);
-    PROTECT(ans = allocMatrix(REALSXP, npar, npar));
+    VAPROTECT(ans, allocMatrix(REALSXP, npar, npar));
     dpar = vect(npar);
     for (i = 0; i < npar; i++)
 	dpar[i] = REAL(par)[i] / (OS->parscale[i]);
@@ -448,7 +448,7 @@ SEXP optimhess(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP nm = getAttrib(par, R_NamesSymbol);
     if(!isNull(nm)) {
 	SEXP dm;
-	PROTECT(dm = allocVector(VECSXP, 2));
+	VAPROTECT(dm, allocVector(VECSXP, 2));
 	SET_VECTOR_ELT(dm, 0, duplicate(nm));
 	SET_VECTOR_ELT(dm, 1, duplicate(nm));
 	setAttrib(ans, R_DimNamesSymbol, dm);

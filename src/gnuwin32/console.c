@@ -929,7 +929,7 @@ static void performCompletion(control c)
 	   != R_UnboundValue) completion_available = 1;
 	else { /* Then try to load it */
 	    char *p = "try(loadNamespace('utils'), silent=TRUE)";
-	    PROTECT(cmdSexp = mkString(p));
+	    VAPROTECT(cmdSexp, mkString(p));
 	    cmdexpr = PROTECT(R_ParseVector(cmdSexp, -1, &status, R_NilValue));
 	    if(status == PARSE_OK) {
 		for(i = 0; i < length(cmdexpr); i++)
@@ -957,7 +957,7 @@ static void performCompletion(control c)
     char cmd[len];
     snprintf(cmd, len, "utils:::.win32consoleCompletion(\"%ls\", %d)",
 	     pline, cursor_position);
-    PROTECT(cmdSexp = mkString(cmd));
+    VAPROTECT(cmdSexp, mkString(cmd));
     cmdexpr = PROTECT(R_ParseVector(cmdSexp, -1, &status, R_NilValue));
     if (status != PARSE_OK) {
 	UNPROTECT(2);

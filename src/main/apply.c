@@ -43,7 +43,7 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     FUN = CADR(args);
     Rboolean realIndx = n > INT_MAX;
 
-    SEXP ans; PROTECT(ans = allocVector(VECSXP, n));
+    SEXP ans; VAPROTECT(ans, allocVector(VECSXP, n));
     SEXP names = getAttrib(XX, R_NamesSymbol);
     if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
 
@@ -54,14 +54,14 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
        protection of its args internally), but not both of them,
        since the computation of one may destroy the other */
     
-    SEXP ind; PROTECT(ind = allocVector(realIndx ? REALSXP : INTSXP, 1));
+    SEXP ind; VAPROTECT(ind, allocVector(realIndx ? REALSXP : INTSXP, 1));
     SEXP tmp;
     /* The R level code has ensured that XX is a vector.
        If it is atomic we can speed things up slightly by
        using the evaluated version.
     */
     if(isVectorAtomic(XX))
-	tmp = PROTECT(tmp = LCONS(R_Bracket2Symbol,
+	VAPROTECT(tmp, LCONS(R_Bracket2Symbol,
 				  LCONS(XX, LCONS(ind, R_NilValue))));
     else
 	tmp = PROTECT(LCONS(R_Bracket2Symbol,
@@ -96,10 +96,10 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT_INDEX index = 0; /* initialize to avoid a warning */
 
     checkArity(op, args);
-    PROTECT(X = CAR(args));
-    PROTECT(XX = eval(CAR(args), rho));
+    VAPROTECT(X, CAR(args));
+    VAPROTECT(XX, eval(CAR(args), rho));
     FUN = CADR(args);  /* must be unevaluated for use in e.g. bquote */
-    PROTECT(value = eval(CADDR(args), rho));
+    VAPROTECT(value, eval(CADDR(args), rho));
     if (!isVector(value)) error(_("'FUN.VALUE' must be a vector"));
     useNames = asLogical(eval(CADDDR(args), rho));
     if (useNames == NA_LOGICAL) error(_("invalid '%s' value"), "USE.NAMES");
@@ -114,12 +114,12 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     commonType = TYPEOF(value);
     dim_v = getAttrib(value, R_DimSymbol);
     array_value = (TYPEOF(dim_v) == INTSXP && LENGTH(dim_v) >= 1);
-    PROTECT(ans = allocVector(commonType, n*commonLen));
+    VAPROTECT(ans, allocVector(commonType, n*commonLen));
     if (useNames) {
-    	PROTECT(names = getAttrib(XX, R_NamesSymbol));
+    	VAPROTECT(names, getAttrib(XX, R_NamesSymbol));
     	if (isNull(names) && TYPEOF(XX) == STRSXP) {
     	    UNPROTECT(1);
-    	    PROTECT(names = XX);
+    	    VAPROTECT(names, XX);
     	}
     	PROTECT_WITH_INDEX(rowNames = getAttrib(value,
 						array_value ? R_DimNamesSymbol
@@ -139,14 +139,14 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	   protection of its args internally), but not both of them,
 	   since the computation of one may destroy the other */
 
-	PROTECT(ind = allocVector(INTSXP, 1));
+	VAPROTECT(ind, allocVector(INTSXP, 1));
 	if(isVectorAtomic(XX))
-	    PROTECT(tmp = LCONS(R_Bracket2Symbol,
+	    VAPROTECT(tmp, LCONS(R_Bracket2Symbol,
 				LCONS(XX, LCONS(ind, R_NilValue))));
 	else
-	    PROTECT(tmp = LCONS(R_Bracket2Symbol,
+	    VAPROTECT(tmp, LCONS(R_Bracket2Symbol,
 				LCONS(X, LCONS(ind, R_NilValue))));
-	PROTECT(R_fcall = LCONS(FUN,
+	VAPROTECT(R_fcall, LCONS(FUN,
 				LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
 
 	for(i = 0; i < n; i++) {
@@ -201,7 +201,7 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (commonLen != 1) {
 	SEXP dim;
 	rnk_v = array_value ? LENGTH(dim_v) : 1;
-	PROTECT(dim = allocVector(INTSXP, rnk_v+1));
+	VAPROTECT(dim, allocVector(INTSXP, rnk_v+1));
 	if(array_value)
 	    for(int j = 0; j < rnk_v; j++)
 		INTEGER(dim)[j] = INTEGER(dim_v)[j];
@@ -218,7 +218,7 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	} else {
 	    if (!isNull(names) || !isNull(rowNames)) {
 		SEXP dimnames;
-		PROTECT(dimnames = allocVector(VECSXP, rnk_v+1));
+		VAPROTECT(dimnames, allocVector(VECSXP, rnk_v+1));
 		if(array_value && !isNull(rowNames)) {
 		    if(TYPEOF(rowNames) != VECSXP || LENGTH(rowNames) != rnk_v)
 			// should never happen ..
@@ -249,7 +249,7 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
     /* if X is a list, recurse.  Otherwise if it matches classes call f */
     if(isNewList(X)) {
 	n = length(X);
-	PROTECT(ans = allocVector(VECSXP, n));
+	VAPROTECT(ans, allocVector(VECSXP, n));
 	names = getAttrib(X, R_NamesSymbol);
 	/* or copy attributes if replace = TRUE? */
 	if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
@@ -262,7 +262,7 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
     if(strcmp(CHAR(STRING_ELT(classes, 0)), "ANY") == 0) /* ASCII */
 	matched = TRUE;
     else {
-	PROTECT(klass = R_data_class(X, FALSE));
+	VAPROTECT(klass, R_data_class(X, FALSE));
 	for(i = 0; i < LENGTH(klass); i++)
 	    for(j = 0; j < length(classes); j++)
 		if(Seql(STRING_ELT(klass, i), STRING_ELT(classes, j)))
@@ -270,8 +270,8 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
 	UNPROTECT(1);
     }
     if(matched) {
-	/* PROTECT(R_fcall = lang2(FUN, X)); */
-	PROTECT(R_fcall = lang3(FUN, X, R_DotsSymbol));
+	/* VAPROTECT(R_fcall, lang2(FUN, X)); */
+	VAPROTECT(R_fcall, lang3(FUN, X, R_DotsSymbol));
 	ans = eval(R_fcall, rho);
 	if (MAYBE_REFERENCED(ans))
 	    ans = lazy_duplicate(ans);
@@ -298,7 +298,7 @@ SEXP attribute_hidden do_rapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(!isString(how)) error(_("invalid '%s' argument"), "how");
     replace = strcmp(CHAR(STRING_ELT(how, 0)), "replace") == 0; /* ASCII */
     n = length(X);
-    PROTECT(ans = allocVector(VECSXP, n));
+    VAPROTECT(ans, allocVector(VECSXP, n));
     names = getAttrib(X, R_NamesSymbol);
     /* or copy attributes if replace = TRUE? */
     if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);

@@ -101,7 +101,7 @@ static SEXP FindTaggedItem(SEXP lst, SEXP tag)
 static SEXP makeErrorCall(SEXP fun)
 {
   SEXP call;
-  PROTECT(call = allocList(1));
+  VAPROTECT(call, allocList(1));
   SET_TYPEOF(call, LANGSXP);
   SETCAR(call, fun);
   UNPROTECT(1);
@@ -214,8 +214,8 @@ int attribute_hidden R_SetOptionWidth(int w)
     SEXP t, v;
     if (w < R_MIN_WIDTH_OPT) w = R_MIN_WIDTH_OPT;
     if (w > R_MAX_WIDTH_OPT) w = R_MAX_WIDTH_OPT;
-    PROTECT(t = install("width"));
-    PROTECT(v = ScalarInteger(w));
+    VAPROTECT(t, install("width"));
+    VAPROTECT(v, ScalarInteger(w));
     v = SetOption(t, v);
     UNPROTECT(2);
     return INTEGER(v)[0];
@@ -226,7 +226,7 @@ int attribute_hidden R_SetOptionWarn(int w)
     SEXP t, v;
 
     t = install("warn");
-    PROTECT(v = ScalarInteger(w));
+    VAPROTECT(v, ScalarInteger(w));
     v = SetOption(t, v);
     UNPROTECT(1);
     return INTEGER(v)[0];
@@ -241,9 +241,9 @@ void attribute_hidden InitOptions(void)
     char *p;
 
 #ifdef HAVE_RL_COMPLETION_MATCHES
-    PROTECT(v = val = allocList(17));
+    VAPROTECT(v, val = allocList(17));
 #else
-    PROTECT(v = val = allocList(16));
+    VAPROTECT(v, val = allocList(16));
 #endif
 
     SET_TAG(v, install("prompt"));
@@ -352,19 +352,19 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	   We alloc up a vector list and write the system values into it.
 	*/
 	int n = length(options);
-	PROTECT(value = allocVector(VECSXP, n));
-	PROTECT(names = allocVector(STRSXP, n));
+	VAPROTECT(value, allocVector(VECSXP, n));
+	VAPROTECT(names, allocVector(STRSXP, n));
 	for (int i = 0; i < n; i++) {
 	    SET_STRING_ELT(names, i, PRINTNAME(TAG(options)));
 	    SET_VECTOR_ELT(value, i, duplicate(CAR(options)));
 	    options = CDR(options);
 	}
-	SEXP sind; PROTECT(sind = allocVector(INTSXP, n));
+	SEXP sind; VAPROTECT(sind, allocVector(INTSXP, n));
 	int *indx = INTEGER(sind);
 	for (int i = 0; i < n; i++) indx[i] = i;
 	orderVector1(indx, n, names, TRUE, FALSE, R_NilValue);
-	SEXP value2; PROTECT(value2 = allocVector(VECSXP, n));
-	SEXP names2; PROTECT(names2 = allocVector(STRSXP, n));
+	SEXP value2; VAPROTECT(value2, allocVector(VECSXP, n));
+	SEXP names2; VAPROTECT(names2, allocVector(STRSXP, n));
 	for(int i = 0; i < n; i++) {
 	    SET_STRING_ELT(names2, i, STRING_ELT(names, indx[i]));
 	    SET_VECTOR_ELT(value2, i, VECTOR_ELT(value, indx[i]));
@@ -387,8 +387,8 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	args = CAR(args);
 	n = length(args);
     }
-    PROTECT(value = allocVector(VECSXP, n));
-    PROTECT(names = allocVector(STRSXP, n));
+    VAPROTECT(value, allocVector(VECSXP, n));
+    VAPROTECT(names, allocVector(STRSXP, n));
 
     SEXP argnames = R_NilValue;
     switch (TYPEOF(args)) {

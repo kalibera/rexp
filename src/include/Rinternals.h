@@ -650,6 +650,7 @@ void (SET_HASHVALUE)(SEXP x, int v);
 
 /* Pointer Protection and Unprotection */
 #define PROTECT(s)	Rf_protect(s)
+#define VAPROTECT(var,val)	do { var = val; PROTECT(var); } while(0)
 #define UNPROTECT(n)	Rf_unprotect(n)
 #define UNPROTECT_PTR(s)	Rf_unprotect_ptr(s)
 

@@ -352,7 +352,7 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
 	for (b = supplied; b != R_NilValue; b = CDR(b))
 	    if (!ARGUSED(b)) {
 		if(last == R_NilValue) {
-		    PROTECT(unused = CONS(CAR(b), R_NilValue));
+		    VAPROTECT(unused, CONS(CAR(b), R_NilValue));
 		    SET_TAG(unused, TAG(b));
 		    last = unused;
 		} else {
@@ -370,7 +370,7 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
                 SEXP tagB = TAG(b), carB = CAR(b) ;
                 if (TYPEOF(carB) == PROMSXP) carB = PREXPR(carB) ;
                 if (last == R_NilValue) {
-                    PROTECT(last = CONS(carB, R_NilValue));
+                    VAPROTECT(last, CONS(carB, R_NilValue));
                     SET_TAG(last, tagB);
                     unusedForError = last;
                 } else {

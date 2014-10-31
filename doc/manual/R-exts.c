@@ -14,7 +14,7 @@
 SEXP out(SEXP x, SEXP y)
 {
     int nx = length(x), ny = length(y);
-    SEXP ans; PROTECT(ans = allocMatrix(REALSXP, nx, ny));
+    SEXP ans; VAPROTECT(ans, allocMatrix(REALSXP, nx, ny));
     double *rx = REAL(x), *ry = REAL(y), *rans = REAL(ans);
 
     for(int i = 0; i < nx; i++) {
@@ -23,7 +23,7 @@ SEXP out(SEXP x, SEXP y)
 	    rans[i + nx*j] = tmp * ry[j];
     }
 
-    SEXP dimnames; PROTECT(dimnames = allocVector(VECSXP, 2));
+    SEXP dimnames; VAPROTECT(dimnames, allocVector(VECSXP, 2));
     SET_VECTOR_ELT(dimnames, 0, getAttrib(x, R_NamesSymbol));
     SET_VECTOR_ELT(dimnames, 1, getAttrib(y, R_NamesSymbol));
     setAttrib(ans, R_DimNamesSymbol, dimnames);
@@ -272,7 +272,7 @@ SEXP numeric_deriv(SEXP args)
     rgr = REAL(gradient); rans = REAL(ans);
 
     for(i = 0, start = 0; i < LENGTH(theta); i++, start += LENGTH(ans)) {
-	PROTECT(par = findVar(installChar(STRING_ELT(theta, i)), rho));
+	VAPROTECT(par, findVar(installChar(STRING_ELT(theta, i)), rho));
 	tt = REAL(par)[0];
 	xx = fabs(tt);
 	delta = (xx < 1) ? eps : xx*eps;

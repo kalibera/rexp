@@ -249,7 +249,7 @@ SEXP Rsm(SEXP x, SEXP stype, SEXP send)
 {
     int iend = asInteger(send), type = asInteger(stype);
     int n = LENGTH(x);
-    SEXP ans; PROTECT(ans = allocVector(VECSXP, 2));
+    SEXP ans; VAPROTECT(ans, allocVector(VECSXP, 2));
     SEXP y = allocVector(REALSXP, n);
     SET_VECTOR_ELT(ans, 0, y);
     SEXP nm = allocVector(STRSXP, 2);

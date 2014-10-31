@@ -265,7 +265,7 @@ static SEXP baseCallback(GEevent task, pGEDevDesc dd, SEXP data)
 	bss = dd->gesd[baseRegisterIndex]->systemSpecific;
 	/* Changed from INTSXP in 2.7.0: but saved graphics lists
 	   are protected by an R version number */
-	PROTECT(result = allocVector(RAWSXP, sizeof(GPar)));
+	VAPROTECT(result, allocVector(RAWSXP, sizeof(GPar)));
 	copyGPar(&(bss->dpSaved), (GPar*) RAW(result));
 	UNPROTECT(1);
 	break;

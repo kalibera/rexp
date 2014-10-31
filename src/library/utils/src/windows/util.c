@@ -111,7 +111,7 @@ SEXP dllversion(SEXP path)
 	error(_("invalid '%s' argument"), "path");
     dll = filenameToWchar(STRING_ELT(path, 0), FALSE);
     dwVerInfoSize = GetFileVersionInfoSizeW(dll, &dwVerHnd);
-    SEXP ans; PROTECT(ans = allocVector(STRSXP, 2));
+    SEXP ans; VAPROTECT(ans, allocVector(STRSXP, 2));
     SET_STRING_ELT(ans, 0, mkChar(""));
     SET_STRING_ELT(ans, 1, mkChar(""));
     if (dwVerInfoSize) {
@@ -153,7 +153,7 @@ SEXP getClipboardFormats(void)
 
     if(OpenClipboard(NULL)) {
 	size = CountClipboardFormats();
-	PROTECT(ans = allocVector(INTSXP, size));
+	VAPROTECT(ans, allocVector(INTSXP, size));
 	for (j = 0; j < size; j++) {
 	    format = EnumClipboardFormats(format);
 	    INTEGER(ans)[j] = format;
@@ -198,7 +198,7 @@ static SEXP splitClipboardText(const char *s, int ienc)
     if (cnt_r == cnt_n) CRLF = TRUE;
     /* over-allocate a line buffer */
     line = R_chk_calloc(1+line_len, 1);
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for(p = s, q = line, nl = 0; *p; p++) {
 	if (*p == eol) {
 	    *q = '\0';

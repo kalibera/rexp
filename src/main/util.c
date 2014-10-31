@@ -267,7 +267,7 @@ void InitTypeTables(void) {
 
         if (j != -1) {
             const char *cstr = TypeTable[j].str;
-            SEXP rchar; PROTECT(rchar = mkChar(cstr));
+            SEXP rchar; VAPROTECT(rchar, mkChar(cstr));
             SEXP rstr = ScalarString(rchar);
             MARK_NOT_MUTABLE(rstr);
             R_PreserveObject(rstr);
@@ -728,7 +728,7 @@ SEXP static intern_getwd(void)
 	if(res > 0) {
 	    wcstoutf8(buf, wbuf, PATH_MAX+1);
 	    R_UTF8fixslash(buf);
-	    PROTECT(rval = allocVector(STRSXP, 1));
+	    VAPROTECT(rval, allocVector(STRSXP, 1));
 	    SET_STRING_ELT(rval, 0, mkCharCE(buf, CE_UTF8));
 	    UNPROTECT(1);
 	}
@@ -796,7 +796,7 @@ SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     if (TYPEOF(s = CAR(args)) != STRSXP)
 	error(_("a character vector argument expected"));
-    PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
+    VAPROTECT(ans, allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
 	if (STRING_ELT(s, i) == NA_STRING)
 	    SET_STRING_ELT(ans, i, NA_STRING);
@@ -830,7 +830,7 @@ SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     if (TYPEOF(s = CAR(args)) != STRSXP)
 	error(_("a character vector argument expected"));
-    PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
+    VAPROTECT(ans, allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
 	if (STRING_ELT(s, i) == NA_STRING)
 	    SET_STRING_ELT(ans, i, NA_STRING);
@@ -871,7 +871,7 @@ SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     if (TYPEOF(s = CAR(args)) != STRSXP)
 	error(_("a character vector argument expected"));
-    PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
+    VAPROTECT(ans, allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
 	if (STRING_ELT(s, i) == NA_STRING)
 	    SET_STRING_ELT(ans, i, NA_STRING);
@@ -913,7 +913,7 @@ SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     if (TYPEOF(s = CAR(args)) != STRSXP)
 	error(_("a character vector argument expected"));
-    PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
+    VAPROTECT(ans, allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
 	if (STRING_ELT(s, i) == NA_STRING)
 	    SET_STRING_ELT(ans, i, NA_STRING);
@@ -963,7 +963,7 @@ SEXP attribute_hidden do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* Does any platform not have this? */
 #ifdef HAVE_REALPATH
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
 	path = translateChar(STRING_ELT(paths, i));
 	char *res = realpath(path, abspath);
@@ -981,7 +981,7 @@ SEXP attribute_hidden do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
     Rboolean OK;
     warning("this platform does not have realpath so the results may not be canonical");
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
 	path = translateChar(STRING_ELT(paths, i));
 	OK = strlen(path) <= PATH_MAX;
@@ -1073,7 +1073,7 @@ SEXP attribute_hidden do_encodeString(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	if(quote) w +=2; /* for surrounding quotes */
     }
-    PROTECT(ans = duplicate(x));
+    VAPROTECT(ans, duplicate(x));
     for(i = 0; i < len; i++) {
 	s = STRING_ELT(x, i);
 	if(na || s != NA_STRING) {
@@ -1102,7 +1102,7 @@ SEXP attribute_hidden do_encoding(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (TYPEOF(x = CAR(args)) != STRSXP)
 	error(_("a character vector argument expected"));
     n = XLENGTH(x);
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
 	if(IS_BYTES(STRING_ELT(x, i))) tmp = "bytes";
 	else if(IS_LATIN1(STRING_ELT(x, i))) tmp = "latin1";
@@ -1747,7 +1747,7 @@ SEXP attribute_hidden do_enc2(SEXP call, SEXP op, SEXP args, SEXP env)
 	} else if (ENC_KNOWN(el)) { /* enc2native */
 	    if (IS_ASCII(el) || IS_BYTES(el)) continue;
 	    if (known_to_be_latin1 && IS_LATIN1(el)) continue;
-	    if (!duped) { PROTECT(ans = duplicate(ans)); duped = TRUE; }
+	    if (!duped) { VAPROTECT(ans, duplicate(ans)); duped = TRUE; }
 	    if (known_to_be_latin1)
 		SET_STRING_ELT(ans, i, mkCharCE(translateChar(el), CE_LATIN1));
 	    else
@@ -2142,15 +2142,15 @@ SEXP attribute_hidden do_bincode(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (IS_LONG_VEC(breaks))
 	error(_("long vector '%s' is not supported"), "breaks");
 #endif
-    PROTECT(x = coerceVector(x, REALSXP));
-    PROTECT(breaks = coerceVector(breaks, REALSXP));
+    VAPROTECT(x, coerceVector(x, REALSXP));
+    VAPROTECT(breaks, coerceVector(breaks, REALSXP));
     R_xlen_t n = XLENGTH(x);
     int nB = LENGTH(breaks), sr = asLogical(right), sl = asLogical(lowest);
     if (nB == NA_INTEGER) error(_("invalid '%s' argument"), "breaks");
     if (sr == NA_INTEGER) error(_("invalid '%s' argument"), "right");
     if (sl == NA_INTEGER) error(_("invalid '%s' argument"), "include.lowest");
     SEXP codes;
-    PROTECT(codes = allocVector(INTSXP, n));
+    VAPROTECT(codes, allocVector(INTSXP, n));
     bincode(REAL(x), n, REAL(breaks), nB, INTEGER(codes), sr, sl);
     UNPROTECT(3);
     return codes;
@@ -2231,7 +2231,7 @@ SEXP attribute_hidden do_pretty(SEXP call, SEXP op, SEXP args, SEXP rho)
     double shrink = asReal(CAR(args)); args = CDR(args);
     if (!R_FINITE(shrink) || shrink <= 0.)
 	error(_("invalid '%s' argument"), "shrink.sml");
-    PROTECT(hi = coerceVector(CAR(args), REALSXP)); args = CDR(args);
+    VAPROTECT(hi, coerceVector(CAR(args), REALSXP)); args = CDR(args);
     double z;
     if (!R_FINITE(z = REAL(hi)[0]) || z < 0.)
 	error(_("invalid '%s' argument"), "high.u.bias");
@@ -2241,7 +2241,7 @@ SEXP attribute_hidden do_pretty(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (eps == NA_INTEGER || eps < 0 || eps > 2)
 	error(_("'eps.correct' must be 0, 1, or 2"));
     R_pretty(&l, &u, &n, min_n, shrink, REAL(hi), eps, 1);
-    PROTECT(ans = allocVector(VECSXP, 3));
+    VAPROTECT(ans, allocVector(VECSXP, 3));
     SET_VECTOR_ELT(ans, 0, ScalarReal(l));
     SET_VECTOR_ELT(ans, 1, ScalarReal(u));
     SET_VECTOR_ELT(ans, 2, ScalarInteger(n));
@@ -2274,7 +2274,7 @@ SEXP attribute_hidden do_formatC(SEXP call, SEXP op, SEXP args, SEXP rho)
     int digits = asInteger(CAR(args)); args = CDR(args);
     const char *fmt = CHAR(STRING_ELT(CAR(args), 0)); args = CDR(args);
     const char *flag = CHAR(STRING_ELT(CAR(args), 0)); args = CDR(args);
-    SEXP i_strlen; PROTECT(i_strlen = coerceVector(CAR(args), INTSXP));
+    SEXP i_strlen; VAPROTECT(i_strlen, coerceVector(CAR(args), INTSXP));
     char **cptr = (char **) R_alloc(n, sizeof(char*));
     for (R_xlen_t i = 0; i < n; i++) {
 	int ix = INTEGER(i_strlen)[i] + 2;
@@ -2289,7 +2289,7 @@ SEXP attribute_hidden do_formatC(SEXP call, SEXP op, SEXP args, SEXP rho)
     default: error("unsupported type ");
     }
     str_signif(px, n, type, width, digits, fmt, flag, cptr);
-    SEXP ans; PROTECT(ans = allocVector(STRSXP, n));
+    SEXP ans; VAPROTECT(ans, allocVector(STRSXP, n));
     for (R_xlen_t i = 0; i < n; i++) SET_STRING_ELT(ans, i, mkChar(cptr[i]));
     UNPROTECT(2);
     return ans;

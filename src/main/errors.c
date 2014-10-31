@@ -537,8 +537,8 @@ void PrintWarnings(void)
 	REprintf("\n");
     }
     /* now truncate and install last.warning */
-    PROTECT(s = allocVector(VECSXP, R_CollectWarnings));
-    PROTECT(t = allocVector(STRSXP, R_CollectWarnings));
+    VAPROTECT(s, allocVector(VECSXP, R_CollectWarnings));
+    VAPROTECT(t, allocVector(STRSXP, R_CollectWarnings));
     names = CAR(ATTRIB(R_Warnings));
     for(i = 0; i < R_CollectWarnings; i++) {
 	SET_VECTOR_ELT(s, i, VECTOR_ELT(R_Warnings, i));
@@ -566,11 +566,11 @@ static SEXP GetSrcLoc(SEXP srcref)
     SEXP srcfile = R_GetSrcFilename(srcref);
     if (TYPEOF(srcref) != INTSXP || length(srcref) < 4)
 	return ScalarString(mkChar(""));
-    SEXP e2; PROTECT(e2 = lang2( install("basename"), srcfile));
-    PROTECT(srcfile = eval(e2, R_BaseEnv ) );
-    PROTECT(sep = ScalarString(mkChar("#")));
-    PROTECT(line = ScalarInteger(INTEGER(srcref)[0]));
-    SEXP e; PROTECT(e = lang4( install("paste0"), srcfile, sep, line ));
+    SEXP e2; VAPROTECT(e2, lang2( install("basename"), srcfile));
+    VAPROTECT(srcfile, eval(e2, R_BaseEnv ) );
+    VAPROTECT(sep, ScalarString(mkChar("#")));
+    VAPROTECT(line, ScalarInteger(INTEGER(srcref)[0]));
+    SEXP e; VAPROTECT(e, lang4( install("paste0"), srcfile, sep, line ));
     result = eval(e, R_BaseEnv );
     UNPROTECT(5);
     return result;
@@ -646,7 +646,7 @@ verrorcall_dflt(SEXP call, const char *format, va_list ap)
 	const char *dcall = CHAR(STRING_ELT(deparse1s(call), 0));
 	snprintf(tmp2, BUFSIZE,  "%s", head); 
 	if (skip != NA_INTEGER) {
-	    PROTECT(srcloc = GetSrcLoc(R_GetCurrentSrcref(skip)));
+	    VAPROTECT(srcloc, GetSrcLoc(R_GetCurrentSrcref(skip)));
 	    protected++;
 	    len = strlen(CHAR(STRING_ELT(srcloc, 0)));
 	    if (len)
@@ -754,7 +754,7 @@ SEXP attribute_hidden do_geterrmessage(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP res;
 
     checkArity(op, args);
-    PROTECT(res = allocVector(STRSXP, 1));
+    VAPROTECT(res, allocVector(STRSXP, 1));
     SET_STRING_ELT(res, 0, mkChar(errbuf));
     UNPROTECT(1);
     return res;
@@ -884,7 +884,7 @@ static void jump_to_top_ex(Rboolean traceback,
 	   (which should not happen) */
 	if (traceback && inError < 2 && inError == oldInError) {
 	    inError = 2;
-	    PROTECT(s = R_GetTraceback(0));
+	    VAPROTECT(s, R_GetTraceback(0));
 	    SET_SYMVALUE(install(".Traceback"), s);
 	    /* should have been defineVar
 	       setVar(install(".Traceback"), s, R_GlobalEnv); */
@@ -981,7 +981,7 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
     else errorcall(call, _("invalid '%s' value"), "domain");
 
     if(strlen(domain)) {
-	PROTECT(ans = allocVector(STRSXP, n));
+	VAPROTECT(ans, allocVector(STRSXP, n));
 	for(i = 0; i < n; i++) {
 	    int ihead = 0, itail = 0;
 	    const char * This = translateChar(STRING_ELT(string, i));
@@ -1089,7 +1089,7 @@ SEXP attribute_hidden do_ngettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 			      translateChar(STRING_ELT(msg1, 0)),
 			      translateChar(STRING_ELT(msg2, 0)),
 			      n);
-	PROTECT(ans = mkString(fmt));
+	VAPROTECT(ans, mkString(fmt));
 	UNPROTECT(1);
 	return ans;
     } else
@@ -1357,7 +1357,7 @@ SEXP R_GetTraceback(int skip)
 		nback++;
 	}
 
-    PROTECT(s = allocList(nback));
+    VAPROTECT(s, allocList(nback));
     t = s;
     for (c = R_GlobalContext ;
 	 c != NULL && c->callflag != CTXT_TOPLEVEL;
@@ -1499,7 +1499,7 @@ SEXP attribute_hidden do_addCondHands(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = LENGTH(handlers);
     oldstack = R_HandlerStack;
 
-    PROTECT(result = allocVector(VECSXP, RESULT_SIZE));
+    VAPROTECT(result, allocVector(VECSXP, RESULT_SIZE));
     PROTECT_WITH_INDEX(newstack = oldstack, &osi);
 
     for (i = n - 1; i >= 0; i--) {
@@ -1544,11 +1544,11 @@ static void vsignalWarning(SEXP call, const char *format, va_list ap)
     hooksym = install(".signalSimpleWarning");
     if (SYMVALUE(hooksym) != R_UnboundValue &&
 	SYMVALUE(R_QuoteSymbol) != R_UnboundValue) {
-	PROTECT(qcall = LCONS(R_QuoteSymbol, LCONS(call, R_NilValue)));
-	PROTECT(hcall = LCONS(qcall, R_NilValue));
+	VAPROTECT(qcall, LCONS(R_QuoteSymbol, LCONS(call, R_NilValue)));
+	VAPROTECT(hcall, LCONS(qcall, R_NilValue));
 	Rvsnprintf(buf, BUFSIZE - 1, format, ap);
 	hcall = LCONS(mkString(buf), hcall);
-	PROTECT(hcall = LCONS(hooksym, hcall));
+	VAPROTECT(hcall, LCONS(hooksym, hcall));
 	eval(hcall, R_GlobalEnv);
 	UNPROTECT(3);
     }
@@ -1589,12 +1589,12 @@ static void vsignalError(SEXP call, const char *format, va_list ap)
 		   overflow */
 		PROTECT(oldstack);
 		hooksym = install(".handleSimpleError");
-		PROTECT(qcall = LCONS(R_QuoteSymbol,
+		VAPROTECT(qcall, LCONS(R_QuoteSymbol,
 				      LCONS(call, R_NilValue)));
-		PROTECT(hcall = LCONS(qcall, R_NilValue));
+		VAPROTECT(hcall, LCONS(qcall, R_NilValue));
 		hcall = LCONS(mkString(buf), hcall);
 		hcall = LCONS(ENTRY_HANDLER(entry), hcall);
-		PROTECT(hcall = LCONS(hooksym, hcall));
+		VAPROTECT(hcall, LCONS(hooksym, hcall));
 		eval(hcall, R_GlobalEnv);
 		UNPROTECT(4);
 	    }
@@ -1634,7 +1634,7 @@ SEXP attribute_hidden do_signalCondition(SEXP call, SEXP op, SEXP args, SEXP rho
     msg = CADR(args);
     ecall = CADDR(args);
 
-    PROTECT(oldstack = R_HandlerStack);
+    VAPROTECT(oldstack, R_HandlerStack);
     while ((list = findConditionHandler(cond)) != R_NilValue) {
 	SEXP entry = CAR(list);
 	R_HandlerStack = CDR(list);
@@ -1677,8 +1677,8 @@ static SEXP getInterruptCondition(void)
 {
     /**** FIXME: should probably pre-allocate this */
     SEXP cond, klass;
-    PROTECT(cond = allocVector(VECSXP, 0));
-    PROTECT(klass = allocVector(STRSXP, 2));
+    VAPROTECT(cond, allocVector(VECSXP, 0));
+    VAPROTECT(klass, allocVector(STRSXP, 2));
     SET_STRING_ELT(klass, 0, mkChar("interrupt"));
     SET_STRING_ELT(klass, 1, mkChar("condition"));
     classgets(cond, klass);
@@ -1690,11 +1690,11 @@ static void signalInterrupt(void)
 {
     SEXP list, cond, oldstack;
 
-    PROTECT(oldstack = R_HandlerStack);
+    VAPROTECT(oldstack, R_HandlerStack);
     while ((list = findInterruptHandler()) != R_NilValue) {
 	SEXP entry = CAR(list);
 	R_HandlerStack = CDR(list);
-	PROTECT(cond = getInterruptCondition());
+	VAPROTECT(cond, getInterruptCondition());
 	if (IS_CALLING_ENTRY(entry)) {
 	    SEXP h = ENTRY_HANDLER(entry);
 	    SEXP hcall = LCONS(h, LCONS(cond, R_NilValue));
@@ -1724,12 +1724,12 @@ R_InsertRestartHandlers(RCNTXT *cptr, Rboolean browser)
 
     /**** need more here to keep recursive errors in browser? */
     rho = cptr->cloenv;
-    PROTECT(klass = mkChar("error"));
+    VAPROTECT(klass, mkChar("error"));
     entry = mkHandlerEntry(klass, rho, R_RestartToken, rho, R_NilValue, TRUE);
     R_HandlerStack = CONS(entry, R_HandlerStack);
     UNPROTECT(1);
-    PROTECT(name = mkString(browser ? "browser" : "tryRestart"));
-    PROTECT(entry = allocVector(VECSXP, 2));
+    VAPROTECT(name, mkString(browser ? "browser" : "tryRestart"));
+    VAPROTECT(entry, allocVector(VECSXP, 2));
     SET_VECTOR_ELT(entry, 0, name);
     SET_VECTOR_ELT(entry, 1, R_MakeExternalPtr(cptr, R_NilValue, R_NilValue));
     setAttrib(entry, R_ClassSymbol, mkString("restart"));
@@ -1788,7 +1788,7 @@ SEXP attribute_hidden do_getRestart(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (i == 1) {
 	/**** need to pre-allocate */
 	SEXP name, entry;
-	PROTECT(name = mkString("abort"));
+	VAPROTECT(name, mkString("abort"));
 	entry = allocVector(VECSXP, 2);
 	SET_VECTOR_ELT(entry, 0, name);
 	SET_VECTOR_ELT(entry, 1, R_NilValue);

@@ -485,7 +485,7 @@ static SEXP parse_request_body(httpd_conn_t *c) {
 	c->body[c->content_length] = 0; /* the body is guaranteed to have an extra byte for the termination */
 	return parse_query(c->body);
     } else { /* something else - pass it as a raw vector */
-	SEXP res; PROTECT(res = Rf_allocVector(RAWSXP, c->content_length));
+	SEXP res; VAPROTECT(res, Rf_allocVector(RAWSXP, c->content_length));
 	if (c->content_length)
 	    memcpy(RAW(res), c->body, c->content_length);
 	if (c->content_type) { /* attach the content type so it can be interpreted */
@@ -571,14 +571,14 @@ static void process_request_(void *ptr)
     }
     uri_decode(c->url); /* decode the path part */
     {   /* construct "try(httpd(url, query, body), silent=TRUE)" */
-	SEXP sTrue; PROTECT(sTrue = ScalarLogical(TRUE));
-	SEXP sBody; PROTECT(sBody = parse_request_body(c));
-	SEXP sQuery; PROTECT(sQuery = query ? parse_query(query) : R_NilValue);
-	SEXP sReqHeaders; PROTECT(sReqHeaders = c->headers ? collect_buffers(c->headers) : R_NilValue);
-	SEXP sArgs; PROTECT(sArgs = list4(mkString(c->url), sQuery, sBody, sReqHeaders));
+	SEXP sTrue; VAPROTECT(sTrue, ScalarLogical(TRUE));
+	SEXP sBody; VAPROTECT(sBody, parse_request_body(c));
+	SEXP sQuery; VAPROTECT(sQuery, query ? parse_query(query) : R_NilValue);
+	SEXP sReqHeaders; VAPROTECT(sReqHeaders, c->headers ? collect_buffers(c->headers) : R_NilValue);
+	SEXP sArgs; VAPROTECT(sArgs, list4(mkString(c->url), sQuery, sBody, sReqHeaders));
 	SEXP sTry = install("try");
 	SEXP y;
-	SEXP x; PROTECT(x = lang3(sTry, LCONS(handler_for_path(c->url), sArgs), sTrue));
+	SEXP x; VAPROTECT(x, lang3(sTry, LCONS(handler_for_path(c->url), sArgs), sTrue));
 	SET_TAG(CDR(CDR(x)), install("silent"));
 	DBG(Rprintf("eval(try(httpd('%s'),silent=TRUE))\n", c->url));
 	

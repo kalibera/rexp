@@ -332,8 +332,8 @@ static SEXP D(SEXP expr, SEXP var)
 	    UNPROTECT(4);
 	}
 	else if (CAR(expr) == DivideSymbol) {
-	    PROTECT(expr1 = D(CADR(expr), var));
-	    PROTECT(expr2 = D(CADDR(expr), var));
+	    VAPROTECT(expr1, D(CADR(expr), var));
+	    VAPROTECT(expr2, D(CADDR(expr), var));
 	    ans = simplify(MinusSymbol,
 			   PP_S(DivideSymbol, expr1, CADDR(expr)),
 			   PP_S(DivideSymbol,
@@ -430,7 +430,7 @@ static SEXP D(SEXP expr, SEXP var)
 	    UNPROTECT(4);
 	}
 	else if (CAR(expr) == SqrtSymbol) {
-	    PROTECT(expr1 = allocList(3));
+	    VAPROTECT(expr1, allocList(3));
 	    SET_TYPEOF(expr1, LANGSXP);
 	    SETCAR(expr1, PowerSymbol);
 	    SETCADR(expr1, CADR(expr));
@@ -644,7 +644,7 @@ SEXP doD(SEXP args)
 	warning(_("only the first element is used as variable name"));
     var = installTrChar(STRING_ELT(var, 0));
     InitDerivSymbols();
-    PROTECT(expr = D(expr, var));
+    VAPROTECT(expr, D(expr, var));
     expr = AddParens(expr);
     UNPROTECT(1);
     return expr;
@@ -795,22 +795,22 @@ static SEXP CreateGrad(SEXP names)
     SEXP p, q, data, dim, dimnames;
     int i, n;
     n = length(names);
-    PROTECT(dimnames = lang3(R_NilValue, R_NilValue, R_NilValue));
+    VAPROTECT(dimnames, lang3(R_NilValue, R_NilValue, R_NilValue));
     SETCAR(dimnames, install("list"));
     p = install("c");
-    PROTECT(q = allocList(n));
+    VAPROTECT(q, allocList(n));
     SETCADDR(dimnames, LCONS(p, q));
     UNPROTECT(1);
     for(i = 0 ; i < n ; i++) {
 	SETCAR(q, ScalarString(STRING_ELT(names, i)));
 	q = CDR(q);
     }
-    PROTECT(dim = lang3(R_NilValue, R_NilValue, R_NilValue));
+    VAPROTECT(dim, lang3(R_NilValue, R_NilValue, R_NilValue));
     SETCAR(dim, install("c"));
     SETCADR(dim, lang2(install("length"), install(".value")));
     SETCADDR(dim, ScalarInteger(length(names))); /* was real? */
-    PROTECT(data = ScalarReal(0.));
-    PROTECT(p = lang4(install("array"), data, dim, dimnames));
+    VAPROTECT(data, ScalarReal(0.));
+    VAPROTECT(p, lang4(install("array"), data, dim, dimnames));
     p = lang3(install("<-"), install(".grad"), p);
     UNPROTECT(4);
     return p;
@@ -821,10 +821,10 @@ static SEXP CreateHess(SEXP names)
     SEXP p, q, data, dim, dimnames;
     int i, n;
     n = length(names);
-    PROTECT(dimnames = lang4(R_NilValue, R_NilValue, R_NilValue, R_NilValue));
+    VAPROTECT(dimnames, lang4(R_NilValue, R_NilValue, R_NilValue, R_NilValue));
     SETCAR(dimnames, install("list"));
     p = install("c");
-    PROTECT(q = allocList(n));
+    VAPROTECT(q, allocList(n));
     SETCADDR(dimnames, LCONS(p, q));
     UNPROTECT(1);
     for(i = 0 ; i < n ; i++) {
@@ -832,13 +832,13 @@ static SEXP CreateHess(SEXP names)
 	q = CDR(q);
     }
     SETCADDDR(dimnames, duplicate(CADDR(dimnames)));
-    PROTECT(dim = lang4(R_NilValue, R_NilValue, R_NilValue,R_NilValue));
+    VAPROTECT(dim, lang4(R_NilValue, R_NilValue, R_NilValue,R_NilValue));
     SETCAR(dim, install("c"));
     SETCADR(dim, lang2(install("length"), install(".value")));
     SETCADDR(dim, ScalarInteger(length(names)));
     SETCADDDR(dim, ScalarInteger(length(names)));
-    PROTECT(data = ScalarReal(0.));
-    PROTECT(p = lang4(install("array"), data, dim, dimnames));
+    VAPROTECT(data, ScalarReal(0.));
+    VAPROTECT(p, lang4(install("array"), data, dim, dimnames));
     p = lang3(install("<-"), install(".hessian"), p);
     UNPROTECT(4);
     return p;
@@ -847,8 +847,8 @@ static SEXP CreateHess(SEXP names)
 static SEXP DerivAssign(SEXP name, SEXP expr)
 {
     SEXP ans, newname;
-    PROTECT(ans = lang3(install("<-"), R_NilValue, expr));
-    PROTECT(newname = ScalarString(name));
+    VAPROTECT(ans, lang3(install("<-"), R_NilValue, expr));
+    VAPROTECT(newname, ScalarString(name));
     SETCADR(ans, lang4(R_BracketSymbol, install(".grad"), R_MissingArg, newname));
     UNPROTECT(2);
     return ans;
@@ -857,8 +857,8 @@ static SEXP DerivAssign(SEXP name, SEXP expr)
 static SEXP HessAssign1(SEXP name, SEXP expr)
 {
     SEXP ans, newname;
-    PROTECT(ans = lang3(install("<-"), R_NilValue, expr));
-    PROTECT(newname = ScalarString(name));
+    VAPROTECT(ans, lang3(install("<-"), R_NilValue, expr));
+    VAPROTECT(newname, ScalarString(name));
     SETCADR(ans, lang5(R_BracketSymbol, install(".hessian"), R_MissingArg,
 		       newname, newname));
     UNPROTECT(2);
@@ -868,14 +868,14 @@ static SEXP HessAssign1(SEXP name, SEXP expr)
 static SEXP HessAssign2(SEXP name1, SEXP name2, SEXP expr)
 {
     SEXP ans, newname1, newname2, tmp1, tmp2, tmp3;
-    PROTECT(newname1 = ScalarString(name1));
-    PROTECT(newname2 = ScalarString(name2));
+    VAPROTECT(newname1, ScalarString(name1));
+    VAPROTECT(newname2, ScalarString(name2));
     /* this is overkill, but PR#14772 found an issue */
-    PROTECT(tmp1 = lang5(R_BracketSymbol, install(".hessian"), R_MissingArg,
+    VAPROTECT(tmp1, lang5(R_BracketSymbol, install(".hessian"), R_MissingArg,
 			 newname1, newname2));
-    PROTECT(tmp2 = lang5(R_BracketSymbol, install(".hessian"), R_MissingArg,
+    VAPROTECT(tmp2, lang5(R_BracketSymbol, install(".hessian"), R_MissingArg,
 			 newname2, newname1));
-    PROTECT(tmp3 = lang3(install("<-"), tmp2, expr));
+    VAPROTECT(tmp3, lang3(install("<-"), tmp2, expr));
     ans = lang3(install("<-"), tmp1, tmp3);
     UNPROTECT(5);
     return ans;
@@ -886,8 +886,8 @@ static SEXP HessAssign2(SEXP name1, SEXP name2, SEXP expr)
 static SEXP AddGrad(void)
 {
     SEXP ans;
-    PROTECT(ans = mkString("gradient"));
-    PROTECT(ans = lang3(install("attr"), install(".value"), ans));
+    VAPROTECT(ans, mkString("gradient"));
+    VAPROTECT(ans, lang3(install("attr"), install(".value"), ans));
     ans = lang3(install("<-"), ans, install(".grad"));
     UNPROTECT(2);
     return ans;
@@ -896,8 +896,8 @@ static SEXP AddGrad(void)
 static SEXP AddHess(void)
 {
     SEXP ans;
-    PROTECT(ans = mkString("hessian"));
-    PROTECT(ans = lang3(install("attr"), install(".value"), ans));
+    VAPROTECT(ans, mkString("hessian"));
+    VAPROTECT(ans, lang3(install("attr"), install(".value"), ans));
     ans = lang3(install("<-"), ans, install(".hessian"));
     UNPROTECT(2);
     return ans;
@@ -923,11 +923,11 @@ SEXP deriv(SEXP args)
 
     args = CDR(args);
     InitDerivSymbols();
-    PROTECT(exprlist = LCONS(R_BraceSymbol, R_NilValue));
+    VAPROTECT(exprlist, LCONS(R_BraceSymbol, R_NilValue));
     /* expr: */
     if (isExpression(CAR(args)))
-	PROTECT(expr = VECTOR_ELT(CAR(args), 0));
-    else PROTECT(expr = CAR(args));
+	VAPROTECT(expr, VECTOR_ELT(CAR(args), 0));
+    else VAPROTECT(expr, CAR(args));
     args = CDR(args);
     /* namevec: */
     names = CAR(args);
@@ -948,7 +948,7 @@ SEXP deriv(SEXP args)
     /* NOTE: FindSubexprs is destructive, hence the duplication.
        It can allocate, so protect the duplicate.
      */
-    PROTECT(ans = duplicate(expr));
+    VAPROTECT(ans, duplicate(expr));
     f_index = FindSubexprs(ans, exprlist, tag);
     d_index = (int*)R_alloc((size_t) nderiv, sizeof(int));
     if (hessian)
@@ -957,15 +957,15 @@ SEXP deriv(SEXP args)
     else d2_index = d_index;/*-Wall*/
     UNPROTECT(1);
     for(i=0, k=0; i<nderiv ; i++) {
-	PROTECT(ans = duplicate(expr));
-	PROTECT(ans = D(ans, installTrChar(STRING_ELT(names, i))));
-	PROTECT(ans2 = duplicate(ans));	/* keep a temporary copy */
+	VAPROTECT(ans, duplicate(expr));
+	VAPROTECT(ans, D(ans, installTrChar(STRING_ELT(names, i))));
+	VAPROTECT(ans2, duplicate(ans));	/* keep a temporary copy */
 	d_index[i] = FindSubexprs(ans, exprlist, tag); /* examine the derivative first */
-	PROTECT(ans = duplicate(ans2));	/* restore the copy */
+	VAPROTECT(ans, duplicate(ans2));	/* restore the copy */
 	if (hessian) {
 	    for(j = i; j < nderiv; j++) {
-		PROTECT(ans2 = duplicate(ans)); /* install could allocate */
-		PROTECT(ans2 = D(ans2, installTrChar(STRING_ELT(names, j))));
+		VAPROTECT(ans2, duplicate(ans)); /* install could allocate */
+		VAPROTECT(ans2, D(ans2, installTrChar(STRING_ELT(names, j))));
 		d2_index[k] = FindSubexprs(ans2, exprlist, tag);
 		k++;
 		UNPROTECT(2);
@@ -978,7 +978,7 @@ SEXP deriv(SEXP args)
 	Accumulate2(MakeVariable(f_index, tag), exprlist);
     }
     else {
-	PROTECT(ans = duplicate(expr));
+	VAPROTECT(ans, duplicate(expr));
 	Accumulate2(expr, exprlist);
 	UNPROTECT(1);
     }
@@ -988,14 +988,14 @@ SEXP deriv(SEXP args)
 	if (d_index[i]) {
 	    Accumulate2(MakeVariable(d_index[i], tag), exprlist);
 	    if (hessian) {
-		PROTECT(ans = duplicate(expr));
-		PROTECT(ans = D(ans, installTrChar(STRING_ELT(names, i))));
+		VAPROTECT(ans, duplicate(expr));
+		VAPROTECT(ans, D(ans, installTrChar(STRING_ELT(names, i))));
 		for (j = i; j < nderiv; j++) {
 		    if (d2_index[k]) {
 			Accumulate2(MakeVariable(d2_index[k], tag), exprlist);
 		    } else {
-			PROTECT(ans2 = duplicate(ans));
-			PROTECT(ans2 = D(ans2, installTrChar(STRING_ELT(names, j))));
+			VAPROTECT(ans2, duplicate(ans));
+			VAPROTECT(ans2, D(ans2, installTrChar(STRING_ELT(names, j))));
 			Accumulate2(ans2, exprlist);
 			UNPROTECT(2);
 		    }
@@ -1004,8 +1004,8 @@ SEXP deriv(SEXP args)
 		UNPROTECT(2);
 	    }
 	} else { /* the first derivative is constant or simple variable */
-	    PROTECT(ans = duplicate(expr));
-	    PROTECT(ans = D(ans, installTrChar(STRING_ELT(names, i))));
+	    VAPROTECT(ans, duplicate(expr));
+	    VAPROTECT(ans, D(ans, installTrChar(STRING_ELT(names, i))));
 	    Accumulate2(ans, exprlist);
 	    UNPROTECT(2);
 	    if (hessian) {
@@ -1013,8 +1013,8 @@ SEXP deriv(SEXP args)
 		    if (d2_index[k]) {
 			Accumulate2(MakeVariable(d2_index[k], tag), exprlist);
 		    } else {
-			PROTECT(ans2 = duplicate(ans));
-			PROTECT(ans2 = D(ans2, installTrChar(STRING_ELT(names, j))));
+			VAPROTECT(ans2, duplicate(ans));
+			VAPROTECT(ans2, D(ans2, installTrChar(STRING_ELT(names, j))));
 			if(isZero(ans2)) Accumulate2(R_MissingArg, exprlist);
 			else Accumulate2(ans2, exprlist);
 			UNPROTECT(2);
@@ -1037,7 +1037,7 @@ SEXP deriv(SEXP args)
 	}
 	else {
             SEXP var;
-            PROTECT(var = MakeVariable(i+1, tag));
+            VAPROTECT(var, MakeVariable(i+1, tag));
             SETCAR(ans, lang3(install("<-"), var, AddParens(CAR(ans))));
             UNPROTECT(1);
         }
@@ -1094,9 +1094,9 @@ SEXP deriv(SEXP args)
 	SET_BODY(funarg, exprlist);
     }
     else if (isString(funarg)) {
-	PROTECT(names = duplicate(funarg));
-	PROTECT(funarg = allocSExp(CLOSXP));
-	PROTECT(ans = allocList(length(names)));
+	VAPROTECT(names, duplicate(funarg));
+	VAPROTECT(funarg, allocSExp(CLOSXP));
+	VAPROTECT(ans, allocList(length(names)));
 	SET_FORMALS(funarg, ans);
 	for(i = 0; i < length(names); i++) {
 	    SET_TAG(ans, installTrChar(STRING_ELT(names, i)));

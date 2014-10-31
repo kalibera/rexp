@@ -1775,12 +1775,12 @@ static char* translateFontFamily(char* family, pX11Desc xd)
     char* result = xd->basefontfamily;
     PROTECT_INDEX xpi;
 
-    PROTECT(graphicsNS = R_FindNamespace(ScalarString(mkChar("grDevices"))));
+    VAPROTECT(graphicsNS, R_FindNamespace(ScalarString(mkChar("grDevices"))));
     PROTECT_WITH_INDEX(x11env = findVar(install(".X11env"), graphicsNS), &xpi);
     if(TYPEOF(x11env) == PROMSXP)
 	REPROTECT(x11env = eval(x11env, graphicsNS), xpi);
-    PROTECT(fontdb = findVar(install(".X11.Fonts"), x11env));
-    PROTECT(fontnames = getAttrib(fontdb, R_NamesSymbol));
+    VAPROTECT(fontdb, findVar(install(".X11.Fonts"), x11env));
+    VAPROTECT(fontnames, getAttrib(fontdb, R_NamesSymbol));
     nfonts = LENGTH(fontdb);
     if (family[0]) {
 	Rboolean found = FALSE;
@@ -2363,7 +2363,7 @@ static SEXP X11_Cap(pDevDesc dd)
         const void *vmax = vmaxget();
         unsigned int *rint;
 
-        PROTECT(raster = allocVector(INTSXP, size));
+        VAPROTECT(raster, allocVector(INTSXP, size));
         
         /* Copy each byte of screen to an R matrix. 
          * The ARGB32 needs to be converted to an R ABGR32 */
@@ -2376,7 +2376,7 @@ static SEXP X11_Cap(pDevDesc dd)
                 rint[i*xd->windowWidth + j] = bitgp((void *) image, i, j);
             }
         }
-        PROTECT(dim = allocVector(INTSXP, 2));
+        VAPROTECT(dim, allocVector(INTSXP, 2));
         INTEGER(dim)[0] = xd->windowHeight;
         INTEGER(dim)[1] = xd->windowWidth;
         setAttrib(raster, R_DimSymbol, dim);

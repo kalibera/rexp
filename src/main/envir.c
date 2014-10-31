@@ -338,7 +338,7 @@ static SEXP R_NewHashTable(int size)
     if (size <= 0) size = HASHMINSIZE;
 
     /* Allocate hash table in the form of a vector */
-    PROTECT(table = allocVector(VECSXP, size));
+    VAPROTECT(table, allocVector(VECSXP, size));
     SET_HASHPRI(table, 0);
     UNPROTECT(1);
     return(table);
@@ -358,7 +358,7 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
 
     PROTECT(enclos);
     PROTECT(size);
-    PROTECT(s = NewEnvironment(R_NilValue, R_NilValue, enclos));
+    VAPROTECT(s, NewEnvironment(R_NilValue, R_NilValue, enclos));
     SET_HASHTAB(s, R_NewHashTable(asInteger(size)));
     UNPROTECT(3);
     return s;
@@ -546,8 +546,8 @@ static SEXP R_HashProfile(SEXP table)
     SEXP chain, ans, chain_counts, nms;
     int i, count;
 
-    PROTECT(ans = allocVector(VECSXP, 3));
-    PROTECT(nms = allocVector(STRSXP, 3));
+    VAPROTECT(ans, allocVector(VECSXP, 3));
+    VAPROTECT(nms, allocVector(STRSXP, 3));
     SET_STRING_ELT(nms, 0, mkChar("size"));    /* size of hashtable */
     SET_STRING_ELT(nms, 1, mkChar("nchains")); /* number of non-null chains */
     SET_STRING_ELT(nms, 2, mkChar("counts"));  /* length of each chain */
@@ -557,7 +557,7 @@ static SEXP R_HashProfile(SEXP table)
     SET_VECTOR_ELT(ans, 0, ScalarInteger(length(table)));
     SET_VECTOR_ELT(ans, 1, ScalarInteger(HASHPRI(table)));
 
-    PROTECT(chain_counts = allocVector(INTSXP, length(table)));
+    VAPROTECT(chain_counts, allocVector(INTSXP, length(table)));
     for (i = 0; i < length(table); i++) {
 	chain = VECTOR_ELT(table, i);
 	count = 0;
@@ -1741,7 +1741,7 @@ SEXP attribute_hidden do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    warning(_("only the first element is used as variable name"));
 	name = installTrChar(STRING_ELT(CAR(args), 0));
     }
-    PROTECT(val = CADR(args));
+    VAPROTECT(val, CADR(args));
     aenv = CADDR(args);
     if (TYPEOF(aenv) == NILSXP)
 	error(_("use of NULL environment is defunct"));
@@ -2010,8 +2010,8 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
 
     if (rval == R_UnboundValue) {
 	if( isFunction(ifnotfound) ) {
-	    PROTECT(var = mkString(name));
-	    PROTECT(R_fcall = LCONS(ifnotfound, LCONS(var, R_NilValue)));
+	    VAPROTECT(var, mkString(name));
+	    VAPROTECT(R_fcall, LCONS(ifnotfound, LCONS(var, R_NilValue)));
 	    rval = eval(R_fcall, enclos);
 	    UNPROTECT(2);
 	} else
@@ -2064,7 +2064,7 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
     if( nmode != nvals && nmode != 1 )
 	error(_("wrong length for '%s' argument"), "mode");
 
-    PROTECT(ifnotfound = coerceVector(CADDDR(args), VECSXP));
+    VAPROTECT(ifnotfound, coerceVector(CADDDR(args), VECSXP));
     nifnfnd = length(ifnotfound);
     if( !isVector(ifnotfound) )
 	error(_("invalid '%s' argument"), "ifnotfound");
@@ -2076,7 +2076,7 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (ginherits == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "inherits");
 
-    PROTECT(ans = allocVector(VECSXP, nvals));
+    VAPROTECT(ans, allocVector(VECSXP, nvals));
 
     for(int i = 0; i < nvals; i++) {
 	SEXPTYPE gmode;
@@ -2310,12 +2310,12 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	    for (x = CAR(args); x != R_NilValue; x = CDR(x))
 		if (TAG(x) == R_NilValue)
 		    error(_("all elements of a list must be named"));
-	    PROTECT(s = allocSExp(ENVSXP));
+	    VAPROTECT(s, allocSExp(ENVSXP));
 	    SET_FRAME(s, shallow_duplicate(CAR(args)));
 	} else if (isEnvironment(CAR(args))) {
 	    SEXP p, loadenv = CAR(args);
 
-	    PROTECT(s = allocSExp(ENVSXP));
+	    VAPROTECT(s, allocSExp(ENVSXP));
 	    if (HASHTAB(loadenv) != R_NilValue) {
 		int i, n;
 		n = length(HASHTAB(loadenv));
@@ -2424,7 +2424,7 @@ SEXP attribute_hidden do_detach(SEXP call, SEXP op, SEXP args, SEXP env)
 	s = t;	/* for -Wall */
     }
     else {
-	PROTECT(s = ENCLOS(t));
+	VAPROTECT(s, ENCLOS(t));
 	x = ENCLOS(s);
 	SET_ENCLOS(t, x);
 	isSpecial = IS_USER_DATABASE(s);
@@ -2467,7 +2467,7 @@ SEXP attribute_hidden do_search(SEXP call, SEXP op, SEXP args, SEXP env)
     n = 2;
     for (t = ENCLOS(R_GlobalEnv); t != R_BaseEnv ; t = ENCLOS(t))
 	n++;
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     /* TODO - what should the name of this be? */
     SET_STRING_ELT(ans, 0, mkChar(".GlobalEnv"));
     SET_STRING_ELT(ans, n-1, mkChar("package:base"));
@@ -2679,7 +2679,7 @@ SEXP R_lsInternal3(SEXP env, Rboolean all, Rboolean sorted)
 	error(_("invalid '%s' argument"), "envir");
 
     /* Step 2 : Allocate and Fill the Result */
-    SEXP ans; PROTECT(ans = allocVector(STRSXP, k));
+    SEXP ans; VAPROTECT(ans, allocVector(STRSXP, k));
     k = 0;
     if (env == R_BaseEnv || env == R_BaseNamespace)
 	BuiltinNames(all, 0, ans, &k);
@@ -2735,8 +2735,8 @@ SEXP attribute_hidden do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	k = FrameSize(FRAME(env), all);
 
-    PROTECT(names = allocVector(STRSXP, k));
-    PROTECT(ans = allocVector(VECSXP, k));
+    VAPROTECT(names, allocVector(STRSXP, k));
+    VAPROTECT(ans, allocVector(VECSXP, k));
 
     k = 0;
     if (env == R_BaseEnv || env == R_BaseNamespace)
@@ -2760,15 +2760,15 @@ SEXP attribute_hidden do_env2list(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     if(sort_nms) {
 	// return list with *sorted* names
-	SEXP sind; PROTECT(sind = allocVector(INTSXP, k));
+	SEXP sind; VAPROTECT(sind, allocVector(INTSXP, k));
 	int *indx = INTEGER(sind);
 	for (int i = 0; i < k; i++) indx[i] = i;
 	orderVector1(indx, k, names, /* nalast */ TRUE, /* decreasing */ FALSE,
 		     R_NilValue);
 	SEXP ans2;
-	PROTECT(ans2 = allocVector(VECSXP, k));
+	VAPROTECT(ans2, allocVector(VECSXP, k));
 	SEXP names2;
-	PROTECT(names2 = allocVector(STRSXP, k));
+	VAPROTECT(names2, allocVector(STRSXP, k));
 	for(int i = 0; i < k; i++) {
 	    SET_STRING_ELT(names2, i, STRING_ELT(names, indx[i]));
 	    SET_VECTOR_ELT(ans2,   i, VECTOR_ELT(ans,   indx[i]));
@@ -2823,8 +2823,8 @@ SEXP attribute_hidden do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	k = FrameSize(FRAME(env), all);
 
-    PROTECT(ans  = allocVector(VECSXP, k));
-    PROTECT(tmp2 = allocVector(VECSXP, k));
+    VAPROTECT(ans, allocVector(VECSXP, k));
+    VAPROTECT(tmp2, allocVector(VECSXP, k));
 
     k2 = 0;
     if (env == R_BaseEnv || env == R_BaseNamespace)
@@ -2834,12 +2834,12 @@ SEXP attribute_hidden do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     else
 	FrameValues(FRAME(env), all, tmp2, &k2);
 
-    PROTECT(ind = allocVector(INTSXP, 1));
+    VAPROTECT(ind, allocVector(INTSXP, 1));
     /* tmp :=  `[`(<elist>, i) */
-    PROTECT(tmp = LCONS(R_Bracket2Symbol,
+    VAPROTECT(tmp, LCONS(R_Bracket2Symbol,
 			LCONS(tmp2, LCONS(ind, R_NilValue))));
     /* fcall :=  <FUN>( tmp, ... ) */
-    PROTECT(R_fcall = LCONS(FUN, LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
+    VAPROTECT(R_fcall, LCONS(FUN, LCONS(tmp, LCONS(R_DotsSymbol, R_NilValue))));
 
     for(i = 0; i < k2; i++) {
 	INTEGER(ind)[0] = i+1;
@@ -2851,7 +2851,7 @@ SEXP attribute_hidden do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (useNms) {
 	SEXP names;
-	PROTECT(names = allocVector(STRSXP, k));
+	VAPROTECT(names, allocVector(STRSXP, k));
 	k = 0;
 	if (env == R_BaseEnv || env == R_BaseNamespace)
 	    BuiltinNames(all, 0, names, &k);
@@ -2954,11 +2954,11 @@ SEXP attribute_hidden do_pos2env(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     check1arg(args, call, "x");
 
-    PROTECT(pos = coerceVector(CAR(args), INTSXP));
+    VAPROTECT(pos, coerceVector(CAR(args), INTSXP));
     npos = length(pos);
     if (npos <= 0)
 	errorcall(call, _("invalid '%s' argument"), "pos");
-    PROTECT(env = allocVector(VECSXP, npos));
+    VAPROTECT(env, allocVector(VECSXP, npos));
     for (i = 0; i < npos; i++) {
 	SET_VECTOR_ELT(env, i, pos2env(INTEGER(pos)[i], call));
     }
@@ -3021,7 +3021,7 @@ do_as_environment(SEXP call, SEXP op, SEXP args, SEXP rho)
     case VECSXP: {
 	/* implement as.environment.list() {isObject(.) is false for a list} */
 	SEXP call, val;
-	PROTECT(call = lang4(install("list2env"), arg,
+	VAPROTECT(call, lang4(install("list2env"), arg,
 			     /* envir = */R_NilValue,
 			     /* parent = */R_EmptyEnv));
 	val = eval(call, rho);
@@ -3371,7 +3371,7 @@ SEXP R_FindPackageEnv(SEXP info)
 {
     SEXP expr, val;
     PROTECT(info);
-    PROTECT(expr = LCONS(install("findPackageEnv"), LCONS(info, R_NilValue)));
+    VAPROTECT(expr, LCONS(install("findPackageEnv"), LCONS(info, R_NilValue)));
     val = eval(expr, R_GlobalEnv);
     UNPROTECT(2);
     return val;
@@ -3429,7 +3429,7 @@ SEXP R_FindNamespace(SEXP info)
 {
     SEXP expr, val;
     PROTECT(info);
-    PROTECT(expr = LCONS(install("getNamespace"), LCONS(info, R_NilValue)));
+    VAPROTECT(expr, LCONS(install("getNamespace"), LCONS(info, R_NilValue)));
     val = eval(expr, R_GlobalEnv);
     UNPROTECT(2);
     return val;
@@ -3764,7 +3764,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     }
     if (cval == R_NilValue) {
 	/* no cached value; need to allocate one and add to the cache */
-	PROTECT(cval = allocCharsxp(len));
+	VAPROTECT(cval, allocCharsxp(len));
 	memcpy(CHAR_RW(cval), name, len);
 	switch(enc) {
 	case CE_NATIVE:

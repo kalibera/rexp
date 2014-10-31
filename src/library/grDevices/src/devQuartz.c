@@ -610,12 +610,12 @@ const char *RQuartz_LookUpFontName(int fontface, const char *fontfamily)
     const char *mappedFont = 0;
     SEXP ns, env, db, names;
     PROTECT_INDEX index;
-    PROTECT(ns = R_FindNamespace(ScalarString(mkChar("grDevices"))));
+    VAPROTECT(ns, R_FindNamespace(ScalarString(mkChar("grDevices"))));
     PROTECT_WITH_INDEX(env = findVar(install(".Quartzenv"), ns), &index);
     if(TYPEOF(env) == PROMSXP)
         REPROTECT(env = eval(env,ns) ,index);
-    PROTECT(db    = findVar(install(".Quartz.Fonts"), env));
-    PROTECT(names = getAttrib(db, R_NamesSymbol));
+    VAPROTECT(db, findVar(install(".Quartz.Fonts"), env));
+    VAPROTECT(names, getAttrib(db, R_NamesSymbol));
     if (*fontfamily) {
         int i;
         for(i = 0; i < length(names); i++)
@@ -1481,7 +1481,7 @@ SEXP Quartz(SEXP args)
 	const char *devname = "quartz_off_screen";
 	if(streql(type, "") || streql(type, "native") || streql(type, "cocoa") 
 	   || streql(type, "carbon")) devname = "quartz";
-	SEXP f; PROTECT(f = mkString(devname));
+	SEXP f; VAPROTECT(f, mkString(devname));
 	if(file) setAttrib(f, install("filepath"), mkString(file));
  	gsetVar(R_DeviceSymbol, f, R_BaseEnv);
 	UNPROTECT(1);

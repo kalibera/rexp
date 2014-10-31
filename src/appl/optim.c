@@ -54,7 +54,7 @@ static void genptry(int n, double *p, double *ptry, double scale, void *ex)
 
     if (!isNull(OS->R_gcall)) {
 	/* user defined generation of candidate point */
-	PROTECT(x = allocVector(REALSXP, n));
+	VAPROTECT(x, allocVector(REALSXP, n));
 	for (i = 0; i < n; i++) {
 	    if (!R_FINITE(p[i]))
 		error(_("non-finite value supplied by 'optim'"));

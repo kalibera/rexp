@@ -2939,7 +2939,7 @@ static SEXP makeSrcref(YYLTYPE *lloc, SEXP srcfile)
 {
     SEXP val;
 
-    PROTECT(val = allocVector(INTSXP, 8));
+    VAPROTECT(val, allocVector(INTSXP, 8));
     INTEGER(val)[0] = lloc->first_line;
     INTEGER(val)[1] = lloc->first_byte;
     INTEGER(val)[2] = lloc->last_line;
@@ -2959,7 +2959,7 @@ static SEXP attachSrcrefs(SEXP val)
     SEXP srval;
 
     PROTECT(val);
-    PROTECT(srval = PairToVectorList(SrcRefs));
+    VAPROTECT(srval, PairToVectorList(SrcRefs));
     
     setAttrib(val, R_SrcrefSymbol, srval);
     setAttrib(val, R_SrcfileSymbol, ParseState.SrcFile);
@@ -2995,7 +2995,7 @@ static int xxvalue(SEXP v, int k, YYLTYPE *lloc)
 static SEXP xxnullformal()
 {
     SEXP ans;
-    PROTECT(ans = R_NilValue);
+    VAPROTECT(ans, R_NilValue);
     return ans;
 }
 
@@ -3004,9 +3004,9 @@ static SEXP xxfirstformal0(SEXP sym)
     SEXP ans;
     UNPROTECT_PTR(sym);
     if (GenerateCode)
-	PROTECT(ans = FirstArg(R_MissingArg, sym));
+	VAPROTECT(ans, FirstArg(R_MissingArg, sym));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     return ans;
 }
 
@@ -3014,9 +3014,9 @@ static SEXP xxfirstformal1(SEXP sym, SEXP expr)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = FirstArg(expr, sym));
+	VAPROTECT(ans, FirstArg(expr, sym));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(expr);
     UNPROTECT_PTR(sym);
     return ans;
@@ -3027,10 +3027,10 @@ static SEXP xxaddformal0(SEXP formlist, SEXP sym, YYLTYPE *lloc)
     SEXP ans;
     if (GenerateCode) {
 	CheckFormalArgs(formlist, sym, lloc);
-	PROTECT(ans = NextArg(formlist, R_MissingArg, sym));
+	VAPROTECT(ans, NextArg(formlist, R_MissingArg, sym));
     }
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(sym);
     UNPROTECT_PTR(formlist);
     return ans;
@@ -3041,10 +3041,10 @@ static SEXP xxaddformal1(SEXP formlist, SEXP sym, SEXP expr, YYLTYPE *lloc)
     SEXP ans;
     if (GenerateCode) {
 	CheckFormalArgs(formlist, sym, lloc);
-	PROTECT(ans = NextArg(formlist, expr, sym));
+	VAPROTECT(ans, NextArg(formlist, expr, sym));
     }
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(expr);
     UNPROTECT_PTR(sym);
     UNPROTECT_PTR(formlist);
@@ -3055,14 +3055,14 @@ static SEXP xxexprlist0(void)
 {
     SEXP ans;
     if (GenerateCode) {
-	PROTECT(ans = NewList());
+	VAPROTECT(ans, NewList());
 	if (ParseState.keepSrcRefs) {
 	    setAttrib(ans, R_SrcrefSymbol, SrcRefs);
 	    REPROTECT(SrcRefs = R_NilValue, srindex);
 	}
     }
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     return ans;
 }
 
@@ -3070,16 +3070,16 @@ static SEXP xxexprlist1(SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans,tmp;
     if (GenerateCode) {
-	PROTECT(tmp = NewList());
+	VAPROTECT(tmp, NewList());
 	if (ParseState.keepSrcRefs) {
 	    setAttrib(tmp, R_SrcrefSymbol, SrcRefs);
 	    REPROTECT(SrcRefs = list1(makeSrcref(lloc, ParseState.SrcFile)), srindex);
 	}
-	PROTECT(ans = GrowList(tmp, expr));
+	VAPROTECT(ans, GrowList(tmp, expr));
 	UNPROTECT_PTR(tmp);
     }
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(expr);
     return ans;
 }
@@ -3090,10 +3090,10 @@ static SEXP xxexprlist2(SEXP exprlist, SEXP expr, YYLTYPE *lloc)
     if (GenerateCode) {
 	if (ParseState.keepSrcRefs)
 	    REPROTECT(SrcRefs = listAppend(SrcRefs, list1(makeSrcref(lloc, ParseState.SrcFile))), srindex);
-	PROTECT(ans = GrowList(exprlist, expr));
+	VAPROTECT(ans, GrowList(exprlist, expr));
     }
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(expr);
     UNPROTECT_PTR(exprlist);
     return ans;
@@ -3103,9 +3103,9 @@ static SEXP xxsub0(void)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = lang2(R_MissingArg,R_NilValue));
+	VAPROTECT(ans, lang2(R_MissingArg,R_NilValue));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     return ans;
 }
 
@@ -3113,9 +3113,9 @@ static SEXP xxsub1(SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = TagArg(expr, R_NilValue, lloc));
+	VAPROTECT(ans, TagArg(expr, R_NilValue, lloc));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(expr);
     return ans;
 }
@@ -3124,9 +3124,9 @@ static SEXP xxsymsub0(SEXP sym, YYLTYPE *lloc)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = TagArg(R_MissingArg, sym, lloc));
+	VAPROTECT(ans, TagArg(R_MissingArg, sym, lloc));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(sym);
     return ans;
 }
@@ -3135,9 +3135,9 @@ static SEXP xxsymsub1(SEXP sym, SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = TagArg(expr, sym, lloc));
+	VAPROTECT(ans, TagArg(expr, sym, lloc));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(expr);
     UNPROTECT_PTR(sym);
     return ans;
@@ -3148,9 +3148,9 @@ static SEXP xxnullsub0(YYLTYPE *lloc)
     SEXP ans;
     UNPROTECT_PTR(R_NilValue);
     if (GenerateCode)
-	PROTECT(ans = TagArg(R_MissingArg, install("NULL"), lloc));
+	VAPROTECT(ans, TagArg(R_MissingArg, install("NULL"), lloc));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     return ans;
 }
 
@@ -3159,9 +3159,9 @@ static SEXP xxnullsub1(SEXP expr, YYLTYPE *lloc)
     SEXP ans = install("NULL");
     UNPROTECT_PTR(R_NilValue);
     if (GenerateCode)
-	PROTECT(ans = TagArg(expr, ans, lloc));
+	VAPROTECT(ans, TagArg(expr, ans, lloc));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(expr);
     return ans;
 }
@@ -3171,9 +3171,9 @@ static SEXP xxsublist1(SEXP sub)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = FirstArg(CAR(sub),CADR(sub)));
+	VAPROTECT(ans, FirstArg(CAR(sub),CADR(sub)));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(sub);
     return ans;
 }
@@ -3182,9 +3182,9 @@ static SEXP xxsublist2(SEXP sublist, SEXP sub)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = NextArg(sublist, CAR(sub), CADR(sub)));
+	VAPROTECT(ans, NextArg(sublist, CAR(sub), CADR(sub)));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(sub);
     UNPROTECT_PTR(sublist);
     return ans;
@@ -3206,9 +3206,9 @@ static SEXP xxif(SEXP ifsym, SEXP cond, SEXP expr)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = lang3(ifsym, cond, expr));
+	VAPROTECT(ans, lang3(ifsym, cond, expr));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(expr);
     UNPROTECT_PTR(cond);
     return ans;
@@ -3218,9 +3218,9 @@ static SEXP xxifelse(SEXP ifsym, SEXP cond, SEXP ifexpr, SEXP elseexpr)
 {
     SEXP ans;
     if( GenerateCode)
-	PROTECT(ans = lang4(ifsym, cond, ifexpr, elseexpr));
+	VAPROTECT(ans, lang4(ifsym, cond, ifexpr, elseexpr));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(elseexpr);
     UNPROTECT_PTR(ifexpr);
     UNPROTECT_PTR(cond);
@@ -3232,9 +3232,9 @@ static SEXP xxforcond(SEXP sym, SEXP expr)
     SEXP ans;
     EatLines = 1;
     if (GenerateCode)
-	PROTECT(ans = LCONS(sym, expr));
+	VAPROTECT(ans, LCONS(sym, expr));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(expr);
     UNPROTECT_PTR(sym);
     return ans;
@@ -3244,9 +3244,9 @@ static SEXP xxfor(SEXP forsym, SEXP forcond, SEXP body)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = lang4(forsym, CAR(forcond), CDR(forcond), body));
+	VAPROTECT(ans, lang4(forsym, CAR(forcond), CDR(forcond), body));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(body);
     UNPROTECT_PTR(forcond);
     return ans;
@@ -3256,9 +3256,9 @@ static SEXP xxwhile(SEXP whilesym, SEXP cond, SEXP body)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = lang3(whilesym, cond, body));
+	VAPROTECT(ans, lang3(whilesym, cond, body));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(body);
     UNPROTECT_PTR(cond);
     return ans;
@@ -3268,9 +3268,9 @@ static SEXP xxrepeat(SEXP repeatsym, SEXP body)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = lang2(repeatsym, body));
+	VAPROTECT(ans, lang2(repeatsym, body));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(body);
     return ans;
 }
@@ -3278,9 +3278,9 @@ static SEXP xxrepeat(SEXP repeatsym, SEXP body)
 static SEXP xxnxtbrk(SEXP keyword)
 {
     if (GenerateCode)
-	PROTECT(keyword = lang1(keyword));
+	VAPROTECT(keyword, lang1(keyword));
     else
-	PROTECT(keyword = R_NilValue);
+	VAPROTECT(keyword, R_NilValue);
     return keyword;
 }
 
@@ -3299,7 +3299,7 @@ static SEXP xxfuncall(SEXP expr, SEXP args)
 	PROTECT(ans);
     }
     else {
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     }
     UNPROTECT_PTR(args);
     UNPROTECT_PTR(sav_expr);
@@ -3314,7 +3314,7 @@ static SEXP mkString2(const char *s, size_t len, Rboolean escaped)
     if(known_to_be_latin1) enc= CE_LATIN1;
     else if(!escaped && known_to_be_utf8) enc = CE_UTF8;
 
-    PROTECT(t = allocVector(STRSXP, 1));
+    VAPROTECT(t, allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharLenCE(s, (int) len, enc));
     UNPROTECT(1);
     return t;
@@ -3331,9 +3331,9 @@ static SEXP xxdefun(SEXP fname, SEXP formals, SEXP body, YYLTYPE *lloc)
     	    ParseState.didAttach = TRUE;
     	} else
     	    srcref = R_NilValue;
-	PROTECT(ans = lang4(fname, CDR(formals), body, srcref));
+	VAPROTECT(ans, lang4(fname, CDR(formals), body, srcref));
     } else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(body);
     UNPROTECT_PTR(formals);
     return ans;
@@ -3343,9 +3343,9 @@ static SEXP xxunary(SEXP op, SEXP arg)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = lang2(op, arg));
+	VAPROTECT(ans, lang2(op, arg));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(arg);
     return ans;
 }
@@ -3354,9 +3354,9 @@ static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = lang3(n1, n2, n3));
+	VAPROTECT(ans, lang3(n1, n2, n3));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(n2);
     UNPROTECT_PTR(n3);
     return ans;
@@ -3366,9 +3366,9 @@ static SEXP xxparen(SEXP n1, SEXP n2)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = lang2(n1, n2));
+	VAPROTECT(ans, lang2(n1, n2));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(n2);
     return ans;
 }
@@ -3382,9 +3382,9 @@ static SEXP xxsubscript(SEXP a1, SEXP a2, SEXP a3)
 {
     SEXP ans;
     if (GenerateCode)
-	PROTECT(ans = LCONS(a2, CONS(a1, CDR(a3))));
+	VAPROTECT(ans, LCONS(a2, CONS(a1, CDR(a3))));
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(a3);
     UNPROTECT_PTR(a1);
     return ans;
@@ -3400,19 +3400,19 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 	SET_TYPEOF(a2, LANGSXP);
 	SETCAR(a2, a1);
 	if (ParseState.keepSrcRefs) {
-	    PROTECT(prevSrcrefs = getAttrib(a2, R_SrcrefSymbol));
+	    VAPROTECT(prevSrcrefs, getAttrib(a2, R_SrcrefSymbol));
 	    REPROTECT(SrcRefs = CONS(makeSrcref(lloc, ParseState.SrcFile), SrcRefs), srindex);
-	    PROTECT(ans = attachSrcrefs(a2));
+	    VAPROTECT(ans, attachSrcrefs(a2));
 	    REPROTECT(SrcRefs = prevSrcrefs, srindex);
 	    /* SrcRefs got NAMED by being an attribute... */
 	    SET_NAMED(SrcRefs, 0);
 	    UNPROTECT_PTR(prevSrcrefs);
 	}
 	else
-	    PROTECT(ans = a2);
+	    VAPROTECT(ans, a2);
     }
     else
-	PROTECT(ans = R_NilValue);
+	VAPROTECT(ans, R_NilValue);
     UNPROTECT_PTR(a2);
     return ans;
 }
@@ -3467,7 +3467,7 @@ static SEXP FirstArg(SEXP s, SEXP tag)
     SEXP tmp;
     PROTECT(s);
     PROTECT(tag);
-    PROTECT(tmp = NewList());
+    VAPROTECT(tmp, NewList());
     tmp = GrowList(tmp, s);
     SET_TAG(CAR(tmp), tag);
     UNPROTECT(3);
@@ -3776,7 +3776,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
    	    buf[buflen] = 0;
     	    defineVar(install("filename"), ScalarString(mkChar("")), ParseState.Original);
     	    defineVar(install("lines"), ScalarString(mkChar(buf)), ParseState.Original);
-    	    PROTECT(class = allocVector(STRSXP, 2));
+    	    VAPROTECT(class, allocVector(STRSXP, 2));
             SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
             SET_STRING_ELT(class, 1, mkChar("srcfile"));
 	    setAttrib(ParseState.Original, R_ClassSymbol, class);
@@ -3805,7 +3805,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     savestack = R_PPStackTop;
     
     ParseContextInit();
-    PROTECT(t = NewList());
+    VAPROTECT(t, NewList());
 
     REPROTECT(ParseState.SrcFile = srcfile, ParseState.SrcFileProt);
     REPROTECT(ParseState.Original = srcfile, ParseState.OriginalProt);
@@ -3843,7 +3843,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 finish:
 
     t = CDR(t);
-    PROTECT(rval = allocVector(EXPRSXP, length(t)));
+    VAPROTECT(rval, allocVector(EXPRSXP, length(t)));
     for (n = 0 ; n < LENGTH(rval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(rval, n, CAR(t));
     if (ParseState.keepSrcRefs) {
@@ -3933,7 +3933,7 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     bufp = buf;
     R_InitSrcRefState();    
     savestack = R_PPStackTop;
-    PROTECT(t = NewList());
+    VAPROTECT(t, NewList());
     
     GenerateCode = 1;
     iob = buffer;
@@ -3989,7 +3989,7 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 finish:
     R_IoBufferWriteReset(buffer);
     t = CDR(t);
-    PROTECT(rval = allocVector(EXPRSXP, length(t)));
+    VAPROTECT(rval, allocVector(EXPRSXP, length(t)));
     for (n = 0 ; n < LENGTH(rval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(rval, n, CAR(t));
     if (ParseState.keepSrcRefs) {
@@ -4107,47 +4107,47 @@ static int KeywordLookup(const char *s)
 	if (strcmp(keywords[i].name, s) == 0) {
 	    switch (keywords[i].token) {
 	    case NULL_CONST:
-		PROTECT(yylval = R_NilValue);
+		VAPROTECT(yylval, R_NilValue);
 		break;
 	    case NUM_CONST:
 		if(GenerateCode) {
 		    switch(i) {
 		    case 1:
-			PROTECT(yylval = mkNA());
+			VAPROTECT(yylval, mkNA());
 			break;
 		    case 2:
-			PROTECT(yylval = mkTrue());
+			VAPROTECT(yylval, mkTrue());
 			break;
 		    case 3:
-			PROTECT(yylval = mkFalse());
+			VAPROTECT(yylval, mkFalse());
 			break;
 		    case 4:
-			PROTECT(yylval = allocVector(REALSXP, 1));
+			VAPROTECT(yylval, allocVector(REALSXP, 1));
 			REAL(yylval)[0] = R_PosInf;
 			break;
 		    case 5:
-			PROTECT(yylval = allocVector(REALSXP, 1));
+			VAPROTECT(yylval, allocVector(REALSXP, 1));
 			REAL(yylval)[0] = R_NaN;
 			break;
 		    case 6:
-			PROTECT(yylval = allocVector(INTSXP, 1));
+			VAPROTECT(yylval, allocVector(INTSXP, 1));
 			INTEGER(yylval)[0] = NA_INTEGER;
 			break;
 		    case 7:
-			PROTECT(yylval = allocVector(REALSXP, 1));
+			VAPROTECT(yylval, allocVector(REALSXP, 1));
 			REAL(yylval)[0] = NA_REAL;
 			break;
 		    case 8:
-			PROTECT(yylval = allocVector(STRSXP, 1));
+			VAPROTECT(yylval, allocVector(STRSXP, 1));
 			SET_STRING_ELT(yylval, 0, NA_STRING);
 			break;
 		    case 9:
-			PROTECT(yylval = allocVector(CPLXSXP, 1));
+			VAPROTECT(yylval, allocVector(CPLXSXP, 1));
 			COMPLEX(yylval)[0].r = COMPLEX(yylval)[0].i = NA_REAL;
 			break;
 		    }
 		} else
-		    PROTECT(yylval = R_NilValue);
+		    VAPROTECT(yylval, R_NilValue);
 		break;
 	    case FUNCTION:
 	    case WHILE:
@@ -4162,7 +4162,7 @@ static int KeywordLookup(const char *s)
 	    case ELSE:
 		break;
 	    case SYMBOL:
-		PROTECT(yylval = install(s));
+		VAPROTECT(yylval, install(s));
 		break;
 	    }
 	    return keywords[i].token;
@@ -4665,7 +4665,7 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
 #else
     wcstoutf8(s, wcs, nb);
 #endif
-    PROTECT(t = allocVector(STRSXP, 1));
+    VAPROTECT(t, allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharCE(s, CE_UTF8));
     UNPROTECT(1);
     return t;
@@ -4894,7 +4894,7 @@ static int StringValue(int c, Rboolean forSymbol)
     yytext[0] = '\0';
     if (c == R_EOF) {
         if(stext != st0) free(stext);
-        PROTECT(yylval = R_NilValue);
+        VAPROTECT(yylval, R_NilValue);
     	return INCOMPLETE_STRING;
     } else {
     	CTEXT_PUSH(c);
@@ -4903,7 +4903,7 @@ static int StringValue(int c, Rboolean forSymbol)
     if (!currtext_truncated)
     	strcpy(yytext, currtext);
     if(forSymbol) {
-	PROTECT(yylval = install(stext));
+	VAPROTECT(yylval, install(stext));
 	if(stext != st0) free(stext);
 	return SYMBOL;
     } else {
@@ -4911,11 +4911,11 @@ static int StringValue(int c, Rboolean forSymbol)
 	    if(oct_or_hex)
 		error(_("mixing Unicode and octal/hex escapes in a string is not allowed"));
 	    if(wcnt < 10000)
-		PROTECT(yylval = mkStringUTF8(wcs, wcnt)); /* include terminator */
+		VAPROTECT(yylval, mkStringUTF8(wcs, wcnt)); /* include terminator */
 	    else
 		error(_("string at line %d containing Unicode escapes not in this locale\nis too long (max 10000 chars)"), ParseState.xxlineno);
 	} else
-	    PROTECT(yylval = mkString2(stext,  bp - stext - 1, oct_or_hex));
+	    VAPROTECT(yylval, mkString2(stext,  bp - stext - 1, oct_or_hex));
 	if(stext != st0) free(stext);
 	return STR_CONST;
     }
@@ -5013,7 +5013,7 @@ static int SymbolValue(int c)
     if ((kw = KeywordLookup(yytext))) 
 	return kw;
     
-    PROTECT(yylval = install(yytext));
+    VAPROTECT(yylval, install(yytext));
     return SYMBOL;
 }
 
@@ -5029,7 +5029,7 @@ static void setParseFilename(SEXP newname) {
 	defineVar(install("filename"), newname, ParseState.SrcFile);
 	defineVar(install("original"), ParseState.Original, ParseState.SrcFile);
 
-	PROTECT(class = allocVector(STRSXP, 2));
+	VAPROTECT(class, allocVector(STRSXP, 2));
 	SET_STRING_ELT(class, 0, mkChar("srcfilealias"));
 	SET_STRING_ELT(class, 1, mkChar("srcfile"));
 	setAttrib(ParseState.SrcFile, R_ClassSymbol, class);
@@ -5673,7 +5673,7 @@ static void modif_token( yyltype* loc, int tok ){
 /* this local version of lengthgets() always copies and doesn't fill with NA */
 static SEXP lengthgets2(SEXP x, int len) {
     SEXP result;
-    PROTECT(result = allocVector( TYPEOF(x), len ));
+    VAPROTECT(result, allocVector( TYPEOF(x), len ));
     
     len = (len < length(x)) ? len : length(x);
     switch(TYPEOF(x)) {
@@ -5775,7 +5775,7 @@ static void finalizeData( ){
 
     /* attach the token names as an attribute so we don't need to switch to a dataframe, and decide on terminals */
     SEXP tokens;
-    PROTECT(tokens = allocVector( STRSXP, nloc ) );
+    VAPROTECT(tokens, allocVector( STRSXP, nloc ) );
     for (int i=0; i<nloc; i++) {
         int token = _TOKEN(i);
         int xlat = yytranslate[token];

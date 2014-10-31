@@ -37,12 +37,12 @@ int isUnitList(SEXP ul) {
 SEXP unit(double value, int unit) 
 {
     SEXP u, units, classname;
-    PROTECT(u = ScalarReal(value));
-    PROTECT(units = ScalarInteger(unit));
+    VAPROTECT(u, ScalarReal(value));
+    VAPROTECT(units, ScalarInteger(unit));
     /* NOTE that we do not set the "unit" attribute */
     setAttrib(u, install("valid.unit"), units);
     setAttrib(u, install("data"), R_NilValue);
-    PROTECT(classname = mkString("unit"));
+    VAPROTECT(classname, mkString("unit"));
     classgets(u, classname);
     UNPROTECT(3);
     return u;
@@ -297,25 +297,25 @@ int pureNullUnit(SEXP unit, int index, pGEDevDesc dd) {
 	     * In this case, need to find the grob first, and in order
 	     * to do that correctly, need to call pre/postDraw code 
 	     */
-	    PROTECT(grob = unitData(unit, index));
-	    PROTECT(savedgpar = gridStateElement(dd, GSS_GPAR));
-	    PROTECT(savedgrob = gridStateElement(dd, GSS_CURRGROB));
-	    PROTECT(widthPreFn = findFun(install("preDraw"), 
+	    VAPROTECT(grob, unitData(unit, index));
+	    VAPROTECT(savedgpar, gridStateElement(dd, GSS_GPAR));
+	    VAPROTECT(savedgrob, gridStateElement(dd, GSS_CURRGROB));
+	    VAPROTECT(widthPreFn, findFun(install("preDraw"), 
 					 R_gridEvalEnv));
-	    PROTECT(widthFn = findFun(install("width"), R_gridEvalEnv));
-	    PROTECT(widthPostFn = findFun(install("postDraw"), 
+	    VAPROTECT(widthFn, findFun(install("width"), R_gridEvalEnv));
+	    VAPROTECT(widthPostFn, findFun(install("postDraw"), 
 					  R_gridEvalEnv));
 	    if (inherits(grob, "gPath")) {
 		if (isNull(savedgrob)) {
-		    PROTECT(findGrobFn = findFun(install("findGrobinDL"), 
+		    VAPROTECT(findGrobFn, findFun(install("findGrobinDL"), 
 						 R_gridEvalEnv));
-		    PROTECT(R_fcall0 = lang2(findGrobFn, 
+		    VAPROTECT(R_fcall0, lang2(findGrobFn, 
 					     getListElement(grob, "name")));
 		    grob = eval(R_fcall0, R_gridEvalEnv);
 		} else {
-		    PROTECT(findGrobFn =findFun(install("findGrobinChildren"), 
+		    VAPROTECT(findGrobFn,findFun(install("findGrobinChildren"), 
 						R_gridEvalEnv));
-		    PROTECT(R_fcall0 = lang3(findGrobFn, 
+		    VAPROTECT(R_fcall0, lang3(findGrobFn, 
 					     getListElement(grob, "name"),
 					     getListElement(savedgrob, 
 							    "children")));
@@ -323,12 +323,12 @@ int pureNullUnit(SEXP unit, int index, pGEDevDesc dd) {
 		}
 		UNPROTECT(2);
 	    }
-	    PROTECT(R_fcall1 = lang2(widthPreFn, grob));
-            PROTECT(updatedgrob = eval(R_fcall1, R_gridEvalEnv));
-	    PROTECT(R_fcall2 = lang2(widthFn, updatedgrob));
-	    PROTECT(width = eval(R_fcall2, R_gridEvalEnv));
+	    VAPROTECT(R_fcall1, lang2(widthPreFn, grob));
+            VAPROTECT(updatedgrob, eval(R_fcall1, R_gridEvalEnv));
+	    VAPROTECT(R_fcall2, lang2(widthFn, updatedgrob));
+	    VAPROTECT(width, eval(R_fcall2, R_gridEvalEnv));
 	    result = pureNullUnit(width, 0, dd);
-	    PROTECT(R_fcall3 = lang2(widthPostFn, updatedgrob));
+	    VAPROTECT(R_fcall3, lang2(widthPostFn, updatedgrob));
 	    eval(R_fcall3, R_gridEvalEnv);
 	    setGridStateElement(dd, GSS_GPAR, savedgpar);
 	    setGridStateElement(dd, GSS_CURRGROB, savedgrob);
@@ -343,25 +343,25 @@ int pureNullUnit(SEXP unit, int index, pGEDevDesc dd) {
 	     * In this case, need to find the grob first, and in order
 	     * to do that correctly, need to call pre/postDraw code 
 	     */
-	    PROTECT(grob = unitData(unit, index));
-	    PROTECT(savedgpar = gridStateElement(dd, GSS_GPAR));
-	    PROTECT(savedgrob = gridStateElement(dd, GSS_CURRGROB));
-	    PROTECT(heightPreFn = findFun(install("preDraw"), 
+	    VAPROTECT(grob, unitData(unit, index));
+	    VAPROTECT(savedgpar, gridStateElement(dd, GSS_GPAR));
+	    VAPROTECT(savedgrob, gridStateElement(dd, GSS_CURRGROB));
+	    VAPROTECT(heightPreFn, findFun(install("preDraw"), 
 					 R_gridEvalEnv));
-	    PROTECT(heightFn = findFun(install("height"), R_gridEvalEnv));
-	    PROTECT(heightPostFn = findFun(install("postDraw"), 
+	    VAPROTECT(heightFn, findFun(install("height"), R_gridEvalEnv));
+	    VAPROTECT(heightPostFn, findFun(install("postDraw"), 
 					  R_gridEvalEnv));
 	    if (inherits(grob, "gPath")) {
 		if (isNull(savedgrob)) {
-		    PROTECT(findGrobFn = findFun(install("findGrobinDL"), 
+		    VAPROTECT(findGrobFn, findFun(install("findGrobinDL"), 
 						 R_gridEvalEnv));
-		    PROTECT(R_fcall0 = lang2(findGrobFn, 
+		    VAPROTECT(R_fcall0, lang2(findGrobFn, 
 					     getListElement(grob, "name")));
 		    grob = eval(R_fcall0, R_gridEvalEnv);
 		} else {
-		    PROTECT(findGrobFn =findFun(install("findGrobinChildren"), 
+		    VAPROTECT(findGrobFn,findFun(install("findGrobinChildren"), 
 						R_gridEvalEnv));
-		    PROTECT(R_fcall0 = lang3(findGrobFn, 
+		    VAPROTECT(R_fcall0, lang3(findGrobFn, 
 					     getListElement(grob, "name"),
 					     getListElement(savedgrob, 
 							    "children")));
@@ -369,12 +369,12 @@ int pureNullUnit(SEXP unit, int index, pGEDevDesc dd) {
 		}
 		UNPROTECT(2);
 	    }
-	    PROTECT(R_fcall1 = lang2(heightPreFn, grob));
-	    PROTECT(updatedgrob = eval(R_fcall1, R_gridEvalEnv));
-	    PROTECT(R_fcall2 = lang2(heightFn, updatedgrob));
-	    PROTECT(height = eval(R_fcall2, R_gridEvalEnv));
+	    VAPROTECT(R_fcall1, lang2(heightPreFn, grob));
+	    VAPROTECT(updatedgrob, eval(R_fcall1, R_gridEvalEnv));
+	    VAPROTECT(R_fcall2, lang2(heightFn, updatedgrob));
+	    VAPROTECT(height, eval(R_fcall2, R_gridEvalEnv));
 	    result = pureNullUnit(height, 0, dd);
-	    PROTECT(R_fcall3 = lang2(heightPostFn, updatedgrob));
+	    VAPROTECT(R_fcall3, lang2(heightPostFn, updatedgrob));
 	    eval(R_fcall3, R_gridEvalEnv);
 	    setGridStateElement(dd, GSS_GPAR, savedgpar);
 	    setGridStateElement(dd, GSS_CURRGROB, savedgrob);
@@ -469,35 +469,35 @@ double evaluateGrobUnit(double value, SEXP grob,
     /* 
      * Save the current gpar state and restore it at the end
      */
-    PROTECT(savedgpar = gridStateElement(dd, GSS_GPAR));
+    VAPROTECT(savedgpar, gridStateElement(dd, GSS_GPAR));
     /*
      * Save the current grob and restore it at the end
      */
-    PROTECT(savedgrob = gridStateElement(dd, GSS_CURRGROB));
+    VAPROTECT(savedgrob, gridStateElement(dd, GSS_CURRGROB));
     /*
      * Set up for calling R functions 
      */
-    PROTECT(preFn = findFun(install("preDraw"), R_gridEvalEnv));
+    VAPROTECT(preFn, findFun(install("preDraw"), R_gridEvalEnv));
     switch(evalType) {
     case 0:
     case 1:
-	PROTECT(evalFnx = findFun(install("xDetails"), R_gridEvalEnv));
-	PROTECT(evalFny = findFun(install("yDetails"), R_gridEvalEnv));
+	VAPROTECT(evalFnx, findFun(install("xDetails"), R_gridEvalEnv));
+	VAPROTECT(evalFny, findFun(install("yDetails"), R_gridEvalEnv));
 	break;
     case 2:
-	PROTECT(evalFnx = findFun(install("width"), R_gridEvalEnv));
+	VAPROTECT(evalFnx, findFun(install("width"), R_gridEvalEnv));
 	break;
     case 3:
-	PROTECT(evalFny = findFun(install("height"), R_gridEvalEnv));
+	VAPROTECT(evalFny, findFun(install("height"), R_gridEvalEnv));
 	break;
     case 4:
-	PROTECT(evalFny = findFun(install("ascentDetails"), R_gridEvalEnv));
+	VAPROTECT(evalFny, findFun(install("ascentDetails"), R_gridEvalEnv));
         break;
     case 5:
-	PROTECT(evalFny = findFun(install("descentDetails"), R_gridEvalEnv));
+	VAPROTECT(evalFny, findFun(install("descentDetails"), R_gridEvalEnv));
         break;
     }
-    PROTECT(postFn = findFun(install("postDraw"), R_gridEvalEnv));
+    VAPROTECT(postFn, findFun(install("postDraw"), R_gridEvalEnv));
     /*
      * If grob is actually a gPath, use it to find an actual grob
      */
@@ -510,18 +510,18 @@ double evaluateGrobUnit(double value, SEXP grob,
 	 * NOTE: assume here that only gPath of depth == 1 are valid
 	 */
 	if (isNull(savedgrob)) {
-	    PROTECT(findGrobFn = findFun(install("findGrobinDL"), 
+	    VAPROTECT(findGrobFn, findFun(install("findGrobinDL"), 
 					 R_gridEvalEnv));
-	    PROTECT(R_fcall0 = lang2(findGrobFn, 
+	    VAPROTECT(R_fcall0, lang2(findGrobFn, 
 				     getListElement(grob, "name")));
-	    PROTECT(grob = eval(R_fcall0, R_gridEvalEnv));
+	    VAPROTECT(grob, eval(R_fcall0, R_gridEvalEnv));
 	} else {
-	    PROTECT(findGrobFn = findFun(install("findGrobinChildren"), 
+	    VAPROTECT(findGrobFn, findFun(install("findGrobinChildren"), 
 					 R_gridEvalEnv));
-	    PROTECT(R_fcall0 = lang3(findGrobFn, 
+	    VAPROTECT(R_fcall0, lang3(findGrobFn, 
 				     getListElement(grob, "name"),
 				     getListElement(savedgrob, "children")));
-	    PROTECT(grob = eval(R_fcall0, R_gridEvalEnv));
+	    VAPROTECT(grob, eval(R_fcall0, R_gridEvalEnv));
 	}
 	/*
 	 * Flag to make sure we UNPROTECT these at the end
@@ -530,8 +530,8 @@ double evaluateGrobUnit(double value, SEXP grob,
     }
     /* Call preDraw(grob) 
      */
-    PROTECT(R_fcall1 = lang2(preFn, grob));
-    PROTECT(updatedgrob = eval(R_fcall1, R_gridEvalEnv));
+    VAPROTECT(R_fcall1, lang2(preFn, grob));
+    VAPROTECT(updatedgrob, eval(R_fcall1, R_gridEvalEnv));
     /* 
      * The call to preDraw may have pushed viewports and/or
      * enforced gpar settings, SO we need to re-establish the
@@ -565,22 +565,22 @@ double evaluateGrobUnit(double value, SEXP grob,
 	 */
 	{
 	    SEXP val;
-	    PROTECT(val = ScalarReal(value));
-	    PROTECT(R_fcall2x = lang3(evalFnx, updatedgrob, val));
-	    PROTECT(unitx = eval(R_fcall2x, R_gridEvalEnv));
-	    PROTECT(R_fcall2y = lang3(evalFny, updatedgrob, val));
-	    PROTECT(unity = eval(R_fcall2y, R_gridEvalEnv));
+	    VAPROTECT(val, ScalarReal(value));
+	    VAPROTECT(R_fcall2x, lang3(evalFnx, updatedgrob, val));
+	    VAPROTECT(unitx, eval(R_fcall2x, R_gridEvalEnv));
+	    VAPROTECT(R_fcall2y, lang3(evalFny, updatedgrob, val));
+	    VAPROTECT(unity, eval(R_fcall2y, R_gridEvalEnv));
 	}
 	break;
     case 2:
-	PROTECT(R_fcall2x = lang2(evalFnx, updatedgrob));
-	PROTECT(unitx = eval(R_fcall2x, R_gridEvalEnv));
+	VAPROTECT(R_fcall2x, lang2(evalFnx, updatedgrob));
+	VAPROTECT(unitx, eval(R_fcall2x, R_gridEvalEnv));
 	break;
     case 3:
     case 4:
     case 5:
-	PROTECT(R_fcall2y = lang2(evalFny, updatedgrob));
-	PROTECT(unity = eval(R_fcall2y, R_gridEvalEnv));
+	VAPROTECT(R_fcall2y, lang2(evalFny, updatedgrob));
+	VAPROTECT(unity, eval(R_fcall2y, R_gridEvalEnv));
 	break;
     }
     /* 
@@ -652,7 +652,7 @@ double evaluateGrobUnit(double value, SEXP grob,
     }
     /* Call postDraw(grob)
      */
-    PROTECT(R_fcall3 = lang2(postFn, updatedgrob));
+    VAPROTECT(R_fcall3, lang2(postFn, updatedgrob));
     eval(R_fcall3, R_gridEvalEnv);
     /* 
      * Restore the saved gpar state and grob
@@ -971,7 +971,7 @@ double transformX(SEXP x, int index,
 	    nullamode = nullAMode;
 	result = unitValue(x, index);
 	unit = unitUnit(x, index);
-	PROTECT(data = unitData(x, index));
+	VAPROTECT(data, unitData(x, index));
 	result = transformLocation(result, unit, data, 
 				   vpc.xscalemin, vpc.xscalemax, gc,
 				   widthCM, heightCM, 
@@ -1013,7 +1013,7 @@ double transformY(SEXP y, int index,
 	    nullamode = nullAMode;
 	result = unitValue(y, index);
 	unit = unitUnit(y, index);
-	PROTECT(data = unitData(y, index));
+	VAPROTECT(data, unitData(y, index));
 	result = transformLocation(result, unit, data, 
 				   vpc.yscalemin, vpc.yscalemax, gc,
 				   heightCM, widthCM, 
@@ -1077,7 +1077,7 @@ double transformWidth(SEXP width, int index,
 	    nullamode = nullAMode;
 	result = unitValue(width, index);
 	unit = unitUnit(width, index);
-	PROTECT(data = unitData(width, index));
+	VAPROTECT(data, unitData(width, index));
 	result = transformDimension(result, unit, data, 
 				    vpc.xscalemin, vpc.xscalemax, gc,
 				    widthCM, heightCM, 
@@ -1119,7 +1119,7 @@ double transformHeight(SEXP height, int index,
 	    nullamode = nullAMode;
 	result = unitValue(height, index);
 	unit = unitUnit(height, index);
-	PROTECT(data = unitData(height, index));
+	VAPROTECT(data, unitData(height, index));
 	result = transformDimension(result, unit, data, 
 				    vpc.yscalemin, vpc.yscalemax, gc,
 				    heightCM, widthCM, 
@@ -1906,7 +1906,7 @@ SEXP validUnits(SEXP units)
     SEXP answer = R_NilValue;
     if (n > 0) {
 	if (isString(units)) {
-	    PROTECT(answer = allocVector(INTSXP, n));
+	    VAPROTECT(answer, allocVector(INTSXP, n));
 	    for (i = 0; i<n; i++) 
 		INTEGER(answer)[i] = convertUnit(units, i);
 	    UNPROTECT(1);

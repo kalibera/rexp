@@ -137,7 +137,7 @@ SEXP pAnsari(SEXP q, SEXP sm, SEXP sn)
     int m = asInteger(sm), n = asInteger(sn);
     q = PROTECT(coerceVector(q, REALSXP));
     int len = LENGTH(q);
-    SEXP p; PROTECT(p = allocVector(REALSXP, len));
+    SEXP p; VAPROTECT(p, allocVector(REALSXP, len));
     pansari(len, REAL(q), REAL(p), m, n);
     UNPROTECT(2);
     return p;
@@ -148,7 +148,7 @@ SEXP qAnsari(SEXP p, SEXP sm, SEXP sn)
     int m = asInteger(sm), n = asInteger(sn);
     p = PROTECT(coerceVector(p, REALSXP));
     int len = LENGTH(p);
-    SEXP q; PROTECT(q = allocVector(REALSXP, len));
+    SEXP q; VAPROTECT(q, allocVector(REALSXP, len));
     qansari(len, REAL(p), REAL(q), m, n);
     UNPROTECT(2);
     return q;

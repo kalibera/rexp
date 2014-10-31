@@ -187,7 +187,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
     /* Convert to a vector of integer subscripts */
     /* in the range 1:length(x). */
 
-    PROTECT(indx = makeSubscript(x, s, &stretch, call));
+    VAPROTECT(indx, makeSubscript(x, s, &stretch, call));
     n = XLENGTH(indx);
 
     /* Allocate the result. */
@@ -200,7 +200,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 	   so to be conservative mark the result as NAMED = 2 */
 	SET_NAMED(result, 2);
 
-    PROTECT(result = ExtractSubset(x, result, indx, call));
+    VAPROTECT(result, ExtractSubset(x, result, indx, call));
     if (result != R_NilValue) {
 	if (
 	    ((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
@@ -337,7 +337,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
 	}
     }
     if(nrs >= 0 && ncs >= 0) {
-	PROTECT(attr = allocVector(INTSXP, 2));
+	VAPROTECT(attr, allocVector(INTSXP, 2));
 	INTEGER(attr)[0] = nrs;
 	INTEGER(attr)[1] = ncs;
 	setAttrib(result, R_DimSymbol, attr);
@@ -353,7 +353,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
 	dimnames = getAttrib(x, R_DimNamesSymbol);
 	dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
 	if (!isNull(dimnames)) {
-	    PROTECT(newdimnames = allocVector(VECSXP, 2));
+	    VAPROTECT(newdimnames, allocVector(VECSXP, 2));
 	    if (TYPEOF(dimnames) == VECSXP) {
 	      SET_VECTOR_ELT(newdimnames, 0,
 		    ExtractSubset(VECTOR_ELT(dimnames, 0),
@@ -411,7 +411,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 	n *= bound[i];
 	r = CDR(r);
     }
-    PROTECT(result = allocVector(mode, n));
+    VAPROTECT(result, allocVector(mode, n));
     r = s;
     for (int i = 0; i < k; i++) {
 	indx[i] = 0;
@@ -497,7 +497,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 	}
     }
 
-    PROTECT(xdims = allocVector(INTSXP, k));
+    VAPROTECT(xdims, allocVector(INTSXP, k));
     for(int i = 0 ; i < k ; i++)
 	INTEGER(xdims)[i] = bound[i];
     setAttrib(result, R_DimSymbol, xdims);
@@ -512,7 +512,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
     if (dimnames != R_NilValue) {
 	int j = 0;
-	PROTECT(xdims = allocVector(VECSXP, k));
+	VAPROTECT(xdims, allocVector(VECSXP, k));
 	if (TYPEOF(dimnames) == VECSXP) {
 	    r = s;
 	    for (int i = 0; i < k ; i++) {
@@ -776,12 +776,12 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SEXP dim = getAttrib(x, R_DimSymbol);
 	int ndim = length(dim);
 	if (ndim > 1) {
-	    PROTECT(ax = allocArray(VECSXP, dim));
+	    VAPROTECT(ax, allocArray(VECSXP, dim));
 	    setAttrib(ax, R_DimNamesSymbol, getAttrib(x, R_DimNamesSymbol));
 	    setAttrib(ax, R_NamesSymbol, getAttrib(x, R_DimNamesSymbol));
 	}
 	else {
-	    PROTECT(ax = allocVector(VECSXP, length(x)));
+	    VAPROTECT(ax, allocVector(VECSXP, length(x)));
 	    setAttrib(ax, R_NamesSymbol, getAttrib(x, R_NamesSymbol));
 	}
 	for(px = x, i = 0 ; px != R_NilValue ; px = CDR(px))
@@ -795,7 +795,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
     if(nsubs < 2) {
 	SEXP dim = getAttrib(x, R_DimSymbol);
 	int ndim = length(dim);
-	PROTECT(ans = VectorSubset(ax, (nsubs == 1 ? CAR(subs) : R_MissingArg),
+	VAPROTECT(ans, VectorSubset(ax, (nsubs == 1 ? CAR(subs) : R_MissingArg),
 				   call));
 	/* one-dimensional arrays went through here, and they should
 	   have their dimensions dropped only if the result has
@@ -807,13 +807,13 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	    if(!drop || len > 1) {
 		// must grab these before the dim is set.
-		SEXP nm; PROTECT(nm = getAttrib(ans, R_NamesSymbol));
-		PROTECT(attr = allocVector(INTSXP, 1));
+		SEXP nm; VAPROTECT(nm, getAttrib(ans, R_NamesSymbol));
+		VAPROTECT(attr, allocVector(INTSXP, 1));
 		INTEGER(attr)[0] = length(ans);
 		setAttrib(ans, R_DimSymbol, attr);
 		if((attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue) {
 		    /* reinstate dimnames, include names of dimnames */
-		    PROTECT(nattrib = duplicate(attrib));
+		    VAPROTECT(nattrib, duplicate(attrib));
 		    SET_VECTOR_ELT(nattrib, 0, nm);
 		    setAttrib(ans, R_DimNamesSymbol, nattrib);
 		    setAttrib(ans, R_NamesSymbol, R_NilValue);
@@ -837,7 +837,7 @@ SEXP attribute_hidden do_subset_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (type == LANGSXP) {
 	ax = ans;
-	PROTECT(ans = allocList(LENGTH(ax)));
+	VAPROTECT(ans, allocList(LENGTH(ax)));
 	if ( LENGTH(ax) > 0 )
 	    SET_TYPEOF(ans, LANGSXP);
 	for(px = ans, i = 0 ; px != R_NilValue ; px = CDR(px))
@@ -1003,7 +1003,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	int ndn; /* Number of dimnames. Unlikely to be anything but
 		    0 or nsubs, but just in case... */
 
-	PROTECT(indx = allocVector(INTSXP, nsubs));
+	VAPROTECT(indx, allocVector(INTSXP, nsubs));
 	dimnames = getAttrib(x, R_DimNamesSymbol);
 	ndn = length(dimnames);
 	for (i = 0; i < nsubs; i++) {
@@ -1131,7 +1131,7 @@ SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
     /* Previously this was SETCADR(args, input); */
     /* which could cause problems when nlist was */
     /* ..., as in PR#8718 */
-    PROTECT(args = CONS(CAR(args), CONS(input, R_NilValue)));
+    VAPROTECT(args, CONS(CAR(args), CONS(input, R_NilValue)));
 
     /* If the first argument is an object and there is */
     /* an approriate method, we dispatch to that method, */

@@ -239,7 +239,7 @@ SEXP do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 			if ((ll >= 0) && (buf[ll] == '\n')) buf[ll] = '\0';
 			tchar = mkChar(buf);
 			UNPROTECT(1); /* tlist */
-			PROTECT(tlist = CONS(tchar, tlist));
+			VAPROTECT(tlist, CONS(tchar, tlist));
 		    }
 
 	    } else {
@@ -255,7 +255,7 @@ SEXP do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 		    CHAR(STRING_ELT(cmd, 0)), ll);
     }
     if (flag == 3) { /* intern = TRUE: convert pairlist to list */
-	PROTECT(rval = allocVector(STRSXP, i));
+	VAPROTECT(rval, allocVector(STRSXP, i));
 	for (j = (i - 1); j >= 0; j--) {
 	    SET_STRING_ELT(rval, j, CAR(tlist));
 	    tlist = CDR(tlist);

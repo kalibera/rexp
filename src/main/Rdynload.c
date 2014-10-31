@@ -952,9 +952,9 @@ Rf_MakeNativeSymbolRef(DL_FUNC f)
 {
     SEXP ref, klass;
 
-    PROTECT(ref = R_MakeExternalPtrFn(f, install("native symbol"),
+    VAPROTECT(ref, R_MakeExternalPtrFn(f, install("native symbol"),
 				      R_NilValue));
-    PROTECT(klass = mkString("NativeSymbol"));
+    VAPROTECT(klass, mkString("NativeSymbol"));
     setAttrib(ref, R_ClassSymbol, klass);
     UNPROTECT(2);
     return(ref);
@@ -983,12 +983,12 @@ Rf_MakeRegisteredNativeSymbol(R_RegisteredNativeSymbol *symbol)
     }
     *copy = *symbol;
 
-    PROTECT(ref = R_MakeExternalPtr(copy,
+    VAPROTECT(ref, R_MakeExternalPtr(copy,
 				    install("registered native symbol"),
 				    R_NilValue));
     R_RegisterCFinalizer(ref, freeRegisteredNativeSymbolCopy);
 
-    PROTECT(klass = mkString("RegisteredNativeSymbol"));
+    VAPROTECT(klass, mkString("RegisteredNativeSymbol"));
     setAttrib(ref, R_ClassSymbol, klass);
 
     UNPROTECT(2);
@@ -1001,7 +1001,7 @@ Rf_makeDllObject(HINSTANCE inst)
 {
     SEXP ans;
 
-    PROTECT(ans = R_MakeExternalPtr(inst, install("DLLHandle"),
+    VAPROTECT(ans, R_MakeExternalPtr(inst, install("DLLHandle"),
 				    R_NilValue));
     setAttrib(ans, R_ClassSymbol, mkString("DLLHandle"));
     UNPROTECT(1);
@@ -1014,7 +1014,7 @@ Rf_makeDllInfoReference(HINSTANCE inst)
 {
     SEXP ans;
 
-    PROTECT(ans = R_MakeExternalPtr(inst, install("DLLInfo"),
+    VAPROTECT(ans, R_MakeExternalPtr(inst, install("DLLInfo"),
 				    install("DLLInfo")));
     setAttrib(ans, R_ClassSymbol, mkString("DLLInfoReference"));
     UNPROTECT(1);
@@ -1039,7 +1039,7 @@ Rf_MakeDLLInfo(DllInfo *info)
 
     n = sizeof(names)/sizeof(names[0]);
 
-    PROTECT(ref = allocVector(VECSXP, n));
+    VAPROTECT(ref, allocVector(VECSXP, n));
     SET_VECTOR_ELT(ref, 0, tmp = allocVector(STRSXP, 1));
     if(info->name)
 	SET_STRING_ELT(tmp, 0, mkChar(info->name));
@@ -1052,7 +1052,7 @@ Rf_MakeDLLInfo(DllInfo *info)
 
     SET_VECTOR_ELT(ref, 4, Rf_makeDllInfoReference((HINSTANCE) info));
 
-    PROTECT(elNames = allocVector(STRSXP, n));
+    VAPROTECT(elNames, allocVector(STRSXP, n));
     for(i = 0; i < n; i++)
 	SET_STRING_ELT(elNames, i, mkChar(names[i]));
     setAttrib(ref, R_NamesSymbol, elNames);
@@ -1120,7 +1120,7 @@ R_getDllTable()
     SEXP ans;
 
  again:
-    PROTECT(ans = allocVector(VECSXP, CountDLL));
+    VAPROTECT(ans, allocVector(VECSXP, CountDLL));
     for(i = 0; i < CountDLL; i++) {
 	SET_VECTOR_ELT(ans, i, Rf_MakeDLLInfo(&(LoadedDLL[i])));
     }
@@ -1146,11 +1146,11 @@ createRSymbolObject(SEXP sname, DL_FUNC f, R_RegisteredNativeSymbol *symbol,
     int n = (symbol->type != R_ANY_SYM) ? 4 : 3;
     int numProtects = 0;
 
-    PROTECT(sym = allocVector(VECSXP, n));    numProtects++;
-    PROTECT(names = allocVector(STRSXP, n));    numProtects++;
+    VAPROTECT(sym, allocVector(VECSXP, n));    numProtects++;
+    VAPROTECT(names, allocVector(STRSXP, n));    numProtects++;
 
     if(!sname || sname == R_NilValue) {
-	PROTECT(sname = mkString(symbol->symbol.call->name));
+	VAPROTECT(sname, mkString(symbol->symbol.call->name));
 	numProtects++;
     }
 
@@ -1167,7 +1167,7 @@ createRSymbolObject(SEXP sname, DL_FUNC f, R_RegisteredNativeSymbol *symbol,
     SET_STRING_ELT(names, 2, mkChar("dll"));
 
 
-    PROTECT(klass = allocVector(STRSXP, (symbol->type != R_ANY_SYM ? 2 : 1)));
+    VAPROTECT(klass, allocVector(STRSXP, (symbol->type != R_ANY_SYM ? 2 : 1)));
     numProtects++;
     SET_STRING_ELT(klass, length(klass)-1, mkChar("NativeSymbolInfo"));
 
@@ -1236,7 +1236,7 @@ R_getRoutineSymbols(NativeSymbolType type, DllInfo *info)
 	num = 0;
     }
 
-    PROTECT(ans = allocVector(VECSXP, num));
+    VAPROTECT(ans, allocVector(VECSXP, num));
 
     for(i = 0; i < num ; i++) {
 	switch(type) {
@@ -1284,14 +1284,14 @@ R_getRegisteredRoutines(SEXP dll)
     if(!info) error(_("NULL value passed for DllInfo"));
 
 
-    PROTECT(ans = allocVector(VECSXP, 4));
+    VAPROTECT(ans, allocVector(VECSXP, 4));
 
     SET_VECTOR_ELT(ans, 0, R_getRoutineSymbols(R_C_SYM, info));
     SET_VECTOR_ELT(ans, 1, R_getRoutineSymbols(R_CALL_SYM, info));
     SET_VECTOR_ELT(ans, 2, R_getRoutineSymbols(R_FORTRAN_SYM, info));
     SET_VECTOR_ELT(ans, 3, R_getRoutineSymbols(R_EXTERNAL_SYM, info));
 
-    PROTECT(snames = allocVector(STRSXP, 4));
+    VAPROTECT(snames, allocVector(STRSXP, 4));
     for(i = 0; i < 4; i++)
 	SET_STRING_ELT(snames, i, mkChar(names[i]));
     setAttrib(ans, R_NamesSymbol, snames);
@@ -1339,7 +1339,7 @@ do_getDllTable(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
 
  again:
-    PROTECT(ans = allocVector(VECSXP, CountDLL));
+    VAPROTECT(ans, allocVector(VECSXP, CountDLL));
     for(int i = 0; i < CountDLL; i++)
 	SET_VECTOR_ELT(ans, i, Rf_MakeDLLInfo(&(LoadedDLL[i])));
     setAttrib(ans, R_ClassSymbol, mkString("DLLInfoList"));
@@ -1353,7 +1353,7 @@ do_getDllTable(SEXP call, SEXP op, SEXP args, SEXP env)
     if (CountDLL != LENGTH(ans)) goto again;
 
     PROTECT(ans);
-    PROTECT(nm = allocVector(STRSXP, CountDLL));
+    VAPROTECT(nm, allocVector(STRSXP, CountDLL));
     setAttrib(ans, R_NamesSymbol, nm);
     for(int i = 0; i < CountDLL; i++)
 	SET_STRING_ELT(nm, i, 
@@ -1378,14 +1378,14 @@ do_getRegisteredRoutines(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!info) error(_("NULL value passed for DllInfo"));
 
 
-    PROTECT(ans = allocVector(VECSXP, 4));
+    VAPROTECT(ans, allocVector(VECSXP, 4));
 
     SET_VECTOR_ELT(ans, 0, R_getRoutineSymbols(R_C_SYM, info));
     SET_VECTOR_ELT(ans, 1, R_getRoutineSymbols(R_CALL_SYM, info));
     SET_VECTOR_ELT(ans, 2, R_getRoutineSymbols(R_FORTRAN_SYM, info));
     SET_VECTOR_ELT(ans, 3, R_getRoutineSymbols(R_EXTERNAL_SYM, info));
 
-    PROTECT(snames = allocVector(STRSXP, 4));
+    VAPROTECT(snames, allocVector(STRSXP, 4));
     for(int i = 0; i < 4; i++)
 	SET_STRING_ELT(snames, i, mkChar(names[i]));
     setAttrib(ans, R_NamesSymbol, snames);

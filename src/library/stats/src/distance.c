@@ -278,7 +278,7 @@ SEXP Cdist(SEXP x, SEXP smethod, SEXP attrs, SEXP p)
     R_xlen_t N;
     double rp = asReal(p);
     N = (R_xlen_t)nr * (nr-1)/2; /* avoid int overflow for N ~ 50,000 */
-    PROTECT(ans = allocVector(REALSXP, N));
+    VAPROTECT(ans, allocVector(REALSXP, N));
     if(TYPEOF(x) != REALSXP) x = coerceVector(x, REALSXP);
     PROTECT(x);
     R_distance(REAL(x), &nr, &nc, REAL(ans), &diag, &method, &rp);

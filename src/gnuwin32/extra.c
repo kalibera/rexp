@@ -176,7 +176,7 @@ SEXP do_sysinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
     DWORD namelen = MAX_COMPUTERNAME_LENGTH + 1, userlen = UNLEN+1;
 
     checkArity(op, args);
-    PROTECT(ans = allocVector(STRSXP, 8));
+    VAPROTECT(ans, allocVector(STRSXP, 8));
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
     if(!GetVersionEx((OSVERSIONINFO *)&osvi))
 	error(_("unsupported version of Windows"));
@@ -240,7 +240,7 @@ SEXP do_sysinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
     SET_STRING_ELT(ans, 5, mkCharCE(buf, CE_UTF8));
     SET_STRING_ELT(ans, 6, STRING_ELT(ans, 5));
     SET_STRING_ELT(ans, 7, STRING_ELT(ans, 5));
-    PROTECT(ansnames = allocVector(STRSXP, 8));
+    VAPROTECT(ansnames, allocVector(STRSXP, 8));
     SET_STRING_ELT(ansnames, 0, mkChar("sysname"));
     SET_STRING_ELT(ansnames, 1, mkChar("release"));
     SET_STRING_ELT(ansnames, 2, mkChar("version"));
@@ -319,7 +319,7 @@ SEXP in_memsize(SEXP ssize)
     } else
 	error(_("incorrect argument"));
 	
-    PROTECT(ans = allocVector(REALSXP, 1));
+    VAPROTECT(ans, allocVector(REALSXP, 1));
 #ifdef LEA_MALLOC
     if(maxmem == NA_LOGICAL)
 	REAL(ans)[0] = R_max_memory;
@@ -348,7 +348,7 @@ SEXP do_dllversion(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("invalid '%s' argument"), "path");
     dll = filenameToWchar(STRING_ELT(path, 0), FALSE);
     dwVerInfoSize = GetFileVersionInfoSizeW(dll, &dwVerHnd);
-    PROTECT(ans = allocVector(STRSXP, 2));
+    VAPROTECT(ans, allocVector(STRSXP, 2));
     SET_STRING_ELT(ans, 0, mkChar(""));
     SET_STRING_ELT(ans, 1, mkChar(""));
     if (dwVerInfoSize) {
@@ -436,7 +436,7 @@ SEXP do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
     
     mustWork = asLogical(CADDR(args));
 
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
     	int warn = 0;
     	SEXP result;
@@ -527,7 +527,7 @@ SEXP in_shortpath(SEXP paths)
 
     if(!isString(paths)) error(_("'path' must be a character vector"));
 
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
 	el = STRING_ELT(paths, i);
 	if(getCharCE(el) == CE_UTF8) {
@@ -826,7 +826,7 @@ SEXP attribute_hidden do_filechoose(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!fn)
 	error(_("file choice cancelled"));
     wcstoutf8(str, fn, 4*MAX_PATH+1);
-    PROTECT(ans = allocVector(STRSXP, 1));
+    VAPROTECT(ans, allocVector(STRSXP, 1));
     SET_STRING_ELT(ans, 0, mkCharCE(str, CE_UTF8));
     UNPROTECT(1);
     return ans;

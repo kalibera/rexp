@@ -193,7 +193,7 @@ static void PrintLanguageEtc(SEXP s, Rboolean useSource, Rboolean isClosure)
     if (!isInteger(t) || !useSource)
 	t = deparse1w(s, 0, useSource | DEFAULTDEPARSE);
     else {
-        PROTECT(t = lang2(install("as.character"), t));
+        VAPROTECT(t, lang2(install("as.character"), t));
         t = eval(t, R_BaseEnv);
         UNPROTECT(1);
     }
@@ -304,7 +304,7 @@ SEXP attribute_hidden do_printdefault(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if(showS == R_UnboundValue)
 		error("missing show() in methods namespace: this should not happen");
 	}
-	PROTECT(call = lang2(showS, x));
+	VAPROTECT(call, lang2(showS, x));
 	eval(call, rho);
 	UNPROTECT(1);
     } else {
@@ -330,10 +330,11 @@ static void PrintGenericVector(SEXP s, SEXP env)
     if((dims = getAttrib(s, R_DimSymbol)) != R_NilValue && length(dims) > 1) {
 	// special case: array-like list
 	PROTECT(dims);
-	PROTECT(t = allocArray(STRSXP, dims));
+	VAPROTECT(t, allocArray(STRSXP, dims));
 	/* FIXME: check (ns <= R_print.max +1) ? ns : R_print.max; */
 	for (i = 0; i < ns; i++) {
-	    switch(TYPEOF(PROTECT(tmp = VECTOR_ELT(s, i)))) {
+    	    VAPROTECT(tmp, VECTOR_ELT(s, i));	
+	    switch(TYPEOF(tmp)) {
 	    case NILSXP:
 		snprintf(pbuf, 115, "NULL");
 		break;
@@ -435,7 +436,7 @@ static void PrintGenericVector(SEXP s, SEXP env)
 	names = getAttrib(s, R_NamesSymbol);
 	taglen = (int) strlen(tagbuf);
 	ptag = tagbuf + taglen;
-	PROTECT(newcall = allocList(2));
+	VAPROTECT(newcall, allocList(2));
 	SETCAR(newcall, install("print"));
 	SET_TYPEOF(newcall, LANGSXP);
 
@@ -537,7 +538,7 @@ static void printList(SEXP s, SEXP env)
     if ((dims = getAttrib(s, R_DimSymbol)) != R_NilValue && length(dims) > 1) {
 	// special case: array-like list
 	PROTECT(dims);
-	PROTECT(t = allocArray(STRSXP, dims));
+	VAPROTECT(t, allocArray(STRSXP, dims));
 	i = 0;
 	while(s != R_NilValue) {
 	    switch(TYPEOF(CAR(s))) {
@@ -599,7 +600,7 @@ static void printList(SEXP s, SEXP env)
 	i = 1;
 	taglen = (int) strlen(tagbuf);
 	ptag = tagbuf + taglen;
-	PROTECT(newcall = allocList(2));
+	VAPROTECT(newcall, allocList(2));
 	SETCAR(newcall, install("print"));
 	SET_TYPEOF(newcall, LANGSXP);
 	while (TYPEOF(s) == LISTSXP) {
@@ -769,11 +770,11 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
     case STRSXP:
     case CPLXSXP:
     case RAWSXP:
-	PROTECT(t = getAttrib(s, R_DimSymbol));
+	VAPROTECT(t, getAttrib(s, R_DimSymbol));
 	if (TYPEOF(t) == INTSXP) {
 	    if (LENGTH(t) == 1) {
 		const void *vmax = vmaxget();
-		PROTECT(t = getAttrib(s, R_DimNamesSymbol));
+		VAPROTECT(t, getAttrib(s, R_DimNamesSymbol));
 		if (t != R_NilValue && VECTOR_ELT(t, 0) != R_NilValue) {
 		    SEXP nn = getAttrib(t, R_NamesSymbol);
 		    const char *title = NULL;
@@ -803,7 +804,7 @@ void attribute_hidden PrintValueRec(SEXP s, SEXP env)
 	}
 	else {
 	    UNPROTECT(1);
-	    PROTECT(t = getAttrib(s, R_NamesSymbol));
+	    VAPROTECT(t, getAttrib(s, R_NamesSymbol));
 	    if (t != R_NilValue)
 		printNamedVector(s, t, R_print.quote, NULL);
 	    else
@@ -886,7 +887,7 @@ static void printAttributes(SEXP s, SEXP env, Rboolean useSlots)
 	    if (TAG(a) == R_RowNamesSymbol) {
 		/* need special handling AND protection */
 		SEXP val;
-		PROTECT(val = getAttrib(s, R_RowNamesSymbol));
+		VAPROTECT(val, getAttrib(s, R_RowNamesSymbol));
 		PrintValueRec(val, env);
 		UNPROTECT(1);
 		goto nextattr;
@@ -903,7 +904,7 @@ static void printAttributes(SEXP s, SEXP env, Rboolean useSlots)
 		    if(showS == R_UnboundValue)
 			error("missing show() in methods namespace: this should not happen");
 		}
-		PROTECT(s = lang2(showS, CAR(a)));
+		VAPROTECT(s, lang2(showS, CAR(a)));
 		eval(s, env);
 		UNPROTECT(1);
 	    } else if (isObject(CAR(a))) {
@@ -925,7 +926,7 @@ static void printAttributes(SEXP s, SEXP env, Rboolean useSlots)
 		    na_width_noquote = R_print.na_width_noquote;
 		Rprt_adj right = R_print.right;
 
-		PROTECT(t = s = allocList(3));
+		VAPROTECT(t, s = allocList(3));
 		SET_TYPEOF(s, LANGSXP);
 		SETCAR(t, install("print")); t = CDR(t);
 		SETCAR(t,  CAR(a)); t = CDR(t);
@@ -984,10 +985,10 @@ void attribute_hidden PrintValueEnv(SEXP s, SEXP env)
 		if(showS == R_UnboundValue)
 		    error("missing show() in methods namespace: this should not happen");
 	    }
-	    PROTECT(call = lang2(showS, s));
+	    VAPROTECT(call, lang2(showS, s));
 	}
 	else /* S3 */
-	    PROTECT(call = lang2(install("print"), s));
+	    VAPROTECT(call, lang2(install("print"), s));
 
 	if (TYPEOF(s) == SYMSXP || TYPEOF(s) == LANGSXP)
 	    /* If s is not self-evaluating wrap it in a promise. Doing

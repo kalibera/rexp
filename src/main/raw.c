@@ -58,7 +58,7 @@ SEXP attribute_hidden do_rawToChar(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_xlen_t i, nc = XLENGTH(x);
 	char buf[2];
 	buf[1] = '\0';
-	PROTECT(ans = allocVector(STRSXP, nc));
+	VAPROTECT(ans, allocVector(STRSXP, nc));
 	for (i = 0; i < nc; i++) {
 	    buf[0] = (char) RAW(x)[i];
 	    SET_STRING_ELT(ans, i, mkChar(buf));
@@ -70,7 +70,7 @@ SEXP attribute_hidden do_rawToChar(SEXP call, SEXP op, SEXP args, SEXP env)
 	   Strip trailing nuls */
 	for (i = 0, j = -1; i < nc; i++) if(RAW(x)[i]) j = i;
 	nc = j + 1;
-	PROTECT(ans = allocVector(STRSXP, 1));
+	VAPROTECT(ans, allocVector(STRSXP, 1));
 	SET_STRING_ELT(ans, 0,
 		       mkCharLenCE((const char *)RAW(x), j+1, CE_NATIVE));
     }
@@ -89,7 +89,7 @@ SEXP attribute_hidden do_rawShift(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("argument 'x' must be a raw vector"));
     if (shift == NA_INTEGER || shift < -8 || shift > 8)
 	error(_("argument 'shift' must be a small integer"));
-    PROTECT(ans = duplicate(x));
+    VAPROTECT(ans, duplicate(x));
     if (shift > 0)
 	for (R_xlen_t i = 0; i < XLENGTH(x); i++)
 	    RAW(ans)[i] <<= shift;
@@ -108,7 +108,7 @@ SEXP attribute_hidden do_rawToBits(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (!isRaw(x))
 	error(_("argument 'x' must be a raw vector"));
-    PROTECT(ans = allocVector(RAWSXP, 8*XLENGTH(x)));
+    VAPROTECT(ans, allocVector(RAWSXP, 8*XLENGTH(x)));
     for (i = 0; i < XLENGTH(x); i++) {
 	tmp = (unsigned int) RAW(x)[i];
 	for (int k = 0; k < 8; k++, tmp >>= 1)
@@ -124,10 +124,10 @@ SEXP attribute_hidden do_intToBits(SEXP call, SEXP op, SEXP args, SEXP env)
     R_xlen_t i, j = 0;
     unsigned int tmp;
     
-    PROTECT(x = coerceVector(CAR(args), INTSXP));
+    VAPROTECT(x, coerceVector(CAR(args), INTSXP));
     if (!isInteger(x))
 	error(_("argument 'x' must be an integer vector"));
-    PROTECT(ans = allocVector(RAWSXP, 32*XLENGTH(x)));
+    VAPROTECT(ans, allocVector(RAWSXP, 32*XLENGTH(x)));
     for (i = 0; i < XLENGTH(x); i++) {
 	tmp = (unsigned int) INTEGER(x)[i];
 	for (int k = 0; k < 32; k++, tmp >>= 1)
@@ -153,7 +153,7 @@ SEXP attribute_hidden do_packBits(SEXP call, SEXP op, SEXP args, SEXP env)
     if (len% fac)
 	error(_("argument 'x' must be a multiple of %d long"), fac);
     slen = len/fac;
-    PROTECT(ans = allocVector(useRaw ? RAWSXP : INTSXP, slen));
+    VAPROTECT(ans, allocVector(useRaw ? RAWSXP : INTSXP, slen));
     for (i = 0; i < slen; i++)
 	if (useRaw) {
 	    Rbyte btmp = 0;
@@ -322,7 +322,7 @@ SEXP attribute_hidden do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
     char buf[10], *tmp;
 
     checkArity(op, args);
-    PROTECT(x = coerceVector(CAR(args), INTSXP));
+    VAPROTECT(x, coerceVector(CAR(args), INTSXP));
     if (!isInteger(x))
 	error(_("argument 'x' must be an integer vector"));
     multiple = asLogical(CADR(args));
@@ -330,7 +330,7 @@ SEXP attribute_hidden do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("argument 'multiple' must be TRUE or FALSE"));
     if (multiple) {
 	R_xlen_t i, nc = XLENGTH(x);
-	PROTECT(ans = allocVector(STRSXP, nc));
+	VAPROTECT(ans, allocVector(STRSXP, nc));
 	for (i = 0; i < nc; i++) {
 	    if (INTEGER(x)[i] == NA_INTEGER)
 		SET_STRING_ELT(ans, i, NA_STRING);
@@ -350,7 +350,7 @@ SEXP attribute_hidden do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
 	    len += inttomb(NULL, INTEGER(x)[i]);
 	}
 	if (haveNA) {
-	    PROTECT(ans = allocVector(STRSXP, 1));
+	    VAPROTECT(ans, allocVector(STRSXP, 1));
 	    SET_STRING_ELT(ans, 0, NA_STRING);
 	    UNPROTECT(2);
 	    return ans;
@@ -366,7 +366,7 @@ SEXP attribute_hidden do_intToUtf8(SEXP call, SEXP op, SEXP args, SEXP env)
 	    strncpy(tmp + len, buf, used);
 	    len += used;
 	}
-	PROTECT(ans = allocVector(STRSXP, 1));
+	VAPROTECT(ans, allocVector(STRSXP, 1));
 	SET_STRING_ELT(ans, 0, mkCharLenCE(tmp, (int) len, CE_UTF8));
 	if(len >= 10000) Free(tmp);
     }

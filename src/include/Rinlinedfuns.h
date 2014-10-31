@@ -344,7 +344,7 @@ INLINE_FUN SEXP lang6(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w, SEXP x)
 INLINE_FUN Rboolean conformable(SEXP x, SEXP y)
 {
     int i, n;
-    PROTECT(x = getAttrib(x, R_DimSymbol));
+    VAPROTECT(x, getAttrib(x, R_DimSymbol));
     y = getAttrib(y, R_DimSymbol);
     UNPROTECT(1);
     if ((n = length(x)) != length(y))
@@ -678,7 +678,7 @@ INLINE_FUN SEXP mkString(const char *s)
 {
     SEXP t;
 
-    PROTECT(t = allocVector(STRSXP, (R_xlen_t)1));
+    VAPROTECT(t, allocVector(STRSXP, (R_xlen_t)1));
     SET_STRING_ELT(t, (R_xlen_t)0, mkChar(s));
     UNPROTECT(1);
     return t;

@@ -199,7 +199,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
     }
 
     /* group by token for efficiency with PCRE/TRE versions */
-    PROTECT(ans = allocVector(VECSXP, len));
+    VAPROTECT(ans, allocVector(VECSXP, len));
     vmax = vmaxget();
     for (itok = 0; itok < tlen; itok++) {
 	SEXP this = STRING_ELT(tok, itok);
@@ -247,18 +247,18 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 			for (ntok = 0; *p; p += used, ntok++)
 			    used = utf8clen(*p);
 			p = buf;
-			PROTECT(t = allocVector(STRSXP, ntok));
+			VAPROTECT(t, allocVector(STRSXP, ntok));
 			for (j = 0; j < ntok; j++, p += used) {
 			    used = utf8clen(*p);
 			    memcpy(bf, p, used); bf[used] = '\0';
 			    SET_STRING_ELT(t, j, mkCharCE(bf, CE_UTF8));
 			}
 		    } else if ((nt = mbstowcs(NULL, buf, 0)) < 0) {
-			PROTECT(t = ScalarString(NA_STRING));
+			VAPROTECT(t, ScalarString(NA_STRING));
 		    } else {
 			ntok = nt;
 			mbs_init(&mb_st);
-			PROTECT(t = allocVector(STRSXP, ntok));
+			VAPROTECT(t, allocVector(STRSXP, ntok));
 			for (j = 0; j < ntok; j++, p += used) {
 			    /* This is valid as we have already checked */
 			    used = mbrtowc(NULL, p, MB_CUR_MAX, &mb_st);
@@ -271,7 +271,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		       single-byte locale and not marked as UTF-8 */
 		    char bf[2];
 		    ntok = strlen(buf);
-		    PROTECT(t = allocVector(STRSXP, ntok));
+		    VAPROTECT(t, allocVector(STRSXP, ntok));
 		    bf[1] = '\0';
 		    for (j = 0; j < ntok; j++) {
 			bf[0] = buf[j];
@@ -787,12 +787,12 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
     if (STRING_ELT(pat, 0) == NA_STRING) {
 	if (value_opt) {
 	    SEXP nmold = getAttrib(text, R_NamesSymbol);
-	    PROTECT(ans = allocVector(STRSXP, n));
+	    VAPROTECT(ans, allocVector(STRSXP, n));
 	    for (i = 0; i < n; i++)  SET_STRING_ELT(ans, i, NA_STRING);
 	    if (!isNull(nmold))
 		setAttrib(ans, R_NamesSymbol, duplicate(nmold));
 	} else {
-	    PROTECT(ans = allocVector(INTSXP, n));
+	    VAPROTECT(ans, allocVector(INTSXP, n));
 	    for (i = 0; i < n; i++)  INTEGER(ans)[i] = NA_INTEGER;
 	}
 	UNPROTECT(1);
@@ -881,7 +881,7 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (rc) reg_report(rc, &reg, spat);
     }
 
-    PROTECT(ind = allocVector(LGLSXP, n));
+    VAPROTECT(ind, allocVector(LGLSXP, n));
     vmax = vmaxget();
     for (i = 0 ; i < n ; i++) {
 //	if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
@@ -940,7 +940,7 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (value_opt) {
 	SEXP nmold = getAttrib(text, R_NamesSymbol), nm;
-	PROTECT(ans = allocVector(STRSXP, nmatches));
+	VAPROTECT(ans, allocVector(STRSXP, nmatches));
 	for (i = 0, j = 0; i < n ; i++)
 	    if (invert ^ LOGICAL(ind)[i])
 		SET_STRING_ELT(ans, j++, STRING_ELT(text, i));
@@ -1537,7 +1537,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     n = XLENGTH(text);
     /* This contradicts the code below that has NA matching NA */
     if (STRING_ELT(pat, 0) == NA_STRING) {
-	PROTECT(ans = allocVector(STRSXP, n));
+	VAPROTECT(ans, allocVector(STRSXP, n));
 	for (i = 0; i < n; i++)  SET_STRING_ELT(ans, i, NA_STRING);
 	UNPROTECT(1);
 	return ans;
@@ -1640,7 +1640,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     }
 
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     vmax = vmaxget();
     for (i = 0 ; i < n ; i++) {
 //	if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
@@ -1941,8 +1941,8 @@ gregexpr_Regexc(const regex_t *reg, SEXP sstr, int useBytes, int use_WC)
     const char *string = NULL;
     const wchar_t *ws = NULL;
 
-    PROTECT(matchbuf = allocVector(INTSXP, bufsize));
-    PROTECT(matchlenbuf = allocVector(INTSXP, bufsize));
+    VAPROTECT(matchbuf, allocVector(INTSXP, bufsize));
+    VAPROTECT(matchlenbuf, allocVector(INTSXP, bufsize));
 
     if (useBytes) {
 	string = CHAR(sstr);
@@ -2000,8 +2000,8 @@ gregexpr_Regexc(const regex_t *reg, SEXP sstr, int useBytes, int use_WC)
 	}
 	eflags = REG_NOTBOL;
     }
-    PROTECT(ans = allocVector(INTSXP, matchIndex + 1));
-    PROTECT(matchlen = allocVector(INTSXP, matchIndex + 1));
+    VAPROTECT(ans, allocVector(INTSXP, matchIndex + 1));
+    VAPROTECT(matchlen, allocVector(INTSXP, matchIndex + 1));
     /* copy from buffers */
     for (j = 0; j <= matchIndex; j++) {
 	INTEGER(ans)[j] = INTEGER(matchbuf)[j];
@@ -2025,8 +2025,8 @@ gregexpr_fixed(const char *pattern, const char *string,
     SEXP ans, matchlen;         /* return vect and its attribute */
     SEXP matchbuf, matchlenbuf; /* buffers for storing multiple matches */
     int bufsize = 1024;         /* starting size for buffers */
-    PROTECT(matchbuf = allocVector(INTSXP, bufsize));
-    PROTECT(matchlenbuf = allocVector(INTSXP, bufsize));
+    VAPROTECT(matchbuf, allocVector(INTSXP, bufsize));
+    VAPROTECT(matchlenbuf, allocVector(INTSXP, bufsize));
     if (!useBytes && use_UTF8)
 	patlen = (int) utf8towcs(NULL, pattern, 0);
     else if (!useBytes && mbcslocale)
@@ -2081,8 +2081,8 @@ gregexpr_fixed(const char *pattern, const char *string,
 	}
     }
     ansSize = foundAny ? (matchIndex + 1) : 1;
-    PROTECT(ans = allocVector(INTSXP, ansSize));
-    PROTECT(matchlen = allocVector(INTSXP, ansSize));
+    VAPROTECT(ans, allocVector(INTSXP, ansSize));
+    VAPROTECT(matchlen, allocVector(INTSXP, ansSize));
     /* copy from buffers */
     for (j = 0; j < ansSize; j++) {
 	INTEGER(ans)[j] = INTEGER(matchbuf)[j];
@@ -2231,9 +2231,9 @@ gregexpr_perl(const char *pattern, const char *string,
 	    if (!foundAny) matchIndex = 0;
 	}
     }
-    PROTECT(ans = allocVector(INTSXP, matchIndex + 1));
+    VAPROTECT(ans, allocVector(INTSXP, matchIndex + 1));
     /* Protect in case install("match.length") allocates */
-    PROTECT(matchlen = allocVector(INTSXP, matchIndex + 1));
+    VAPROTECT(matchlen, allocVector(INTSXP, matchIndex + 1));
     setAttrib(ans, install("match.length"), matchlen);
     if(useBytes) {
 	setAttrib(ans, install("useBytes"), ScalarLogical(TRUE));
@@ -2249,9 +2249,9 @@ gregexpr_perl(const char *pattern, const char *string,
 
     if (capture_count) {
 	SEXP capture, capturelen, dmn;
-	PROTECT(capture = allocMatrix(INTSXP, matchIndex+1, capture_count));
-	PROTECT(capturelen = allocMatrix(INTSXP, matchIndex+1, capture_count));
-	PROTECT(dmn = allocVector(VECSXP, 2));
+	VAPROTECT(capture, allocMatrix(INTSXP, matchIndex+1, capture_count));
+	VAPROTECT(capturelen, allocMatrix(INTSXP, matchIndex+1, capture_count));
+	VAPROTECT(dmn, allocVector(VECSXP, 2));
 	SET_VECTOR_ELT(dmn, 1, capture_names);
 	setAttrib(capture, R_DimNamesSymbol, dmn);
 	setAttrib(capturelen, R_DimNamesSymbol, dmn);
@@ -2280,8 +2280,8 @@ gregexpr_perl(const char *pattern, const char *string,
 static SEXP gregexpr_NAInputAns(void)
 {
     SEXP ans, matchlen;
-    PROTECT(ans = allocVector(INTSXP, 1));
-    PROTECT(matchlen = allocVector(INTSXP, 1));
+    VAPROTECT(ans, allocVector(INTSXP, 1));
+    VAPROTECT(matchlen, allocVector(INTSXP, 1));
     INTEGER(ans)[0] = INTEGER(matchlen)[0] = R_NaInt;
     setAttrib(ans, install("match.length"), matchlen);
     UNPROTECT(2);
@@ -2291,8 +2291,8 @@ static SEXP gregexpr_NAInputAns(void)
 static SEXP gregexpr_BadStringAns(void)
 {
     SEXP ans, matchlen;
-    PROTECT(ans = allocVector(INTSXP, 1));
-    PROTECT(matchlen = allocVector(INTSXP, 1));
+    VAPROTECT(ans, allocVector(INTSXP, 1));
+    VAPROTECT(matchlen, allocVector(INTSXP, 1));
     INTEGER(ans)[0] = INTEGER(matchlen)[0] = -1;
     setAttrib(ans, install("match.length"), matchlen);
     UNPROTECT(2);
@@ -2433,10 +2433,10 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 	ovector_size = (capture_count + 1) * 3;
 	ovector = (int *) malloc(ovector_size*sizeof(int));
 	SEXP thisname;
-	PROTECT(capture_names = allocVector(STRSXP, capture_count));
+	VAPROTECT(capture_names, allocVector(STRSXP, capture_count));
 	for(i = 0; i < name_count; i++) {
 	    char *entry = name_table + name_entry_size * i;
-	    PROTECT(thisname = mkChar(entry + 2));
+	    VAPROTECT(thisname, mkChar(entry + 2));
 	    int capture_num = (entry[0]<<8) + entry[1] - 1;
 	    SET_STRING_ELT(capture_names, capture_num, thisname);
 	    UNPROTECT(1);
@@ -2454,9 +2454,9 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
     if (PRIMVAL(op) == 0) { /* regexpr */
 	SEXP matchlen, capture_start, capturelen;
 	int *is, *il;
-	PROTECT(ans = allocVector(INTSXP, n));
+	VAPROTECT(ans, allocVector(INTSXP, n));
 	/* Protect in case install("match.length") allocates */
-	PROTECT(matchlen = allocVector(INTSXP, n));
+	VAPROTECT(matchlen, allocVector(INTSXP, n));
 	setAttrib(ans, install("match.length"), matchlen);
 	if(useBytes) {
 	    setAttrib(ans, install("useBytes"), ScalarLogical(TRUE));
@@ -2466,12 +2466,12 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (n > INT_MAX) error("too long a vector");
 	    int nn = (int) n;
 	    SEXP dmn;
-	    PROTECT(dmn = allocVector(VECSXP, 2));
+	    VAPROTECT(dmn, allocVector(VECSXP, 2));
 	    SET_VECTOR_ELT(dmn, 1, capture_names);
-	    PROTECT(capture_start = allocMatrix(INTSXP, nn, capture_count));
+	    VAPROTECT(capture_start, allocMatrix(INTSXP, nn, capture_count));
 	    setAttrib(capture_start, R_DimNamesSymbol, dmn);
 	    setAttrib(ans, install("capture.start"), capture_start);
-	    PROTECT(capturelen = allocMatrix(INTSXP, nn, capture_count));
+	    VAPROTECT(capturelen, allocMatrix(INTSXP, nn, capture_count));
 	    setAttrib(capturelen, R_DimNamesSymbol, dmn);
 	    setAttrib(ans, install("capture.length"), capturelen);
 	    setAttrib(ans, install("capture.names"), capture_names);
@@ -2553,7 +2553,7 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     } else {
 	SEXP elt;
-	PROTECT(ans = allocVector(VECSXP, n));
+	VAPROTECT(ans, allocVector(VECSXP, n));
 	vmax = vmaxget();
 	for (i = 0 ; i < n ; i++) {
 //	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
@@ -2696,12 +2696,12 @@ SEXP attribute_hidden do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
 
     pmatch = (regmatch_t *) malloc(nmatch * sizeof(regmatch_t));
 
-    PROTECT(ans = allocVector(VECSXP, n));
+    VAPROTECT(ans, allocVector(VECSXP, n));
 
     for(i = 0; i < n; i++) {
 //	if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
 	if(STRING_ELT(vec, i) == NA_STRING) {
-	    PROTECT(matchpos = ScalarInteger(NA_INTEGER));
+	    VAPROTECT(matchpos, ScalarInteger(NA_INTEGER));
 	    setAttrib(matchpos, install("match.length"),
 		      ScalarInteger(NA_INTEGER));
 	    SET_VECTOR_ELT(ans, i, matchpos);
@@ -2726,8 +2726,8 @@ SEXP attribute_hidden do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
 		vmaxset(vmax);		
 	    }
 	    if(rc == REG_OK) {
-		PROTECT(matchpos = allocVector(INTSXP, nmatch));
-		PROTECT(matchlen = allocVector(INTSXP, nmatch));
+		VAPROTECT(matchpos, allocVector(INTSXP, nmatch));
+		VAPROTECT(matchlen, allocVector(INTSXP, nmatch));
 		for(j = 0; j < nmatch; j++) {
 		    so = pmatch[j].rm_so;
 		    INTEGER(matchpos)[j] = so + 1;
@@ -2743,8 +2743,8 @@ SEXP attribute_hidden do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
 		/* No match (or could there be an error?). */
 		/* Alternatively, could return nmatch -1 values.
 		*/
-		PROTECT(matchpos = ScalarInteger(-1));
-		PROTECT(matchlen = ScalarInteger(-1));
+		VAPROTECT(matchpos, ScalarInteger(-1));
+		VAPROTECT(matchlen, ScalarInteger(-1));
 		setAttrib(matchpos, install("match.length"), matchlen);
 		SET_VECTOR_ELT(ans, i, matchpos);
 		UNPROTECT(2);

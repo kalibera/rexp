@@ -293,7 +293,7 @@ SEXP attribute_hidden do_sprintf(SEXP call, SEXP op, SEXP args, SEXP env)
 				if(TYPEOF(_this) != REALSXP &&
 				   /* no automatic as.double(<string>) : */
 				   TYPEOF(_this) != STRSXP) {
-				    PROTECT(tmp = lang2(install("as.double"), _this));
+				    VAPROTECT(tmp, lang2(install("as.double"), _this));
 #define COERCE_THIS_TO_A						\
 				    _this = eval(tmp, env);		\
 				    UNPROTECT(1);			\
@@ -316,7 +316,7 @@ SEXP attribute_hidden do_sprintf(SEXP call, SEXP op, SEXP args, SEXP env)
 				    size_t nc = strlen(outputString);
 				    char *z = Calloc(nc+1, char);
 				    strcpy(z, outputString);
-				    PROTECT(tmp = lang2(install("as.character"), _this));
+				    VAPROTECT(tmp, lang2(install("as.character"), _this));
 
 				    COERCE_THIS_TO_A
 				    strcpy(outputString, z);
@@ -440,7 +440,7 @@ SEXP attribute_hidden do_sprintf(SEXP call, SEXP op, SEXP args, SEXP env)
 	}  /* end for ( each chunk ) */
 
 	if(ns == 0) { /* may have adjusted maxlen now ... */
-	    PROTECT(ans = allocVector(STRSXP, maxlen));
+	    VAPROTECT(ans, allocVector(STRSXP, maxlen));
 	    nprotect++;
 	}
 	SET_STRING_ELT(ans, ns, mkCharCE(outputString,

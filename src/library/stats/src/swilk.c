@@ -205,7 +205,7 @@ SEXP SWilk(SEXP x)
     swilk(REAL(x), n, &W, &pw, &ifault);
     if (ifault > 0 && ifault != 7)
 	error("ifault=%d. This should not happen", ifault);
-    SEXP ans; PROTECT(ans = allocVector(REALSXP, 2));
+    SEXP ans; VAPROTECT(ans, allocVector(REALSXP, 2));
     REAL(ans)[0] = W, REAL(ans)[1] = pw;
     UNPROTECT(2);
     return ans;

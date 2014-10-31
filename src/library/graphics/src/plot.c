@@ -100,7 +100,7 @@ static SEXP FixupPch(SEXP pch, int dflt)
     n = length(pch);
     if (n == 0) return ans = ScalarInteger(dflt);
 
-    PROTECT(ans = allocVector(INTSXP, n));
+    VAPROTECT(ans, allocVector(INTSXP, n));
     if (isList(pch)) {
 	for (i = 0; pch != R_NilValue;	pch = CDR(pch))
 	    INTEGER(ans)[i++] = asInteger(CAR(pch));
@@ -156,7 +156,7 @@ SEXP FixupLwd(SEXP lwd, double dflt)
     if (n == 0)
 	ans = ScalarReal(dflt);
     else {
-	PROTECT(lwd = coerceVector(lwd, REALSXP));
+	VAPROTECT(lwd, coerceVector(lwd, REALSXP));
 	n = length(lwd);
 	ans = allocVector(REALSXP, n);
 	for (i = 0; i < n; i++) {
@@ -226,7 +226,7 @@ SEXP FixupCol(SEXP col, unsigned int dflt)
 
     n = length(col);
     if (n == 0) {
-	PROTECT(ans = ScalarInteger(dflt));
+	VAPROTECT(ans, ScalarInteger(dflt));
     } else {
 	ans = PROTECT(allocVector(INTSXP, n));
 	if (isList(col))
@@ -285,7 +285,7 @@ SEXP FixupVFont(SEXP vfont) {
 	int typeface, fontindex;
 	int minindex, maxindex=0;/* -Wall*/
 	int i;
-	PROTECT(vf = coerceVector(vfont, INTSXP));
+	VAPROTECT(vf, coerceVector(vfont, INTSXP));
 	if (length(vf) != 2)
 	    error(_("invalid '%s' value"), "vfont");
 	typeface = INTEGER(vf)[0];
@@ -619,7 +619,7 @@ SEXP labelformat(SEXP labels)
 			  (but really uses single precision..) */
     switch(TYPEOF(labels)) {
     case LGLSXP:
-	PROTECT(ans = allocVector(STRSXP, n));
+	VAPROTECT(ans, allocVector(STRSXP, n));
 	for (i = 0; i < n; i++) {
 	    strp = EncodeLogical(LOGICAL(labels)[i], 0);
 	    SET_STRING_ELT(ans, i, mkChar(strp));
@@ -627,7 +627,7 @@ SEXP labelformat(SEXP labels)
 	UNPROTECT(1);
 	break;
     case INTSXP:
-	PROTECT(ans = allocVector(STRSXP, n));
+	VAPROTECT(ans, allocVector(STRSXP, n));
 	for (i = 0; i < n; i++) {
 	    strp = EncodeInteger(INTEGER(labels)[i], 0);
 	    SET_STRING_ELT(ans, i, mkChar(strp));
@@ -636,7 +636,7 @@ SEXP labelformat(SEXP labels)
 	break;
     case REALSXP:
 	formatReal(REAL(labels), n, &w, &d, &e, 0);
-	PROTECT(ans = allocVector(STRSXP, n));
+	VAPROTECT(ans, allocVector(STRSXP, n));
 	for (i = 0; i < n; i++) {
 	    strp = EncodeReal0(REAL(labels)[i], 0, d, e, OutDec);
 	    SET_STRING_ELT(ans, i, mkChar(strp));
@@ -645,7 +645,7 @@ SEXP labelformat(SEXP labels)
 	break;
     case CPLXSXP:
 	formatComplex(COMPLEX(labels), n, &w, &d, &e, &wi, &di, &ei, 0);
-	PROTECT(ans = allocVector(STRSXP, n));
+	VAPROTECT(ans, allocVector(STRSXP, n));
 	for (i = 0; i < n; i++) {
 	    strp = EncodeComplex(COMPLEX(labels)[i], 0, d, e, 0, di, ei,
 				 OutDec);
@@ -654,7 +654,7 @@ SEXP labelformat(SEXP labels)
 	UNPROTECT(1);
 	break;
     case STRSXP:
-	PROTECT(ans = allocVector(STRSXP, n));
+	VAPROTECT(ans, allocVector(STRSXP, n));
 	for (i = 0; i < n; i++) {
 	    SET_STRING_ELT(ans, i, STRING_ELT(labels, i));
 	}
@@ -794,13 +794,13 @@ SEXP C_axis(SEXP args)
 	i = asLogical(lab);
 	if (i == 0 || i == NA_LOGICAL)
 	    dolabels = FALSE;
-	PROTECT(lab = R_NilValue);
+	VAPROTECT(lab, R_NilValue);
     } else if (TYPEOF(lab) == LANGSXP || TYPEOF(lab) == SYMSXP) {
-	PROTECT(lab = coerceVector(lab, EXPRSXP));
+	VAPROTECT(lab, coerceVector(lab, EXPRSXP));
     } else if (isExpression(lab)) {
 	PROTECT(lab);
     } else {
-	PROTECT(lab = coerceVector(lab, STRSXP));
+	VAPROTECT(lab, coerceVector(lab, STRSXP));
     }
     args = CDR(args);
 
@@ -868,7 +868,7 @@ SEXP C_axis(SEXP args)
     args = CDR(args);
 
     /* Optional argument: "padj" */
-    PROTECT(padj = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(padj, coerceVector(CAR(args), REALSXP));
     npadj = length(padj);
     if (npadj <= 0) error(_("zero-length '%s' specified"), "padj");
 
@@ -923,11 +923,11 @@ SEXP C_axis(SEXP args)
 
     create_at = isNull(at);
     if (create_at) {
-	PROTECT(at = CreateAtVector(axp, usr, nint, logflag));
+	VAPROTECT(at, CreateAtVector(axp, usr, nint, logflag));
     }
     else {
-	if (isReal(at)) PROTECT(at = duplicate(at));
-	else PROTECT(at = coerceVector(at, REALSXP));
+	if (isReal(at)) VAPROTECT(at, duplicate(at));
+	else VAPROTECT(at, coerceVector(at, REALSXP));
     }
     n = length(at);
 
@@ -1332,11 +1332,11 @@ SEXP C_plotXY(SEXP args)
     }
     args = CDR(args);
 
-    PROTECT(pch = FixupPch(CAR(args), gpptr(dd)->pch));
+    VAPROTECT(pch, FixupPch(CAR(args), gpptr(dd)->pch));
     npch = length(pch);
     args = CDR(args);
 
-    PROTECT(lty = FixupLty(CAR(args), gpptr(dd)->lty));
+    VAPROTECT(lty, FixupLty(CAR(args), gpptr(dd)->lty));
     args = CDR(args);
 
     /* Default col was NA_INTEGER (0x80000000) which was interpreted
@@ -1347,16 +1347,16 @@ SEXP C_plotXY(SEXP args)
        FIXME: bg needs similar change, but that requires changes to
        the specific drivers. */
 
-    PROTECT(col = FixupCol(CAR(args), 0));		args = CDR(args);
+    VAPROTECT(col, FixupCol(CAR(args), 0));		args = CDR(args);
     ncol = LENGTH(col);
 
-    PROTECT(bg = FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
+    VAPROTECT(bg, FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
     nbg = LENGTH(bg);
 
-    PROTECT(cex = FixupCex(CAR(args), 1.0));		args = CDR(args);
+    VAPROTECT(cex, FixupCex(CAR(args), 1.0));		args = CDR(args);
     ncex = LENGTH(cex);
 
-    PROTECT(lwd = FixupLwd(CAR(args), gpptr(dd)->lwd)); args = CDR(args);
+    VAPROTECT(lwd, FixupLwd(CAR(args), gpptr(dd)->lwd)); args = CDR(args);
     nlwd = LENGTH(lwd);
 
     /* Miscellaneous Graphical Parameters */
@@ -1629,13 +1629,13 @@ SEXP C_segments(SEXP args)
     sx1 = CAR(args); nx1 = length(sx1); args = CDR(args);
     sy1 = CAR(args); ny1 = length(sy1); args = CDR(args);
 
-    PROTECT(col = FixupCol(CAR(args), R_TRANWHITE));
+    VAPROTECT(col, FixupCol(CAR(args), R_TRANWHITE));
     ncol = LENGTH(col); args = CDR(args);
 
-    PROTECT(lty = FixupLty(CAR(args), gpptr(dd)->lty));
+    VAPROTECT(lty, FixupLty(CAR(args), gpptr(dd)->lty));
     nlty = length(lty); args = CDR(args);
 
-    PROTECT(lwd = FixupLwd(CAR(args), gpptr(dd)->lwd));
+    VAPROTECT(lwd, FixupLwd(CAR(args), gpptr(dd)->lwd));
     nlwd = length(lwd); args = CDR(args);
 
     GSavePars(dd);
@@ -1694,19 +1694,19 @@ SEXP C_rect(SEXP args)
     sxr = CAR(args); nxr = length(sxr); args = CDR(args);/* x_right */
     syt = CAR(args); nyt = length(syt); args = CDR(args);/* y_top */
 
-    PROTECT(col = FixupCol(CAR(args), R_TRANWHITE));
+    VAPROTECT(col, FixupCol(CAR(args), R_TRANWHITE));
     ncol = LENGTH(col);
     args = CDR(args);
 
-    PROTECT(border =  FixupCol(CAR(args), gpptr(dd)->fg));
+    VAPROTECT(border,  FixupCol(CAR(args), gpptr(dd)->fg));
     nborder = LENGTH(border);
     args = CDR(args);
 
-    PROTECT(lty = FixupLty(CAR(args), gpptr(dd)->lty));
+    VAPROTECT(lty, FixupLty(CAR(args), gpptr(dd)->lty));
     nlty = length(lty);
     args = CDR(args);
 
-    PROTECT(lwd = FixupLwd(CAR(args), gpptr(dd)->lwd));
+    VAPROTECT(lwd, FixupLwd(CAR(args), gpptr(dd)->lwd));
     nlwd = length(lwd);
     args = CDR(args);
 
@@ -1764,14 +1764,14 @@ SEXP C_path(SEXP args)
     sy = SETCAR(args, coerceVector(CAR(args), REALSXP));  args = CDR(args);
     nx = LENGTH(sx);
 
-    PROTECT(nper = CAR(args)); args = CDR(args);
+    VAPROTECT(nper, CAR(args)); args = CDR(args);
     npoly = LENGTH(nper);
 
-    PROTECT(rule = CAR(args)); args = CDR(args);
+    VAPROTECT(rule, CAR(args)); args = CDR(args);
 
-    PROTECT(col = FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
-    PROTECT(border = FixupCol(CAR(args), gpptr(dd)->fg)); args = CDR(args);
-    PROTECT(lty = FixupLty(CAR(args), gpptr(dd)->lty)); args = CDR(args);
+    VAPROTECT(col, FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
+    VAPROTECT(border, FixupCol(CAR(args), gpptr(dd)->fg)); args = CDR(args);
+    VAPROTECT(lty, FixupLty(CAR(args), gpptr(dd)->lty)); args = CDR(args);
 
     GSavePars(dd);
     ProcessInlinePars(args, dd);
@@ -1924,15 +1924,15 @@ SEXP C_arrows(SEXP args)
 	error(_("invalid arrow head specification"));
     args = CDR(args);
 
-    PROTECT(col = FixupCol(CAR(args), R_TRANWHITE));
+    VAPROTECT(col, FixupCol(CAR(args), R_TRANWHITE));
     ncol = LENGTH(col);
     args = CDR(args);
 
-    PROTECT(lty = FixupLty(CAR(args), gpptr(dd)->lty));
+    VAPROTECT(lty, FixupLty(CAR(args), gpptr(dd)->lty));
     nlty = length(lty);
     args = CDR(args);
 
-    PROTECT(lwd = FixupLwd(CAR(args), gpptr(dd)->lwd));
+    VAPROTECT(lwd, FixupLwd(CAR(args), gpptr(dd)->lwd));
     nlwd = length(lwd);
     args = CDR(args);
 
@@ -1999,13 +1999,13 @@ SEXP C_polygon(SEXP args)
     sy = SETCAR(args, coerceVector(CAR(args), REALSXP));  args = CDR(args);
     nx = LENGTH(sx);
 
-    PROTECT(col = FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
+    VAPROTECT(col, FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
     ncol = LENGTH(col);
 
-    PROTECT(border = FixupCol(CAR(args), gpptr(dd)->fg)); args = CDR(args);
+    VAPROTECT(border, FixupCol(CAR(args), gpptr(dd)->fg)); args = CDR(args);
     nborder = LENGTH(border);
 
-    PROTECT(lty = FixupLty(CAR(args), gpptr(dd)->lty)); args = CDR(args);
+    VAPROTECT(lty, FixupLty(CAR(args), gpptr(dd)->lty)); args = CDR(args);
     nlty = length(lty);
 
     GSavePars(dd);
@@ -2084,7 +2084,7 @@ SEXP C_text(SEXP args)
 	error(_("zero-length '%s' specified"), "labels");
     args = CDR(args);
 
-    PROTECT(adj = CAR(args));
+    VAPROTECT(adj, CAR(args));
     if (isNull(adj) || (isNumeric(adj) && length(adj) == 0)) {
 	adjx = gpptr(dd)->adj;
 	adjy = NA_REAL;
@@ -2112,7 +2112,7 @@ SEXP C_text(SEXP args)
     else error(_("invalid '%s' value"), "adj");
     args = CDR(args);
 
-    PROTECT(pos = coerceVector(CAR(args), INTSXP));
+    VAPROTECT(pos, coerceVector(CAR(args), INTSXP));
     npos = length(pos);
     for (i = 0; i < npos; i++)
 	if (INTEGER(pos)[i] < 1 || INTEGER(pos)[i] > 4)
@@ -2122,19 +2122,19 @@ SEXP C_text(SEXP args)
     offset = GConvertXUnits(asReal(CAR(args)), CHARS, INCHES, dd);
     args = CDR(args);
 
-    PROTECT(vfont = FixupVFont(CAR(args)));
+    VAPROTECT(vfont, FixupVFont(CAR(args)));
     args = CDR(args);
 
-    PROTECT(cex = FixupCex(CAR(args), 1.0));
+    VAPROTECT(cex, FixupCex(CAR(args), 1.0));
     ncex = LENGTH(cex);
     args = CDR(args);
 
     rawcol = CAR(args);
-    PROTECT(col = FixupCol(rawcol, R_TRANWHITE));
+    VAPROTECT(col, FixupCol(rawcol, R_TRANWHITE));
     ncol = LENGTH(col);
     args = CDR(args);
 
-    PROTECT(font = FixupFont(CAR(args), NA_INTEGER));
+    VAPROTECT(font, FixupFont(CAR(args), NA_INTEGER));
     nfont = LENGTH(font);
     args = CDR(args);
 
@@ -2362,14 +2362,14 @@ SEXP C_mtext(SEXP args)
     args = CDR(args);
 
     /* Arg2 : side= */
-    PROTECT(side = coerceVector(CAR(args), INTSXP));
+    VAPROTECT(side, coerceVector(CAR(args), INTSXP));
     nside = length(side);
     if (nside <= 0) error(_("zero-length '%s' specified"), "side");
     if (n < nside) n = nside;
     args = CDR(args);
 
     /* Arg3 : line= */
-    PROTECT(line = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(line, coerceVector(CAR(args), REALSXP));
     nline = length(line);
     if (nline <= 0) error(_("zero-length '%s' specified"), "line");
     if (n < nline) n = nline;
@@ -2377,35 +2377,35 @@ SEXP C_mtext(SEXP args)
 
     /* Arg4 : outer= */
     /* outer == NA => outer <- 0 */
-    PROTECT(outer = coerceVector(CAR(args), INTSXP));
+    VAPROTECT(outer, coerceVector(CAR(args), INTSXP));
     nouter = length(outer);
     if (nouter <= 0) error(_("zero-length '%s' specified"), "outer");
     if (n < nouter) n = nouter;
     args = CDR(args);
 
     /* Arg5 : at= */
-    PROTECT(at = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(at, coerceVector(CAR(args), REALSXP));
     nat = length(at);
     if (nat <= 0) error(_("zero-length '%s' specified"), "at");
     if (n < nat) n = nat;
     args = CDR(args);
 
     /* Arg6 : adj= */
-    PROTECT(adj = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(adj, coerceVector(CAR(args), REALSXP));
     nadj = length(adj);
     if (nadj <= 0) error(_("zero-length '%s' specified"), "adj");
     if (n < nadj) n = nadj;
     args = CDR(args);
 
     /* Arg7 : padj= */
-    PROTECT(padj = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(padj, coerceVector(CAR(args), REALSXP));
     npadj = length(padj);
     if (npadj <= 0) error(_("zero-length '%s' specified"), "padj");
     if (n < npadj) n = npadj;
     args = CDR(args);
 
     /* Arg8 : cex */
-    PROTECT(cex = FixupCex(CAR(args), 1.0));
+    VAPROTECT(cex, FixupCex(CAR(args), 1.0));
     ncex = length(cex);
     if (ncex <= 0) error(_("zero-length '%s' specified"), "cex");
     if (n < ncex) n = ncex;
@@ -2413,14 +2413,14 @@ SEXP C_mtext(SEXP args)
 
     /* Arg9 : col */
     rawcol = CAR(args);
-    PROTECT(col = FixupCol(rawcol, R_TRANWHITE));
+    VAPROTECT(col, FixupCol(rawcol, R_TRANWHITE));
     ncol = length(col);
     if (ncol <= 0) error(_("zero-length '%s' specified"), "col");
     if (n < ncol) n = ncol;
     args = CDR(args);
 
     /* Arg10 : font */
-    PROTECT(font = FixupFont(CAR(args), NA_INTEGER));
+    VAPROTECT(font, FixupFont(CAR(args), NA_INTEGER));
     nfont = length(font);
     if (nfont <= 0) error(_("zero-length '%s' specified"), "font");
     if (n < nfont) n = nfont;
@@ -2760,13 +2760,13 @@ SEXP C_abline(SEXP args)
     args = CDR(args);
 
 
-    PROTECT(col = FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
+    VAPROTECT(col, FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
     ncol = LENGTH(col);
 
-    PROTECT(lty = FixupLty(CAR(args), gpptr(dd)->lty)); args = CDR(args);
+    VAPROTECT(lty, FixupLty(CAR(args), gpptr(dd)->lty)); args = CDR(args);
     nlty = length(lty);
 
-    PROTECT(lwd = FixupLwd(CAR(args), gpptr(dd)->lwd)); args = CDR(args);
+    VAPROTECT(lwd, FixupLwd(CAR(args), gpptr(dd)->lwd)); args = CDR(args);
     nlwd = length(lwd);
 
     GSavePars(dd);
@@ -3001,9 +3001,9 @@ SEXP C_locator(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else
 	    error(_("invalid plot type"));
 	type = CHAR(STRING_ELT(stype, 0))[0];
-	PROTECT(x = allocVector(REALSXP, n));
-	PROTECT(y = allocVector(REALSXP, n));
-	PROTECT(nobs=allocVector(INTSXP,1));
+	VAPROTECT(x, allocVector(REALSXP, n));
+	VAPROTECT(y, allocVector(REALSXP, n));
+	VAPROTECT(nobs,allocVector(INTSXP,1));
 
 	GMode(2, dd);
 	for (i = 0; i < n; i++) {
@@ -3025,12 +3025,12 @@ SEXP C_locator(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    REAL(x)[i] = NA_REAL;
 	    REAL(y)[i] = NA_REAL;
 	}
-	PROTECT(ans = allocList(3));
+	VAPROTECT(ans, allocList(3));
 	SETCAR(ans, x);
 	SETCADR(ans, y);
 	SETCADDR(ans, nobs);
 	if (GRecording(call, dd)) {
-	    PROTECT(saveans = allocList(5));
+	    VAPROTECT(saveans, allocList(5));
 	    SETCAR(saveans, name);
 	    SETCADR(saveans, x);
 	    SETCADDR(saveans, y);
@@ -3163,14 +3163,14 @@ SEXP C_identify(SEXP call, SEXP op, SEXP args, SEXP rho)
 	 */
 	gpptr(dd)->cex = gpptr(dd)->cexbase;
 	offset = GConvertXUnits(asReal(Offset), CHARS, INCHES, dd);
-	PROTECT(ind = allocVector(LGLSXP, n));
-	PROTECT(pos = allocVector(INTSXP, n));
+	VAPROTECT(ind, allocVector(LGLSXP, n));
+	VAPROTECT(pos, allocVector(INTSXP, n));
 	for (i = 0; i < n; i++) LOGICAL(ind)[i] = 0;
 
 	k = 0;
 	GMode(2, dd);
-	PROTECT(x = duplicate(x));
-	PROTECT(y = duplicate(y));
+	VAPROTECT(x, duplicate(x));
+	VAPROTECT(y, duplicate(y));
 	while (k < npts) {
 	    if (!GLocator(&xp, &yp, INCHES, dd)) break;
 	    /*
@@ -3246,13 +3246,13 @@ SEXP C_identify(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	}
 	GMode(0, dd);
-	PROTECT(ans = allocList(2));
+	VAPROTECT(ans, allocList(2));
 	SETCAR(ans, ind);
 	SETCADR(ans, pos);
 	if (GRecording(call, dd)) {
 	    /* If we are recording, save enough information to be able to
 	       redraw the text labels beside identified points */
-	    PROTECT(saveans = allocList(8));
+	    VAPROTECT(saveans, allocList(8));
 	    SETCAR(saveans, name);
 	    SETCADR(saveans, ind);
 	    SETCADDR(saveans, pos);
@@ -3299,8 +3299,8 @@ SEXP C_identify(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if (!R_FINITE((cex = asReal(CAR(args)))) || cex <= 0.0)	\
 	error(_("invalid '%s' value"), "cex");				\
     args = CDR(args);							\
-    PROTECT(font = FixupFont(CAR(args), NA_INTEGER)); args = CDR(args); \
-    PROTECT(vfont = FixupVFont(CAR(args))); args = CDR(args);		\
+    VAPROTECT(font, FixupFont(CAR(args), NA_INTEGER)); args = CDR(args); \
+    VAPROTECT(vfont, FixupVFont(CAR(args))); args = CDR(args);		\
     GSavePars(dd);							\
     ProcessInlinePars(args, dd);					\
 									\
@@ -3312,7 +3312,7 @@ SEXP C_identify(SEXP call, SEXP op, SEXP args, SEXP rho)
     } else gpptr(dd)->font = INTEGER(font)[0];				\
 									\
     n = LENGTH(str);							\
-    PROTECT(ans = allocVector(REALSXP, n));				\
+    VAPROTECT(ans, allocVector(REALSXP, n));				\
     cexsave = gpptr(dd)->cex;						\
     gpptr(dd)->cex = cex * gpptr(dd)->cexbase;				\
     for (i = 0; i < n; i++)						\
@@ -3430,7 +3430,7 @@ SEXP C_dend(SEXP args)
     /* ord = order(x$order) */
     if (length(CAR(args)) != n+1)
 	goto badargs;
-    PROTECT(xpos = coerceVector(CAR(args), REALSXP));
+    VAPROTECT(xpos, coerceVector(CAR(args), REALSXP));
     dnd_xpos = REAL(xpos);
     args = CDR(args);
 
@@ -3583,7 +3583,7 @@ SEXP C_erase(SEXP args)
     SEXP col;
     pGEDevDesc dd = GEcurrentDevice();
     args = CDR(args);
-    PROTECT(col = FixupCol(CAR(args), R_TRANWHITE));
+    VAPROTECT(col, FixupCol(CAR(args), R_TRANWHITE));
     GSavePars(dd);
     GMode(1, dd);
     GRect(0.0, 0.0, 1.0, 1.0, NDC, INTEGER(col)[0], R_TRANWHITE, dd);
@@ -3650,8 +3650,8 @@ SEXP C_symbols(SEXP args)
     if (length(args) < 7)
 	error(_("too few arguments"));
 
-    PROTECT(x = coerceVector(CAR(args), REALSXP)); args = CDR(args);
-    PROTECT(y = coerceVector(CAR(args), REALSXP)); args = CDR(args);
+    VAPROTECT(x, coerceVector(CAR(args), REALSXP)); args = CDR(args);
+    VAPROTECT(y, coerceVector(CAR(args), REALSXP)); args = CDR(args);
     if (!isNumeric(x) || !isNumeric(y) || length(x) <= 0 || LENGTH(x) <= 0)
 	error(_("invalid symbol coordinates"));
 
@@ -3667,10 +3667,10 @@ SEXP C_symbols(SEXP args)
     if (!R_FINITE(inches) || inches < 0)
 	inches = 0;
 
-    PROTECT(bg = FixupCol(CAR(args), R_TRANWHITE)); args = CDR(args);
+    VAPROTECT(bg, FixupCol(CAR(args), R_TRANWHITE)); args = CDR(args);
     nbg = LENGTH(bg);
 
-    PROTECT(fg = FixupCol(CAR(args), R_TRANWHITE)); args = CDR(args);
+    VAPROTECT(fg, FixupCol(CAR(args), R_TRANWHITE)); args = CDR(args);
     nfg = LENGTH(fg);
 
     GSavePars(dd);
@@ -3938,14 +3938,14 @@ SEXP C_xspline(SEXP args)
     repEnds = asLogical(CAR(args)); args = CDR(args);
     draw = asLogical(CAR(args)); args = CDR(args);
 
-    PROTECT(col = FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
+    VAPROTECT(col, FixupCol(CAR(args), R_TRANWHITE));	args = CDR(args);
     ncol = LENGTH(col);
     if(ncol < 1)
 	error(_("incorrect length for '%s' argument"), "col");
     if(ncol > 1)
 	warning(_("incorrect length for '%s' argument"), "col");
 
-    PROTECT(border = FixupCol(CAR(args), gpptr(dd)->fg)); args = CDR(args);
+    VAPROTECT(border, FixupCol(CAR(args), gpptr(dd)->fg)); args = CDR(args);
     nborder = LENGTH(border);
     if(nborder < 1)
 	error(_("incorrect length for '%s' argument"), "border");
@@ -3983,16 +3983,16 @@ SEXP C_xspline(SEXP args)
     if(!draw) {
 	SEXP nm, tmpx, tmpy;
 	double *xx, *yy, *x0, *y0;
-	PROTECT(ans = res);
-	PROTECT(nm = allocVector(STRSXP, 2));
+	VAPROTECT(ans, res);
+	VAPROTECT(nm, allocVector(STRSXP, 2));
 	SET_STRING_ELT(nm, 0, mkChar("x"));
 	SET_STRING_ELT(nm, 1, mkChar("y"));
 	setAttrib(ans, R_NamesSymbol, nm);
 	nx = LENGTH(VECTOR_ELT(ans, 0));
 	x0 = REAL(VECTOR_ELT(ans, 0));
 	y0 = REAL(VECTOR_ELT(ans, 1));
-	PROTECT(tmpx = allocVector(REALSXP, nx));
-	PROTECT(tmpy = allocVector(REALSXP, nx));
+	VAPROTECT(tmpx, allocVector(REALSXP, nx));
+	VAPROTECT(tmpy, allocVector(REALSXP, nx));
 	xx = REAL(tmpx);
 	yy = REAL(tmpy);
 	for (i = 0; i < nx; i++) {
@@ -4058,7 +4058,7 @@ SEXP C_convertX(SEXP args)
 	error(_("invalid '%s' argument"), "to");
     from--; to--;
 
-    PROTECT(ans = duplicate(x));
+    VAPROTECT(ans, duplicate(x));
     rx = REAL(ans);
     for (i = 0; i < n; i++) rx[i] = GConvertX(rx[i], from, to, gdd);
     UNPROTECT(1);
@@ -4085,7 +4085,7 @@ SEXP C_convertY(SEXP args)
 	error(_("invalid '%s' argument"), "to");
     from--; to--;
 
-    PROTECT(ans = duplicate(x));
+    VAPROTECT(ans, duplicate(x));
     rx = REAL(ans);
     for (i = 0; i < n; i++) rx[i] = GConvertY(rx[i], from, to, gdd);
     UNPROTECT(1);

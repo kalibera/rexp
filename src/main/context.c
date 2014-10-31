@@ -423,7 +423,7 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
     while (cptr->nextcontext != NULL) {
 	if (cptr->callflag & CTXT_FUNCTION ) {
 	    if (n == 0) {
-	    	PROTECT(result = shallow_duplicate(cptr->call));
+	    	VAPROTECT(result, shallow_duplicate(cptr->call));
 	    	if (cptr->srcref && !isNull(cptr->srcref))
 	    	    setAttrib(result, R_SrcrefSymbol, duplicate(cptr->srcref));
 	    	UNPROTECT(1);
@@ -434,7 +434,7 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
 	cptr = cptr->nextcontext;
     }
     if (n == 0 && cptr->nextcontext == NULL) {
-	PROTECT(result = shallow_duplicate(cptr->call));
+	VAPROTECT(result, shallow_duplicate(cptr->call));
 	if (cptr->srcref && !isNull(cptr->srcref))
 	    setAttrib(result, R_SrcrefSymbol, duplicate(cptr->srcref));
 	UNPROTECT(1);
@@ -627,7 +627,7 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return ScalarInteger(framedepth(cptr));
     case 5: /* sys.calls */
 	nframe = framedepth(cptr);
-	PROTECT(rval = allocList(nframe));
+	VAPROTECT(rval, allocList(nframe));
 	t=rval;
 	for(i = 1; i <= nframe; i++, t = CDR(t))
 	    SETCAR(t, R_syscall(i, cptr));
@@ -635,7 +635,7 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return rval;
     case 6: /* sys.frames */
 	nframe = framedepth(cptr);
-	PROTECT(rval = allocList(nframe));
+	VAPROTECT(rval, allocList(nframe));
 	t = rval;
 	for(i = 1; i <= nframe; i++, t = CDR(t))
 	    SETCAR(t, R_sysframe(i, cptr));
@@ -706,8 +706,8 @@ Rboolean R_ToplevelExec(void (*fun)(void *), void *data)
     Rboolean result;
 
 
-    PROTECT(topExp = R_CurrentExpr);
-    PROTECT(oldHStack = R_HandlerStack);
+    VAPROTECT(topExp, R_CurrentExpr);
+    VAPROTECT(oldHStack, R_HandlerStack);
     R_HandlerStack = R_NilValue;
     saveToplevelContext = R_ToplevelContext;
 

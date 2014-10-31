@@ -22,11 +22,11 @@ main(int argc, char *argv[])
       and then calls foo()  twice
       where foo is defined in the file error.R
     */
-    PROTECT(e = lang2(install("source"), mkString("error.R")));
+    VAPROTECT(e, lang2(install("source"), mkString("error.R")));
     R_tryEval(e, R_GlobalEnv, &errorOccurred);
     UNPROTECT(1);
 
-    PROTECT(e = lang1(install("foo")));
+    VAPROTECT(e, lang1(install("foo")));
     R_tryEval(e, R_GlobalEnv, &errorOccurred);
     fprintf(stderr, "Trying again (yes it will fail also!)\n");fflush(stderr);
     R_tryEval(e, R_GlobalEnv, &errorOccurred);

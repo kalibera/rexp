@@ -81,7 +81,7 @@ SEXP attribute_hidden do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     }
     else n = XLENGTH(CAR(args));
-    PROTECT(x = allocVector(REALSXP, n));
+    VAPROTECT(x, allocVector(REALSXP, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
@@ -94,7 +94,7 @@ SEXP attribute_hidden do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(CADR(args), REALSXP));
+	VAPROTECT(a, coerceVector(CADR(args), REALSXP));
 	GetRNGstate();
 	switch (PRIMVAL(op)) {
 	    RAND1(0, rchisq);
@@ -162,7 +162,7 @@ SEXP attribute_hidden do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     }
     else n = XLENGTH(CAR(args));
-    PROTECT(x = allocVector(REALSXP, n));
+    VAPROTECT(x, allocVector(REALSXP, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
@@ -176,8 +176,8 @@ SEXP attribute_hidden do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(CADR(args), REALSXP));
-	PROTECT(b = coerceVector(CADDR(args), REALSXP));
+	VAPROTECT(a, coerceVector(CADR(args), REALSXP));
+	VAPROTECT(b, coerceVector(CADDR(args), REALSXP));
 	GetRNGstate();
 	switch (PRIMVAL(op)) {
 	    RAND2(0, rbeta);
@@ -254,7 +254,7 @@ SEXP attribute_hidden do_random3(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     }
     else n = XLENGTH(CAR(args));
-    PROTECT(x = allocVector(REALSXP, n));
+    VAPROTECT(x, allocVector(REALSXP, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
@@ -275,9 +275,9 @@ SEXP attribute_hidden do_random3(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(a, REALSXP));
-	PROTECT(b = coerceVector(b, REALSXP));
-	PROTECT(c = coerceVector(c, REALSXP));
+	VAPROTECT(a, coerceVector(a, REALSXP));
+	VAPROTECT(b, coerceVector(b, REALSXP));
+	VAPROTECT(c, coerceVector(c, REALSXP));
 	GetRNGstate();
 	switch (PRIMVAL(op)) {
 	    RAND3(0, rhyper);
@@ -478,7 +478,7 @@ SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid '%s' argument"), "size");
 	if (!replace && k > n)
 	    error(_("cannot take a sample larger than the population when 'replace = FALSE'"));
-	PROTECT(y = allocVector(INTSXP, k));
+	VAPROTECT(y, allocVector(INTSXP, k));
 	prob = coerceVector(prob, REALSXP);
 	if (MAYBE_REFERENCED(prob)) prob = duplicate(prob);
 	PROTECT(prob);
@@ -486,7 +486,7 @@ SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (length(prob) != n)
 	    error(_("incorrect number of probabilities"));
 	FixupProb(p, n, k, (Rboolean) replace);
-	PROTECT(x = allocVector(INTSXP, n));
+	VAPROTECT(x, allocVector(INTSXP, n));
 	if (replace) {
 	    int i, nc = 0;
 	    for (i = 0; i < n; i++) if(n * p[i] > 0.1) nc++;
@@ -507,7 +507,7 @@ SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (!replace && k > dn)
 	    error(_("cannot take a sample larger than the population when 'replace = FALSE'"));
 	if (dn > INT_MAX || k > INT_MAX) {
-	    PROTECT(y = allocVector(REALSXP, k));
+	    VAPROTECT(y, allocVector(REALSXP, k));
 	    if (replace) {
 		double *ry = REAL(y);
 		for (R_xlen_t i = 0; i < k; i++) ry[i] = floor(dn * ru() + 1);
@@ -528,7 +528,7 @@ SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	} else {
 	    int n = (int) dn;
-	    PROTECT(y = allocVector(INTSXP, k));
+	    VAPROTECT(y, allocVector(INTSXP, k));
 	    int *iy = INTEGER(y);
 	    /* avoid allocation for a single sample */
 	    if (replace || k < 2) {

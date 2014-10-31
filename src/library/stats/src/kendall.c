@@ -100,7 +100,7 @@ SEXP pKendall(SEXP q, SEXP sn)
 {
     q = PROTECT(coerceVector(q, REALSXP));
     int len = LENGTH(q), n = asInteger(sn);
-    SEXP p; PROTECT(p = allocVector(REALSXP, len));
+    SEXP p; VAPROTECT(p, allocVector(REALSXP, len));
     pkendall(len, REAL(q), REAL(p), n);
     UNPROTECT(2);
     return p;

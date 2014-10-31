@@ -570,22 +570,22 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
 	if (xarray && yarray) {
 	    if (!conformable(x, y))
 		errorcall(lcall, _("non-conformable arrays"));
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    VAPROTECT(dims, getAttrib(x, R_DimSymbol));
 	}
 	else if (xarray) {
-	    PROTECT(dims = getAttrib(x, R_DimSymbol));
+	    VAPROTECT(dims, getAttrib(x, R_DimSymbol));
 	}
 	else {			/* (yarray) */
-	    PROTECT(dims = getAttrib(y, R_DimSymbol));
+	    VAPROTECT(dims, getAttrib(y, R_DimSymbol));
 	}
 	nprotect++;
 	if (xattr) {
-	    PROTECT(xnames = getAttrib(x, R_DimNamesSymbol));
+	    VAPROTECT(xnames, getAttrib(x, R_DimNamesSymbol));
 	    nprotect++;
 	}
 	else xnames = R_NilValue;
 	if (yattr) {
-	    PROTECT(ynames = getAttrib(y, R_DimNamesSymbol));
+	    VAPROTECT(ynames, getAttrib(y, R_DimNamesSymbol));
 	    nprotect++;
 	}
 	else ynames = R_NilValue;
@@ -593,12 +593,12 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
     else {
 	dims = R_NilValue;
 	if (xattr) {
-	    PROTECT(xnames = getAttrib(x, R_NamesSymbol));
+	    VAPROTECT(xnames, getAttrib(x, R_NamesSymbol));
 	    nprotect++;
 	}
 	else xnames = R_NilValue;
 	if (yattr) {
-	    PROTECT(ynames = getAttrib(y, R_NamesSymbol));
+	    VAPROTECT(ynames, getAttrib(y, R_NamesSymbol));
 	    nprotect++;
 	}
 	else ynames = R_NilValue;
@@ -613,20 +613,20 @@ SEXP attribute_hidden R_binary(SEXP call, SEXP op, SEXP x, SEXP y)
 	if (xts && yts) {
 	    if (!tsConform(x, y))
 		errorcall(lcall, _("non-conformable time-series"));
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    VAPROTECT(tsp, getAttrib(x, R_TspSymbol));
+	    VAPROTECT(klass, getAttrib(x, R_ClassSymbol));
 	}
 	else if (xts) {
 	    if (nx < ny)
 		ErrorMessage(lcall, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(x, R_TspSymbol));
-	    PROTECT(klass = getAttrib(x, R_ClassSymbol));
+	    VAPROTECT(tsp, getAttrib(x, R_TspSymbol));
+	    VAPROTECT(klass, getAttrib(x, R_ClassSymbol));
 	}
 	else {			/* (yts) */
 	    if (ny < nx)
 		ErrorMessage(lcall, ERROR_TSVEC_MISMATCH);
-	    PROTECT(tsp = getAttrib(y, R_TspSymbol));
-	    PROTECT(klass = getAttrib(y, R_ClassSymbol));
+	    VAPROTECT(tsp, getAttrib(y, R_TspSymbol));
+	    VAPROTECT(klass, getAttrib(y, R_ClassSymbol));
 	}
 	nprotect += 2;
     }
@@ -713,10 +713,10 @@ SEXP attribute_hidden R_unary(SEXP call, SEXP op, SEXP s1)
 static SEXP logical_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 {
     R_xlen_t n = XLENGTH(s1);
-    SEXP ans; PROTECT(ans = allocVector(INTSXP, n));
-    SEXP names; PROTECT(names = getAttrib(s1, R_NamesSymbol));
-    SEXP dim; PROTECT(dim = getAttrib(s1, R_DimSymbol));
-    SEXP dimnames; PROTECT(dimnames = getAttrib(s1, R_DimNamesSymbol));
+    SEXP ans; VAPROTECT(ans, allocVector(INTSXP, n));
+    SEXP names; VAPROTECT(names, getAttrib(s1, R_NamesSymbol));
+    SEXP dim; VAPROTECT(dim, getAttrib(s1, R_DimSymbol));
+    SEXP dimnames; VAPROTECT(dimnames, getAttrib(s1, R_DimNamesSymbol));
     if(names != R_NilValue) setAttrib(ans, R_NamesSymbol, names);
     if(dim != R_NilValue) setAttrib(ans, R_DimSymbol, dim);
     if(dimnames != R_NilValue) setAttrib(ans, R_DimNamesSymbol, dimnames);
@@ -914,7 +914,7 @@ static SEXP real_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
     if (n1 == 0 || n2 == 0) return(allocVector(REALSXP, 0));
 
     n = (n1 > n2) ? n1 : n2;
-    PROTECT(ans = R_allocOrReuseVector(s1, s2, REALSXP, n));
+    VAPROTECT(ans, R_allocOrReuseVector(s1, s2, REALSXP, n));
 
     switch (code) {
     case PLUSOP:
@@ -1109,8 +1109,8 @@ static SEXP math1(SEXP sa, double(*f)(double), SEXP lcall)
 
     n = XLENGTH(sa);
     /* coercion can lose the object bit */
-    PROTECT(sa = coerceVector(sa, REALSXP));
-    PROTECT(sy = NO_REFERENCES(sa) ? sa : allocVector(REALSXP, n));
+    VAPROTECT(sa, coerceVector(sa, REALSXP));
+    VAPROTECT(sy, NO_REFERENCES(sa) ? sa : allocVector(REALSXP, n));
     a = REAL(sa);
     y = REAL(sy);
     naflag = 0;
@@ -1238,7 +1238,7 @@ SEXP attribute_hidden do_abs(SEXP call, SEXP op, SEXP args, SEXP env)
         }
     } else if (TYPEOF(x) == REALSXP) {
 	R_xlen_t i, n = XLENGTH(x);
-	PROTECT(s = NO_REFERENCES(x) ? x : allocVector(REALSXP, n));
+	VAPROTECT(s, NO_REFERENCES(x) ? x : allocVector(REALSXP, n));
 	for(i = 0 ; i < n ; i++)
 	    REAL(s)[i] = fabs(REAL(x)[i]);
     } else if (isComplex(x)) {
@@ -1279,15 +1279,15 @@ static SEXP math2(SEXP sa, SEXP sb, double (*f)(double, double),
     na = XLENGTH(sa);				\
     nb = XLENGTH(sb);				\
     if ((na == 0) || (nb == 0))	{		\
-	PROTECT(sy = allocVector(REALSXP, 0));	\
+	VAPROTECT(sy, allocVector(REALSXP, 0));	\
 	if (na == 0) DUPLICATE_ATTRIB(sy, sa);	\
 	UNPROTECT(1);				\
 	return(sy);				\
     }						\
     n = (na < nb) ? nb : na;			\
-    PROTECT(sa = coerceVector(sa, REALSXP));	\
-    PROTECT(sb = coerceVector(sb, REALSXP));	\
-    PROTECT(sy = allocVector(REALSXP, n));	\
+    VAPROTECT(sa, coerceVector(sa, REALSXP));	\
+    VAPROTECT(sb, coerceVector(sb, REALSXP));	\
+    VAPROTECT(sy, allocVector(REALSXP, n));	\
     a = REAL(sa);				\
     b = REAL(sb);				\
     y = REAL(sy);				\
@@ -1495,11 +1495,11 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	isSymbol(CADR(args)) && R_isMissing(CADR(args), env)) {
 	double digits = 0;
 	if(PRIMVAL(op) == 10004) digits = 6.0; // for signif()
-	PROTECT(args = list2(CAR(args), ScalarReal(digits))); nprotect++;
+	VAPROTECT(args, list2(CAR(args), ScalarReal(digits))); nprotect++;
     }
 
-    PROTECT(args = evalListKeepMissing(args, env));
-    PROTECT(call2 = lang2(CAR(call), R_NilValue));
+    VAPROTECT(args, evalListKeepMissing(args, env));
+    VAPROTECT(call2, lang2(CAR(call), R_NilValue));
     SETCDR(call2, args);
 
     n = length(args);
@@ -1519,7 +1519,7 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	        if (do_Math2_formals == NULL)
                     do_Math2_formals = allocFormalsList2(install("x"),
 							 install("digits"));
-		PROTECT(args = matchArgs(do_Math2_formals, args, call));
+		VAPROTECT(args, matchArgs(do_Math2_formals, args, call));
 		nprotect++;
 	    }
 	    if (length(CADR(args)) == 0)
@@ -1544,8 +1544,8 @@ SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
     if(PRIMVAL(op) == 10) tmp = ScalarReal(10.0);
     if(PRIMVAL(op) == 2)  tmp = ScalarReal(2.0);
 
-    PROTECT(call2 = lang3(install("log"), CAR(args), tmp));
-    PROTECT(args2 = lang2(CAR(args), tmp));
+    VAPROTECT(call2, lang3(install("log"), CAR(args), tmp));
+    VAPROTECT(args2, lang2(CAR(args), tmp));
     if (! DispatchGroup("Math", call2, op, args2, env, &res)) {
 	if (isComplex(CAR(args)))
 	    res = complex_math2(call2, op, args2, env);
@@ -1632,7 +1632,7 @@ SEXP attribute_hidden do_log_builtin(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* match argument names if supplied */
 	/* will signal an error unless there are one or two arguments */
 	/* after the match, length(args) will be 2 */
-	PROTECT(args = matchArgs(do_log_formals, args, call));
+	VAPROTECT(args, matchArgs(do_log_formals, args, call));
 
 	if(CAR(args) == R_MissingArg)
 	    error(_("argument \"%s\" is missing, with no default"), "x");
@@ -1682,10 +1682,10 @@ SEXP attribute_hidden do_log_builtin(SEXP call, SEXP op, SEXP args, SEXP env)
     n = na;							\
     if (n < nb) n = nb;						\
     if (n < nc) n = nc;						\
-    PROTECT(sa = coerceVector(sa, REALSXP));			\
-    PROTECT(sb = coerceVector(sb, REALSXP));			\
-    PROTECT(sc = coerceVector(sc, REALSXP));			\
-    PROTECT(sy = allocVector(REALSXP, n));			\
+    VAPROTECT(sa, coerceVector(sa, REALSXP));			\
+    VAPROTECT(sb, coerceVector(sb, REALSXP));			\
+    VAPROTECT(sc, coerceVector(sc, REALSXP));			\
+    VAPROTECT(sy, allocVector(REALSXP, n));			\
     a = REAL(sa);						\
     b = REAL(sb);						\
     c = REAL(sc);						\
@@ -1918,11 +1918,11 @@ static SEXP math4(SEXP sa, SEXP sb, SEXP sc, SEXP sd,
     if (n < nb) n = nb;							\
     if (n < nc) n = nc;							\
     if (n < nd) n = nd;							\
-    PROTECT(sa = coerceVector(sa, REALSXP));				\
-    PROTECT(sb = coerceVector(sb, REALSXP));				\
-    PROTECT(sc = coerceVector(sc, REALSXP));				\
-    PROTECT(sd = coerceVector(sd, REALSXP));				\
-    PROTECT(sy = allocVector(REALSXP, n));				\
+    VAPROTECT(sa, coerceVector(sa, REALSXP));				\
+    VAPROTECT(sb, coerceVector(sb, REALSXP));				\
+    VAPROTECT(sc, coerceVector(sc, REALSXP));				\
+    VAPROTECT(sd, coerceVector(sd, REALSXP));				\
+    VAPROTECT(sy, allocVector(REALSXP, n));				\
     a = REAL(sa);							\
     b = REAL(sb);							\
     c = REAL(sc);							\
@@ -2102,12 +2102,12 @@ static SEXP math5(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP se, double (*f)())
     if (n < nc) n = nc;							\
     if (n < nd) n = nd;							\
     if (n < ne) n = ne;		/* n = max(na,nb,nc,nd,ne) */		\
-    PROTECT(sa = coerceVector(sa, REALSXP));				\
-    PROTECT(sb = coerceVector(sb, REALSXP));				\
-    PROTECT(sc = coerceVector(sc, REALSXP));				\
-    PROTECT(sd = coerceVector(sd, REALSXP));				\
-    PROTECT(se = coerceVector(se, REALSXP));				\
-    PROTECT(sy = allocVector(REALSXP, n));				\
+    VAPROTECT(sa, coerceVector(sa, REALSXP));				\
+    VAPROTECT(sb, coerceVector(sb, REALSXP));				\
+    VAPROTECT(sc, coerceVector(sc, REALSXP));				\
+    VAPROTECT(sd, coerceVector(sd, REALSXP));				\
+    VAPROTECT(se, coerceVector(se, REALSXP));				\
+    VAPROTECT(sy, allocVector(REALSXP, n));				\
     a = REAL(sa);							\
     b = REAL(sb);							\
     c = REAL(sc);							\

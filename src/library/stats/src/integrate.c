@@ -42,11 +42,11 @@ static void Rintfn(double *x, int n, void *ex)
     int i;
     IntStruct IS = (IntStruct) ex;
 
-    PROTECT(args = allocVector(REALSXP, n));
+    VAPROTECT(args, allocVector(REALSXP, n));
     for(i = 0; i < n; i++) REAL(args)[i] = x[i];
 
-    PROTECT(tmp = lang2(IS->f , args));
-    PROTECT(resultsxp = eval(tmp, IS->env));
+    VAPROTECT(tmp, lang2(IS->f , args));
+    VAPROTECT(resultsxp, eval(tmp, IS->env));
 
     if(length(resultsxp) != n)
 	error("evaluation of function gave a result of wrong length");
@@ -86,8 +86,8 @@ SEXP call_dqags(SEXP args)
 	   &lower, &upper, &epsabs, &epsrel, &result,
 	   &abserr, &neval, &ier, &limit, &lenw, &last, iwork, work);
 
-    PROTECT(ans = allocVector(VECSXP, 4));
-    PROTECT(ansnames = allocVector(STRSXP, 4));
+    VAPROTECT(ans, allocVector(VECSXP, 4));
+    VAPROTECT(ansnames, allocVector(STRSXP, 4));
     SET_STRING_ELT(ansnames, 0, mkChar("value"));
     SET_VECTOR_ELT(ans, 0, allocVector(REALSXP, 1));
     REAL(VECTOR_ELT(ans, 0))[0] = result;
@@ -127,8 +127,8 @@ SEXP call_dqagi(SEXP args)
     Rdqagi(Rintfn, (void*)&is, &bound,&inf,&epsabs,&epsrel,&result,
 	   &abserr,&neval,&ier,&limit,&lenw,&last,iwork,work);
 
-    PROTECT(ans = allocVector(VECSXP, 4));
-    PROTECT(ansnames = allocVector(STRSXP, 4));
+    VAPROTECT(ans, allocVector(VECSXP, 4));
+    VAPROTECT(ansnames, allocVector(STRSXP, 4));
     SET_STRING_ELT(ansnames, 0, mkChar("value"));
     SET_VECTOR_ELT(ans, 0, allocVector(REALSXP, 1));
     REAL(VECTOR_ELT(ans, 0))[0] = result;

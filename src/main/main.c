@@ -253,7 +253,7 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
 	R_Visible = FALSE;
 	R_EvalDepth = 0;
 	resetTimeLimits();
-	PROTECT(thisExpr = R_CurrentExpr);
+	VAPROTECT(thisExpr, R_CurrentExpr);
 	R_Busy(1);
 	value = eval(thisExpr, rho);
 	SET_SYMVALUE(R_LastvalueSymbol, value);
@@ -428,7 +428,7 @@ static void win32_segv(int signum)
     {   /* A simple customized print of the traceback */
 	SEXP trace, p, q;
 	int line = 1, i;
-	PROTECT(trace = R_GetTraceback(0));
+	VAPROTECT(trace, R_GetTraceback(0));
 	if(trace != R_NilValue) {
 	    REprintf("\nTraceback:\n");
 	    for(p = trace; p != R_NilValue; p = CDR(p), line++) {
@@ -562,7 +562,7 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
     {   /* A simple customized print of the traceback */
 	SEXP trace, p, q;
 	int line = 1, i;
-	PROTECT(trace = R_GetTraceback(0));
+	VAPROTECT(trace, R_GetTraceback(0));
 	if(trace != R_NilValue) {
 	    REprintf("\nTraceback:\n");
 	    for(p = trace; p != R_NilValue; p = CDR(p), line++) {
@@ -883,11 +883,11 @@ void setup_Rmainloop(void)
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     if (!doneit) {
 	doneit = 1;
-	PROTECT(cmd = install(".OptRequireMethods"));
+	VAPROTECT(cmd, install(".OptRequireMethods"));
 	R_CurrentExpr = findVar(cmd, R_GlobalEnv);
 	if (R_CurrentExpr != R_UnboundValue &&
 	    TYPEOF(R_CurrentExpr) == CLOSXP) {
-		PROTECT(R_CurrentExpr = lang1(cmd));
+		VAPROTECT(R_CurrentExpr, lang1(cmd));
 		R_CurrentExpr = eval(R_CurrentExpr, R_GlobalEnv);
 		UNPROTECT(1);
 	}
@@ -938,11 +938,11 @@ void setup_Rmainloop(void)
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     if (!doneit) {
 	doneit = 1;
-	PROTECT(cmd = install(".First"));
+	VAPROTECT(cmd, install(".First"));
 	R_CurrentExpr = findVar(cmd, R_GlobalEnv);
 	if (R_CurrentExpr != R_UnboundValue &&
 	    TYPEOF(R_CurrentExpr) == CLOSXP) {
-		PROTECT(R_CurrentExpr = lang1(cmd));
+		VAPROTECT(R_CurrentExpr, lang1(cmd));
 		R_CurrentExpr = eval(R_CurrentExpr, R_GlobalEnv);
 		UNPROTECT(1);
 	}
@@ -956,11 +956,11 @@ void setup_Rmainloop(void)
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     if (!doneit) {
 	doneit = 1;
-	PROTECT(cmd = install(".First.sys"));
+	VAPROTECT(cmd, install(".First.sys"));
 	R_CurrentExpr = findVar(cmd, baseEnv);
 	if (R_CurrentExpr != R_UnboundValue &&
 	    TYPEOF(R_CurrentExpr) == CLOSXP) {
-		PROTECT(R_CurrentExpr = lang1(cmd));
+		VAPROTECT(R_CurrentExpr, lang1(cmd));
 		R_CurrentExpr = eval(R_CurrentExpr, R_GlobalEnv);
 		UNPROTECT(1);
 	}
@@ -1104,7 +1104,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP ap, topExp, argList;
 
     /* argument matching */
-    PROTECT(ap = list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue));
+    VAPROTECT(ap, list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue));
     SET_TAG(ap,  install("text"));
     SET_TAG(CDR(ap), install("condition"));
     SET_TAG(CDDR(ap), install("expr"));
@@ -1133,7 +1133,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     browselevel = countContexts(CTXT_BROWSER, 1);
     savestack = R_PPStackTop;
-    PROTECT(topExp = R_CurrentExpr);
+    VAPROTECT(topExp, R_CurrentExpr);
     saveToplevelContext = R_ToplevelContext;
     saveGlobalContext = R_GlobalContext;
 
@@ -1200,18 +1200,18 @@ void R_dot_Last(void)
     /* Errors here should kick us back into the repl. */
 
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
-    PROTECT(cmd = install(".Last"));
+    VAPROTECT(cmd, install(".Last"));
     R_CurrentExpr = findVar(cmd, R_GlobalEnv);
     if (R_CurrentExpr != R_UnboundValue && TYPEOF(R_CurrentExpr) == CLOSXP) {
-	PROTECT(R_CurrentExpr = lang1(cmd));
+	VAPROTECT(R_CurrentExpr, lang1(cmd));
 	R_CurrentExpr = eval(R_CurrentExpr, R_GlobalEnv);
 	UNPROTECT(1);
     }
     UNPROTECT(1);
-    PROTECT(cmd = install(".Last.sys"));
+    VAPROTECT(cmd, install(".Last.sys"));
     R_CurrentExpr = findVar(cmd, R_BaseNamespace);
     if (R_CurrentExpr != R_UnboundValue && TYPEOF(R_CurrentExpr) == CLOSXP) {
-	PROTECT(R_CurrentExpr = lang1(cmd));
+	VAPROTECT(R_CurrentExpr, lang1(cmd));
 	R_CurrentExpr = eval(R_CurrentExpr, R_GlobalEnv);
 	UNPROTECT(1);
     }
@@ -1428,7 +1428,7 @@ R_getTaskCallbackNames(void)
 	n++;
 	el = el->next;
     }
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     n = 0;
     el = Rf_ToplevelTaskHandlers;
     while(el) {
@@ -1504,7 +1504,7 @@ R_taskCallbackRoutine(SEXP expr, SEXP value, Rboolean succeeded,
     int errorOccurred;
     Rboolean again, useData = LOGICAL(VECTOR_ELT(f, 2))[0];
 
-    PROTECT(e = allocVector(LANGSXP, 5 + useData));
+    VAPROTECT(e, allocVector(LANGSXP, 5 + useData));
     SETCAR(e, VECTOR_ELT(f, 0));
     cur = CDR(e);
     SETCAR(cur, tmp = allocVector(LANGSXP, 2));
@@ -1554,13 +1554,13 @@ R_addTaskCallback(SEXP f, SEXP data, SEXP useData, SEXP name)
     if(length(name))
 	tmpName = CHAR(STRING_ELT(name, 0));
 
-    PROTECT(index = allocVector(INTSXP, 1));
+    VAPROTECT(index, allocVector(INTSXP, 1));
     el = Rf_addTaskCallback(R_taskCallbackRoutine,  internalData,
 			    (void (*)(void*)) R_ReleaseObject, tmpName,
 			    INTEGER(index));
 
     if(length(name) == 0) {
-	PROTECT(name = mkString(el->name));
+	VAPROTECT(name, mkString(el->name));
 	setAttrib(index, R_NamesSymbol, name);
 	UNPROTECT(1);
     } else {

@@ -1990,9 +1990,9 @@ static SEXP xxnewlist(SEXP item)
 #if DEBUGVALS
     Rprintf("xxnewlist(item=%p)", item);
 #endif    
-    PROTECT(tmp = NewList());
+    VAPROTECT(tmp, NewList());
     if (item) {
-    	PROTECT(ans = GrowList(tmp, item));
+    	VAPROTECT(ans, GrowList(tmp, item));
     	UNPROTECT_PTR(tmp);
     	UNPROTECT_PTR(item);
     } else ans = tmp;
@@ -2008,7 +2008,7 @@ static SEXP xxlist(SEXP oldlist, SEXP item)
 #if DEBUGVALS
     Rprintf("xxlist(oldlist=%p, item=%p)", oldlist, item);
 #endif
-    PROTECT(ans = GrowList(oldlist, item));
+    VAPROTECT(ans, GrowList(oldlist, item));
     UNPROTECT_PTR(item);
     UNPROTECT_PTR(oldlist);
 #if DEBUGVALS
@@ -2023,7 +2023,7 @@ static SEXP xxenv(SEXP begin, SEXP body, SEXP end, YYLTYPE *lloc)
 #if DEBUGVALS
     Rprintf("xxenv(begin=%p, body=%p, end=%p)", begin, body, end);    
 #endif
-    PROTECT(ans = allocVector(VECSXP, 2));
+    VAPROTECT(ans, allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ans, 0, begin);
     UNPROTECT_PTR(begin);
     if (!isNull(body)) {
@@ -2047,7 +2047,7 @@ static SEXP xxmath(SEXP body, YYLTYPE *lloc)
 #if DEBUGVALS
     Rprintf("xxmath(body=%p)", body);    
 #endif
-    PROTECT(ans = PairToVectorList(CDR(body)));
+    VAPROTECT(ans, PairToVectorList(CDR(body)));
     UNPROTECT_PTR(body);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, parseState.SrcFile));
     setAttrib(ans, install("latex_tag"), mkString("MATH"));
@@ -2064,9 +2064,9 @@ static SEXP xxblock(SEXP body, YYLTYPE *lloc)
     Rprintf("xxblock(body=%p)", body);    
 #endif
     if (!body) 
-        PROTECT(ans = allocVector(VECSXP, 0));
+        VAPROTECT(ans, allocVector(VECSXP, 0));
     else {
-	PROTECT(ans = PairToVectorList(CDR(body)));
+	VAPROTECT(ans, PairToVectorList(CDR(body)));
     	UNPROTECT_PTR(body);	
     }
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, parseState.SrcFile));
@@ -2199,7 +2199,7 @@ static SEXP makeSrcref(YYLTYPE *lloc, SEXP srcfile)
 {
     SEXP val;
     
-    PROTECT(val = allocVector(INTSXP, 6));
+    VAPROTECT(val, allocVector(INTSXP, 6));
     INTEGER(val)[0] = lloc->first_line;
     INTEGER(val)[1] = lloc->first_byte;
     INTEGER(val)[2] = lloc->last_line;
@@ -2217,7 +2217,7 @@ static SEXP mkString2(const char *s, size_t len)
     SEXP t;
     cetype_t enc = CE_UTF8;
 
-    PROTECT(t = allocVector(STRSXP, 1));
+    VAPROTECT(t, allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharLenCE(s, (int) len, enc));
     UNPROTECT(1);
     return t;
@@ -2507,7 +2507,7 @@ static int token(void)
         yylloc.last_line = 0;
         yylloc.last_column = 0;
         yylloc.last_byte = 0;
-    	PROTECT(yylval = mkString(""));
+    	VAPROTECT(yylval, mkString(""));
         c = parseState.xxinitvalue;
     	parseState.xxinitvalue = 0;
     	return(c);
@@ -2554,7 +2554,7 @@ static int mkText(int c)
     };
 stop:
     xxungetc(c);
-    PROTECT(yylval = mkString2(stext,  bp - stext));
+    VAPROTECT(yylval, mkString2(stext,  bp - stext));
     if(stext != st0) free(stext);
     return TEXT;
 }
@@ -2571,7 +2571,7 @@ static int mkComment(int c)
     if (c == R_EOF) xxungetc(c);
     else TEXT_PUSH(c);
     
-    PROTECT(yylval = mkString2(stext,  bp - stext));
+    VAPROTECT(yylval, mkString2(stext,  bp - stext));
     if(stext != st0) free(stext);    
     return COMMENT;
 }
@@ -2600,7 +2600,7 @@ static int mkMarkup(int c)
     	    xxungetc(c);
     }
     if (retval != VERB) {
-    	PROTECT(yylval = mkString(stext));
+    	VAPROTECT(yylval, mkString(stext));
     }
     if(stext != st0) free(stext);
     return retval;
@@ -2618,7 +2618,7 @@ static int mkVerb(int c)
     while ((c = xxgetc()) != delim) TEXT_PUSH(c);
     TEXT_PUSH(c);
     
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    VAPROTECT(yylval, mkString2(stext, bp - stext));
     if(stext != st0) free(stext);
     return VERB;  
 }
@@ -2645,7 +2645,7 @@ static int mkVerbEnv()
     	parseState.xxInVerbEnv = NULL;
     }
     	    
-    PROTECT(yylval = mkString2(stext, bp - stext));
+    VAPROTECT(yylval, mkString2(stext, bp - stext));
     if (stext != st0) free(stext);
     return VERB;
 }

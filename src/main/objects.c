@@ -106,7 +106,7 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newvars)
     else if (TYPEOF(op) == BUILTINSXP) {
 	int save = R_PPStackTop, flag = PRIMPRINT(op);
 	const void *vmax = vmaxget();
-	PROTECT(args = evalList(args, rho, call, 0));
+	VAPROTECT(args, evalList(args, rho, call, 0));
 	R_Visible = flag != 1;
 	ans = PRIMFUN(op) (call, op, args, rho);
 	if (flag < 2) R_Visible = flag != 1;
@@ -159,7 +159,7 @@ void R_warn_S3_for_S4(SEXP method) {
   SEXP call;
   if(!s_check_S3_for_S4)
     s_check_S3_for_S4 = install(".checkS3forS4");
-  PROTECT(call = lang2(s_check_S3_for_S4, method));
+  VAPROTECT(call, lang2(s_check_S3_for_S4, method));
   eval(call, R_MethodsNamespace);
   UNPROTECT(1);
 }
@@ -328,7 +328,7 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
     SEXP newcall =  PROTECT(duplicate(cptr->call));
     SETCAR(newcall, method);
     R_GlobalContext->callflag = CTXT_GENERIC;
-    SEXP matchedarg; PROTECT(matchedarg = cptr->promargs); /* ? is this PROTECT needed ? */
+    SEXP matchedarg; VAPROTECT(matchedarg, cptr->promargs); /* ? is this PROTECT needed ? */
     SEXP ans = applyMethod(newcall, sxp, matchedarg, rho, newvars);
     R_GlobalContext->callflag = CTXT_RETURN;
     UNPROTECT(5); /* "generic,method", newvars, newcall, matchedarg */
@@ -349,7 +349,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 
     cptr = R_GlobalContext;
     op = cptr->callfun;
-    PROTECT(klass = R_data_class2(obj));
+    VAPROTECT(klass, R_data_class2(obj));
 
     nclass = length(klass);
     for (i = 0; i < nclass; i++) {
@@ -362,7 +362,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    if(method == R_SortListSymbol && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
             if (i > 0) {
-		SEXP dotClass; PROTECT(dotClass = stringSuffix(klass, i));
+		SEXP dotClass; VAPROTECT(dotClass, stringSuffix(klass, i));
 		setAttrib(dotClass, R_PreviousSymbol, klass);
 		*ans = dispatchMethod(op, sxp, dotClass, cptr, method, generic,
 				      rho, callrho, defrho);
@@ -406,11 +406,11 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
         do_usemethod_formals = allocFormalsList2(install("generic"),
 						 install("object"));
 
-    PROTECT(argList = matchArgs(do_usemethod_formals, args, call));
+    VAPROTECT(argList, matchArgs(do_usemethod_formals, args, call));
     if (CAR(argList) == R_MissingArg)
 	errorcall(call, _("there must be a 'generic' argument"));
     else
-	PROTECT(generic = eval(CAR(argList), env));
+	VAPROTECT(generic, eval(CAR(argList), env));
     if(!isString(generic) || length(generic) != 1)
 	errorcall(call, _("'generic' argument must be a character string"));
 
@@ -440,9 +440,9 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
     else defenv = R_BaseNamespace;
 
     if (CADR(argList) != R_MissingArg)
-	PROTECT(obj = eval(CADR(argList), env));
+	VAPROTECT(obj, eval(CADR(argList), env));
     else
-	PROTECT(obj = GetObject(cptr));
+	VAPROTECT(obj, GetObject(cptr));
 
     if (usemethod(translateChar(STRING_ELT(generic, 0)), obj, call, CDR(args),
 		  env, callenv, defenv, &ans) == 1) {
@@ -454,7 +454,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	SEXP klass;
 	int nclass;
 	char cl[1000];
-	PROTECT(klass = R_data_class2(obj));
+	VAPROTECT(klass, R_data_class2(obj));
 	nclass = length(klass);
 	if (nclass == 1)
 	    strcpy(cl, translateChar(STRING_ELT(klass, 0)));
@@ -557,7 +557,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     if (cptr == NULL)
 	error(_("'NextMethod' called from outside a function"));
 
-    PROTECT(newcall = duplicate(cptr->call));
+    VAPROTECT(newcall, duplicate(cptr->call));
 
     /* eg get("print.ts")(1) */
     if (TYPEOF(CAR(cptr->call)) == LANGSXP)
@@ -591,7 +591,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     /* get formals and actuals; attach the names of the formals to
        the actuals, expanding any ... that occurs */
     formals = FORMALS(s);
-    PROTECT(actuals = matchArgs(formals, cptr->promargs, call));
+    VAPROTECT(actuals, matchArgs(formals, cptr->promargs, call));
 
     i = 0;
     for(s = formals, t = actuals; s != R_NilValue; s = CDR(s), t = CDR(t)) {
@@ -599,7 +599,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(TAG(t) == R_DotsSymbol) i = length(CAR(t));
     }
     if(i) {   /* we need to expand out the dots */
-	PROTECT(t = allocList(i+length(actuals)-1));
+	VAPROTECT(t, allocList(i+length(actuals)-1));
 	for(s = actuals, m = t; s != R_NilValue; s = CDR(s)) {
 	    if(TYPEOF(CAR(s)) == DOTSXP) {
 		for(i = 1, a = CAR(s); a != R_NilValue;
@@ -622,7 +622,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
     /* we can't duplicate because it would force the promises */
     /* so we do our own duplication of the promargs */
 
-    PROTECT(matchedarg = allocList(length(cptr->promargs)));
+    VAPROTECT(matchedarg, allocList(length(cptr->promargs)));
     for (t = matchedarg, s = cptr->promargs; t != R_NilValue;
 	 s = CDR(s), t = CDR(t)) {
 	SETCAR(t, CAR(s));
@@ -653,7 +653,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    SET_TYPEOF(t, LISTSXP); /* a safe mutation */
 	    s = matchmethargs(matchedarg, t);
 	    UNPROTECT(1);
-	    PROTECT(matchedarg = s);
+	    VAPROTECT(matchedarg, s);
 	    newcall = fixcall(newcall, matchedarg);
 	}
     }
@@ -784,19 +784,19 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
     }
-    PROTECT(s = stringSuffix(klass, i));
+    VAPROTECT(s, stringSuffix(klass, i));
     setAttrib(s, R_PreviousSymbol, klass);
     /* It is possible that if a method was called directly that
 	'method' is unset */
     if (method != R_UnboundValue) {
 	/* for Ops we need `method' to be a vector */
-	PROTECT(method = duplicate(method));
+	VAPROTECT(method, duplicate(method));
 	for(j = 0; j < length(method); j++) {
 	    if (strlen(CHAR(STRING_ELT(method,j))))
 		SET_STRING_ELT(method, j,  PRINTNAME(nextfunSignature));
 	}
     } else
-	PROTECT(method = PRINTNAME(nextfunSignature));
+	VAPROTECT(method, PRINTNAME(nextfunSignature));
 
     SEXP newvars = createS3Vars(
         generic,
@@ -864,9 +864,9 @@ static SEXP inherits3(SEXP x, SEXP what, SEXP which)
     SEXP klass, rval = R_NilValue /* -Wall */;
 
     if(IS_S4_OBJECT(x))
-	PROTECT(klass = R_data_class2(x));
+	VAPROTECT(klass, R_data_class2(x));
     else
-	PROTECT(klass = R_data_class(x, FALSE));
+	VAPROTECT(klass, R_data_class(x, FALSE));
 
     if(!isString(what))
 	error(_("'what' must be a character vector"));
@@ -883,7 +883,7 @@ static SEXP inherits3(SEXP x, SEXP what, SEXP which)
 #endif
 
     if(isvec)
-	PROTECT(rval = allocVector(INTSXP, nwhat));
+	VAPROTECT(rval, allocVector(INTSXP, nwhat));
 
     for(j = 0; j < nwhat; j++) {
 	const char *ss = translateChar(STRING_ELT(what, j));
@@ -955,8 +955,8 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 	    s_selectSuperCl = install(".selectSuperClasses");
 	}
 
-	PROTECT(classExts = R_do_slot(R_getClassDef(class), s_contains));
-	PROTECT(_call = lang3(s_selectSuperCl, classExts,
+	VAPROTECT(classExts, R_do_slot(R_getClassDef(class), s_contains));
+	VAPROTECT(_call, lang3(s_selectSuperCl, classExts,
 			      /* dropVirtual = */ ScalarLogical(1)));
 	superCl = eval(_call, rho);
 	UNPROTECT(2);
@@ -1000,7 +1000,7 @@ int R_check_class_etc(SEXP x, const char **valid)
     if(!isNull(pkg)) { /* find  rho := correct class Environment */
 	SEXP clEnvCall;
 	// FIXME: fails if 'methods' is not loaded.
-	PROTECT(clEnvCall = lang2(meth_classEnv, cl));
+	VAPROTECT(clEnvCall, lang2(meth_classEnv, cl));
 	rho = eval(clEnvCall, R_MethodsNamespace);
 	UNPROTECT(1);
 	if(!isEnvironment(rho))
@@ -1053,7 +1053,7 @@ static SEXP R_isMethodsDispatchOn(SEXP onOff)
 	    // so not already on
 	    // This may not work correctly: the default arg is incorrect.
 	    warning("R_isMethodsDispatchOn(TRUE) called -- may not work correctly");
-	    SEXP call; PROTECT(call = lang1(install("initMethodDispatch")));
+	    SEXP call; VAPROTECT(call, lang1(install("initMethodDispatch")));
 	    eval(call, R_MethodsNamespace); // only works with methods loaded
 	    UNPROTECT(1);
 	}
@@ -1121,7 +1121,7 @@ static SEXP dispatchNonGeneric(SEXP name, SEXP env, SEXP fdef)
 	cptr = cptr->nextcontext;
     }
 
-    PROTECT(e = duplicate(R_syscall(0, cptr)));
+    VAPROTECT(e, duplicate(R_syscall(0, cptr)));
     SETCAR(e, fun);
     /* evaluate a call the non-generic with the same arguments and from
        the same environment as the call to the generic version */
@@ -1153,7 +1153,7 @@ SEXP attribute_hidden do_standardGeneric(SEXP call, SEXP op, SEXP args, SEXP env
 	errorcall(call,
 		  _("argument to 'standardGeneric' must be a non-empty character string"));
 
-    PROTECT(fdef = get_this_generic(args));
+    VAPROTECT(fdef, get_this_generic(args));
 
     if(isNull(fdef))
 	error(_("call to standardGeneric(\"%s\") apparently not from the body of that generic function"), translateChar(STRING_ELT(arg, 0)));
@@ -1326,7 +1326,7 @@ static SEXP get_primitive_methods(SEXP op, SEXP rho)
     int nprotect = 0;
     f = PROTECT(allocVector(STRSXP, 1));  nprotect++;
     SET_STRING_ELT(f, 0, mkChar(PRIMNAME(op)));
-    PROTECT(e = allocVector(LANGSXP, 2)); nprotect++;
+    VAPROTECT(e, allocVector(LANGSXP, 2)); nprotect++;
     SETCAR(e, install("getGeneric"));
     val = CDR(e); SETCAR(val, f);
     val = eval(e, rho);
@@ -1445,7 +1445,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	   R_preserveobject, so later we can just grab mlist from
 	   prim_mlist */
 	do_set_prim_method(op, "suppressed", R_NilValue, mlist);
-	PROTECT(mlist = get_primitive_methods(op, rho));
+	VAPROTECT(mlist, get_primitive_methods(op, rho));
 	do_set_prim_method(op, "set", R_NilValue, mlist);
 	current = prim_methods[offset]; /* as revised by do_set_prim_method */
 	UNPROTECT(1);
@@ -1459,7 +1459,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	if(isFunction(value)) {
 	    /* found a method, call it with promised args */
 	    if(!promisedArgs) {
-		PROTECT(s = promiseArgs(CDR(call), rho));
+		VAPROTECT(s, promiseArgs(CDR(call), rho));
 		if (length(s) != length(args)) error(_("dispatch error"));
 		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 		    SET_PRVALUE(CAR(b), CAR(a));
@@ -1478,7 +1478,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
     /* To do:  arrange for the setting to be restored in case of an
        error in method search */
     if(!promisedArgs) {
-	PROTECT(s = promiseArgs(CDR(call), rho));
+	VAPROTECT(s, promiseArgs(CDR(call), rho));
 	if (length(s) != length(args)) error(_("dispatch error"));
 	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 	    SET_PRVALUE(CAR(b), CAR(a));
@@ -1500,7 +1500,7 @@ SEXP R_do_MAKE_CLASS(const char *what)
     if(!what)
 	error(_("C level MAKE_CLASS macro called with NULL string pointer"));
     if(!s_getClass) s_getClass = install("getClass");
-    PROTECT(call = allocVector(LANGSXP, 2));
+    VAPROTECT(call, allocVector(LANGSXP, 2));
     SETCAR(call, s_getClass);
     SETCAR(CDR(call), mkString(what));
     e = eval(call, R_MethodsNamespace);
@@ -1515,7 +1515,7 @@ SEXP R_getClassDef_R(SEXP what)
     static SEXP s_getClassDef = NULL;
     if(!s_getClassDef) s_getClassDef = install("getClassDef");
     if(!isMethodsDispatchOn()) error(_("'methods' package not yet loaded"));
-    SEXP call; PROTECT(call = lang2(s_getClassDef, what));
+    SEXP call; VAPROTECT(call, lang2(s_getClassDef, what));
     SEXP e = eval(call, R_MethodsNamespace);
     UNPROTECT(1);
     return(e);
@@ -1533,7 +1533,7 @@ Rboolean R_isVirtualClass(SEXP class_def, SEXP env)
     if(!isMethodsDispatchOn()) return(FALSE);
     static SEXP isVCl_sym = NULL;
     if(!isVCl_sym) isVCl_sym = install("isVirtualClass");
-    SEXP call; PROTECT(call = lang2(isVCl_sym, class_def));
+    SEXP call; VAPROTECT(call, lang2(isVCl_sym, class_def));
     SEXP e = eval(call, env);
     UNPROTECT(1);
     // return(LOGICAL(e)[0]);
@@ -1546,7 +1546,7 @@ Rboolean R_extends(SEXP class1, SEXP class2, SEXP env)
     if(!isMethodsDispatchOn()) return(FALSE);
     static SEXP extends_sym = NULL;
     if(!extends_sym) extends_sym = install("extends");
-    SEXP call; PROTECT(call = lang3(extends_sym, class1, class2));
+    SEXP call; VAPROTECT(call, lang3(extends_sym, class1, class2));
     SEXP e = eval(call, env);
     UNPROTECT(1);
     // return(LOGICAL(e)[0]);
@@ -1616,7 +1616,7 @@ SEXP R_get_primname(SEXP object)
     SEXP f;
     if(TYPEOF(object) != BUILTINSXP && TYPEOF(object) != SPECIALSXP)
 	error("'R_get_primname' called on a non-primitive");
-    PROTECT(f = allocVector(STRSXP, 1));
+    VAPROTECT(f, allocVector(STRSXP, 1));
     SET_STRING_ELT(f, 0, mkChar(PRIMNAME(object)));
     UNPROTECT(1);
     return f;

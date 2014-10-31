@@ -330,7 +330,7 @@ SEXP attribute_hidden do_cmathfuns(SEXP call, SEXP op, SEXP args, SEXP env)
     else if(isNumeric(x)) { /* so no complex numbers involved */
 	n = XLENGTH(x);
 	if(isReal(x)) PROTECT(x);
-	else PROTECT(x = coerceVector(x, REALSXP));
+	else VAPROTECT(x, coerceVector(x, REALSXP));
         y = NO_REFERENCES(x) ? x : allocVector(REALSXP, n);
 
 	switch(PRIMVAL(op)) {
@@ -622,9 +622,9 @@ SEXP attribute_hidden complex_math1(SEXP call, SEXP op, SEXP args, SEXP env)
     R_xlen_t n;
     Rboolean naflag = FALSE;
 
-    PROTECT(x = CAR(args));
+    VAPROTECT(x, CAR(args));
     n = xlength(x);
-    PROTECT(y = allocVector(CPLXSXP, n));
+    VAPROTECT(y, allocVector(CPLXSXP, n));
 
     switch (PRIMVAL(op)) {
     case 10003: naflag = cmath1(clog, COMPLEX(x), COMPLEX(y), n); break;
@@ -718,12 +718,12 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall_return(call, _("unimplemented complex function"));
     }
 
-    PROTECT(sa = coerceVector(CAR(args), CPLXSXP));
-    PROTECT(sb = coerceVector(CADR(args), CPLXSXP));
+    VAPROTECT(sa, coerceVector(CAR(args), CPLXSXP));
+    VAPROTECT(sb, coerceVector(CADR(args), CPLXSXP));
     na = XLENGTH(sa); nb = XLENGTH(sb);
     if ((na == 0) || (nb == 0)) return(allocVector(CPLXSXP, 0));
     n = (na < nb) ? nb : na;
-    PROTECT(sy = allocVector(CPLXSXP, n));
+    VAPROTECT(sy, allocVector(CPLXSXP, n));
     a = COMPLEX(sa); b = COMPLEX(sb); y = COMPLEX(sy);
     for (i = 0; i < n; i++) {
 	ai = a[i % na]; bi = b[i % nb];
@@ -756,8 +756,8 @@ SEXP attribute_hidden do_complex(SEXP call, SEXP op, SEXP args, SEXP rho)
     na = asInteger(CAR(args));
     if(na == NA_INTEGER || na < 0)
 	error(_("invalid length"));
-    PROTECT(re = coerceVector(CADR(args), REALSXP));
-    PROTECT(im = coerceVector(CADDR(args), REALSXP));
+    VAPROTECT(re, coerceVector(CADR(args), REALSXP));
+    VAPROTECT(im, coerceVector(CADDR(args), REALSXP));
     nr = XLENGTH(re);
     ni = XLENGTH(im);
     /* is always true: if (na >= 0) {*/
@@ -799,7 +799,7 @@ SEXP attribute_hidden do_polyroot(SEXP call, SEXP op, SEXP args, SEXP rho)
     case REALSXP:
     case INTSXP:
     case LGLSXP:
-	PROTECT(z = coerceVector(z, CPLXSXP));
+	VAPROTECT(z, coerceVector(z, CPLXSXP));
 	break;
     default:
 	UNIMPLEMENTED_TYPE("polyroot", z);
@@ -817,10 +817,10 @@ SEXP attribute_hidden do_polyroot(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     n = degree + 1; /* omit trailing zeroes */
     if(degree >= 1) {
-	PROTECT(rr = allocVector(REALSXP, n));
-	PROTECT(ri = allocVector(REALSXP, n));
-	PROTECT(zr = allocVector(REALSXP, n));
-	PROTECT(zi = allocVector(REALSXP, n));
+	VAPROTECT(rr, allocVector(REALSXP, n));
+	VAPROTECT(ri, allocVector(REALSXP, n));
+	VAPROTECT(zr, allocVector(REALSXP, n));
+	VAPROTECT(zi, allocVector(REALSXP, n));
 
 	for(i = 0 ; i < n ; i++) {
 	    if(!R_FINITE(COMPLEX(z)[i].r) || !R_FINITE(COMPLEX(z)[i].i))

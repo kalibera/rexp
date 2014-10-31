@@ -103,11 +103,11 @@ SEXP attribute_hidden do_nzchar(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (isFactor(CAR(args)))
 	error(_("'%s' requires a character vector"), "nzchar()");
-    PROTECT(x = coerceVector(CAR(args), STRSXP));
+    VAPROTECT(x, coerceVector(CAR(args), STRSXP));
     if (!isString(x))
 	error(_("'%s' requires a character vector"), "nzchar()");
     len = XLENGTH(x);
-    PROTECT(ans = allocVector(LGLSXP, len));
+    VAPROTECT(ans, allocVector(LGLSXP, len));
     for (i = 0; i < len; i++)
 	LOGICAL(ans)[i] = LENGTH(STRING_ELT(x, i)) > 0;
     UNPROTECT(2);
@@ -130,7 +130,7 @@ SEXP attribute_hidden do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     if (isFactor(CAR(args)))
 	error(_("'%s' requires a character vector"), "nchar()");
-    PROTECT(x = coerceVector(CAR(args), STRSXP));
+    VAPROTECT(x, coerceVector(CAR(args), STRSXP));
     if (!isString(x))
 	error(_("'%s' requires a character vector"), "nchar()");
     len = XLENGTH(x);
@@ -143,7 +143,7 @@ SEXP attribute_hidden do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
     allowNA = asLogical(CADDR(args));
     if (allowNA == NA_LOGICAL) allowNA = 0;
 
-    PROTECT(s = allocVector(INTSXP, len));
+    VAPROTECT(s, allocVector(INTSXP, len));
     vmax = vmaxget();
     for (i = 0; i < len; i++) {
 	SEXP sxi = STRING_ELT(x, i);
@@ -262,7 +262,7 @@ SEXP attribute_hidden do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
     if (!isString(x))
 	error(_("extracting substrings from a non-character object"));
     len = XLENGTH(x);
-    PROTECT(s = allocVector(STRSXP, len));
+    VAPROTECT(s, allocVector(STRSXP, len));
     if (len > 0) {
 	if (!isInteger(sa) || !isInteger(so) || k == 0 || l == 0)
 	    error(_("invalid substring arguments"));
@@ -357,7 +357,7 @@ SEXP attribute_hidden do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
     if (!isString(x))
 	error(_("replacing substrings in a non-character object"));
     len = LENGTH(x);
-    PROTECT(s = allocVector(STRSXP, len));
+    VAPROTECT(s, allocVector(STRSXP, len));
     if (len > 0) {
 	if (!isInteger(sa) || !isInteger(so) || k == 0 || l == 0)
 	    error(_("invalid substring arguments"));
@@ -551,7 +551,7 @@ SEXP attribute_hidden do_abbrev(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("the first argument must be a character vector"));
     len = XLENGTH(x);
 
-    PROTECT(ans = allocVector(STRSXP, len));
+    VAPROTECT(ans, allocVector(STRSXP, len));
     minlen = asInteger(CADR(args));
     vmax = vmaxget();
     for (i = 0 ; i < len ; i++) {
@@ -593,7 +593,7 @@ SEXP attribute_hidden do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
     allow_ = asLogical(CADR(args));
     if (allow_ == NA_LOGICAL)
 	error(_("invalid '%s' value"), "allow_");
-    PROTECT(ans = allocVector(STRSXP, n));
+    VAPROTECT(ans, allocVector(STRSXP, n));
     vmax = vmaxget();
     for (i = 0 ; i < n ; i++) {
 	This = translateChar(STRING_ELT(arg, i));
@@ -695,7 +695,7 @@ SEXP attribute_hidden do_tolower(SEXP call, SEXP op, SEXP args, SEXP env)
     /* coercion is done in wrapper */
     if (!isString(x)) error(_("non-character argument"));
     n = XLENGTH(x);
-    PROTECT(y = allocVector(STRSXP, n));
+    VAPROTECT(y, allocVector(STRSXP, n));
 #if defined(Win32) || defined(__STDC_ISO_10646__) || defined(__APPLE__) || defined(__FreeBSD__)
     /* utf8towcs is really to UCS-4/2 */
     for (i = 0; i < n; i++)
@@ -1144,7 +1144,7 @@ SEXP attribute_hidden do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
 	ISORT(xtable, xtable_cnt, xtable_t , xtable_comp);
 	COMPRESS(xtable, &xtable_cnt, xtable_t, xtable_comp);
 
-	PROTECT(y = allocVector(STRSXP, n));
+	VAPROTECT(y, allocVector(STRSXP, n));
 	vmax = vmaxget();
 	for (i = 0; i < n; i++) {
 	    el = STRING_ELT(x,i);
@@ -1228,7 +1228,7 @@ SEXP attribute_hidden do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
 	Free(trs_old_ptr); Free(trs_new_ptr);
 
 	n = LENGTH(x);
-	PROTECT(y = allocVector(STRSXP, n));
+	VAPROTECT(y, allocVector(STRSXP, n));
 	vmax = vmaxget();
 	for (i = 0; i < n; i++) {
 	    if (STRING_ELT(x,i) == NA_STRING)
@@ -1270,7 +1270,7 @@ SEXP attribute_hidden do_strtrim(SEXP call, SEXP op, SEXP args, SEXP env)
     if (!isString(x = CAR(args)))
 	error(_("strtrim() requires a character vector"));
     len = XLENGTH(x);
-    PROTECT(width = coerceVector(CADR(args), INTSXP));
+    VAPROTECT(width, coerceVector(CADR(args), INTSXP));
     nw = LENGTH(width);
     if (!nw || (nw < len && len % nw))
 	error(_("invalid '%s' argument"), "width");
@@ -1278,7 +1278,7 @@ SEXP attribute_hidden do_strtrim(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (INTEGER(width)[i] == NA_INTEGER ||
 	   INTEGER(width)[i] < 0)
 	    error(_("invalid '%s' argument"), "width");
-    PROTECT(s = allocVector(STRSXP, len));
+    VAPROTECT(s, allocVector(STRSXP, len));
     vmax = vmaxget();
     for (i = 0; i < len; i++) {
 	if (STRING_ELT(x, i) == NA_STRING) {
@@ -1343,7 +1343,7 @@ SEXP attribute_hidden do_strtoi(SEXP call, SEXP op, SEXP args, SEXP env)
     if((base != 0) && ((base < 2) || (base > 36)))
 	error(_("invalid '%s' argument"), "base");
 
-    PROTECT(ans = allocVector(INTSXP, n = LENGTH(x)));
+    VAPROTECT(ans, allocVector(INTSXP, n = LENGTH(x)));
     for(i = 0; i < n; i++)
 	INTEGER(ans)[i] = strtoi(STRING_ELT(x, i), base);
     UNPROTECT(1);
@@ -1359,7 +1359,7 @@ SEXP attribute_hidden stringSuffix(SEXP string, int fromIndex) {
     int origLen = LENGTH(string);
     int newLen = origLen - fromIndex;
 
-    SEXP res; PROTECT(res = allocVector(STRSXP, newLen));
+    SEXP res; VAPROTECT(res, allocVector(STRSXP, newLen));
     int i;
     for(i = 0; i < newLen; i++) {
         SET_STRING_ELT(res, i, STRING_ELT(string, fromIndex++));
