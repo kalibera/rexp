@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998--2013  The R Core Team.
+ *  Copyright (C) 1998--2014  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -67,13 +67,28 @@
 #endif
 #endif
 
-#ifndef NVALGRIND
-# include "memcheck.h"
-#endif
-
 
 #ifndef VALGRIND_LEVEL
 # define VALGRIND_LEVEL 0
+#endif
+
+#ifndef NVALGRIND
+# ifdef HAVE_VALGRIND_MEMCHECK_H
+#  include "valgrind/memcheck.h"
+# else
+// internal version of headers.
+#  include "vg/memcheck.h"
+# endif
+// for more recent external headers (>= 3.8.0?): 
+// currently only levels 1 and 2 work with such headers.
+# ifndef VALGRIND_MAKE_NOACCESS
+# if VALGRIND_LEVEL > 2
+#  error "Only valgrind instrumentation levels 1/2 are supported with these headers"
+#  endif
+#  define VALGRIND_MAKE_NOACCESS VALGRIND_MAKE_MEM_NOACCESS
+#  define VALGRIND_MAKE_READABLE VALGRIND_MAKE_MEM_DEFINED
+#  define VALGRIND_MAKE_WRITABLE VALGRIND_MAKE_MEM_UNDEFINED
+# endif
 #endif
 
 #define R_USE_SIGNALS 1
@@ -2139,6 +2154,31 @@ char *R_alloc(size_t nelem, int eltsize)
     else return NULL;
 }
 
+#ifdef HAVE_STDALIGN_H
+# include <stdalign.h>
+#endif
+
+#include <stdint.h>
+
+long double *R_allocLD(size_t nelem)
+{
+#if __alignof_is_defined
+    // This is C11: picky compilers may warn.
+    size_t ld_align = alignof(long double);
+#elif __GNUC__
+    // This is C99, but do not rely on it.
+    size_t ld_align = offsetof(struct { char __a; long double __b; }, __b);
+#else
+    size_t ld_align = 0x0F; // value of x86_64, known others are 4 or 8
+#endif
+    if (ld_align > 8) {
+	uintptr_t tmp = (uintptr_t) R_alloc(nelem + 1, sizeof(long double));
+	tmp = (tmp + ld_align - 1) & ~ld_align;
+	return (long double *) tmp;
+    } else {
+	return (long double *) R_alloc(nelem, sizeof(long double));
+    }
+}
 
 
 /* S COMPATIBILITY */

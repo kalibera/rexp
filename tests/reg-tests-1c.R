@@ -548,4 +548,54 @@ for(k in 1:5) {
 ## "wrong" results for k in {2,3,4} in R <= 3.1.1
 
 
+## bw.SJ() and similar with NA,Inf values, PR#16024
+try(bw.SJ (c(NA,2,3)))
+try(bw.bcv(c(-Inf,2,3)))
+try(bw.ucv(c(1,NaN,3,4)))
+## seg.faulted  in  3.0.0 <= R <= 3.1.1
+
+
+## as.dendrogram() with wrong input
+x <- rbind(c( -6, -9), c(  0, 13),
+	   c(-15,  6), c(-14,  0), c(12,-10))
+dx <- dist(x,"manhattan")
+hx <- hclust(dx)
+hx$merge <- matrix(c(-3, 1, -2, 3,
+                     -4, -5, 2, 3), 4,2)
+tools::assertError(as.dendrogram(hx))
+## 8 member dendrogram and memory explosion for larger examples in R <= 3.1.2
+
+
+## abs with named args failed, PR#16047
+abs(x=1i)
+## Complained that the arg should be named z
+
+
+## Big exponents overflowed, PR#15976
+x <- 0E4933
+y <- 0x0p100000
+stopifnot(x == 0, y == 0)
+##
+
+
+## drop.terms() dropped some attributes, PR#16029
+test <- model.frame(Employed ~ Year + poly(GNP,3) + Population, data=longley)
+mterm <- terms(test)
+mterm2 <- drop.terms(mterm, 3)
+predvars <- attr(mterm2, "predvars")
+dataClasses <- attr(mterm2, "dataClasses")
+factors <- attr(mterm2, "factors")
+stopifnot(is.language(predvars), length(predvars) == length(dataClasses)+1,
+          all(names(dataClasses) == rownames(factors)))
+## Previously dropped predvars and dataClasses
+
+
+## prompt() did not escape percent signs properly
+fn <- function(fmt = "%s") {}
+f <- tempfile(fileext = ".Rd")
+prompt(fn, filename = f)
+rd <- tools::parse_Rd(f)
+## Gave syntax errors because the percent sign in Usage 
+## was taken as the start of a comment.
+
 proc.time()

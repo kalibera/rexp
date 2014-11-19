@@ -1,7 +1,7 @@
 #  File src/library/methods/R/refClass.R
 #  Part of the R package, http://www.R-project.org
 #
-#  Copyright (C) 1995-2013 The R Core Team
+#  Copyright (C) 1995-2014 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -457,7 +457,7 @@ makeEnvRefMethods <- function() {
     assignClassDef("envRefClass", def, where = envir)
     setMethod("initialize", "envRefClass", methods:::.initForEnvRefClass,
               where = envir)
-    ## NOTE:  "$" method requires setting in methods:::.InitStructureMethods
+    ## NOTE:  "$" method requires setting in .InitStructureMethods()
     setMethod("$", "envRefClass", .dollarForEnvRefClass, where = envir)
     setMethod("$<-", "envRefClass", .dollarGetsForEnvRefClass, where = envir)
     setMethod("show", "envRefClass",
@@ -1011,17 +1011,20 @@ showClassMethod <- function(object) {
     cat(sprintf(" for method %s()\n", object@name))
     show(as(object, "function"))
     if(length(object@mayCall))
-        .printNames("Methods used: ", object@mayCall)
+        .printNames("\nMethods used: ", object@mayCall)
 }
 
 .printNames <- function(header, names, separateLine = TRUE) {
-    if(separateLine)
-        cat("\n",header,"\n    ")
-    else
-        cat(header,": ",sep="")
-    cat(paste0('"', names, '"'), sep = ", ", fill = TRUE)
-    cat("\n")
+    names <- paste0('"', names, '"')
+    if(separateLine) {
+        cat(header, "\n", sep = "")
+        cat(names, sep = ", ", fill = TRUE, labels = "    ")
+    } else {
+        cat(header, ": ", sep = "")
+        cat(names, sep = ", ", fill = TRUE)
     }
+    cat("\n")
+}
 
 showRefClassDef <- function(object, title = "Reference Class") {
     cat(title," \"", object@className,"\":\n", sep="")
@@ -1036,7 +1039,7 @@ showRefClassDef <- function(object, title = "Reference Class") {
         cat("\nNo fields defined\n")
     methods <- objects(object@refMethods, all.names = TRUE)
     if(length(methods))
-        .printNames("Class Methods: ", methods)
+        .printNames("\nClass Methods: ", methods)
     else
         cat ("\nNo Class Methods\n")
     supers <- object@refSuperClasses
