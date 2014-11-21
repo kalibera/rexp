@@ -396,7 +396,7 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
    for the respective actuals in the given environment 'cloenv'.  This is
    used by NextMethod to allow patching of arguments to the current closure
    before dispatching to the next method.  The implementation is based on
-   matchArgs, but there is no error/warning checking, assuming that has
+   matchArgs, but there is no error/warning checking, assuming that it has
    already been done by a call to matchArgs when the current closure was
    invoked.
 */
@@ -408,7 +408,7 @@ typedef enum {
 } fstype_t;
 
 static R_INLINE
-void mapVariable(SEXP suppliedSlot, SEXP name, fstype_t *farg, SEXP cloenv) {
+void patchVariable(SEXP suppliedSlot, SEXP name, fstype_t *farg, SEXP cloenv) {
     SEXP value = CAR(suppliedSlot);
     if (value == R_MissingArg) {
         if (farg) *farg = FS_MATCHED_MISSING;
@@ -447,7 +447,7 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 	if (TAG(f) != R_DotsSymbol) {
 	    for (b = prsupplied; b != R_NilValue; b = CDR(b)) {
 		if (TAG(b) != R_NilValue && pmatch(TAG(f), TAG(b), 1)) {
-		    mapVariable(b, TAG(f), &farg[farg_i], cloenv);
+		    patchVariable(b, TAG(f), &farg[farg_i], cloenv);
 		    SET_ARGUSED(b, 2);
 		    break; /* Previous invocation of matchArgs */
                            /* ensured unique matches */
@@ -474,7 +474,7 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 		    if (!ARGUSED(b) && TAG(b) != R_NilValue &&
 			pmatch(TAG(f), TAG(b), seendots)) {
 
-			mapVariable(b, TAG(f), &farg[farg_i], cloenv);
+			patchVariable(b, TAG(f), &farg[farg_i], cloenv);
 			SET_ARGUSED(b, 1);
 			break; /* Previous invocation of matchArgs */
                                /* ensured unique matches */
@@ -516,7 +516,7 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 	    b = CDR(b);
 	} else {
 	    /* We have a positional match */
-	    mapVariable(b, TAG(f), NULL, cloenv);
+	    patchVariable(b, TAG(f), NULL, cloenv);
 	    SET_ARGUSED(b, 1);
 	    b = CDR(b);
 	    f = CDR(f);
