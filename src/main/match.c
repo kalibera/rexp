@@ -408,7 +408,7 @@ typedef enum {
 } fstype_t;
 
 static R_INLINE
-void patchVariable(SEXP suppliedSlot, SEXP name, fstype_t *farg, SEXP cloenv) {
+void patchArgument(SEXP suppliedSlot, SEXP name, fstype_t *farg, SEXP cloenv) {
     SEXP value = CAR(suppliedSlot);
     if (value == R_MissingArg) {
         if (farg) *farg = FS_MATCHED_MISSING;
@@ -437,7 +437,7 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
     for(b = supplied, a = prsupplied; b != R_NilValue; b = CDR(b), a = CDR(a)) {
         SETCAR(a, CAR(b));
         SET_ARGUSED(a, 0);
-        SET_TAG(a,TAG(b));
+        SET_TAG(a, TAG(b));
     }
 
     /* First pass: exact matches by tag */
@@ -448,7 +448,7 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 	if (TAG(f) != R_DotsSymbol) {
 	    for (b = prsupplied; b != R_NilValue; b = CDR(b)) {
 		if (TAG(b) != R_NilValue && pmatch(TAG(f), TAG(b), 1)) {
-		    patchVariable(b, TAG(f), &farg[farg_i], cloenv);
+		    patchArgument(b, TAG(f), &farg[farg_i], cloenv);
 		    SET_ARGUSED(b, 2);
 		    break; /* Previous invocation of matchArgs */
 		           /* ensured unique matches */
@@ -475,7 +475,7 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 		    if (!ARGUSED(b) && TAG(b) != R_NilValue &&
 			pmatch(TAG(f), TAG(b), seendots)) {
 
-			patchVariable(b, TAG(f), &farg[farg_i], cloenv);
+			patchArgument(b, TAG(f), &farg[farg_i], cloenv);
 			SET_ARGUSED(b, 1);
 			break; /* Previous invocation of matchArgs */
 			       /* ensured unique matches */
@@ -518,7 +518,7 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 	    b = CDR(b);
 	} else {
 	    /* We have a positional match */
-	    patchVariable(b, TAG(f), NULL, cloenv);
+	    patchArgument(b, TAG(f), NULL, cloenv);
 	    SET_ARGUSED(b, 1);
 	    b = CDR(b);
 	    f = CDR(f);
