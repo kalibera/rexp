@@ -507,7 +507,6 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 
 	    /* Already matched by tag */
 	    /* skip to next formal */
-	    b = CDR(b);
 	    f = CDR(f);
 	    farg_i++;
 	} else if (ARGUSED(b) || TAG(b) != R_NilValue) {
