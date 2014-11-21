@@ -432,6 +432,7 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
     for(i = 0; i < nfarg; i++) farg[i] = FS_UNMATCHED;
 
     /* Shallow-duplicate supplied arguments */
+
     PROTECT(prsupplied = allocList(length(supplied)));
     for(b = supplied, a = prsupplied; b != R_NilValue; b = CDR(b), a = CDR(a)) {
         SETCAR(a, CAR(b));
@@ -450,12 +451,12 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 		    patchVariable(b, TAG(f), &farg[farg_i], cloenv);
 		    SET_ARGUSED(b, 2);
 		    break; /* Previous invocation of matchArgs */
-                           /* ensured unique matches */
+		           /* ensured unique matches */
 		}
 	    }
 	}
 	f = CDR(f);
-        farg_i++;
+	farg_i++;
     }
 
     /* Second pass: partial matches based on tags */
@@ -477,13 +478,13 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 			patchVariable(b, TAG(f), &farg[farg_i], cloenv);
 			SET_ARGUSED(b, 1);
 			break; /* Previous invocation of matchArgs */
-                               /* ensured unique matches */
+			       /* ensured unique matches */
 		    }
 		}
 	    }
 	}
 	f = CDR(f);
-        farg_i++;
+	farg_i++;
     }
 
     /* Third pass: matches based on order */
@@ -496,12 +497,14 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
     f = formals;
     b = prsupplied;
     farg_i = 0;
-
     while (f != R_NilValue && b != R_NilValue) {
 	if (TAG(f) == R_DotsSymbol) {
 	    /* Done, ... and following args cannot be patched */
 	    break;
 	} else if (farg[farg_i] == FS_MATCHED_PRESENT) {
+	    /* Note that this check corresponds to CAR(b) == R_MissingArg */
+	    /* in matchArgs */
+
 	    /* Already matched by tag */
 	    /* skip to next formal */
 	    b = CDR(b);
