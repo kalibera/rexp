@@ -404,16 +404,22 @@ SEXP attribute_hidden matchArgs(SEXP formals, SEXP supplied, SEXP call)
 typedef enum {
     FS_UNMATCHED       = 0, /* the formal was not matched by any supplied arg */
     FS_MATCHED_PRESENT = 1, /* the formal was matched by a non-missing arg */
-    FS_MATCHED_MISSING = 2  /* the formal was matched, but by a missing arg */
+    FS_MATCHED_MISSING = 2, /* the formal was matched, but by a missing arg */
+    FS_MATCHED_LOCAL   = 3, /* the formal was matched by a missing arg, but
+                               a local variable of the same name as the formal
+                               has been used */
 } fstype_t;
 
 static R_INLINE
 void patchArgument(SEXP suppliedSlot, SEXP name, fstype_t *farg, SEXP cloenv) {
     SEXP value = CAR(suppliedSlot);
     if (value == R_MissingArg) {
-        if (farg) *farg = FS_MATCHED_MISSING;
         value = findVarInFrame3(cloenv, name, TRUE);
-        if (value == R_MissingArg) return;
+        if (value == R_MissingArg) {
+            if (farg) *farg = FS_MATCHED_MISSING;
+            return;
+        }
+        if (farg) *farg = FS_MATCHED_LOCAL;
     } else
         if (farg) *farg = FS_MATCHED_PRESENT;
 
@@ -518,7 +524,17 @@ patchArgsByActuals(SEXP formals, SEXP supplied, SEXP cloenv)
 	    b = CDR(b);
 	} else {
 	    /* We have a positional match */
-	    patchArgument(b, TAG(f), NULL, cloenv);
+	    if (farg[farg_i] == FS_MATCHED_LOCAL)
+	        /* Another supplied argument, a missing with a tag, has */
+	        /* been patched to a promise reading this formal, because */
+	        /* there was a local variable of that name. Hence, we have */
+	        /* to turn this supplied argument into a missing. */
+	        /* Otherwise, we would supply a value twice, confusing */
+	        /* argument matching in subsequently called functions. */
+	        SETCAR(b, R_MissingArg);
+	    else
+	        patchArgument(b, TAG(f), NULL, cloenv);
+
 	    SET_ARGUSED(b, 1);
 	    b = CDR(b);
 	    f = CDR(f);
