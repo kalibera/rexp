@@ -1566,12 +1566,13 @@ SEXP R_do_new_object(SEXP class_def)
 	      translateChar(asChar(e)));
     }
     e = R_do_slot(class_def, s_className);
-    value = duplicate(R_do_slot(class_def, s_prototype));
+    PROTECT(value = duplicate(R_do_slot(class_def, s_prototype)));
     if(TYPEOF(value) == S4SXP || getAttrib(e, R_PackageSymbol) != R_NilValue)
     { /* Anything but an object from a base "class" (numeric, matrix,..) */
 	setAttrib(value, R_ClassSymbol, e);
 	SET_S4_OBJECT(value);
     }
+    UNPROTECT(1); /* value */
     vmaxset(vmax);
     return value;
 }
