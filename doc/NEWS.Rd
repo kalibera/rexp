@@ -154,8 +154,19 @@
       with a default such that \code{example(..)} in help examples will
       run \code{\\dontcheck} code only if used interactively.
 
-      \item \code{rbind.data.frame()} gets optional argument
+      \item \code{rbind.data.frame()} gains an optional argument
       \code{make.row.names}, for potential speedup.
+      
+      \item New function \code{extSoftVersion()} to report on the
+      versions of third-party software in use in this session.
+      Currently reports versions of \code{zlib}, \code{bzlib}, the
+      \code{liblzma} from \code{xz}, PCRE, ICU and TRE.
+
+      A similar function \code{grSoftVersion()} in package \pkg{grDevices}
+      reports on third-party graphics software.
+
+      Calling \code{callGeneric()} without arguments now works with
+      primitive generics to some extent.
     }
   }
 
@@ -166,13 +177,23 @@
       \command{make check TEST_DONTTEST=TRUE}.
 
       \item It is possible to request the use of system
-      \command{valgrind} headers \emph{via} option
+      \command{valgrind} headers \emph{via} \command{configure} option
       \option{--with-system-valgrind-headers}: note the possible
       incompatibility of such headers discussed in the 'R Installation
       and Administration' manual. (Wish of \PR{16808}.)
 
-      \item The included version of \code{lzmautils} has been updated to
+      \item The included version of \code{liblzma} has been updated to
       \code{xz-utils} 5.0.7 (minor bug fixes from 5.0.5).
+      
+      \item \command{configure} options \option{--with-system-zlib},
+       \option{--with-system-bzlib} and \option{--with-system-pcre} are
+       now the default.  For the time being there is fallback to the
+       versions included in the \R sources if no system versions are
+       found or (unlikely) if they are too old.
+
+       Linux users should check that the \code{-devel} or \code{-dev}
+       versions of packages \pkg{zlib}, \pkg{bzip2}/\pkg{libbz2} and
+       \code{pcre} (or similar names) are installed.
     }
   }
 
@@ -191,12 +212,12 @@
       \code{tools::toHTML()} methods is now
       \sQuote{\acronym{XHTML} 1.0 Strict}.
 
-      \item The compiler utility function \code{setCompilerOptions()}
-      now returns the old values invisibly. The initial optimization
-      level can also be set with the environment variable
-      \env{R_COMPILER_OPTIMIZE}.
+      \item The \pkg{compiler} package has a new utility function
+      \code{setCompilerOptions()} now returns the old values
+      invisibly. The initial optimization level can also be set with the
+      environment variable \env{R_COMPILER_OPTIMIZE}.
 
-      \item \command{R CMD check} gains option \option{--test-dir=} to
+      \item \command{R CMD check} gains option \option{--test-dir} to
       specify an alternative set of tests to run.
     }
   }
@@ -206,8 +227,8 @@
       \item New C API utility \code{logspace_sum(logx[], n)}.
 
       \item Entry points \code{rbinom_mu}, \code{rnbinom_mu} and
-      \code{rmultinom} are remapped (by default).  This requires
-      packages using them to be re-installed.
+      \code{rmultinom} are remapped (by default) to \code{Rf_rbinom_mu}
+      etc.  This requires packages using them to be re-installed.
 
       \item \code{.C(DUP = FALSE)} and \code{.Fortran(DUP = FALSE)} are
       now ignored, so arguments are duplicated if \code{DUP = TRUE}
@@ -223,6 +244,10 @@
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item \code{download.file(method = "lynx")} is defunct.
+
+      \item Use of the included versions of \code{zlib}, \code{bzip2},
+      \code{xz} and PCRE is deprecated: these are essentially frozen and
+      will eventually be removed.
     }
   }
 
@@ -237,9 +262,8 @@
       \item \code{all.equal()} gains methods for \code{environment}s and
       \code{refClass}es.
 
-      \item \code{nlm()} no longer modifies the callback argument in place (a
-      new vector is allocated for each invocation, which mimics the
-      implicit duplication that occurred in R < 3.1.0). (\PR{15958})
+      \code{[<-} and \code{[[<-} gain S4 \code{data.frame} methods to
+      avoid corruption of S4 class information by the S3 methods.
     }
   }
 }
@@ -256,6 +280,16 @@
       \item The \code{as.dendrogram} method for \code{"hclust"} objects
       gets a \code{check} argument protecting against memory explosion for
       invalid inputs.
+
+      \item \code{capabilities()} has a new item \code{long.double}
+      which indicates if the build uses a \code{long double} type which
+      is longer than \code{double}.
+
+      \item \code{nlm()} no longer modifies the callback argument in
+      place (a new vector is allocated for each invocation, which mimics
+      the implicit duplication that occurred in R < 3.1.0); note that
+      this is a change from the previously documented
+      behavior. (\PR{15958})
     }
   }
 
@@ -292,10 +326,6 @@
       \item Extremely large exponents on zero expressed in scientific
       notation (e.g. \code{0.0e50000}) could give \code{NaN}.  (\PR{15976})
 
-      \item \code{nlm()} no longer modifies the callback argument in place (a
-      new vector is allocated for each invocation, which mimics the
-      implicit duplication that occurred in R < 3.1.0). (\PR{15958})
-
       \item \code{download.file()} reported downloaded sizes as 0KB if
       less than 1MB, only for \R 3.1.2 and only on big-endian platforms.
       
@@ -311,6 +341,9 @@
       \item (Windows.) The \code{choose.files()} command returned a 
       blank string when the user asked for a single file but cancelled
       the request.  (\PR{16074})
+
+      \item \code{Math2} group generics failed to correctly dispatch
+      \code{"structure"} and \code{"nonStructure"}-derived classes.
     }
   }
 }

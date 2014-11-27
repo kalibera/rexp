@@ -1923,9 +1923,9 @@ Optional Packages:
   --with-libpng           use libpng library (if available) [yes]
   --with-jpeglib          use jpeglib library (if available) [yes]
   --with-libtiff          use libtiff library (if available) [yes]
-  --with-system-zlib      use system zlib library (if available) [no]
-  --with-system-bzlib     use system bzlib library (if available) [no]
-  --with-system-pcre      use system PCRE library (if available) [no]
+  --with-system-zlib      use system zlib library (if available) [yes]
+  --with-system-bzlib     use system bzlib library (if available) [yes]
+  --with-system-pcre      use system PCRE library (if available) [yes]
   --with-system-tre       use system tre library (if available) [no]
   --with-system-xz        use system xz (lzma) library (if available) [yes]
   --with-valgrind-instrumentation
@@ -1942,7 +1942,7 @@ Optional Packages:
   --with-x                use the X Window System
   --with-libpth-prefix[=DIR]  search for libpth in DIR/include and DIR/lib
   --without-libpth-prefix     don't search for libpth in includedir and libdir
-  --with-included-gettext use the GNU gettext library included here
+  --with-included-gettext use the GNU gettext library included here [no]
   --with-libintl-prefix[=DIR]  search for libintl in DIR/include and DIR/lib
   --without-libintl-prefix     don't search for libintl in includedir and libdir
 
@@ -4251,7 +4251,7 @@ else
 fi
 
 else
-  use_system_zlib=no
+  use_system_zlib=yes
 fi
 
 
@@ -4264,7 +4264,7 @@ else
 fi
 
 else
-  use_system_bzlib=no
+  use_system_bzlib=yes
 fi
 
 
@@ -4277,7 +4277,7 @@ else
 fi
 
 else
-  use_system_pcre=no
+  use_system_pcre=yes
 fi
 
 
@@ -46076,6 +46076,24 @@ else
   r_external_libs="${r_external_libs}${separator}LAPACK(${r_lapack})"
 fi
 fi
+if test "${have_zlib}" = yes; then
+  separator=", "
+test -z "${separator}" && separator=" "
+if test -z "${r_external_libs}"; then
+  r_external_libs="zlib"
+else
+  r_external_libs="${r_external_libs}${separator}zlib"
+fi
+fi
+if test "${have_bzlib}" = yes; then
+  separator=", "
+test -z "${separator}" && separator=" "
+if test -z "${r_external_libs}"; then
+  r_external_libs="bzlib"
+else
+  r_external_libs="${r_external_libs}${separator}bzlib"
+fi
+fi
 if test "${have_lzma}" = yes; then
   separator=", "
 test -z "${separator}" && separator=" "
@@ -46083,6 +46101,24 @@ if test -z "${r_external_libs}"; then
   r_external_libs="lzma"
 else
   r_external_libs="${r_external_libs}${separator}lzma"
+fi
+fi
+if test "${have_pcre}" = yes; then
+  separator=", "
+test -z "${separator}" && separator=" "
+if test -z "${r_external_libs}"; then
+  r_external_libs="PCRE"
+else
+  r_external_libs="${r_external_libs}${separator}PCRE"
+fi
+fi
+if test "${have_tre}" = yes; then
+  separator=", "
+test -z "${separator}" && separator=" "
+if test -z "${r_external_libs}"; then
+  r_external_libs="tre"
+else
+  r_external_libs="${r_external_libs}${separator}tre"
 fi
 fi
 

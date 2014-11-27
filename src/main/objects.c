@@ -441,8 +441,7 @@ SEXP attribute_hidden do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (usemethod(translateChar(STRING_ELT(generic, 0)), obj, call, CDR(args),
 		  env, callenv, defenv, &ans) == 1) {
-	UNPROTECT(2); /* obj, argList */
-	PROTECT(ans);
+	UNPROTECT(3); /* obj, generic, argList */
 	findcontext(CTXT_RETURN, env, ans); /* does not return */
     }
     else {
@@ -1629,22 +1628,27 @@ SEXP asS4(SEXP s, Rboolean flag, int complete)
     PROTECT(s);
     if(MAYBE_SHARED(s))
 	s = shallow_duplicate(s);
-    UNPROTECT(1);
     if(flag) SET_S4_OBJECT(s);
     else {
 	if(complete) {
 	    SEXP value;
 	    /* TENTATIVE:  how much does this change? */
 	    if((value = R_getS4DataSlot(s, ANYSXP))
-	       != R_NilValue && !IS_S4_OBJECT(value))
+	       != R_NilValue && !IS_S4_OBJECT(value)) {
+	      UNPROTECT(1);
 	      return value;
+	    }
 	    /* else no plausible S3 object*/
 	    else if(complete == 1) /* ordinary case (2, for conditional) */
 	      error(_("object of class \"%s\" does not correspond to a valid S3 object"),
 		      CHAR(STRING_ELT(R_data_class(s, FALSE), 0)));
-	    else return s; /*  unchanged */
+	    else {
+	        UNPROTECT(1);
+	        return s; /*  unchanged */
+	    }
 	}
 	UNSET_S4_OBJECT(s);
     }
+    UNPROTECT(1);
     return s;
 }

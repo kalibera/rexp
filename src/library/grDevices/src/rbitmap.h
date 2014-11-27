@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Langage for Statistical Data Analysis
- *  Copyright (C) 2000-11     The R Core Team
+ *  Copyright (C) 2000-2014     The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,10 @@
 #include <windows.h>
 typedef int (*R_SaveAsBitmap)(/* variable set of args */);
 static R_SaveAsBitmap R_SaveAsPng, R_SaveAsJpeg, R_SaveAsBmp, R_SaveAsTIFF;
+
+typedef const char * (*R_version_t)(void);
+static R_version_t R_pngVersion = NULL, R_jpegVersion = NULL,
+    R_tiffVersion = NULL;
 
 static int RbitmapAlreadyLoaded = 0;
 static HINSTANCE hRbitmapDll;
@@ -45,12 +49,21 @@ static int Load_Rbitmap_Dll()
 	     != NULL) &&
 	    ((R_SaveAsTIFF=
 	      (R_SaveAsBitmap)GetProcAddress(hRbitmapDll, "R_SaveAsTIFF"))
+	     != NULL) &&
+	    ((R_pngVersion=
+	      (R_version_t)GetProcAddress(hRbitmapDll, "R_pngVersion"))
+	     != NULL) &&
+	    ((R_jpegVersion=
+	      (R_version_t)GetProcAddress(hRbitmapDll, "R_jpegVersion"))
+	     != NULL) &&
+	    ((R_tiffVersion=
+	      (R_version_t)GetProcAddress(hRbitmapDll, "R_tiffVersion"))
 	     != NULL)
 	    ) {
 	    RbitmapAlreadyLoaded = 1;
 	} else {
 	    if (hRbitmapDll != NULL) FreeLibrary(hRbitmapDll);
-	    RbitmapAlreadyLoaded= -1;
+	    RbitmapAlreadyLoaded = -1;
 	    char buf[1000];
 	    snprintf(buf, 1000, "Unable to load '%s'", szFullPath);
 	    R_ShowMessage(buf);
