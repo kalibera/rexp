@@ -1030,6 +1030,7 @@ SEXP deriv(SEXP args)
 
     i = 0;
     ans = CDR(exprlist);
+    SEXP s_assign = install("<-");
     while (i < nexpr) {
 	if (CountOccurrences(MakeVariable(i+1, tag), CDR(ans)) < 2) {
 	    SETCDR(ans, Replace(MakeVariable(i+1, tag), CAR(ans), CDR(ans)));
@@ -1038,14 +1039,15 @@ SEXP deriv(SEXP args)
 	else {
             SEXP var;
             PROTECT(var = MakeVariable(i+1, tag));
-            SETCAR(ans, lang3(install("<-"), var, AddParens(CAR(ans))));
+            SETCAR(ans, lang3(s_assign, var, AddParens(CAR(ans))));
             UNPROTECT(1);
         }
 	i = i + 1;
 	ans = CDR(ans);
     }
     /* .value <- ... */
-    SETCAR(ans, lang3(install("<-"), install(".value"), AddParens(CAR(ans))));
+    SEXP s_value = install(".value");
+    SETCAR(ans, lang3(s_assign, s_value, AddParens(CAR(ans))));
     ans = CDR(ans);
     /* .grad <- ... */
     SETCAR(ans, CreateGrad(names));
