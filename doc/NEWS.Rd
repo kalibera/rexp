@@ -156,7 +156,7 @@
 
       \item \code{rbind.data.frame()} gains an optional argument
       \code{make.row.names}, for potential speedup.
-      
+
       \item New function \code{extSoftVersion()} to report on the
       versions of third-party software in use in this session.
       Currently reports versions of \code{zlib}, \code{bzlib}, the
@@ -165,8 +165,11 @@
       A similar function \code{grSoftVersion()} in package \pkg{grDevices}
       reports on third-party graphics software.
 
-      Calling \code{callGeneric()} without arguments now works with
-      primitive generics to some extent.
+      \item Calling \code{callGeneric()} without arguments now works
+      with primitive generics to some extent.
+
+      \item \code{vapply(x, FUN, FUN.VALUE)} is more efficient notably
+      for large \code{length(FUN.VALUE)}; as extension of \PR{16061}.
     }
   }
 
@@ -174,17 +177,17 @@
     \itemize{
       \item The \code{\\donttest} sections of \R's help files can be
       tested by\cr
-      \command{make check TEST_DONTTEST=TRUE}.
+      \command{make check TEST_DONTTEST=TRUE} .
 
       \item It is possible to request the use of system
       \command{valgrind} headers \emph{via} \command{configure} option
       \option{--with-system-valgrind-headers}: note the possible
       incompatibility of such headers discussed in the 'R Installation
-      and Administration' manual. (Wish of \PR{16808}.)
+      and Administration' manual. (Wish of \PR{16068}.)
 
       \item The included version of \code{liblzma} has been updated to
       \code{xz-utils} 5.0.7 (minor bug fixes from 5.0.5).
-      
+
       \item \command{configure} options \option{--with-system-zlib},
        \option{--with-system-bzlib} and \option{--with-system-pcre} are
        now the default.  For the time being there is fallback to the
@@ -194,7 +197,12 @@
        Linux users should check that the \code{-devel} or \code{-dev}
        versions of packages \pkg{zlib}, \pkg{bzip2}/\pkg{libbz2} and
        \code{pcre} (or similar names) are installed.
-    }
+
+       \item (Windows.) Installation using external binary distributions
+       of \pkg{zlib}, \pkg{bzip}, \pkg{liblzma}, \pkg{pcre},
+       \pkg{libpng}, \pkg{jpeglib} and \pkg{libtiff} is now preferred
+       and likely to become the only way before release.
+     }
   }
 
   \subsection{UTILITIES}{
@@ -241,6 +249,16 @@
     }
   }
 
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item  (Windows) The use of macro \code{ZLIB_LIBS} in file
+      \file{src/Makevars.win} (which has not been documented for a long
+      time) now requires an external \file{libz.a} to be available (it is
+      part of the \sQuote{goodies} used to compile Windows binary
+      packages).  It would be simpler to use \code{-lz} instead.
+    }
+  }
+
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item \code{download.file(method = "lynx")} is defunct.
@@ -248,6 +266,11 @@
       \item Use of the included versions of \code{zlib}, \code{bzip2},
       \code{xz} and PCRE is deprecated: these are essentially frozen and
       will eventually be removed.
+
+      \item The \command{configure} option
+      \option{--with-valgrind-instrumentation=3} has been withdrawn, as
+      it did not work with recent \command{valgrind} headers: it is now
+      treated as level \code{2}.
     }
   }
 
@@ -290,6 +313,10 @@
       the implicit duplication that occurred in R < 3.1.0); note that
       this is a change from the previously documented
       behavior. (\PR{15958})
+
+      \item \code{icuSetCollate()} now accepts \code{locale = "ASCII"}
+      which uses the basic C function \code{strcmp} and so collates
+      strings byte-by-byte in numerical order.
     }
   }
 
@@ -298,7 +325,23 @@
       \item The included version of PCRE has been updated to 8.36.
     }
   }
-
+  
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD check} now checks the packages used in
+      \code{\\donttest} sections of the examples are specified in the
+      \file{DESCRIPTION} file.
+      (These are needed to run the examples interactively.)
+    }
+  }
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item The \command{configure} option
+      \option{--with-valgrind-instrumentation=3} is deprecated and will
+      be removed in \R 3.2.0.
+    }
+  }
+  
   \subsection{BUG FIXES}{
     \itemize{
       \item (Windows.) \command{Rscript.exe} was missing a
@@ -328,22 +371,32 @@
 
       \item \code{download.file()} reported downloaded sizes as 0KB if
       less than 1MB, only for \R 3.1.2 and only on big-endian platforms.
-      
+
       \item \code{prompt()} did not escape percent signs in the
       automatically generated usage section of help files.
-      
+
       \item \code{drop.terms()} dropped some of the attributes of the
-      object it was working with.  (\PR{16029})      
+      object it was working with.  (\PR{16029})
 
       \item (Windows.) The command completion in \command{Rgui.exe}
       messed up the console.  (\PR{15791})
-      
-      \item (Windows.) The \code{choose.files()} command returned a 
+
+      \item (Windows.) The \code{choose.files()} command returned a
       blank string when the user asked for a single file but cancelled
       the request.  (\PR{16074})
 
       \item \code{Math2} group generics failed to correctly dispatch
       \code{"structure"} and \code{"nonStructure"}-derived classes.
+
+      \item \code{loadNamespace()} imposed undocumented restrictions
+      on the \code{versionCheck} parameter.  (Reported by Geoff Lee.)
+
+      \item Rare over-runs detected by AddressSanitizer in
+      \code{substr()} and its replacement version have been avoided.
+
+      \item Loading packages incorrectly defining an S4 generic followed
+      by a function of the same name caused an erroneous cyclic
+      namespace dependency error.
     }
   }
 }

@@ -823,11 +823,12 @@ The @samp{Suggests} field uses the same syntax as @samp{Depends} and
 lists packages that are not necessarily needed.  This includes packages
 used only in examples, tests or vignettes (@pxref{Writing package
 vignettes}), and packages loaded in the body of functions.  E.g.,
-suppose an example from package @pkg{foo} uses a dataset from package
-@pkg{bar}. Then it is not necessary to have @pkg{bar} use @pkg{foo}
-unless one wants to execute all the examples/tests/vignettes: it is
-useful to have @pkg{bar}, but not necessary.  Version requirements can
-be specified, and will be used by @command{R CMD check}.
+suppose an example@footnote{even one wrapped in @code{\donttest}.} from
+package @pkg{foo} uses a dataset from package @pkg{bar}. Then it is not
+necessary to have @pkg{bar} use @pkg{foo} unless one wants to execute
+all the examples/tests/vignettes: it is useful to have @pkg{bar}, but
+not necessary.  Version requirements can be specified, and will be used
+by @command{R CMD check}.
 
 @c DESCRIPTION field Enhances
 Finally, the @samp{Enhances} field lists packages ``enhanced'' by the
@@ -3881,7 +3882,7 @@ GNU extensions.  Commonly misused GNU extensions are conditional
 inclusions (@code{ifeq} and the like), @code{$@{shell ...@}} and
 @code{$@{wildcard ...@}}, and the use of @code{+=} and @code{:=}.  Also,
 the use of @code{$<} other than in implicit rules is a GNU extension, as
-is the @code{$^} macro  Unfortunately makefiles which use GNU
+is the @code{$^} macro.  Unfortunately makefiles which use GNU
 extensions often run on other platforms but do not have the intended
 results.
 
@@ -3906,14 +3907,17 @@ SystemRequirements: GNU make
 Since the only viable make for Windows is GNU make, it is permissible to
 use GNU extensions in files @file{Makevars.win} or @file{Makefile.win}.
 
-Moreover, Bash extensions also need to be avoided in shell scripts,
-including expressions in Makefiles (which are passed to the shell for
-processing).  Some @R{} platforms use strictly POSIX-conformant Bourne
-shells, and Windows and some Unix-alike OSes use @command{ash}
-(@uref{http://en.wikipedia.org/wiki/Almquist_shell}), a rather minimal
-shell with few builtins.  Beware of assuming that all the POSIX
-command-line utilities are available, especially on Windows where only a
-minimal set is provided for use with @R{}.
+@item
+Bash extensions also need to be avoided in shell scripts, including
+expressions in Makefiles (which are passed to the shell for processing).
+Some @R{} platforms use strict@footnote{For example, @command{test}
+options @option{-a} and @option{-e} are not portable, and not supported
+in the AT&T Bourne shell used on Solaris. Even though they are in the
+POSIX standard.} Bourne shells, and Windows and some Unix-alike OSes use
+@command{ash} (@uref{http://en.wikipedia.org/wiki/Almquist_shell}), a
+rather minimal shell with few builtins.  Beware of assuming that all the
+POSIX command-line utilities are available, especially on Windows where
+only a minimal set is provided for use with @R{}.
 @ifset UseExternalXrefs
 (@xref{The command line tools, , The command line tools,
 R-admin, R Installation and Administration}.)
@@ -3946,6 +3950,13 @@ to follow the 1998 standard (and not use features from C99).  See also
 If you use FORTRAN 77, @code{ftnchek}
 (@uref{http://www.dsm.fordham.edu/@/~ftnchek/}) provides thorough testing
 of conformance to the standard.
+
+Not all common @R{} platforms conform to the expected standards, e.g.@:
+C99 for C code.  One common area of problems is the @code{*printf}
+functions where Windows does not support @code{%lld}, @code{%Lf} and
+similar formats (and has its own formats such as @code{%I64d} for 64-bit
+integers).  It is very rare to need to output such types, and 64-bit
+integers can usually be converted to doubles for output.
 
 @item
 Do be very careful with passing arguments between @R{}, C and
@@ -4019,6 +4030,17 @@ nm -pg mypkg.so
 @noindent
 and checking if any of the symbols marked @code{U} is unexpected is a
 good way to avoid this.
+
+@item
+Linkers have a lot of freedom in how to resolve entry points in
+dynamically-loaded code, so the results may differ by platform.  One
+area that has caused grief is packages including copies of standard
+system software such as @code{libz} (especially those already linked
+into @R{}).  In the case in point, entry point @code{gzgets} was
+sometimes resolved against the old version compiled into the package,
+sometimes against the copy compiled into @R{} and sometimes against the
+system dynamic library.  The only safe solution is to rename the entry
+points in the copy in the package.
 
 @item
 Conflicts between symbols in DLLs are handled in very platform-specific
@@ -4100,7 +4122,9 @@ If you must try to establish a tolerance empirically, configure and
 build @R{} with @option{--disable-long-double} and use appropriate
 compiler flags (such as @option{-ffloat-store} and
 @option{-fexcess-precision=standard} for @command{gcc}, depending on the
-CPU type) to mitigate the effects of extended-precision calculations.
+CPU type@footnote{These are not needed for the default compiler settings
+on @cputype{x86_64} but are likely to be needed on @cputype{ix86}.}) to
+mitigate the effects of extended-precision calculations.
 
 Tests which involve random inputs or non-deterministic algorithms should
 normally set a seed or be tested for many seeds.
@@ -5231,12 +5255,19 @@ standard data sets listed by @code{data()} (see @code{?data} for more
 info).
 
 Finally, there is @code{\donttest}, used (at the beginning of a separate
-line) to mark code that should be run by @code{examples()} but not by
-@code{R CMD check}.  This should be needed only occasionally but can be
-used for code which might fail in circumstances that are hard to test
-for, for example in some locales.  (Use e.g. @code{capabilities()} to
-test for features needed in the examples wherever possible, and you can
-also use @code{try()} or @code{tryCatch()}.)
+line) to mark code that should be run by @code{example()} but not by
+@code{R CMD check} (by default: as from @R{} 3.2.0 the option
+@option{--run-donttest} can be used).  This should be needed only
+occasionally but can be used for code which might fail in circumstances
+that are hard to test for, for example in some locales.  (Use
+e.g. @code{capabilities()} to test for features needed in the examples
+wherever possible, and you can also use @code{try()} or
+@code{tryCatch()}.  Use @code{interactive()} to condition examples which
+need someone to interact with.)  Note that code included in
+@code{\donttest} must be correct @R{} code, and any packages used should
+be declared in the @file{DESCRIPTION} file.  It is good practice to
+include a comment in the @code{\donttest} section explaining why it is
+needed.
 
 @findex \keyword
 @item \keyword@{@var{key}@}
@@ -5403,7 +5434,7 @@ another @file{Rd} file, it is helpful to use this as an additional
 @code{\alias}.
 
 Skeletons of documentation for a package can be generated using the
-function @code{promptPackage()}.  If the @code{final = TRUE} argument
+function @code{promptPackage()}.  If the @code{final = LIBS} argument
 is used, then the @file{Rd} file will be generated in final form, containing
 the information that would be produced up to
 @code{library(help = @var{pkgname})}.  Otherwise (the default) comments
@@ -6751,7 +6782,7 @@ The analysis for @file{libc} showed that calls to @code{wcsftime}
 dominated, so those calls were cached for @R{} 3.0.3: the time spent in
 @code{no-vmlinux} (the kernel) was reduced dramatically.
 
-On platforms which support it, callgraphs can be produced by
+On platforms which support it, call graphs can be produced by
 @command{opcontrol --callgraph} if collected via @command{operf
 --callgraph}.
 

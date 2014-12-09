@@ -36,14 +36,15 @@ bytecode-base:
 
 
 rpackages:
-	@$(MK) -C ../library -f Makefile.win all WIN=$(WIN)
+	@$(MK) -C ../library -f Makefile.win all WIN=$(WIN) EXT_LIBS="$(EXT_LIBS)"
 	@$(MK) -C ../library -f Makefile.win docs
 
 
 ## must come after bitmapdll
 cairodevices:
 ifneq "$(CAIRO_HOME)" ""
-	@$(MK) -C ../library/grDevices/src/cairo -f Makefile.win all WIN=$(WIN) CAIRO_HOME=$(CAIRO_HOME) CAIRO_TYPE=$(CAIRO_TYPE)
+	@$(MK) -C ../library/grDevices/src/cairo -f Makefile.win all \
+	  WIN=$(WIN) CAIRO_HOME=$(CAIRO_HOME) CAIRO_TYPE=$(CAIRO_TYPE)
 endif
 
 ifeq ($(wildcard MkRules?local),MkRules.local)
@@ -67,31 +68,32 @@ endif
 
 R-DLLFLAGS=-mwindows
 ifdef USE_ICU
-LIBEXTRAS+= -L$(ICU_PATH)/lib$(R_ARCH) $(ICU_LIBS)
+LIBEXTRAS = -L$(ICU_PATH)/lib$(R_ARCH) $(ICU_LIBS)
 endif
 
-R-DLLLIBS =$(OPENMP) -L. $(FLIBS) -lRblas -L../../$(IMPDIR) -lRzlib -lRgraphapp -lRiconv -lcomctl32 -lversion $(LIBEXTRAS)
-dllversion-RESFLAGS =-I../include
+dllversion-RESFLAGS = -I../include
 CSOURCES = \
-  console.c dynload.c editor.c embeddedR.c extra.c \
+  console.c dynload.c editor.c embeddedR.c extra.c malloc.c \
   opt.c pager.c preferences.c psignal.c rhome.c rt_complete.c \
   rui.c run.c shext.c sys-win32.c system.c dos_wglob.c
-OBJS = $(CSOURCES:.c=.o)
+OBJS = $(CSOURCES:.c=.o) dllversion.o
 ifeq "$(WIN)" "32"
  OBJS += e_pow.o
 endif
 MAINLIBS = ../main/libmain.a ../appl/libappl.a ../nmath/libnmath.a
 EXTRALIBS = getline/gl.a ../extra/xdr/libxdr.a \
-   ../extra/pcre/libpcre.a ../extra/bzip2/libbz2.a \
    ../extra/intl/libintl.a ../extra/trio/libtrio.a ../extra/tzone/libtz.a \
-   ../extra/tre/libtre.a ../extra/xz/liblzma.a
+   ../extra/tre/libtre.a
 
-# flags to ensure that Doug Lea's malloc is used:
-ifdef LEA_MALLOC
-extra-CFLAGS+=-DLEA_MALLOC
-OBJS-EXTRA=malloc.o
-malloc-DEFS=-DLEA_MALLOC
+ifdef EXT_LIBS
+LIBEXTRAS += -L"$(EXT_LIBS)"/lib$(R_ARCH) -lpcre -lz -lbz2 -llzma
+R-DLLLIBS = $(OPENMP) -L. $(FLIBS) -lRblas -L../../$(IMPDIR) -lRgraphapp -lRiconv -lcomctl32 -lversion $(LIBEXTRAS)
+else
+EXTRALIBS += ../extra/pcre/libpcre.a ../extra/bzip2/libbz2.a \
+   ../extra/xz/liblzma.a
+R-DLLLIBS = $(OPENMP) -L. $(FLIBS) -lRblas -L../../$(IMPDIR) -lRzlib -lRgraphapp -lRiconv -lcomctl32 -lversion $(LIBEXTRAS)
 endif
+
 
 .PHONY:  clean veryclean rlibs fixfiles front-ends rmodules
 
@@ -122,9 +124,14 @@ rlibs:
 	$(MK) -C ../nmath CFLAGS='$(CFLAGS)' FFLAGS='${FFLAGS}' -f Makefile.win
 	$(MK) -C ../main CFLAGS='$(CFLAGS)' FFLAGS='$(FFLAGS)' malloc-DEFS='$(malloc-DEFS)' -f Makefile.win
 	$(MK) -C ./getline CFLAGS='$(CFLAGS)'
-	@for ex in graphapp pcre bzip2 zlib xdr tre trio tzone win_iconv xz; do \
+	@for ex in graphapp xdr tre trio tzone win_iconv ; do \
 	  $(MK) -C ../extra/$${ex} CFLAGS='$(CFLAGS)' -f Makefile.win || exit 1; \
 	done
+ifndef EXT_LIBS
+	@for ex in pcre bzip2 zlib xz; do \
+	  $(MK) -C ../extra/$${ex} CFLAGS='$(CFLAGS)' -f Makefile.win || exit 1; \
+	done
+endif
 
 rmodules:
 	@$(MKDIR) -p ../../modules$(R_ARCH)
@@ -146,7 +153,7 @@ dllversion.o: ../include/Rversion.h
 
 ## Rdll.hide has decoration which 64-bit builds lack
 ifeq "$(WIN)" "64"
-R.dll: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
+R.dll: $(OBJS) $(MAINLIBS) $(EXTRALIBS)
 	@$(ECHO) EXPORTS > R.def
 	@$(NM) $^ | $(SED) -n  $(SYMPAT) | LC_COLLATE=C $(SORT) | \
 	  uniq $(NM_FILTER) > R0.def
@@ -155,7 +162,7 @@ R.dll: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
 	$(DLL) -shared $(DLLFLAGS) $($*-DLLFLAGS) -o $@ R.def $^ $($*-DLLLIBS) $(DLLLIBS)
 	@$(RM) R.def R0.def R1.def
 else
-R.dll: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
+R.dll: $(OBJS) $(MAINLIBS) $(EXTRALIBS)
 	@$(ECHO) EXPORTS > R.def
 	@$(NM) $^ | $(SED) -n  $(SYMPAT) | LC_COLLATE=C $(SORT) | uniq > R0.def
 	@LC_COLLATE=C $(SORT) Rdll.hide > R1.def
@@ -164,7 +171,7 @@ R.dll: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
 	@$(RM) R.def R0.def R1.def
 endif
 
-R.exp: $(OBJS) $(OBJS-EXTRA) $(MAINLIBS) $(EXTRALIBS) dllversion.o
+R.exp: $(OBJS) $(MAINLIBS) $(EXTRALIBS)
 	@$(ECHO) LIBRARY R.dll > R.exp
 	@$(ECHO) EXPORTS >> R.exp
 	@$(NM) $^ | $(SED) -n $(SYMPAT) | LC_COLLATE=C $(SORT) | \

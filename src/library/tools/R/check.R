@@ -2190,11 +2190,11 @@ setRlibs <-
                 if(haveObjs)
                     c("Compiled code should not call entry points which",
                       "might terminate R nor write to stdout/stderr instead",
-                      "of to the console, nor the C RNG.\n")
+                      "of to the console, nor the system RNG.\n")
                 else
                     c("Compiled code should not call entry points which",
                       "might terminate R nor write to stdout/stderr instead",
-                      "of to the console, nor the C RNG.",
+                      "of to the console, nor the system RNG.",
                       "The detected symbols are linked",
                       "into the code but might come from libraries",
                       "and not actually be called.\n")
@@ -2451,7 +2451,7 @@ setRlibs <-
         if (!do_examples) resultLog(Log, "SKIPPED")
         else {
             pkgtopdir <- file.path(libdir, pkgname)
-            cmd <- sprintf('tools:::.createExdotR("%s", "%s", silent = TRUE, use_gct = %s, addTiming = %s, commentDontrun = %s, commentDontest = %s)',
+            cmd <- sprintf('tools:::.createExdotR("%s", "%s", silent = TRUE, use_gct = %s, addTiming = %s, commentDontrun = %s, commentDonttest = %s)',
                            pkgname, pkgtopdir, use_gct, do_timings,
                            !run_dontrun, !run_donttest)
             Rout <- tempfile("Rout")
@@ -2505,6 +2505,13 @@ setRlibs <-
                     Log$stars <<-  "*"
                     if (!res) do_exit(1L)
                 }
+                cntFile <- paste0(exfile, "-cnt")
+                if (file.exists(cntFile)) {
+                    unlink(cntFile)
+                    if (as_cran)
+                        printLog(Log, "** found \\donttest examples:",
+                                 " check also with --run-donttest\n")
+                }
             } else {
                 resultLog(Log, "NONE")
                 no_examples <<- TRUE
@@ -2531,7 +2538,7 @@ setRlibs <-
 	    checkingLog(Log, "tests")
 	else
 	    checkingLog(Log, "tests in ", sQuote(test_dir))
-	    
+
         run_one_arch <- function(arch = "")
         {
             testsrcdir <- file.path(pkgdir, test_dir)
@@ -3890,7 +3897,7 @@ setRlibs <-
             "      --use-valgrind    use 'valgrind' when running examples/tests/vignettes",
             "      --timings         record timings for examples",
             "      --install-args=	command-line args to be passed to INSTALL",
-	    "      --test-dir=       look in this subdirectory for test scripts (default tests)",	    
+	    "      --test-dir=       look in this subdirectory for test scripts (default tests)",
             "      --check-subdirs=default|yes|no",
             "			run checks on the package subdirectories",
             "			(default is yes for a tarball, no otherwise)",
@@ -4065,6 +4072,8 @@ setRlibs <-
         opts <- c(opts, "--install=no")
         do_install_arg <- FALSE
     }
+    if (run_dontrun) opts <- c(opts, "--run-dontrun")
+    if (run_donttest) opts <- c(opts, "--run-donttest")
 
     if (install == "fake") {
         ## If we fake installation, then we cannot *run* any code.
