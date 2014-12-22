@@ -11,11 +11,10 @@ LOCAL_SOFT =
 
 ## ============== configuration macros for building R ===================
 
-# External library directory, containing zlib, bzlib, liblzma, pcre,
+# Path of library directory containing zlib, bzlib, liblzma, pcre,
 # libpng, libjpeg, libtiff.
 # A suitable version can be found at
 # http://www.stats.ox.ac.uk/pub/Rtools/libs.html
-# No spaces in the path.
 # EXT_LIBS =
 
 # an alternative is to use -gstabs here, if the debugger supports only stabs.
@@ -75,11 +74,6 @@ WIN = 32
 # path to parent of ICU headers
 ICU_PATH = /path/to/ICU
 ICU_LIBS = -lsicuin -lsicuuc -lsicudt -lstdc++
-
-# optional overrides for making bitmapdll: names of source directories
-# JPEGDIR = jpeg-9
-# PNGDIR = libpng
-# TIFFDIR = libtiff
 
 # For the cairographics devices
 # Optionally use a static build of cairographics from

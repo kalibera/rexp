@@ -160,16 +160,31 @@
       \item New function \code{extSoftVersion()} to report on the
       versions of third-party software in use in this session.
       Currently reports versions of \code{zlib}, \code{bzlib}, the
-      \code{liblzma} from \code{xz}, PCRE, ICU and TRE.
+      \code{liblzma} from \code{xz}, PCRE, ICU, TRE and the \code{iconv}
+      implementation.
 
       A similar function \code{grSoftVersion()} in package \pkg{grDevices}
       reports on third-party graphics software.
+
+      Function \code{tcltk::tclVersion()} reports the Tcl/Tk version.
 
       \item Calling \code{callGeneric()} without arguments now works
       with primitive generics to some extent.
 
       \item \code{vapply(x, FUN, FUN.VALUE)} is more efficient notably
       for large \code{length(FUN.VALUE)}; as extension of \PR{16061}.
+
+      \item \code{as.table()} now allows tables with one or more
+      dimensions of length 0 (such as \code{as.table(integer())}).
+
+      \item \code{names(x) <- NULL} now clears the names of call
+      and \code{\dots} objects.
+
+      \item \code{library()} will report a warning when an insufficient
+      dependency version is masking a sufficient one later on the
+      library search path.
+
+      \item A new \code{plot.raster()} method has been added.
     }
   }
 
@@ -200,8 +215,8 @@
 
        \item (Windows.) Installation using external binary distributions
        of \pkg{zlib}, \pkg{bzip}, \pkg{liblzma}, \pkg{pcre},
-       \pkg{libpng}, \pkg{jpeglib} and \pkg{libtiff} is now preferred
-       and likely to become the only way before release.
+       \pkg{libpng}, \pkg{jpeglib} and \pkg{libtiff} is now required,
+       and the build instructions have been revised.
      }
   }
 
@@ -227,6 +242,13 @@
 
       \item \command{R CMD check} gains option \option{--test-dir} to
       specify an alternative set of tests to run.
+      
+      \item \command{R CMD check} will now by default continue with
+      testing after many types of errors, and will output a summary
+      count of errors at the end if any have occurred.      
+      
+      \item \command{R CMD check --as-cran} checks a \file{README.md}
+      file can be processed: this needs \command{pandoc} installed.
     }
   }
 
@@ -246,6 +268,8 @@
       \item New entry point \code{R_allocLD}, like \code{R_alloc} but
       guaranteed to have sufficient alignment for \code{long double}
       pointers.
+
+      \item \code{isPairList} now returns \code{TRUE} for DOTSXP.
     }
   }
 
@@ -285,8 +309,17 @@
       \item \code{all.equal()} gains methods for \code{environment}s and
       \code{refClass}es.
 
-      \code{[<-} and \code{[[<-} gain S4 \code{data.frame} methods to
+      \item \code{[<-} and \code{[[<-} gain S4 \code{data.frame} methods to
       avoid corruption of S4 class information by the S3 methods.
+
+      \item \code{callNextMethod()} should now work within a \code{.local}
+      call when \code{\dots} is absent from \code{formals(.local)}.
+
+      \item \code{dput(pairlist(x))} generates a call to the \code{pairlist}
+      constructor, instead of the \code{list} constructor.
+
+      \item Fix \code{missing()} when arguments are propagated through
+      \code{\dots}; see \PR{15707}.
     }
   }
 }
@@ -300,9 +333,9 @@
 
       \item \code{kruskal.test()} warns on more types of suspicious input.
 
-      \item The \code{as.dendrogram} method for \code{"hclust"} objects
-      gets a \code{check} argument protecting against memory explosion for
-      invalid inputs.
+      \item The \code{as.dendrogram()} method for \code{"hclust"}
+      objects gains a \code{check} argument protecting against memory
+      explosion for invalid inputs.
 
       \item \code{capabilities()} has a new item \code{long.double}
       which indicates if the build uses a \code{long double} type which
@@ -385,8 +418,8 @@
       blank string when the user asked for a single file but cancelled
       the request.  (\PR{16074})
 
-      \item \code{Math2} group generics failed to correctly dispatch
-      \code{"structure"} and \code{"nonStructure"}-derived classes.
+      \item \code{Math2} S4 group generics failed to correctly dispatch
+      \code{"structure"}- and \code{"nonStructure"}-derived classes.
 
       \item \code{loadNamespace()} imposed undocumented restrictions
       on the \code{versionCheck} parameter.  (Reported by Geoff Lee.)
@@ -397,6 +430,9 @@
       \item Loading packages incorrectly defining an S4 generic followed
       by a function of the same name caused an erroneous cyclic
       namespace dependency error.
+      
+      \item Declared vignette encodings are now always passed to the
+      vignette engine.
     }
   }
 }

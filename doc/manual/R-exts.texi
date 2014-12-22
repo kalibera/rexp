@@ -250,11 +250,12 @@ installation instructions), @file{README}/@file{README.md}@footnote{This
 seems to be commonly used for a file in `markdown' format.  Be aware
 that most users of @R{} will not know that, nor know how to view such a
 file: platforms such as OS X and Windows do not have a default viewer
-set in their file associations. The @acronym{CRAN} package web pages
-render such files in @HTML{}.}, or @file{ChangeLog} will be ignored by
-@R{}, but may be useful to end users.  The utility @command{R CMD build}
-may add files in a @file{build} directory (but this should not be used
-for other purposes).
+set in their file associations.  The @acronym{CRAN} package web pages
+render such files in @HTML{}: the converter used expects the file to be
+encoded in UTF-8.}, or @file{ChangeLog} will be ignored by @R{}, but may
+be useful to end users.  The utility @command{R CMD build} may add files
+in a @file{build} directory (but this should not be used for other
+purposes).
 
 Except where specifically mentioned,@footnote{currently, top-level files
 @file{.Rbuildignore} and @file{.Rinstignore}, and
@@ -2728,6 +2729,10 @@ give false positives, most commonly because of non-standard evaluation
 for formulae and because the intention is to return objects in the
 environment of a function for later use.
 
+Complete checking of a package which contains a file @file{README.md}
+needs @command{pandoc} installed: see
+@uref{http://johnmacfarlane.net/@/pandoc/@/installing.html}.
+
 You do need to ensure that the package is checked in a suitable locale
 if it contains non-@acronym{ASCII} characters.  Such packages are likely
 to fail some of the checks in a @code{C} locale, and @command{R CMD
@@ -3140,15 +3145,26 @@ need to be declared to @LaTeX{} via a line like
 @end example
 @noindent
 (It is also possible to use the more recent @samp{inputenx} @LaTeX{}
-package.)  If the encoding is UTF-8, this can also be declared using
+package.) For files where this line is not needed (e.g. chapters
+included within the body of a larger document, or non-Sweave 
+vignettes), the encoding may be declared using a comment like
+@example
+%!\VignetteEncoding@{UTF-8@}
+@end example
+@noindent
+If the encoding is UTF-8, this can also be declared using
 the declaration
 @example
 %!\SweaveUTF8
 @end example
 @noindent
-but be aware that @LaTeX{} may require the @samp{usepackage} declaration.
-@command{R CMD check} will warn about any non-@acronym{ASCII}
-vignettes it finds which do not have one of these declarations.
+If no declaration is given in the vignette, it will be assumed to be
+in the encoding declared for the package.  If there is no encoding
+declared in either place, then it is an error to use non-@acronym{ASCII}
+characters in the vignette.
+
+In any case, be aware that @LaTeX{} may require the @samp{usepackage} 
+declaration.
 
 @code{Sweave()} will also parse and evaluate the @R{} code in each
 chunk.  The @R{} output will also be in the current locale (or @acronym{UTF-8}
@@ -4071,6 +4087,15 @@ It is bad practice for package code to alter the search path using
 @code{library}, @code{require} or @code{attach} and this often does not
 work as intended.  For alternatives, see @ref{Suggested packages} and
 @code{with}.
+
+@item
+Examples can be run interactively @emph{via} @code{example} as well as
+in batch mode when checking.  So they should behave appropriately in
+both scenarios, conditioning by @code{interactive()} the parts which
+need an operator or observer.  For instance, progress bars are only
+appropriate in interactive use, as is displaying help pages or calling
+@code{View()} (see below).
+
 @end itemize
 
 Do be careful in what your tests (and examples) actually test.  Bad
@@ -5280,7 +5305,7 @@ within @R{}.  There can be more than one @code{\keyword} entry if the @R{}
 object being documented falls into more than one category, or none.
 
 Do strongly consider using @code{\concept} (@pxref{Indices}) instead of
-@code{\keyword} if you are about to use more than very few non standard
+@code{\keyword} if you are about to use more than very few non-standard
 keywords. 
 
 The special keyword @samp{internal} marks a page of internal objects
@@ -10240,7 +10265,7 @@ code.  In this example the special values are no problem, as
 implementation this is also true of @code{NA} as it is a type of
 @code{NaN}, but it is unwise to rely on such details.  Thus we will
 re-write the code to handle @code{NA}s using macros defined in
-@file{R_exts/Arith.h} included by @file{R.h}.
+@file{R_ext/Arith.h} included by @file{R.h}.
 
 The code changes are the same in any of the versions of @code{convolve2}
 or @code{convolveE}:

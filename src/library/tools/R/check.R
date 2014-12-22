@@ -263,6 +263,7 @@ setRlibs <-
             resultLog(Log, "OK")
         } else {
             errorLog(Log, "Package directory ", sQuote(pkg), "does not exist.")
+            summaryLog(Log)
             do_exit(1L)
         }
 
@@ -463,7 +464,7 @@ setRlibs <-
                     "Please rename the files and try again.\n",
                     "See section 'Package structure'",
                     "in the 'Writing R Extensions' manual.\n")
-            do_exit(1L)
+	    maybe_exit(1L)
         }
 
         ## Next check for name clashes on case-insensitive file systems
@@ -479,7 +480,7 @@ setRlibs <-
                     "Please rename the files and try again.\n",
                     "See section 'Package structure'",
                     "in the 'Writing R Extensions' manual.\n")
-            do_exit(1L)
+	    maybe_exit(1L)
         }
 
         ## NB: the omission of ' ' is deliberate.
@@ -535,7 +536,8 @@ setRlibs <-
                     "final component.\n",
                     "See section 'Package structure'",
                     "in the 'Writing R Extensions' manual.\n")
-            if (!OK) do_exit(1L)
+	    if (!OK)
+		maybe_exit(1L)
         }
         if (!any) resultLog(Log, "OK")
 
@@ -577,8 +579,8 @@ setRlibs <-
             wrapLog("Found the following files with insufficient permissions:\n")
             printLog0(Log, .format_lines_with_indent(bad_files), "\n")
             wrapLog("Permissions should be at least 700 for directories and 400 for files.\nPlease fix permissions and try again.\n")
-            do_exit(1L)
-        }
+	    maybe_exit(1L)
+	}
 
         ## Phase B.  Top-level scripts 'configure' and 'cleanup'
         ## should really be mode at least 500, or they will not be
@@ -614,6 +616,7 @@ setRlibs <-
         if (length(out)) {
             errorLog(Log)
             printLog0(Log, paste(out, collapse = "\n"), "\n")
+            summaryLog(Log)
             do_exit(1L)
         }
         any <- FALSE
@@ -758,6 +761,30 @@ setRlibs <-
             printLog0(Log, .format_lines_with_indent(topfiles), "\n")
             wrapLog("These files are defunct.",
                     "See manual 'Writing R Extensions'.\n")
+        }
+        ## if README.md is present, it must be able to be processed
+        ## by CRAN to README.html, which is done by pandoc.
+        if (file.exists("README.md") && check_incoming) {
+            if (nzchar(Sys.which("pandoc"))) {
+                rfile <- file.path(tempdir(), "README.html")
+                out <- .system_with_capture("pandoc",
+                                            paste("README.md", "-s",
+                                                  "--email-obfuscation=references",
+                                                  "--css=../../CRAN_web.css",
+                                                  "-o", rfile))
+                if(out$status) {
+                    if(!any) warningLog(Log)
+                    any <- TRUE
+                    printLog(Log, "Conversion of README.md failed:\n",
+                             paste(out$stderr, collapse = "\n"), "\n")
+                }
+            } else {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                printLog(Log,
+                         "File README.md cannot be checked without ",
+                         "'pandoc' being installed.\n")
+            }
         }
         topfiles <- Sys.glob(c("LICENCE", "LICENSE"))
         if (length(topfiles)) {
@@ -1252,7 +1279,7 @@ setRlibs <-
         if (any(grepl("^Error", out))) {
             errorLog(Log)
             printLog0(Log, paste(c(out, ""), collapse = "\n"))
-            do_exit(1L)
+	    maybe_exit(1L)
         } else if (length(out)) {
             warningLog(Log)
             printLog0(Log, paste(c(out, ""), collapse = "\n"))
@@ -1390,7 +1417,7 @@ setRlibs <-
                 wrapLog("The system-specific extension for",
                         "shared objects must not be added.\n",
                         "See ?library.dynam.\n")
-                do_exit(1L)
+		maybe_exit(1L)
             }
         }
 
@@ -1641,7 +1668,7 @@ setRlibs <-
             if (length(err)) {
                 errorLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
-                do_exit(1L)
+		maybe_exit(1L)
             } else if (length(out)) {
                 warningLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
@@ -2224,6 +2251,7 @@ setRlibs <-
                 printLog0(Log,
                           paste(c("Loading log:", out, ""),
                                 collapse = "\n"))
+            summaryLog(Log)
             do_exit()
         }
         if (any(grepl("^Error", out))) {
@@ -2232,7 +2260,7 @@ setRlibs <-
             wrapLog("\nIt looks like this package",
                     "has a loading problem: see the messages",
                     "for details.\n")
-            do_exit()
+	    maybe_exit(1L)
         } else resultLog(Log, "OK")
 
         checkingLog(Log, "whether the package can be loaded with stated dependencies")
@@ -2466,7 +2494,7 @@ setRlibs <-
                           paste(readLines(Rout, warn = FALSE),
                                 collapse = "\n"),
                           "\n")
-                do_exit(1L)
+		maybe_exit(1L)
             }
             ## It ran, but did it create any examples?
             exfile <- paste0(pkgname, "-Ex.R")
@@ -2476,7 +2504,7 @@ setRlibs <-
                 } else ""
                 if (!this_multiarch) {
                     exout <- paste0(pkgname, "-Ex.Rout")
-                    if(!run_one_arch(exfile, exout)) do_exit(1L)
+                    if(!run_one_arch(exfile, exout)) maybe_exit(1L)
                 } else {
                     printLog(Log, "\n")
                     Log$stars <<-  "**"
@@ -2492,6 +2520,7 @@ setRlibs <-
                             if (!dir.exists(tdir)) {
                                 errorLog(Log,
                                          "unable to create examples directory")
+                                summaryLog(Log)
                                 do_exit(1L)
                             }
                             od <- setwd(tdir)
@@ -2503,7 +2532,7 @@ setRlibs <-
                         }
                     }
                     Log$stars <<-  "*"
-                    if (!res) do_exit(1L)
+                    if (!res) maybe_exit(1L)
                 }
                 cntFile <- paste0(exfile, "-cnt")
                 if (file.exists(cntFile)) {
@@ -2548,6 +2577,7 @@ setRlibs <-
             if(!dir.exists(testdir)) {
                 errorLog(Log,
                          sprintf("unable to create %s", sQuote(testdir)))
+                summaryLog(Log)
                 do_exit(1L)
             }
             file.copy(Sys.glob(paste0(testsrcdir, "/*")),
@@ -2620,7 +2650,7 @@ setRlibs <-
                         res <- res & run_one_arch(arch)
                     }
             }
-            if (!res) do_exit(1L)
+            if (!res) maybe_exit(1L)
         } else resultLog(Log, "SKIPPED")
     }
 
@@ -2670,7 +2700,8 @@ setRlibs <-
                                         sQuote(basename(bad_vignettes))),
                                   "", ""), collapse = "\n"))
             }
-            encs <- vapply(vigns$docs, getVignetteEncoding, "")
+	    defaultEncoding <- .get_package_metadata(pkgdir)["Encoding"]
+            encs <- vapply(vigns$docs, getVignetteEncoding, "", default = defaultEncoding)
             bad_vignettes <- vigns$docs[encs == "non-ASCII"]
             if(nb <- length(bad_vignettes)) {
                 if(!any) warningLog(Log)
@@ -2746,8 +2777,9 @@ setRlibs <-
         ## If the vignettes declare an encoding, are they actually in it?
         ## (We don't check the .tex, though)
         bad_vignettes <- character()
-        for (v in vigns$docs) {
-            enc <- getVignetteEncoding(v, TRUE)
+        for (i in seq_along(vigns$docs)) {
+	    v <- vigns$docs[i]
+            enc <- vigns$encodings[i]
             if (enc %in% c("", "non-ASCII", "unknown")) next
             lines <- readLines(v, warn = FALSE) # some miss final NA
             lines2 <- iconv(lines, enc, "UTF-16LE", toRaw = TRUE)
@@ -2785,8 +2817,7 @@ setRlibs <-
             for (i in seq_along(vigns$docs)) {
                 file <- vigns$docs[i]
                 name <- vigns$names[i]
-                enc <- getVignetteEncoding(file, TRUE)
-                if(enc %in% c("non-ASCII", "unknown")) enc <- def_enc
+                enc <- vigns$encodings[i]
                 cat("  ", sQuote(basename(file)),
                     if(nzchar(enc)) paste("using", sQuote(enc)),
                     "...")
@@ -2856,7 +2887,7 @@ setRlibs <-
                 } else {
                     errorLog(Log, "Errors in running code in vignettes:")
                     printLog0(Log, paste(c(res, "", ""), collapse = "\n"))
-                    do_exit(1L)
+		    maybe_exit(1L)
                 }
             } else resultLog(Log, "OK")
 
@@ -2874,6 +2905,7 @@ setRlibs <-
                 dir.create(vd2 <- "vign_test")
                 if (!dir.exists(vd2)) {
                     errorLog(Log, "unable to create 'vign_test'")
+                    summaryLog(Log)
                     do_exit(1L)
                 }
                 file.copy(pkgdir, vd2, recursive = TRUE)
@@ -2965,7 +2997,7 @@ setRlibs <-
                               invert = TRUE, value = TRUE)
                 printLog0(Log, paste(c(lines, ""), collapse = "\n"))
                 unlink(build_dir, recursive = TRUE)
-                do_exit(1L)
+		maybe_exit(1L)
             } else if (res > 0) {
                 latex_file <- file.path(build_dir, "Rd2.tex")
                 if (file.exists(latex_file))
@@ -3015,7 +3047,7 @@ setRlibs <-
                         run_Rcmd(args)
                     }
                     unlink(build_dir, recursive = TRUE)
-                    do_exit(1L)
+		    maybe_exit(1L)
                 } else {
                     unlink(build_dir, recursive = TRUE)
                     resultLog(Log, "OK")
@@ -3191,6 +3223,7 @@ setRlibs <-
                 ## Rare use of R CMD INSTALL
                 if (run_Rcmd(args)) {
                     errorLog(Log, "Installation failed.")
+                    summaryLog(Log)
                     do_exit(1L)
                 }
                 message("")
@@ -3210,6 +3243,7 @@ setRlibs <-
                     if (!file.exists(thislog)) {
                         errorLog(Log,
                                  sprintf("install log %s does not exist", sQuote(thislog)))
+                        summaryLog(Log)
                         do_exit(2L)
                     }
                     file.copy(thislog, outfile)
@@ -3239,6 +3273,7 @@ setRlibs <-
                     errorLog(Log, "Installation failed.")
                     printLog0(Log, "See ", sQuote(outfile),
                              " for details.\n")
+                    summaryLog(Log)
                     do_exit(1L)
                 }
 
@@ -3520,6 +3555,7 @@ setRlibs <-
             desc <- try(.read_description(f))
             if (inherits(desc, "try-error") || !length(desc)) {
                 resultLog(Log, "EXISTS but not correct format")
+                summaryLog(Log)
                 do_exit(1L)
             }
             mandatory <- c("Package", "Version", "License", "Description",
@@ -3532,6 +3568,7 @@ setRlibs <-
                                 "Required fields missing or empty:")
                 msg <- paste0(msg, "\n", .pretty_format(fail))
                 errorLog(Log, msg)
+                summaryLog(Log)
                 do_exit(1L)
             }
             if(!grepl("^[[:alpha:]][[:alnum:].]*[[:alnum:]]$", desc["Package"])
@@ -3544,10 +3581,12 @@ setRlibs <-
             encoding <- desc["Encoding"]
         } else if (file.exists(f <- file.path(pkgdir, "DESCRIPTION"))) {
             errorLog(Log,
-                     "File DESCRIPTION does not exist but there is a case-insenstiive match.")
+                     "File DESCRIPTION does not exist but there is a case-insensitive match.")
+            summaryLog(Log)
             do_exit(1L)
         } else {
             resultLog(Log, "NO")
+            summaryLog(Log)
             do_exit(1L)
         }
         if (!is.na(desc["Type"])) { # standard packages do not have this
@@ -3556,6 +3595,7 @@ setRlibs <-
             if (desc["Type"] != "Package") {
                 printLog(Log,
                          "Only 'Type = Package' extensions can be checked.\n")
+                summaryLog(Log)
                 do_exit(0L)
             }
         }
@@ -3563,6 +3603,7 @@ setRlibs <-
             messageLog(Log, "looks like ", sQuote(pkgname0),
                        " is a package bundle -- they are defunct")
             errorLog(Log, "")
+            summaryLog(Log)
             do_exit(1L)
         }
 
@@ -3598,7 +3639,7 @@ setRlibs <-
             } else if(length(res$bad_package)) {
                 errorLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
-                do_exit(1L)
+		maybe_exit(1L)
             } else if(length(res$bad_version) ||
                       identical(res$foss_with_BuildVigettes, TRUE) ||
                       res$empty_Maintainer_name ||
@@ -3648,6 +3689,7 @@ setRlibs <-
                              c("See section 'Package namespaces'",
                                " of the 'Writing R Extensions' manual.\n")
                          wrapLog(msg_NAMESPACE)
+                         summaryLog(Log)
                          do_exit(1L)
                      })
             OK <- TRUE
@@ -3728,6 +3770,7 @@ setRlibs <-
                            "_R_CHECK_FORCE_SUGGESTS_",
                            "to a false value.\n\n")
                 wrapLog(msg_DESCRIPTION)
+                summaryLog(Log)
                 do_exit(1L)
             } else {
                 noteLog(Log)
@@ -3746,6 +3789,7 @@ setRlibs <-
         if (!is.na(desc["Built"])) {
             errorLog(Log)
             printLog(Log, "Only *source* packages can be checked.\n")
+            summaryLog(Log)
             do_exit(1L)
         } else if (!grepl("^check", install)) {
             ini <- character()
@@ -3854,6 +3898,14 @@ setRlibs <-
     }
 
     do_exit <- function(status = 1L) q("no", status = status, runLast = FALSE)
+
+    maybe_exit <- function(status = 1L) {
+	if (R_check_exit_on_first_error) {
+	    printLog(Log, "NOTE:  Quitting check on first error.\n")
+	    summaryLog(Log)
+	    do_exit(status)
+	}
+    }
 
     env_path <- function(...) {
         paths <- c(...)
@@ -4193,6 +4245,8 @@ setRlibs <-
         config_val_to_logical(Sys.getenv("_R_CHECK_FF_DUP_", "TRUE"))
     R_check_toplevel_files <-
         config_val_to_logical(Sys.getenv("_R_CHECK_TOPLEVEL_FILES_", "FALSE"))
+    R_check_exit_on_first_error <-
+	config_val_to_logical(Sys.getenv("_R_CHECK_EXIT_ON_FIRST_ERROR_", "FALSE"))
 
     if (!nzchar(check_subdirs)) check_subdirs <- R_check_subdirs_strict
 
@@ -4322,6 +4376,7 @@ setRlibs <-
         dir.create(pkgoutdir, mode = "0755")
         if (!dir.exists(pkgoutdir)) {
             message(sprintf("ERROR: cannot create check dir %s", sQuote(pkgoutdir)))
+            summaryLog(Log)
             do_exit(1L)
         }
         Log <- newLog(file.path(pkgoutdir, "00check.log"))
@@ -4330,6 +4385,7 @@ setRlibs <-
             dir.create(dir, mode = "0755")
             if (!dir.exists(dir)) {
                 errorLog(Log, sprintf("cannot create %s", sQuote(dir)))
+                summaryLog(Log)
                 do_exit(1L)
             }
             ## force the use of internal untar unless over-ridden
@@ -4337,6 +4393,7 @@ setRlibs <-
             if (untar(pkg, exdir = dir,
                       tar =  Sys.getenv("R_INSTALL_TAR", "internal"))) {
                 errorLog(Log, sprintf("cannot unpack %s", sQuote(pkg)))
+                summaryLog(Log)
                 do_exit(1L)
             }
             ## this assumes foo_x.y.tar.gz unpacks to foo, but we are about
@@ -4406,6 +4463,7 @@ setRlibs <-
             desc <- try(read.dcf(f))
             if (inherits(desc, "try-error") || !length(desc)) {
                 resultLog(Log, "EXISTS but not correct format")
+                summaryLog(Log)
                 do_exit(1L)
             }
             desc <- desc[1L, ]
@@ -4462,13 +4520,14 @@ setRlibs <-
             else  if (file.exists(file.path(pkgdir, "NAMESPACE"))) {
                 errorLog(Log,
                        "File NAMESPACE does not exist but there is a case-insenstiive match.")
+                summaryLog(Log)
                 do_exit(1L)
             } else if (dir.exists(file.path(pkgdir, "R"))) {
                 errorLog(Log)
                 wrapLog("All packages need a namespace as from R 3.0.0.\n",
                         "R CMD build will produce a suitable starting point,",
                         "but it is better to handcraft a NAMESPACE file.")
-                do_exit(1L)
+	        maybe_exit(1L)
             } else {
                 noteLog(Log)
                 wrapLog("Packages without R code can be installed without",
@@ -4569,8 +4628,10 @@ setRlibs <-
             }
         }
         messageLog(Log, "DONE")
-        if ((Log$warnings > 0L) || (Log$notes > 0L)) {
+        if ((Log$errors > 0L) || (Log$warnings > 0L) || (Log$notes > 0L)) {
             message(""); summaryLog(Log)
+	    if (Log$errors > 0L)
+		do_exit(1L)
         }
 
         if(config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_STATUS_SUMMARY_",
