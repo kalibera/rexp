@@ -2253,12 +2253,12 @@ SEXP attribute_hidden do_pretty(SEXP call, SEXP op, SEXP args, SEXP rho)
     SET_VECTOR_ELT(ans, 0, ScalarReal(l));
     SET_VECTOR_ELT(ans, 1, ScalarReal(u));
     SET_VECTOR_ELT(ans, 2, ScalarInteger(n));
-    PROTECT(nm = allocVector(STRSXP, 3));
+    nm = allocVector(STRSXP, 3);
     setAttrib(ans, R_NamesSymbol, nm);
     SET_STRING_ELT(nm, 0, mkChar("l"));
     SET_STRING_ELT(nm, 1, mkChar("u"));
     SET_STRING_ELT(nm, 2, mkChar("n"));
-    UNPROTECT(3);
+    UNPROTECT(2);
     return ans;
 }
 
