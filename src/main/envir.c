@@ -3394,7 +3394,9 @@ Rboolean R_IsNamespaceEnv(SEXP rho)
     else if (TYPEOF(rho) == ENVSXP) {
 	SEXP info = findVarInFrame3(rho, R_NamespaceSymbol, TRUE);
 	if (info != R_UnboundValue && TYPEOF(info) == ENVSXP) {
+	    PROTECT(info);
 	    SEXP spec = findVarInFrame3(info, install("spec"), TRUE);
+	    UNPROTECT(1);
 	    if (spec != R_UnboundValue &&
 		TYPEOF(spec) == STRSXP && LENGTH(spec) > 0)
 		return TRUE;
@@ -3423,7 +3425,9 @@ SEXP R_NamespaceEnvSpec(SEXP rho)
     else if (TYPEOF(rho) == ENVSXP) {
 	SEXP info = findVarInFrame3(rho, R_NamespaceSymbol, TRUE);
 	if (info != R_UnboundValue && TYPEOF(info) == ENVSXP) {
+	    PROTECT(info);
 	    SEXP spec = findVarInFrame3(info, install("spec"), TRUE);
+	    UNPROTECT(1);
 	    if (spec != R_UnboundValue &&
 		TYPEOF(spec) == STRSXP && LENGTH(spec) > 0)
 		return spec;
