@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.1.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2014-10-26 08:48\n"
+"POT-Creation-Date: 2015-02-09 08:50\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -818,15 +818,28 @@ msgstr "niepoprawne określenie pola"
 msgid "do not know what to search"
 msgstr "nie wiadomo czego szukać"
 
-# utils/R/help.search.R: 153
-# stop("incorrect type specification")
-msgid "incorrect type specification"
-msgstr "niepoprawne określenie typu"
-
 # utils/R/help.search.R: 161
 # warning("argument 'help.db' is deprecated")
 msgid "argument 'help.db' is deprecated"
 msgstr "argument 'help.db' jest przestarzały"
+
+# utils/R/help.search.R: 434
+# stop(gettextf("no information in the database for package %s: need 'rebuild = TRUE'?",
+# 			  sQuote(package[pos_in_hsearch_db == 0][1L])),
+#                  domain = NA)
+msgid "no information in the database for package %s: need 'rebuild = TRUE'?"
+msgstr ""
+"brak informacji w bazie danych dla pakietu %s: potrzeba 'rebuild = TRUE'?"
+
+# utils/R/help.search.R: 472
+# stop("incorrect 'agrep' specification")
+msgid "incorrect 'agrep' specification"
+msgstr "niepoprawne określenie 'agrep'"
+
+# utils/R/help.search.R: 153
+# stop("incorrect type specification")
+msgid "incorrect type specification"
+msgstr "niepoprawne określenie typu"
 
 # utils/R/help.search.R: 273
 # stop(gettextf("could not find package %s", sQuote(p)),
@@ -845,19 +858,6 @@ msgstr "pakiet %s ma puste dane 'hsearch' - dziwne"
 msgid "removing all entries with invalid multi-byte character data"
 msgstr ""
 "usuwanie wszystkich wpisów z niepoprawnymi danymi o wielobajtowych znakach"
-
-# utils/R/help.search.R: 434
-# stop(gettextf("no information in the database for package %s: need 'rebuild = TRUE'?",
-# 			  sQuote(package[pos_in_hsearch_db == 0][1L])),
-#                  domain = NA)
-msgid "no information in the database for package %s: need 'rebuild = TRUE'?"
-msgstr ""
-"brak informacji w bazie danych dla pakietu %s: potrzeba 'rebuild = TRUE'?"
-
-# utils/R/help.search.R: 472
-# stop("incorrect 'agrep' specification")
-msgid "incorrect 'agrep' specification"
-msgstr "niepoprawne określenie 'agrep'"
 
 # utils/R/help.start.R: 28
 # stop("invalid browser name, check options(\"browser\").")
@@ -1088,6 +1088,11 @@ msgstr "nie można dostać się do indeksu dla repozytorium %s"
 msgid "invalid 'filters' argument."
 msgstr "niepoprawny argument 'filters'"
 
+msgid ""
+"specifying 'contriburl' or 'available' requires a single type, not type = "
+"\"both\""
+msgstr ""
+
 # utils/R/packages.R: 351
 # warning(sprintf("package '%s' in library '%s' will not be updated",
 # 				    oldPkgs[pkg], oldPkgs[pkg, 2]),
@@ -1219,6 +1224,12 @@ msgstr ""
 "Nie wiadomo, do którego elementu 'lib' zainstalować zależności\n"
 "pomijanie zależności"
 
+# utils/R/databrowser.R: 185
+# stop("only 'html = TRUE' is supported on this platform")
+#, fuzzy
+msgid "type 'binary' is not supported on this platform"
+msgstr "jedynie 'html = TRUE' jest wspierane na tej platformie"
+
 # utils/R/packages2.R: 198
 # stop("no packages were specified")
 # utils/R/packages2.R: 205
@@ -1284,14 +1295,6 @@ msgid ""
 msgstr ""
 "'type == \"both\"' może być użyte jedynie w systemie Windows lub kompilacji "
 "CRAN dla systemów Mac OS X"
-
-# utils/R/packages2.R: 305
-# stop("type == \"both\" cannot be used if 'available' or 'contriburl' is specified")
-msgid ""
-"type == \"both\" cannot be used if 'available' or 'contriburl' is specified"
-msgstr ""
-"'type == \"both\"' nie może być użyte jeśli 'available' lub 'contriburl' są "
-"określone"
 
 # utils/R/packages2.R: 307
 # stop("type == \"both\" cannot be used with 'repos = NULL'")
@@ -2077,6 +2080,20 @@ msgstr "argument 'ccaddress' musi być długości 1"
 msgid "no download method found"
 msgstr "nie znaleziono metody pobierania"
 
+# utils/R/widgets.R: 25
+# stop("'title' must be NULL or a length-1 character vector")
+#, fuzzy
+msgid "'url' must be a length-one character vector"
+msgstr ""
+"argument 'title' musi być wartością NULL lub wektorem tekstowym o długości 1"
+
+# utils/R/widgets.R: 25
+# stop("'title' must be NULL or a length-1 character vector")
+#, fuzzy
+msgid "'destfile' must be a length-one character vector"
+msgstr ""
+"argument 'title' musi być wartością NULL lub wektorem tekstowym o długości 1"
+
 # utils/R/unix/download.file.R: 70
 # warning("download had nonzero exit status")
 # utils/R/windows/download.file.R: 72
@@ -2322,8 +2339,9 @@ msgstr[2] ""
 # 			paste(sQuote(p0[miss]), collapse=", "),
 # 			sub(" *\\(.*","", R.version.string)),
 #                 domain = NA, call. = FALSE)
-msgid "package %s is not available (for %s)"
-msgid_plural "packages %s are not available (for %s)"
+#, fuzzy
+msgid "package %s is not available (%s)"
+msgid_plural "packages %s are not available (%s)"
 msgstr[0] "pakiet %s nie jest dostępny (dla '%s')"
 msgstr[1] "pakiety %s nie są dostępne (dla %s)"
 msgstr[2] "pakiety %s nie są dostępne (dla %s)"
@@ -2399,7 +2417,9 @@ msgstr[2] "Są dostępne wersje binarne, ale wersje ze źródłami są później
 # ngettext(sum(later & hasSrc),
 #                              "Do you want to install from sources the package which need compilation?",
 #                              "Do you want to install from sources the packages which need compilation?")
-msgid "Do you want to install from sources the package which need compilation?"
+#, fuzzy
+msgid ""
+"Do you want to install from sources the package which needs compilation?"
 msgid_plural ""
 "Do you want to install from sources the packages which need compilation?"
 msgstr[0] "Czy chcesz zainstalować ze źródeł pakiet, który wymaga kompilacji?"
@@ -2412,8 +2432,9 @@ msgstr[2] ""
 # ngettext(length(s2),
 #                              "Package which are only available in source form, and may need compilation of C/C++/Fortran",
 #                              "Packages which are only available in source form, and may need compilation of C/C++/Fortran")
+#, fuzzy
 msgid ""
-"Package which are only available in source form, and may need compilation of "
+"Package which is only available in source form, and may need compilation of "
 "C/C++/Fortran"
 msgid_plural ""
 "Packages which are only available in source form, and may need compilation "
@@ -2514,6 +2535,15 @@ msgid_plural "packages %s are in use and will not be installed"
 msgstr[0] "pakiet %s jest w użyciu i nie zostanie zainstalowany"
 msgstr[1] "pakiety %s są w użyciu i nie zostaną zainstalowane"
 msgstr[2] "pakiety %s są w użyciu i nie zostaną zainstalowane"
+
+# utils/R/packages2.R: 305
+# stop("type == \"both\" cannot be used if 'available' or 'contriburl' is specified")
+#~ msgid ""
+#~ "type == \"both\" cannot be used if 'available' or 'contriburl' is "
+#~ "specified"
+#~ msgstr ""
+#~ "'type == \"both\"' nie może być użyte jeśli 'available' lub 'contriburl' "
+#~ "są określone"
 
 # utils/R/unix/download.file.R: 63
 # warning("method 'lynx' is untested and deprecated as from R 3.1.0")

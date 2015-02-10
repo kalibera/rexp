@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1998	Robert Gentleman and Ross Ihaka.
- *  Copyright (C) 2000-2014	The R Core Team.
+ *  Copyright (C) 2000-2015	The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -300,7 +300,9 @@ SEXP attribute_hidden do_printdefault(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    SEXP methodsNS = R_FindNamespace(mkString("methods"));
 	    if(methodsNS == R_UnboundValue)
 		error("missing methods namespace: this should not happen");
+	    PROTECT(methodsNS);
 	    showS = findVarInFrame3(methodsNS, install("show"), TRUE);
+	    UNPROTECT(1);
 	    if(showS == R_UnboundValue)
 		error("missing show() in methods namespace: this should not happen");
 	}
@@ -899,7 +901,9 @@ static void printAttributes(SEXP s, SEXP env, Rboolean useSlots)
 		    SEXP methodsNS = R_FindNamespace(mkString("methods"));
 		    if(methodsNS == R_UnboundValue)
 			error("missing methods namespace: this should not happen");
+		    PROTECT(showS);
 		    showS = findVarInFrame3(methodsNS, install("show"), TRUE);
+		    UNPROTECT(1);
 		    if(showS == R_UnboundValue)
 			error("missing show() in methods namespace: this should not happen");
 		}
@@ -980,7 +984,9 @@ void attribute_hidden PrintValueEnv(SEXP s, SEXP env)
 		SEXP methodsNS = R_FindNamespace(mkString("methods"));
 		if(methodsNS == R_UnboundValue)
 		    error("missing methods namespace: this should not happen");
+		PROTECT(methodsNS);
 		showS = findVarInFrame3(methodsNS, install("show"), TRUE);
+		UNPROTECT(1);
 		if(showS == R_UnboundValue)
 		    error("missing show() in methods namespace: this should not happen");
 	    }

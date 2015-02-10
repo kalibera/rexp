@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998--2013	    The R Core Team.
+ *  Copyright (C) 1998--2015	    The R Core Team.
  *  Copyright (C) 2003-4	    The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -1440,8 +1440,8 @@ SEXP attribute_hidden do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
     switch (PRIMVAL(op)) {
 
     case  0: return Math2(args, atan2);
-    case 10001: return Math2(args, fround);/* round(), src/nmath/fround.c */
-    case 10004: return Math2(args, fprec); /* signif(), src/nmath/fprec.c */
+    case 10001: return Math2(args, fround);// round(),  ../nmath/fround.c
+    case 10004: return Math2(args, fprec); // signif(), ../nmath/fprec.c
 
     case  2: return Math2(args, lbeta);
     case  3: return Math2(args, beta);
@@ -1571,7 +1571,7 @@ SEXP attribute_hidden do_log(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     args = evalListKeepMissing(args, env);
     return  do_log_builtin(call, op, args, env);
-}    
+}
 
 SEXP attribute_hidden do_log_builtin(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -1593,7 +1593,7 @@ SEXP attribute_hidden do_log_builtin(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     else if (n == 2 &&
 	     TAG(args) == R_NilValue &&
-	     (TAG(CDR(args)) == R_NilValue || TAG(CDR(args)) == R_baseSymbol)) {
+	     (TAG(CDR(args)) == R_NilValue || TAG(CDR(args)) == R_BaseSymbol)) {
 	/* log(x, y) or log(x, base = y) are handled here */
 	SEXP x = CAR(args);
 	SEXP y = CADR(args);
@@ -1612,7 +1612,7 @@ SEXP attribute_hidden do_log_builtin(SEXP call, SEXP op, SEXP args, SEXP env)
     static SEXP R_x_Symbol = NULL;
     if (do_log_formals == NULL) {
 	R_x_Symbol = install("x");
-	do_log_formals = allocFormalsList2(R_x_Symbol, R_baseSymbol);
+	do_log_formals = allocFormalsList2(R_x_Symbol, R_BaseSymbol);
     }
 
     if (n == 1) {

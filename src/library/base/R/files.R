@@ -1,7 +1,7 @@
 #  File src/library/base/R/files.R
 #  Part of the R package, http://www.R-project.org
 #
-#  Copyright (C) 1995-2014 The R Core Team
+#  Copyright (C) 1995-2015 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ file.show <-
     ## avoid re-encoding files to the current encoding.
     if(l10n_info()[["UTF-8"]] && encoding == "UTF-8") encoding <- ""
     if(l10n_info()[["Latin-1"]] && encoding == "latin1") encoding <- ""
-    if(!is.na(encoding) && encoding != "") {
+    if(!is.na(encoding) && nzchar(encoding)) {
         for(i in seq_along(files)) {
             f <- files[i]
             tf <- tempfile()
@@ -163,9 +163,9 @@ file.info <- function(..., extra_cols = TRUE)
     res
 }
 ## wrappers introduced in R 3.2.0
-file.mode <- function(...) file.info(..., extra_cols = TRUE)$mode
-file.mtime <- function(...) file.info(..., extra_cols = TRUE)$mtime
-file.size <- function(...) file.info(..., extra_cols = TRUE)$size
+file.mode <- function(...) file.info(..., extra_cols = FALSE)$mode
+file.mtime <- function(...) file.info(..., extra_cols = FALSE)$mtime
+file.size <- function(...) file.info(..., extra_cols = FALSE)$size
 
 
 file.access <- function(names, mode = 0)
@@ -174,11 +174,6 @@ file.access <- function(names, mode = 0)
     names(res) <- names
     res
 }
-
-## dir.exists <- function(paths) {
-##     isdir <- file.info(paths, extra_cols = FALSE)$isdir
-##     !is.na(isdir) & isdir
-## }
 
 dir.exists <- function(paths) .Internal(dir.exists(paths))
 

@@ -2,7 +2,7 @@
 /*
  *  R : A Computer Langage for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2013  The R Core Team
+ *  Copyright (C) 1997--2015  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1188,7 +1188,10 @@ static SEXP UserMacroLookup(const char *s)
 {
     SEXP rec = findVar(install(s), parseState.xxMacroList);
     if (rec == R_UnboundValue) error(_("Unable to find macro %s"), s);
-    return getAttrib(rec, install("definition"));
+    PROTECT(rec);
+    SEXP res = getAttrib(rec, install("definition"));
+    UNPROTECT(1);
+    return res;
 }
 
 static void yyerror(const char *s)

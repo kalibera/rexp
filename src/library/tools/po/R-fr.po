@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.12.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2014-12-19 10:57\n"
+"POT-Creation-Date: 2015-02-09 08:50\n"
 "PO-Revision-Date: 2014-03-17 11:53+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -17,6 +17,16 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Generator: Poedit 1.6.4\n"
+
+#, fuzzy
+msgid "Reading %s failed with message: %s"
+msgstr ""
+"la compilation du fichier TeX %s a échoué avec le diagnostic :\n"
+"%s"
+
+#, fuzzy
+msgid "Checking %s"
+msgstr "vérification de %s ..."
 
 msgid "argument 'package' must be of length 1"
 msgstr "l'argument 'package' doit être de longueur 1"
@@ -248,9 +258,16 @@ msgstr ""
 "Les packages avec priorité 'base' ou 'recommended' ou 'defunct-base' doivent "
 "être déjà connus de R."
 
+msgid "Malformed Title field: should not end in a period."
+msgstr ""
+
 msgid ""
-"See the information on DESCRIPTION files in section 'Creating R packages' of "
-"the 'Writing R Extensions' manual."
+"Malformed Description field: should contain one or more complete sentences."
+msgstr ""
+
+#, fuzzy
+msgid ""
+"See section 'The DESCRIPTION file' in the 'Writing R Extensions' manual."
 msgstr ""
 "Voyez l'information à propos des fichiers DESCRIPTION dans la section "
 "'Creating R packages' du manuel 'Writing R Extensions'."
@@ -270,7 +287,14 @@ msgstr "Le champ Authors@R ne renvoie aucune personne avec un rôle reconnu."
 msgid "Cannot extract Maintainer field from Authors@R field:"
 msgstr "Impossible d'extraire le champ 'Maintainer' du champ 'Authors@R' :"
 
-msgid "Authors@R field gives no person with maintainer role and email address."
+#, fuzzy
+msgid "Authors@R field gives more than one person with maintainer role:"
+msgstr "Le champ 'Authors@R' ne renvoie aucune personne avec un rôle d'auteur."
+
+#, fuzzy
+msgid ""
+"Authors@R field gives no person with maintainer role, valid email address "
+"and non-empty name."
 msgstr ""
 "Le champ 'Authors@R' ne renvoie personne avec un rôle de mainteneur et une "
 "adresse email."
@@ -310,19 +334,11 @@ msgstr "Indicateur non portable dans la variable '%s' :"
 msgid "Variables overriding user/site settings:"
 msgstr "Des variables remplacent les valeurs utilisateur/site :"
 
-msgid ""
-"package %s exists but was not installed under R >= 2.10.0 so xrefs cannot be "
-"checked"
-msgstr ""
-"le package %s existe, mais il n'a pas été installé sous R >= 2.10.0 et donc "
-"vérification de xrefs impossible"
-
 msgid "Missing link or links in documentation object '%s':"
 msgstr "Lien(s) manquant(s) dans la documentation de l'objet '%s' :"
 
-msgid ""
-"See the information in section 'Cross-references' of the 'Writing R "
-"Extensions' manual."
+#, fuzzy
+msgid "See section 'Cross-references' in the 'Writing R Extensions' manual."
 msgstr ""
 "Voyez l'information dans la section 'Croos-references' du manuel 'Writing R "
 "Extensions'."
@@ -407,6 +423,14 @@ msgid ""
 "'library' or 'require' call to %s which was already attached by Depends."
 msgstr ""
 "appels 'library' ou 'require' à %s qui est déjà attaché depuis Depends."
+
+#, fuzzy
+msgid "'library' or 'require' calls in package code:"
+msgstr "appels 'library' ou 'require' non déclarés depuis :"
+
+#, fuzzy
+msgid "'library' or 'require' call to %s in package code."
+msgstr "appels 'library' ou 'require' non déclarés depuis :"
 
 msgid "Namespaces in Imports field not imported from:"
 msgstr "Espaces de noms dans le champ Imports non importés depuis :"
@@ -1211,6 +1235,18 @@ msgstr "'x' doit être une chaîne de caractères unique"
 msgid "test '%s' is not available"
 msgstr "le test '%s' n'est pas disponible"
 
+msgid ":"
+msgstr " :"
+
+msgid "latin1"
+msgstr ""
+
+msgid "ASCII"
+msgstr ""
+
+msgid "byte"
+msgstr ""
+
 msgid "argument 'x' must be a character vector"
 msgstr "l'argument 'x' doit être un vecteur de chaînes de caractères"
 
@@ -1260,13 +1296,18 @@ msgstr "impossible de sourcer le code du package"
 msgid "Call sequence:"
 msgstr "Séquence d'appel :"
 
+#, fuzzy
+msgid "'text' must be a character vector"
+msgstr "l'argument 'x' doit être un vecteur de chaînes de caractères"
+
 msgid "parsing '%s'"
 msgstr "analyse de '%s'"
 
-msgid "Obsolete package %s in Rd xrefs"
-msgid_plural "Obsolete packages %s in Rd xrefs"
-msgstr[0] "Package obsolète %s dans les xrefs Rd"
-msgstr[1] "Packages obsolètes %s dans les xrefs Rd"
+#, fuzzy
+msgid "Undeclared package used in Rd xrefs:"
+msgid_plural "Undeclared packages used in Rd xrefs:"
+msgstr[0] "Package inconnu %s dans les xrefs Rd"
+msgstr[1] "Packages inconnus %s dans les xrefs Rd"
 
 msgid "Package unavailable to check Rd xrefs: %s"
 msgid_plural "Packages unavailable to check Rd xrefs: %s"
@@ -1432,6 +1473,18 @@ msgid_plural "%d of the package tests failed"
 msgstr[0] "%d des tests du package ont échoué"
 msgstr[1] "%d des tests du package ont échoué"
 
+#~ msgid ""
+#~ "package %s exists but was not installed under R >= 2.10.0 so xrefs cannot "
+#~ "be checked"
+#~ msgstr ""
+#~ "le package %s existe, mais il n'a pas été installé sous R >= 2.10.0 et "
+#~ "donc vérification de xrefs impossible"
+
+#~ msgid "Obsolete package %s in Rd xrefs"
+#~ msgid_plural "Obsolete packages %s in Rd xrefs"
+#~ msgstr[0] "Package obsolète %s dans les xrefs Rd"
+#~ msgstr[1] "Packages obsolètes %s dans les xrefs Rd"
+
 #, fuzzy
 #~ msgid "Inconsistent encoding specifications: %s with %%\\SweaveUTF8"
 #~ msgstr "Spécifications d'encodage incohérentes :"
@@ -1466,9 +1519,6 @@ msgstr[1] "%d des tests du package ont échoué"
 
 #~ msgid ". The following files exists in directory"
 #~ msgstr ". Les fichiers sont dans ce répertoire"
-
-#~ msgid ":"
-#~ msgstr " :"
 
 #~ msgid "Located more than one"
 #~ msgstr "Localisation plus d'une fois"

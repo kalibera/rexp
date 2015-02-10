@@ -1,5 +1,11 @@
+R_HOME = ../..
+
 ## first time through MkRules will not exist.
+
+ifeq ($(wildcard MkRules?local),MkRules.local)
 include MkRules.local
+endif
+
 include MkRules.rules
 include ../../share/make/vars.mk
 
@@ -43,29 +49,24 @@ endif
 
 ifeq ($(wildcard MkRules?local),MkRules.local)
 MkRules: MkRules.local MkRules.rules
-ifeq "$(EXT_LIBS)" ""
-	@echo "*** EXT_LIBS must be set in MkRules.local (and not empty)"
-	@exit 1
-endif
-	cat MkRules.local MkRules.rules > MkRules
+	@cat MkRules.local MkRules.rules > MkRules
 else
-MkRules:
-	@echo "*** copy MkRules.dist to MkRules.local and edit it"
-	@exit 1
+MkRules: MkRules.rules
+	@cat MkRules.rules > MkRules
 endif
 
-CFLAGS=-O3 -Wall -pedantic $(EOPTS)
-FFLAGS=-O3 $(EOPTS)
+CFLAGS = -O3 -Wall -pedantic $(EOPTS)
+FFLAGS = -O3 $(EOPTS)
 ifdef DEBUG
- CFLAGS+=$(G_FLAG)
- FFLAGS+=$(G_FLAG)
- DLLFLAGS=
+ CFLAGS += $(G_FLAG)
+ FFLAGS += $(G_FLAG)
+ DLLFLAGS =
 else
- DLLFLAGS=-s
+ DLLFLAGS = -s
 endif
 
 
-R-DLLFLAGS=-mwindows
+R-DLLFLAGS = -mwindows
 LIBEXTRAS = -L"$(EXT_LIBS)"/lib$(R_ARCH) -lpcre -lz -lbz2 -llzma
 ifdef USE_ICU
 LIBEXTRAS += -L"$(ICU_PATH)"/lib$(R_ARCH) $(ICU_LIBS)
@@ -94,6 +95,12 @@ R-DLLLIBS = $(OPENMP) -L. $(FLIBS) -lRblas -L../../$(IMPDIR) -lRgraphapp \
 
 CPPFLAGS = -I../include -I. -I../extra -DHAVE_CONFIG_H -DR_DLL_BUILD
 extra-CPPFLAGS = -I../library/grDevices/src
+
+Rpwd.exe: front-ends/Rpwd.exe
+	$(CP) $< $@
+
+front-ends/Rpwd.exe:
+	$(MK) -C front-ends Rpwd
 
 ## watch out: R.dll and Rblas.dll depend on each other.
 rbuild:
@@ -131,9 +138,14 @@ COPYRIGHTS: ../../doc/COPYRIGHTS COPYRIGHTS.win
 	cat $^ > $@
 
 
-fixfiles: 
+fixfiles: Rpwd.exe
 	@$(MKDIR) -p ../../$(BINDIR)
 	@$(MK) -C ./fixed
+ifdef USE_LIBCURL
+	@if test -f "$(CURL_PATH)/etc/curl-ca-bundle.crt"; then \
+	  $(CP) -p "$(CURL_PATH)/etc/curl-ca-bundle.crt" ../../etc; \
+	fi
+endif
 
 fixed/fixdesc:
 	@sh fixed/GETDESC $(R_PKGS_BASE) translations
@@ -229,7 +241,7 @@ libRblas.dll.a:  ../extra/blas/Rblas.def
 #                          ===== cleaning ======
 
 ## used in installer/Makefile
-PKGDIR=../library
+PKGDIR = ../library
 pkgclean-%:
 	@(cd $(PKGDIR)/$*/src; rm -f *.d *.o *.dll *_res.rc Makedeps)
 
@@ -356,6 +368,15 @@ bytecode-recommended:
 	@R_COMPILE_PKGS=1 R_COMPILER_SUPPRESS_ALL=1 \
 	  $(MK) -C ../library/Recommended -f Makefile.win
 
+RVER-MAJOR-MINOR = $(shell echo `cut -d'.' -f1,2 ../../VERSION`)
+CRANEXT = cran.r-project.org::CRAN/bin/windows/extsoft/$(RVER-MAJOR-MINOR)/
+
+rsync-extsoft:
+	($(MKDIR) -p ../../extsoft; \
+	cd ../../extsoft; \
+	rsync --timeout=60 -rcvp --delete $(CRANEXT) . ) 
+
+
 docfiles:
 	@$(MK) -C ../../doc/manual -f Makefile.win FAQ
 
@@ -390,7 +411,7 @@ distribution:
 ## ============= End of maintainer targets ========================
 
 # Dependencies: malloc.c doesn't have any
-DEPS=$(CSOURCES:.c=.d)
+DEPS = $(CSOURCES:.c=.d)
 
 makeMakedeps: $(DEPS)
 	@$(RM) Makedeps

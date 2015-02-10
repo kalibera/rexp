@@ -1,7 +1,7 @@
 #  File src/library/base/R/library.R
 #  Part of the R package, http://www.R-project.org
 #
-#  Copyright (C) 1995-2013 The R Core Team
+#  Copyright (C) 1995-2015 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -286,6 +286,17 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
             ## has a namespace, then the namespace loading mechanism
             ## takes over.
             if (packageHasNamespace(package, which.lib.loc)) {
+		if (isNamespaceLoaded(package)) {
+                    # Already loaded.  Does the version match?
+                    newversion <- as.numeric_version(pkgInfo$DESCRIPTION["Version"])
+                    oldversion <- as.numeric_version(getNamespaceVersion(package))
+                    if (newversion != oldversion) {
+                    	# No, so try to unload the previous one
+                    	res <- try(unloadNamespace(package))
+                    	if (inherits(res, "try-error"))
+                    	    stop(dQuote(package), " version ", oldversion, " cannot be unloaded.")
+                    }
+                }
                 tt <- try({
                     ns <- loadNamespace(package, c(which.lib.loc, lib.loc))
                     env <- attachNamespace(ns, pos = pos, deps)
@@ -358,7 +369,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                                         txt$File)),
                           paste(txt$Title,
                                 paste0(rep.int("(source", NROW(txt)),
-                                       ifelse(txt$PDF != "",
+                                       ifelse(nzchar(txt$PDF),
                                               ", pdf",
                                               ""),
                                        ")")))
@@ -386,7 +397,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                 ## 'package.rds' but we have not checked.
                 file <- system.file("Meta", "package.rds", package = i,
                                     lib.loc = lib)
-                title <- if(file != "") {
+                title <- if(nzchar(file)) {
                     txt <- readRDS(file)
                     if(is.list(txt)) txt <- txt$DESCRIPTION
                     ## we may need to re-encode here.
@@ -677,21 +688,11 @@ function(package = NULL, lib.loc = NULL, quiet = FALSE,
     out <- character()
 
     for(pkg in package) {
-        paths <- character()
-        for(lib in lib.loc) {
-            dirs <- list.files(lib,
-                               pattern = paste0("^", pkg, "$"),
-                               full.names = TRUE)
-            ## Note that we cannot use tools::file_test() here, as
-            ## cyclic namespace dependencies are not supported.  Argh.
-            paths <- c(paths,
-                       dirs[dir.exists(dirs) &
-                            file.exists(file.path(dirs,
-                                                  "DESCRIPTION"))])
-        }
-        if(use_loaded && pkg %in% loadedNamespaces()) {
-            dir <- if (pkg == "base") system.file()
-            else getNamespaceInfo(pkg, "path")
+	paths <- file.path(lib.loc, pkg)
+	paths <- paths[ file.exists(file.path(paths, "DESCRIPTION")) ]
+	if(use_loaded && isNamespaceLoaded(pkg)) {
+	    dir <- if (pkg == "base") system.file()
+		   else .getNamespaceInfo(asNamespace(pkg), "path")
             paths <- c(dir, paths)
         }
         ## trapdoor for tools:::setRlibs
@@ -817,7 +818,7 @@ function(pkgInfo, quietly = FALSE, lib.loc = NULL, useImports = FALSE)
         pfile <- system.file("Meta", "package.rds",
                              package = pkg, lib.loc = lib.loc)
         if (nzchar(pfile))
-            as.numeric_version(readRDS(pfile)$DESCRIPTION["Version"])  
+            as.numeric_version(readRDS(pfile)$DESCRIPTION["Version"])
         else
             NULL
     }
@@ -864,7 +865,7 @@ function(pkgInfo, quietly = FALSE, lib.loc = NULL, useImports = FALSE)
                      call. = FALSE, domain = NA)
             }
         }
-        
+
         if (!attached) {
             if (!quietly)
                 packageStartupMessage(gettextf("Loading required package: %s",

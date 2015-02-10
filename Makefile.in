@@ -9,6 +9,8 @@ top_builddir = .
 
 include $(top_builddir)/Makeconf
 
+GIT = `if [ -d "$(top_builddir)/.git" ]; then echo "git"; fi`
+
 distdir = $(PACKAGE)-$(VERSION)
 INSTFILES = COPYING
 NON_SVN_INSTFILES = SVN-REVISION
@@ -104,15 +106,15 @@ svnonly:
 	@if test ! -f "$(srcdir)/doc/FAQ" || test -f non-tarball ; then \
 	  (cd doc/manual && $(MAKE) front-matter html-non-svn) ; \
 	  touch non-tarball ; \
-	  (cd $(srcdir); LC_ALL=C TZ=GMT svn info || $(ECHO) "Revision: -99") 2> /dev/null \
+	  (cd $(srcdir); LC_ALL=C TZ=GMT $(GIT) svn info || $(ECHO) "Revision: -99") 2> /dev/null \
 	    | sed -n -e '/^Revision/p' -e '/^Last Changed Date/'p \
 	    | cut -d' ' -f1,2,3,4 > SVN-REVISION-tmp ; \
 	  if test "`cat SVN-REVISION-tmp`" = "Revision: -99"; then \
-	    $(ECHO) "WARNING: not an svn checkout"; \
-	  else \
-	    $(SHELL) $(top_srcdir)/tools/move-if-change SVN-REVISION-tmp SVN-REVISION ; \
-	    rm -f SVN-REVISION-tmp ; \
+	    $(ECHO) "ERROR: not an svn checkout"; \
+	    exit 1; \
 	  fi; \
+	  $(SHELL) $(top_srcdir)/tools/move-if-change SVN-REVISION-tmp SVN-REVISION ; \
+	  rm -f SVN-REVISION-tmp ; \
 	else \
 	  if test "$(BUILDDIR_IS_SRCDIR)" = no ; then \
 	    for f in $(NON_SVN_INSTFILES); do \
@@ -128,7 +130,7 @@ install-libR:
 install-libR-exists:
 	@$(MKINSTALLDIRS) "$(DESTDIR)${libdir}"
 	@$(INSTALL_DATA) -m755 lib$(R_ARCH)/$(libR_la) "$(DESTDIR)${libdir}"
-uninstall-libR: 
+uninstall-libR:
 	@rm -f "$(DESTDIR)${libdir}/$(libR_la)"
 
 installdirs:

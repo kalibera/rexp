@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 2.13.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2014-10-26 08:48\n"
+"POT-Creation-Date: 2015-02-09 08:50\n"
 "PO-Revision-Date: 2011-03-26 08:57-0300\n"
 "Last-Translator: Fernando Henrique <pessoal@fernandohrosa.com.br>\n"
 "Language-Team: http://www.feferraz.net/br/P/Projeto_Traducao_R_Portugues\n"
@@ -422,10 +422,16 @@ msgstr ""
 msgid "do not know what to search"
 msgstr ""
 
-msgid "incorrect type specification"
+msgid "argument 'help.db' is deprecated"
 msgstr ""
 
-msgid "argument 'help.db' is deprecated"
+msgid "no information in the database for package %s: need 'rebuild = TRUE'?"
+msgstr ""
+
+msgid "incorrect 'agrep' specification"
+msgstr ""
+
+msgid "incorrect type specification"
 msgstr ""
 
 msgid "could not find package %s"
@@ -435,12 +441,6 @@ msgid "package %s has empty hsearch data - strangely"
 msgstr ""
 
 msgid "removing all entries with invalid multi-byte character data"
-msgstr ""
-
-msgid "no information in the database for package %s: need 'rebuild = TRUE'?"
-msgstr ""
-
-msgid "incorrect 'agrep' specification"
 msgstr ""
 
 msgid "invalid browser name, check options(\"browser\")."
@@ -561,6 +561,11 @@ msgstr ""
 msgid "invalid 'filters' argument."
 msgstr ""
 
+msgid ""
+"specifying 'contriburl' or 'available' requires a single type, not type = "
+"\"both\""
+msgstr ""
+
 msgid "package '%s' in library '%s' will not be updated"
 msgstr ""
 
@@ -630,6 +635,9 @@ msgid ""
 "skipping dependencies"
 msgstr ""
 
+msgid "type 'binary' is not supported on this platform"
+msgstr ""
+
 msgid "no packages were specified"
 msgstr ""
 
@@ -650,10 +658,6 @@ msgstr ""
 
 msgid ""
 "type == \"both\" can only be used on Windows or a CRAN build for Mac OS X"
-msgstr ""
-
-msgid ""
-"type == \"both\" cannot be used if 'available' or 'contriburl' is specified"
 msgstr ""
 
 msgid "type == \"both\" cannot be used with 'repos = NULL'"
@@ -1021,6 +1025,12 @@ msgstr ""
 msgid "no download method found"
 msgstr ""
 
+msgid "'url' must be a length-one character vector"
+msgstr ""
+
+msgid "'destfile' must be a length-one character vector"
+msgstr ""
+
 msgid "download had nonzero exit status"
 msgstr ""
 
@@ -1125,8 +1135,8 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-msgid "package %s is not available (for %s)"
-msgid_plural "packages %s are not available (for %s)"
+msgid "package %s is not available (%s)"
+msgid_plural "packages %s are not available (%s)"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1160,14 +1170,15 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-msgid "Do you want to install from sources the package which need compilation?"
+msgid ""
+"Do you want to install from sources the package which needs compilation?"
 msgid_plural ""
 "Do you want to install from sources the packages which need compilation?"
 msgstr[0] ""
 msgstr[1] ""
 
 msgid ""
-"Package which are only available in source form, and may need compilation of "
+"Package which is only available in source form, and may need compilation of "
 "C/C++/Fortran"
 msgid_plural ""
 "Packages which are only available in source form, and may need compilation "

@@ -2304,6 +2304,53 @@ R_PCRE
 ## tre headers and libraries.
 R_TRE
 
+## libcurl
+AC_PATH_PROG(CURL_CONFIG, curl-config)
+if test -n "${CURL_CONFIG}"; then
+  if test -z "${CURL_CPPFLAGS}"; then
+    CURL_CPPFLAGS=`${CURL_CONFIG} --cflags`
+  fi
+  ## This in particular may be wrong for a static library,
+  ## and OpenCSW has in the past copied the static answer over the dynamic one.
+  if test -z "${CURL_LIBS}"; then
+    CURL_LIBS=`${CURL_CONFIG} --libs`
+  fi
+fi
+r_save_CPPFLAGS="${CPPLAGS}"
+CPPFLAGS="${CURL_CPPFLAGS} ${CPPFLAGS}"
+r_save_LIBS="${LIBS}"
+LIBS="${CURL_LIBS} ${LIBS}"
+AC_CACHE_CHECK([if libcurl version >= 7.28.0], [r_cv_have_curl728],
+[AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <stdlib.h>
+#include <curl/curl.h>
+int main() 
+{
+#ifdef LIBCURL_VERSION_MAJOR
+#if LIBCURL_VERSION_MAJOR > 7
+  exit(1);
+#elif LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 28
+  exit(0);
+#else
+  exit(1);
+#endif
+#else
+  exit(1);
+#endif
+}
+]])], [r_cv_have_curl728=yes], [r_cv_have_curl728=no], [r_cv_have_curl728=no])])
+if test "x${r_cv_have_curl728}" != xyes; then
+  ac_cv_have_curl_curl_h=0
+  CURL_CPPFLAGS=
+  CURL_LIBS=
+else
+  AC_CHECK_HEADERS(curl/curl.h)
+fi
+CPPFLAGS="${r_save_CPPFLAGS}"
+LIBS="${r_save_LIBS}"
+AC_SUBST(CURL_CPPFLAGS)
+AC_SUBST(CURL_LIBS)
+
 ## POSIX times.
 R_SYS_POSIX_LEAPSECONDS
 
@@ -2844,6 +2891,9 @@ if test "${have_pcre}" = yes; then
 fi
 if test "${have_tre}" = yes; then
   R_SH_VAR_ADD(r_external_libs, [tre], [, ])
+fi
+if test "x$ac_cv_header_curl_curl_h" = xyes; then
+  R_SH_VAR_ADD(r_external_libs, [curl], [, ])
 fi
 
 r_capabilities=

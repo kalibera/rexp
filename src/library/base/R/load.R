@@ -1,7 +1,7 @@
 #  File src/library/base/R/load.R
 #  Part of the R package, http://www.R-project.org
 #
-#  Copyright (C) 1995-2013 The R Core Team
+#  Copyright (C) 1995-2015 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -69,16 +69,16 @@ save <- function(..., list = character(),
         warning("Use of save versions prior to 2 is deprecated", domain = NA)
 
     names <- as.character(substitute(list(...)))[-1L]
-     if(missing(list) && !length(names))
+    if(missing(list) && !length(names))
 	warning("nothing specified to be save()d")
-   list <- c(list, names)
+    list <- c(list, names)
     if (!is.null(version) && version == 1)
         .Internal(save(list, file, ascii, version, envir, eval.promises))
     else {
         if (precheck) {
             ## check for existence of objects before opening connection
             ## (and e.g. clobering file)
-            ok <- unlist(lapply(list, exists, envir=envir))
+	    ok <- vapply(list, exists, NA, envir=envir)
             if(!all(ok)) {
                 n <- sum(!ok)
                 stop(sprintf(ngettext(n,
@@ -119,7 +119,7 @@ save <- function(..., list = character(),
 	else if (inherits(file, "connection"))
 	    con <- file
 	else stop("bad file argument")
-	if(isOpen(con) && summary(con)$text != "binary")
+	if(isOpen(con) && !ascii && summary(con)$text != "binary")
 	    stop("can only save to a binary connection")
 	.Internal(saveToConn(list, con, ascii, version, envir, eval.promises))
     }
@@ -155,7 +155,7 @@ save.image <- function (file = ".RData", version = NULL, ascii = FALSE,
     else outfile <- file
 
     on.exit(file.remove(outfile))
-    save(list = ls(envir = .GlobalEnv, all.names = TRUE), file = outfile,
+    save(list = names(.GlobalEnv), file = outfile,
          version = version, ascii = ascii, compress = compress,
          envir = .GlobalEnv, precheck = FALSE)
     if (safe)

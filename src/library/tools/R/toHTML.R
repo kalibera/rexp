@@ -1,7 +1,7 @@
 toHTML <- function(x, ...) UseMethod("toHTML")
 
 #
-#  Copyright (C) 1995-2013 The R Core Team
+#  Copyright (C) 1995-2014 The R Core Team
 
 HTMLheader <-
 function(title="R", logo=TRUE,
@@ -160,7 +160,7 @@ makeVignetteTable <- function(vignettes, depth=2) {
 	      '<col style="width: 50%;" />',
 	      '<col style="width:  8%;" />',
 	      '<col style="width:  8%;" />',
-	      '<col style="width:  8%;" />')
+             '<col style="width:  8%;" />')
     for (i in seq_len(nrow(vignettes))) {
 	Outfile <- vignettes[i, "PDF"]
 	topic <- file_path_sans_ext(Outfile)
@@ -222,9 +222,9 @@ makeDemoTable <- function(demos, depth=2) {
 
 makeHelpTable <- function(help, depth=2) {
     out <- c('<table width="100%">',
-	      '<col style="width: 22%;" />',
-	      '<col style="width:  2%;" />',
-	      '<col style="width: 74%;" />')
+             '<col style="width: 22%;" />',
+             '<col style="width:  2%;" />',
+             '<col style="width: 74%;" />')
     pkg <- help[,"Package"]
     root <- paste0(paste(rep.int("../", depth), collapse=""),
                    "library/", pkg, "/html/")
@@ -233,7 +233,7 @@ makeHelpTable <- function(help, depth=2) {
     links <- paste0('<a href="', root, topic, '.html">',
 		    ifelse(nchar(pkg), paste0(pkg, "::"), ""),
 		    topic, '</a>')
-    lines <- paste0('<tr><td style="text-align: right; vertical-align: top";>', links,
+    lines <- paste0('<tr><td style="text-align: right; vertical-align: top;">', links,
 		    '</td>\n<td></td><td valign="top">', Title,
 		    '</td></tr>')
     c(out, lines, '</table>')

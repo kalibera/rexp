@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.2.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2014-12-19 10:57\n"
+"POT-Creation-Date: 2015-02-09 08:50\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10,6 +10,12 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+
+msgid "Reading %s failed with message: %s"
+msgstr ""
+
+msgid "Checking %s"
+msgstr ""
 
 msgid "argument 'package' must be of length 1"
 msgstr ""
@@ -203,7 +209,13 @@ msgstr ""
 msgid "Packages with priorities 'base' or 'recommended' or 'defunct-base' must already be known to R."
 msgstr ""
 
-msgid "See the information on DESCRIPTION files in section 'Creating R packages' of the 'Writing R Extensions' manual."
+msgid "Malformed Title field: should not end in a period."
+msgstr ""
+
+msgid "Malformed Description field: should contain one or more complete sentences."
+msgstr ""
+
+msgid "See section 'The DESCRIPTION file' in the 'Writing R Extensions' manual."
 msgstr ""
 
 msgid "Malformed Authors@R field:"
@@ -221,7 +233,10 @@ msgstr ""
 msgid "Cannot extract Maintainer field from Authors@R field:"
 msgstr ""
 
-msgid "Authors@R field gives no person with maintainer role and email address."
+msgid "Authors@R field gives more than one person with maintainer role:"
+msgstr ""
+
+msgid "Authors@R field gives no person with maintainer role, valid email address and non-empty name."
 msgstr ""
 
 msgid "Encoding '%s' is not portable"
@@ -257,13 +272,10 @@ msgstr ""
 msgid "Variables overriding user/site settings:"
 msgstr ""
 
-msgid "package %s exists but was not installed under R >= 2.10.0 so xrefs cannot be checked"
-msgstr ""
-
 msgid "Missing link or links in documentation object '%s':"
 msgstr ""
 
-msgid "See the information in section 'Cross-references' of the 'Writing R Extensions' manual."
+msgid "See section 'Cross-references' in the 'Writing R Extensions' manual."
 msgstr ""
 
 msgid "File %s:"
@@ -327,6 +339,12 @@ msgid "'library' or 'require' calls to packages already attached by Depends:"
 msgstr ""
 
 msgid "'library' or 'require' call to %s which was already attached by Depends."
+msgstr ""
+
+msgid "'library' or 'require' calls in package code:"
+msgstr ""
+
+msgid "'library' or 'require' call to %s in package code."
 msgstr ""
 
 msgid "Namespaces in Imports field not imported from:"
@@ -1022,6 +1040,18 @@ msgstr ""
 msgid "test '%s' is not available"
 msgstr ""
 
+msgid ":"
+msgstr ""
+
+msgid "latin1"
+msgstr ""
+
+msgid "ASCII"
+msgstr ""
+
+msgid "byte"
+msgstr ""
+
 msgid "argument 'x' must be a character vector"
 msgstr ""
 
@@ -1070,11 +1100,14 @@ msgstr ""
 msgid "Call sequence:"
 msgstr ""
 
+msgid "'text' must be a character vector"
+msgstr ""
+
 msgid "parsing '%s'"
 msgstr ""
 
-msgid        "Obsolete package %s in Rd xrefs"
-msgid_plural "Obsolete packages %s in Rd xrefs"
+msgid        "Undeclared package used in Rd xrefs:"
+msgid_plural "Undeclared packages used in Rd xrefs:"
 msgstr[0]    ""
 msgstr[1]    ""
 

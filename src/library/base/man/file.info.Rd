@@ -1,6 +1,6 @@
 % File src/library/base/man/file.info.Rd
 % Part of the R package, http://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2015 R Core Team
 % Distributed under GPL 2 or later
 
 \name{file.info}
@@ -102,7 +102,7 @@ file.size(\dots)
   seconds, and some (e.g., modification time on FAT systems) are recorded
   in increments of 2 or more seconds.
   
-  \code{file.mode}, \code{file.mtime} and \code{file.mode} are
+  \code{file.mode}, \code{file.mtime} and \code{file.size} are
   convenience wrappers returning just one of the columns.
 }
 #ifdef unix

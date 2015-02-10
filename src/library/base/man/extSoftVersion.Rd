@@ -1,6 +1,6 @@
 % File src/library/base/man/extSoftVersion.Rd
 % Part of the R package, http://www.R-project.org
-% Copyright 2014 R Core Team
+% Copyright 2014-2015 R Core Team
 % Distributed under GPL 2 or later
 
 \name{extSoftVersion}
@@ -43,11 +43,15 @@ extSoftVersion()
   2.18"} or \code{"win_iconv"} (which has no version number).
 }
 \seealso{
+  \code{\link{libcurlVersion}} for the version of \code{libCurl}.
+  
   \code{\link{La_version}} for the version of LAPACK in use.
 
   \code{\link{grSoftVersion}} for third-party graphics software.
 
   \code{\link{tclVersion}} for the version of Tcl/Tk.
+  
+  \code{\link{pcre_config}} for PCRE configuration options.
 }
 \examples{
 extSoftVersion()

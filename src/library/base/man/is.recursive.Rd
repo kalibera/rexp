@@ -1,6 +1,6 @@
 % File src/library/base/man/is.recursive.Rd
 % Part of the R package, http://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2015 R Core Team
 % Distributed under GPL 2 or later
 
 \name{is.recursive}
@@ -22,7 +22,7 @@ is.recursive(x)
   \item{x}{object to be tested.}
 }
 \details{
-  \code{is.atomic} is true for the atomic types
+  \code{is.atomic} is true for the \link{atomic} types
   (\code{"logical"}, \code{"integer"}, \code{"numeric"},
   \code{"complex"}, \code{"character"} and \code{"raw"}) and \code{NULL}.
 

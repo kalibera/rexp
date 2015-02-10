@@ -1,7 +1,7 @@
 #  File src/library/utils/R/URLencode.R
 #  Part of the R package, http://www.R-project.org
 #
-#  Copyright (C) 1995-2014 The R Core Team
+#  Copyright (C) 1995-2015 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -28,8 +28,10 @@ URLencode <- function(URL, reserved = FALSE)
     x <- strsplit(URL, "")[[1L]]
     z <- grep(OK, x)
     if(length(z)) {
-        y <- sapply(x[z], function(x)
-                    paste0("%", as.character(charToRaw(x)), collapse = ""))
+        y <- sapply(x[z],
+                    function(x)
+                        paste0("%", toupper(as.character(charToRaw(x))),
+                               collapse = ""))
         x[z] <- y
     }
     paste(x, collapse = "")

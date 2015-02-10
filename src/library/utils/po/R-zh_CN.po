@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.3.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2014-10-26 08:48\n"
+"POT-Creation-Date: 2015-02-09 08:50\n"
 "PO-Revision-Date: 2011-01-18 13:56+0000\n"
 "Last-Translator: 陈斐 <FeiC@normipaiva.com>\n"
 "Language-Team: Chinese\n"
@@ -425,11 +425,17 @@ msgstr "域设定得不对"
 msgid "do not know what to search"
 msgstr "不知道要搜查什么"
 
-msgid "incorrect type specification"
-msgstr "域设定得不对"
-
 msgid "argument 'help.db' is deprecated"
 msgstr "参数'help.db'已经不再用了"
+
+msgid "no information in the database for package %s: need 'rebuild = TRUE'?"
+msgstr "数据库里没有关于程序包%s的信息：是不是需要设定'rebuild = TRUE'？"
+
+msgid "incorrect 'agrep' specification"
+msgstr "'agrep'设定得不对"
+
+msgid "incorrect type specification"
+msgstr "域设定得不对"
 
 msgid "could not find package %s"
 msgstr "找不到程序包%s"
@@ -439,12 +445,6 @@ msgstr "程序包%s的hsearch数据是空的-很奇怪"
 
 msgid "removing all entries with invalid multi-byte character data"
 msgstr "删除所有多字節字符数据出错的分錄"
-
-msgid "no information in the database for package %s: need 'rebuild = TRUE'?"
-msgstr "数据库里没有关于程序包%s的信息：是不是需要设定'rebuild = TRUE'？"
-
-msgid "incorrect 'agrep' specification"
-msgstr "'agrep'设定得不对"
 
 msgid "invalid browser name, check options(\"browser\")."
 msgstr "浏览器的名字不对，请检查options(\"browser\")的设置。"
@@ -566,6 +566,11 @@ msgstr "无法在貯藏處%s中读写索引"
 msgid "invalid 'filters' argument."
 msgstr "'filters'参数不对。"
 
+msgid ""
+"specifying 'contriburl' or 'available' requires a single type, not type = "
+"\"both\""
+msgstr ""
+
 msgid "package '%s' in library '%s' will not be updated"
 msgstr "程序库'%2$s'里'%1$s'这个程序包将不会被更新"
 
@@ -637,6 +642,10 @@ msgstr ""
 "不知道'lib'元素里如何安装依赖程序\n"
 "因此略过不装"
 
+#, fuzzy
+msgid "type 'binary' is not supported on this platform"
+msgstr "本平台只支持'html = TRUE'"
+
 msgid "no packages were specified"
 msgstr "没有设定程序包"
 
@@ -659,11 +668,6 @@ msgstr "无法建立临时目录%s"
 msgid ""
 "type == \"both\" can only be used on Windows or a CRAN build for Mac OS X"
 msgstr "type == \"both\"只适用在Windows上或在为Mac OS X的CRAN构建上"
-
-msgid ""
-"type == \"both\" cannot be used if 'available' or 'contriburl' is specified"
-msgstr ""
-"如果已经设定了'available'或'contriburl'的话，不能再设定type == \"both\""
 
 msgid "type == \"both\" cannot be used with 'repos = NULL'"
 msgstr "设定了'repos = NULL'后就不能再设定type == \"both\""
@@ -1040,6 +1044,14 @@ msgstr "'ccaddress'的长度必需为一"
 msgid "no download method found"
 msgstr "没有下载方法"
 
+#, fuzzy
+msgid "'url' must be a length-one character vector"
+msgstr "'title'值要么是NULL，要么是长度为一的字符向量"
+
+#, fuzzy
+msgid "'destfile' must be a length-one character vector"
+msgstr "'title'值要么是NULL，要么是长度为一的字符向量"
+
 msgid "download had nonzero exit status"
 msgstr "下载退出状态不是零"
 
@@ -1141,8 +1153,9 @@ msgstr[0] ""
 "从%s中删除程序包\n"
 "(因为没有指定%s)"
 
-msgid "package %s is not available (for %s)"
-msgid_plural "packages %s are not available (for %s)"
+#, fuzzy
+msgid "package %s is not available (%s)"
+msgid_plural "packages %s are not available (%s)"
 msgstr[0] "没有%s这个程序包(给%s用)"
 
 msgid "dependency %s is not available"
@@ -1172,13 +1185,16 @@ msgid_plural ""
 "There are binary versions available but the source versions are later"
 msgstr[0] "有二进制版本的，但源代码版本是后来的"
 
-msgid "Do you want to install from sources the package which need compilation?"
+#, fuzzy
+msgid ""
+"Do you want to install from sources the package which needs compilation?"
 msgid_plural ""
 "Do you want to install from sources the packages which need compilation?"
 msgstr[0] "你想从源代码安装的需要编译的程序包？"
 
+#, fuzzy
 msgid ""
-"Package which are only available in source form, and may need compilation of "
+"Package which is only available in source form, and may need compilation of "
 "C/C++/Fortran"
 msgid_plural ""
 "Packages which are only available in source form, and may need compilation "
@@ -1216,6 +1232,12 @@ msgstr[0] ""
 msgid "package %s is in use and will not be installed"
 msgid_plural "packages %s are in use and will not be installed"
 msgstr[0] "正在使用%s这个程序包，因此不会被安装"
+
+#~ msgid ""
+#~ "type == \"both\" cannot be used if 'available' or 'contriburl' is "
+#~ "specified"
+#~ msgstr ""
+#~ "如果已经设定了'available'或'contriburl'的话，不能再设定type == \"both\""
 
 #~ msgid ""
 #~ "If nothing happens, you should open\n"

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2000-2014   The R Core Team.
+ *  Copyright (C) 2000-2015   The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -3742,6 +3742,7 @@ static SEXP readOneString(Rconnection con)
     for(pos = 0; pos < 10000; pos++) {
 	p = buf + pos;
 	m = (int) con->read(p, sizeof(char), 1, con);
+	if (m < 0) error("error reading from the connection");
 	if(!m) {
 	    if(pos > 0)
 		warning(_("incomplete string at end of file has been discarded"));
@@ -3876,6 +3877,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 	    while(n0) {
 		size_t n1 = (n0 < BLOCK) ? n0 : BLOCK;
 		m0 = con->read(pp, size, n1, con);
+		if (m0 < 0) error("error reading from the connection");
 		m += m0;
 		if (m0 < n1) break;
 		n0 -= n1;
@@ -3956,8 +3958,9 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(!signd && (mode != 1 || size > 2))
 	    warning(_("'signed = FALSE' is only valid for integers of sizes 1 and 2"));
 	if(size == sizedef) {
-	    if(isRaw) m = rawRead(p, size, n, bytes, nbytes, &np);
-	    else {
+	    if(isRaw) {
+		m = rawRead(p, size, n, bytes, nbytes, &np);
+	    } else {
 		/* Do this in blocks to avoid large buffers in the connection */
 		char *pp = p;
 		R_xlen_t m0, n0 = n;
@@ -3965,6 +3968,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 		while(n0) {
 		    size_t n1 = (n0 < BLOCK) ? n0 : BLOCK;
 		    m0 = con->read(pp, size, n1, con);
+		    if (m0 < 0) error("error reading from the connection");
 		    m += m0;
 		    if (m0 < n1) break;
 		    n0 -= n1;
@@ -3980,6 +3984,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 		for(i = 0, m = 0; i < n; i++) {
 		    s = isRaw ? rawRead(buf, size, 1, bytes, nbytes, &np)
 			: (int) con->read(buf, size, 1, con);
+		    if (s < 0) error("error reading from the connection");
 		    if(s) m++; else break;
 		    if(swap && size > 1) swapb(buf, size);
 		    switch(size) {
@@ -4012,6 +4017,7 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 		for(i = 0, m = 0; i < n; i++) {
 		    s = isRaw ? rawRead(buf, size, 1, bytes, nbytes, &np)
 			: (int) con->read(buf, size, 1, con);
+		    if (s < 0) error("error reading from the connection");
 		    if(s) m++; else break;
 		    if(swap && size > 1) swapb(buf, size);
 		    switch(size) {
@@ -4943,12 +4949,20 @@ SEXP attribute_hidden do_sumconnection(SEXP call, SEXP op, SEXP args, SEXP env)
 /* op = 0: url(description, open, blocking, encoding)
    op = 1: file(description, open, blocking, encoding)
 */
+
+// in internet module: 'type' is unused
+extern Rconnection 
+R_newCurlUrl(const char *description, const char * const mode, int type);
+
 SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP scmd, sopen, ans, class, enc;
     char *class2 = "url";
     const char *url, *open;
-    int ncon, block, raw = 0;
+    int ncon, block, raw = 0, meth = 0;
+#ifdef Win32
+    int urlmeth = UseInternet2;
+#endif
     cetype_t ienc = CE_NATIVE;
     Rconnection con = NULL;
 #ifdef HAVE_INTERNET
@@ -4963,7 +4977,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	warning(_("only first element of 'description' argument used"));
     url = CHAR(STRING_ELT(scmd, 0)); /* ASCII */
 #ifdef Win32
-    if(PRIMVAL(op) && !IS_ASCII(STRING_ELT(scmd, 0)) ) {
+    if(PRIMVAL(op) == 1 && !IS_ASCII(STRING_ELT(scmd, 0)) ) {
 	ienc = CE_UTF8;
 	url = translateCharUTF8(STRING_ELT(scmd, 0));
     } else {
@@ -4976,10 +4990,13 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 #else
 	url = translateChar(STRING_ELT(scmd, 0));
 #endif
+
 #ifdef HAVE_INTERNET
     if (strncmp(url, "http://", 7) == 0) type = HTTPsh;
     else if (strncmp(url, "ftp://", 6) == 0) type = FTPsh;
     else if (strncmp(url, "https://", 8) == 0) type = HTTPSsh;
+    // ftps:// is available via most libcurl.
+    else if (strncmp(url, "ftps://", 7) == 0) type = FTPSsh;
 #endif
 
     sopen = CADR(args);
@@ -4993,10 +5010,70 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!isString(enc) || length(enc) != 1 ||
        strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
-    if(PRIMVAL(op)) {
+    if(PRIMVAL(op) == 1) {
 	raw = asLogical(CAD4R(args));
 	if(raw == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "raw");
+    }
+
+    if(PRIMVAL(op) == 0) {
+	const char *cmeth = CHAR(asChar(CAD4R(args)));
+	meth = streql(cmeth, "libcurl");
+	if (streql(cmeth, "wininet")) {
+#ifdef Win32
+	    urlmeth = 1;
+#else
+	    error(_("method = \"wininet\" is only supported on Windows"));
+#endif    
+	} 
+#ifdef Win32
+	else if (streql(cmeth, "internal")) urlmeth = 0;
+#endif
+    } else { // file(), look at option.
+	SEXP opt = GetOption1(install("url.method"));
+	if (isString(opt) && LENGTH(opt) >= 1) {
+	    const char *val = CHAR(STRING_ELT(opt, 0));
+	    if (streql(val, "libcurl")) meth = 1;
+#ifdef Win32
+	    if (streql(val, "wininet")) urlmeth = 1;
+#endif
+	}
+    }
+
+    if(!meth) {
+	if (strncmp(url, "ftps://", 7) == 0)
+#ifdef HAVE_CURL_CURL_H
+	{
+	    // this is slightly optimistic: we did not check the libcurl build
+	    REprintf("ftps:// URLs are not supported by the default method: trying \"libcurl\"\n");
+	    R_FlushConsole();
+	    meth = 1;
+	}
+//	error("ftps:// URLs are not supported by the default method:\n   consider url(method = \"libcurl\")");
+#else
+	error("ftps:// URLs are not supported");
+#endif
+#ifdef Win32
+	if (!urlmeth && strncmp(url, "https://", 8) == 0) {
+	    REprintf("https:// URLs are not supported by the default method: using \"wininet\"\n");
+	    R_FlushConsole();
+	    urlmeth = 1;
+	}
+	//   error("for https:// URLs use setInternet2(TRUE)");
+#else
+	if (strncmp(url, "https://", 8) == 0)
+# ifdef HAVE_CURL_CURL_H
+	{
+	    // this is slightly optimistic: we did not check the libcurl build
+	    REprintf("https:// URLs are not supported by the default method: trying \"libcurl\"\n");
+	    R_FlushConsole();
+	    meth = 1;
+	}
+//	    error("https:// URLs are not supported by the default method:\n  consider url(method = \"libcurl\")");
+# else
+	error("https:// URLs are not supported");
+# endif
+#endif
     }
 
     ncon = NextConnection();
@@ -5010,14 +5087,28 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	con = newfile(url + nh, ienc, strlen(open) ? open : "r", raw);
 	class2 = "file";
 #ifdef HAVE_INTERNET
+	// we could pass others to libcurl.
     } else if (strncmp(url, "http://", 7) == 0 ||
 	       strncmp(url, "https://", 8) == 0 ||
-	       strncmp(url, "ftp://", 6) == 0) {
-       con = R_newurl(url, strlen(open) ? open : "r");
-       ((Rurlconn)con->private)->type = type;
+	       strncmp(url, "ftp://", 6) == 0 ||
+	       strncmp(url, "ftps://", 7) == 0) {
+	if(meth) {
+#ifdef HAVE_CURL_CURL_H
+	    con = R_newCurlUrl(url, strlen(open) ? open : "r", 0);
+#else
+	    error("url(method = \"libcurl\") is not supported on this platform");
+#endif
+	} else {
+#ifdef Win32
+	    con = R_newurl(url, strlen(open) ? open : "r", urlmeth);
+#else
+	    con = R_newurl(url, strlen(open) ? open : "r", 0);
+#endif
+	    ((Rurlconn)con->private)->type = type;
+	}
 #endif
     } else {
-	if(PRIMVAL(op)) { /* call to file() */
+	if(PRIMVAL(op) == 1) { /* call to file() */
 	    if(strlen(url) == 0) {
 		if(!strlen(open)) open ="w+";
 		if(strcmp(open, "w+") != 0 && strcmp(open, "w+b") != 0) {
@@ -5076,7 +5167,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	    class2 = "file";
 	} else {
-	    error(_("unsupported URL scheme"));
+	    error(_("URL scheme unsupported by this method"));
 	}
     }
 

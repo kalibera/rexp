@@ -1,6 +1,6 @@
 #  File src/library/tools/R/Rd2HTML.R
 #
-#  Copyright (C) 1995-2014 The R Core Team
+#  Copyright (C) 1995-2015 The R Core Team
 #  Part of the R package, http://www.R-project.org
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -127,7 +127,7 @@ urlify <- function(x) {
     chars <- unlist(strsplit(x, ""))
     hex <- vapply(chars,
                   function(x)
-                  paste0("%", as.character(charToRaw(x)),
+                  paste0("%", toupper(as.character(charToRaw(x))),
                          collapse = ""),
                   "")
     todo <- paste0("[^",
@@ -181,7 +181,7 @@ Rd2HTML <-
             package <- package[1L]
         } else {
             dir <- dirname(package)
-            if((dir != "") &&
+            if(nzchar(dir) &&
                file_test("-f", dfile <- file.path(package,
                                                   "DESCRIPTION"))) {
                 version <- .read_description(dfile)["Version"]
@@ -443,14 +443,14 @@ Rd2HTML <-
                ## cwhmisc has an empty \\email
                "\\email" = if (length(block)) {
                    url <- paste(as.character(block), collapse="")
-                   url <- gsub("\n", "", url)
+                   url <- trimws(gsub("\n", "", url))
                    enterPara(doParas)
                    of0('<a href="mailto:', urlify(url), '">',
                        htmlify(url), '</a>')},
                ## watch out for empty URLs (TeachingDemos has one)
                "\\url" = if(length(block)) {
                    url <- paste(as.character(block), collapse="")
-                   url <- gsub("\n", "", url)
+                   url <- trimws(gsub("\n", "", url))
                    enterPara(doParas)
                    of0('<a href="', urlify(url), '">',
                        htmlify(url), '</a>')
@@ -458,7 +458,7 @@ Rd2HTML <-
                "\\href" = {
                	   if(length(block[[1L]])) {
                	   	url <- paste(as.character(block[[1L]]), collapse="")
-               	   	url <- gsub("\n", "", url)
+               	   	url <- trimws(gsub("\n", "", url))
 		        enterPara(doParas)
                	   	of0('<a href="', urlify(url), '">')
                	   	closing <- "</a>"
@@ -812,10 +812,10 @@ Rd2HTML <-
 	for (i in seq_along(sections)[-(1:2)])
 	    writeSection(Rd[[i]], sections[i])
 
-	if(version != "")
+	if(nzchar(version))
 	    version <- paste0('Package <em>',package,'</em> version ',version,' ')
 	of0('\n')
-	if (version != "")
+	if(nzchar(version))
 	    of0('<hr /><div style="text-align: center;">[', version,
 		if (!no_links) '<a href="00Index.html">Index</a>',
 		']</div>')

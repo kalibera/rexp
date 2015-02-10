@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2014  The R Core Team
+ *  Copyright (C) 1997--2015  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -108,6 +108,9 @@ SEXP do_copyDFattr(SEXP, SEXP, SEXP, SEXP);
 SEXP do_crc64(SEXP, SEXP, SEXP, SEXP);
 SEXP do_Cstack_info(SEXP, SEXP, SEXP, SEXP);
 SEXP do_cum(SEXP, SEXP, SEXP, SEXP);
+SEXP do_curlDownload(SEXP, SEXP, SEXP, SEXP);
+SEXP do_curlGetHeaders(SEXP, SEXP, SEXP, SEXP);
+SEXP do_curlVersion(SEXP, SEXP, SEXP, SEXP);
 SEXP do_D2POSIXlt(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dataentry(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dataframe(SEXP, SEXP, SEXP, SEXP);
@@ -191,6 +194,7 @@ SEXP do_geterrmessage(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getGraphicsEvent(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getGraphicsEventEnv(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getlocale(SEXP, SEXP, SEXP, SEXP);
+SEXP do_getOption(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getRegisteredRoutines(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getSymbolInfo(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getRestart(SEXP, SEXP, SEXP, SEXP);
@@ -235,6 +239,7 @@ SEXP do_lazyLoadDBflush(SEXP, SEXP, SEXP, SEXP);
 SEXP do_lazyLoadDBinsertValue(SEXP call, SEXP op, SEXP args, SEXP env);
 SEXP do_length(SEXP, SEXP, SEXP, SEXP);
 SEXP do_lengthgets(SEXP, SEXP, SEXP, SEXP);
+SEXP do_lengths(SEXP, SEXP, SEXP, SEXP);
 SEXP do_levelsgets(SEXP, SEXP, SEXP, SEXP);
 SEXP do_listdirs(SEXP, SEXP, SEXP, SEXP);
 SEXP do_listfiles(SEXP, SEXP, SEXP, SEXP);
@@ -288,6 +293,7 @@ SEXP do_parentframe(SEXP, SEXP, SEXP, SEXP);
 SEXP do_parse(SEXP, SEXP, SEXP, SEXP);
 SEXP do_paste(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pathexpand(SEXP, SEXP, SEXP, SEXP);
+SEXP do_pcre_config(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pmatch(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pmin(SEXP, SEXP, SEXP, SEXP);
 SEXP do_polyroot(SEXP, SEXP, SEXP, SEXP);
@@ -418,6 +424,7 @@ SEXP do_tempdir(SEXP, SEXP, SEXP, SEXP);
 SEXP do_tempfile(SEXP, SEXP, SEXP, SEXP);
 SEXP do_tilde(SEXP, SEXP, SEXP, SEXP);
 SEXP do_tolower(SEXP, SEXP, SEXP, SEXP);
+SEXP do_topenv(SEXP, SEXP, SEXP, SEXP);
 SEXP do_trace(SEXP, SEXP, SEXP, SEXP);
 SEXP do_traceOnOff(SEXP, SEXP, SEXP, SEXP);
 SEXP do_traceback(SEXP, SEXP, SEXP, SEXP);

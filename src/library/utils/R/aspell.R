@@ -1,7 +1,7 @@
 #  File src/library/utils/R/aspell.R
 #  Part of the R package, http://www.R-project.org
 #
-#  Copyright (C) 1995-2013 The R Core Team
+#  Copyright (C) 1995-2015 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -15,7 +15,6 @@
 #
 #  A copy of the GNU General Public License is available at
 #  http://www.r-project.org/Licenses/
-
 
 aspell <-
 function(files, filter, control = list(), encoding = "unknown",
@@ -239,33 +238,44 @@ function(files, filter, control = list(), encoding = "unknown",
     db
 }
 
-print.aspell <-
+format.aspell <- 
 function(x, sort = TRUE, verbose = FALSE, indent = 2L, ...)
 {
-    ## A very simple printer ...
-    if(!(nr <- nrow(x))) return(invisible(x))
+    if(!(nr <- nrow(x))) return(character())
 
-    if (sort)
-    	x <- x[order(x$Original, x$File, x$Line, x$Column), ]
+    if(sort)
+        x <- x[order(x$Original, x$File, x$Line, x$Column), ]
 
-    if (verbose)
-    	out <-
-    	    sprintf("%sWord: %s (%s:%d:%d)\n%s",
-    	            c("", rep.int("\n", nr - 1L)),
-    	            x$Original, x$File, x$Line, x$Column,
-    	            formatDL(rep.int("Suggestions", nr),
-    	                     sapply(x$Suggestions, paste, collapse = " "),
-    	                     style = "list"))
-    else {
-        s <- split(sprintf("%s:%d:%d", x$File, x$Line, x$Column),
-                   x$Original)
+    from <- split(sprintf("%s:%d:%d", x$File, x$Line, x$Column),
+                  x$Original)
+
+    if(verbose) {
+        unlist(Map(function(w, f, s) {
+            sprintf("Word: %s\nFrom: %s\n%s",
+                    w,
+                    paste0(c("", rep.int("      ", length(f) - 1L)),
+                           f, collapse = "\n"),
+                    paste(strwrap(paste("Suggestions:",
+                                        paste(s[[1L]], collapse = " ")),
+                                  exdent = 6L, indent = 0L),
+                          collapse = "\n"))
+        },
+                   names(from),
+                   from,
+                   split(x$Suggestions, x$Original)))
+    } else {
         sep <- sprintf("\n%s",
                        paste(rep.int(" ", indent), collapse = ""))
-        out <- paste(names(s),
-                     sapply(s, paste, collapse = sep),
-                     sep = sep, collapse = "\n\n")
+        paste(names(from),
+              sapply(from, paste, collapse = sep),
+              sep = sep)
     }
-    writeLines(out)
+}
+
+print.aspell <-
+function(x, ...)
+{
+    writeLines(paste(format(x, ...), collapse = "\n\n"))
     invisible(x)
 }
 
@@ -590,6 +600,7 @@ function(dir,
     files <- vinfo$docs
     if(!length(files)) return(aspell(character()))
 
+    ## We need the package encoding to read the defaults file ...
     meta <- tools:::.get_package_metadata(dir, installed = FALSE)
     if(is.na(encoding <- meta["Encoding"]))
         encoding <- "unknown"
@@ -616,22 +627,25 @@ function(dir,
 
     program <- aspell_find_program(program)
 
-    files <- split(files, vinfo$engine)
-
+    fgroups <- split(files, vinfo$engines)
+    egroups <- split(vinfo$encodings, vinfo$engines)
+    
     do.call(rbind,
-            Map(function(files, engine) {
+            Map(function(fgroup, egroup, engine) {
                 engine <- tools::vignetteEngine(engine)
-                aspell(files,
+                aspell(fgroup,
                        filter = engine$aspell$filter,
                        control =
                        c(engine$aspell$control,
                          aspell_control_package_vignettes[[names(program)]],
                          control),
+                       encoding = egroup,
                        program = program,
                        dictionaries = dictionaries)
             },
-                files,
-                names(files)
+                fgroups,
+                egroups,
+                names(fgroups)
                 )
             )
 }
@@ -680,7 +694,7 @@ function(ifile, encoding = "unknown", ignore = character())
             cols <- cumsum(widths)
             widths[i] <- 8 - (cols[i] - 1) %% 8
         }
-        cumsum(c(1, widths))
+        cumsum(widths)
     },
                gregexpr("\t", lines[lines_in_pd], fixed = TRUE),
                nchar(lines[lines_in_pd]))
@@ -692,26 +706,26 @@ function(ifile, encoding = "unknown", ignore = character())
     for(entry in split(pd, seq_len(NROW(pd)))) {
         line1 <- entry$line1
         line2 <- entry$line2
-        col1 <- entry$col1 + 1L
-        col2 <- entry$col2 - 1L
+        col1 <- entry$col1
+        col2 <- entry$col2
         if(line1 == line2) {
             if(length(ptab <- tab[[as.character(line1)]])) {
-                col1 <- which(ptab == col1)
-                col2 <- which(ptab == col2)
+                col1 <- which(ptab == col1) + 1L
+                col2 <- which(ptab == col2) - 1L
             }
             substring(lines[line1], col1, col2) <- entry$text
         } else {
             texts <- unlist(strsplit(entry$text, "\n", fixed = TRUE))
             n <- length(texts)
             if(length(ptab <- tab[[as.character(line1)]])) {
-                col1 <- which(ptab == col1)
+                col1 <- which(ptab == col1) + 1L
             }
             substring(lines[line1], col1) <- texts[1L]
             pos <- seq(from = 2, length.out = n - 2)
             if(length(pos))
                 lines[line1 + pos - 1] <- texts[pos]
             if(length(ptab <- tab[[as.character(line2)]])) {
-                col2 <- which(ptab == col2)
+                col2 <- which(ptab == col2) - 1L
             }
             substring(lines[line2], 1L, col2) <- texts[n]
         }
@@ -729,7 +743,10 @@ function(file, encoding = "unknown")
     ## The message strings considered are the string constants subject to
     ## translation in gettext-family calls (see below for details).
 
-    exprs <- parse(file = file, encoding = encoding, keep.source = TRUE)
+    exprs <-
+        suppressWarnings(tools:::.parse_code_file(file = file,
+                                                  encoding = encoding,
+                                                  keep.source = TRUE))
     if(!length(exprs)) return(NULL)
 
     pd <- getParseData(exprs)

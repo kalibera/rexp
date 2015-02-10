@@ -1,7 +1,7 @@
 #  File src/library/tools/R/Rd2latex.R
 #  Part of the R package, http://www.R-project.org
 #
-#  Copyright (C) 1995-2013 The R Core Team
+#  Copyright (C) 1995-2015 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -212,7 +212,8 @@ Rd2latex <- function(Rd, out="", defines=.Platform$OS.type, stages="render",
             tag <- "\\Rhref"
         }
     	of0(tag, "{",
-            gsub("\n", "", paste(as.character(url), collapse="")),
+            trimws(gsub("\n", "",
+                        paste(as.character(url), collapse=""))),
             "}")
         if (tag == "\\Rhref") {
             of1("{")
@@ -362,7 +363,7 @@ Rd2latex <- function(Rd, out="", defines=.Platform$OS.type, stages="render",
                "\\option" =,
                "\\samp" = writeWrapped(block, tag),
                ## really verbatim
-                "\\url"=,
+               "\\url"=,
                "\\href"= writeURL(block, tag),
                ## R-like
                "\\code"= {

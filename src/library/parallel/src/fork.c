@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  (C) Copyright 2008-11 Simon Urbanek
- *      Copyright 2011-2014 R Core Team.
+ *      Copyright 2011-2015 R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -550,8 +550,10 @@ static SEXP read_child_ci(child_info_t *ci)
 	PROTECT(rv);
 	{
 	    SEXP pa = allocVector(INTSXP, 1);
+	    PROTECT(pa);
 	    INTEGER(pa)[0] = ci->pid;
 	    setAttrib(rv, install("pid"), pa);
+	    UNPROTECT(1);
 	}
 	UNPROTECT(1);
 	return rv;

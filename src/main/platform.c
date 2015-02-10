@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998--2014 The R Core Team
+ *  Copyright (C) 1998--2015 The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1964,8 +1964,8 @@ SEXP attribute_hidden do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
 
-    PROTECT(ans = allocVector(LGLSXP, 17));
-    PROTECT(ansnames = allocVector(STRSXP, 17));
+    PROTECT(ans = allocVector(LGLSXP, 18));
+    PROTECT(ansnames = allocVector(STRSXP, 18));
 
     SET_STRING_ELT(ansnames, i, mkChar("jpeg"));
 #ifdef HAVE_JPEG
@@ -2116,6 +2116,14 @@ SEXP attribute_hidden do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SET_STRING_ELT(ansnames, i, mkChar("long.double"));
     LOGICAL(ans)[i++] = sizeof(LDOUBLE) > sizeof(double);
+
+    SET_STRING_ELT(ansnames, i, mkChar("libcurl"));
+#ifdef HAVE_CURL_CURL_H
+    LOGICAL(ans)[i++] = TRUE;
+#else
+    LOGICAL(ans)[i++] = FALSE;
+#endif
+
 
     setAttrib(ans, R_NamesSymbol, ansnames);
     UNPROTECT(2);
@@ -3062,6 +3070,20 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     UNPROTECT(2);
     return ans;
 }
+
+/* platform-specific */
+extern void Rsleep(double timeint);
+
+SEXP attribute_hidden do_syssleep(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    checkArity(op, args);
+    double time = asReal(CAR(args));
+    if (ISNAN(time) || time < 0.)
+	errorcall(call, _("invalid '%s' value"), "time");
+    Rsleep(time);
+    return R_NilValue;
+}
+
 
 /* Formerly src/appl/machar.c:
  * void machar()  -- computes ALL `machine constants' at once.

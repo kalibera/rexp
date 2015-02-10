@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995-1996 Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997-2013 The R Core Team
+ *  Copyright (C) 1997-2015 The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1424,16 +1424,19 @@ static SEXP get_package_CEntry_table(const char *package)
 void R_RegisterCCallable(const char *package, const char *name, DL_FUNC fptr)
 {
     SEXP penv = get_package_CEntry_table(package);
+    PROTECT(penv);
     SEXP eptr = R_MakeExternalPtrFn(fptr, R_NilValue, R_NilValue);
     PROTECT(eptr);
     defineVar(install(name), eptr, penv);
-    UNPROTECT(1);
+    UNPROTECT(2);
 }
 
 DL_FUNC R_GetCCallable(const char *package, const char *name)
 {
     SEXP penv = get_package_CEntry_table(package);
+    PROTECT(penv);
     SEXP eptr = findVarInFrame(penv, install(name));
+    UNPROTECT(1);
     if (eptr == R_UnboundValue)
 	error(_("function '%s' not provided by package '%s'"), name, package);
     else if (TYPEOF(eptr) != EXTPTRSXP)

@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2008  The R Core Team
+ *  Copyright (C) 1997--2015  The R Core Team
  *  Copyright (C) 2002--2005  The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -156,6 +156,7 @@ pGEDevDesc GEcurrentDevice(void)
 		*/
 		SEXP ns = findVarInFrame(R_NamespaceRegistry,
 					 install("grDevices"));
+		PROTECT(ns);
 		if(ns != R_UnboundValue &&
 		   findVar(devName, ns) != R_UnboundValue) {
 		    PROTECT(defdev = lang1(devName));
@@ -163,6 +164,7 @@ pGEDevDesc GEcurrentDevice(void)
 		    UNPROTECT(1);
 		} else
 		    error(_("no active or default device"));
+		UNPROTECT(1);
 	    }
 	} else if(TYPEOF(defdev) == CLOSXP) {
 	    PROTECT(defdev = lang1(defdev));

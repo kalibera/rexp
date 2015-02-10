@@ -2,7 +2,7 @@
 #  Part of the R package, http://www.R-project.org
 #
 # Copyright (C) 2006  Deepayan Sarkar
-#               2006-2013  The R Core Team
+#               2006-2014  The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -215,7 +215,7 @@ rc.options <- function(...)
     nm <- names(new)
     if (is.null(nm)) return(old[unlist(new)])
 
-    isNamed <- nm != ""
+    isNamed <- nzchar(nm)
     if (any(!isNamed)) nm[!isNamed] <- unlist(new[!isNamed])
 
     ## so now everything has non-"" names, but only the isNamed ones
@@ -698,7 +698,7 @@ inFunction <-
         else ## guess function name
         {
             possible <- suppressWarnings(strsplit(prefix, breakRE, perl = TRUE))[[1L]]
-            possible <- possible[possible != ""]
+            possible <- possible[nzchar(possible)]
             if (length(possible)) return(tail.default(possible, 1))
             else return(character())
         }

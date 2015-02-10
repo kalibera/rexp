@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2014  The R Core Team.
+ *  Copyright (C) 1995--2015  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -416,7 +416,7 @@ void warningcall_immediate(SEXP call, const char *format, ...)
 
     immediateWarning = 1;
     va_start(ap, format);
-    vwarningcall_dflt(call, format, ap);
+    vsignalWarning(call, format, ap);
     va_end(ap);
     immediateWarning = 0;
 }
@@ -1043,9 +1043,9 @@ SEXP attribute_hidden do_ngettext(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     if(n == NA_INTEGER || n < 0) error(_("invalid '%s' argument"), "n");
     if(!isString(msg1) || LENGTH(msg1) != 1)
-	error(_("'msg1' must be a character string"));
+	error(_("'%s' must be a character string"), "msg1");
     if(!isString(msg2) || LENGTH(msg2) != 1)
-	error(_("'msg2' must be a character string"));
+	error(_("'%s' must be a character string"), "msg2");
 
 #ifdef ENABLE_NLS
     if(isNull(sdom)) {
@@ -1783,11 +1783,11 @@ SEXP attribute_hidden do_getRestart(SEXP call, SEXP op, SEXP args, SEXP rho)
 	/**** need to pre-allocate */
 	SEXP name, entry;
 	PROTECT(name = mkString("abort"));
-	entry = allocVector(VECSXP, 2);
+	PROTECT(entry = allocVector(VECSXP, 2));
 	SET_VECTOR_ELT(entry, 0, name);
 	SET_VECTOR_ELT(entry, 1, R_NilValue);
 	setAttrib(entry, R_ClassSymbol, mkString("restart"));
-	UNPROTECT(1);
+	UNPROTECT(2);
 	return entry;
     }
     else return R_NilValue;
