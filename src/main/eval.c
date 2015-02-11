@@ -3552,8 +3552,8 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	}								\
 	SEXP call = VECTOR_ELT(constants, GETOP());			\
 	SEXP args = CONS_NR(GETSTACK(-1), R_NilValue);			\
-	SEXP op = getPrimitive(R_LogSym, SPECIALSXP);			\
 	SETSTACK(-1, args); /* to protect */				\
+	SEXP op = getPrimitive(R_LogSym, SPECIALSXP);			\
 	SETSTACK(-1, do_log_builtin(call, op, args, rho));		\
 	NEXT();								\
  } while (0)
@@ -3571,10 +3571,11 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	    NEXT();							\
 	}								\
 	SEXP call = VECTOR_ELT(constants, GETOP());			\
-	SEXP args = CONS_NR(GETSTACK(-2), CONS_NR(GETSTACK(-1), R_NilValue)); \
-	SEXP op = getPrimitive(R_LogSym, SPECIALSXP);			\
+	SEXP tmp = GETSTACK(-2);					\
+	SEXP args = CONS_NR(tmp, CONS_NR(GETSTACK(-1), R_NilValue)); 	\
 	R_BCNodeStackTop--;						\
 	SETSTACK(-1, args); /* to protect */				\
+	SEXP op = getPrimitive(R_LogSym, SPECIALSXP);			\
 	SETSTACK(-1, do_log_builtin(call, op, args, rho));		\
 	NEXT();								\
     } while (0)
@@ -3638,8 +3639,8 @@ static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
 	}								\
 	SEXP args = CONS_NR(GETSTACK(-1), R_NilValue);			\
 	SEXP sym = CAR(call);						\
-	SEXP op = getPrimitive(sym, BUILTINSXP);			\
 	SETSTACK(-1, args); /* to protect */				\
+	SEXP op = getPrimitive(sym, BUILTINSXP);			\
 	SETSTACK(-1, do_math1(call, op, args, rho));			\
 	NEXT();								\
     } while (0)
@@ -5410,13 +5411,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  Rprintf("trace: ");
 	  PrintValue(symbol);
 	}
-	BCNPUSH(fun);  /* for GC protection */
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
 	value = PRIMFUN(fun) (call, fun, CDR(call), rho);
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
-	SETSTACK(-1, value); /* replaces fun on stack */
+	BCNPUSH(value);
 	NEXT();
       }
     OP(MAKECLOSURE, 1):
