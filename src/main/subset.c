@@ -351,7 +351,7 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
     if (nrs >= 0 && ncs >= 0) {
 	SEXP dimnames, dimnamesnames, newdimnames;
 	dimnames = getAttrib(x, R_DimNamesSymbol);
-	dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+	PROTECT(dimnamesnames = getAttrib(dimnames, R_NamesSymbol));
 	if (!isNull(dimnames)) {
 	    PROTECT(newdimnames = allocVector(VECSXP, 2));
 	    if (TYPEOF(dimnames) == VECSXP) {
@@ -372,8 +372,9 @@ static SEXP MatrixSubset(SEXP x, SEXP s, SEXP call, int drop)
 	    }
 	    setAttrib(newdimnames, R_NamesSymbol, dimnamesnames);
 	    setAttrib(result, R_DimNamesSymbol, newdimnames);
-	    UNPROTECT(1);
+	    UNPROTECT(1); /* newdimnames */
 	}
+	UNPROTECT(1); /* dimnamesnames */
     }
     /*  Probably should not do this:
     copyMostAttrib(x, result); */
@@ -982,8 +983,10 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    named_x = NAMED(x);
 	}
 	    
-	offset = get1index(thesub, getAttrib(x, R_NamesSymbol),
+	SEXP xnames = PROTECT(getAttrib(x, R_NamesSymbol));
+	offset = get1index(thesub, xnames,
 			   xlength(x), pok, len > 1 ? len-1 : -1, call);
+	UNPROTECT(1); /* xnames */
 	if (offset < 0 || offset >= xlength(x)) {
 	    /* a bold attempt to get the same behaviour for $ and [[ */
 	    if (offset < 0 && (isNewList(x) ||
@@ -995,6 +998,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	    else errorcall(call, R_MSG_subs_o_b);
 	}
+
     } else { /* matrix indexing */
 	/* Here we use the fact that: */
 	/* CAR(R_NilValue) = R_NilValue */
