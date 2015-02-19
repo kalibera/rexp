@@ -4163,14 +4163,13 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	SETSTACK(-1, value);			\
     } while (0)
 
-#define PUSHCALLARG(v) do { 				\
-  SEXP __value__ = v;					\
-  SEXP __stack1__ = GETSTACK(-1); 			\
-  SEXP __stack2__ = GETSTACK(-2); 			\
-  SEXP __cell__ = CONS_NR(__value__, R_NilValue); 	\
-  if (__stack2__ == R_NilValue) SETSTACK(-2, __cell__); \
-  else SETCDR(__stack1__, __cell__); 			\
-  SETSTACK(-1, __cell__);	       			\
+/* push an argument to existing call frame */
+/* a call frame always uses boxed stack values */
+#define PUSHCALLARG(v) do { \
+  SEXP __cell__ = CONS_NR(v, R_NilValue); \
+  if (GETSTACK(-2) == R_NilValue) SETSTACK(-2, __cell__); \
+  else SETCDR(GETSTACK(-1), __cell__); \
+  SETSTACK(-1, __cell__);	       \
 } while (0)
 
 /* place a tag on the most recently pushed call argument */
