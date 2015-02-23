@@ -3537,9 +3537,7 @@ SEXP attribute_hidden do_getRegNS(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP name, val;
     checkArity(op, args);
-    PROTECT(name = coerceVector(CAR(args), SYMSXP));
-    name = checkNSname(call, name);
-    UNPROTECT(1);
+    name = checkNSname(call, coerceVector(CAR(args), SYMSXP));
     val = findVarInFrame(R_NamespaceRegistry, name);
 
     switch(PRIMVAL(op)) {
