@@ -815,7 +815,7 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
     else
 	PROTECT(call = lang3(s_nchar, pat,
 			     ScalarString(mkChar("chars"))));
-    SEXP ncharres = eval(call, env);
+    SEXP ncharres = PROTECT(eval(call, env));
     patlen = asInteger(ncharres);
     UNPROTECT(2); /* ncharres, call */
     if(!patlen)
