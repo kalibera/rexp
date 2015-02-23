@@ -911,7 +911,7 @@ int R_check_class_and_super(SEXP x, const char **valid, SEXP rho)
 		if (!strlen(valid[ans]))
 		    break;
 		if (!strcmp(s_class, valid[ans])) {
-		    UNPROTECT(1);
+		    UNPROTECT(1); /* superCl */
 		    return ans;
 		}
 	    }
