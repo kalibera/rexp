@@ -502,7 +502,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     for(int i = 0 ; i < k ; i++)
 	INTEGER(xdims)[i] = bound[i];
     setAttrib(result, R_DimSymbol, xdims);
-    UNPROTECT(1);
+    UNPROTECT(1); /* xdims */
 
     /* The array elements have been transferred. */
     /* Now we need to transfer the attributes. */
@@ -510,7 +510,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     /* dimnames of the returned value. */
 
     dimnames = getAttrib(x, R_DimNamesSymbol);
-    dimnamesnames = getAttrib(dimnames, R_NamesSymbol);
+    PROTECT(dimnamesnames = getAttrib(dimnames, R_NamesSymbol));
     if (dimnames != R_NilValue) {
 	int j = 0;
 	PROTECT(xdims = allocVector(VECSXP, k));
@@ -542,7 +542,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
 	}
 	setAttrib(xdims, R_NamesSymbol, dimnamesnames);
 	setAttrib(result, R_DimNamesSymbol, xdims);
-	UNPROTECT(1);
+	UNPROTECT(1); /* xdims */
     }
     /* This was removed for matrices in 1998
        copyMostAttrib(x, result); */
@@ -550,7 +550,7 @@ static SEXP ArraySubset(SEXP x, SEXP s, SEXP call, int drop)
     vmaxset(vmaxsave);
     if (drop)
 	DropDims(result);
-    UNPROTECT(1);
+    UNPROTECT(2); /* dimnamesnames, result */
     return result;
 }
 
