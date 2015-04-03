@@ -123,6 +123,7 @@ FUNTAB R_FunTab[] =
 {"missing",	do_missing,	1,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"nargs",	do_nargs,	1,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"on.exit",	do_onexit,	0,	100,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"forceAndCall",do_forceAndCall,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 
 /* .Internals */
 
@@ -1033,13 +1034,12 @@ int StrToInternal(const char *s)
 static void installFunTab(int i)
 {
     SEXP prim;
-    /* prim needs to be protected since install can (and does here) allocate */
-    PROTECT(prim = mkPRIMSXP(i, R_FunTab[i].eval % 10));
+    /* mkPRIMSXP caches its results, thus prim does not need protection */
+    prim = mkPRIMSXP(i, R_FunTab[i].eval % 10);
     if ((R_FunTab[i].eval % 100 )/10)
 	SET_INTERNAL(install(R_FunTab[i].name), prim);
     else
 	SET_SYMVALUE(install(R_FunTab[i].name), prim);
-    UNPROTECT(1);
 }
 
 static void SymbolShortcuts(void)
@@ -1246,9 +1246,11 @@ SEXP installChar(SEXP charSXP)
         /* This branch is to match behaviour of install (which is older):
            symbol C-string names are always interpreted as if
            in the native locale, even when they are not in the native locale */
+        PROTECT(charSXP);
         sym = mkSYMSXP(mkChar(CHAR(charSXP)), R_UnboundValue);
         SET_HASHVALUE(PRINTNAME(sym), hashcode);
         SET_HASHASH(PRINTNAME(sym), 1);
+        UNPROTECT(1);
     }
 
     R_SymbolTable[i] = CONS(sym, R_SymbolTable[i]);

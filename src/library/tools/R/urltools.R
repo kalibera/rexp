@@ -58,12 +58,16 @@ function(x)
     urls <- character()
     recurse <- function(e) {
         tag <- attr(e, "Rd_tag")
+        ## Rd2HTML and Rd2latex remove whitespace and \n from URLs.
         if(identical(tag, "\\url")) {
             urls <<-
-                c(urls, .Rd_deparse(e, tag = FALSE))
+                c(urls, trimws(gsub("\n", "", .Rd_deparse(e, tag = FALSE),
+                                    fixed = TRUE, useBytes = TRUE)))
         } else if(identical(tag, "\\href")) {
             urls <<-
-                c(urls, .Rd_deparse(e[[1L]], tag = FALSE))
+                c(urls, trimws(gsub("\n", "",
+                                    .Rd_deparse(e[[1L]], tag = FALSE),
+                                    fixed = TRUE, useBytes = TRUE)))
         } else if(is.list(e))
               lapply(e, recurse)
     }
@@ -96,7 +100,8 @@ function(f)
 url_db <-
 function(urls, parents)
 {
-    db <- data.frame(URL = as.character(urls),
+    ## Some people get leading LFs in URLs, so trim before checking.
+    db <- data.frame(URL = trimws(as.character(urls)),
                      Parent = as.character(parents),
                      stringsAsFactors = FALSE)
     class(db) <- c("url_db", "data.frame")
@@ -151,7 +156,7 @@ function(dir, meta, installed = FALSE)
     if(file.exists(cfile)) {
         cinfo <- .read_citation_quietly(cfile, meta)
         if(!inherits(cinfo, "error"))
-            urls <- unique(unlist(cinfo$url, use.names = FALSE))
+            urls <- trimws(unique(unlist(cinfo$url, use.names = FALSE)))
     }
     url_db(urls, rep.int(path, length(urls)))
 }

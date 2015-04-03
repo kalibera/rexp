@@ -258,7 +258,7 @@ clean: cleanwin
 	-$(MK) -C ../modules -f Makefile.win clean
 	-$(MK) -C ../../tests -f Makefile.win clean
 	-$(MK) -C ../library/Recommended -f Makefile.win clean
-	$(RM) -f ../library/methods/all.R
+	$(RM) -f ../library/methods/all.R ../../etc/curl-ca-bundle.crt
 
 distclean: clean
 	@for d in $(EXTRA_DIRS); do \
@@ -268,7 +268,7 @@ distclean: clean
 	$(RM) -R ../../bin ../../include ../../lib ../../library ../../modules
 	$(RM) ../include/config.h ../include/iconv.h ../include/psignal.h \
 	../include/Rconfig.h ../include/Rversion.h ../include/Rmath.h \
-	../include/libintl.h
+	../include/libintl.h ../include/trioremap.h
 	$(RM) ../library/*/src/*.o ../library/*/src/*.a
 	$(RM) ../library/*/src/*.d ../library/*/src/Makedeps
 	$(RM) ../library/*/src/*.dll

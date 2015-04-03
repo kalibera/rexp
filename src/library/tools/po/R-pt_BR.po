@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 2.13.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2015-02-09 08:50\n"
+"POT-Creation-Date: 2015-03-24 20:06\n"
 "PO-Revision-Date: 2011-03-26 08:57-0300\n"
 "Last-Translator: Colin Robert <beasley@ufpa.br>\n"
 "Language-Team: http://www.feferraz.net/br/P/Projeto_Traducao_R_Portugues\n"
@@ -296,6 +296,11 @@ msgid "Non-portable flags in variable '%s':"
 msgstr ""
 
 msgid "Variables overriding user/site settings:"
+msgstr ""
+
+msgid ""
+"package %s exists but was not installed under R >= 2.10.0 so xrefs cannot be "
+"checked"
 msgstr ""
 
 #, fuzzy
@@ -688,12 +693,6 @@ msgstr ""
 msgid "assertConditon: Successfully caught a condition"
 msgstr ""
 
-msgid "assertCondition: caught %s"
-msgstr ""
-
-msgid ","
-msgstr ""
-
 msgid "Got %s in evaluating %s; wanted %s"
 msgstr ""
 
@@ -756,9 +755,6 @@ msgid "downloading reverse dependencies ..."
 msgstr ""
 
 msgid "downloading %s ..."
-msgstr ""
-
-msgid "installing dependencies %s"
 msgstr ""
 
 msgid "checking %s ..."
@@ -941,9 +937,6 @@ msgstr ""
 msgid "Cannot extract version info from the following section titles:"
 msgstr ""
 
-msgid "%s"
-msgstr ""
-
 msgid ""
 "Malformed NEWS.Rd file:\n"
 "Chunk starting\n"
@@ -1113,18 +1106,6 @@ msgstr ""
 msgid "test '%s' is not available"
 msgstr ""
 
-msgid ":"
-msgstr ""
-
-msgid "latin1"
-msgstr ""
-
-msgid "ASCII"
-msgstr ""
-
-msgid "byte"
-msgstr ""
-
 msgid "argument 'x' must be a character vector"
 msgstr ""
 
@@ -1179,8 +1160,8 @@ msgstr ""
 msgid "parsing '%s'"
 msgstr ""
 
-msgid "Undeclared package used in Rd xrefs:"
-msgid_plural "Undeclared packages used in Rd xrefs:"
+msgid "Obsolete package %s in Rd xrefs"
+msgid_plural "Obsolete packages %s in Rd xrefs"
 msgstr[0] ""
 msgstr[1] ""
 

@@ -153,6 +153,10 @@ function(files, filter, control = list(), encoding = "unknown",
             do.call(filter, c(list(file, encoding = enc), filter_args))
         }
 
+        ## Allow filters to pass additional control arguments, in case
+        ## these need to be inferred from the file contents.
+        control <- c(control, attr(lines, "control"))
+
         ## Need to escape all lines with carets to ensure Aspell handles
         ## them as data: the Aspell docs say
         ##   It is recommended that programmatic interfaces prefix every
@@ -275,7 +279,8 @@ function(x, sort = TRUE, verbose = FALSE, indent = 2L, ...)
 print.aspell <-
 function(x, ...)
 {
-    writeLines(paste(format(x, ...), collapse = "\n\n"))
+    if(nrow(x))
+        writeLines(paste(format(x, ...), collapse = "\n\n"))
     invisible(x)
 }
 
@@ -1043,9 +1048,13 @@ function(ifile, encoding, keep = c("Title", "Description"),
     lines <- readLines(ifile, encoding = encoding, warn = FALSE)
     line_has_tags <- grepl("^[^[:blank:]][^:]*:", lines)
     tags <- sub(":.*", "", lines[line_has_tags])
+    lines[line_has_tags] <-
+        blank_out_regexp_matches(lines[line_has_tags], "^[^:]*:")
     lines <- split(lines, cumsum(line_has_tags))
     ind <- is.na(match(tags, keep))
     lines[ind] <- lapply(lines[ind], function(s) rep.int("", length(s)))
+    ind <- !ind
+    lines[ind] <- lapply(lines[ind], paste0, " ")
     lines <- unlist(lines, use.names = FALSE)
     for(re in ignore[nzchar(ignore)])
         lines <- blank_out_regexp_matches(lines, re)
@@ -1073,6 +1082,28 @@ function(dir, ignore = character(),
            encoding = encoding,
            program = program,
            dictionaries = dictionaries)
+}
+
+## For spell checking packages.
+
+aspell_package <-
+function(dir,
+         control = list(), program = NULL, dictionaries = character())
+{
+    args <- list(dir = dir,
+                 program = program,
+                 control = control,
+                 dictionaries = dictionaries)
+    a <- rbind(do.call(aspell_package_description, args),
+               do.call(aspell_package_Rd_files, args),
+               do.call(aspell_package_vignettes, args),
+               do.call(aspell_package_R_files, args),
+               do.call(aspell_package_C_files, args))
+    if(nrow(a)) {
+        a$File <- tools:::.file_path_relative_to_dir(a$File,
+                                                     dirname(dir))
+    }
+    a
 }
 
 ## For writing personal dictionaries:

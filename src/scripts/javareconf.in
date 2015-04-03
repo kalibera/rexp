@@ -9,7 +9,7 @@ fi
 DYLIB_EXT=`${R_HOME}/bin/R CMD config DYLIB_EXT`
 tools_classpath=${R_SHARE_DIR}/java
 
-revision='$Rev: 67570 $'
+revision='$Rev: 67942 $'
 version=`set - ${revision}; echo ${2}`
 version="R Java configurator: ${R_VERSION} (r${version})
 
@@ -327,7 +327,7 @@ wd=${PWD}
 cd "${tempdir}"
 
 echo
-echo "trying to compile and link a JNI progam "
+echo "trying to compile and link a JNI program "
 echo "detected JNI cpp flags    : ${JAVA_CPPFLAGS}"
 echo "detected JNI linker flags : ${JAVA_LIBS}"
 

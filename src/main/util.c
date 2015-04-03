@@ -762,7 +762,7 @@ SEXP attribute_hidden do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("missing value is invalid"));
 
     /* get current directory to return */
-    wd = intern_getwd();
+    PROTECT(wd = intern_getwd());
 
 #ifdef Win32
     {
@@ -778,6 +778,7 @@ SEXP attribute_hidden do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("cannot change working directory"));
     }
 #endif
+    UNPROTECT(1); /* wd */
     return(wd);
 }
 
@@ -2358,10 +2359,8 @@ SEXP attribute_hidden do_formatC(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 #ifdef Win32
 /* avoid latest MinGW's redefinition in stdio.h */
-int trio_sprintf(char *buffer, const char *format, ...);
-#define sprintf trio_sprintf
+#include <trioremap.h>
 #endif
-
 #include <Rmath.h>		/* fround */
 
 static

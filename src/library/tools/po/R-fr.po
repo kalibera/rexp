@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.12.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2015-02-09 08:50\n"
+"POT-Creation-Date: 2015-03-24 20:06\n"
 "PO-Revision-Date: 2014-03-17 11:53+0100\n"
 "Last-Translator: Philippe Grosjean <phgrosjean@sciviews.org>\n"
 "Language-Team: French <R-core@r-project.org>\n"
@@ -333,6 +333,13 @@ msgstr "Indicateur non portable dans la variable '%s' :"
 
 msgid "Variables overriding user/site settings:"
 msgstr "Des variables remplacent les valeurs utilisateur/site :"
+
+msgid ""
+"package %s exists but was not installed under R >= 2.10.0 so xrefs cannot be "
+"checked"
+msgstr ""
+"le package %s existe, mais il n'a pas été installé sous R >= 2.10.0 et donc "
+"vérification de xrefs impossible"
 
 msgid "Missing link or links in documentation object '%s':"
 msgstr "Lien(s) manquant(s) dans la documentation de l'objet '%s' :"
@@ -780,12 +787,6 @@ msgstr "le chargement a échoué"
 msgid "assertConditon: Successfully caught a condition"
 msgstr "assertCondition : Une condition a été capturée avec succès"
 
-msgid "assertCondition: caught %s"
-msgstr "assertCondition : capture de %s"
-
-msgid ","
-msgstr ","
-
 msgid "Got %s in evaluating %s; wanted %s"
 msgstr "%s a été obtenu lors de l'évaluation de %s ; il fallait %s"
 
@@ -852,9 +853,6 @@ msgstr "téléchargement des dépendances inverses ..."
 
 msgid "downloading %s ..."
 msgstr "téléchargement de %s ..."
-
-msgid "installing dependencies %s"
-msgstr "installation des dépendances %s"
 
 msgid "checking %s ..."
 msgstr "vérification de %s ..."
@@ -1053,9 +1051,6 @@ msgstr ""
 msgid "Cannot extract version info from the following section titles:"
 msgstr "Impossible d'extraire la version des titres de sections suivants :"
 
-msgid "%s"
-msgstr "%s"
-
 msgid ""
 "Malformed NEWS.Rd file:\n"
 "Chunk starting\n"
@@ -1235,18 +1230,6 @@ msgstr "'x' doit être une chaîne de caractères unique"
 msgid "test '%s' is not available"
 msgstr "le test '%s' n'est pas disponible"
 
-msgid ":"
-msgstr " :"
-
-msgid "latin1"
-msgstr ""
-
-msgid "ASCII"
-msgstr ""
-
-msgid "byte"
-msgstr ""
-
 msgid "argument 'x' must be a character vector"
 msgstr "l'argument 'x' doit être un vecteur de chaînes de caractères"
 
@@ -1303,11 +1286,10 @@ msgstr "l'argument 'x' doit être un vecteur de chaînes de caractères"
 msgid "parsing '%s'"
 msgstr "analyse de '%s'"
 
-#, fuzzy
-msgid "Undeclared package used in Rd xrefs:"
-msgid_plural "Undeclared packages used in Rd xrefs:"
-msgstr[0] "Package inconnu %s dans les xrefs Rd"
-msgstr[1] "Packages inconnus %s dans les xrefs Rd"
+msgid "Obsolete package %s in Rd xrefs"
+msgid_plural "Obsolete packages %s in Rd xrefs"
+msgstr[0] "Package obsolète %s dans les xrefs Rd"
+msgstr[1] "Packages obsolètes %s dans les xrefs Rd"
 
 msgid "Package unavailable to check Rd xrefs: %s"
 msgid_plural "Packages unavailable to check Rd xrefs: %s"
@@ -1473,17 +1455,26 @@ msgid_plural "%d of the package tests failed"
 msgstr[0] "%d des tests du package ont échoué"
 msgstr[1] "%d des tests du package ont échoué"
 
-#~ msgid ""
-#~ "package %s exists but was not installed under R >= 2.10.0 so xrefs cannot "
-#~ "be checked"
-#~ msgstr ""
-#~ "le package %s existe, mais il n'a pas été installé sous R >= 2.10.0 et "
-#~ "donc vérification de xrefs impossible"
+#~ msgid "assertCondition: caught %s"
+#~ msgstr "assertCondition : capture de %s"
 
-#~ msgid "Obsolete package %s in Rd xrefs"
-#~ msgid_plural "Obsolete packages %s in Rd xrefs"
-#~ msgstr[0] "Package obsolète %s dans les xrefs Rd"
-#~ msgstr[1] "Packages obsolètes %s dans les xrefs Rd"
+#~ msgid ","
+#~ msgstr ","
+
+#~ msgid "installing dependencies %s"
+#~ msgstr "installation des dépendances %s"
+
+#~ msgid "%s"
+#~ msgstr "%s"
+
+#~ msgid ":"
+#~ msgstr " :"
+
+#, fuzzy
+#~ msgid "Undeclared package used in Rd xrefs:"
+#~ msgid_plural "Undeclared packages used in Rd xrefs:"
+#~ msgstr[0] "Package inconnu %s dans les xrefs Rd"
+#~ msgstr[1] "Packages inconnus %s dans les xrefs Rd"
 
 #, fuzzy
 #~ msgid "Inconsistent encoding specifications: %s with %%\\SweaveUTF8"

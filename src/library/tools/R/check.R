@@ -83,7 +83,7 @@ setRlibs <-
 
     if(test_recommended) {
         ## Now add dummies for recommended packages (removed later if declared)
-        recommended <-  .get_standard_package_names()$recommended
+        recommended <- .get_standard_package_names()$recommended
         ## grDevices has :: to KernSmooth
         ## stats has ::: to Matrix, Matrix depends on lattice
         ## which gives false positives in MASS and Rcpp
@@ -99,7 +99,9 @@ setRlibs <-
         for(pkg in recommended) {
             if(pkg == thispkg) next
             dir.create(pd <- file.path(tmplib, pkg))
-            file.copy(file.path(.Library, pkg, "DESCRIPTION"), pd)
+            ## some people remove recommended packages ....
+            f <- file.path(.Library, pkg, "DESCRIPTION")
+            if(file.exists(f)) file.copy(f, pd)
             ## to make sure find.package throws an error:
             close(file(file.path(pd, "dummy_for_check"), "w"))
         }
@@ -4534,11 +4536,13 @@ setRlibs <-
         if (!do_codoc) opts <- c(opts, "--no-codoc")
         if (!do_examples && !spec_install) opts <- c(opts, "--no-examples")
         if (!do_tests && !spec_install) opts <- c(opts, "--no-tests")
+        if (!do_manual && !spec_install) opts <- c(opts, "--no-manual")
         if (!do_vignettes && !spec_install) opts <- c(opts, "--no-vignettes")
         if (!do_build_vignettes && !spec_install)
             opts <- c(opts, "--no-build-vignettes")
         if (use_gct) opts <- c(opts, "--use-gct")
         if (use_valgrind) opts <- c(opts, "--use-valgrind")
+        if (as_cran) opts <- c(opts, "--as-cran")
         if (length(opts) > 1L)
             messageLog(Log, "using options ", sQuote(paste(opts, collapse=" ")))
         else if (length(opts) == 1L)

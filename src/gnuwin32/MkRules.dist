@@ -36,22 +36,27 @@
 # checkout with no modifications).
 # USE_SVNVERSION = YES
 
-# With the recommended toolchain, set this to 32 or 64
+# With the recommended gcc 4.6.3 toolchain, set this to 32 or 64
 # MULTI =
 # If the toolchain's bin directory is not in your path, set this to the path
 # (including the trailing /, and use / not \).
 # TOOL_PATH =
 # for other toolchains leave these empty and set the more detailed options below
 
+# With the experimental gcc 4.9.2 toolchain or another toolchain, set 
+# BINPREF and BINPREF64 (below) to the respective bin directories.  
+# Include the trailing /, and use / not \.
+# Do this in the more detailed options below
+
 
 ### BEGIN more detailed options
 # Some of the toolchains have prefixes for e.g. ar, gcc.
 # This can also be used to give the full path to the compiler, 
-# including a trailing / .
-# prefix for 32-bit: path or i686-w64-mingw32-
-# BINPREF =
-# prefix for 64-bit: path or x86_64-w64-mingw32-
-# BINPREF64 = x86_64-w64-mingw32-
+# including a trailing / .  The experimental gcc 4.9.2 defaults are shown;
+# actual defaults are blank for both of these.
+# BINPREF = c:/Rtools/gcc492_32/bin/
+# prefix for 64-bit:
+# BINPREF64 = c:/Rtools/gcc492_64/bin/
 
 # Others use a -m64 or -m32 option to select architectures
 # M_ARCH =
@@ -65,13 +70,16 @@
 # 32- or 64-bit Windows?
 # WIN = 32
 
+# The gcc 4.9.2 64 bit toolchain is set up for the 'medium code' model and needs
+# to remove the .refptr entries from the exports list; this is the default
+# when WIN = 64, with blank for WIN = 32:
+# NM_FILTER = | $(SED) -e '/.refptr./d'
+
 # We normally link directly against DLLs, 
 # but this macro forces the use of import libs
 # Has been needed for some versions of MinGW-w64
 # USE_IMPLIBS = YES
 
-# some toolchains set up for the 'medium code' model need
-# NM_FILTER = | $(SED) -e '/.refptr./d'
 ### END more detailed options
 
 
@@ -135,6 +143,9 @@
 # DLLs64 = c:/R/bin64/pthreadGC2-w64.dll
 # DLLs32 =
 # DLLs64 =
+
+# Define this to 1 if using the gcc 4.9.2 toolchain with dynamic linking
+# COPY_RUNTIME_DLLS =
 
 ## ====== configuration macros for building MSI installer ===========
 

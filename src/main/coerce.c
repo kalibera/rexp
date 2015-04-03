@@ -406,9 +406,10 @@ static SEXP coerceToSymbol(SEXP v)
     default:
 	UNIMPLEMENTED_TYPE("coerceToSymbol", v);
     }
+    PROTECT(ans);
     if (warn) CoercionWarning(warn);/*2000/10/23*/
     ans = installChar(ans);
-    UNPROTECT(1);
+    UNPROTECT(2); /* ans, v */
     return ans;
 }
 
@@ -1354,12 +1355,18 @@ SEXP asCharacterFactor(SEXP x)
 
     R_xlen_t i, n = XLENGTH(x);
     SEXP labels = getAttrib(x, R_LevelsSymbol);
+    if (TYPEOF(labels) != STRSXP)
+	error(_("malformed factor"));
+    int nl = LENGTH(labels);
     PROTECT(ans = allocVector(STRSXP, n));
     for(i = 0; i < n; i++) {
       int ii = INTEGER(x)[i];
-      SET_STRING_ELT(ans, i,
-		   (ii == NA_INTEGER) ? NA_STRING
-		   : STRING_ELT(labels, ii - 1));
+      if (ii == NA_INTEGER)
+	  SET_STRING_ELT(ans, i, NA_STRING);
+      else if (ii >= 1 && ii <= nl)
+	  SET_STRING_ELT(ans, i, STRING_ELT(labels, ii - 1));
+      else
+	  error(_("malformed factor"));
     }
     UNPROTECT(1);
     return ans;
@@ -1515,7 +1522,7 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = length(arglist);
     if (n < 1)
 	errorcall(call, _("argument must have length at least 1"));
-    names = getAttrib(arglist, R_NamesSymbol);
+    PROTECT(names = getAttrib(arglist, R_NamesSymbol));
     PROTECT(pargs = args = allocList(n - 1));
     for (i = 0; i < n - 1; i++) {
 	SETCAR(pargs, VECTOR_ELT(arglist, i));
@@ -1537,7 +1544,7 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    args =  mkCLOSXP(args, body, envir);
     else
 	    errorcall(call, _("invalid body for function"));
-    UNPROTECT(2);
+    UNPROTECT(3); /* body, pargs, names */
     return args;
 }
 
@@ -1560,7 +1567,7 @@ SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
     case EXPRSXP:
 	if(0 == (n = length(args)))
 	    errorcall(call, _("invalid length 0 argument"));
-	names = getAttrib(args, R_NamesSymbol);
+	PROTECT(names = getAttrib(args, R_NamesSymbol));
 	PROTECT(ap = ans = allocList(n));
 	for (i = 0; i < n; i++) {
 	    SETCAR(ap, VECTOR_ELT(args, i));
@@ -1568,7 +1575,7 @@ SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
 		SET_TAG(ap, installTrChar(STRING_ELT(names, i)));
 	    ap = CDR(ap);
 	}
-	UNPROTECT(1);
+	UNPROTECT(2); /* ap, names */
 	break;
     case LISTSXP:
 	ans = duplicate(args);
@@ -2269,7 +2276,7 @@ SEXP attribute_hidden do_isfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     x = CAR(args);
     n = xlength(x);
-    ans = allocVector(LGLSXP, n);
+    PROTECT(ans = allocVector(LGLSXP, n));
     if (isVector(x)) {
 	dims = getAttrib(x, R_DimSymbol);
 	if (isArray(x))
@@ -2309,6 +2316,7 @@ SEXP attribute_hidden do_isfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else
 	    setAttrib(ans, R_NamesSymbol, names);
     }
+    UNPROTECT(1); /* ans */
     return ans;
 }
 
@@ -2329,7 +2337,7 @@ SEXP attribute_hidden do_isinfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     x = CAR(args);
     n = xlength(x);
-    ans = allocVector(LGLSXP, n);
+    PROTECT(ans = allocVector(LGLSXP, n));
     if (isVector(x)) {
 	dims = getAttrib(x, R_DimSymbol);
 	if (isArray(x))
@@ -2377,6 +2385,7 @@ SEXP attribute_hidden do_isinfinite(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else
 	    setAttrib(ans, R_NamesSymbol, names);
     }
+    UNPROTECT(1); /* ans */
     return ans;
 }
 
@@ -2439,7 +2448,7 @@ SEXP attribute_hidden do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("'envir' must be an environment"));
 
     n = length(args);
-    names = getAttrib(args, R_NamesSymbol);
+    PROTECT(names = getAttrib(args, R_NamesSymbol));
 
     PROTECT(c = call = allocList(n + 1));
     SET_TYPEOF(c, LANGSXP);
@@ -2466,7 +2475,7 @@ SEXP attribute_hidden do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     call = eval(call, envir);
 
-    UNPROTECT(1);
+    UNPROTECT(2); /* c, names */
     return call;
 }
 

@@ -211,8 +211,8 @@ VerbatimArg1 VerbatimArg2 IfDefTarget ArgItems Option
 
 %%
 
-Init:		STARTFILE RdFile END_OF_INPUT		{ xxsavevalue($2, &@$); UNPROTECT_PTR($1); return 0; }
-	|	STARTFRAGMENT RdFragment END_OF_INPUT	{ xxsavevalue($2, &@$); UNPROTECT_PTR($1); return 0; }
+Init:		STARTFILE RdFile END_OF_INPUT		{ xxsavevalue($2, &@$); UNPROTECT_PTR($1); YYACCEPT; }
+	|	STARTFRAGMENT RdFragment END_OF_INPUT	{ xxsavevalue($2, &@$); UNPROTECT_PTR($1); YYACCEPT; }
 	|	error					{ PROTECT(parseState.Value = R_NilValue);  YYABORT; }
 	;
 
@@ -269,7 +269,7 @@ Markup:		LATEXMACRO  LatexArg 		{ $$ = xxmarkup($1, $2, STATIC, &@$); }
 	|	ESCAPE				{ $$ = xxmarkup($1, R_NilValue, STATIC, &@$); }
 	|	IFDEF IfDefTarget ArgItems ENDIF { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); UNPROTECT_PTR($4); }
 	|	IFDEF IfDefTarget ArgItems error { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); }
-	|	VERBLATEX   VerbatimArg1 LatexArg2 { $$ = xxmarkup2($1, $2, $3, 2, STATIC, &@$); }
+	|	VERBLATEX   VerbatimArg LatexArg2 { $$ = xxmarkup2($1, $2, $3, 2, STATIC, &@$); }
 	
 UserMacro:	NEWCOMMAND  VerbatimArg1 VerbatimArg { $$ = xxnewcommand($1, $2, $3, &@$); }
 	|	USERMACRO			{ $$ = xxusermacro($1, xxnewlist(NULL), &@$); }

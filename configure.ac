@@ -2,7 +2,7 @@
 ###
 ### Process this file with autoconf to produce a configure script.
 ###
-### Copyright (C) 1998-2014 R Core Team
+### Copyright (C) 1998-2015 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -411,26 +411,10 @@ AC_ARG_WITH([libtiff],
 [AS_HELP_STRING([--with-libtiff],[use libtiff library (if available) @<:@yes@:>@])],
 [R_ARG_USE(libtiff)],
 [use_libtiff=yes])
-AC_ARG_WITH([system-zlib],
-[AS_HELP_STRING([--with-system-zlib],[use system zlib library (if available) @<:@yes@:>@])],
-[R_ARG_USE_SYSTEM(zlib)],
-[use_system_zlib=yes])
-AC_ARG_WITH([system-bzlib],
-[AS_HELP_STRING([--with-system-bzlib],[use system bzlib library (if available) @<:@yes@:>@])],
-[R_ARG_USE_SYSTEM(bzlib)],
-[use_system_bzlib=yes])
-AC_ARG_WITH([system-pcre],
-[AS_HELP_STRING([--with-system-pcre],[use system PCRE library (if available) @<:@yes@:>@])],
-[R_ARG_USE_SYSTEM(pcre)],
-[use_system_pcre=yes])
 AC_ARG_WITH([system-tre],
 [AS_HELP_STRING([--with-system-tre],[use system tre library (if available) @<:@no@:>@])],
 [R_ARG_USE_SYSTEM(tre)],
 [use_system_tre=no])
-AC_ARG_WITH([system-xz],
-[AS_HELP_STRING([--with-system-xz],[use system xz (lzma) library (if available) @<:@yes@:>@])],
-[R_ARG_USE_SYSTEM(xz)],
-[use_system_xz=yes])
 
 ## Valgrind instrumentation
 AC_ARG_WITH([valgrind-instrumentation],
@@ -814,8 +798,8 @@ AC_HEADER_SYS_WAIT
 ## sys/param.h is one way to get PATH_MAX.
 ## sched.h is POSIX, but we use it for Linux-specific features (affinity)
 ## stdalign.h is C11.
-AC_CHECK_HEADERS(arpa/inet.h dl.h dlfcn.h elf.h fcntl.h floatingpoint.h \
-  fpu_control.h glob.h grp.h langinfo.h \
+AC_CHECK_HEADERS(arpa/inet.h dl.h dlfcn.h elf.h features.h fcntl.h \
+  floatingpoint.h fpu_control.h glob.h grp.h langinfo.h \
   netdb.h netinet/in.h pwd.h sched.h strings.h \
   sys/param.h sys/resource.h sys/select.h sys/socket.h \
   sys/stat.h sys/time.h sys/times.h sys/utsname.h unistd.h utime.h)
@@ -2026,8 +2010,18 @@ fi
 R_FUNC_LOG1P
 R_FUNC_FTELL
 R_FUNC_SIGACTION
-R_MKTIME_ERRNO
-R_FUNC_MKTIME
+
+if test x${use_internal_tzcode} = xdefault; then
+case "${host_os}" in
+   darwin*)
+     use_internal_tzcode=yes;
+     ;; 
+esac
+fi
+if test "${use_internal_tzcode}" != yes; then
+  R_MKTIME_ERRNO
+  R_FUNC_MKTIME
+fi
 
 R_C99_COMPLEX
 
@@ -2053,8 +2047,9 @@ fi
 AC_CACHE_CHECK([whether 'struct tm' includes tm_gmtoff],
                 [r_cv_have_tm_gmtoff],
 [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-// glibc needs this defined.
+// glibc needs this defined, second for >= 2.20
 #define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #include <time.h>
 
 int main() {
@@ -2305,13 +2300,17 @@ R_PCRE
 R_TRE
 
 ## libcurl
+## curl-config might not match the installed libcurl,
+## so we allow the user to set CURL_CPPFLAGS, CURL_LIBS
+## and check the version directly rather than by curl-config --checkfor
 AC_PATH_PROG(CURL_CONFIG, curl-config)
 if test -n "${CURL_CONFIG}"; then
+  echo `${CURL_CONFIG} --version`
   if test -z "${CURL_CPPFLAGS}"; then
     CURL_CPPFLAGS=`${CURL_CONFIG} --cflags`
   fi
-  ## This in particular may be wrong for a static library,
-  ## and OpenCSW has in the past copied the static answer over the dynamic one.
+  ## This should be correct for a static-only build, user will
+  ## need to override to specify static linking (see config.site)
   if test -z "${CURL_LIBS}"; then
     CURL_LIBS=`${CURL_CONFIG} --libs`
   fi
@@ -2384,13 +2383,6 @@ fi
 
 AC_DEFINE_UNQUOTED(VALGRIND_LEVEL, ${valgrind_level}, [Define as 1 or 2 to specify levels of Valgrind instrumentation])
 
-if test x${use_internal_tzcode} = xdefault; then
-case "${host_os}" in
-   darwin*)
-     use_internal_tzcode=yes;
-     ;; 
-esac
-fi
 
 if test "x${use_internal_tzcode}" = xyes; then
   AC_DEFINE(USE_INTERNAL_MKTIME, 1, [Define to use internal time-zone code])
@@ -2739,14 +2731,10 @@ AC_CONFIG_FILES(
   src/appl/Makefile
   src/extra/Makefile
   src/extra/blas/Makefile
-  src/extra/bzip2/Makefile
   src/extra/intl/Makefile
-  src/extra/pcre/Makefile
   src/extra/tre/Makefile
   src/extra/tzone/Makefile
   src/extra/xdr/Makefile
-  src/extra/xz/Makefile
-  src/extra/zlib/Makefile
   src/include/Makefile
   src/include/Rmath.h0
   src/include/R_ext/Makefile
@@ -2876,18 +2864,6 @@ if test "${acx_lapack_ok}" = "yes"; then
     *)         r_lapack=generic ;;
   esac
   R_SH_VAR_ADD(r_external_libs, [LAPACK(${r_lapack})], [, ])
-fi
-if test "${have_zlib}" = yes; then
-  R_SH_VAR_ADD(r_external_libs, [zlib], [, ])
-fi
-if test "${have_bzlib}" = yes; then
-  R_SH_VAR_ADD(r_external_libs, [bzlib], [, ])
-fi
-if test "${have_lzma}" = yes; then
-  R_SH_VAR_ADD(r_external_libs, [lzma], [, ])
-fi
-if test "${have_pcre}" = yes; then
-  R_SH_VAR_ADD(r_external_libs, [PCRE], [, ])
 fi
 if test "${have_tre}" = yes; then
   R_SH_VAR_ADD(r_external_libs, [tre], [, ])

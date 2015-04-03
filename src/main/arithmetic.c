@@ -2,7 +2,7 @@
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1998--2015	    The R Core Team.
- *  Copyright (C) 2003-4	    The R Foundation
+ *  Copyright (C) 2003--2015	    The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1388,6 +1388,8 @@ static SEXP math2B(SEXP sa, SEXP sb, double (*f)(double, double, double *),
     double amax, *work;
     size_t nw;
 
+#define besselJY_max_nu 1e7
+
     if (!isNumeric(sa) || !isNumeric(sb))
 	errorcall(lcall, R_MSG_NONNUM_MATH);
 
@@ -1400,8 +1402,11 @@ static SEXP math2B(SEXP sa, SEXP sb, double (*f)(double, double, double *),
     amax = 0.0;
     for (i = 0; i < nb; i++) {
 	double av = b[i] < 0 ? -b[i] : b[i];
-	if (av > amax) amax = av;
+	if (amax < av)
+	    amax = av;
     }
+    if (amax > besselJY_max_nu)
+	amax = besselJY_max_nu; // and warning will happen in ../nmath/bessel_[jy].c
     const void *vmax = vmaxget();
     nw = 1 + (size_t)floor(amax);
     work = (double *) R_alloc(nw, sizeof(double));
@@ -1542,10 +1547,11 @@ SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (DispatchGroup("Math", call, op, args, env, &res)) return res;
 
+    SEXP sLog = install("log");
     if(PRIMVAL(op) == 10) tmp = ScalarReal(10.0);
     if(PRIMVAL(op) == 2)  tmp = ScalarReal(2.0);
 
-    PROTECT(call2 = lang3(install("log"), CAR(args), tmp));
+    PROTECT(call2 = lang3(sLog, CAR(args), tmp));
     PROTECT(args2 = lang2(CAR(args), tmp));
     if (! DispatchGroup("Math", call2, op, args2, env, &res)) {
 	if (isComplex(CAR(args)))

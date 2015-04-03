@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 2.3.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2015-02-09 08:50\n"
+"POT-Creation-Date: 2015-03-24 20:06\n"
 "PO-Revision-Date: 2005-04-17 16:57+0200\n"
 "Last-Translator: stefano iacus <>\n"
 "Language-Team: Italian <it@li.org>\n"
@@ -305,6 +305,11 @@ msgid "Non-portable flags in variable '%s':"
 msgstr ""
 
 msgid "Variables overriding user/site settings:"
+msgstr ""
+
+msgid ""
+"package %s exists but was not installed under R >= 2.10.0 so xrefs cannot be "
+"checked"
 msgstr ""
 
 #, fuzzy
@@ -718,12 +723,6 @@ msgstr "esecuzione di make fallita"
 msgid "assertConditon: Successfully caught a condition"
 msgstr ""
 
-msgid "assertCondition: caught %s"
-msgstr ""
-
-msgid ","
-msgstr ""
-
 msgid "Got %s in evaluating %s; wanted %s"
 msgstr ""
 
@@ -789,9 +788,6 @@ msgid "downloading reverse dependencies ..."
 msgstr ""
 
 msgid "downloading %s ..."
-msgstr ""
-
-msgid "installing dependencies %s"
 msgstr ""
 
 msgid "checking %s ..."
@@ -985,9 +981,6 @@ msgstr ""
 msgid "Cannot extract version info from the following section titles:"
 msgstr ""
 
-msgid "%s"
-msgstr ""
-
 msgid ""
 "Malformed NEWS.Rd file:\n"
 "Chunk starting\n"
@@ -1174,18 +1167,6 @@ msgstr "l'argomento 'txt' deve essere una stringa carattere"
 msgid "test '%s' is not available"
 msgstr "il test '%s' non è disponibile"
 
-msgid ":"
-msgstr ""
-
-msgid "latin1"
-msgstr ""
-
-msgid "ASCII"
-msgstr ""
-
-msgid "byte"
-msgstr ""
-
 msgid "argument 'x' must be a character vector"
 msgstr "l'argomento 'x' deve essere un vettore carattere"
 
@@ -1246,8 +1227,8 @@ msgstr "l'argomento 'x' deve essere un vettore carattere"
 msgid "parsing '%s'"
 msgstr "analizzo '%s'"
 
-msgid "Undeclared package used in Rd xrefs:"
-msgid_plural "Undeclared packages used in Rd xrefs:"
+msgid "Obsolete package %s in Rd xrefs"
+msgid_plural "Obsolete packages %s in Rd xrefs"
 msgstr[0] ""
 msgstr[1] ""
 

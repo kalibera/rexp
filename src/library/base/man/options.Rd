@@ -491,15 +491,16 @@ getOption(x, default = NULL)
   \describe{
     \item{\code{BioC_mirror}:}{The URL of a Bioconductor mirror
       for use by \code{\link{setRepositories}},
-      e.g.\sspace{}the default \samp{"http://www.bioconductor.org"}
+      e.g.\sspace{}the default \samp{"http://bioconductor.org"}
       or the European mirror
       \samp{"http://bioconductor.statistik.tu-dortmund.de"}.  Can be set
       by \code{\link{chooseBioCmirror}}.}
 
-    \item{\code{browser}:}{default HTML browser used by
-      \code{\link{help.start}()} and \code{\link{browseURL}} on UNIX, or
-      a non-default browser on Windows.  Alternatively, an \R function that
-      is called with a URL as its argument.}
+    \item{\code{browser}:}{The HTML browser to be used by
+      \code{\link{browseURL}}.  This sets the default browser on UNIX or
+      a non-default browser on Windows.  Alternatively, an \R function
+      that is called with a URL as its argument.  See
+      \code{\link{browseURL}} for further details.}
 
     \item{\code{ccaddress}:}{default Cc: address used by
       \code{\link{create.post}} (and hence\code{\link{bug.report}} and

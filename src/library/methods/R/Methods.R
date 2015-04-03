@@ -345,30 +345,14 @@ getMethods <-
     function(f, where = topenv(parent.frame()), table = FALSE)
 {
     if(!table)
-      .MlistDeprecated("getMethods", "findMethods")
+      .MlistDefunct("getMethods", "findMethods")
     nowhere <- missing(where)
     fdef <- getGeneric(f, where = where)
     f <- fdef@generic
     if(!is.null(fdef)) {
         if(table)
           return(getMethodsForDispatch(fdef, TRUE))
-        value <-
-            (if(nowhere) {
-                if(is(fdef, "genericFunction"))
-                    .makeMlistFromTable(fdef) # else NULL
-            }
-            else if(.noMlists())
-		.makeMlistFromTable(fdef, where)
-            else getMethodsMetaData(f, where = where)
-             )
-
-        if(is.null(value)) ## return empty methods list
-            new("MethodsList", argument = fdef@default@argument) # but deprecated from 2.11.0
-        else
-            value
-    }
-    else
-      NULL
+    } ## else NULL
 }
 
 getMethodsForDispatch <- function(fdef, inherited = FALSE)
@@ -393,8 +377,7 @@ getMethodsForDispatch <- function(fdef, inherited = FALSE)
     }
 }
 
-##NB used internally in MethodsListSelect.  Must NOT use the standard version
-## to prevent recursion
+## Must NOT use the standard version to prevent recursion  {still true ?}
 .getMethodsForDispatch <- function(fdef) {
     ev <- base::environment(fdef)
     if(base::exists(".Methods", envir = ev))
@@ -989,7 +972,144 @@ showMethods <-
         invisible(printTo)
 }
 
+.methods_info <-
+    ## (not exported) simplify construction of standard data.frame
+    ## return value from .S4methodsFor*
+    function(generic=character(), signature=character(),
+             visible=rep(TRUE, length(signature)), from=character())
+{
+    if (length(signature))
+        signature <- paste0(generic, ",", signature, "-method")
+    keep <- !duplicated(signature)
+    data.frame(visible=visible[keep], from=from[keep],
+               generic=generic[keep], isS4=rep(TRUE, sum(keep)),
+               row.names=signature[keep], stringsAsFactors=FALSE)
+}
 
+.S4methodsForClass <-
+    ## (not exported) discover methods for specific class;
+    ## generic.function ignored
+    function(generic.function, class)
+{
+    def <- tryCatch(getClass(class), error=function(...) NULL)
+    if (is.null(def))
+        return(.methods_info())
+
+    mtable <- ".MTable"
+    classes <- c(class, names(getClass(class)@contains))
+    generics <- getGenerics(where=search())
+    nms <- setNames(as.vector(generics), as.vector(generics))
+
+    packages <- lapply(nms, function(generic) {
+        table <- get(mtable, environment(getGeneric(generic)))
+        lapply(names(table), function(nm, table) {
+            environmentName(environment(table[[nm]]))
+        }, table)
+    })
+    methods <- lapply(nms, function(generic, classes) {
+        table <- get(mtable, environment(getGeneric(generic)))
+        methods <- names(table)
+        lapply(methods, function(method, classes) {
+            m <- table[[method]]
+            if (is(m, "MethodDefinition") && any(m@defined %in% classes))
+                setNames(as.vector(m@defined), names(m@defined))
+            else
+                NULL
+        }, classes)
+    }, classes)
+
+    geom <- lapply(methods, function(method) {
+        !vapply(method, is.null, logical(1))
+    })
+    filter <- function(elt, geom) elt[geom]
+    packages <- Map(filter, packages, geom)
+    methods <- Map(filter, methods, geom)
+    packages <- packages[lengths(methods) != 0L]
+    methods <- methods[lengths(methods) != 0L]
+
+    ## only derived methods
+    geom <- lapply(methods, function(method, classes) {
+        sig <- simplify2array(method)
+        if (!is.matrix(sig))
+            sig <- matrix(sig, ncol=length(method))
+        idx <- apply(sig, 2, match, classes, 0)
+        if (!is.matrix(idx))
+            idx <- matrix(idx, ncol=ncol(sig))
+        keep <- colSums(idx != 0) != 0
+        sidx <- idx[,keep, drop=FALSE]
+
+        ## 'nearest' method
+        shift <- c(0, cumprod(pmax(1, apply(sidx, 1, max)))[-nrow(sidx)])
+        score <- colSums(sidx + shift)
+        sig0 <- sig <- sig[,keep, drop=FALSE]
+        sig0[sidx != 0] <- "*"
+        sig0 <- apply(sig0, 2, paste, collapse="#")
+        split(score, sig0) <-
+            lapply(split(score, sig0), function(elt) elt == min(elt))
+        score == 1
+    }, classes)
+    filter <- function(elt, geom) elt[geom]
+    packages <- Map(filter, packages, geom)
+    methods <- Map(filter, methods, geom)
+
+    generic <- rep(names(methods), lengths(methods))
+    signature <- unlist(lapply(methods, function(method) {
+        vapply(method, paste0, character(1L), collapse=",")
+    }), use.names=FALSE)
+    package <- unlist(packages, use.names=FALSE)
+
+    .methods_info(generic=generic, signature=signature, from=package)
+}
+
+.S4methodsForGeneric <-
+    ## (not exported) discover methods for specific generic; class
+    ## ignored.
+    function(generic.function, class)
+{
+    if (is.null(getGeneric(generic.function)))
+        return(.methods_info())
+
+    mtable <- ".MTable"
+    generic <- generic.function
+    table <- get(mtable, environment(getGeneric(generic)))
+    packages <- sapply(names(table), function(nm, table) {
+        environmentName(environment(table[[nm]]))
+    }, table)
+
+    methods <- names(table)
+    signatures <- lapply(methods, function(method, classes) {
+        m <- table[[method]]
+        if (is(m, "MethodDefinition"))
+            setNames(as.vector(m@defined), names(m@defined))
+        else
+            NULL
+    })
+
+    geom <- vapply(signatures, Negate(is.null), logical(1))
+    packages <- packages[geom]
+    methods <- methods[geom]
+    signatures <- sapply(signatures[geom], function(elt) {
+        paste0(as.vector(elt), collapse=",")
+    })
+
+    .methods_info(generic=rep(generic.function, length(packages)), from=packages,
+                  signature=signatures)
+}
+
+.S4methods <-
+    ## discover methods by generic or class, primarily for interactive
+    ## display via utils::methods()
+    function(generic.function, class)
+{
+    info <- if (!missing(generic.function))
+        .S4methodsForGeneric(generic.function, class)
+    else if (!missing(class))
+        .S4methodsForClass(generic.function, class)
+    else
+        stop("must supply 'generic.function' or 'class'")
+    structure(rownames(info), info=info, byclass=missing(generic.function),
+              class="MethodsFunction")
+}
 
 removeMethods <-
   ## removes all the methods defined for this generic function.  Returns `TRUE' if

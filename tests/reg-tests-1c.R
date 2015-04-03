@@ -560,6 +560,7 @@ L0 <- list()
 stopifnot(identical(L0, as.list(as.environment(L0))))
 ## as.env..() did not work, and as.list(..) gave non-NULL names in R 3.1.x
 
+
 ## all.equal() for environments and refClass()es
 RR <- setRefClass("Ex", fields = list(nr = "numeric"))
 m1 <- RR$new(); m2 <- RR$new(); m3 <- RR$new(nr = pi); m4 <- RR$new(nr=3.14159)
@@ -629,12 +630,14 @@ for(k in 1:5) {
 }
 ## "wrong" results for k in {2,3,4} in R 3.1.x
 
+
 ## eigen(*, symmetric = <default>) with asymmetric dimnames,  PR#16151
 m <- matrix(c(83,41), 5, 4,
 	    dimnames=list(paste0("R",1:5), paste0("C",1:4)))[-5,] + 3*diag(4)
 stopifnot( all.equal(eigen(m, only.values=TRUE) $ values,
 		     c(251, 87, 3, 3), tol=1e-14) )
 ## failed, using symmetric=FALSE and complex because of the asymmetric dimnames()
+
 
 ## match.call() re-matching '...'
 test <- function(x, ...) test2(x, 2, ...)
@@ -670,5 +673,44 @@ stopifnot(identical(stats4::show -> s4s,
 	  )
 ## stats4::show was NULL for 4 hours in R-devel
 
+
+## mode<- did too much evaluation (PR#16215)
+x <- y <- quote(-2^2)
+x <- as.list(x)
+mode(y) <- "list"
+stopifnot(identical(x, y))
+## y ended up containing -4, not -2^2
+
+
+## besselJ()/besselY() with too large order
+besselJ(1, 2^64) ## NaN with a warning
+besselY(1, c(2^(60:70), Inf))
+## seg.faulted in R <= 3.1.2
+
+
+## besselJ()/besselY() with  nu = k + 1/2; k in {-1,-2,..}
+besselJ(1, -1750.5) ## Inf, with only one warning...
+stopifnot(is.finite(besselY(1, .5 - (1500 + 0:10))))
+## last gave NaNs; both: more warnings in R <= 3.1.x
+
+
+## BIC() for arima(), also with NA's
+lho <- lh; lho[c(3,7,13,17)] <- NA
+alh300 <- arima(lh,  order = c(3,0,0))
+alh311 <- arima(lh,  order = c(3,1,1))
+ao300  <- arima(lho, order = c(3,0,0))
+ao301  <- arima(lho, order = c(3,0,1))
+## AIC/BIC for *different* data rarely makes sense ... want warning:
+tools::assertWarning(AA <- AIC(alh300,alh311, ao300,ao301))
+tools::assertWarning(BB <- BIC(alh300,alh311, ao300,ao301))
+fmLst <- list(alh300,alh311, ao300,ao301)
+## nobs() did not "work" in R < 3.2.0:
+stopifnot(sapply(fmLst, nobs) == c(48,47, 44,44))
+lls <- lapply(fmLst, logLik)
+str(lapply(lls, unclass))# -> 'df' and 'nobs'
+## 'manual BIC' via generalized AIC:
+stopifnot(all.equal(BB[,"BIC"],
+                    sapply(fmLst, function(fm) AIC(fm, k = log(nobs(fm))))))
+## BIC() was NA unnecessarily in  R < 3.2.0; nobs() was not available eiher
 
 proc.time()

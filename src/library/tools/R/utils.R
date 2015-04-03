@@ -181,7 +181,7 @@ function(x)
     if(any(ind))
         message(paste0(which(ind), ": ",
                        iconv(x[ind], "latin1", "ASCII", sub = "byte"),
-                       collapse = "\n"))
+                       collapse = "\n"), domain = NA)
     invisible(x[ind])
 }
 
@@ -461,7 +461,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 ### ** .BioC_version_associated_with_R_version
 
 .BioC_version_associated_with_R_version <-
-    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.0"))
+    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.1"))
 ## Things are more complicated from R-2.15.x with still two BioC
 ## releases a year, so we do need to set this manually.
 ## Wierdly, 3.0 is the second version (after 2.14) for the 3.1.x series.
@@ -603,6 +603,27 @@ function(expr, type = NULL)
          message = readLines(msgcon, encoding = "UTF-8", warn = FALSE))
 }
 
+### ** .expand_anchored_Rd_xrefs
+
+.expand_anchored_Rd_xrefs <-
+function(db)
+{
+    ## db should have columns Target and Anchor.
+    db <- db[, c("Target", "Anchor"), drop = FALSE]
+    ## See .check_Rd_xrefs().
+    anchor <- db[, 2L]
+    have_equals <- grepl("^=", anchor)
+    if(any(have_equals))
+        db[have_equals, ] <-
+            cbind(sub("^=", "", anchor[have_equals]), "")
+    anchor <- db[, 2L]
+    have_colon <- grepl(":", anchor, fixed = TRUE)
+    y <- cbind(T_Package = anchor, T_File = db[, 1L])
+    y[have_colon, ] <-
+        cbind(sub("([^:]*):(.*)", "\\1", anchor[have_colon]),
+              sub("([^:]*):(.*)", "\\2", anchor[have_colon]))
+    y
+}
 
 ### ** .file_append_ensuring_LFs
 
@@ -899,6 +920,8 @@ function(dir, installed = TRUE, primitive = FALSE)
             env_list <- unique(env_list)
         }
     }
+    ## some BioC packages warn here
+    suppressWarnings(
     unique(c(.get_internal_S3_generics(primitive),
              unlist(lapply(env_list,
                            function(env) {
@@ -908,7 +931,7 @@ function(dir, installed = TRUE, primitive = FALSE)
                                else Filter(function(f)
                                            .is_S3_generic(f, envir = env),
                                            nms)
-                           }))))
+                           })))))
 }
 
 ### ** .get_S3_group_generics
@@ -1607,7 +1630,7 @@ function(x)
 {
     x <- sub("%bm",
              as.character(getOption("BioC_mirror",
-                                    "http://www.bioconductor.org")),
+                                    "http://bioconductor.org")),
              x, fixed = TRUE)
     sub("%v",
         as.character(.BioC_version_associated_with_R_version()),
@@ -1898,10 +1921,11 @@ toTitleCase <- function(text)
     ## These should be lower case except at the beginning (and after :)
     lpat <- "^(a|an|and|are|as|at|be|but|by|en|for|if|in|is|nor|not|of|on|or|per|so|the|to|v[.]?|via|vs[.]?|from|into|than|that|with)$"
     ## These we don't care about
-    either <- c("all", "above", "after", "along", "also", "among", "any",
-                "both", "can", "few", "it", "less", "log", "many",
-                "may", "more", "some", "their", "then", "this", "under",
-                "until", "using", "von", "when", "where", "which", "will",
+    either <- c("all", "above", "after", "along", "also", "among",
+                "any", "both", "can", "few", "it", "less", "log",
+                "many", "may", "more", "over", "some", "their",
+                "then", "this", "under", "until", "using", "von",
+                "when", "where", "which", "will", "without",
                 "yet", "you", "your")
     titleCase1 <- function(x) {
         ## A quote might be prepended.
@@ -1923,6 +1947,9 @@ toTitleCase <- function(text)
         ind <- grep("[-:]$", xx); ind <- ind[ind + 2L <= length(l)]
         ind <- ind[(xx[ind + 1L] == " ") & grepl("^['[:alnum:]]", xx[ind + 2L])]
         l[ind + 2L] <- FALSE
+        ## Also after " (e.g. "A Book Title")
+        ind <- which(xx == '"'); ind <- ind[ind + 1L <= length(l)]
+        l[ind + 1L] <- FALSE
         xx[l] <- tolower(xx[l])
         keep <- havecaps | l | (nchar(xx) == 1L) | alone
         xx[!keep] <- sapply(xx[!keep], do1)
