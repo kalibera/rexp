@@ -2214,8 +2214,9 @@ SEXP attribute_hidden do_missing(SEXP call, SEXP op, SEXP args, SEXP rho)
 	sym = R_DotsSymbol;
     }
 
-    t = findVarLocInFrame(rho, sym, NULL);
+    PROTECT(t = findVarLocInFrame(rho, sym, NULL));
     rval = allocVector(LGLSXP,1);
+    UNPROTECT(1);
     if (t != R_NilValue) {
 	if (DDVAL(s)) {
 	    if (length(CAR(t)) < ddv  || CAR(t) == R_MissingArg) {

@@ -116,8 +116,8 @@ static int R_call(ClientData clientData,
 
     sscanf(argv[1], "%p", &fun);
 
-    expr = LCONS( (SEXP)fun, alist);
     SEXP s_try = install("try");
+    expr = LCONS( (SEXP)fun, alist);
     expr = LCONS(s_try, LCONS(expr, R_NilValue));
 
     R_Busy(1);

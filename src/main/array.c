@@ -491,12 +491,12 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
         *ans_elt = (int)x_elt_len;
     }
-    UNPROTECT(1);
 
     if(useNames) {
 	SEXP names = getAttrib(x, R_NamesSymbol);
 	if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
     }
+    UNPROTECT(1);
     return ans;
 }
 
