@@ -1524,7 +1524,7 @@ static void vec2buff(SEXP v, LocalParseData *d)
     const void *vmax = vmaxget();
 
     n = length(v);
-    nv = getAttrib(v, R_NamesSymbol);
+    PROTECT(nv = getAttrib(v, R_NamesSymbol));
     if (length(nv) == 0) nv = R_NilValue;
 
     if (d->opts & USESOURCE) {
@@ -1560,6 +1560,7 @@ static void vec2buff(SEXP v, LocalParseData *d)
     }
     if (lbreak)
 	d->indent--;
+    UNPROTECT(1); /* nv */
     vmaxset(vmax);
 }
 
