@@ -2184,7 +2184,9 @@ R_isMissing(SEXP symbol, SEXP rho)
 	    else {
 		int val;
 		SET_PRSEEN(CAR(vl), 1);
+		PROTECT(vl);
 		val = R_isMissing(PREXPR(CAR(vl)), PRENV(CAR(vl)));
+		UNPROTECT(1); /* vl */
 		SET_PRSEEN(CAR(vl), 0);
 		return val;
 	    }
@@ -2399,6 +2401,7 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	SET_ENCLOS(s, x);
     }
 
+    PROTECT(s);
     if(!isSpecial) { /* Temporary: need to remove the elements identified by objects(CAR(args)) */
 #ifdef USE_GLOBAL_CACHE
 	R_FlushGlobalCacheFromTable(HASHTAB(s));
@@ -2412,6 +2415,7 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
     }
 
+    UNPROTECT(1); /* s */
     return s;
 }
 
