@@ -2401,6 +2401,7 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	SET_ENCLOS(s, x);
     }
 
+    PROTECT(s);
     if(!isSpecial) { /* Temporary: need to remove the elements identified by objects(CAR(args)) */
 #ifdef USE_GLOBAL_CACHE
 	R_FlushGlobalCacheFromTable(HASHTAB(s));
