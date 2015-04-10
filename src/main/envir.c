@@ -2382,7 +2382,7 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_ObjectTable *tb = (R_ObjectTable*) R_ExternalPtrAddr(CAR(args));
 	if(tb->onAttach)
 	    tb->onAttach(tb);
-	s = allocSExp(ENVSXP);
+	PROTECT(s = allocSExp(ENVSXP));
 	SET_HASHTAB(s, CAR(args));
 	setAttrib(s, R_ClassSymbol, getAttrib(HASHTAB(s), R_ClassSymbol));
     }
@@ -2401,13 +2401,11 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	SET_ENCLOS(s, x);
     }
 
-    PROTECT(s);
     if(!isSpecial) { /* Temporary: need to remove the elements identified by objects(CAR(args)) */
 #ifdef USE_GLOBAL_CACHE
 	R_FlushGlobalCacheFromTable(HASHTAB(s));
 	MARK_AS_GLOBAL_FRAME(s);
 #endif
-	UNPROTECT(1);
     } else {
 #ifdef USE_GLOBAL_CACHE
 	R_FlushGlobalCacheFromUserTable(HASHTAB(s));
