@@ -1274,7 +1274,7 @@ static SEXP SimpleListAssign(SEXP call, SEXP x, SEXP s, SEXP y, int ind)
 
     if (stretch) {
 	SEXP t = CAR(s);
-	SEXP yi = allocList((int)(stretch - nx));
+	SEXP yi = PROTECT(allocList((int)(stretch - nx)));
 	/* This is general enough for only usage */
 	if(isString(t) && length(t) == stretch - nx) {
 	    SEXP z = yi;
@@ -1282,6 +1282,7 @@ static SEXP SimpleListAssign(SEXP call, SEXP x, SEXP s, SEXP y, int ind)
 	    for(i = 0; i < LENGTH(t); i++, z = CDR(z))
 		SET_TAG(z, installTrChar(STRING_ELT(t, i)));
 	}
+	UNPROTECT(yi);
 	PROTECT(x = listAppend(x, yi));
 	nx = (int) stretch;
     }
