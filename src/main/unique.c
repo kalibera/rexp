@@ -1230,7 +1230,7 @@ static SEXP subDots(SEXP rho)
     SEXP rval, dots, a, b, t;
     int len,i;
 
-    dots = findVar(R_DotsSymbol, rho);
+    PROTECT(dots = findVar(R_DotsSymbol, rho));
 
     if (dots == R_UnboundValue)
 	error(_("... used in a situation where it does not exist"));
