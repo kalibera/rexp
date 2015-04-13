@@ -1309,12 +1309,15 @@ static SEXP get_this_generic(SEXP args)
     for(i=0;  i<n; i++) {
 	SEXP rval = R_sysfunction(i, cptr);
 	if(isObject(rval)) {
+	    PROTECT(rval);
 	    SEXP generic = getAttrib(rval, gen_name);
 	    if(TYPEOF(generic) == STRSXP &&
 	       !strcmp(translateChar(asChar(generic)), fname)) {
 	      value = rval;
+	      UNPROTECT(1); /* rval */
 	      break;
 	    }
+	    UNPROTECT(1); /* rval */
 	}
     }
     UNPROTECT(1);
