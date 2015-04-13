@@ -1963,7 +1963,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
     /* code to allow classes to extend ENVSXP */
     if(TYPEOF(x) == S4SXP) {
 	xS4 = x;
-        x = R_getS4DataSlot(x, ANYSXP);
+	REPROTECT(x = R_getS4DataSlot(x, ANYSXP), pxidx);
 	if(x == R_NilValue)
 	  errorcall(call, _("no method for assigning subsets of this S4 class"));
     }
