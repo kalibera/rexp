@@ -6,11 +6,39 @@
 \encoding{UTF-8}
 
 \section{\Rlogo CHANGES IN R-devel}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item The \code{print} method for \code{methods()} gains a
+      \code{byclass} argument.
+    }
+  }
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item The included versions of \code{zlib}, \code{bzip2},
       \code{xz} and PCRE have been removed, so system versions are
       required (see the \sQuote{R Installation and Administration} manual).
+    }
+  }
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item C-level \code{asChar(x)} is fixed for when \code{x} is not a
+      vector, and it returns \dQuote{TRUE}/\dQuote{FALSE} instead of
+      \dQuote{T}/\dQuote{F} for logical vectors.
+
+      %% Plan to port to 3.2.0 patched:
+      \item \code{as.integer("111111111111")} now gives NA (with a warning) as
+      it does for the corresponding numeric or negative number
+      coercions.  Further, \code{as.integer(M + 0.1)} now gives \code{M}
+      (instead of NA) when M is the maximal representable integer.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.2.0 patched}{
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{acf()} and \code{ccf()} now guarantee values strictly
+      in \eqn{[-1,1]} (instead of sometimes very slightly outside). \PR{15832}.
     }
   }
 }
@@ -134,9 +162,9 @@
       functions by \R since before \R version 2.14.0) is no longer
       treated as special.
 
-      \item An experimental function \code{returnValue()} has been added
-      to give \code{on.exit()} code access to a function's return
-      value for debugging purposes.
+      \item Function \code{returnValue()} has been added to give
+      \code{on.exit()} code access to a function's return value for
+      debugging purposes.
 
       \item \code{crossprod(x, y)} allows more matrix coercions when
       \code{x} or \code{y} are vectors, now equalling
@@ -144,7 +172,7 @@
       Similarly, \code{tcrossprod(x,y)} and \code{\%*\%} work in more
       cases with vector arguments.
 
-      \item An experimental utility \code{dynGet()} useful for detecting
+      \item Utility function \code{dynGet()} useful for detecting
       cycles, aka infinite recursions.
 
       \item The byte-code compiler and interpreter include new
@@ -273,7 +301,7 @@
       locked namespace or namespace imports environment.  Contributed by
       Karl Millar.
 
-      \item New function \code{isLoadedNamespace()} for readability and speed.
+      \item New function \code{isNamespaceLoaded()} for readability and speed.
 
       \item \code{names(env)} now returns all the object names of an
       \code{environment} \code{env}, equivalently to
@@ -613,6 +641,10 @@
       \item \sQuote{Abbreviated} locale-specific day and month names
       could have been truncated in those rare locales where there are
       the same as the full names.
+
+      \item An irrelevant warning message from updating subclass
+      information was silenced (the namespace would not be writable
+      in this case).
     }
   }
 }
@@ -997,7 +1029,7 @@
       dendrogram.
 
       \item The \code{plot} method for \code{"hclust"} objects gets an
-      optional argument \code{check}; When that is true (the default) it
+      optional argument \code{check}; when that is true (the default) it
       checks more carefully for valid input.
 
       \item (Windows only) If a user chose to install 64 bit \R but not

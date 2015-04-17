@@ -481,9 +481,11 @@ holder(s) are not the authors.  If necessary, this can refer to an
 installed file: the convention is to use file @file{inst/COPYRIGHTS}.
 
 @c DESCRIPTION field Date
-The @samp{Date} field gives the release date of the current
-version of the package.  It is strongly recommended to use the yyyy-mm-dd
-format conforming to the ISO 8601 standard.
+The optional @samp{Date} field gives the @emph{release date} of the
+current version of the package.  It is strongly recommended@footnote{and
+required by @acronym{CRAN}, so checked by @command{R CMD check
+--as-cran}.} to use the @samp{yyyy-mm-dd} format conforming to the ISO
+8601 standard.
 
 The @samp{Depends}, @samp{Imports}, @samp{Suggests}, @samp{Enhances},
 @samp{LinkingTo} and @samp{Additional_repositories} fields are discussed
@@ -965,8 +967,8 @@ CRAN package @CRANpkg{BH} and almost all users of
 For another use of @samp{LinkingTo} see @ref{Linking to native routines
 in other packages}.
 
-@c DESCRIPTION field Addiitonal_repositories
-The @samp{Addiitonal_repositories} field is a comma-separated list of
+@c DESCRIPTION field Additional_repositories
+The @samp{Additional_repositories} field is a comma-separated list of
 repository URLs where the packages named in the other fields may be
 found.  It is currently used by @command{R CMD check} to check that the
 packages can be found, at least as source packages (which can be
