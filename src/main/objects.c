@@ -729,6 +729,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	    }
 	}
     }
+    PROTECT(nextfun);
     PROTECT(s = stringSuffix(klass, i));
     setAttrib(s, R_PreviousSymbol, klass);
     /* It is possible that if a method was called directly that
@@ -761,7 +762,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 
     ans = applyMethod(newcall, nextfun, matchedarg, env, newvars);
     vmaxset(vmax);
-    UNPROTECT(7);
+    UNPROTECT(8);
     return(ans);
 }
 
