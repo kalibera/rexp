@@ -211,7 +211,7 @@ void doMouseEvent(pDevDesc dd, R_MouseEvent event,
 
     dd->gettingEvent = FALSE; /* avoid recursive calls */
 
-    handler = findVar(install(mouseHandlers[event]), dd->eventEnv);
+    PROTECT(handler = findVar(install(mouseHandlers[event]), dd->eventEnv));
     if (TYPEOF(handler) == PROMSXP)
 	handler = eval(handler, dd->eventEnv);
 
@@ -237,6 +237,7 @@ void doMouseEvent(pDevDesc dd, R_MouseEvent event,
 	UNPROTECT(5);	
 	R_FlushConsole();
     }
+    UNPROTECT(1); /* handler */
     dd->gettingEvent = TRUE;
     return;
 }
@@ -254,7 +255,7 @@ void doKeybd(pDevDesc dd, R_KeyName rkey,
 
     dd->gettingEvent = FALSE; /* avoid recursive calls */
 
-    handler = findVar(install(keybdHandler), dd->eventEnv);
+    PROTECT(handler = findVar(install(keybdHandler), dd->eventEnv));
     if (TYPEOF(handler) == PROMSXP)
 	handler = eval(handler, dd->eventEnv);
 
@@ -268,6 +269,7 @@ void doKeybd(pDevDesc dd, R_KeyName rkey,
 	UNPROTECT(3);	
 	R_FlushConsole();
     }
+    UNPROTECT(1); /* handler */
     dd->gettingEvent = TRUE;
     return;
 }
