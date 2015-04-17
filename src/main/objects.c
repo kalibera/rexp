@@ -356,6 +356,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	if (isFunction(sxp)) {
 	    if(method == R_SortListSymbol && CLOENV(sxp) == R_BaseNamespace)
 		continue; /* kludge because sort.list is not a method */
+	    PROTECT(sxp);
             if (i > 0) {
 		SEXP dotClass = PROTECT(stringSuffix(klass, i));
 		setAttrib(dotClass, R_PreviousSymbol, klass);
@@ -366,19 +367,19 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	        *ans = dispatchMethod(op, sxp, klass, cptr, method, generic,
 				      rho, callrho, defrho);
             }
-	    UNPROTECT(1); /* klass */
+	    UNPROTECT(2); /* klass, sxp */
 	    return 1;
 	}
     }
     method = installS3Signature(generic, "default");
-    sxp = R_LookupMethod(method, rho, callrho, defrho);
+    PROTECT(sxp = R_LookupMethod(method, rho, callrho, defrho));
     if (isFunction(sxp)) {
         *ans = dispatchMethod(op, sxp, R_NilValue, cptr, method, generic,
 			      rho, callrho, defrho);
-	UNPROTECT(1); /* klass */
+	UNPROTECT(2); /* klass, sxp */
 	return 1;
     }
-    UNPROTECT(1); /* klass */
+    UNPROTECT(2); /* klass, sxp */
     cptr->callflag = CTXT_RETURN;
     return 0;
 }
