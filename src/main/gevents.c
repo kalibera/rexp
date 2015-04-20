@@ -212,9 +212,11 @@ void doMouseEvent(pDevDesc dd, R_MouseEvent event,
     dd->gettingEvent = FALSE; /* avoid recursive calls */
 
     PROTECT(handler = findVar(install(mouseHandlers[event]), dd->eventEnv));
-    if (TYPEOF(handler) == PROMSXP)
+    if (TYPEOF(handler) == PROMSXP) {
 	handler = eval(handler, dd->eventEnv);
-
+	UNPROTECT(1); /* handler */
+	PROTECT(handler);
+    }
     if (TYPEOF(handler) == CLOSXP) {
         SEXP s_which = install("which");
         defineVar(s_which, ScalarInteger(ndevNumber(dd)+1), dd->eventEnv);
