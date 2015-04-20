@@ -421,6 +421,8 @@ SEXP port_nlminb(SEXP fn, SEXP gr, SEXP hs, SEXP rho,
 	   value (package varComp does this) */
 	defineVar(dot_par_symbol, duplicate(xpt), rho);
 	xpt = findVarInFrame(rho, dot_par_symbol);
+	UNPROTECT(1);
+	PROTECT(xpt);
     } while(INTEGER(iv)[0] < 3);
 
     if (b) Free(b); if (g) Free(g); if (h) Free(h);
