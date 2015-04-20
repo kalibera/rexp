@@ -1282,7 +1282,7 @@ static SEXP SimpleListAssign(SEXP call, SEXP x, SEXP s, SEXP y, int ind)
 	    for(i = 0; i < LENGTH(t); i++, z = CDR(z))
 		SET_TAG(z, installTrChar(STRING_ELT(t, i)));
 	}
-	UNPROTECT(yi);
+	UNPROTECT(1);
 	PROTECT(x = listAppend(x, yi));
 	nx = (int) stretch;
     }
