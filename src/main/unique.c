@@ -1230,7 +1230,7 @@ static SEXP subDots(SEXP rho)
     SEXP rval, dots, a, b, t;
     int len,i;
 
-    PROTECT(dots = findVar(R_DotsSymbol, rho));
+    dots = findVar(R_DotsSymbol, rho);
 
     if (dots == R_UnboundValue)
 	error(_("... used in a situation where it does not exist"));
@@ -1242,6 +1242,7 @@ static SEXP subDots(SEXP rho)
 	error(_("... is not a pairlist"));
 
     len = length(dots);
+    PROTECT(dots);
     PROTECT(rval=allocList(len));
     for(a = dots, b = rval, i = 1; i <= len; a = CDR(a), b = CDR(b), i++) {
 	SET_TAG(b, TAG(a));
