@@ -258,7 +258,7 @@ void doKeybd(pDevDesc dd, R_KeyName rkey,
     dd->gettingEvent = FALSE; /* avoid recursive calls */
 
     PROTECT(handler = findVar(install(keybdHandler), dd->eventEnv));
-    if (TYPEOF(handler) == PROMSXP)
+    if (TYPEOF(handler) == PROMSXP) {
 	handler = eval(handler, dd->eventEnv);
 	UNPROTECT(1); /* handler */
 	PROTECT(handler);
