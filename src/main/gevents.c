@@ -260,6 +260,9 @@ void doKeybd(pDevDesc dd, R_KeyName rkey,
     PROTECT(handler = findVar(install(keybdHandler), dd->eventEnv));
     if (TYPEOF(handler) == PROMSXP)
 	handler = eval(handler, dd->eventEnv);
+	UNPROTECT(1); /* handler */
+	PROTECT(handler);
+    }
 
     if (TYPEOF(handler) == CLOSXP) {
         SEXP s_which = install("which");
