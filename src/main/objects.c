@@ -212,10 +212,18 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	SEXP table = findVarInFrame3(defrho,
 				     s_S3MethodsTable,
 				     TRUE);
-	if (TYPEOF(table) == PROMSXP) table = eval(table, R_BaseEnv);
+	if (TYPEOF(table) == PROMSXP) {
+	    PROTECT(table);
+	    table = eval(table, R_BaseEnv);
+	    UNPROTECT(1);
+	}
 	if (TYPEOF(table) == ENVSXP) {
 	    val = findVarInFrame3(table, method, TRUE);
-	    if (TYPEOF(val) == PROMSXP) val = eval(val, rho);
+	    if (TYPEOF(val) == PROMSXP) {
+	        PROTECT(val);
+	        val = eval(val, rho);
+	        UNPROTECT(1);
+	    }
 	    return val;
 	}
 	return R_UnboundValue;
@@ -718,8 +726,11 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (!isFunction(nextfun)) {
 	    t = install(sg);
 	    nextfun = findVar(t, env);
-	    if (TYPEOF(nextfun) == PROMSXP)
+	    if (TYPEOF(nextfun) == PROMSXP) {
+		PROTECT(nextfun);
 		nextfun = eval(nextfun, env);
+		UNPROTECT(1);
+	    }
 	    if (!isFunction(nextfun))
 		error(_("no method to invoke"));
 	    if (TYPEOF(nextfun) == CLOSXP) {
