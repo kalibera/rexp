@@ -2030,7 +2030,11 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
     }
 
     /* We need to evaluate if it is a promise */
-    if (TYPEOF(rval) == PROMSXP) rval = eval(rval, env);
+    if (TYPEOF(rval) == PROMSXP) {
+	PROTECT(rval);
+	rval = eval(rval, env);
+	UNPROTECT(1);
+    }
     if (!ISNULL(rval) && NAMED(rval) == 0) SET_NAMED(rval, 1);
     return rval;
 }
