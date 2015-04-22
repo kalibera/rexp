@@ -2599,7 +2599,10 @@ static void X11_eventHelper(pDevDesc dd, int code)
     	if (isEnvironment(dd->eventEnv)) {
     	    SEXP prompt = findVar(install("prompt"), dd->eventEnv);
     	    if (length(prompt) == 1) {
-    		 XStoreName(display, xd->window, CHAR(asChar(prompt)));
+    		 PROTECT(prompt);
+    		 PROTECT(prompt = asChar(prompt));
+    		 XStoreName(display, xd->window, CHAR(prompt));
+    		 UNPROTECT(2);
     	    }
     	}
     	XSync(display, 1);
