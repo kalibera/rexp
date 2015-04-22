@@ -963,7 +963,10 @@ int R_check_class_etc(SEXP x, const char **valid)
 	if(!isEnvironment(rho))
 	    error(_("could not find correct environment; please report!"));
     }
-    return R_check_class_and_super(x, valid, rho);
+    PROTECT(rho);
+    int res = R_check_class_and_super(x, valid, rho);
+    UNPROTECT(1);
+    return res;
 }
 
 /* standardGeneric:  uses a pointer to R_standardGeneric, to be
