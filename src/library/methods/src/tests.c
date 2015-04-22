@@ -33,13 +33,12 @@ SEXP R_methods_test_MAKE_CLASS(SEXP className)
 
 SEXP R_methods_test_NEW(SEXP className)
 {
-  SEXP clDef;
-  PROTECT(className);
   SEXP classNameChar = PROTECT(asChar(className));
   const char *class;
   class = CHAR(classNameChar);
+  SEXP clDef;
   PROTECT(clDef = MAKE_CLASS(class));
   SEXP res = NEW_OBJECT(clDef);
-  UNPROTECT(3);
+  UNPROTECT(2);
   return res;
 }
