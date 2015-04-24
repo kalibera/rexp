@@ -2600,9 +2600,8 @@ static void X11_eventHelper(pDevDesc dd, int code)
     	    SEXP prompt = findVar(install("prompt"), dd->eventEnv);
     	    if (length(prompt) == 1) {
     		 PROTECT(prompt);
-    		 PROTECT(prompt = asChar(prompt));
-    		 XStoreName(display, xd->window, CHAR(prompt));
-    		 UNPROTECT(2);
+    		 XStoreName(display, xd->window, CHAR(asChar(prompt)));
+    		 UNPROTECT(1);
     	    }
     	}
     	XSync(display, 1);
