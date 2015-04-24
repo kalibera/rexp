@@ -10,8 +10,32 @@
     \itemize{
       \item The \code{print} method for \code{methods()} gains a
       \code{byclass} argument.
+
+      \item New functions \code{validEnc()} and \code{validUTF8()} to
+      give access to the validity checks for inputs used by
+      \code{grep()} and friends.
+
+      \item Experimental new functionality for S3 method checking, notably
+      \code{isS3method()}.  Also, the \R \dQuote{language element} names
+      are exported as \code{tools::langElts}.
+
+      \item \code{str(x)} now displays \code{"Time-Series"} also for
+      matrix (multivariate) time-series, i.e. when \code{is.ts(x)} is true.
+
+      %% Port to 3.2.0 patched, but with *DIFFERENT* default keepNA = FALSE:
+      \item \code{nchar(x, *)} gains a new argument \code{keepNA} which
+      governs how the result for \code{NA}s in \code{x} is determined.
     }
   }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD check} has a new option
+      \option{--ignore-vignettes} for use with non-Sweave vignettes
+      whose \samp{VignetteBuilder} package is not available.
+    }
+  }
+
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item The included versions of \code{zlib}, \code{bzip2},
@@ -19,26 +43,38 @@
       required (see the \sQuote{R Installation and Administration} manual).
     }
   }
+
   \subsection{BUG FIXES}{
     \itemize{
       \item C-level \code{asChar(x)} is fixed for when \code{x} is not a
       vector, and it returns \dQuote{TRUE}/\dQuote{FALSE} instead of
       \dQuote{T}/\dQuote{F} for logical vectors.
-
-      %% Plan to port to 3.2.0 patched:
-      \item \code{as.integer("111111111111")} now gives NA (with a warning) as
-      it does for the corresponding numeric or negative number
-      coercions.  Further, \code{as.integer(M + 0.1)} now gives \code{M}
-      (instead of NA) when M is the maximal representable integer.
     }
   }
 }
 
 \section{\Rlogo CHANGES IN R 3.2.0 patched}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{utf8ToInt()} now checks that its input is valid UTF-8
+      and returns \code{NA} if it is not.
+    }
+  }
+
   \subsection{BUG FIXES}{
     \itemize{
       \item \code{acf()} and \code{ccf()} now guarantee values strictly
       in \eqn{[-1,1]} (instead of sometimes very slightly outside). \PR{15832}.
+
+      \item \code{as.integer("111111111111")} now gives NA (with a warning) as
+      it does for the corresponding numeric or negative number
+      coercions.  Further, \code{as.integer(M + 0.1)} now gives \code{M}
+      (instead of NA) when M is the maximal representable integer.
+
+      \item Under some circumstances \code{nchar(x, "c")} and
+      \code{nchar(x, "w")} would return values (possibly \code{NA}) for
+      inputs which were declared to be UTF-8 but were not, or for
+      invalid strings without a marked encoding in a multi-byte locale.
     }
   }
 }

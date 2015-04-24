@@ -520,8 +520,8 @@ FUNTAB R_FunTab[] =
 
 /* String Manipulation */
 
-{"nchar",	do_nchar,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"nzchar",	do_nzchar,	1,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"nchar",	do_nchar,	1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
+{"nzchar",	do_nzchar,	1,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"substr",	do_substr,	1,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"substr<-",	do_substrgets,	1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"strsplit",	do_strsplit,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
@@ -553,6 +553,8 @@ FUNTAB R_FunTab[] =
 {"packBits",	do_packBits,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"utf8ToInt",	do_utf8ToInt,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"intToUtf8",	do_intToUtf8,	1,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"validUTF8",	do_validUTF8,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"validEnc",	do_validEnc,	1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"encodeString",do_encodeString,1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"iconv",	do_iconv,	0,	11,	6,	{PP_FUNCALL, PREC_FN,	0}},
 {"strtrim",	do_strtrim,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},

@@ -60,6 +60,13 @@
 
 ## NB: 'tools' cannot use NAMESPACE imports from utils, as it exists first
 
+## "The language elements" : all are .Primitive *and* print as .Primitive("...")
+langElts <- c("(", "{", ":", "~",
+	      "<-", "<<-", "=",
+	      "[", "[[", "[[<-", "[<-", "@", "@<-", "$", "$<-",
+	      "&&", "||",
+	      "break", "for", "function", "if", "next", "repeat", "return", "while")
+
 ##' a "default" print method used "below" (in several *.R):
 .print.via.format <- function(x, ...) {
     writeLines(format(x, ...))
@@ -242,9 +249,8 @@ function(package, dir, lib.loc = NULL)
 
         ## The bad ones:
         S4_methods <-
-            S4_methods[!sapply(S4_methods,
-                               function(u)
-                               utils:::topicName("method", u))
+	    S4_methods[!vapply(S4_methods, utils:::topicName, " ",
+			       type="method", USE.NAMES=FALSE)
                        %in% all_doc_topics]
         undoc_things <-
             c(undoc_things,
@@ -257,18 +263,12 @@ function(package, dir, lib.loc = NULL)
         ## We use .ArgsEnv and .GenericArgsEnv in checkS3methods() and
         ## codoc(), so we check here that the set of primitives has not
         ## been changed.
-        base_funs <- ls("package:base", all.names=TRUE)
-        prim <- sapply(base_funs,
-                       function(x) is.primitive(get(x, "package:base")))
-        prims <- base_funs[prim]
-        prototypes <- sort(c(ls(envir=.ArgsEnv, all.names=TRUE),
-                             ls(envir=.GenericArgsEnv, all.names=TRUE)))
+	ff <- as.list(baseenv(), all.names=TRUE)
+	prims <- names(ff)[vapply(ff, is.primitive, logical(1L))]
+        prototypes <- sort(c(names(.ArgsEnv), names(.GenericArgsEnv)))
         extras <- setdiff(prototypes, prims)
         if(length(extras))
             undoc_things <- c(undoc_things, list(prim_extra=extras))
-        langElts <- c("$","$<-","&&","(",":","@","@<-","[","[[",
-                      "[[<-","[<-","{","||","~","<-","<<-","=","break","for",
-                      "function","if","next","repeat","return", "while")
         miss <- setdiff(prims, c(langElts, prototypes))
         if(length(miss))
             undoc_things <- c(undoc_things, list(primitives=miss))
@@ -1643,7 +1643,7 @@ function(package, dir, lib.loc = NULL)
     ## generic functions.
     ## Change in 3.0.0: we only look for methods named generic.class,
     ## not those registered by a 3-arg S3method().
-    methods_stop_list <- .make_S3_methods_stop_list(basename(dir))
+    methods_stop_list <- nonS3methods(basename(dir))
     methods_in_package <- sapply(all_S3_generics, function(g) {
         ## This isn't really right: it assumes the generics are visible.
         if(!exists(g, envir = code_env)) return(character())
@@ -2449,7 +2449,7 @@ function(package, dir, lib.loc = NULL)
     ## Now determine the 'bad' methods in the function objects of the
     ## package.
     bad_methods <- list()
-    methods_stop_list <- .make_S3_methods_stop_list(basename(dir))
+    methods_stop_list <- nonS3methods(basename(dir))
     ## some packages export S4 generics derived from other packages ....
     methods_stop_list <- c(methods_stop_list, "all.equal",
         "all.names", "all.vars", "fitted.values", "qr.Q", "qr.R",
@@ -2810,7 +2810,8 @@ function(x, ...)
 
 
 .check_package_depends <-
-function(dir, force_suggests = TRUE, check_incoming = FALSE)
+function(dir, force_suggests = TRUE, check_incoming = FALSE,
+         ignore_vignettes = FALSE)
 {
     .check_dependency_cycles <-
         function(db, available = available.packages(),
@@ -2945,7 +2946,7 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE)
             if(length(m))
                 bad_depends$suggests_but_not_installed <- m
         }
-        if (length(VB)) {
+        if (!ignore_vignettes && length(VB)) {
             ## These need both to be declared and installed
             ## If people explicitly state 'utils' they ought really to
             ## declare it, but skip for now.
@@ -3077,7 +3078,7 @@ function(x, ...)
       if(length(bad <- x$required_for_checking_but_not_installed) > 1L) {
           c(.pretty_format2("VignetteBuilder packages required for checking but not installed:", bad), "")
       } else if(length(bad)) {
-          c(sprintf("VignetteBuilder package required for checking but installed: %s", sQuote(bad)), "")
+          c(sprintf("VignetteBuilder package required for checking but not installed: %s", sQuote(bad)), "")
       },
       if(length(bad <- x$missing_vignette_depends)) {
           c(if(length(bad) > 1L) {
@@ -6876,7 +6877,7 @@ function(dir)
         ## packageDescription() only warns and returns NA, or a vector
         ## of NAs if called with specific fields.  Subscripting the
         ## return value using $ will fail (as this needs lists);
-        ## subscripting by other means, or using specific fields, 
+        ## subscripting by other means, or using specific fields,
         ## incorrectly results in NAs.
         ## The warnings are currently not caught by the direct check.
         ## (We could need a suitably package-not-found condition for

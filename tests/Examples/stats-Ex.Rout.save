@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2015-04-05 r68147) -- "Unsuffered Consequences"
+R Under development (unstable) (2015-04-23 r68245) -- "Unsuffered Consequences"
 Copyright (C) 2015 The R Foundation for Statistical Computing
 Platform: x86_64-unknown-linux-gnu (64-bit)
 
@@ -76,10 +76,16 @@ lm2  6 336.3417
 0.085937500 0.048828125 0.027343750 0.015136719 0.008300781 
 > 
 > ## Example from Brockwell & Davis (1991, pp.92-4)
-> ## answer 2^(-n) * (32/3 + 8 * n) /(32/3)
-> n <- 1:10; 2^(-n) * (32/3 + 8 * n) /(32/3)
- [1] 0.875000000 0.625000000 0.406250000 0.250000000 0.148437500 0.085937500
- [7] 0.048828125 0.027343750 0.015136719 0.008300781
+> ## answer: 2^(-n) * (32/3 + 8 * n) /(32/3)
+> n <- 1:10
+> a.n <- 2^(-n) * (32/3 + 8 * n) /(32/3)
+> (A.n <- ARMAacf(c(1.0, -0.25), 1.0, lag.max = 10))
+          0           1           2           3           4           5 
+1.000000000 0.875000000 0.625000000 0.406250000 0.250000000 0.148437500 
+          6           7           8           9          10 
+0.085937500 0.048828125 0.027343750 0.015136719 0.008300781 
+> stopifnot(all.equal(unname(A.n), c(1, a.n)))
+> 
 > ARMAacf(c(1.0, -0.25), 1.0, lag.max = 10, pacf = TRUE)
  [1]  0.8750000 -0.6000000  0.3750000 -0.2727273  0.2142857 -0.1764706
  [7]  0.1500000 -0.1304348  0.1153846 -0.1034483
@@ -3786,7 +3792,7 @@ sigma^2 estimated as 0.4566:  log likelihood = -101.2,  aic = 212.4
 > 
 > asOneSidedFormula("age")
 ~age
-<environment: 0x2723d30>
+<environment: 0x1602d98>
 > asOneSidedFormula(~ age)
 ~age
 > 
@@ -4749,7 +4755,7 @@ function (V)
     r[cbind(1L:p, 1L:p)] <- 1
     r
 }
-<bytecode: 0x48eb660>
+<bytecode: 0x37bdea0>
 <environment: namespace:stats>
 > stopifnot(all.equal(Cl, cov2cor(cov(longley))),
 +           all.equal(cor(longley, method = "kendall"),
@@ -7273,7 +7279,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env = new.env()))
-<environment: 0x2c56500>
+<environment: 0x16950f8>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -11753,14 +11759,14 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<bytecode: 0x49e0c20>
-<environment: 0x49d1a20>
+<bytecode: 0x38b02e8>
+<environment: 0x38a2b38>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<bytecode: 0x49e0d38>
-<environment: 0x49d1a20>
+<bytecode: 0x38b0400>
+<environment: 0x38a2b38>
 
 > 
 > 
@@ -15633,8 +15639,8 @@ Step function with continuity 'f'= 0.2 ,  3 knots at
 > unclass(sfun0)
 function (v) 
 .approxfun(x, y, v, method, yleft, yright, f)
-<bytecode: 0x467a768>
-<environment: 0x48f4058>
+<bytecode: 0x306a300>
+<environment: 0x37c5598>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
@@ -17911,7 +17917,7 @@ Number of Fisher Scoring iterations: 6
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  4.394 0.114 4.509 0 0 
+Time elapsed:  4.394 0.099 4.494 0 0 
 > grDevices::dev.off()
 null device 
           1 
