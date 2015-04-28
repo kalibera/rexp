@@ -655,6 +655,7 @@ void (SET_HASHVALUE)(SEXP x, int v);
 
 #define AUTO_UNPROTECT __attribute__((cleanup(R_auto_unprotect_handler))) int __pp_stack_top = R_PPStackTop;
 #define CHECK_BALANCE __attribute__((cleanup(R_check_balance_handler))) int __pp_stack_top = R_PPStackTop;
+#define DISABLE_GC __attribute__((cleanup(R_disable_gc_handler))) int __gc_enabled = R_GCEnabled; R_GCEnabled = 0;
 
 /* We sometimes need to coerce a protected value and place the new
    coerced value under protection.  For these cases PROTECT_WITH_INDEX
@@ -1328,6 +1329,7 @@ SEXP	 Rf_ScalarString(SEXP);
 R_xlen_t  Rf_xlength(SEXP);
 void R_auto_unprotect_handler(int *saved);
 void R_check_balance_handler(int *saved);
+void R_disable_gc_handler(int *saved);
 # ifdef INLINE_PROTECT
 SEXP Rf_protect(SEXP);
 void Rf_unprotect(int);

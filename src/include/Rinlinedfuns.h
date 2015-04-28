@@ -120,6 +120,12 @@ INLINE_FUN void R_check_balance_handler(int *saved) {
   }
 }
 
+extern int R_GCEnabled;
+
+INLINE_FUN void R_disable_gc_handler(int *saved) {
+  R_GCEnabled = *saved;
+}
+
 /* from dstruct.c */
 
 /*  length - length of objects  */
