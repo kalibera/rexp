@@ -653,6 +653,9 @@ void (SET_HASHVALUE)(SEXP x, int v);
 #define UNPROTECT(n)	Rf_unprotect(n)
 #define UNPROTECT_PTR(s)	Rf_unprotect_ptr(s)
 
+#define AUTO_UNPROTECT __attribute__((cleanup(R_auto_unprotect_handler))) int __pp_stack_top = R_PPStackTop;
+#define CHECK_BALANCE __attribute__((cleanup(R_check_balance_handler))) int __pp_stack_top = R_PPStackTop;
+
 /* We sometimes need to coerce a protected value and place the new
    coerced value under protection.  For these cases PROTECT_WITH_INDEX
    saves an index of the protection location that can be used to
@@ -1323,6 +1326,8 @@ SEXP	 Rf_ScalarRaw(Rbyte);
 SEXP	 Rf_ScalarReal(double);
 SEXP	 Rf_ScalarString(SEXP);
 R_xlen_t  Rf_xlength(SEXP);
+void R_auto_unprotect_handler(int *saved);
+void R_check_balance_handler(int *saved);
 # ifdef INLINE_PROTECT
 SEXP Rf_protect(SEXP);
 void Rf_unprotect(int);

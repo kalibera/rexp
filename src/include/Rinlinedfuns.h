@@ -110,6 +110,16 @@ INLINE_FUN void R_Reprotect(SEXP s, PROTECT_INDEX i)
 }
 #endif /* INLINE_PROTECT */
 
+INLINE_FUN void R_auto_unprotect_handler(int *saved) {
+  R_PPStackTop = *saved;
+}
+
+INLINE_FUN void R_check_balance_handler(int *saved) {
+  if (*saved != R_PPStackTop) {
+      error("ERROR - CHECK_BALANCE: Found pointer protection stack imbalance.");
+  }
+}
+
 /* from dstruct.c */
 
 /*  length - length of objects  */
