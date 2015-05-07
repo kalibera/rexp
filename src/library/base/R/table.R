@@ -1,7 +1,7 @@
 #  File src/library/base/R/table.R
 #  Part of the R package, http://www.R-project.org
 #
-#  Copyright (C) 1995-2014 The R Core Team
+#  Copyright (C) 1995-2015 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -163,7 +163,7 @@ summary.table <- function(object, ...)
 	    m[[k]] <- apply(relFreqs, k, sum)
 	expected <- apply(do.call("expand.grid", m), 1L, prod) * n.cases
 	statistic <- sum((c(object) - expected)^2 / expected)
-	lm <- vapply(m, length, 1L)
+	lm <- lengths(m)
 	parameter <- prod(lm) - 1L - sum(lm - 1L)
 	y <- c(y, list(statistic = statistic,
 		       parameter = parameter,
@@ -244,4 +244,35 @@ margin.table <- function(x, margin = NULL)
     else return(sum(x))
     class(z) <- oldClass(x) # avoid adding "matrix"
     z
+}
+
+`[.table` <- function(i, j, ..., drop = NA)
+{
+    tmp <- NextMethod(drop = FALSE)
+    ret <- drop(tmp)
+
+    ## Special case: for 1 x 1 tables, keep default behavior
+    ## (i.e., drop dim and dimnames attributes):
+    if (is.na(drop) && length(ret) == 1L) return(ret)
+
+    ## For all other tables, restore class attribute
+    ## removed by array indexing:
+    class(ret) <- "table"
+
+    ## Handle explicit setting of drop= argument:
+    if(!is.na(drop))
+        return(if (drop) ret else structure(tmp, class = "table"))
+
+    ## If a two-way table is indexed so that one margin has length 1,
+    ## standard array indexing removes dim and dimnames attributes.
+    ## In this case, restore one dimension to obtain
+    ## a 1 x n or n x 1 table:
+    d <- dim(tmp)
+    if (!is.null(d) && is.null(dim(ret))) {
+        dim(ret) <- length(ret)
+        dimnames(ret) <- dimnames(tmp)[d > 1L]
+    }
+
+    ## In all other cases, keep default indexing.
+    ret
 }

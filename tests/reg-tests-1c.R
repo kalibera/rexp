@@ -729,5 +729,34 @@ stopifnot(diff(sort(y)) > 0)
 ## order() and hence sort() failed here badly for a while around 2015-04-16
 
 
+## NAs in data frame names:
+dn <- list(c("r1", NA), c("V", NA))
+d11 <- as.data.frame(matrix(c(1, 1, 1, 1), ncol = 2, dimnames = dn))
+stopifnot(identical(names(d11), dn[[2]]),
+          identical(row.names(d11), dn[[1]]))
+## as.data.frame() failed in R-devel for a couple of hours ..
+## note that format(d11) does fail currently, and hence print(), too
 
-proc.time()
+
+## Ensure  R -e ..  works on Unix
+if(.Platform$OS.type == "unix" &&
+   file.exists(Rc <- file.path(R.home("bin"), "R")) &&
+   file.access(Rc, mode = 1) == 0) { # 1: executable
+    cmd <- paste(Rc, "-q --vanilla -e 1:3")
+    ans <- system(cmd, intern=TRUE)
+    stopifnot(length(ans) >= 3,
+	      identical(ans[1:2], c("> 1:3",
+				    "[1] 1 2 3")))
+}
+## (failed for < 1 hr, in R-devel only)
+
+
+## Parsing large exponents of floating point numbers, PR#16358
+set.seed(12)
+lrg <- sprintf("%.0f", round(exp(10*(2+abs(rnorm(2^10))))))
+head(huge <- paste0("1e", lrg))
+    micro <- paste0("1e-", lrg)
+stopifnot(as.numeric(huge) == Inf,
+          as.numeric(micro) == 0)
+## Both failed in R <= 3.2.0
+

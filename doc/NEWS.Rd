@@ -6,6 +6,19 @@
 \encoding{UTF-8}
 
 \section{\Rlogo CHANGES IN R-devel}{
+  \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
+    \itemize{
+      \item \code{nchar(x, *)} gains a new argument \code{keepNA} which
+      governs how the result for \code{NA}s in \code{x} is determined.
+      The new default \code{keepNA = NA} returns \code{NA} where
+      \code{x} is \code{NA}, unless for \code{type = "width"} which still
+      returns \code{2}, the formatting / printing width of \code{NA}.
+
+      \code{nzchar(x)} gets the same new argument, with default
+      \code{keepNA = FALSE} however.  Consequently \code{nzchar(x)} keeps
+      returning a non-\code{NA} logical vector, back compatibly.
+    }
+  }
   \subsection{NEW FEATURES}{
     \itemize{
       \item The \code{print} method for \code{methods()} gains a
@@ -22,9 +35,11 @@
       \item \code{str(x)} now displays \code{"Time-Series"} also for
       matrix (multivariate) time-series, i.e. when \code{is.ts(x)} is true.
 
-      %% Port to 3.2.0 patched, but with *DIFFERENT* default keepNA = FALSE:
-      \item \code{nchar(x, *)} gains a new argument \code{keepNA} which
-      governs how the result for \code{NA}s in \code{x} is determined.
+      \item (Windows only)  The GUI menu item to install local packages
+      now accepts \file{*.tar.gz} files as well as \file{*.zip} files
+      (but defaults to the latter).
+
+      \item new programmeR's utility \code{chkDots}.
     }
   }
 
@@ -58,6 +73,23 @@
     \itemize{
       \item \code{utf8ToInt()} now checks that its input is valid UTF-8
       and returns \code{NA} if it is not.
+
+      \item \code{install.packages()} now allows \code{type = "both"}
+      with \code{repos = NULL} if it can infer the type of file.
+
+      \item \code{nchar(x, *)} and \code{nzchar(x)} gain a new argument
+      \code{keepNA} which governs how the result for \code{NA}s in
+      \code{x} is determined.  For the \R 3.2.x series, the default
+      remains \code{FALSE} which is fully back compatible.
+      From \R 3.3.0, the default will change to \code{keepNA = NA} and
+      you are advised to consider this for code portability.
+
+      \item \code{news()} more flexibly extracts dates from package
+      \file{NEWS.Rd} files.
+
+      \item \code{lengths(x)} now also works (trivially) for atomic
+      \code{x} and hence can be used more generally as an efficient
+      replacement of \code{sapply(x, length)} and similar.
     }
   }
 
@@ -71,10 +103,44 @@
       coercions.  Further, \code{as.integer(M + 0.1)} now gives \code{M}
       (instead of NA) when M is the maximal representable integer.
 
-      \item Under some circumstances \code{nchar(x, "c")} and
-      \code{nchar(x, "w")} would return values (possibly \code{NA}) for
-      inputs which were declared to be UTF-8 but were not, or for
-      invalid strings without a marked encoding in a multi-byte locale.
+      \item On some platforms \code{nchar(x, "c")} and \code{nchar(x, "w")}
+      would return values (possibly \code{NA}) for inputs which were
+      declared to be UTF-8 but were not, or for invalid strings without a
+      marked encoding in a multi-byte locale, rather than give an
+      error.  Additional checks have been added to mitigate this.
+
+      \item \code{apply(a, M, function(u) c(X = ., Y = .))} again
+      has dimnames containing "X" and "Y" (as in R < 3.2.0).
+
+      \item (Windows only) In some cases, the \command{--clean} option
+      to \command{R CMD INSTALL} could fail.  (\PR{16178})
+
+      \item (Windows only) \code{choose.files()} would occasionally
+      include characters from the result of an earlier call in
+      the result of a later one.  (\PR{16270})
+
+      \item A change in \code{RSiteSearch()} in \R 3.2.0 caused it to
+      submit invalid URLs.  (\PR{16329})
+
+      \item \command{Rscript} and command line \command{R} silently
+      ignored incomplete statements at the end of a script; now they
+      are reported as parse errors.  (\PR{16350})
+
+      \item Parse data for very long strings was not stored.  (\PR{16354})
+
+      \item \code{plotNode()}, the workhorse of the \code{plot} method
+      for \code{"dendrogram"}s is no longer recursive, thanks to Suharto
+      Anggono, and hence also works for deeply nested dendrograms.  (\PR{15215})
+
+      \item The parser could overflow internally when given numbers
+      in scientific format with extremely large exponents.  (\PR{16358})
+
+      \item If the CRAN mirror was not set, \code{install.packages(type = "both")}
+      and related functions could repeatedly query the user for it.  
+      (Part of \PR{16362})
+      
+      \item The low-level functions \code{.rowSums()} etc. did not 
+      check the length of their argument, so could segfault. (\PR{16367})
     }
   }
 }

@@ -1987,8 +1987,11 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 #     define GET_VALUE(rval)				\
 	/* We need to evaluate if it is a promise */	\
-	if (TYPEOF(rval) == PROMSXP)			\
+	if (TYPEOF(rval) == PROMSXP) {			\
+	    PROTECT(rval);				\
 	    rval = eval(rval, genv);			\
+	    UNPROTECT(1);				\
+	}						\
 							\
 	if (!ISNULL(rval) && NAMED(rval) == 0)		\
 	    SET_NAMED(rval, 1)
@@ -2027,7 +2030,11 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
     }
 
     /* We need to evaluate if it is a promise */
-    if (TYPEOF(rval) == PROMSXP) rval = eval(rval, env);
+    if (TYPEOF(rval) == PROMSXP) {
+	PROTECT(rval);
+	rval = eval(rval, env);
+	UNPROTECT(1);
+    }
     if (!ISNULL(rval) && NAMED(rval) == 0) SET_NAMED(rval, 1);
     return rval;
 }
@@ -2697,6 +2704,7 @@ BuiltinValues(int all, int intern, SEXP values, int *indx)
     }
 }
 
+// .Internal(ls(envir, all.names, sorted)) :
 SEXP attribute_hidden do_ls(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
@@ -2720,7 +2728,7 @@ SEXP attribute_hidden do_ls(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_lsInternal3(env, all, sort_nms);
 }
 
-/* takes a *list* of environments, a boolean indicating whether to get all
+/* takes an environment, a boolean indicating whether to get all
    names and a boolean if sorted is desired */
 SEXP R_lsInternal3(SEXP env, Rboolean all, Rboolean sorted)
 {
@@ -2940,7 +2948,11 @@ SEXP attribute_hidden do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 int envlength(SEXP rho)
 {
-    if( HASHTAB(rho) != R_NilValue)
+    if(IS_USER_DATABASE(rho)) {
+        R_ObjectTable *tb = (R_ObjectTable*)
+	    R_ExternalPtrAddr(HASHTAB(rho));
+        return(xlength(tb->objects(tb)));
+    } else if( HASHTAB(rho) != R_NilValue)
 	return HashTableSize(HASHTAB(rho), 1);
     else
 	return FrameSize(FRAME(rho), 1);
@@ -2963,10 +2975,11 @@ SEXP attribute_hidden do_builtins(SEXP call, SEXP op, SEXP args, SEXP rho)
     intern = asLogical(CAR(args));
     if (intern == NA_INTEGER) intern = 0;
     nelts = BuiltinSize(1, intern);
-    ans = allocVector(STRSXP, nelts);
+    PROTECT(ans = allocVector(STRSXP, nelts));
     nelts = 0;
     BuiltinNames(1, intern, ans, &nelts);
     sortVector(ans, TRUE);
+    UNPROTECT(1); /* ans */
     return ans;
 }
 

@@ -42,12 +42,13 @@ static SEXP row_names_gets(SEXP vec , SEXP val)
     if(isReal(val) && length(val) == 2 && ISNAN(REAL(val)[0]) ) {
 	/* This should not happen, but if a careless user dput()s a
 	   data frame and sources the result, it will */
+	PROTECT(vec);
 	PROTECT(val);
 	val = coerceVector(val, INTSXP);
-	UNPROTECT(1);
+	UNPROTECT(1); /* val */
 	PROTECT(val);
 	ans =  installAttrib(vec, R_RowNamesSymbol, val);
-	UNPROTECT(1);
+	UNPROTECT(2); /* vec, val */
 	return ans;
     }
     if(isInteger(val)) {
@@ -64,19 +65,21 @@ static SEXP row_names_gets(SEXP vec , SEXP val)
 	} else OK_compact = FALSE;
 	if(OK_compact) {
 	    /* we hide the length in an impossible integer vector */
+	    PROTECT(vec);
 	    PROTECT(val = allocVector(INTSXP, 2));
 	    INTEGER(val)[0] = NA_INTEGER;
 	    INTEGER(val)[1] = n;
 	    ans =  installAttrib(vec, R_RowNamesSymbol, val);
-	    UNPROTECT(1);
+	    UNPROTECT(2); /* vec, val */
 	    return ans;
 	}
     } else if(!isString(val))
 	error(_("row names must be 'character' or 'integer', not '%s'"),
 	      type2char(TYPEOF(val)));
+    PROTECT(vec);
     PROTECT(val);
     ans =  installAttrib(vec, R_RowNamesSymbol, val);
-    UNPROTECT(1);
+    UNPROTECT(2); /* vec, val */
     return ans;
 }
 
@@ -215,7 +218,9 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
     PROTECT(name);
 
     if (isString(name)) {
+	PROTECT(val);
 	name = installTrChar(STRING_ELT(name, 0));
+	UNPROTECT(1);
     }
     if (val == R_NilValue) {
 	UNPROTECT(2);
@@ -1026,7 +1031,7 @@ SEXP dimnamesgets(SEXP vec, SEXP val)
     /* there may be old pair-lists out there */
     /* There are, when this gets used as names<- for 1-d arrays */
     if (!isPairList(val) && !isNewList(val))
-	error(_("'dimnames' must be a list"));
+        error(_("'%s' must be a list"), "dimnames");
     dims = getAttrib(vec, R_DimSymbol);
     if ((k = LENGTH(dims)) < length(val))
 	error(_("length of 'dimnames' [%d] must match that of 'dims' [%d]"),

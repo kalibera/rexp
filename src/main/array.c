@@ -435,6 +435,7 @@ SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ScalarInteger(length(x));
 }
 
+// auxiliary for do_lengths_*(), i.e., R's lengths()
 static R_xlen_t getElementLength(SEXP x, R_xlen_t i, SEXP call, SEXP rho) {
     static SEXP length_op = NULL;
     SEXP x_elt = VECTOR_ELT(x, i);
@@ -477,23 +478,39 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
     int useNames = asLogical(CADR(args));
     if (useNames == NA_LOGICAL)
 	error(_("invalid '%s' value"), "USE.NAMES");
-    if (!isVectorList(x))
-        error(_("'%s' must be a list"), "x");
+    Rboolean isList = isVectorList(x);
+    if(!isList) switch(TYPEOF(x)) {
+	case NILSXP:
+	case CHARSXP:
+	case LGLSXP:
+	case INTSXP:
+	case REALSXP:
+	case CPLXSXP:
+	case STRSXP:
+	case RAWSXP:
+	    break;
+	default:
+	    error(_("'%s' must be a list or atomic vector"), "x");
+    }
     x_len = xlength(x);
     PROTECT(ans = allocVector(INTSXP, x_len));
-    for (i = 0, ans_elt = INTEGER(ans); i < x_len; i++, ans_elt++) {
-        R_xlen_t x_elt_len = getElementLength(x, i, call, rho);
+    if(isList) {
+	for (i = 0, ans_elt = INTEGER(ans); i < x_len; i++, ans_elt++) {
+	    R_xlen_t x_elt_len = getElementLength(x, i, call, rho);
 #ifdef LONG_VECTOR_SUPPORT
-        if (x_elt_len > INT_MAX) {
-            ans = do_lengths_long(x, call, rho);
-            UNPROTECT(1);
-            PROTECT(ans);
-            break;
-        }
+	    if (x_elt_len > INT_MAX) {
+		ans = do_lengths_long(x, call, rho);
+		UNPROTECT(1);
+		PROTECT(ans);
+		break;
+	    }
 #endif
-        *ans_elt = (int)x_elt_len;
+	    *ans_elt = (int)x_elt_len;
+	}
+    } else { // atomic: every element has length 1
+	for (i = 0, ans_elt = INTEGER(ans); i < x_len; i++, ans_elt++)
+	    *ans_elt = 1;
     }
-
     if(useNames) {
 	SEXP names = getAttrib(x, R_NamesSymbol);
 	if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
@@ -1351,6 +1368,8 @@ SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (p == NA_INTEGER || p < 0)
 	error(_("invalid '%s' argument"), "p");
     if (NaRm == NA_LOGICAL) error(_("invalid '%s' argument"), "na.rm");
+    if (n*p > xlength(x))
+    	error(_("'X' is too short")); /* PR#16367 */
     keepNA = !NaRm;
 
     int OP = PRIMVAL(op);
@@ -1359,7 +1378,7 @@ SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
     case INTSXP: break;
     case REALSXP: break;
     default:
-	error(_("'x' must be numeric"));
+	error(_("'X' must be numeric"));
     }
 
     if (OP == 0 || OP == 1) { /* columns */
