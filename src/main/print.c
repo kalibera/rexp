@@ -655,10 +655,11 @@ static void PrintExpression(SEXP s)
     SEXP u;
     int i, n;
 
-    u = deparse1w(s, 0, R_print.useSource | DEFAULTDEPARSE);
+    u = PROTECT(deparse1w(s, 0, R_print.useSource | DEFAULTDEPARSE));
     n = LENGTH(u);
     for (i = 0; i < n; i++)
 	Rprintf("%s\n", CHAR(STRING_ELT(u, i))); /*translated */
+    UNPROTECT(1); /* u */
 }
 
 static void PrintSpecial(SEXP s)
