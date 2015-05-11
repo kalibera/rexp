@@ -905,10 +905,9 @@ static void printAttributes(SEXP s, SEXP env, Rboolean useSlots)
 		    SEXP methodsNS = R_FindNamespace(mkString("methods"));
 		    if(methodsNS == R_UnboundValue)
 			error("missing methods namespace: this should not happen");
-		    PROTECT(showS);
 		    PROTECT(methodsNS);
 		    showS = findVarInFrame3(methodsNS, install("show"), TRUE);
-		    UNPROTECT(2);
+		    UNPROTECT(1);
 		    if(showS == R_UnboundValue)
 			error("missing show() in methods namespace: this should not happen");
 		}
