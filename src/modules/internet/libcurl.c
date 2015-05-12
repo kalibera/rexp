@@ -90,7 +90,7 @@ static void curlCommon(CURL *hnd, int redirect, int verify)
     SEXP agentFun = PROTECT(lang2(sMakeUserAgent, ScalarLogical(0)));
     SEXP utilsNS = PROTECT(R_FindNamespace(mkString("utils")));
     SEXP sua = eval(agentFun, utilsNS);
-    UNPROTECT(1);
+    UNPROTECT(1); /* utilsNS */
     PROTECT(sua);
     if(TYPEOF(sua) != NILSXP)
 	curl_easy_setopt(hnd, CURLOPT_USERAGENT, CHAR(STRING_ELT(sua, 0)));
