@@ -66,8 +66,6 @@
 #endif
 #endif
 
-#include <stdlib.h>
-#define RCHOICE(x) (rand() < ((RAND_MAX/100.0)*(x)))
 
 #ifndef VALGRIND_LEVEL
 # define VALGRIND_LEVEL 0
@@ -237,8 +235,7 @@ static int gc_force_gap = 0;
 static Rboolean gc_inhibit_release = FALSE;
 #define FORCE_GC (gc_force_wait > 0 ? (--gc_force_wait > 0 ? 0 : (gc_force_wait = gc_force_gap, 1)) : 0)
 #else
-//# define FORCE_GC 0
-  # define FORCE_GC RCHOICE(30) /* run GC even though not needed */ 
+# define FORCE_GC 0
 #endif
 
 #ifdef R_MEMORY_PROFILING
@@ -735,11 +732,7 @@ static R_size_t R_NodesInUse = 0;
 } while (0)
 
 #define NO_FREE_NODES() (R_NodesInUse >= R_NSize)
-//#define GET_FREE_NODE(s) CLASS_GET_FREE_NODE(0,s)
-#define GET_FREE_NODE(s) do { \
-  if (RCHOICE(5)) CLASS_GET_FREE_NODE(0,s);  /* allocate a dummy node */ \
-  CLASS_GET_FREE_NODE(0,s); \
-} while(0)
+#define GET_FREE_NODE(s) CLASS_GET_FREE_NODE(0,s)
 
 
 /* Debugging Routines. */
@@ -1524,10 +1517,6 @@ static void RunGenCollect(R_size_t size_needed)
 	    num_old_gens_to_collect++;
 	}
 	else break;
-    }
-    
-    if (RCHOICE(10)) { // collect all generations anyway
-      num_old_gens_to_collect = NUM_OLD_GENERATIONS;
     }
 
 #ifdef PROTECTCHECK
@@ -2862,15 +2851,6 @@ static void gc_end_timing(void)
 
 static void R_gc_internal(R_size_t size_needed)
 {
-  // randomization experiment
-  
-  if (RCHOICE(20)) { // just increase the heap, but don't collect
-    AdjustHeapSize(size_needed);
-    return;
-  }
-
-
-
     R_size_t onsize = R_NSize /* can change during collection */;
     double ncells, vcells, vfrac, nfrac;
     SEXPTYPE first_bad_sexp_type = 0;
