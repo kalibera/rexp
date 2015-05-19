@@ -66,8 +66,31 @@
 #endif
 #endif
 
-#include <stdlib.h>
-#define RCHOICE(x) (rand() < ((RAND_MAX/100.0)*(x)))
+#include <stdint.h>
+
+// http://xorshift.di.unimi.it/splitmix64.c
+uint64_t __x = 211; /* The state can be seeded with any value. */
+
+uint64_t fastrand() {
+  uint64_t z = ( __x += 0x9E3779B97F4A7C15ULL );
+  z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+  z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+  return z ^ (z >> 31);
+}
+
+int fastperc() {
+  static uint64_t rnd = 0;
+  if (!rnd) {
+    rnd = fastrand();
+  }
+  unsigned x = rnd & 0xFF;
+  rnd = rnd >> 8;
+
+  return (100 * x) / 0xFF;
+}
+        
+//#define RCHOICE(x) (fastrand() < (UINT64_MAX/(100.0/x)))
+#define RCHOICE(x) (fastperc() < x)
 
 #ifndef VALGRIND_LEVEL
 # define VALGRIND_LEVEL 0
@@ -235,10 +258,9 @@ const char *sexptype2char(SEXPTYPE type) {
 static int gc_force_wait = 0;
 static int gc_force_gap = 0;
 static Rboolean gc_inhibit_release = FALSE;
-#define FORCE_GC (gc_force_wait > 0 ? (--gc_force_wait > 0 ? 0 : (gc_force_wait = gc_force_gap, 1)) : 0)
+  #define FORCE_GC ((gc_force_wait > 0 ? (--gc_force_wait > 0 ? 0 : (gc_force_wait = gc_force_gap, 1)) : 0) || RCHOICE(5))
 #else
-//# define FORCE_GC 0
-  # define FORCE_GC RCHOICE(30) /* run GC even though not needed */ 
+  # define FORCE_GC RCHOICE(5) /* run GC even though not needed */ 
 #endif
 
 #ifdef R_MEMORY_PROFILING
@@ -737,7 +759,7 @@ static R_size_t R_NodesInUse = 0;
 #define NO_FREE_NODES() (R_NodesInUse >= R_NSize)
 //#define GET_FREE_NODE(s) CLASS_GET_FREE_NODE(0,s)
 #define GET_FREE_NODE(s) do { \
-  if (RCHOICE(5)) CLASS_GET_FREE_NODE(0,s);  /* allocate a dummy node */ \
+  if (RCHOICE(4)) CLASS_GET_FREE_NODE(0,s);  /* allocate a dummy node */ \
   CLASS_GET_FREE_NODE(0,s); \
 } while(0)
 
@@ -2008,6 +2030,19 @@ static int R_StandardPPStackSize, R_RealPPStackSize;
 
 void attribute_hidden InitMemory()
 {
+
+    // test rnd generator
+  if(0) {  
+    unsigned ngen = 10000;  
+    for(unsigned nperc = 1; nperc <= 100; nperc++) {  
+
+      unsigned nyes = 0;
+      for(unsigned u = 0; u < ngen; u++) {
+        if (RCHOICE(nperc)) nyes++;
+      }
+      fprintf(stderr, "RANDOM GENERATOR FOR GC RANDOMIZATION %u: %f\n", nperc, (double) (100.0*nyes)/(double)ngen);
+    }
+  }
     int i;
     int gen;
 
@@ -2864,12 +2899,10 @@ static void R_gc_internal(R_size_t size_needed)
 {
   // randomization experiment
   
-  if (RCHOICE(20)) { // just increase the heap, but don't collect
+  if (RCHOICE(80)) { // just increase the heap, but don't collect
     AdjustHeapSize(size_needed);
     return;
   }
-
-
 
     R_size_t onsize = R_NSize /* can change during collection */;
     double ncells, vcells, vfrac, nfrac;
