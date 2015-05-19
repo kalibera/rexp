@@ -92,6 +92,11 @@ int fastperc() {
 //#define RCHOICE(x) (fastrand() < (UINT64_MAX/(100.0/x)))
 #define RCHOICE(x) (fastperc() < x)
 
+// http://stackoverflow.com/questions/2509679/how-to-generate-a-random-number-from-within-a-range
+// http://stackoverflow.com/questions/5008804/generating-random-integer-from-a-range
+
+#define RUNIF(limit) (fastrand() % limit)
+
 #ifndef VALGRIND_LEVEL
 # define VALGRIND_LEVEL 0
 #endif
@@ -1222,6 +1227,46 @@ static void SortNodes(void)
 #endif
 
 
+static void RandomizeNodesOrder(void)
+{
+    SEXP s;
+    int i;
+
+    for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++) {
+	PAGE_HEADER *page;
+	int node_size = NODE_SIZE(i);
+	int page_count = (R_PAGE_SIZE - sizeof(PAGE_HEADER)) / node_size;
+	
+	  // generate an identity permutation
+	int perm[page_count];
+	for(int j = 0; j < page_count; j++) {
+	  perm[j] = j;
+	}
+
+	SET_NEXT_NODE(R_GenHeap[i].New, R_GenHeap[i].New);
+	SET_PREV_NODE(R_GenHeap[i].New, R_GenHeap[i].New);
+	for (page = R_GenHeap[i].pages; page != NULL; page = page->next) {
+	    int j;
+	    char *data = PAGE_DATA(page);
+
+	    for(j = 0; j < page_count; j++) { // shuffle - generate a random permutation
+	      int jswap = RUNIF(page_count);
+	      int oldp = perm[j];	  
+	      perm[j] = perm[jswap];
+	      perm[jswap] = oldp;
+            }
+            
+	    for (j = 0; j < page_count; j++) {
+		s = (SEXP) (data + (perm[j] * node_size));
+		if (! NODE_IS_MARKED(s))
+		    SNAP_NODE(s, R_GenHeap[i].New);
+	    }
+	}
+	R_GenHeap[i].Free = NEXT_NODE(R_GenHeap[i].New);
+    }
+}
+
+
 /* Finalization and Weak References */
 
 /* The design of this mechanism is very close to the one described in
@@ -1850,6 +1895,9 @@ static void RunGenCollect(R_size_t size_needed)
 	SortNodes();
 #endif
 
+    if (gens_collected == NUM_OLD_GENERATIONS)
+	RandomizeNodesOrder();
+   
     if (gc_reporting) {
 	REprintf("Garbage collection %d = %d", gc_count, gen_gc_counts[0]);
 	for (i = 0; i < NUM_OLD_GENERATIONS; i++)
