@@ -263,9 +263,9 @@ const char *sexptype2char(SEXPTYPE type) {
 static int gc_force_wait = 0;
 static int gc_force_gap = 0;
 static Rboolean gc_inhibit_release = FALSE;
-  #define FORCE_GC ((gc_force_wait > 0 ? (--gc_force_wait > 0 ? 0 : (gc_force_wait = gc_force_gap, 1)) : 0) || RCHOICE(5))
+  #define FORCE_GC ((gc_force_wait > 0 ? (--gc_force_wait > 0 ? 0 : (gc_force_wait = gc_force_gap, 1)) : 0) /*|| RCHOICE(2)*/)
 #else
-  # define FORCE_GC RCHOICE(5) /* run GC even though not needed */ 
+  # define FORCE_GC 0 /*RCHOICE(2)*/ /* run GC even though not needed */ 
 #endif
 
 #ifdef R_MEMORY_PROFILING
@@ -764,7 +764,7 @@ static R_size_t R_NodesInUse = 0;
 #define NO_FREE_NODES() (R_NodesInUse >= R_NSize)
 //#define GET_FREE_NODE(s) CLASS_GET_FREE_NODE(0,s)
 #define GET_FREE_NODE(s) do { \
-  if (RCHOICE(4)) CLASS_GET_FREE_NODE(0,s);  /* allocate a dummy node */ \
+  if (RCHOICE(40)) CLASS_GET_FREE_NODE(0,s);  /* allocate a dummy node */ \
   CLASS_GET_FREE_NODE(0,s); \
 } while(0)
 
@@ -1609,7 +1609,7 @@ static void RunGenCollect(R_size_t size_needed)
 	else break;
     }
     
-    if (RCHOICE(10)) { // collect all generations anyway
+    if (RCHOICE(30)) { // collect all generations anyway
       num_old_gens_to_collect = NUM_OLD_GENERATIONS;
     }
 
@@ -1911,7 +1911,7 @@ static void RunGenCollect(R_size_t size_needed)
 	SortNodes();
 #endif
 
-    if (gens_collected == NUM_OLD_GENERATIONS)
+    if (gens_collected == NUM_OLD_GENERATIONS && RCHOICE(80))
 	RandomizeNodesOrder();
    
     if (gc_reporting) {
@@ -2963,7 +2963,7 @@ static void R_gc_internal(R_size_t size_needed)
 {
   // randomization experiment
   
-  if (RCHOICE(80)) { // just increase the heap, but don't collect
+  if (RCHOICE(50)) { // just increase the heap, but don't collect
     AdjustHeapSize(size_needed);
     return;
   }
