@@ -1237,31 +1237,47 @@ static void RandomizeNodesOrder(void)
 	int node_size = NODE_SIZE(i);
 	int page_count = (R_PAGE_SIZE - sizeof(PAGE_HEADER)) / node_size;
 	
-	  // generate an identity permutation
-	int perm[page_count];
-	for(int j = 0; j < page_count; j++) {
-	  perm[j] = j;
-	}
 
 	SET_NEXT_NODE(R_GenHeap[i].New, R_GenHeap[i].New);
 	SET_PREV_NODE(R_GenHeap[i].New, R_GenHeap[i].New);
-	for (page = R_GenHeap[i].pages; page != NULL; page = page->next) {
+	
+	int n_new_nodes = 0;
+	for (page = R_GenHeap[i].pages; page != NULL; page = page->next) { // count nodes to snap
 	    int j;
 	    char *data = PAGE_DATA(page);
 
-	    for(j = 0; j < page_count; j++) { // shuffle - generate a random permutation
-	      int jswap = RUNIF(page_count);
-	      int oldp = perm[j];	  
-	      perm[j] = perm[jswap];
-	      perm[jswap] = oldp;
-            }
-            
-	    for (j = 0; j < page_count; j++) {
-		s = (SEXP) (data + (perm[j] * node_size));
+	    for (j = 0; j < page_count; j++, data += node_size) {
+		s = (SEXP) data;
 		if (! NODE_IS_MARKED(s))
-		    SNAP_NODE(s, R_GenHeap[i].New);
+		    n_new_nodes++;
 	    }
 	}
+	
+	SEXP tosnap[n_new_nodes];
+	int si = 0;
+	
+	for (page = R_GenHeap[i].pages; page != NULL; page = page->next) { // record nodes to snap
+	    int j;
+	    char *data = PAGE_DATA(page);
+
+	    for (j = 0; j < page_count; j++, data += node_size) {
+		s = (SEXP) data;
+		if (! NODE_IS_MARKED(s))
+		    tosnap[si++] = s;
+	    }
+	}
+	
+        for(int j = 0; j < n_new_nodes; j++) { // randomize snap order
+          int jswap = RUNIF(n_new_nodes);
+          SEXP oldp = tosnap[j];	  
+          tosnap[j] = tosnap[jswap];
+          tosnap[jswap] = oldp;
+        }
+        
+        for(int j = 0; j < n_new_nodes; j++) { // snap (in random order)
+          SNAP_NODE(tosnap[j], R_GenHeap[i].New);
+        }
+        
 	R_GenHeap[i].Free = NEXT_NODE(R_GenHeap[i].New);
     }
 }
