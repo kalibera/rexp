@@ -1253,7 +1253,10 @@ static void RandomizeNodesOrder(void)
 	    }
 	}
 	
-	SEXP tosnap[n_new_nodes];
+	SEXP* tosnap = (SEXP*) malloc(n_new_nodes * sizeof(SEXP));
+	if (!tosnap) {
+	  return; // do not reorder
+	}
 	int si = 0;
 	
 	for (page = R_GenHeap[i].pages; page != NULL; page = page->next) { // record nodes to snap
@@ -1277,6 +1280,7 @@ static void RandomizeNodesOrder(void)
         for(int j = 0; j < n_new_nodes; j++) { // snap (in random order)
           SNAP_NODE(tosnap[j], R_GenHeap[i].New);
         }
+        free(tosnap);
         
 	R_GenHeap[i].Free = NEXT_NODE(R_GenHeap[i].New);
     }
