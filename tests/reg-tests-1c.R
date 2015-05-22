@@ -760,3 +760,30 @@ stopifnot(as.numeric(huge) == Inf,
           as.numeric(micro) == 0)
 ## Both failed in R <= 3.2.0
 
+
+## vcov() failed on manova() results, PR#16380
+tear <- c(6.5, 6.2, 5.8, 6.5, 6.5, 6.9, 7.2, 6.9, 6.1, 6.3, 6.7, 6.6, 7.2, 7.1, 6.8, 7.1, 7.0, 7.2, 7.5, 7.6)
+gloss <- c(9.5, 9.9, 9.6, 9.6, 9.2, 9.1, 10.0, 9.9, 9.5, 9.4, 9.1, 9.3, 8.3, 8.4, 8.5, 9.2, 8.8, 9.7, 10.1, 9.2)
+opacity <- c(4.4, 6.4, 3.0, 4.1, 0.8, 5.7, 2.0, 3.9, 1.9, 5.7, 2.8, 4.1, 3.8,1.6, 3.4, 8.4, 5.2, 6.9, 2.7, 1.9)
+Y <- cbind(tear, gloss, opacity)
+rate <- factor(gl(2,10), labels = c("Low", "High"))
+fit <- manova(Y ~ rate)
+vcov(fit)
+## Gave error because coef.aov() turned matrix of coefficients into a vector
+
+
+## Unary / Binary uses of logic operations, PR#16385
+tools::assertError(`&`(FALSE))
+tools::assertError(`|`(TRUE))
+## Did not give errors in R <= 3.2.0
+E <- tryCatch(`!`(), error = function(e)e)
+stopifnot(grepl("0 arguments .*\\<1", conditionMessage(E)))
+## Gave wrong error message in R <= 3.2.0
+
+
+## cummax(<integer>)
+iNA <- NA_integer_
+x <- c(iNA, 1L)
+stopifnot(identical(cummin(x), c(iNA, iNA)),
+          identical(cummax(x), c(iNA, iNA)))
+## an initial NA was not propaged in R <= 3.2.0

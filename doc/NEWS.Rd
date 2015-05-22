@@ -29,7 +29,7 @@
       \code{grep()} and friends.
 
       \item Experimental new functionality for S3 method checking, notably
-      \code{isS3method()}.  Also, the \R \dQuote{language element} names
+      \code{isS3method()}.  Also, the \R \sQuote{language element} names
       are exported as \code{tools::langElts}.
 
       \item \code{str(x)} now displays \code{"Time-Series"} also for
@@ -39,7 +39,18 @@
       now accepts \file{*.tar.gz} files as well as \file{*.zip} files
       (but defaults to the latter).
 
-      \item new programmeR's utility \code{chkDots}.
+      \item New programmeR's utility function \code{chkDots()}.
+
+      \item \code{D()} now signals an error when given invalid input,
+      rather than silently returning \code{NA}.  (Request of John Nash.)
+
+      \item \code{formula} objects are slightly more \dQuote{first class}:
+      e.g., \code{formula()} or \code{new("formula", y ~ x)} are now
+      valid.  Similarly, for \code{"table"}, \code{"ordered"} and
+      \code{"summary.table"}.  Packages defining S4 classes with the above
+      S3/S4 classes as slots should be reinstalled.
+      % notably if their classes are reused in other
+      % packages. e.g. re-install arules for arulesSequence, flexmix for betareg
     }
   }
 
@@ -64,6 +75,13 @@
       \item C-level \code{asChar(x)} is fixed for when \code{x} is not a
       vector, and it returns \dQuote{TRUE}/\dQuote{FALSE} instead of
       \dQuote{T}/\dQuote{F} for logical vectors.
+
+      \item \code{.colSums()} etc (with an initial dot) first argument
+      name \code{x} matches \code{colSums()} such that error messages
+      are correct.
+
+      \item A \code{coef.maov()} method has been added to allow
+      \code{vcov()} to work with multivariate results. (\PR{16380})
     }
   }
 }
@@ -90,6 +108,12 @@
       \item \code{lengths(x)} now also works (trivially) for atomic
       \code{x} and hence can be used more generally as an efficient
       replacement of \code{sapply(x, length)} and similar.
+
+      \item The included version of PCRE has been updated to 8.37, a
+      bug-fix release.
+
+      \item \code{diag()} no longer duplicates a matrix when extracting
+      its diagonal.
     }
   }
 
@@ -136,11 +160,25 @@
       in scientific format with extremely large exponents.  (\PR{16358})
 
       \item If the CRAN mirror was not set, \code{install.packages(type = "both")}
-      and related functions could repeatedly query the user for it.  
+      and related functions could repeatedly query the user for it.
       (Part of \PR{16362})
-      
-      \item The low-level functions \code{.rowSums()} etc. did not 
+
+      \item The low-level functions \code{.rowSums()} etc. did not
       check the length of their argument, so could segfault. (\PR{16367})
+
+      \item The \code{quietly} argument of \code{library()} is correctly
+      propagated from \code{.getRequiredPackages2()} now.
+
+      \item Under some circumstances using the internal PCRE would cause
+      external libs such as \code{-llzma} to omitted from the main link.
+
+      \item The .Primitive default methods of the logic operators, i.e.,
+      \code{!}, \code{&} and \code{|}, now give correct error messages
+      when appropriate, e.g., for \code{`&`(TRUE)} or \code{`!`()}.
+      (\PR{16385})
+
+      \item \code{cummax(x)} now correctly propagates \code{NA}s also
+      when \code{x} is of type \code{integer} and begins with an \code{NA}.
     }
   }
 }
