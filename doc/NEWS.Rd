@@ -51,6 +51,23 @@
       S3/S4 classes as slots should be reinstalled.
       % notably if their classes are reused in other
       % packages. e.g. re-install arules for arulesSequence, flexmix for betareg
+
+      \item New function \code{strrep()} for repeating the elements of a
+      character vector.
+
+      \item \code{rapply} preserves attributes on the list when
+      \code{how="replace"}.
+
+      \item New S3 generic function \code{sigma()} with methods for
+      extracting the estimated standard deviation aka \dQuote{residual
+	standard deviation} from a fitted model.
+
+      \item \code{news()} now displays \R and package news files within
+      the HTML help system if it is available.  If no news file is found,
+      a visible \code{NULL} is returned to the console.
+
+      \item \code{as.raster(x)} now also accepts \code{\link{raw}}
+      arrays \code{x} assuming values in \code{0:255}.
     }
   }
 
@@ -82,11 +99,39 @@
 
       \item A \code{coef.maov()} method has been added to allow
       \code{vcov()} to work with multivariate results. (\PR{16380})
+
+      \item \code{options(OutDec = s)} now signals a warning (which will
+      become an error in the future) when \code{s} is not a string with
+      exactly one character, as that has been a documented requirement.
+      %% Move to R-patched together with next one, after a while
+
+      \item \code{prettyNum()} gains a new option \code{input.d.mark}
+      which together with other changes, e.g., the default for
+      \code{decimal.mark}, fixes some \code{format()}ting variants with
+      non-default \code{getOption("OutDec")} such as in \PR{16411}.
     }
   }
 }
 
-\section{\Rlogo CHANGES IN R 3.2.0 patched}{
+\section{\Rlogo CHANGES IN R 3.2.1 patched}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{cmdscale()} gets new option \code{list.} for increased
+      flexibility when a list should be returned.
+    }
+  }
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item The HTML help page links to demo code failed due to a change
+      in \R 3.2.0.  (\PR{16432})
+      
+      \item If \code{na.action} was used in \code{model.frame}, the 
+      original data could be modified. (\PR{16436})
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.2.1}{
   \subsection{NEW FEATURES}{
     \itemize{
       \item \code{utf8ToInt()} now checks that its input is valid UTF-8
@@ -114,6 +159,10 @@
 
       \item \code{diag()} no longer duplicates a matrix when extracting
       its diagonal.
+
+      \item \code{as.character.srcref()} gains an argument to allow
+      characters corresponding to a range of source references to be
+      extracted.
     }
   }
 
@@ -166,11 +215,12 @@
       \item The low-level functions \code{.rowSums()} etc. did not
       check the length of their argument, so could segfault. (\PR{16367})
 
-      \item The \code{quietly} argument of \code{library()} is correctly
-      propagated from \code{.getRequiredPackages2()} now.
+      \item The \code{quietly} argument of \code{library()} is now
+      correctly propagated from \code{.getRequiredPackages2()}.
 
-      \item Under some circumstances using the internal PCRE would cause
-      external libs such as \code{-llzma} to omitted from the main link.
+      \item Under some circumstances using the internal PCRE when
+      building \R from source would cause external libs such as
+      \code{-llzma} to be omitted from the main link.
 
       \item The .Primitive default methods of the logic operators, i.e.,
       \code{!}, \code{&} and \code{|}, now give correct error messages
@@ -179,6 +229,24 @@
 
       \item \code{cummax(x)} now correctly propagates \code{NA}s also
       when \code{x} is of type \code{integer} and begins with an \code{NA}.
+
+      \item \code{summaryRprof()} could fail when the profile contained
+      only two records.  (\PR{16395})
+
+      \item HTML vignettes opened using \code{vignette()} did not support
+      links into the rest of the HTML help system.  (Links worked properly
+      when the vignette was opened using \code{browseVignettes()} or from
+      within the help system.)
+
+      \item \code{arima(*, xreg = .)} (for \eqn{d \ge 1}{d >= 1})
+      computes estimated variances based on a the number of effective
+      observations as in \R version 3.0.1 and earlier.  (\PR{16278})
+
+      \item \code{slotNames(.)} is now correct for \code{"signature"}
+      objects (mostly used internally in \pkg{methods}).
+
+      \item On some systems, the first string comparison after
+      a locale change would result in \code{NA}.
     }
   }
 }

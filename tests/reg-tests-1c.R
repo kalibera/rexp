@@ -779,6 +779,9 @@ tools::assertError(`|`(TRUE))
 E <- tryCatch(`!`(), error = function(e)e)
 stopifnot(grepl("0 arguments .*\\<1", conditionMessage(E)))
 ## Gave wrong error message in R <= 3.2.0
+stopifnot(identical(!matrix(TRUE), matrix(FALSE)),
+	  identical(!matrix(FALSE), matrix(TRUE)))
+## was wrong for while in R 3.2.0 patched
 
 
 ## cummax(<integer>)
@@ -786,4 +789,43 @@ iNA <- NA_integer_
 x <- c(iNA, 1L)
 stopifnot(identical(cummin(x), c(iNA, iNA)),
           identical(cummax(x), c(iNA, iNA)))
-## an initial NA was not propaged in R <= 3.2.0
+## an initial NA was not propagated in R <= 3.2.0
+
+
+## summaryRprof failed for very short profile, PR#16395
+profile <- tempfile()
+writeLines(c(
+'memory profiling: sample.interval=20000',
+':145341:345360:13726384:0:"stdout"',
+':208272:345360:19600000:0:"stdout"'), profile)
+summaryRprof(filename = profile, memory = "both")
+unlink(profile)
+## failed when a matrix was downgraded to a vector
+
+
+## option(OutDec = *)  -- now gives a warning when  not 1 character
+op <- options(OutDec = ".", digits = 7, # <- default
+              warn = 2)# <- (unexpected) warnings become errors
+stopifnot(identical("3.141593", fpi <- format(pi)))
+options(OutDec = ",")
+stopifnot(identical("3,141593", cpi <- format(pi)))
+## warnings, but it "works" (for now):
+tools::assertWarning(options(OutDec = ".1."))
+stopifnot(identical("3.1.141593", format(pi)))
+tools::assertWarning(options(OutDec = ""))
+tools::assertWarning(stopifnot(identical("3141593", format(pi))))
+options(op)# back to sanity
+## No warnings in R versions <= 3.2.1
+
+
+## format(*, decimal.mark=".")  when   OutDec != "."  (PR#16411)
+op <- options(OutDec = ",")
+stopifnot(identical(fpi, format(pi, decimal.mark=".")))
+## failed in R <= 3.2.1
+
+
+## model.frame() removed ts attributes on original data (PR#16436)
+orig <- class(EuStockMarkets)  
+mf <- model.frame(EuStockMarkets ~ 1, na.action=na.fail)
+stopifnot(identical(orig, class(EuStockMarkets)))  
+## ts class lost in R <= 3.2.1

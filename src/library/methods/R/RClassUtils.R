@@ -752,8 +752,7 @@ reconcilePropertiesAndPrototype <-
       }
       ## check for conflicts in the slots
       allProps <- properties
-      for(i in seq_along(superClasses)) {
-          cl <- superClasses[[i]]
+      for(cl in superClasses) {
           clDef <- getClassDef(cl, where)
           if(is(clDef, "classRepresentation")) {
               theseProperties <- getSlots(clDef)
@@ -992,8 +991,7 @@ possibleExtends <- function(class1, class2, ClassDef1, ClassDef2)
             if(!.identC(class(ClassDef2), "classRepresentation") &&
                isClassUnion(ClassDef2))
                 ## a simple TRUE iff class1 or one of its superclasses belongs to the union
-		i <- as.logical(anyDuplicated(c(class1, unique(nm1),
-						names(ext))))
+		            i <- any(c(class1, nm1) %in% names(ext))
             else {
                 ## class1 could be multiple classes here.
                 ## I think we want to know if any extend
@@ -1936,8 +1934,7 @@ assign("#HAS_DUPLICATE_CLASS_NAMES", FALSE, envir = .classTable)
             pkg <- prev@package # start a per-package list
             if(identical(pkg, newpkg)) { # redefinition
                 ## cache for S3, to override possible previous cache
-                base:::.cache_class(name, .extendsForS3(def))
-##                base:::.cache_class(name, extends(def))
+                .cache_class(name, .extendsForS3(def))
                 return(assign(name, def, envir = .classTable))
             }
             else if(.simpleDuplicateClass(def, prev))
@@ -2272,9 +2269,9 @@ classesToAM <- function(classes, includeSubclasses = FALSE,
   if(length(abbr) != 1 || is.na(abbr))
     stop("argument 'abbreviate' must be 0, 1, 2, or 3")
   if(abbr %% 2)
-    dimnames(value)[[1]] <- base::abbreviate(dimnames(value)[[1]])
+    dimnames(value)[[1]] <- abbreviate(dimnames(value)[[1]])
   if(abbr %/% 2)
-    dimnames(value)[[2]] <- base::abbreviate(dimnames(value)[[2]])
+    dimnames(value)[[2]] <- abbreviate(dimnames(value)[[2]])
   value
 }
 

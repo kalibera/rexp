@@ -32,7 +32,7 @@ findGeneric <- function(fname, envir, warnS4only = TRUE)
 	fMethsEnv <- methods::getMethodsForDispatch(f)
         meths <- as.list(fMethsEnv, all.names=TRUE)
         r <- meths[grep("^ANY\\b", names(meths))]
-	if(any(ddm <- vapply(r, is, logical(1L), "derivedDefaultMethod")))
+	if(any(ddm <- vapply(r, methods::is, logical(1L), "derivedDefaultMethod")))
 	    f <- r[ddm][[1]]@.Data
 	else if(warnS4only)
 	    warning(gettextf(
@@ -309,7 +309,7 @@ isS3method <- function(method, f, class, envir = parent.frame())
 	## know: f is a knownS3generic, and method m is a visible function
 	pkg <- if(isNamespace(em <- environment(m))) environmentName(em)
 	       else if(is.primitive(m)) "base" else NULL
-	return(is.na(match(method, tools:::nonS3methods(pkg)))) ## TRUE unless an exception
+	return(is.na(match(method, tools::nonS3methods(pkg)))) ## TRUE unless an exception
     }
     ## also look for registered method in namespaces
     defenv <- if(!is.na(w <- .knownS3Generics[f])) asNamespace(w)

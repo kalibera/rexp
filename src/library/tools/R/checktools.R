@@ -214,6 +214,11 @@ function(dir,
 
     ## Install what is needed.
 
+    if(xvfb) {
+        pid <- start_virtual_X11_fb(xvfb_options)
+        on.exit(close_virtual_X11_db(pid), add = TRUE)
+    }
+
     depends <-
         package_dependencies(pnames, available, which = "most")
     depends <- setdiff(unique(unlist(depends, use.names = FALSE)),
@@ -311,11 +316,6 @@ function(dir,
                             env = env))
     }
 
-    if(xvfb) {
-        pid <- start_virtual_X11_fb(xvfb_options)
-        on.exit(close_virtual_X11_db(pid), add = TRUE)
-    }
-
     if(Ncpus > 1L) {
         if(os_type != "windows") {
             timings <- parallel::mclapply(pfiles,
@@ -341,7 +341,7 @@ function(dir,
 
     timings <- do.call(rbind, lapply(timings, summary))
     rownames(timings) <- pnames
-    write.table(timings, "timings.tab")
+    utils::write.table(timings, "timings.tab")
 
     file.rename(sprintf("%s.Rcheck", rnames),
                 sprintf("rdepends_%s.Rcheck", rnames))
@@ -582,7 +582,7 @@ function(dir, all = FALSE, full = FALSE)
         tfiles <- Sys.glob(file.path(R_check_outdirs(dir, all = all),
                                      "*-Ex.timings"))
         if(length(tfiles)) message("")
-        timings <- lapply(tfiles, read.table, header = TRUE)
+        timings <- lapply(tfiles, utils::read.table, header = TRUE)
         ## Order by CPU time.
         timings <- lapply(timings,
                           function(x)

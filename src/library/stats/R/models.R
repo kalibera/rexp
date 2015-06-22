@@ -389,7 +389,7 @@ model.frame.default <-
     ## and note the number of rows.
     possible_newdata <-
         !missing(data) && is.data.frame(data) &&
-        identical(deparse(substitute(data)), "newdata") &&
+        identical(substitute(data), quote(newdata)) &&
         (nr <- nrow(data)) > 0
 
     ## were we passed just a fitted model object?
@@ -403,6 +403,7 @@ model.frame.default <-
         m <- match(c("formula", "data", "subset", "weights", "na.action"),
                    names(fcall), 0)
         fcall <- fcall[c(1, m)]
+        ## need stats:: for non-standard evaluation
         fcall[[1L]] <- quote(stats::model.frame)
         env <- environment(formula$terms)
 	if (is.null(env)) env <- parent.frame()
