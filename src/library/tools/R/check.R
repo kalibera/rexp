@@ -1319,7 +1319,7 @@ setRlibs <-
 
     check_R_code <- function()
     {
-        if (!is_base_pkg) {
+        ## if (!is_base_pkg) {
             checkingLog(Log, "dependencies in R code")
             if (do_install) {
                 Rcmd <- paste("options(warn=1, showErrorCalls=FALSE)\n",
@@ -1346,7 +1346,7 @@ setRlibs <-
                     ## wrapLog(msg_DESCRIPTION)
                 } else resultLog(Log, "OK")
             }
-        }
+        ## }
 
         ## Check whether methods have all arguments of the corresponding
         ## generic.
@@ -1495,7 +1495,11 @@ setRlibs <-
             Rcmd <-
                 paste("options(warn=1)\n",
                       sprintf("tools:::.check_code_usage_in_package(package = \"%s\")\n", pkgname))
-            out3 <- R_runR2(Rcmd, "R_DEFAULT_PACKAGES=")
+            out3 <- if(config_val_to_logical(Sys.getenv("_R_CHECK_CODE_USAGE_WITH_ONLY_BASE_ATTACHED_",
+                                                        "false")))
+                R_runR2(Rcmd, "R_DEFAULT_PACKAGES=NULL")
+            else
+                R_runR2(Rcmd, "R_DEFAULT_PACKAGES=")
         }
 
         if(!is_base_pkg && R_check_use_codetools && R_check_dot_internal) {
@@ -4415,6 +4419,7 @@ setRlibs <-
         prev <- Sys.getenv("_R_CHECK_SCREEN_DEVICE_", NA)
         if(is.na(prev)) Sys.setenv("_R_CHECK_SCREEN_DEVICE_" = "stop")
         Sys.setenv("_R_CHECK_CODE_USAGE_VIA_NAMESPACES_" = "TRUE")
+        Sys.setenv("_R_CHECK_CODE_USAGE_WITH_ONLY_BASE_ATTACHED_" = "TRUE")
         Sys.setenv("_R_CHECK_S3_METHODS_NOT_REGISTERED_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE

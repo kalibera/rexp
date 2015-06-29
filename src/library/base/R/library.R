@@ -133,8 +133,8 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                 message(gettextf("package %s has a license that you need to accept:\naccording to the DESCRIPTION file it is", sQuote(pkg)), domain = NA)
                 message(pkgInfo$DESCRIPTION["License"], domain = NA)
             }
-            choice <- menu(c("accept", "decline"),
-                           title = paste("License for", sQuote(pkg)))
+            choice <- utils::menu(c("accept", "decline"),
+                                  title = paste("License for", sQuote(pkg)))
             if(choice != 1)
                 stop(gettextf("license for package %s not accepted",
                               sQuote(package)), domain = NA, call. = FALSE)
@@ -626,7 +626,7 @@ function(all.available = FALSE, lib.loc = NULL)
         return(unique(ans))
     } ## else
     s <- search()
-    return(invisible(substring(s[substr(s, 1L, 8L) == "package:"], 9)))
+    invisible(.rmpkg(s[substr(s, 1L, 8L) == "package:"]))
 }
 
 path.package <-
