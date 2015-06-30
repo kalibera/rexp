@@ -1271,9 +1271,12 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		    R_xlen_t k = XLENGTH(u);
 		    if (k > 0) {
 			R_xlen_t idx = (!umatrix) ? rows : k;
-			for (R_xlen_t i = 0; i < idx; i++)
+			R_xlen_t ui = 0;
+			for (R_xlen_t i = 0; i < idx; i++, ui++) {
+			    if (ui == k) ui = 0;
 			    SET_VECTOR_ELT(result, n++,
-					   lazy_duplicate(VECTOR_ELT(u, i % k)));
+					   lazy_duplicate(VECTOR_ELT(u, ui)));
+			}
 		    }
 		    UNPROTECT(1);
 		    break;
@@ -1320,8 +1323,11 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 			n += idx;
 		    }
 		    else {
-			for (R_xlen_t i = 0; i < idx; i++)
-			    REAL(result)[n++] = (INTEGER(u)[i % k]) == NA_INTEGER ? NA_REAL : INTEGER(u)[i % k];
+			R_xlen_t ui = 0;
+			for (R_xlen_t i = 0; i < idx; i++, ui++) {
+			    if (ui == k) ui = 0;
+			    REAL(result)[n++] = (INTEGER(u)[ui]) == NA_INTEGER ? NA_REAL : INTEGER(u)[ui];
+			}
 		    }
 		}
 		else if (TYPEOF(u) == REALSXP) {
@@ -1333,12 +1339,19 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		       defined as raw < logical -- it is possible to represent logical as
 		       raw losslessly but not vice versa. So due to the way this was
 		       defined the raw -> logical conversion is bound to be lossy .. */
-		    if (mode == LGLSXP)
-			for (R_xlen_t i = 0; i < idx; i++)
-			    LOGICAL(result)[n++] = RAW(u)[i % k] ? TRUE : FALSE;
-		    else
-			for (R_xlen_t i = 0; i < idx; i++)
-			    INTEGER(result)[n++] = (unsigned char) RAW(u)[i % k];
+		    if (mode == LGLSXP) {
+			R_xlen_t ui = 0;
+			for (R_xlen_t i = 0; i < idx; i++, ui++) {
+			    if (ui == k) ui = 0;
+			    LOGICAL(result)[n++] = RAW(u)[ui] ? TRUE : FALSE;
+			}
+		    } else {
+			R_xlen_t ui = 0;
+			for (R_xlen_t i = 0; i < idx; i++, ui++) {
+			    if (ui == k) ui = 0;
+			    INTEGER(result)[n++] = (unsigned char) RAW(u)[ui];
+			}
+		    }
 		}
 	    }
 	}
