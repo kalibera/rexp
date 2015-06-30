@@ -477,3 +477,58 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
     else
 	copyVector(s, t);
 }
+
+#define COPY_WITH_REUSE(VALTYPE, TNAME) \
+void xcopy##TNAME##WithReuse(VALTYPE *dst, VALTYPE *src, R_xlen_t n, R_xlen_t nsrc) { \
+                                                        \
+    if (nsrc >= n) { /* no reuse needed */		\
+        for(R_xlen_t i = 0; i < n; i++) 		\
+            dst[i] = src[i]; 				\
+        return; 					\
+    }							\
+    if (nsrc == 1) {					\
+        VALTYPE val = src[0];				\
+        for(R_xlen_t i = 0; i < n; i++)			\
+            dst[i] = val;				\
+        return;						\
+    }							\
+                                                        \
+    /* reuse needed */					\
+    R_xlen_t sidx = 0;					\
+    for(R_xlen_t i = 0; i < n; i++, sidx++) {		\
+        if (sidx == nsrc) sidx = 0;			\
+        dst[i] = src[sidx];				\
+    }							\
+}
+
+COPY_WITH_REUSE(Rcomplex, Complex)	/* xcopyComplexWithReuse */
+COPY_WITH_REUSE(int, Integer)		/* xcopyIntegerWithReuse */
+COPY_WITH_REUSE(int, Logical)		/* xcopyLogicalWithReuse */
+COPY_WITH_REUSE(Rbyte, Raw)		/* xcopyRawWithReuse */
+COPY_WITH_REUSE(double, Real)		/* xcopyRealWithReuse */
+
+#define COPY_ELT_WITH_REUSE(TNAME, GETELT, SETELT) \
+void xcopy##TNAME##WithReuse(SEXP dst, SEXP src, R_xlen_t n, R_xlen_t nsrc) { \
+                                                        \
+    if (nsrc >= n) { /* no reuse needed */		\
+        for(R_xlen_t i = 0; i < n; i++) 		\
+            SETELT(dst, i, GETELT(src, i)); 		\
+        return; 					\
+    }							\
+    if (nsrc == 1) {					\
+        SEXP val = GETELT(src, 0);			\
+        for(R_xlen_t i = 0; i < n; i++)			\
+            SETELT(dst, i, val);			\
+        return;						\
+    }							\
+                                                        \
+    /* reuse needed */					\
+    R_xlen_t sidx = 0;					\
+    for(R_xlen_t i = 0; i < n; i++, sidx++) {		\
+        if (sidx == nsrc) sidx = 0;			\
+        SETELT(dst, i, GETELT(src, sidx));		\
+    }							\
+}
+
+COPY_ELT_WITH_REUSE(String, STRING_ELT, SET_STRING_ELT); /* xcopyStringWithReuse */
+COPY_ELT_WITH_REUSE(Vector, VECTOR_ELT, SET_VECTOR_ELT); /* xcopyVectorWithReuse */
