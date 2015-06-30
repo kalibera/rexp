@@ -959,7 +959,7 @@ SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(x = coerceVector(CAR(args), anstype));
 	r = INTEGER(x);
 	n = XLENGTH(x);
-	for(i = 0; i < len; i++) ra[i] = r[i % n];
+	xcopyIntegerWithReuse(ra, r, len, n);
 	UNPROTECT(1);
 	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
 	    x = CAR(a);
@@ -992,7 +992,7 @@ SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(x = coerceVector(CAR(args), anstype));
 	r = REAL(x);
 	n = XLENGTH(x);
-	for(i = 0; i < len; i++) ra[i] = r[i % n];
+	xcopyRealWithReuse(ra, r, len, n);
 	UNPROTECT(1);
 	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
 	    PROTECT(x = coerceVector(CAR(a), anstype));

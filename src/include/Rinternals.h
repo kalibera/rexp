@@ -890,6 +890,12 @@ SEXP Rf_mkCharCE(const char *, cetype_t);
 SEXP Rf_mkCharLenCE(const char *, int, cetype_t);
 const char *Rf_reEnc(const char *x, cetype_t ce_in, cetype_t ce_out, int subst);
 
+void Rf_xcopyComplexWithReuse(Rcomplex *dst, Rcomplex *src, R_xlen_t n, R_xlen_t nsrc);
+void Rf_xcopyIntegerWithReuse(int *dst, int *src, R_xlen_t n, R_xlen_t nsrc);
+void Rf_xcopyLogicalWithReuse(int *dst, int *src, R_xlen_t n, R_xlen_t nsrc);
+void Rf_xcopyRawWithReuse(Rbyte *dst, Rbyte *src, R_xlen_t n, R_xlen_t nsrc);
+void Rf_xcopyRealWithReuse(double *dst, double *src, R_xlen_t n, R_xlen_t nsrc);
+
 				/* return(.) NOT reached : for -Wall */
 #define error_return(msg)	{ Rf_error(msg);	   return R_NilValue; }
 #define errorcall_return(cl,msg){ Rf_errorcall(cl, msg);   return R_NilValue; }
@@ -1262,6 +1268,11 @@ void R_orderVector(int *indx, int n, SEXP arglist, Rboolean nalast, Rboolean dec
 #define VectorToPairList	Rf_VectorToPairList
 #define warningcall		Rf_warningcall
 #define warningcall_immediate	Rf_warningcall_immediate
+#define xcopyComplexWithReuse	Rf_xcopyComplexWithReuse
+#define xcopyIntegerWithReuse	Rf_xcopyIntegerWithReuse
+#define xcopyLogicalWithReuse	Rf_xcopyLogicalWithReuse
+#define xcopyRawWithReuse	Rf_xcopyRawWithReuse
+#define xcopyRealWithReuse	Rf_xcopyRealWithReuse
 #define xlength(x)		Rf_xlength(x)
 #define xlengthgets		Rf_xlengthgets
 

@@ -374,20 +374,16 @@ void copyVector(SEXP s, SEXP t)
 	    SET_STRING_ELT(s, i, STRING_ELT(t, i % nt));
 	break;
     case LGLSXP:
-	for (R_xlen_t i = 0; i < ns; i++)
-	    LOGICAL(s)[i] = LOGICAL(t)[i % nt];
+	xcopyLogicalWithReuse(LOGICAL(s), LOGICAL(t), ns, nt);
 	break;
     case INTSXP:
-	for (R_xlen_t i = 0; i < ns; i++)
-	    INTEGER(s)[i] = INTEGER(t)[i % nt];
+	xcopyIntegerWithReuse(INTEGER(s), INTEGER(t), ns, nt);
 	break;
     case REALSXP:
-	for (R_xlen_t i = 0; i < ns; i++)
-	    REAL(s)[i] = REAL(t)[i % nt];
+	xcopyRealWithReuse(REAL(s), REAL(t), ns, nt);
 	break;
     case CPLXSXP:
-	for (R_xlen_t i = 0; i < ns; i++)
-	    COMPLEX(s)[i] = COMPLEX(t)[i % nt];
+	xcopyComplexWithReuse(COMPLEX(s), COMPLEX(t), ns, nt);
 	break;
     case EXPRSXP:
     case VECSXP:
@@ -395,8 +391,7 @@ void copyVector(SEXP s, SEXP t)
 	    SET_VECTOR_ELT(s, i, VECTOR_ELT(t, i % nt));
 	break;
     case RAWSXP:
-	for (R_xlen_t i = 0; i < ns; i++)
-	    RAW(s)[i] = RAW(t)[i % nt];
+	xcopyRawWithReuse(RAW(s), RAW(t), ns, nt);
 	break;
     default:
 	UNIMPLEMENTED_TYPE("copyVector", s);

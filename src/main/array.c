@@ -1564,28 +1564,25 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     switch(TYPEOF(vals)) {
     case LGLSXP:
 	if (nans && lendat)
-	    for (i = 0; i < nans; i++)
-		LOGICAL(ans)[i] = LOGICAL(vals)[i % lendat];
+	    xcopyLogicalWithReuse(LOGICAL(ans), LOGICAL(vals), nans, lendat);
 	else
 	    for (i = 0; i < nans; i++) LOGICAL(ans)[i] = NA_LOGICAL;
 	break;
     case INTSXP:
 	if (nans && lendat)
-	    for (i = 0; i < nans; i++)
-		INTEGER(ans)[i] = INTEGER(vals)[i % lendat];
+	    xcopyIntegerWithReuse(INTEGER(ans), INTEGER(vals), nans, lendat);
 	else
 	    for (i = 0; i < nans; i++) INTEGER(ans)[i] = NA_INTEGER;
 	break;
     case REALSXP:
 	if (nans && lendat)
-	    for (i = 0; i < nans; i++) REAL(ans)[i] = REAL(vals)[i % lendat];
+	    xcopyRealWithReuse(REAL(ans), REAL(vals), nans, lendat);
 	else
 	    for (i = 0; i < nans; i++) REAL(ans)[i] = NA_REAL;
 	break;
     case CPLXSXP:
 	if (nans && lendat)
-	    for (i = 0; i < nans; i++)
-		COMPLEX(ans)[i] = COMPLEX(vals)[i % lendat];
+	    xcopyComplexWithReuse(COMPLEX(ans), COMPLEX(vals), nans, lendat);
 	else {
 	    Rcomplex na_cmplx;
 	    na_cmplx.r = NA_REAL;
@@ -1595,7 +1592,7 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
 	break;
     case RAWSXP:
 	if (nans && lendat)
-	    for (i = 0; i < nans; i++) RAW(ans)[i] = RAW(vals)[i % lendat];
+	    xcopyRawWithReuse(RAW(ans), RAW(vals), nans, lendat);
 	else
 	    for (i = 0; i < nans; i++) RAW(ans)[i] = 0;
 	break;

@@ -2519,3 +2519,33 @@ void str_signif(void *x, R_xlen_t n, const char *type, int width, int digits,
     }
     vmaxset(vmax);
 }
+
+
+#define COPY_WITH_REUSE(VALTYPE, TNAME) \
+void xcopy##TNAME##WithReuse(VALTYPE *dst, VALTYPE *src, R_xlen_t n, R_xlen_t nsrc) { \
+                                                        \
+    if (nsrc >= n) { /* no reuse needed */		\
+        for(R_xlen_t i = 0; i < n; i++) 		\
+            dst[i] = src[i]; 				\
+        return; 					\
+    }							\
+    if (nsrc == 1) {					\
+        VALTYPE val = src[0];				\
+        for(R_xlen_t i = 0; i < n; i++)			\
+            dst[i] = val;				\
+        return;						\
+    }							\
+                                                        \
+    /* reuse needed */					\
+    R_xlen_t sidx = 0;					\
+    for(R_xlen_t i = 0; i < n; i++, sidx++) {		\
+        if (sidx == nsrc) sidx = 0;			\
+        dst[i] = src[sidx];				\
+    }							\
+}
+
+COPY_WITH_REUSE(Rcomplex, Complex)	/* xcopyComplexWithReuse */
+COPY_WITH_REUSE(int, Integer)		/* xcopyIntegerWithReuse */
+COPY_WITH_REUSE(int, Logical)		/* xcopyLogicalWithReuse */
+COPY_WITH_REUSE(Rbyte, Raw)		/* xcopyRawWithReuse */
+COPY_WITH_REUSE(double, Real)		/* xcopyRealWithReuse */
