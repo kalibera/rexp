@@ -479,7 +479,8 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 }
 
 #define COPY_WITH_REUSE(VALTYPE, TNAME) \
-void xcopy##TNAME##WithReuse(VALTYPE *dst, VALTYPE *src, R_xlen_t dstart, R_xlen_t n, R_xlen_t nsrc) { \
+void attribute_hidden \
+xcopy##TNAME##WithReuse(VALTYPE *dst, VALTYPE *src, R_xlen_t dstart, R_xlen_t n, R_xlen_t nsrc) { \
                                                         \
     if (nsrc >= n) { /* no reuse needed */		\
         for(R_xlen_t i = 0; i < n; i++) 		\
@@ -508,7 +509,8 @@ COPY_WITH_REUSE(Rbyte, Raw)		/* xcopyRawWithReuse */
 COPY_WITH_REUSE(double, Real)		/* xcopyRealWithReuse */
 
 #define COPY_ELT_WITH_REUSE(TNAME, GETELT, SETELT) \
-void xcopy##TNAME##WithReuse(SEXP dst, SEXP src, R_xlen_t dstart, R_xlen_t n, R_xlen_t nsrc) { \
+void attribute_hidden \
+xcopy##TNAME##WithReuse(SEXP dst, SEXP src, R_xlen_t dstart, R_xlen_t n, R_xlen_t nsrc) { \
                                                         \
     if (nsrc >= n) { /* no reuse needed */		\
         for(R_xlen_t i = 0; i < n; i++) 		\

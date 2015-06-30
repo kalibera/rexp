@@ -1418,6 +1418,27 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 } /* cbind */
 
 
+#define FILL_WITH_REUSE(VALTYPE, TNAME) \
+static void xfill##TNAME##MatrixWithReuse(VALTYPE *dst, VALTYPE *src,	\
+    R_xlen_t dstart, R_xlen_t drows, R_xlen_t srows, 			\
+    R_xlen_t cols, R_xlen_t nsrc) {					\
+                                                                        \
+    for(R_xlen_t i = 0; i < srows; i++) {				\
+        R_xlen_t sidx = i;						\
+        for(R_xlen_t j = 0; j < cols; j++, sidx += srows) {		\
+            if (sidx >= nsrc) sidx -= nsrc;				\
+            dst[dstart + i + (j * drows)] = src[sidx];			\
+        }								\
+    }									\
+}
+
+FILL_WITH_REUSE(Rcomplex, Complex);	/* xfillComplexMatrixWithReuse */
+FILL_WITH_REUSE(int, Integer);		/* xfillIntegerMatrixWithReuse */
+/* FILL_WITH_REUSE(int, Logical); */	/* xfillLogicalMatrixWithReuse */
+FILL_WITH_REUSE(Rbyte, Raw);		/* xfillRawMatrixWithReuse */
+FILL_WITH_REUSE(double, Real);		/* xfillRealMatrixWithReuse */
+
+
 static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		  int deparse_level)
 {
@@ -1540,10 +1561,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		u = coerceVector(u, RAWSXP);
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		for (R_xlen_t i = 0; i < idx; i++)
-		    for (int j = 0; j < cols; j++)
-			RAW(result)[i + n + (j * rows)]
-			    = RAW(u)[(i + j * idx) % k];
+		xfillRawMatrixWithReuse(RAW(result), RAW(u), n, rows, idx, cols, k);
 		n += idx;
 	    }
 	}
@@ -1555,10 +1573,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		u = coerceVector(u, CPLXSXP);
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		for (R_xlen_t i = 0; i < idx; i++)
-		    for (int j = 0; j < cols; j++)
-			COMPLEX(result)[i + n + (j * rows)]
-			    = COMPLEX(u)[(i + j * idx) % k];
+		xfillComplexMatrixWithReuse(COMPLEX(result), COMPLEX(u), n, rows, idx, cols, k);
 		n += idx;
 	    }
 	}
@@ -1571,10 +1586,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
 		if (TYPEOF(u) <= INTSXP) {
 		    if (mode <= INTSXP) {
-			for (R_xlen_t i = 0; i < idx; i++)
-			    for (int j = 0; j < cols; j++)
-				INTEGER(result)[i + n + (j * rows)]
-				    = INTEGER(u)[(i + j * idx) % k];
+			xfillIntegerMatrixWithReuse(INTEGER(result), INTEGER(u), n, rows, idx, cols, k);
 			n += idx;
 		    }
 		    else {
@@ -1586,10 +1598,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		    }
 		}
 		else if (TYPEOF(u) == REALSXP) {
-		    for (R_xlen_t i = 0; i < idx; i++)
-			for (int j = 0; j < cols; j++)
-			    REAL(result)[i + n + (j * rows)]
-				= REAL(u)[(i + j * idx) % k];
+		    xfillRealMatrixWithReuse(REAL(result), REAL(u), n, rows, idx, cols, k);
 		    n += idx;
 		}
 		else { /* RAWSXP */
