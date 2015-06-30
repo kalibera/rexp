@@ -1564,25 +1564,25 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     switch(TYPEOF(vals)) {
     case LGLSXP:
 	if (nans && lendat)
-	    xcopyLogicalWithReuse(LOGICAL(ans), LOGICAL(vals), nans, lendat);
+	    xcopyLogicalWithReuse(LOGICAL(ans), LOGICAL(vals), 0, nans, lendat);
 	else
 	    for (i = 0; i < nans; i++) LOGICAL(ans)[i] = NA_LOGICAL;
 	break;
     case INTSXP:
 	if (nans && lendat)
-	    xcopyIntegerWithReuse(INTEGER(ans), INTEGER(vals), nans, lendat);
+	    xcopyIntegerWithReuse(INTEGER(ans), INTEGER(vals), 0, nans, lendat);
 	else
 	    for (i = 0; i < nans; i++) INTEGER(ans)[i] = NA_INTEGER;
 	break;
     case REALSXP:
 	if (nans && lendat)
-	    xcopyRealWithReuse(REAL(ans), REAL(vals), nans, lendat);
+	    xcopyRealWithReuse(REAL(ans), REAL(vals), 0, nans, lendat);
 	else
 	    for (i = 0; i < nans; i++) REAL(ans)[i] = NA_REAL;
 	break;
     case CPLXSXP:
 	if (nans && lendat)
-	    xcopyComplexWithReuse(COMPLEX(ans), COMPLEX(vals), nans, lendat);
+	    xcopyComplexWithReuse(COMPLEX(ans), COMPLEX(vals), 0, nans, lendat);
 	else {
 	    Rcomplex na_cmplx;
 	    na_cmplx.r = NA_REAL;
@@ -1592,20 +1592,20 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
 	break;
     case RAWSXP:
 	if (nans && lendat)
-	    xcopyRawWithReuse(RAW(ans), RAW(vals), nans, lendat);
+	    xcopyRawWithReuse(RAW(ans), RAW(vals), 0, nans, lendat);
 	else
 	    for (i = 0; i < nans; i++) RAW(ans)[i] = 0;
 	break;
     /* Rest are already initialized */
     case STRSXP:
 	if (nans && lendat)
-	    xcopyStringWithReuse(ans, vals, nans, lendat);
+	    xcopyStringWithReuse(ans, vals, 0, nans, lendat);
 	break;
     case VECSXP:
     case EXPRSXP:
 #ifdef SWITCH_TO_REFCNT
 	if (nans && lendat)
-	    xcopyVectorWithReuse(ans, vals, nans, lendat);
+	    xcopyVectorWithReuse(ans, vals, 0, nans, lendat);
 #else
 	if (nans && lendat) {
 	    /* Need to guard against possible sharing of values under

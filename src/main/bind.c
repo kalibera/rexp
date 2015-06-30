@@ -1245,8 +1245,8 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		u = coerceVector(u, STRSXP);
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (!isMatrix(u)) ? rows : k;
-		for (R_xlen_t i = 0; i < idx; i++)
-		    SET_STRING_ELT(result, n++, STRING_ELT(u, i % k));
+		xcopyStringWithReuse(result, u, n, idx, k);
+		n += idx;
 	    }
 	}
     }
@@ -1291,8 +1291,8 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		u = coerceVector(u, CPLXSXP);
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (!isMatrix(u)) ? rows : k;
-		for (R_xlen_t i = 0; i < idx; i++)
-		    COMPLEX(result)[n++] = COMPLEX(u)[i % k];
+		xcopyComplexWithReuse(COMPLEX(result), COMPLEX(u), n, idx, k);
+		n += idx;
 	    }
 	}
     }
@@ -1303,8 +1303,8 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		u = coerceVector(u, RAWSXP);
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (!isMatrix(u)) ? rows : k;
-		for (R_xlen_t i = 0; i < idx; i++)
-		    RAW(result)[n++] = RAW(u)[i % k];
+		xcopyRawWithReuse(RAW(result), RAW(u), n, idx, k);
+		n += idx;
 	    }
 	}
     }
@@ -1316,8 +1316,8 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		R_xlen_t idx = (!isMatrix(u)) ? rows : k;
 		if (TYPEOF(u) <= INTSXP) { /* INT or LGL */
 		    if (mode <= INTSXP) {
-			for (R_xlen_t i = 0; i < idx; i++)
-			    INTEGER(result)[n++] = INTEGER(u)[i % k];
+			xcopyIntegerWithReuse(INTEGER(result), INTEGER(u), n, idx, k);
+			n += idx;
 		    }
 		    else {
 			for (R_xlen_t i = 0; i < idx; i++)
@@ -1325,8 +1325,8 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		    }
 		}
 		else if (TYPEOF(u) == REALSXP) {
-		    for (R_xlen_t i = 0; i < idx; i++)
-			REAL(result)[n++] = REAL(u)[i % k];
+		    xcopyRealWithReuse(REAL(result), REAL(u), n, idx, k);
+		    n += idx;
 		}
 		else { /* RAWSXP */
 		    /* FIXME: I'm not sure what the author intended when the sequence was

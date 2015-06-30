@@ -370,26 +370,26 @@ void copyVector(SEXP s, SEXP t)
     R_xlen_t ns = XLENGTH(s), nt = XLENGTH(t);
     switch (sT) {
     case STRSXP:
-	xcopyStringWithReuse(s, t, ns, nt);
+	xcopyStringWithReuse(s, t, 0, ns, nt);
 	break;
     case LGLSXP:
-	xcopyLogicalWithReuse(LOGICAL(s), LOGICAL(t), ns, nt);
+	xcopyLogicalWithReuse(LOGICAL(s), LOGICAL(t), 0, ns, nt);
 	break;
     case INTSXP:
-	xcopyIntegerWithReuse(INTEGER(s), INTEGER(t), ns, nt);
+	xcopyIntegerWithReuse(INTEGER(s), INTEGER(t), 0, ns, nt);
 	break;
     case REALSXP:
-	xcopyRealWithReuse(REAL(s), REAL(t), ns, nt);
+	xcopyRealWithReuse(REAL(s), REAL(t), 0, ns, nt);
 	break;
     case CPLXSXP:
-	xcopyComplexWithReuse(COMPLEX(s), COMPLEX(t), ns, nt);
+	xcopyComplexWithReuse(COMPLEX(s), COMPLEX(t), 0, ns, nt);
 	break;
     case EXPRSXP:
     case VECSXP:
-	xcopyVectorWithReuse(s, t, ns, nt);
+	xcopyVectorWithReuse(s, t, 0, ns, nt);
 	break;
     case RAWSXP:
-	xcopyRawWithReuse(RAW(s), RAW(t), ns, nt);
+	xcopyRawWithReuse(RAW(s), RAW(t), 0, ns, nt);
 	break;
     default:
 	UNIMPLEMENTED_TYPE("copyVector", s);
@@ -479,17 +479,17 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 }
 
 #define COPY_WITH_REUSE(VALTYPE, TNAME) \
-void xcopy##TNAME##WithReuse(VALTYPE *dst, VALTYPE *src, R_xlen_t n, R_xlen_t nsrc) { \
+void xcopy##TNAME##WithReuse(VALTYPE *dst, VALTYPE *src, R_xlen_t dstart, R_xlen_t n, R_xlen_t nsrc) { \
                                                         \
     if (nsrc >= n) { /* no reuse needed */		\
         for(R_xlen_t i = 0; i < n; i++) 		\
-            dst[i] = src[i]; 				\
+            dst[dstart + i] = src[i]; 			\
         return; 					\
     }							\
     if (nsrc == 1) {					\
         VALTYPE val = src[0];				\
         for(R_xlen_t i = 0; i < n; i++)			\
-            dst[i] = val;				\
+            dst[dstart + i] = val;			\
         return;						\
     }							\
                                                         \
@@ -497,7 +497,7 @@ void xcopy##TNAME##WithReuse(VALTYPE *dst, VALTYPE *src, R_xlen_t n, R_xlen_t ns
     R_xlen_t sidx = 0;					\
     for(R_xlen_t i = 0; i < n; i++, sidx++) {		\
         if (sidx == nsrc) sidx = 0;			\
-        dst[i] = src[sidx];				\
+        dst[dstart + i] = src[sidx];			\
     }							\
 }
 
@@ -508,17 +508,17 @@ COPY_WITH_REUSE(Rbyte, Raw)		/* xcopyRawWithReuse */
 COPY_WITH_REUSE(double, Real)		/* xcopyRealWithReuse */
 
 #define COPY_ELT_WITH_REUSE(TNAME, GETELT, SETELT) \
-void xcopy##TNAME##WithReuse(SEXP dst, SEXP src, R_xlen_t n, R_xlen_t nsrc) { \
+void xcopy##TNAME##WithReuse(SEXP dst, SEXP src, R_xlen_t dstart, R_xlen_t n, R_xlen_t nsrc) { \
                                                         \
     if (nsrc >= n) { /* no reuse needed */		\
         for(R_xlen_t i = 0; i < n; i++) 		\
-            SETELT(dst, i, GETELT(src, i)); 		\
+            SETELT(dst, dstart + i, GETELT(src, i)); 	\
         return; 					\
     }							\
     if (nsrc == 1) {					\
         SEXP val = GETELT(src, 0);			\
         for(R_xlen_t i = 0; i < n; i++)			\
-            SETELT(dst, i, val);			\
+            SETELT(dst, dstart + i, val);		\
         return;						\
     }							\
                                                         \
@@ -526,7 +526,7 @@ void xcopy##TNAME##WithReuse(SEXP dst, SEXP src, R_xlen_t n, R_xlen_t nsrc) { \
     R_xlen_t sidx = 0;					\
     for(R_xlen_t i = 0; i < n; i++, sidx++) {		\
         if (sidx == nsrc) sidx = 0;			\
-        SETELT(dst, i, GETELT(src, sidx));		\
+        SETELT(dst, dstart + i, GETELT(src, sidx));	\
     }							\
 }
 
