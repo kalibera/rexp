@@ -1599,15 +1599,13 @@ SEXP attribute_hidden do_array(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Rest are already initialized */
     case STRSXP:
 	if (nans && lendat)
-	    for (i = 0; i < nans; i++)
-		SET_STRING_ELT(ans, i, STRING_ELT(vals, i % lendat));
+	    xcopyStringWithReuse(ans, vals, nans, lendat);
 	break;
     case VECSXP:
     case EXPRSXP:
 #ifdef SWITCH_TO_REFCNT
 	if (nans && lendat)
-	    for (i = 0; i < nans; i++)
-		SET_VECTOR_ELT(ans, i, VECTOR_ELT(vals, i % lendat));
+	    xcopyVectorWithReuse(ans, vals, nans, lendat);
 #else
 	if (nans && lendat) {
 	    /* Need to guard against possible sharing of values under

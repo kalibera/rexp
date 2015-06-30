@@ -370,8 +370,7 @@ void copyVector(SEXP s, SEXP t)
     R_xlen_t ns = XLENGTH(s), nt = XLENGTH(t);
     switch (sT) {
     case STRSXP:
-	for (R_xlen_t i = 0; i < ns; i++)
-	    SET_STRING_ELT(s, i, STRING_ELT(t, i % nt));
+	xcopyStringWithReuse(s, t, ns, nt);
 	break;
     case LGLSXP:
 	xcopyLogicalWithReuse(LOGICAL(s), LOGICAL(t), ns, nt);
@@ -387,8 +386,7 @@ void copyVector(SEXP s, SEXP t)
 	break;
     case EXPRSXP:
     case VECSXP:
-	for (R_xlen_t i = 0; i < ns; i++)
-	    SET_VECTOR_ELT(s, i, VECTOR_ELT(t, i % nt));
+	xcopyVectorWithReuse(s, t, ns, nt);
 	break;
     case RAWSXP:
 	xcopyRawWithReuse(RAW(s), RAW(t), ns, nt);

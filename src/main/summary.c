@@ -1020,7 +1020,7 @@ SEXP attribute_hidden do_pmin(SEXP call, SEXP op, SEXP args, SEXP rho)
     {
 	PROTECT(x = coerceVector(CAR(args), anstype));
 	n = XLENGTH(x);
-	for(i = 0; i < len; i++) SET_STRING_ELT(ans, i, STRING_ELT(x, i % n));
+	xcopyStringWithReuse(ans, x, len, n);
 	UNPROTECT(1);
 	for(a = CDR(args); a != R_NilValue; a = CDR(a)) {
 	    SEXP tmp, t2;
