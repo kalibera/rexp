@@ -1152,6 +1152,22 @@ static void SetColNames(SEXP dimnames, SEXP x)
 }
 
 /*
+FILL_VECTOR_ITERATE
+Iterator macro for cbind
+
+    for (R_xlen_t i = 0, sidx = 0; i < n; i++, sidx++) {
+        if (sidx == nsrc) sidx = 0;
+        ...
+    }
+*/
+
+#define FILL_VECTOR_ITERATE(n, nsrc) 		\
+    for(R_xlen_t i = 0, sidx = 0; i < n;	\
+        i++,					\
+        sidx++,					\
+        (sidx == nsrc) ? sidx = 0 : 0)
+
+/*
  * Apparently i % 0 could occur here (PR#2541).  But it should not,
  * as zero-length vectors are ignored and
  * zero-length matrices must have zero columns,
@@ -1271,12 +1287,9 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		    R_xlen_t k = XLENGTH(u);
 		    if (k > 0) {
 			R_xlen_t idx = (!umatrix) ? rows : k;
-			R_xlen_t ui = 0;
-			for (R_xlen_t i = 0; i < idx; i++, ui++) {
-			    if (ui == k) ui = 0;
+			FILL_VECTOR_ITERATE(idx, k)
 			    SET_VECTOR_ELT(result, n++,
-					   lazy_duplicate(VECTOR_ELT(u, ui)));
-			}
+                                lazy_duplicate(VECTOR_ELT(u, sidx)));
 		    }
 		    UNPROTECT(1);
 		    break;
@@ -1323,11 +1336,9 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 			n += idx;
 		    }
 		    else {
-			R_xlen_t ui = 0;
-			for (R_xlen_t i = 0; i < idx; i++, ui++) {
-			    if (ui == k) ui = 0;
-			    REAL(result)[n++] = (INTEGER(u)[ui]) == NA_INTEGER ? NA_REAL : INTEGER(u)[ui];
-			}
+			FILL_VECTOR_ITERATE(idx, k)
+			    REAL(result)[n++] =
+			        (INTEGER(u)[sidx]) == NA_INTEGER ? NA_REAL : INTEGER(u)[sidx];
 		    }
 		}
 		else if (TYPEOF(u) == REALSXP) {
@@ -1340,17 +1351,11 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		       raw losslessly but not vice versa. So due to the way this was
 		       defined the raw -> logical conversion is bound to be lossy .. */
 		    if (mode == LGLSXP) {
-			R_xlen_t ui = 0;
-			for (R_xlen_t i = 0; i < idx; i++, ui++) {
-			    if (ui == k) ui = 0;
-			    LOGICAL(result)[n++] = RAW(u)[ui] ? TRUE : FALSE;
-			}
+			FILL_VECTOR_ITERATE(idx, k)
+			    LOGICAL(result)[n++] = RAW(u)[sidx] ? TRUE : FALSE;
 		    } else {
-			R_xlen_t ui = 0;
-			for (R_xlen_t i = 0; i < idx; i++, ui++) {
-			    if (ui == k) ui = 0;
-			    INTEGER(result)[n++] = (unsigned char) RAW(u)[ui];
-			}
+			FILL_VECTOR_ITERATE(idx, k)
+			    INTEGER(result)[n++] = (unsigned char) RAW(u)[sidx];
 		    }
 		}
 	    }
@@ -1559,7 +1564,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
 		FILL_MATRIX_ITERATE(n, rows, idx, cols, k)
-		    result[didx] = u[sidx];
+		    RAW(result)[didx] = RAW(u)[sidx];
 		n += idx;
 	    }
 	}
@@ -1572,7 +1577,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
 		FILL_MATRIX_ITERATE(n, rows, idx, cols, k)
-		    result[didx] = u[sidx];
+		    COMPLEX(result)[didx] = COMPLEX(u)[sidx];
 		n += idx;
 	    }
 	}
@@ -1586,7 +1591,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		if (TYPEOF(u) <= INTSXP) {
 		    if (mode <= INTSXP) {
 			FILL_MATRIX_ITERATE(n, rows, idx, cols, k)
-			    result[didx] = u[sidx];
+			    INTEGER(result)[didx] = INTEGER(u)[sidx];
 			n += idx;
 		    }
 		    else {
@@ -1598,7 +1603,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		}
 		else if (TYPEOF(u) == REALSXP) {
 		    FILL_MATRIX_ITERATE(n, rows, idx, cols, k)
-			result[didx] = u[sidx];
+			REAL(result)[didx] = REAL(u)[sidx];
 		    n += idx;
 		}
 		else { /* RAWSXP */
