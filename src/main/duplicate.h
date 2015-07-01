@@ -75,4 +75,13 @@ void xfillRealMatrixWithReuse(double *dst, double *src, R_xlen_t dstart, R_xlen_
 void xfillStringMatrixWithReuse(SEXP dst, SEXP src, R_xlen_t dstart, R_xlen_t drows, R_xlen_t srows, R_xlen_t cols, R_xlen_t nsrc);
 void xfillVectorMatrixWithReuse(SEXP dst, SEXP src, R_xlen_t dstart, R_xlen_t drows, R_xlen_t srows, R_xlen_t cols, R_xlen_t nsrc);
 
+#define FILL_MATRIX_BYROW_ITERATE(dstart, drows, dcols, nsrc) 		\
+    for(R_xlen_t i = 0, sidx = 0; i < drows; i++)			\
+        for(R_xlen_t j = 0, didx = dstart + i; j < dcols;		\
+            j++, 							\
+            sidx++,							\
+            (sidx >= nsrc) ? sidx -= nsrc : 0,				\
+            didx += drows)
+
+
 #endif /* R_DUPLICATE_H */

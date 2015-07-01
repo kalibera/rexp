@@ -431,46 +431,38 @@ void copyListMatrix(SEXP s, SEXP t, Rboolean byrow)
 void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 {
     int nr = nrows(s), nc = ncols(s);
-    R_xlen_t k = 0, nt = XLENGTH(t);
+    R_xlen_t nt = XLENGTH(t);
 
     if (byrow) {
-	R_xlen_t NR = nr;
 	switch (TYPEOF(s)) {
 	case STRSXP:
-	    for (int i = 0; i < nr; i++)
-		for (int j = 0; j < nc; j++)
-		    SET_STRING_ELT(s, i + j * NR, STRING_ELT(t, k++ % nt));
+	    FILL_MATRIX_BYROW_ITERATE(0, nr, nc, nt)
+		SET_STRING_ELT(s, didx, STRING_ELT(t, sidx));
 	    break;
 	case LGLSXP:
-	    for (int i = 0; i < nr; i++)
-		for (int j = 0; j < nc; j++)
-		    LOGICAL(s)[i + j * NR] = LOGICAL(t)[k++ % nt];
+	    FILL_MATRIX_BYROW_ITERATE(0, nr, nc, nt)
+		LOGICAL(s)[didx] = LOGICAL(t)[sidx];
 	    break;
 	case INTSXP:
-	    for (int i = 0; i < nr; i++)
-		for (int j = 0; j < nc; j++)
-		    INTEGER(s)[i + j * NR] = INTEGER(t)[k++ % nt];
+	    FILL_MATRIX_BYROW_ITERATE(0, nr, nc, nt)
+		INTEGER(s)[didx] = INTEGER(t)[sidx];
 	    break;
 	case REALSXP:
-	    for (int i = 0; i < nr; i++)
-		for (int j = 0; j < nc; j++)
-		    REAL(s)[i + j * NR] = REAL(t)[k++ % nt];
+	    FILL_MATRIX_BYROW_ITERATE(0, nr, nc, nt)
+		REAL(s)[didx] = REAL(t)[sidx];
 	    break;
 	case CPLXSXP:
-	    for (int i = 0; i < nr; i++)
-		for (int j = 0; j < nc; j++)
-		    COMPLEX(s)[i + j * NR] = COMPLEX(t)[k++ % nt];
+	    FILL_MATRIX_BYROW_ITERATE(0, nr, nc, nt)
+		COMPLEX(s)[didx] = COMPLEX(t)[sidx];
 	    break;
 	case EXPRSXP:
 	case VECSXP:
-	    for (int i = 0; i < nr; i++)
-		for (int j = 0; j < nc; j++)
-		    SET_VECTOR_ELT(s, i + j * NR, VECTOR_ELT(t, k++ % nt));
+	    FILL_MATRIX_BYROW_ITERATE(0, nr, nc, nt)
+		SET_VECTOR_ELT(s, didx, VECTOR_ELT(t, sidx));
 	    break;
 	case RAWSXP:
-	    for (int i = 0; i < nr; i++)
-		for (int j = 0; j < nc; j++)
-		    RAW(s)[i + j * NR] = RAW(t)[k++ % nt];
+	    FILL_MATRIX_BYROW_ITERATE(0, nr, nc, nt)
+		RAW(s)[didx] = RAW(t)[sidx];
 	    break;
 	default:
 	    UNIMPLEMENTED_TYPE("copyMatrix", s);
