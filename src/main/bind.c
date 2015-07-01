@@ -1439,7 +1439,6 @@ Iterator macro for rbind
             (sidx >= nsrc) ? sidx -= nsrc : 0,				\
             didx += drows)
 
-
 static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		  int deparse_level)
 {
