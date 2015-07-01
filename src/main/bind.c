@@ -33,6 +33,8 @@
 #include "RBufferUtils.h"
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
+#include "duplicate.h"
+
 #define LIST_ASSIGN(x) {SET_VECTOR_ELT(data->ans_ptr, data->ans_length, x); data->ans_length++;}
 
 static SEXP cbind(SEXP, SEXP, SEXPTYPE, SEXP, int);
@@ -1152,22 +1154,6 @@ static void SetColNames(SEXP dimnames, SEXP x)
 }
 
 /*
-FILL_VECTOR_ITERATE
-Iterator macro for cbind
-
-    for (R_xlen_t i = 0, sidx = 0; i < n; i++, sidx++) {
-        if (sidx == nsrc) sidx = 0;
-        ...
-    }
-*/
-
-#define FILL_VECTOR_ITERATE(n, nsrc) 		\
-    for(R_xlen_t i = 0, sidx = 0; i < n;	\
-        i++,					\
-        sidx++,					\
-        (sidx == nsrc) ? sidx = 0 : 0)
-
-/*
  * Apparently i % 0 could occur here (PR#2541).  But it should not,
  * as zero-length vectors are ignored and
  * zero-length matrices must have zero columns,
@@ -1422,28 +1408,6 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     return result;
 } /* cbind */
 
-/*    
-FILL_MATRIX_ITERATE
-Iterator macro for rbind
-
-    for(R_xlen_t i = 0; i < srows; i++) {
-        R_xlen_t sidx = i;
-        for(R_xlen_t j = 0; j < cols; j++, sidx += srows) {
-            if (sidx >= nsrc) sidx -= nsrc;
-            didx = dstart + i + (j * drows);
-            ... "dst[didx] = src[sidx]"
-        }
-    }
-*/
-
-#define FILL_MATRIX_ITERATE(dstart, drows, srows, cols, nsrc) 		\
-    for(R_xlen_t i = 0, sidx = 0; i < srows; i++, sidx = i)		\
-        for(R_xlen_t j = 0, didx = dstart + i; j < cols;		\
-            j++, 							\
-            sidx += srows,						\
-            (sidx >= nsrc) ? sidx -= nsrc : 0,				\
-            didx += drows)
-
 static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		  int deparse_level)
 {
@@ -1534,8 +1498,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		u = coerceVector(u, STRSXP);
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		FILL_MATRIX_ITERATE(n, rows, idx, cols, k)
-		    SET_STRING_ELT(result, didx, STRING_ELT(u, sidx));
+		xfillStringMatrixWithReuse(result, u, n, rows, idx, cols, k);
 		n += idx;
 	    }
 	}
@@ -1563,8 +1526,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		u = coerceVector(u, RAWSXP);
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		FILL_MATRIX_ITERATE(n, rows, idx, cols, k)
-		    RAW(result)[didx] = RAW(u)[sidx];
+		xfillRawMatrixWithReuse(RAW(result), RAW(u), n, rows, idx, cols, k);
 		n += idx;
 	    }
 	}
@@ -1576,8 +1538,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		u = coerceVector(u, CPLXSXP);
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
-		FILL_MATRIX_ITERATE(n, rows, idx, cols, k)
-		    COMPLEX(result)[didx] = COMPLEX(u)[sidx];
+		xfillComplexMatrixWithReuse(COMPLEX(result), COMPLEX(u), n, rows, idx, cols, k);
 		n += idx;
 	    }
 	}
@@ -1590,8 +1551,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
 		if (TYPEOF(u) <= INTSXP) {
 		    if (mode <= INTSXP) {
-			FILL_MATRIX_ITERATE(n, rows, idx, cols, k)
-			    INTEGER(result)[didx] = INTEGER(u)[sidx];
+			xfillIntegerMatrixWithReuse(INTEGER(result), INTEGER(u), n, rows, idx, cols, k);
 			n += idx;
 		    }
 		    else {
@@ -1602,8 +1562,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		    }
 		}
 		else if (TYPEOF(u) == REALSXP) {
-		    FILL_MATRIX_ITERATE(n, rows, idx, cols, k)
-			REAL(result)[didx] = REAL(u)[sidx];
+		    xfillRealMatrixWithReuse(REAL(result), REAL(u), n, rows, idx, cols, k);
 		    n += idx;
 		}
 		else { /* RAWSXP */

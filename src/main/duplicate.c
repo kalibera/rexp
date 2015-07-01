@@ -27,6 +27,8 @@
 
 #include <R_ext/RS.h> /* S4 bit */
 
+#include "duplicate.h"
+
 /*  duplicate  -  object duplication  */
 
 /*  Because we try to maintain the illusion of call by
@@ -534,3 +536,30 @@ xcopy##TNAME##WithReuse(SEXP dst, SEXP src, R_xlen_t dstart, R_xlen_t n, R_xlen_
 
 COPY_ELT_WITH_REUSE(String, STRING_ELT, SET_STRING_ELT); /* xcopyStringWithReuse */
 COPY_ELT_WITH_REUSE(Vector, VECTOR_ELT, SET_VECTOR_ELT); /* xcopyVectorWithReuse */
+
+#define FILL_WITH_REUSE(VALTYPE, TNAME) \
+void attribute_hidden xfill##TNAME##MatrixWithReuse(VALTYPE *dst, VALTYPE *src,	\
+    R_xlen_t dstart, R_xlen_t drows, R_xlen_t srows,		\
+    R_xlen_t cols, R_xlen_t nsrc) {				\
+                                                                \
+    FILL_MATRIX_ITERATE(dstart, drows, srows, cols, nsrc)	\
+        dst[didx] = src[sidx];					\
+}
+
+FILL_WITH_REUSE(Rcomplex, Complex);	/* xfillComplexMatrixWithReuse */
+FILL_WITH_REUSE(int, Integer);		/* xfillIntegerMatrixWithReuse */
+FILL_WITH_REUSE(int, Logical);		/* xfillLogicalMatrixWithReuse */
+FILL_WITH_REUSE(Rbyte, Raw);		/* xfillRawMatrixWithReuse */
+FILL_WITH_REUSE(double, Real);		/* xfillRealMatrixWithReuse */
+
+#define FILL_ELT_WITH_REUSE(TNAME, GETELT, SETELT) \
+void attribute_hidden xfill##TNAME##MatrixWithReuse(SEXP dst, SEXP src,	\
+    R_xlen_t dstart, R_xlen_t drows, R_xlen_t srows,		\
+    R_xlen_t cols, R_xlen_t nsrc) {				\
+                                                                \
+    FILL_MATRIX_ITERATE(dstart, drows, srows, cols, nsrc)	\
+        SETELT(dst, didx, GETELT(src, sidx));			\
+}
+
+FILL_ELT_WITH_REUSE(String, STRING_ELT, SET_STRING_ELT); /* xfillStringMatrixWithReuse */
+FILL_ELT_WITH_REUSE(Vector, VECTOR_ELT, SET_VECTOR_ELT); /* xfillVectorMatrixWithReuse */

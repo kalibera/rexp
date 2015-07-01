@@ -29,6 +29,8 @@
 #include <R_ext/RS.h>     /* for Calloc/Free */
 #include <R_ext/Applic.h> /* for dgemm */
 
+#include "duplicate.h"
+
 /* "GetRowNames" and "GetColNames" are utility routines which
  * locate and return the row names and column names from the
  * dimnames attribute of a matrix.  They are useful because
