@@ -63,6 +63,8 @@
 
 #include "arithmetic.h"		/* complex_*  */
 #include <complex.h>
+#include <R_ext/Itermacros.h>
+
 
 /* interval at which to check interrupts, a guess */
 #define NINTERRUPT 10000000
@@ -198,15 +200,11 @@ static double complex mycpow (double complex X, double complex Y)
     return Z;
 }
 
-/* See arithmetic.c */
-#define mod_iterate(n1,n2,i1,i2) for (i=i1=i2=0; i<n; \
-	i1 = (++i1 == n1) ? 0 : i1,\
-	i2 = (++i2 == n2) ? 0 : i2,\
-	++i)
+
 
 SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 {
-    R_xlen_t i,i1, i2, n, n1, n2;
+    R_xlen_t i, i1, i2, n, n1, n2;
     SEXP ans;
 
     /* Note: "s1" and "s2" are protected in the calling code. */
@@ -221,41 +219,38 @@ SEXP attribute_hidden complex_binary(ARITHOP_TYPE code, SEXP s1, SEXP s2)
 
     switch (code) {
     case PLUSOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
+	MOD_ITERATE2_CHECK(NINTERRUPT, n, n1, n2, i, i1, i2, {
+	    Rcomplex x1 = COMPLEX(s1)[i1];
+	    Rcomplex x2 = COMPLEX(s2)[i2];
 	    COMPLEX(ans)[i].r = x1.r + x2.r;
 	    COMPLEX(ans)[i].i = x1.i + x2.i;
-	}
+	});
 	break;
     case MINUSOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    Rcomplex x1 = COMPLEX(s1)[i1], x2 = COMPLEX(s2)[i2];
+	MOD_ITERATE2_CHECK(NINTERRUPT, n, n1, n2, i, i1, i2, {
+	    Rcomplex x1 = COMPLEX(s1)[i1];
+	    Rcomplex x2 = COMPLEX(s2)[i2];
 	    COMPLEX(ans)[i].r = x1.r - x2.r;
 	    COMPLEX(ans)[i].i = x1.i - x2.i;
-	}
+	});
 	break;
     case TIMESOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
+	MOD_ITERATE2_CHECK(NINTERRUPT, n, n1, n2, i, i1, i2, {
 	    SET_C99_COMPLEX(COMPLEX(ans), i,
 			    C99_COMPLEX2(s1, i1) * C99_COMPLEX2(s2, i2));
-	}
+	});
 	break;
     case DIVOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
+	MOD_ITERATE2_CHECK(NINTERRUPT, n, n1, n2, i, i1, i2, {
 	    SET_C99_COMPLEX(COMPLEX(ans), i,
 			    C99_COMPLEX2(s1, i1) / C99_COMPLEX2(s2, i2));
-	}
+	});
 	break;
     case POWOP:
-	mod_iterate(n1, n2, i1, i2) {
-	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
+	MOD_ITERATE2_CHECK(NINTERRUPT, n, n1, n2, i, i1, i2, {
 	    SET_C99_COMPLEX(COMPLEX(ans), i,
 			    mycpow(C99_COMPLEX2(s1, i1), C99_COMPLEX2(s2, i2)));
-	}
+	});
 	break;
     default:
 	error(_("unimplemented complex operation"));
@@ -728,7 +723,7 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
     n = (na < nb) ? nb : na;
     PROTECT(sy = allocVector(CPLXSXP, n));
     a = COMPLEX(sa); b = COMPLEX(sb); y = COMPLEX(sy);
-    mod_iterate(na, nb, ia, ib) {
+    MOD_ITERATE2(n, na, nb, i, ia, ib, {
 	ai = a[ia]; bi = b[ib];
 	if(ISNA(ai.r) && ISNA(ai.i) &&
 	   ISNA(bi.r) && ISNA(bi.i)) {
@@ -739,7 +734,7 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 		 !(ISNAN(ai.r) || ISNAN(ai.i) || ISNAN(bi.r) || ISNAN(bi.i)) )
 		naflag = TRUE;
 	}
-    }
+    });
     if (naflag)
 	warningcall(call, "NaNs produced in function \"%s\"", PRIMNAME(op));
     if(n == na) {
