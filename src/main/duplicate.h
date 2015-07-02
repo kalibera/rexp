@@ -21,8 +21,8 @@
 #define R_DUPLICATE_H
 
 /*
-FILL_VECTOR_ITERATE
-Iterator macro to fill a vector from a vector with re-use
+VECTOR_ITERATE
+Iterator macro to iterate over a vector with re-use
 
     for (R_xlen_t i = 0, sidx = 0; i < n; i++, sidx++) {
         if (sidx == nsrc) sidx = 0;
@@ -30,7 +30,7 @@ Iterator macro to fill a vector from a vector with re-use
     }
 */
 
-#define FILL_VECTOR_ITERATE(n, nsrc) 		\
+#define VECTOR_ITERATE(n, nsrc) 		\
     for(R_xlen_t i = 0, sidx = 0; i < n;	\
         i++,					\
         sidx++,					\

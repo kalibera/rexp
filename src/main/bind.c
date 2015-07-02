@@ -1273,7 +1273,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		    R_xlen_t k = XLENGTH(u);
 		    if (k > 0) {
 			R_xlen_t idx = (!umatrix) ? rows : k;
-			FILL_VECTOR_ITERATE(idx, k)
+			VECTOR_ITERATE(idx, k)
 			    SET_VECTOR_ELT(result, n++,
                                 lazy_duplicate(VECTOR_ELT(u, sidx)));
 		    }
@@ -1322,7 +1322,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 			n += idx;
 		    }
 		    else {
-			FILL_VECTOR_ITERATE(idx, k)
+			VECTOR_ITERATE(idx, k)
 			    REAL(result)[n++] =
 			        (INTEGER(u)[sidx]) == NA_INTEGER ? NA_REAL : INTEGER(u)[sidx];
 		    }
@@ -1337,10 +1337,10 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		       raw losslessly but not vice versa. So due to the way this was
 		       defined the raw -> logical conversion is bound to be lossy .. */
 		    if (mode == LGLSXP) {
-			FILL_VECTOR_ITERATE(idx, k)
+			VECTOR_ITERATE(idx, k)
 			    LOGICAL(result)[n++] = RAW(u)[sidx] ? TRUE : FALSE;
 		    } else {
-			FILL_VECTOR_ITERATE(idx, k)
+			VECTOR_ITERATE(idx, k)
 			    INTEGER(result)[n++] = (unsigned char) RAW(u)[sidx];
 		    }
 		}
