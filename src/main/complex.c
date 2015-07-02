@@ -697,7 +697,7 @@ static void z_atan2(Rcomplex *r, Rcomplex *csn, Rcomplex *ccs)
 typedef void (*cm2_fun)(Rcomplex *, Rcomplex *, Rcomplex *);
 SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    R_xlen_t i, n, na, nb;
+    R_xlen_t i, n, na, nb, ia, ib;
     Rcomplex ai, bi, *a, *b, *y;
     SEXP sa, sb, sy;
     Rboolean naflag = FALSE;
@@ -728,8 +728,8 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
     n = (na < nb) ? nb : na;
     PROTECT(sy = allocVector(CPLXSXP, n));
     a = COMPLEX(sa); b = COMPLEX(sb); y = COMPLEX(sy);
-    for (i = 0; i < n; i++) {
-	ai = a[i % na]; bi = b[i % nb];
+    mod_iterate(na, nb, ia, ib) {
+	ai = a[ia]; bi = b[ib];
 	if(ISNA(ai.r) && ISNA(ai.i) &&
 	   ISNA(bi.r) && ISNA(bi.i)) {
 	    y[i].r = NA_REAL; y[i].i = NA_REAL;

@@ -286,9 +286,16 @@ SEXP attribute_hidden do_logic2(SEXP call, SEXP op, SEXP args, SEXP env)
     return ScalarLogical(ans);
 }
 
+/* See arithmetic.c */
+#define mod_iterate(n1,n2,i1,i2) for (i=i1=i2=0; i<n; \
+	i1 = (++i1 == n1) ? 0 : i1,\
+	i2 = (++i2 == n2) ? 0 : i2,\
+	++i)
+
+
 static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
 {
-    R_xlen_t i, n, n1, n2;
+    R_xlen_t i, n, n1, n2, i1, i2;
     int x1, x2;
     SEXP ans;
 
@@ -303,10 +310,10 @@ static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
 
     switch (code) {
     case 1:		/* & : AND */
-	for (i = 0; i < n; i++) {
+	mod_iterate(n1, n2, i1, i2) {
 //	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    x1 = LOGICAL(s1)[i % n1];
-	    x2 = LOGICAL(s2)[i % n2];
+	    x1 = LOGICAL(s1)[i1];
+	    x2 = LOGICAL(s2)[i2];
 	    if (x1 == 0 || x2 == 0)
 		LOGICAL(ans)[i] = 0;
 	    else if (x1 == NA_LOGICAL || x2 == NA_LOGICAL)
@@ -316,10 +323,10 @@ static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
 	}
 	break;
     case 2:		/* | : OR */
-	for (i = 0; i < n; i++) {
+	mod_iterate(n1, n2, i1, i2) {
 //	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    x1 = LOGICAL(s1)[i % n1];
-	    x2 = LOGICAL(s2)[i % n2];
+	    x1 = LOGICAL(s1)[i1];
+	    x2 = LOGICAL(s2)[i2];
 	    if ((x1 != NA_LOGICAL && x1) || (x2 != NA_LOGICAL && x2))
 		LOGICAL(ans)[i] = 1;
 	    else if (x1 == 0 && x2 == 0)
@@ -337,7 +344,7 @@ static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
 
 static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
 {
-    R_xlen_t i, n, n1, n2;
+    R_xlen_t i, n, n1, n2, i1, i2;
     Rbyte x1, x2;
     SEXP ans;
 
@@ -352,18 +359,18 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
 
     switch (code) {
     case 1:		/* & : AND */
-	for (i = 0; i < n; i++) {
+	mod_iterate(n1, n2, i1, i2) {
 //	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    x1 = RAW(s1)[i % n1];
-	    x2 = RAW(s2)[i % n2];
+	    x1 = RAW(s1)[i1];
+	    x2 = RAW(s2)[i2];
 	    RAW(ans)[i] = x1 & x2;
 	}
 	break;
     case 2:		/* | : OR */
-	for (i = 0; i < n; i++) {
+	mod_iterate(n1, n2, i1, i2) {
 //	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    x1 = RAW(s1)[i % n1];
-	    x2 = RAW(s2)[i % n2];
+	    x1 = RAW(s1)[i1];
+	    x2 = RAW(s2)[i2];
 	    RAW(ans)[i] = x1 | x2;
 	}
 	break;

@@ -1674,7 +1674,7 @@ SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
        Rcomplex *rx = COMPLEX(x), *ra = COMPLEX(ans), zero;
        zero.r = zero.i = 0.0;
        for (R_xlen_t i = 0; i < NR*nc; i++) ra[i] = zero;
-       for (int j = 0; j < mn; j++) ra[j * (NR+1)] = rx[j % nx];
+       FILL_VECTOR_ITERATE(mn, nx) ra[i * (NR+1)] = rx[sidx];
   } else {
        if(TYPEOF(x) != REALSXP) {
 	   PROTECT(x = coerceVector(x, REALSXP));
@@ -1685,7 +1685,7 @@ SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
        R_xlen_t NR = nr;
        double *rx = REAL(x), *ra = REAL(ans);
        for (R_xlen_t i = 0; i < NR*nc; i++) ra[i] = 0.0;
-       for (int j = 0; j < mn; j++) ra[j * (NR+1)] = rx[j % nx];
+       FILL_VECTOR_ITERATE(mn, nx) ra[i * (NR+1)] = rx[sidx];
    }
    UNPROTECT(nprotect);
    return ans;
