@@ -20,23 +20,6 @@
 #ifndef R_DUPLICATE_H
 #define R_DUPLICATE_H
 
-/*
-VECTOR_ITERATE
-Iterator macro to iterate over a vector with re-use
-
-    for (R_xlen_t i = 0, sidx = 0; i < n; i++, sidx++) {
-        if (sidx == nsrc) sidx = 0;
-        ...
-    }
-*/
-
-#define VECTOR_ITERATE(n, nsrc) 		\
-    for(R_xlen_t i = 0, sidx = 0; i < n;	\
-        i++,					\
-        sidx++,					\
-        (sidx == nsrc) ? sidx = 0 : 0)
-
-
 /*    
 FILL_MATRIX_ITERATE
 Iterator macro to fill a matrix from a vector with re-use of vector

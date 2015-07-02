@@ -28,6 +28,7 @@
 #include <Defn.h>
 #include <Internal.h>
 #include <R_ext/PrtUtil.h> // for IndexWidth
+#include <R_ext/Itermacros.h>
 #define imax2(x, y) ((x < y) ? y : x)
 
 #include "RBufferUtils.h"
@@ -1273,9 +1274,11 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		    R_xlen_t k = XLENGTH(u);
 		    if (k > 0) {
 			R_xlen_t idx = (!umatrix) ? rows : k;
-			VECTOR_ITERATE(idx, k)
+			R_xlen_t i, i1;
+			MOD_ITERATE1(idx, k, i, i1, {
 			    SET_VECTOR_ELT(result, n++,
-                                lazy_duplicate(VECTOR_ELT(u, sidx)));
+                                lazy_duplicate(VECTOR_ELT(u, i1)));
+			});
 		    }
 		    UNPROTECT(1);
 		    break;
@@ -1322,9 +1325,11 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 			n += idx;
 		    }
 		    else {
-			VECTOR_ITERATE(idx, k)
+			R_xlen_t i, i1;
+			MOD_ITERATE1(idx, k, i, i1, {
 			    REAL(result)[n++] =
-			        (INTEGER(u)[sidx]) == NA_INTEGER ? NA_REAL : INTEGER(u)[sidx];
+			        (INTEGER(u)[i1]) == NA_INTEGER ? NA_REAL : INTEGER(u)[i1];
+			});
 		    }
 		}
 		else if (TYPEOF(u) == REALSXP) {
@@ -1337,11 +1342,15 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 		       raw losslessly but not vice versa. So due to the way this was
 		       defined the raw -> logical conversion is bound to be lossy .. */
 		    if (mode == LGLSXP) {
-			VECTOR_ITERATE(idx, k)
-			    LOGICAL(result)[n++] = RAW(u)[sidx] ? TRUE : FALSE;
+			R_xlen_t i, i1;
+			MOD_ITERATE1(idx, k, i, i1, {
+			    LOGICAL(result)[n++] = RAW(u)[i1] ? TRUE : FALSE;
+			});
 		    } else {
-			VECTOR_ITERATE(idx, k)
-			    INTEGER(result)[n++] = (unsigned char) RAW(u)[sidx];
+			R_xlen_t i, i1;
+			MOD_ITERATE1(idx, k, i, i1, {
+			    INTEGER(result)[n++] = (unsigned char) RAW(u)[i1];
+			});
 		    }
 		}
 	    }

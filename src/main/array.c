@@ -28,6 +28,7 @@
 #include <Rmath.h>
 #include <R_ext/RS.h>     /* for Calloc/Free */
 #include <R_ext/Applic.h> /* for dgemm */
+#include <R_ext/Itermacros.h>
 
 #include "duplicate.h"
 
@@ -1674,7 +1675,10 @@ SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
        Rcomplex *rx = COMPLEX(x), *ra = COMPLEX(ans), zero;
        zero.r = zero.i = 0.0;
        for (R_xlen_t i = 0; i < NR*nc; i++) ra[i] = zero;
-       VECTOR_ITERATE(mn, nx) ra[i * (NR+1)] = rx[sidx];
+       R_xlen_t i, i1;
+       MOD_ITERATE1(mn, nx, i, i1, {
+	   ra[i * (NR+1)] = rx[i1];
+       });
   } else {
        if(TYPEOF(x) != REALSXP) {
 	   PROTECT(x = coerceVector(x, REALSXP));
@@ -1685,7 +1689,10 @@ SEXP attribute_hidden do_diag(SEXP call, SEXP op, SEXP args, SEXP rho)
        R_xlen_t NR = nr;
        double *rx = REAL(x), *ra = REAL(ans);
        for (R_xlen_t i = 0; i < NR*nc; i++) ra[i] = 0.0;
-       VECTOR_ITERATE(mn, nx) ra[i * (NR+1)] = rx[sidx];
+       R_xlen_t i, i1;
+       MOD_ITERATE1(mn, nx, i, i1, {
+	   ra[i * (NR+1)] = rx[i1];
+       });
    }
    UNPROTECT(nprotect);
    return ans;
