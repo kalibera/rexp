@@ -68,9 +68,16 @@
 
       \item \code{as.raster(x)} now also accepts \code{\link{raw}}
       arrays \code{x} assuming values in \code{0:255}.
-      
+
       \item Subscripting of matrix/array objects of type
       \code{"expression"} is now supported.
+
+      \item \code{type.convert("i")} now returns a factor instead of a
+      complex value with zero real part and missing imaginary part.
+      
+      \item Graphics devices \code{cairo_pdf()} and \code{cairo_ps()}
+      now allow non-default values of the cairographics \sQuote{fallback
+	resolution} to be set.
     }
   }
 
@@ -90,12 +97,20 @@
 
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
-      \item The included versions of \code{zlib}, \code{bzip2},
+      \item The previously included versions of \code{zlib}, \code{bzip2},
       \code{xz} and PCRE have been removed, so system versions are
-      required (see the \sQuote{R Installation and Administration} manual).
+      required (see the \sQuote{R Installation and Administration}
+      manual).
     }
   }
 
+  \subsection{INSTALLATION and INCLUDED SOFTWARE}{
+    \itemize{
+      \item Support for very old versions of \command{valgrind}
+      (e.g. 3.3.0) was been removed.
+    }
+  }
+  
   \subsection{BUG FIXES}{
     \itemize{
       \item C-level \code{asChar(x)} is fixed for when \code{x} is not a
@@ -108,16 +123,6 @@
 
       \item A \code{coef.maov()} method has been added to allow
       \code{vcov()} to work with multivariate results. (\PR{16380})
-
-      \item \code{options(OutDec = s)} now signals a warning (which will
-      become an error in the future) when \code{s} is not a string with
-      exactly one character, as that has been a documented requirement.
-      %% Move to R-patched together with next one, after a while
-
-      \item \code{prettyNum()} gains a new option \code{input.d.mark}
-      which together with other changes, e.g., the default for
-      \code{decimal.mark}, fixes some \code{format()}ting variants with
-      non-default \code{getOption("OutDec")} such as in \PR{16411}.
     }
   }
 }
@@ -127,25 +132,73 @@
     \itemize{
       \item \code{cmdscale()} gets new option \code{list.} for increased
       flexibility when a list should be returned.
+
+      \item \command{configure} now supports \code{texinfo} version 6.0,
+      which (unlike the change from 4.x to 5.0) is a minor update.
+      (Wish of \PR{16456}.)
+
+      \item (Windows only) \code{setInternet2(TRUE)} is now the default,
+      so \samp{https://} URLs should be readable.  The command line
+      option \command{--internet2} and the environment variable
+      \env{R_WIN_INTERNET2} are now ignored.
+
+      \item (Non-Windows only:) \code{download.file()} with default
+      \code{method = "auto"} now chooses \code{"libcurl"} if that is
+      available and a \samp{https://} or \samp{ftps://} url is used.
+
+      \item \code{chooseCRANmirror()} now offers HTTPS mirrors in
+      preference to HTTP mirrors.
     }
   }
   \subsection{BUG FIXES}{
     \itemize{
       \item The HTML help page links to demo code failed due to a change
       in \R 3.2.0.  (\PR{16432})
-      
-      \item If \code{na.action} was used in \code{model.frame()}, the 
+
+      \item If \code{na.action} was used in \code{model.frame()}, the
       original data could be modified. (\PR{16436})
-      
+
       \item \code{getGraphicsEvent()} could cause a crash if a graphics
       window was closed while it was in use. (\PR{16438})
-      
+
       \item \code{matrix(x, nr, nc, byrow = TRUE)} failed if \code{x}
       was an object of type \code{"expression"}.
-      
+
       \item \code{strptime()} could overflow the C stack when the
       timezone had a non-standard format much longer than the
       standard formats. (Part of \PR{16328}.)
+
+      \item \code{options(OutDec = s)} now signals a warning (which will
+      become an error in the future) when \code{s} is not a string with
+      exactly one character, as that has been a documented requirement.
+
+      \item \code{prettyNum()} gains a new option \code{input.d.mark}
+      which together with other changes, e.g., the default for
+      \code{decimal.mark}, fixes some \code{format()}ting variants with
+      non-default \code{getOption("OutDec")} such as in \PR{16411}.
+
+      \item \code{download.packages()} failed for \code{type} equal to
+      \code{"both"} or \code{"binary"}.  (Reported by Dan Tenenbaum.)
+
+      \item The \code{dendrogram} method of \code{labels()} is much more
+      efficient for large dendrograms, now using \code{rapply()}.
+      (Comment #15 of \PR{15215})
+
+      \item The \code{"port"} algorithm of \code{nls()} could give
+      spurious errors.  (Reported by Radford Neal.)
+
+      \item Reference classes that inherited from reference classes in
+      another package could invalidate methods of the inherited
+      class. Fixing this requires adding the ability for methods to be
+      \dQuote{external}, with the object supplied explicitly as the first
+      argument, named \code{.self}. See "Inter-Package Superclasses"
+      in the documentation.
+
+      \item \code{readBin()} could fail on the SPARC architecture
+      due to alignment issues.  (Reported by Radford Neal.)
+
+      \item \code{qt(*, df=Inf, ncp=.)} now uses the natural
+      \code{qnorm()} limit instead of returning \code{NaN}. (\PR{16475})
     }
   }
 }
@@ -487,8 +540,8 @@
 	schemes it supports.
 
 	\item \code{curlGetHeaders()} retrieves the headers for
-	\code{http://}, \code{https://}, \code{ftp://} and
-	\code{ftps://} URLs: analysis of these headers can provide
+	\samp{http://}, \samp{https://}, \samp{ftp://} and
+	\samp{ftps://} URLs: analysis of these headers can provide
 	insights into the `existence' of a URL (it might for example be
 	permanently redirected) and is so used in \command{R CMD
 	  check --as-cran}.
@@ -1372,7 +1425,7 @@
       an error instead of a warning.
 
       \item \code{install.packages(repos = NULL)} now accepts
-      \code{http://} or \code{ftp://} URLs of package archives as well
+      \samp{http://} or \samp{ftp://} URLs of package archives as well
       as file paths, and will download as required.  In most cases
       \code{repos = NULL} can be deduced from the extension of the URL.
 
