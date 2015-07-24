@@ -980,9 +980,13 @@ makeSubscript(SEXP x, SEXP s, R_xlen_t *stretch, SEXP call)
 	break;
     case STRSXP:
     {
+	PROTECT(s = duplicate(s));
+	SET_ATTRIB(s, R_NilValue);
+	SET_OBJECT(s, 0);
 	SEXP names = getAttrib(x, R_NamesSymbol);
 	/* *stretch = 0; */
 	ans = stringSubscript(s, ns, nx, names, stretch, call);
+	UNPROTECT(1);
 	break;
     }
     case SYMSXP:
