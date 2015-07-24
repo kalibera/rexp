@@ -511,6 +511,24 @@ logicalSubscript(SEXP s, R_xlen_t ns, R_xlen_t nx, R_xlen_t *stretch, SEXP call)
     if (ns == 0) return(allocVector(INTSXP, 0));
 #ifdef LONG_VECTOR_SUPPORT
     if (nmax > R_SHORT_LEN_MAX) {
+
+        if (ns == nmax) {
+	    const void *vmax = vmaxget();
+	    double *buf = (double *) R_alloc(nmax, sizeof(double));
+	    count = 0;
+	    R_ITERATE_CHECK(NINTERRUPT, nmax, i,                    \
+	        if (LOGICAL(s)[i]) {                                \
+		    if (LOGICAL(s)[i] == NA_LOGICAL)		    \
+		        buf[count++] = NA_REAL;        		    \
+                    else					    \
+		        buf[count++] = (double)(i + 1);      	    \
+                });
+            PROTECT(indx = allocVector(REALSXP, count));
+            memcpy(REAL(indx), buf, sizeof(double) * count);
+            vmaxset(vmax);
+            UNPROTECT(1);
+            return indx;
+        }
 	count = 0;
 	/* we only need to scan s once even if we recycle,
 	   just remember the total count as well as
@@ -531,22 +549,13 @@ logicalSubscript(SEXP s, R_xlen_t ns, R_xlen_t nx, R_xlen_t *stretch, SEXP call)
 	}
 	PROTECT(indx = allocVector(REALSXP, count));
 	count = 0;
-	if (ns == nmax) { /* no recycling - use fast single-index code */
-	    R_ITERATE_CHECK(NINTERRUPT, nmax, i,		\
-		if (LOGICAL(s)[i]) {		                \
-		    if (LOGICAL(s)[i] == NA_LOGICAL)		\
-			REAL(indx)[count++] = NA_REAL;		\
-		    else					\
-			REAL(indx)[count++] = (double)(i + 1);	\
-		});
-	} else /* otherwise iter-macro */
-	    MOD_ITERATE_CHECK(NINTERRUPT, nmax, ns, nmax, i, i1, i2,	\
-		    if (LOGICAL(s)[i1]) {				\
-			if (LOGICAL(s)[i1] == NA_LOGICAL)		\
-			    REAL(indx)[count++] = NA_REAL;		\
-			else						\
-			    REAL(indx)[count++] = (int)(i + 1);		\
-		    });							\
+        MOD_ITERATE_CHECK(NINTERRUPT, nmax, ns, nmax, i, i1, i2, \
+            if (LOGICAL(s)[i1]) {				 \
+                if (LOGICAL(s)[i1] == NA_LOGICAL)		 \
+                    REAL(indx)[count++] = NA_REAL;		 \
+                else						 \
+                    REAL(indx)[count++] = (double)(i + 1);  	 \
+            });
 
 	UNPROTECT(1);
 	return indx;
@@ -590,13 +599,12 @@ logicalSubscript(SEXP s, R_xlen_t ns, R_xlen_t nx, R_xlen_t *stretch, SEXP call)
     }
     PROTECT(indx = allocVector(INTSXP, count));
     count = 0;
-    MOD_ITERATE_CHECK(NINTERRUPT, nmax, ns, nmax, i, i1, i2, {	\
-            if (LOGICAL(s)[i1]) {			        \
-                if (LOGICAL(s)[i1] == NA_LOGICAL)		\
-                    INTEGER(indx)[count++] = NA_INTEGER;	\
-                else						\
-                    INTEGER(indx)[count++] = (int)(i + 1);	\
-            }							\
+    MOD_ITERATE_CHECK(NINTERRUPT, nmax, ns, nmax, i, i1, i2,	\
+        if (LOGICAL(s)[i1]) {			        	\
+            if (LOGICAL(s)[i1] == NA_LOGICAL)			\
+                INTEGER(indx)[count++] = NA_INTEGER;		\
+            else						\
+                INTEGER(indx)[count++] = (int)(i + 1);		\
         });
 
     UNPROTECT(1);
