@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2002--2013     The R Core Team
+ *  Copyright (C) 2002--2015     The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
+ *  https://www.R-project.org/Licenses/
  *
  * Originally written by Jonathan Rougier
 */
@@ -280,7 +280,8 @@ SEXP attribute_hidden do_sprintf(SEXP call, SEXP op, SEXP args, SEXP env)
 			    case 'X':
 				if(TYPEOF(_this) == REALSXP) {
 				    double r = REAL(_this)[0];
-				    if((double)((int) r) == r)
+				    // qdapTools manages to call this with NaN
+				    if(R_FINITE(r) && (double)((int) r) == r)
 					_this = coerceVector(_this, INTSXP);
 				    PROTECT(a[nthis] = _this);
 				    nprotect++;

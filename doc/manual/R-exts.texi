@@ -217,7 +217,7 @@ use less (virtual) memory.
 and contributed code, especially @R{} packages.  Users of @R{} are
 encouraged to join in the collaborative project and to submit their own
 packages to @acronym{CRAN}: current instructions are linked from
-@uref{http://CRAN.R-project.org/@/banner.shtml#submitting}.
+@uref{https://CRAN.R-project.org/@/banner.shtml#submitting}.
 
 
 @menu
@@ -278,7 +278,7 @@ are @file{configure.win} and @file{cleanup.win}.
 
 For the conventions for files @file{NEWS} and @file{ChangeLog} in the
 @acronym{GNU} project see
-@uref{http://www.gnu.org/@/prep/@/standards/@/standards.html#Documentation}.
+@uref{https://www.gnu.org/@/prep/@/standards/@/standards.html#Documentation}.
 
 The package subdirectory should be given the same name as the package.
 Because some file systems (e.g., those on Windows and by default on OS
@@ -360,8 +360,8 @@ Suggests: MASS
 Description: A (one paragraph) description of what
   the package does and why it may be useful.
 License: GPL (>= 2)
-URL: http://www.r-project.org, http://www.another.url
-BugReports: http://pkgname.bugtracker.url
+URL: https://www.r-project.org, http://www.another.url
+BugReports: https://pkgname.bugtracker.url
 @end smallexample
 @end cartouche
 @end quotation
@@ -369,7 +369,7 @@ BugReports: http://pkgname.bugtracker.url
 @noindent
 The format is that of a version of a `Debian Control File' (see the help
 for @samp{read.dcf} and
-@uref{http://www.debian.org/@/doc/@/debian-policy/@/ch-controlfields.html}:
+@uref{https://www.debian.org/@/doc/@/debian-policy/@/ch-controlfields.html}:
 @R{} does not require encoding in UTF-8 and does not support comments
 starting with @samp{#}).  Fields start with an @acronym{ASCII} name
 immediately followed by a colon: the value starts after the colon and a
@@ -433,7 +433,7 @@ with the package name, `This package' or similar.  As with the
 non-English usage, including names of other packages and external
 software.  This field should also be used for explaining the package
 name if necessary.  URLs should be enclosed in angle brackets, e.g.@:
-@samp{<http://www.r-project.org>}: see also @ref{Specifying URLs}.
+@samp{<https://www.r-project.org>}: see also @ref{Specifying URLs}.
 
 @c DESCRIPTION field Author
 @c DESCRIPTION field Authors@R
@@ -640,11 +640,11 @@ A @samp{Language} field can be used to indicate if the package
 documentation is not in English: this should be a comma-separated list
 of standard (not private use or grandfathered) IETF language tags as
 currently defined by RFC 5646
-(@uref{http://tools.ietf.org/@/html/@/rfc5646}, see also
-@uref{http://en.wikipedia.org/@/wiki/@/IETF_language_tag}), i.e., use
+(@uref{https://tools.ietf.org/@/html/@/rfc5646}, see also
+@uref{https://en.wikipedia.org/@/wiki/@/IETF_language_tag}), i.e., use
 language subtags which in essence are 2-letter ISO 639-1
-(@uref{http://en.wikipedia.@/org/@/wiki/@/ISO_639-1}) or 3-letter ISO
-639-3 (@uref{http://en.wikipedia.@/org/@/wiki/@/ISO_639-3}) language
+(@uref{https://en.wikipedia.@/org/@/wiki/@/ISO_639-1}) or 3-letter ISO
+639-3 (@uref{https://en.wikipedia.@/org/@/wiki/@/ISO_639-3}) language
 codes.
 
 @c DESCRIPTION field RdMacros
@@ -689,7 +689,7 @@ the package, let alone use it.
 
 The package management tools use the concept of
 `free or open source software'
-(FOSS, e.g., @uref{http://en.wikipedia.org/@/wiki/@/FOSS})
+(FOSS, e.g., @uref{https://en.wikipedia.org/@/wiki/@/FOSS})
 licenses: the idea being that some users of @R{} and its packages want
 to restrict themselves to such software.  Others need to ensure that
 there are no restrictions stopping them using a package, e.g.@:
@@ -713,7 +713,7 @@ One of the ``standard'' short specifications
 GPL-2 GPL-3 LGPL-2 LGPL-2.1 LGPL-3 AGPL-3 Artistic-2.0
 BSD_2_clause BSD_3_clause MIT
 @end example
-as made available @emph{via} @uref{http://www.R-project.org/@/Licenses/} and
+as made available @emph{via} @uref{https://www.R-project.org/@/Licenses/} and
 contained in subdirectory @file{share/licenses} of the @R{} source or home
 directory.
 @item
@@ -785,7 +785,7 @@ Whereas you should feel free to include a license file in your
 @emph{source} distribution, please do not arrange to @emph{install} yet
 another copy of the @acronym{GNU} @file{COPYING} or @file{COPYING.LIB}
 files but refer to the copies on
-@uref{http://www.R-project.org/@/Licenses/} and included in the @R{}
+@uref{https://www.R-project.org/@/Licenses/} and included in the @R{}
 distribution (in directory @file{share/licenses}).  Since files named
 @file{LICENSE} or @file{LICENCE} @emph{will} be installed, do not use
 these names for standard license files.  To include comments about the
@@ -1330,7 +1330,7 @@ Data files can have one of three types as indicated by their extension:
 plain @R{} code (@file{.R} or @file{.r}), tables (@file{.tab},
 @file{.txt}, or @file{.csv}, see @code{?data} for the file formats, and
 note that @file{.csv} is @strong{not} the standard@footnote{e.g.@:
-@uref{http://tools.ietf.org/@/html/@/rfc4180}.} CSV format), or
+@uref{https://tools.ietf.org/@/html/@/rfc4180}.} CSV format), or
 @code{save()} images (@file{.RData} or @file{.rda}).  The files should
 not be hidden (have names starting with a dot).  Note that @R{} code
 should be ``self-sufficient'' and not make use of extra functionality
@@ -1426,18 +1426,10 @@ this should be declared in the @samp{SystemRequirements} field of its
 Windows and Mac users should be aware that the Tcl extensions
 @samp{BWidget} and @samp{Tktable} which are currently included with the
 @R{} for Windows and in the OS X installers @emph{are} extensions and do
-need to be declared.  @samp{Tktable} did ship as part of the X11-based
-Tcl/Tk provided on @acronym{CRAN} for OS X prior to @R{} 3.0.0, but you
-will need to tell your users how to make use of it:
-
-@example
-> addTclPath('/usr/local/lib/Tktable2.9')
-> tclRequire('Tktable')
-<Tcl> 2.9
-@end example
-
-@noindent
-It should work with no further user action as from @R{} 3.0.0.
+need to be declared for users of other platforms (and that
+@samp{Tktable} is less widely available than it used to be, including
+not in the main repositories for major Linux distributions).
+@c Not in Fedora since 17, only in launchpad for Ubuntu.
 
 @samp{BWidget} needs to be installed by the user on other OSes.  This is
 fairly easy to do: first find the Tcl/Tk search path:
@@ -1468,8 +1460,8 @@ URLs in many places in the package documentation will be converted to
 clickable hyperlinks in at least some of their renderings.  So care is
 needed that their forms are correct and portable.
 
-The full URL should be given, including the scheme (often
-@samp{http://}) and a final @samp{/} for references to directories.
+The full URL should be given, including the scheme (often @samp{http://}
+or @samp{https://}) and a final @samp{/} for references to directories.
 
 Spaces in URLs are not portable and how they are handled does vary by
 HTTP server and by client.  There should be no space in the host part of
@@ -1481,7 +1473,7 @@ Other characters may benefit from being encoded: see the help on
 
 The canonical URL for a @acronym{CRAN} package is
 @example
-http://cran.r-project.org/package=@var{pkgname}
+https://cran.r-project.org/package=@var{pkgname}
 @end example
 
 @noindent
@@ -1983,7 +1975,7 @@ xxx.dll
 where the first and second are conventionally import libraries, the
 third and fourth often static libraries (with @code{.lib} intended for
 Visual C++), but might be import libraries.  See for example
-@uref{http://sourceware.org/@/binutils/@/docs-2.20/@/ld/@/WIN32.html#WIN32}.
+@uref{https://sourceware.org/@/binutils/@/docs-2.20/@/ld/@/WIN32.html#WIN32}.
 
 The fly in the ointment is that the DLL might not be named
 @file{libxxx.dll}, and in fact on 32-bit Windows there is a
@@ -2005,14 +1997,14 @@ DLL.
 
 There is some support for packages which wish to use
 OpenMP@footnote{@uref{http://www.openmp.org/},
-@uref{http://en.wikipedia.org/@/wiki/@/OpenMP},
+@uref{https://en.wikipedia.org/@/wiki/@/OpenMP},
 @uref{https://computing.llnl.gov/@/tutorials/@/openMP/}}.  The
 @command{make} macros
 
 @example
 SHLIB_OPENMP_CFLAGS
 SHLIB_OPENMP_CXXFLAGS
-Shlib_OPENMP_FCFLAGS
+SHLIB_OPENMP_FCFLAGS
 SHLIB_OPENMP_FFLAGS
 @end example
 
@@ -2024,7 +2016,11 @@ conditioned on the use of OpenMP can be used inside @code{#ifdef
 SUPPORT_OPENMP}, a macro defined in the header @file{Rconfig.h}
 (@pxref{Platform and version information}) or @code{_OPENMP}: note that
 some toolchains used for @R{} (including most of those using
-@command{clang}) have no OpenMP support at all, not even @file{omp.h}.
+@command{clang}@footnote{Some builds of @command{clang} 3.7 have support
+for OpenMP 3.1. However, this needs the compiler/linker flag
+@option{-fopenmp=libomp} which is not currently added by
+@command{configure}.}) have no OpenMP support at all, not even
+@file{omp.h}.
 
 For example, a package with C code written for OpenMP should have in
 @file{src/Makevars} the lines
@@ -2041,10 +2037,8 @@ should do their own @command{configure} checks.
 There is nothing to say what version of OpenMP is supported: version 3.0
 (May 2008) is supported by recent versions of the Linux, Windows and
 Solaris platforms, but portable packages cannot assume that end users
-have recent versions.  OS X nowadays uses @command{clang}, and the Apple
-builds currently@footnote{Projects to add it has been announced, but it
-is unknown when or even if the Apple builds will incorporate them.}
-have no OpenMP support.
+have recent versions.  OS X currently uses Apple builds of
+@command{clang} with no OpenMP support.
 
 The performance of OpenMP varies substantially between platforms.  Both
 the Windows and earlier Apple OS X implementations have substantial
@@ -2343,7 +2337,7 @@ versions of @R{} for Unix OSes still do.}) platforms have no Fortran
 
 This means that portable packages need to be written in correct
 FORTRAN 77, which will also be valid Fortran 95.  See
-@uref{http://developer.R-project.org/@/Portability.html} for reference
+@uref{https://developer.R-project.org/@/Portability.html} for reference
 resources.  In particular, @emph{free source form} F95 code is not
 portable.
 
@@ -2464,7 +2458,7 @@ enable support for the 2014 revision using something like
 As noted above, support for C++11 varies across platforms.  The default
 compiler on Windows is GCC 4.6.x and supports the @option{-std=c++0x}
 flag and some C++11 features (see
-@uref{http://gcc.gnu.org/@/gcc-4.6/@/cxx0x_status.html}).  On some
+@uref{https://gcc.gnu.org/@/gcc-4.6/@/cxx0x_status.html}).  On some
 platforms, it may be possible or necessary to select a different
 compiler for C++11, @emph{via} personal or site @file{Makevars} files.
 
@@ -2774,9 +2768,7 @@ setting environment variables @w{@env{_R_CHECK_*_}:}, as described in
 @end ifclear
 a set of these customizations similar to those used by @acronym{CRAN}
 can be selected by the option @option{--as-cran} (which works best if
-Internet access is available@footnote{Windows users behind proxies may
-want to set environment variable @env{R_WIN_INTERNET2} to a non-empty
-value, e.g.@: in @file{~/.R/check_environ}.}).  Some Windows users may
+Internet access is available).  Some Windows users may
 need to set environment variable @env{R_WIN_NO_JUNCTIONS} to a non-empty
 value.  The test of cyclic declarations@footnote{For example, in early
 2014 @CRANpkg{gdata} declared @samp{Imports: gtools} and @CRANpkg{gtools}
@@ -2784,7 +2776,7 @@ declared @samp{Imports: gdata}.}in @file{DESCRIPTION} files needs
 repositories (including @acronym{CRAN}) set: do this in
 @file{~/.Rprofile}, by e.g.@:
 @example
-options(repos = c(CRAN="http://cran.r-project.org"))
+options(repos = c(CRAN="https://cran.r-project.org"))
 @end example
 
 One check customization which can be revealing is
@@ -3168,8 +3160,8 @@ the package.  If you do supply a @file{inst/doc/index.html} file it
 should contain relative links only to files under the installed
 @file{doc} directory, or perhaps (not really an index) to @HTML{} help
 files or to the @file{DESCRIPTION} file, and be valid @HTML{} as
-confirmed via the @uref{http://validator.w3.org, W3C Markup Validation
-Service} or @uref{http://validator.nu/, Validator.nu}.
+confirmed via the @uref{https://validator.w3.org, W3C Markup Validation
+Service} or @uref{https://validator.nu/, Validator.nu}.
 
 Sweave/Stangle allows the document to specify the @code{split=TRUE}
 option to create a single @R{} file for each code chunk: this will not
@@ -3333,7 +3325,7 @@ package should be @emph{exported} to make them available to package
 users, and which variables should be @emph{imported} from other
 packages.
 
-The mechanism for specifying a namespace for a package is to place a
+The namespace for a package is specified by the
 @file{NAMESPACE} file in the top level package directory.  This file
 contains @emph{namespace directives} describing the imports and exports
 of the namespace.  Additional directives register any shared objects to
@@ -3440,7 +3432,8 @@ importFrom(foo, f, g)
 @noindent
 specifies that the exported variables @code{f} and @code{g} of the
 package @pkg{foo} are to be imported.  Using @code{importFrom}
-selectively rather than @code{import} is good practice.
+selectively rather than @code{import} is good practice and recommended
+notably when importing from packages with more than a dozen exports.
 
 It is possible to export variables from a namespace which it has
 imported from other namespaces: this has to be done explicitly and not
@@ -4020,7 +4013,7 @@ options @option{-a} and @option{-e} are not portable, and not supported
 in the AT&T Bourne shell used on Solaris, even though they are in the
 POSIX standard.} Bourne shells: the @R{} toolset on Windows and some
 Unix-alike OSes use @command{ash}
-(@uref{http://en.wikipedia.org/@/wiki/@/Almquist_shell}), a rather
+(@uref{https://en.wikipedia.org/@/wiki/@/Almquist_shell}), a rather
 minimal shell with few builtins.  Beware of assuming that all the POSIX
 command-line utilities are available, especially on Windows where only a
 minimal set is provided for use with @R{}.
@@ -4190,6 +4183,16 @@ bars@footnote{except perhaps the simplest kind as used by
 interactive use, as is displaying help pages or calling @code{View()}
 (see below).
 
+@item
+Be careful with the order of entries in macros such as @code{PKG_LIBS}.
+Some linkers will re-order the entries, and behaviour can differ between
+dynamic and static libraries.  Generally @option{-L} options should
+precede@footnote{Whereas the GNU linker reorders so @option{-L} options
+are processed first, the Solaris one does not.} the libraries (typically
+specified by @option{-l} options) to be found from those directories,
+and libraries are searched once in the order they are specified.  Not
+all linkers allow a space after @option{-L} .
+
 @end itemize
 
 Do be careful in what your tests (and examples) actually test.  Bad
@@ -4294,7 +4297,7 @@ and suitable options might be
 @end example
 
 @noindent
-; see @uref{http://www.ghostscript.com/@/doc/@/current/@/Ps2pdf.htm} for
+; see @uref{https://www.ghostscript.com/@/doc/@/current/@/Ps2pdf.htm} for
 more such and consider all the options for image downsampling).  There
 have been examples in @acronym{CRAN} packages for which Ghostscript 9.06
 and later produced much better reductions than 9.05 or earlier.
@@ -4388,9 +4391,10 @@ language of the UTF-8 locale, and your users would need to be told how
 to select the @samp{encoding} argument.
 
 If you want to run @command{R CMD check} on a Unix-alike over a package
-that sets a package encoding in its @file{DESCRIPTION} file you may need
-to specify a suitable locale @emph{via} environment variable
-@env{R_ENCODING_LOCALES}.  The default is equivalent to the value
+that sets a package encoding in its @file{DESCRIPTION} file @emph{and do
+not use a UTF-8 locale} you may need to specify a suitable locale
+@emph{via} environment variable @env{R_ENCODING_LOCALES}.  The default
+is equivalent to the value
 
 @example
 "latin1=en_US:latin2=pl_PL:UTF-8=en_US.UTF-8:latin9=fr_FR.iso885915@@euro"
@@ -4430,12 +4434,14 @@ A not-uncommonly-seen problem is to mistakenly call @code{floor(x/y)} or
 `overloading ambiguity' may be reported.
 
 @item
-Function @code{fabs} is defined for only for floating-point types,
-except in C++11 which has overloads in @file{<cmath>} for integer types.
-Function @code{abs} is defined in C99's @file{<stdlib.h>} for @code{int}
-and in C++98's @file{<cstdlib>} for integer types, overloaded in
-@file{<cmath>} for floating-point types.  C++11 has additional overloads
-for @code{abs} in @file{<cmath>} for integer types.
+Function @code{fabs} is defined only for floating-point types, except in
+C++11 which has overloads for @code{std::fabs} in @file{<cmath>} for
+integer types.  Function @code{abs} is defined in C99's
+@file{<stdlib.h>} for @code{int} and in C++98's @file{<cstdlib>} for
+integer types, overloaded in @file{<cmath>} for floating-point types.
+C++11 has additional overloads for @code{std::abs} in @file{<cmath>} for
+integer types.  The effect of calling @code{abs} for a floating-point
+type is implementation-specific: it may truncate to an integer.
 
 @item
 Functions/macros such as @code{isnan}, @code{isinf} and @code{isfinite}
@@ -4457,8 +4463,8 @@ provides the portable @code{R_PosInf} (and @code{R_NegInf} for
 available.
 
 Some (but not all) extensions are listed at
-@uref{https://gcc.gnu.org/onlinedocs/gcc/C-Extensions.html} and
-@uref{https://gcc.gnu.org/onlinedocs/gcc/C_002b_002b-Extensions.html}.
+@uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/C-Extensions.html} and
+@uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/C_002b_002b-Extensions.html}.
 
 @item
 Including C headers in C++ code is not portable.  Including the C
@@ -4507,7 +4513,7 @@ and other core headers.
 @end itemize
 
 Some additional information for C++ is available at
-@uref{http://journal.r-project.org/archive/2011-2/RJournal_2011-2_Plummer.pdf}
+@uref{http://journal.r-project.org/@/archive/@/2011-2/@/RJournal_2011-2_Plummer.pdf}
 by Martyn Plummer.
 
 @node Binary distribution,  , Portable C and C++ code, Writing portable packages
@@ -4673,7 +4679,7 @@ the default).
 The procedures make use of @code{msgfmt} and @code{xgettext} which are
 part of @acronym{GNU} @code{gettext} and this will need to be installed:
 Windows users can find pre-compiled binaries at
-@uref{http://www.stats.ox.ac.uk/pub/Rtools/goodies/gettext-tools.zip}.
+@uref{https://www.stats.ox.ac.uk/@/pub/@/Rtools/@/goodies/@/gettext-tools.zip}.
 
 @menu
 * C-level messages::            
@@ -4860,7 +4866,7 @@ bibentry(bibtype = "Manual",
                     person("R Core Team")),
          year = year,
          note = note,
-         url = "http://CRAN.R-project.org/package=nlme")
+         url = "https://CRAN.R-project.org/package=nlme")
 @end example
 
 Note the way that information that may need to be updated is picked up
@@ -4935,8 +4941,8 @@ distribution.
 offers the automated preparation of (32/64-bit) Windows binaries from
 well-tested source packages.
 
-R-Forge (@uref{http://R-Forge.r-project.org, R-Forge.r-project.org}) and
-RForge (@uref{http://www.rforge.net, www.rforge.net}) are similar
+R-Forge (@uref{https://R-Forge.r-project.org, R-Forge.r-project.org}) and
+RForge (@uref{https://www.rforge.net, www.rforge.net}) are similar
 services with similar names.  Both provide source-code management
 through SVN, daily building and checking, mailing lists and a repository
 that can be accessed @emph{via} @code{install.packages} (they can be
@@ -5044,7 +5050,7 @@ specified@footnote{e.g.@: @code{\alias}, @code{\keyword} and
 file (in any order), and the processing software will retain only the
 first occurrence of a standard section in the file, with a warning.
 
-See @uref{http://developer.r-project.org/Rds.html, ``Guidelines for Rd
+See @uref{https://developer.r-project.org/Rds.html, ``Guidelines for Rd
 files''} for guidelines for writing documentation in @file{Rd} format
 which should be useful for package writers.
 @findex prompt
@@ -5058,7 +5064,7 @@ other types of @file{Rd} file.
 
 The general syntax of @file{Rd} files is summarized below.  For a detailed
 technical discussion of current @file{Rd} syntax, see
-@uref{http://developer.r-project.org/parseRd.pdf, ``Parsing Rd files''}.
+@uref{https://developer.r-project.org/parseRd.pdf, ``Parsing Rd files''}.
 
 @file{Rd} files consist of four types of text input.  The most common
 is @LaTeX{}-like, with the backslash used as a prefix on markup
@@ -5088,7 +5094,7 @@ enter them into text sometimes requires escapes using a backslash.  In
 general balanced braces do not need to be escaped, but percent symbols
 always do, except in the `verbatim' variant.
 For the complete list of macros and rules for escapes, see
-@uref{http://developer.r-project.org/parseRd.pdf, ``Parsing Rd files''}.
+@uref{https://developer.r-project.org/parseRd.pdf, ``Parsing Rd files''}.
 
 @menu
 * Documenting functions::       
@@ -6034,7 +6040,7 @@ examples section in the file @file{Paren.Rd} for an example.}
 @emph{almost always} need to be escaped by @samp{\}, and @samp{\\} can
 be used for backslash and needs to be when there two or more adjacent
 backslashes).  In @R{}-like code quoted strings are handled slightly
-differently; see @uref{http://developer.r-project.org/parseRd.pdf,
+differently; see @uref{https://developer.r-project.org/parseRd.pdf,
 ``Parsing Rd files''} for details -- in particular braces should not be
 escaped in quoted strings.
 
@@ -6255,7 +6261,7 @@ The @code{\RdOpts} macro is used to set new defaults for options to apply
 to following uses of @code{\Sexpr}.
 
 For more details, see the online document
-@uref{http://developer.r-project.org/parseRd.pdf, ``Parsing Rd files''}.
+@uref{https://developer.r-project.org/parseRd.pdf, ``Parsing Rd files''}.
 
 @node User-defined macros, Encoding, Dynamic pages, Writing R documentation files
 @section User-defined macros
@@ -6308,8 +6314,30 @@ will expand to
 \Sexpr[results=rd]@{tools:::Rd_expr_PR(1234)@}
 @end example
 @noindent
-when parsed.  See the comments in that file for a discussion of what
-macros are available and what they do.
+when parsed.  
+
+Some macros that might be of general use are:
+@ftable @code
+@item \CRANpkg@{pkg@}
+A package on CRAN
+
+@item \sspace
+A single space (used after a period that does not end a sentence).
+
+@item \doi@{numbers@}
+A digital object identifier (DOI).
+@end ftable
+See the @file{system.Rd} file in @file{share/Rd/macros} for more details
+and macro definitions, including macros @code{\packageTitle},
+@code{\packageDescription}, @code{\packageAuthor}, @code{\packageMaintainer},
+@code{\packageDESCRIPTION} and @code{\packageIndices}.
+@findex @code{\packageTitle}
+@findex @code{\packageDescription}
+@findex @code{\packageAuthor}
+@findex @code{\packageMaintainer}
+@findex @code{\packageDESCRIPTION}
+@findex @code{\packageIndices}
+
 
 Packages may also define their own common macros; these would be stored
 in an @file{.Rd} file in @file{man/macros} in the package source and
@@ -6439,13 +6467,13 @@ separately).
 
 Another is the Eclipse IDE with the Stat-ET plugin
 (@uref{http://www.walware.de/goto/statet}), and (on Windows only)
-Tinn-R (@uref{http://sourceforge.net/projects/tinn-r/}).
+Tinn-R (@uref{http://sourceforge.net/@/projects/@/tinn-r/}).
 
 People have also used @LaTeX{} mode in a editor, as @file{.Rd} files are
 rather similar to @LaTeX{} files.
 
 Some @R{} front-ends provide editing support for  @file{.Rd} files, for
-example RStudio (@uref{http://rstudio.org/}).
+example RStudio (@uref{https://rstudio.org/}).
 
 @node Tidying and profiling R code, Debugging, Writing R documentation files, Top
 @chapter Tidying and profiling R code
@@ -7050,7 +7078,7 @@ ways to get useful error information and moving on to how to deal with
 errors that crash @R{}.  For those who prefer other styles there are
 contributed packages such as @CRANpkg{debug} on @acronym{CRAN}
 (described in an article in
-@uref{http://CRAN.R-project.org/@/doc/@/Rnews/@/Rnews_2003-3.pdf, R-News
+@uref{https://CRAN.R-project.org/@/doc/@/Rnews/@/Rnews_2003-3.pdf, R-News
 3/3}).  (There are notes from 2002 provided by Roger Peng at
 @uref{http://www.biostat.jhsph.edu/@/~rpeng/@/docs/@/R-debug-tools.pdf}
 which provide complementary examples to those given here.)
@@ -7683,19 +7711,24 @@ threaded programs.
 @command{AddressSanitizer} (`ASan') is a tool with similar aims to the
 memory checker in @command{valgrind}.  It is available with suitable
 builds@footnote{currently only on @cputype{ix86}/@cputype{x86_64} Linux
-and OS X, not including the versions distributed by Apple in
-@code{Xcode} 4.6 or 5. On some platforms, e.g.@: Fedora, the runtime
-library, @pkg{libasan}, needs to be installed separately. OS X users can
-install a suitable @command{clang} from the sources or possibly
-distributions such as MacPorts or Homebrew.} of @command{gcc} 4.8.0 or
-@command{clang} 3.1 and later on common Linux and OS X platforms.  See
-@uref{http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation},
-@uref{http://clang.llvm.org/docs/AddressSanitizer.html} and
-@uref{https://code.google.com/p/address-sanitizer/}.
+and OS X (including the builds in Xcode 7 beta but not earlier Apple
+releases).  On some platforms, e.g.@: Fedora, the runtime library,
+@pkg{libasan}, needs to be installed separately. OS X users can install
+a suitable @command{clang} from the sources,
+@url{http://llvm.org/releases/} or possibly distributions such as
+MacPorts or Homebrew.} of @command{gcc} and @command{clang} on common
+Linux and OS X platforms.  See
+@uref{http://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation},
+@uref{http://clang.llvm.org/@/docs/@/AddressSanitizer.html} and
+@uref{https://code.google.com/@/p/@/address-sanitizer/}.
+
+More thorough checks of C++ code are done if the C++ library has been
+`annotated': at the time of writing this applied to @code{std::vector}
+in @code{libc++} for use with @command{clang} and gives rise to
+@samp{container-overflow} reports.
 
 It requires code to have been compiled @emph{and linked} with
-@option{-fsanitize=address}@footnote{@option{-faddress-sanitizer} in
-@command{clang} 3.1}, and compiling with @code{-fno-omit-frame-pointer}
+@option{-fsanitize=address} and compiling with @code{-fno-omit-frame-pointer}
 will give more legible reports.  It has a runtime penalty of 2--3x,
 extended compilation times and uses substantially more memory, often
 1--2GB, at run time.  On 64-bit platforms it reserves (but does not
@@ -7706,28 +7739,31 @@ By comparison with @command{valgrind}, ASan can
 detect misuse of stack and global variables but not the use of
 uninitialized memory.
 
-@command{gcc} as from version 4.9.0 returns symbolic addresses for the
-location of the error, but most other versions do not.  For the latter,
-one possibility is to use an external symbolizer.  Depending on the
-version, this can be done @emph{via} an environment variable, e.g.@:
+Recent versions return symbolic addresses for the location of the error
+provided @command{llvm-symbolizer}@footnote{part of the LLVM project and
+in distributed in @code{llvm} RPMs and @code{.deb}s on Linux.  It is not
+currently shipped by Apple.} is on the path: if it is available but not
+on the path or has been renamed@footnote{as Ubuntu does.}, one can use an
+environment variable, e.g.@:
 
 @example
 ASAN_SYMBOLIZER_PATH=/path/to/llvm-symbolizer
 @end example
 
 @noindent
-or by piping the output through
+An alternative is to pipe the output through
 @command{asan_symbolize.py}@footnote{installed on some Linux systems as
 @command{asan_symbolize}, and obtainable from
-@uref{https://llvm.org/svn/llvm-project/compiler-rt/trunk/lib/asan/scripts/asan_symbolize.py}:
-it makes use of @command{llvm-symbolizer} if available.} and
-perhaps then (for compiled C++ code) @command{c++filt}.
+@uref{https://llvm.org/@/svn/@/llvm-project/@/compiler-rt/@/trunk/@/lib/@/asan/scripts/@/asan_symbolize.py}:
+it makes use of @command{llvm-symbolizer} if available.} and perhaps
+then (for compiled C++ code) @command{c++filt}.  (On OS X, you may need
+to run @command{dsymutil} to get line-number reports.)
 
 The simplest way to make use of this is to build a version of @R{} with
 something like
 
 @example
-CC="gcc-4.9 -std=gnu99 -fsanitize=address"
+CC="gcc -std=gnu99 -fsanitize=address"
 CFLAGS="-fno-omit-frame-pointer -g -O2 -Wall -pedantic -mtune=native"
 @end example
 
@@ -7756,7 +7792,7 @@ specified as part of @samp{CC} when @R{} was built.
 
 For options available @emph{via} the environment variable
 @env{ASAN_OPTIONS} see
-@uref{https://code.google.com/p/address-sanitizer/wiki/Flags#Run-time_flags}.
+@uref{https://code.google.com/@/p/@/address-sanitizer/@/wiki/@/Flags#Run-time_flags}.
 With @command{gcc} additional control is available @emph{via} the
 @option{--params} flag: see its @command{man} page.
 
@@ -7767,7 +7803,7 @@ produced: for @command{gdb} or @command{lldb} you could use
 break __asan_report_error
 @end example
 (See
-@uref{http://code.google.com/p/address-sanitizer/wiki/AddressSanitizer#gdb}.)
+@uref{https://code.google.com/@/p/@/address-sanitizer/@/wiki@//AddressSanitizer#gdb}.)
 
 @menu
 * Using Leak Sanitizer::        
@@ -7777,7 +7813,7 @@ break __asan_report_error
 @subsubsection Using the Leak Sanitizer
 
 For @code{x86_64} Linux there is a leak sanitizer, `LSan': see
-@uref{https://code.google.com/p/address-sanitizer/wiki/LeakSanitizer}.
+@uref{https://code.google.com/@/p/@/address-sanitizer/@/wiki/@/LeakSanitizer}.
 This is available on recent versions of @code{gcc} and @code{clang}, and
 where available is compiled in as part of ASan.
 
@@ -7795,12 +7831,12 @@ When LSan is enabled, leaks give the process a failure error status (by
 default @code{23}).  For an @R{} package this means the @R{} process,
 and as the parser retains some memory to the end of the process, if @R{}
 itself was built against ASan, all runs will have a failure error status
-(and that includes running @R{} as part of building @R{} itself).
+(which may include running @R{} as part of building @R{} itself).
 
 To disable both this and some strict checking use
 
 @example
-setenv ASAN_OPTIONS 'alloc_dealloc_mismatch=0:detect_leaks=0'
+setenv ASAN_OPTIONS 'alloc_dealloc_mismatch=0:detect_leaks=0:detect_odr_violation=0'
 @end example
 
 LSan also has a `stand-alone' mode where it is compiled in using
@@ -7823,25 +7859,28 @@ might be @code{NA_INTEGER}.
 
 `UBSanitizer' is a tool for C/C++ source code selected by
 @option{-fsanitize=undefined} in suitable builds of @command{clang}, and
-GCC as from 4.9.0.  Its runtime library is linked into each package's
-DLL, so it is less often needed to be included in @env{MAIN_LDFLAGS}.
+GCC as from 4.9.0.  Its (main) runtime library is linked into each
+package's DLL, so it is less often needed to be included in
+@env{MAIN_LDFLAGS}.
 
-Some versions have greatly increased compilation times on a few files
-(e.g.@: @file{src/extra/bzip2/decompress.c} in the @R{} sources with
-@command{clang} 3.5).
+Some versions have greatly increased compilation times on a few
+files@footnote{e.g.@: @file{src/main/dotcode.c} and parts of the
+@pkg{Matrix} sources with @command{clang} 3.7.0).}.
 
 This sanitizer can be combined with the Address Sanitizer by
-@option{-fsanitize=undefined,address}.
+@option{-fsanitize=undefined,address} (where both are supported).
 
 Finer control of what is checked can be achieved by other options: for
 @command{clang} see
-@uref{http://clang.llvm.org/docs/UsersManual.html#controlling-code-generation}.
+@uref{http://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation}.@footnote{or
+the user manual for your version of @command{clang}, e.g.@:
+@uref{http://llvm.org/@/releases/@/3.6.2@//tools/@/clang/@/docs/@/UsersManual.html}.}
 The current set for @command{clang} is (on a single line):
 @example
--fsanitize=alignment,bounds,bool,enum,float-cast-overflow,
-float-divide-by-zero,function,integer-divide-by-zero,null,object-size,
-return,returns-nonnull-attribute,shift,signed-integer-overflow,
-unreachable,vla-bound,vptr
+-fsanitize=alignment,bool,bounds,enum,float-cast-overflow,
+float-divide-by-zero,function,integer-divide-by-zero,non-null-attribute,
+null,object-size,return,returns-nonnull-attribute,shift,
+signed-integer-overflow,unreachable,vla-bound,vptr
 @end example
 
 @noindent
@@ -7853,47 +7892,51 @@ like
 @end example
 
 @noindent
-In addition,
+(@code{return} and @code{vptr} apply to C++).  In addition,
 @example
 -fsanitize=unsigned-integer-overflow
 @end example
 is available as a separate option in some versions of @command{clang}
 (not enabled by @option{-fsanitize=undefined}).
 
-@command{clang} 3.5 and later seem to need
+@command{clang} 3.5 and later need
 
 @example
 -fsanitize=undefined -fno-sanitize=float-divide-by-zero,vptr
 @end example
 
 @noindent
-for C++ code (in @code{CXX} and @code{CXX1X}).
-
-A smaller selection is currently released for GCC, for 4.9.x defaulting
-to
+for C++ code (in @code{CXX} and @code{CXX1X}) as the run-time library
+for @code{vptr} needs to be linked into the main @R{} executable (and
+that would need to be linked by @code{clang++}, not @code{clang}: you
+could try building @R{} with
 @example
--fsanitize=integer-divide-by-zero,null,
-return,shift,signed-integer-overflow,unreachable,vla-bound
+MAIN_LD="clang++ -fsanitize=undefined"
 @end example
+or add @code{-lclang_rt.asan_cxx-x86_64}@footnote{This includes the C++
+UBSAN handlers, despite its name.} to @code{LD_FLAGS} or similar).
 
-See
-@uref{https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html} (or the
-manual for your version of GCC).  GCC 5.1.0 added
+See @uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/Debugging-Options.html} (or
+the manual for your version of GCC, installed or @emph{via}
+@uref{https://gcc.gnu.org/@/onlinedocs/}) for the options supported by
+GCC: 5.2.0 supports
 @example
--fsanitize=alignment,bounds,float-cast-overflow,object-size,
-nonnull-attribute,returns-nonnull-attribute,bool,enum,vptr
+-fsanitize=alignment,bool,bounds,enum,float-cast-overflow,
+integer-divide-by-zero,non-null-attribute,null,object-size,
+return,returns-nonnull-attribute,shift,signed-integer-overflow,
+unreachable,vla-bound,vptr
 @end example
 @noindent
 with
 @example
 -fsanitize=float-divide-by-zero
 @end example
-
 @noindent
 as a separate option not enabled by @code{-fsanitize=undefined} (and not
 desirable for @R{} uses).  At the time of writing the @code{object-size}
 and @code{vptr} checks produced many warnings on GCC's own C++ headers,
 so should be disabled.
+
 
 Other useful flags include
 @example
@@ -7919,7 +7962,7 @@ and @option{-ftrapv}, said to be more reliable in @command{clang} than
 
 For more details on the topic see
 @uref{http://blog.regehr.org/archives/213} and
-@uref{http://blog.llvm.org/2011/05/what-every-c-programmer-should-know.html}
+@uref{http://blog.llvm.org/@/2011/@/05/@/what-every-c-programmer-should-know.html}
 (which has 3 parts).
 
 
@@ -7927,10 +7970,10 @@ For more details on the topic see
 @subsection Other analyses with `clang'
 
 Recent versions of @command{clang} on @cputype{x86_64} Linux have
-`ThreadSanitizer' (@uref{https://code.google.com/p/thread-sanitizer/}),
+`ThreadSanitizer' (@uref{https://code.google.com/@/p/@/thread-sanitizer/}),
 a `data race detector for C/C++ programs', and `MemorySanitizer'
-(@uref{http://clang.llvm.org/docs/MemorySanitizer.html},
-@uref{https://code.google.com/p/memory-sanitizer/wiki/MemorySanitizer})
+(@uref{http://clang.llvm.org/@/docs/@/MemorySanitizer.html},
+@uref{https://code.google.com/@/p/@/memory-sanitizer/@/wiki/@/MemorySanitizer})
 for the detection of uninitialized memory.  Both are based on and
 provide similar functionality to tools in @command{valgrind}.
 
@@ -7975,11 +8018,10 @@ when you run @command{R CMD check}.
 
 This may report incorrectly errors with the way that Fortran character
 variables are passed, particularly when Fortran subroutines are called
-from C code.  This may include@footnote{depending on the compiler
-version, with @command{gfortran} @code{4.8.x} doing this less than
-@code{4.7.x}.} the use of BLAS and LAPACK subroutines in @R{}, so it is
-not advisable to build @R{} itself with bounds checking (and may not
-even be possible as these subroutines are called during the @R{} build).
+from C code.  This may include the use of BLAS and LAPACK subroutines in
+@R{}, so it is not advisable to build @R{} itself with bounds checking
+(and may not even be possible as these subroutines are called during the
+@R{} build).
 
 
 @node Debugging compiled code,  , Checking memory access, Debugging
@@ -8772,7 +8814,7 @@ symbol.
 Examples of registering routines can be found in the different packages
 in the @R{} source tree (e.g., @pkg{stats}).  Also, there is a
 brief, high-level introduction in @emph{R News} (volume 1/3, September
-2001, pages 20--23, @uref{http://www.r-project.org/doc/Rnews/Rnews_2001-3.pdf}).
+2001, pages 20--23, @uref{https://www.r-project.org/@/doc/@/Rnews/Rnews_2001-3.pdf}).
 
 Once routines are registered, they can be referred to as @R{} objects if
 they this is arranged in the @code{useDynLib} call in the package's
@@ -11084,8 +11126,8 @@ void R_RunWeakRefFinalizer(SEXP w);
 @end example
 
 A toy example of the use of weak references can be found at
-@uref{http://www.stat.uiowa.edu/~luke/R/references/weakfinex.html,
-@code{www.@/stat.@/uiowa.@/edu/@/~luke/@/R/references/@/weakfinex.html}},
+@uref{http://homepage.stat.uiowa.edu/~luke/R/references/weakfinex.html,
+@code{homepage.@/stat.@/uiowa.@/edu/@/~luke/@/R/references/@/weakfinex.html}},
 but that is used to add finalizers to external pointers which can now be
 done more directly.  At the time of writing no @acronym{CRAN} or
 Bioconductor package uses weak references.
@@ -12063,7 +12105,7 @@ in @file{Rmath.h}, but is in @file{math.h} which @file{Rmath.h} includes.
 
 @deftypefun double logspace_add (double @var{logx}, double @var{logy})
 @deftypefunx double logspace_sub (double @var{logx}, double @var{logy})
-@deftypefunx double logspace_sum (double* @var{logx}, int @var{n})
+@deftypefunx double logspace_sum (const double* @var{logx}, int @var{n})
 Compute the log of a sum or difference from logs of terms, i.e., ``x +
 y'' as @code{log (exp(@var{logx}) + exp(@var{logy}))} and ``x - y'' as
 @code{log (exp(@var{logx}) - exp(@var{logy}))},
@@ -12556,7 +12598,7 @@ the code is indeed being used with @R{}.
 Header file @file{Rconfig.h} (included by @file{R.h}) is used to define
 platform-specific macros that are mainly for use in other header files.
 The macro @code{WORDS_BIGENDIAN} is defined on
-big-endian@footnote{@uref{http://en.wikipedia.org/@/wiki/@/Endianness}.}
+big-endian@footnote{@uref{https://en.wikipedia.org/@/wiki/@/Endianness}.}
 systems (e.g.@: most OSes on Sparc and PowerPC hardware) and not on
 little-endian systems (such as @code{i686} and @code{x86_64} on all
 OSes, and Linux on Alpha and Itanium).  It can be useful when
@@ -12574,7 +12616,7 @@ of @R{} which did not have this macro, use a construction such as
 
 @example
 @group
-#if defined(R_VERSION) && R_VERSION >= R_Version(1, 9, 0)
+#if defined(R_VERSION) && R_VERSION >= R_Version(3, 1, 0)
   ...
 #endif
 @end group
@@ -12583,7 +12625,29 @@ of @R{} which did not have this macro, use a construction such as
 More detailed information is available in the macros @code{R_MAJOR},
 @code{R_MINOR}, @code{R_YEAR}, @code{R_MONTH} and @code{R_DAY}: see the
 header file @file{Rversion.h} for their format.  Note that the minor
-version includes the patchlevel (as in @samp{9.0}).
+version includes the patchlevel (as in @samp{2.2}).
+
+Packages which use @code{alloca} need to ensure it is defined: as it is
+neither C99 nor POSIX there is no standard way to do so.  As from @R{}
+3.2.2 one can use
+
+@example
+#include <Rconfig.h> // for HAVE_ALLOCA_H
+#ifdef __GNUC__
+// this covers gcc, clang, icc
+# undef alloca
+# define alloca(x) __builtin_alloca((x))
+#elif defined(HAVE_ALLOCA_H)
+// needed for native compilers on Solaris and AIX
+# include <alloca.h>
+#endif
+@end example
+
+@noindent
+(and this should be included before standard C headers such as
+@file{stdlib.h}, since on some platforms these include @file{malloc.h}
+which may have a conflicting definition), which suffices for known @R{}
+platforms.
 
 @node Inlining C functions, Controlling visibility, Platform and version information, The R API
 @section Inlining C functions
@@ -12981,7 +13045,7 @@ mean a GUI or other application that has the ability to submit commands
 to @R{} and perhaps to receive results back (not necessarily in a text
 format).  There are other routes besides those described here, for
 example the package @CRANpkg{Rserve} (from @acronym{CRAN}, see also
-@uref{http://www.rforge.net/@/Rserve/}) and connections to Java in
+@uref{https://www.rforge.net/@/Rserve/}) and connections to Java in
 @samp{JRI} (part of the @CRANpkg{rJava} package on @acronym{CRAN}) and
 the Omegahat/Bioconductor package @samp{SJava}.
 

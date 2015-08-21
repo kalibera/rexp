@@ -1,5 +1,5 @@
 #  File src/library/tools/R/utils.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 1995-2015 The R Core Team
 #
@@ -14,7 +14,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 ### * File utilities.
 
@@ -258,19 +258,19 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
     bstinputs <- paste(c(texinputs0, Rbstinputs, ""),
                        collapse = envSep)
 
-    otexinputs <- Sys.getenv("TEXINPUTS", unset = NA)
+    otexinputs <- Sys.getenv("TEXINPUTS", unset = NA_character_)
     if(is.na(otexinputs)) {
         on.exit(Sys.unsetenv("TEXINPUTS"))
         otexinputs <- "."
     } else on.exit(Sys.setenv(TEXINPUTS = otexinputs))
     Sys.setenv(TEXINPUTS = paste(otexinputs, texinputs, sep = envSep))
-    obibinputs <- Sys.getenv("BIBINPUTS", unset = NA)
+    obibinputs <- Sys.getenv("BIBINPUTS", unset = NA_character_)
     if(is.na(obibinputs)) {
         on.exit(Sys.unsetenv("BIBINPUTS"), add = TRUE)
         obibinputs <- "."
     } else on.exit(Sys.setenv(BIBINPUTS = obibinputs, add = TRUE))
     Sys.setenv(BIBINPUTS = paste(obibinputs, bibinputs, sep = envSep))
-    obstinputs <- Sys.getenv("BSTINPUTS", unset = NA)
+    obstinputs <- Sys.getenv("BSTINPUTS", unset = NA_character_)
     if(is.na(obstinputs)) {
         on.exit(Sys.unsetenv("BSTINPUTS"), add = TRUE)
         obstinputs <- "."
@@ -849,7 +849,7 @@ function(dir, installed = FALSE)
 .get_repositories <-
 function()
 {
-    rfile <- Sys.getenv("R_REPOSITORIES", unset = NA)
+    rfile <- Sys.getenv("R_REPOSITORIES", unset = NA_character_)
     if(is.na(rfile) || !file_test("-f", rfile)) {
         rfile <- file.path(Sys.getenv("HOME"), ".R", "repositories")
         if(!file_test("-f", rfile))
@@ -1167,6 +1167,28 @@ function(pattern, replacement, x, trafo, count, ...)
     x
 }
 
+### imports_for_undefined_globals
+
+imports_for_undefined_globals <-
+function(txt, lst, selective = TRUE)
+{
+    if(!missing(txt))
+        lst <- scan(what = character(), text = txt, quiet = TRUE)
+    lst <- sort(unique(lst))
+    nms <- lapply(lst, utils::find)
+    ind <- sapply(nms, length) > 0L
+    imp <- split(lst[ind], substring(unlist(nms[ind]), 9L))
+    if(selective) {
+        sprintf("importFrom(%s)",
+                vapply(Map(c, names(imp), imp),
+                       function(e)
+                           paste0("\"", e, "\"", collapse = ", "),
+                       ""))
+    } else {
+        sprintf("import(\"%s\")", names(imp))
+    }
+}
+
 ### ** .is_ASCII
 
 .is_ASCII <-
@@ -1406,6 +1428,7 @@ nonS3methods <- function(package)
              RCurl = "merge.list",
              RNetCDF = c("close.nc", "dim.def.nc", "dim.inq.nc",
                          "dim.rename.nc", "open.nc", "print.nc"),
+             Rmpfr = c("mpfr.is.0", "mpfr.is.integer"),
              SMPracticals = "exp.gibbs",
              TANOVA = "sigma.hat",
              TeachingDemos = "sigma.test",
@@ -1639,12 +1662,13 @@ function(file)
     db
 }
 
+### default changed to https: for R 3.3.0
 .expand_BioC_repository_URLs <-
 function(x)
 {
     x <- sub("%bm",
              as.character(getOption("BioC_mirror",
-                                    "http://bioconductor.org")),
+                                    "https://bioconductor.org")),
              x, fixed = TRUE)
     sub("%v",
         as.character(.BioC_version_associated_with_R_version()),

@@ -1,5 +1,5 @@
 #  File src/library/base/R/attach.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 1995-2015 The R Core Team
 #
@@ -14,7 +14,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 ## Abstraction for "The fastest way" to do this [no if(), no substr(), ...],
 ## to be used in many places:
@@ -52,7 +52,7 @@ attach <- function(what, pos = 2L, name = deparse(substitute(what)),
                 break
             }
         }
-        ob <- objects(db.pos, all.names = TRUE)
+        ob <- names(as.environment(db.pos))
         if(.isMethodsDispatchOn()) { ## {see note in library() about this}
             these <- ob[substr(ob, 1L, 6L) == ".__T__"]
             gen  <- gsub(".__T__(.*):([^:]+)", "\\1", these)
@@ -62,7 +62,7 @@ attach <- function(what, pos = 2L, name = deparse(substitute(what)),
         }
         ipos <- seq_along(sp)[-c(db.pos, match(c("Autoloads", "CheckExEnv"), sp, 0L))]
         for (i in ipos) {
-            obj.same <- match(objects(i, all.names = TRUE), ob, nomatch = 0L)
+            obj.same <- match(names(as.environment(i)), ob, nomatch = 0L)
             if (any(obj.same > 0L)) {
                 same <- ob[obj.same]
                 same <- same[!(same %in% dont.mind)]
@@ -77,7 +77,8 @@ attach <- function(what, pos = 2L, name = deparse(substitute(what)),
                 if(length(same)) {
 		    pkg <- if (sum(sp == sp[i]) > 1L) # 'pos = *' needs no translation
 			sprintf("%s (pos = %d)", sp[i], i) else sp[i]
-		    message(.maskedMsg(same, pkg, by = i < db.pos), domain=NA)
+		    message(.maskedMsg(sort(same), pkg, by = i < db.pos),
+                            domain = NA)
 		}
             }
         }
@@ -102,7 +103,7 @@ attach <- function(what, pos = 2L, name = deparse(substitute(what)),
         checkConflicts(value)
     }
     if (length(names(value)) && .isMethodsDispatchOn() )
-        methods:::cacheMetaData(value, TRUE)
+        methods::cacheMetaData(value, TRUE)
     invisible(value)
 }
 
@@ -191,7 +192,7 @@ detach <- function(name, pos = 2L, unload = FALSE, character.only = FALSE,
         }
     } else {
         if(.isMethodsDispatchOn() && methods:::.hasS4MetaData(env))
-            methods:::cacheMetaData(env, FALSE)
+            methods::cacheMetaData(env, FALSE)
         .Internal(lazyLoadDBflush(paste0(libpath, "/R/", pkgname, ".rdb")))
     }
     invisible()
@@ -217,7 +218,7 @@ ls <- objects <-
     all.names <- .Internal(ls(envir, all.names, sorted))
     if (!missing(pattern)) {
         if ((ll <- length(grep("[", pattern, fixed = TRUE))) &&
-            ll != length(grep("]", pattern, fixed = TRUE))) {
+             ll != length(grep("]", pattern, fixed = TRUE))) {
             if (pattern == "[") {
                 pattern <- "\\["
                 warning("replaced regular expression pattern '[' by  '\\\\['")

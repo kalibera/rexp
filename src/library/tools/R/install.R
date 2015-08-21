@@ -1,5 +1,5 @@
 #  File src/library/tools/R/install.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 1995-2015 The R Core Team
 #
@@ -16,7 +16,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 #### R based engine for  R CMD INSTALL SHLIB Rprof
 ####
@@ -704,7 +704,8 @@
             if (WINDOWS) {
                 owd <- setwd("src")
                 makefiles <- character()
-                if (!is.na(f <- Sys.getenv("R_MAKEVARS_USER", NA))) {
+                if (!is.na(f <- Sys.getenv("R_MAKEVARS_USER",
+                                           NA_character_))) {
                     if (file.exists(f))  makefiles <- f
                 } else if (file.exists(f <- path.expand("~/.R/Makevars.win")))
                     makefiles <- f
@@ -720,7 +721,7 @@
                 } else { ## no src/Makefile.win
                     srcs <- dir(pattern = "\\.([cfmM]|cc|cpp|f90|f95|mm)$",
                                 all.files = TRUE)
-                    archs <- if (!force_both && !grepl(" x64 ", win.version()))
+                    archs <- if (!force_both && !grepl(" x64 ", utils::win.version()))
                         "i386"
                     else {
                         ## see what is installed
@@ -785,12 +786,13 @@
                     owd <- setwd("src")
                     system_makefile <-
                         file.path(R.home(), paste0("etc", rarch), "Makeconf")
-                    site <- Sys.getenv("R_MAKEVARS_SITE", NA)
+                    site <- Sys.getenv("R_MAKEVARS_SITE", NA_character_)
                     if (is.na(site)) site <- file.path(paste0(R.home("etc"), rarch), "Makevars.site")
                     makefiles <- c(system_makefile,
                                    if(file.exists(site)) site,
                                    "Makefile")
-                    if (!is.na(f <- Sys.getenv("R_MAKEVARS_USER", NA))) {
+                    if (!is.na(f <- Sys.getenv("R_MAKEVARS_USER",
+                                               NA_character_))) {
                         if (file.exists(f))  makefiles <- c(makefiles, f)
                     } else if (file.exists(f <- path.expand(paste("~/.R/Makevars",
                                                                   Sys.getenv("R_PLATFORM"), sep = "-"))))
@@ -880,7 +882,7 @@
         if (WINDOWS && "x64" %in% test_archs) {
             ## we cannot actually test x64 unless this is 64-bit
             ## Windows, even if it is installed.
-            if (!grepl(" x64 ", win.version())) test_archs <- "i386"
+            if (!grepl(" x64 ", utils::win.version())) test_archs <- "i386"
         }
 
 
@@ -1709,7 +1711,7 @@
         SHLIB_LIBADD <- ""
         MAKE <- "make"
         ## Formerly for winshlib.mk to pick up Makeconf
-        rarch <- Sys.getenv("R_ARCH", NA)
+        rarch <- Sys.getenv("R_ARCH", NA_character_)
         if(is.na(rarch)) {
             if (nzchar(.Platform$r_arch)) {
                 rarch <- paste0("/", .Platform$r_arch)
@@ -1722,7 +1724,7 @@
 
     objs <- character()
     shlib <- ""
-    site <- Sys.getenv("R_MAKEVARS_SITE", NA)
+    site <- Sys.getenv("R_MAKEVARS_SITE", NA_character_)
     if (is.na(site))
         site <- file.path(paste0(R.home("etc"), rarch), "Makevars.site")
     makefiles <-
@@ -1811,7 +1813,7 @@
     if (length(objs)) objs <- paste0(objs, OBJ_EXT, collapse = " ")
 
     if (WINDOWS) {
-        if (!is.na(f <- Sys.getenv("R_MAKEVARS_USER", NA))) {
+        if (!is.na(f <- Sys.getenv("R_MAKEVARS_USER", NA_character_))) {
             if (file.exists(f))  makefiles <- c(makefiles, f)
         } else if (rarch == "/x64" &&
                    file.exists(f <- path.expand("~/.R/Makevars.win64")))
@@ -1821,7 +1823,7 @@
         else if (file.exists(f <- path.expand("~/.R/Makevars")))
             makefiles <- c(makefiles, f)
     } else {
-        if (!is.na(f <- Sys.getenv("R_MAKEVARS_USER", NA))) {
+        if (!is.na(f <- Sys.getenv("R_MAKEVARS_USER", NA_character_))) {
             if (file.exists(f))  makefiles <- c(makefiles, f)
         } else if (file.exists(f <- path.expand(paste("~/.R/Makevars",
                                                Sys.getenv("R_PLATFORM"),
@@ -1860,7 +1862,7 @@
         }
     }
     if (!use_cxx1x) {
-        val <- Sys.getenv("USE_CXX1X", NA)
+        val <- Sys.getenv("USE_CXX1X", NA_character_)
         if(!is.na(val)) {
             use_cxx1x <- TRUE
         }
@@ -2284,7 +2286,7 @@ function(name="", version = "0.0")
         "            VALUE \"FileVersion\", \"", version, "\\0\"\n", sep = "")
     writeLines(c(
                  '            VALUE "Compiled under R Version", R_MAJOR "." R_MINOR " (" R_YEAR "-" R_MONTH "-" R_DAY ")\\0"',
-                 '            VALUE "Project info", "http://www.r-project.org\\0"',
+                 '            VALUE "Project info", "https://www.r-project.org\\0"',
                  '        END',
                  '    END',
                  '    BLOCK "VarFileInfo"',

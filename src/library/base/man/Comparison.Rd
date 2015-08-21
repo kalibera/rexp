@@ -1,5 +1,5 @@
 % File src/library/base/man/Comparison.Rd
-% Part of the R package, http://www.R-project.org
+% Part of the R package, https://www.R-project.org
 % Copyright 1995-2014 R Core Team
 % Distributed under GPL 2 or later
 
@@ -113,7 +113,7 @@ x != y
 
   Collation of character strings is a complex topic.  For an
   introduction see
-  \url{http://en.wikipedia.org/wiki/Collating_sequence}.  The
+  \url{https://en.wikipedia.org/wiki/Collating_sequence}.  The
   \emph{Unicode Collation Algorithm}
   (\url{http://unicode.org/reports/tr10/}) is likely to be increasingly
   influential.  Where available \R by default makes use of ICU

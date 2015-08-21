@@ -14,7 +14,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
+ *  https://www.R-project.org/Licenses/
  */
 
 /*  DESCRIPTION --> see below */
@@ -60,7 +60,8 @@ double bessel_y(double x, double alpha)
 	       ((alpha      == na ) ? 0 : bessel_j(x, -alpha) * sinpi(alpha)));
     }
     else if (alpha > 1e7) {
-	MATHLIB_WARNING("besselY(x, nu): nu=%g too large for bessel_y() algorithm", alpha);
+	MATHLIB_WARNING(_("besselY(x, nu): nu=%g too large for bessel_y() algorithm"),
+			alpha);
 	return ML_NAN;
     }
     nb = 1+ (int)na;/* nb-1 <= alpha < nb */
@@ -121,7 +122,8 @@ double bessel_y_ex(double x, double alpha, double *by)
 	       ((alpha      == na ) ? 0 : bessel_j_ex(x, -alpha, by) * sinpi(alpha)));
     }
     else if (alpha > 1e7) {
-	MATHLIB_WARNING("besselY(x, nu): nu=%g too large for bessel_y() algorithm", alpha);
+	MATHLIB_WARNING(_("besselY(x, nu): nu=%g too large for bessel_y() algorithm"),
+			alpha);
 	return ML_NAN;
     }
     nb = 1+ (int)na;/* nb-1 <= alpha < nb */

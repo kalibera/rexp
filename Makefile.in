@@ -110,11 +110,11 @@ svnonly:
 	    | sed -n -e '/^Revision/p' -e '/^Last Changed Date/'p \
 	    | cut -d' ' -f1,2,3,4 > SVN-REVISION-tmp ; \
 	  if test "`cat SVN-REVISION-tmp`" = "Revision: -99"; then \
-	    $(ECHO) "WARNING: not an svn checkout"; \
-	  else \
-	    $(SHELL) $(top_srcdir)/tools/move-if-change SVN-REVISION-tmp SVN-REVISION ; \
-	    rm -f SVN-REVISION-tmp ; \
+	    $(ECHO) "ERROR: not an svn checkout"; \
+	    exit 1; \
 	  fi; \
+	  $(SHELL) $(top_srcdir)/tools/move-if-change SVN-REVISION-tmp SVN-REVISION ; \
+	  rm -f SVN-REVISION-tmp ; \
 	else \
 	  if test "$(BUILDDIR_IS_SRCDIR)" = no ; then \
 	    for f in $(NON_SVN_INSTFILES); do \
@@ -123,7 +123,7 @@ svnonly:
 	  fi \
 	fi
 
-@WANT_R_STATIC_FALSE@libR_la = libR$(DYLIB_EXT)
+@WANT_R_STATIC_FALSE@libR_la = libR$(R_DYLIB_EXT)
 @WANT_R_STATIC_TRUE@libR_la = libR.a
 install-libR:
 	@if test -f lib$(R_ARCH)/$(libR_la); then $(MAKE) install-libR-exists; fi
@@ -144,7 +144,7 @@ uninstall:
 	@rm -rf "$(DESTDIR)$(Rexecbindir)" "$(DESTDIR)$(rhome)/lib"
 	@rmdir "$(DESTDIR)$(rhome)" 2>/dev/null \
           || $(ECHO) "  dir $(DESTDIR)$(rhome) not removed"
-	@rm -f "$(DESTDIR)${libdir}/libR$(DYLIB_EXT)"
+	@rm -f "$(DESTDIR)${libdir}/libR$(R_DYLIB_EXT)"
 
 mostlyclean: clean
 clean:

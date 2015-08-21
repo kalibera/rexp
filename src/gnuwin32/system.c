@@ -15,7 +15,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
+ *  https://www.R-project.org/Licenses/
  */
 
 /* See ../unix/system.txt for a description of functions */
@@ -57,7 +57,6 @@ void editorcleanall(void);                  /* from editor.c */
 int Rwin_graphicsx = -25, Rwin_graphicsy = 0;
 
 R_size_t R_max_memory = INT_MAX;
-Rboolean UseInternet2 = TRUE; // used in main/internet.c
 
 extern SA_TYPE SaveAction; /* from ../main/startup.c */
 Rboolean DebugMenuitem = FALSE;  /* exported for rui.c */
@@ -494,8 +493,16 @@ void R_CleanUp(SA_TYPE saveact, int status, int runLast)
 	PrintWarnings();        /* from device close and (if run) .Last */
     app_cleanup();
     RConsole = NULL;
-    if(ifp) fclose(ifp);        /* input file from -f or --file= */
-    if(ifile[0]) unlink(ifile); /* input file from -e */
+    // Add some protection against calling this more than once:
+    // caused by signals on Unix, so maybe cannot happen here.
+    if(ifp) { 
+	fclose(ifp);    /* input file from -f or --file= */
+	ifp = NULL; 
+    }
+    if(ifile[0]) {
+	unlink(ifile); /* input file from -e */
+	ifile[0] = '\0';
+    }
     exit(status);
 }
 
@@ -983,7 +990,7 @@ int cmdlineoptions(int ac, char **av)
 		InThreadReadConsole = FileReadConsole;
 		setvbuf(stdout, NULL, _IONBF, 0);
 	    } else if (!strcmp(*av, "--internet2")) {
-/*		UseInternet2 = TRUE;    This is now the default */
+/*	        This is now the default */
 	    } else if (!strcmp(*av, "--mdi")) {
 		MDIset = 1;
 	    } else if (!strcmp(*av, "--sdi") || !strcmp(*av, "--no-mdi")) {

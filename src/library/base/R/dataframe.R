@@ -1,5 +1,5 @@
 #  File src/library/base/R/dataframe.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 # Statlib code by John Chambers, Bell Labs, 1994
 # Changes Copyright (C) 1998-2015 The R Core Team
@@ -437,7 +437,7 @@ data.frame <-
 	else {
             if(length(namesi)) vnames[[i]] <- namesi
             else if (no.vn[[i]]) {
-                tmpname <- deparse(object[[i]])[1L]
+                tmpname <- deparse(object[[i]], nlines = 1L)[1L]
                 if( substr(tmpname, 1L, 2L) == "I(" ) {
                     ntmpn <- nchar(tmpname, "c")
                     if(substr(tmpname, ntmpn, ntmpn) == ")")
@@ -1393,9 +1393,9 @@ print.data.frame <-
 {
     n <- length(row.names(x))
     if(length(x) == 0L) {
-        cat(sprintf(ngettext(n, "data frame with 0 columns and %d row",
-                             "data frame with 0 columns and %d rows",
-                             domain = "R-base"), n), "\n", sep = "")
+	cat(sprintf(ngettext(n, "data frame with 0 columns and %d row",
+			     "data frame with 0 columns and %d rows"),
+		    n), "\n", sep = "")
     } else if(n == 0L) {
         ## FIXME: header format is inconsistent here
 	print.default(names(x), quote = FALSE)

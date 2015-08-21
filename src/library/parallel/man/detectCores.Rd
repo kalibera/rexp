@@ -1,5 +1,5 @@
 % File src/library/parallel/man/detectCores.Rd
-% Part of the R package, http://www.R-project.org
+% Part of the R package, https://www.R-project.org
 % Copyright 2011-2014 R Core Team
 % Distributed under GPL 2 or later
 
@@ -45,7 +45,7 @@ detectCores(all.tests = FALSE, logical = FALSE)
   or Server 2003: however it reported correctly on the XP systems we
   tested.
 #endif
-% http://msdn.microsoft.com/en-us/library/ms683194%28v=VS.85%29.aspx
+% https://msdn.microsoft.com/en-us/library/ms683194%28v=VS.85%29.aspx
 
   Currently \code{logical} makes a difference on Sparc Solaris: there
   \code{logical = FALSE} returns the number of physical cores and

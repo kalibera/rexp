@@ -1,5 +1,5 @@
 % File src/library/base/man/strptime.Rd
-% Part of the R package, http://www.R-project.org
+% Part of the R package, https://www.R-project.org
 % Copyright 1995-2015 R Core Team
 % Distributed under GPL 2 or later
 
@@ -125,13 +125,13 @@ strptime(x, format, tz = "")
     \item{\code{\%r}}{The 12-hour clock time (using the locale's AM or
       PM).  Only defined in some locales.}
     \item{\code{\%R}}{Equivalent to \code{\%H:\%M}.}
-    \item{\code{\%S}}{Second as decimal number (00--61), allowing for
+    \item{\code{\%S}}{Second as integer (00--61), allowing for
       up to two leap-seconds (but POSIX-compliant implementations
       will ignore leap seconds).}
     \item{\code{\%t}}{Tab on output, arbitrary whitespace on input.}
     \item{\code{\%T}}{Equivalent to \code{\%H:\%M:\%S}.}
     \item{\code{\%u}}{Weekday as a decimal number (1--7, Monday is 1).}
-    % see http://en.wikipedia.org/wiki/Week_number#Week_number
+    % see https://en.wikipedia.org/wiki/Week_number#Week_number
     \item{\code{\%U}}{Week of the year as decimal number (00--53) using
       Sunday as the first day 1 of the week (and typically with the
       first Sunday of the year as day 1 of week 1).  The US convention.}
@@ -157,7 +157,7 @@ strptime(x, format, tz = "")
     \item{\code{\%Y}}{Year with century.  Note that whereas there was no
       zero in the original Gregorian calendar, ISO 8601:2004 defines it
       to be valid (interpreted as 1BC): see
-      \url{http://en.wikipedia.org/wiki/0_(year)}.  Note that the standards
+      \url{https://en.wikipedia.org/wiki/0_(year)}.  Note that the standards
       also say that years before 1582 in its calendar should only be used
       with agreement of the parties involved.
   
@@ -210,8 +210,8 @@ strptime(x, format, tz = "")
   not followed by a digit, it uses the setting of
   \code{\link{getOption}("digits.secs")}, or if that is unset, \code{n =
   3}).  Further, for \code{strptime} \code{\%OS} will input seconds
-  including fractional seconds.  Note that \code{\%S} ignores (and not
-  rounds) fractional parts on output.
+  including fractional seconds.  Note that \code{\%S} does not read
+  fractional parts on output. 
 
   The behaviour of other conversion specifications (and even if other
   character sequences commencing with \code{\%} \emph{are} conversion
@@ -245,7 +245,7 @@ strptime(x, format, tz = "")
   
   OS facilities will probably not print years before 1 CE (aka 1 AD)
   \sQuote{correctly} (they tend to assume the existence of a year 0: see
-  \url{http://en.wikipedia.org/wiki/0_(year)}, and some OSes get them
+  \url{https://en.wikipedia.org/wiki/0_(year)}, and some OSes get them
   completely wrong).  Common formats are \code{-45} and \code{-045}.
 
   Years after 9999 and before -999 are normally printed with five or

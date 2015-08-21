@@ -1,5 +1,5 @@
 % File src/library/utils/man/tar.Rd
-% Part of the R package, http://www.R-project.org
+% Part of the R package, https://www.R-project.org
 % Copyright 2009-2014 R Core Team
 % Distributed under GPL 2 or later
 
@@ -128,7 +128,7 @@ tar(tarfile, files = NULL,
 }
 
 \seealso{
-  \url{http://en.wikipedia.org/wiki/Tar_(file_format)},
+  \url{https://en.wikipedia.org/wiki/Tar_(file_format)},
   \url{http://pubs.opengroup.org/onlinepubs/9699919799/utilities/pax.html#tag_20_92_13_06}
   for the way the POSIX utility \command{pax} handles \command{tar} formats.
 

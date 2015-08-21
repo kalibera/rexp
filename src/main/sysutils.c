@@ -15,7 +15,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
+ *  https://www.R-project.org/Licenses/
  */
 
 #ifdef HAVE_CONFIG_H
@@ -630,14 +630,14 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 		PROTECT(ans = duplicate(x));
 	    else {
 		PROTECT(ans = allocVector(STRSXP, LENGTH(x)));
-		DUPLICATE_ATTRIB(ans, x);
+		SHALLOW_DUPLICATE_ATTRIB(ans, x);
 	    }
 	} else {   
 	    if(TYPEOF(x) != STRSXP)
 		error(_("'x' must be a character vector"));
 	    if(toRaw) {
 		PROTECT(ans = allocVector(VECSXP, LENGTH(x)));
-		DUPLICATE_ATTRIB(ans, x);
+		SHALLOW_DUPLICATE_ATTRIB(ans, x);
 	    } else 
 		PROTECT(ans = duplicate(x));
 	}

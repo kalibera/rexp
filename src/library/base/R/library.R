@@ -1,5 +1,5 @@
 #  File src/library/base/R/library.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 1995-2015 The R Core Team
 #
@@ -14,7 +14,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 testPlatformEquivalence <-
 function(built, run)
@@ -82,7 +82,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
             ## allow mismatches if r_arch is in use, e.g.
             ## i386-gnu-linux vs x86-gnu-linux depending on
             ## build system.
-            if(!nzchar(r_arch) && length(grep("\\w", platform)) &&
+            if(!nzchar(r_arch) && grepl("\\w", platform) &&
                !testPlatformEquivalence(platform, R.version$platform))
                 stop(gettextf("package %s was built for %s",
                               sQuote(pkgname), platform),
@@ -118,11 +118,15 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                 if(pkg %in% agreed) return()
             } else agreed <- character()
             if(!interactive())
-                stop(gettextf("package %s has a license that you need to accept in an interactive session", sQuote(pkg)), domain = NA)
+                stop(gettextf(
+                    "package %s has a license that you need to accept in an interactive session",
+                              sQuote(pkg)), domain = NA)
             lfiles <- file.path(pkgpath, c("LICENSE", "LICENCE"))
             lfiles <- lfiles[file.exists(lfiles)]
             if(length(lfiles)) {
-                message(gettextf("package %s has a license that you need to accept after viewing", sQuote(pkg)), domain = NA)
+                message(gettextf(
+                    "package %s has a license that you need to accept after viewing",
+                                 sQuote(pkg)), domain = NA)
                 readline("press RETURN to view license")
                 encoding <- pkgInfo$DESCRIPTION["Encoding"]
                 if(is.na(encoding)) encoding <- ""
@@ -130,8 +134,11 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                 if(encoding == "latin1") encoding <- "cp1252"
                 file.show(lfiles[1L], encoding = encoding)
             } else {
-                message(gettextf("package %s has a license that you need to accept:\naccording to the DESCRIPTION file it is", sQuote(pkg)), domain = NA)
-                message(pkgInfo$DESCRIPTION["License"], domain = NA)
+                message(gettextf(paste("package %s has a license that you need to accept:",
+				       "according to the DESCRIPTION file it is",
+				       "%s", sep="\n"),
+				 sQuote(pkg),
+				 pkgInfo$DESCRIPTION["License"]), domain = NA)
             }
             choice <- utils::menu(c("accept", "decline"),
                                   title = paste("License for", sQuote(pkg)))
@@ -153,7 +160,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
         else {
             ## A package will have created a generic
             ## only if it has created a formal method.
-            length(objects(env, pattern="^\\.__T", all.names=TRUE)) == 0L
+            length(grep(pattern="^\\.__T", names(env))) == 0L
         }
     }
 
@@ -165,9 +172,9 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                        ".packageName", ".noGenerics", ".required",
                        ".no_S3_generics", ".Depends", ".requireCachedGenerics")
         sp <- search()
-        lib.pos <- match(pkgname, sp)
+        lib.pos <- which(sp == pkgname)
         ## ignore generics not defined for the package
-        ob <- objects(lib.pos, all.names = TRUE)
+        ob <- names(as.environment(lib.pos))
         if(!nogenerics) {
             ##  Exclude generics that are consistent with implicit generic
             ## from another package.  A better test would be to move this
@@ -183,7 +190,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
 	ipos <- seq_along(sp)[-c(lib.pos,
 				 match(c("Autoloads", "CheckExEnv"), sp, 0L))]
         for (i in ipos) {
-            obj.same <- match(objects(i, all.names = TRUE), ob, nomatch = 0L)
+            obj.same <- match(names(as.environment(i)), ob, nomatch = 0L)
             if (any(obj.same > 0)) {
                 same <- ob[obj.same]
                 same <- same[!(same %in% dont.mind)]
@@ -213,7 +220,8 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                                                        sQuote(package)),
                                               domain = NA)
                     }
-		    msg <- .maskedMsg(same, pkg = sQuote(sp[i]), by = i < lib.pos)
+		    msg <- .maskedMsg(sort(same), pkg = sQuote(sp[i]),
+                                      by = i < lib.pos)
 		    packageStartupMessage(msg, domain = NA)
                 }
             }
@@ -243,7 +251,10 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
             ## The methods package caches all other pkgs when it is
             ## attached.
 
-            pkgpath <- find.package(package, lib.loc, quiet = TRUE,
+            ## Too extreme (unfortunately; warning too often):
+	    ## pkgpath <- find.package(package, lib.loc, quiet = TRUE, verbose = !quietly)
+	    ##   'verbose' here means to warn about packages found more than once
+	    pkgpath <- find.package(package, lib.loc, quiet = TRUE,
                                     verbose = verbose)
             if(length(pkgpath) == 0L) {
                 txt <- if(length(lib.loc))
@@ -275,7 +286,8 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
             if(is.character(pos)) {
                 npos <- match(pos, search())
                 if(is.na(npos)) {
-                    warning(gettextf("%s not found on search path, using pos = 2", sQuote(pos)), domain = NA)
+                    warning(gettextf("%s not found on search path, using pos = 2",
+                                     sQuote(pos)), domain = NA)
                     pos <- 2
                 } else pos <- npos
             }
@@ -287,20 +299,23 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
             ## takes over.
             if (packageHasNamespace(package, which.lib.loc)) {
 		if (isNamespaceLoaded(package)) {
-                    # Already loaded.  Does the version match?
+                    ## Already loaded.  Does the version match?
                     newversion <- as.numeric_version(pkgInfo$DESCRIPTION["Version"])
                     oldversion <- as.numeric_version(getNamespaceVersion(package))
                     if (newversion != oldversion) {
-                    	# No, so try to unload the previous one
+                    	## No, so try to unload the previous one
                     	res <- try(unloadNamespace(package))
                     	if (inherits(res, "try-error"))
-                    	    stop(gettextf("Package %s version %s cannot be unloaded", sQuote(package), oldversion, domain = "R-base"))
+                    	    stop(gettextf("Package %s version %s cannot be unloaded",
+					  sQuote(package), oldversion), domain=NA)
                     }
                 }
                 tt <- try({
-                    ns <- loadNamespace(package, c(which.lib.loc, lib.loc))
+                    attr(package, "LibPath") <- which.lib.loc
+                    ns <- loadNamespace(package, lib.loc)
                     env <- attachNamespace(ns, pos = pos, deps)
                 })
+                attr(package, "LibPath") <- NULL
                 if (inherits(tt, "try-error"))
                     if (logical.return)
                         return(FALSE)
@@ -436,7 +451,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
     if (logical.return)
 	TRUE
     else invisible(.packages())
-}
+} ## {library}
 
 format.libraryIQR <-
 function(x, ...)
@@ -675,14 +690,10 @@ function(package = NULL, lib.loc = NULL, quiet = FALSE,
                       "splines", "stats4", "tcltk"))
         return(file.path(.Library, package))
 
-    use_loaded <- FALSE
     if(is.null(package)) package <- .packages()
-    if(is.null(lib.loc)) {
-        use_loaded <- TRUE
-        lib.loc <- .libPaths()
-    }
-
     if(!length(package)) return(character())
+    if(use_loaded <- is.null(lib.loc))
+	lib.loc <- .libPaths()
 
     bad <- character()
     out <- character()
@@ -738,7 +749,7 @@ function(package = NULL, lib.loc = NULL, quiet = FALSE,
         if(length(paths) > 1L) {
             ## If a package was found more than once ...
             paths <- paths[1L]
-            if(verbose)
+	    if(verbose)
                 warning(gettextf("package %s found more than once,\nusing the one found in %s",
                                  sQuote(pkg), sQuote(paths)), domain = NA)
         }

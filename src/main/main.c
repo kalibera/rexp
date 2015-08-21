@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998-2014   The R Core Team
+ *  Copyright (C) 1998-2015   The R Core Team
  *  Copyright (C) 2002-2005  The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
+ *  https://www.R-project.org/Licenses/
  */
 
 #ifdef HAVE_CONFIG_H
@@ -718,7 +718,7 @@ void setup_Rmainloop(void)
 	char *p, Rlocale[1000]; /* Windows' locales can be very long */
 	p = getenv("LC_ALL");
 	strncpy(Rlocale, p ? p : "", 1000);
-        Rlocale[1000 - 1] = '\0';
+	Rlocale[1000 - 1] = '\0';
 	if(!(p = getenv("LC_CTYPE"))) p = Rlocale;
 	/* We'd like to use warning, but need to defer.
 	   Also cannot translate. */
@@ -811,6 +811,7 @@ void setup_Rmainloop(void)
     R_Toplevel.nextcontext = NULL;
     R_Toplevel.callflag = CTXT_TOPLEVEL;
     R_Toplevel.cstacktop = 0;
+    R_Toplevel.gcenabled = R_GCEnabled;
     R_Toplevel.promargs = R_NilValue;
     R_Toplevel.callfun = R_NilValue;
     R_Toplevel.call = R_NilValue;
@@ -823,10 +824,15 @@ void setup_Rmainloop(void)
     R_Toplevel.intstack = R_BCIntStackTop;
 #endif
     R_Toplevel.cend = NULL;
+    R_Toplevel.cenddata = NULL;
     R_Toplevel.intsusp = FALSE;
     R_Toplevel.handlerstack = R_HandlerStack;
     R_Toplevel.restartstack = R_RestartStack;
     R_Toplevel.srcref = R_NilValue;
+    R_Toplevel.prstack = NULL;
+    R_Toplevel.returnValue = NULL;
+    R_Toplevel.evaldepth = 0;
+    R_Toplevel.browserfinish = 0;
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     R_ExitContext = NULL;
 
@@ -928,7 +934,7 @@ void setup_Rmainloop(void)
 	R_InitialData();
     }
     else {
-    	if (! SETJMP(R_Toplevel.cjmpbuf)) {
+	if (! SETJMP(R_Toplevel.cjmpbuf)) {
 	    warning(_("unable to restore saved data in %s\n"), get_workspace_name());
 	}
     }
@@ -1131,8 +1137,8 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* return if 'expr' is not TRUE */
     if( !asLogical(CADDR(argList)) ) {
-        UNPROTECT(1);
-        return R_NilValue;
+	UNPROTECT(1);
+	return R_NilValue;
     }
 
     /* Save the evaluator state information */
@@ -1145,7 +1151,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     saveGlobalContext = R_GlobalContext;
 
     if (!RDEBUG(rho)) {
-        int skipCalls = asInteger(CADDDR(argList));
+	int skipCalls = asInteger(CADDDR(argList));
 	cptr = R_GlobalContext;
 	while ( ( !(cptr->callflag & CTXT_FUNCTION) || skipCalls--)
 		&& cptr->callflag )
@@ -1153,11 +1159,11 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 	Rprintf("Called from: ");
 	int tmp = asInteger(GetOption(install("deparse.max.lines"), R_BaseEnv));
 	if(tmp != NA_INTEGER && tmp > 0) R_BrowseLines = tmp;
-        if( cptr != R_ToplevelContext ) {
+	if( cptr != R_ToplevelContext ) {
 	    PrintValueRec(cptr->call, rho);
 	    SET_RDEBUG(cptr->cloenv, 1);
-        } else
-            Rprintf("top level \n");
+	} else
+	    Rprintf("top level \n");
 
 	R_BrowseLines = 0;
     }

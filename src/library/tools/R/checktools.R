@@ -1,5 +1,5 @@
 #  File src/library/tools/R/checktools.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 2013-2015 The R Core Team
 #
@@ -14,7 +14,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 ### ** check_packages_in_dir
 
@@ -110,19 +110,21 @@ function(dir,
     ## Build a package db from the source packages in the working
     ## directory.
     write_PACKAGES(dir, type = "source")
-
+    if(dir.exists(depdir <- file.path(dir, "Depends"))) {
+        write_PACKAGES(depdir, type = "source")
+        curl <- c(curl, paste0(curl, "/Depends"))
+    }
     ## Determine packages available locally (for checking) and in the
     ## repositories, and merge the information giving preference to the
     ## former.
-    curls <- utils::contrib.url(getOption("repos"), type = "source")
     localones <- utils::available.packages(contriburl = curl,
                                            type = "source")
+    curls <- utils::contrib.url(getOption("repos"), type = "source")
     available <- utils::available.packages(contriburl = curls,
                                            type = "source")
-    pos <- match(localones[, "Package"], available[, "Package"])
-    if(length(pos <- pos[!is.na(pos)]))
-        available <- available[-pos, , drop = FALSE]
     available <- rbind(localones, available)
+    available <-
+        available[!duplicated(available[, "Package"]), , drop = FALSE]
     curls <- c(curl, curls)
 
     ## As of c52164, packages with OS_type different from the current
@@ -199,7 +201,8 @@ function(dir,
             for(i in seq_along(rfiles)) {
                 message(sprintf("downloading %s ... ", rfiles[i]),
                         appendLF = FALSE)
-                status <- if(!utils::download.file(rfurls[i], rfiles[i]))
+                status <- if(!utils::download.file(rfurls[i], rfiles[i],
+                                                   quiet = TRUE))
                     "ok" else "failed"
                 message(status)
             }
@@ -415,7 +418,7 @@ function(options)
         options <- c(num, options)
     }
 
-    dis <- Sys.getenv("DISPLAY", unset = NA)
+    dis <- Sys.getenv("DISPLAY", unset = NA_character_)
 
     ## We need to start Xvfb with the given options and obtain its pid
     ## so that we can terminate it when done checking.
@@ -540,17 +543,7 @@ function(dir, all = TRUE, full = FALSE)
             "OK")) {
         writeLines(c("", "Check results details:"))
         details <- check_packages_in_dir_details(logs = logs)
-        flags <- details$Flags
-        out <- cbind(sprintf("Package: %s %s",
-                             details$Package, details$Version),
-                     ifelse(nzchar(flags),
-                            sprintf("Flags: %s\n", flags),
-                            ""),
-                     sprintf("Check: %s, Result: %s",
-                             details$Check, details$Status),
-                     c(gsub("\n", "\n  ", details$Output,
-                            perl = TRUE, useBytes = TRUE)))
-        cat(t(out), sep = c("\n", "", "\n  ", "\n\n"))
+        writeLines(paste(format(details), collapse = "\n\n"))
         invisible(TRUE)
     } else {
         invisible(FALSE)
@@ -882,7 +875,36 @@ function(dir, logs = NULL, drop_ok = TRUE)
     db$Check <- as.factor(db$Check)
     db$Status <- as.factor(db$Status)
 
+    class(db) <- c("check_details", "data.frame")
     db
+}
+
+format.check_details <-
+function(x, ...)
+{
+    flags <- x$Flags
+    flavor <- x$Flavor
+    paste(sprintf("Package: %s %s\n",
+                  x$Package, x$Version),
+          ifelse(nzchar(flavor),
+                 sprintf("Flavor: %s\n", flavor),
+                 ""),
+          ifelse(nzchar(flags),
+                 sprintf("Flags: %s\n", flags),
+                 ""),
+          sprintf("Check: %s, Result: %s\n",
+                  x$Check, x$Status),
+          sprintf("  %s",
+                  gsub("\n", "\n  ", x$Output,
+                       perl = TRUE, useBytes = TRUE)),
+          sep = "")
+}
+
+print.check_details <-
+function(x, ...)    
+{
+    writeLines(paste(format(x, ...), collapse = "\n\n"))
+    invisible(x)
 }
 
 ### ** check_packages_in_dir_changes

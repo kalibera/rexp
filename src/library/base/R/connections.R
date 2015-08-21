@@ -1,5 +1,5 @@
 #  File src/library/base/R/connections.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 1995-2015 The R Core Team
 #
@@ -14,7 +14,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 stdin <- function() .Internal(stdin())
 stdout <- function() .Internal(stdout())
@@ -75,9 +75,10 @@ flush.connection <- function (con)
     .Internal(flush(con))
 
 file <- function(description = "", open = "", blocking = TRUE,
-                 encoding = getOption("encoding"), raw = FALSE)
-    .Internal(file(description, open, blocking, encoding, raw))
-
+                 encoding = getOption("encoding"), raw = FALSE,
+                 method = getOption("url.method", "default")) {
+    .Internal(file(description, open, blocking, encoding, method, raw))
+}
 pipe <- function(description, open = "", encoding = getOption("encoding"))
     .Internal(pipe(description, open, encoding))
 
@@ -86,10 +87,9 @@ fifo <- function(description, open = "", blocking = FALSE,
     .Internal(fifo(description, open, blocking, encoding))
 
 url <- function(description, open = "", blocking = TRUE,
-                encoding = getOption("encoding"), method)
+                encoding = getOption("encoding"),
+                method = getOption("url.method", "default"))
 {
-    if(missing(method))
-        method <- getOption("url.method", "default")
     method <- match.arg(method, c("default", "internal", "libcurl", "wininet"))
     .Internal(url(description, open, blocking, encoding, method))
 }

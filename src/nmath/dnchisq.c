@@ -16,7 +16,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
+ *  https://www.R-project.org/Licenses/
  *
  *  DESCRIPTION
  *
@@ -89,7 +89,7 @@ double dnchisq(double x, double df, double ncp, int give_log)
     } while (q >= 1 || term * q > (1-q)*eps || term > 1e-10*sum);
     /* lower tail */
     term = mid; df = dfmid; i = imax;
-    while (i) {
+    while (i != 0) {
 	df -= 2;
 	q = i * df / x2;
 	i--;

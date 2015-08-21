@@ -1,5 +1,5 @@
 % File src/library/base/man/iconv.Rd
-% Part of the R package, http://www.R-project.org
+% Part of the R package, https://www.R-project.org
 % Copyright 1995-2015 R Core Team
 % Distributed under GPL 2 or later
 
@@ -144,7 +144,7 @@ iconvlist()
   \code{from} and \code{to} (as from \R 3.0.3) by \code{iconv}, but not
   for e.g.\sspace{}\code{fileEncoding} arguments.  \code{"macintosh"} is
   the official (and most widely supported) name for \sQuote{Mac Roman}
-  (\url{http://en.wikipedia.org/wiki/Mac_OS_Roman}).
+  (\url{https://en.wikipedia.org/wiki/Mac_OS_Roman}).
 }
 
 \seealso{

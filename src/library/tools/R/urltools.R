@@ -1,5 +1,5 @@
 #  File src/library/tools/R/urltools.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 2015 The R Core Team
 #
@@ -14,7 +14,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 get_IANA_URI_scheme_db <-
 function()
@@ -406,7 +406,7 @@ function(db, verbose = FALSE)
         ## A mis-configured site
         if (s == "503" && any(grepl("www.sciencedirect.com", c(u, newLoc))))
             s <- "405"
-        cran <- grepl("http://cran.r-project.org/web/packages/[.[:alnum:]]+(|/|/index.html)$",
+        cran <- grepl("https?://cran.r-project.org/web/packages/[.[:alnum:]]+(|/|/index.html)$",
                       u, ignore.case = TRUE)
         spaces <- grepl(" ", u)
         c(s, msg, newLoc, if(cran) u else "", if(spaces) u else "")

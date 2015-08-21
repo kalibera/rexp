@@ -1,5 +1,5 @@
 % File src/library/tcltk/man/TkWidgets.Rd
-% Part of the R package, http://www.R-project.org
+% Part of the R package, https://www.R-project.org
 % Copyright 1995-2008 R Core Team
 % Distributed under GPL 2 or later
 
@@ -27,7 +27,6 @@
 \alias{ttkcombobox}
 \alias{ttkentry}
 \alias{ttkframe}
-\alias{ttkimage}
 \alias{ttklabel}
 \alias{ttklabelframe}
 \alias{ttkmenubutton}
@@ -35,9 +34,11 @@
 \alias{ttkpanedwindow}
 \alias{ttkprogressbar}
 \alias{ttkradiobutton}
+\alias{ttkscale}
 \alias{ttkscrollbar}
 \alias{ttkseparator}
 \alias{ttksizegrip}
+\alias{ttkspinbox}
 \alias{ttktreeview}
 
 \title{Tk widgets}
@@ -68,7 +69,6 @@ ttkbutton(parent, ...)
 ttkcheckbutton(parent, ...)
 ttkcombobox(parent, ...)
 ttkframe(parent, ...)
-ttkimage(parent, ...)
 ttklabel(parent, ...)
 ttklabelframe(parent, ...)
 ttkmenubutton(parent, ...)
@@ -76,9 +76,11 @@ ttknotebook(parent, ...)
 ttkpanedwindow(parent, ...)
 ttkprogressbar(parent, ...)
 ttkradiobutton(parent, ...)
+ttkscale(parent, ...)
 ttkscrollbar(parent, ...)
 ttkseparator(parent, ...)
 ttksizegrip(parent, ...)
+ttkspinbox(parent, ...)
 ttktreeview(parent, ...)
 }
 \arguments{

@@ -1,5 +1,5 @@
 % File src/library/base/man/library.Rd
-% Part of the R package, http://www.R-project.org
+% Part of the R package, https://www.R-project.org
 % Copyright 1995-2014 R Core Team
 % Distributed under GPL 2 or later
 
@@ -107,7 +107,7 @@ require(package, lib.loc = NULL, quietly = FALSE,
   already been accepted.
 
   Free or Open Source Software (FOSS, e.g.,
-  \url{http://en.wikipedia.org/wiki/FOSS}) packages are determined by
+  \url{https://en.wikipedia.org/wiki/FOSS}) packages are determined by
   the same filters used by \code{\link{available.packages}} but applied
   to just the current package, not its dependencies.
 

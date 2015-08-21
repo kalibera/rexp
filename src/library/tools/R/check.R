@@ -1,5 +1,5 @@
 #  File src/library/tools/R/check.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 1995-2015 The R Core Team
 #
@@ -14,7 +14,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 ###- R based engine for R CMD check
 
@@ -644,7 +644,7 @@ setRlibs <-
         ## entries because these really are a part of R: hence, skip the
         ## check.
         check_license <- if (!is_base_pkg) {
-            Check_license <- Sys.getenv("_R_CHECK_LICENSE_", NA)
+            Check_license <- Sys.getenv("_R_CHECK_LICENSE_", NA_character_)
             if(is.na(Check_license)) {
                 ## The check code conditionalizes *output* on _R_CHECK_LICENSE_.
                 Sys.setenv('_R_CHECK_LICENSE_' = "TRUE")
@@ -1495,11 +1495,30 @@ setRlibs <-
             Rcmd <-
                 paste("options(warn=1)\n",
                       sprintf("tools:::.check_code_usage_in_package(package = \"%s\")\n", pkgname))
-            out3 <- if(config_val_to_logical(Sys.getenv("_R_CHECK_CODE_USAGE_WITH_ONLY_BASE_ATTACHED_",
-                                                        "false")))
-                R_runR2(Rcmd, "R_DEFAULT_PACKAGES=NULL")
-            else
-                R_runR2(Rcmd, "R_DEFAULT_PACKAGES=")
+            if(config_val_to_logical(Sys.getenv("_R_CHECK_CODE_USAGE_WITH_ONLY_BASE_ATTACHED_",
+                                                "false"))) {
+                out3 <-  R_runR2(Rcmd, "R_DEFAULT_PACKAGES=NULL")
+                if(length(pos <-
+                          grep("^Undefined global functions or variables:",
+                               out3))) {
+                    Rcmd <-
+                        sprintf("writeLines(strwrap(tools:::imports_for_undefined_globals(\"%s\"), exdent = 11))\n",
+                                paste(utils::tail(out3, -pos),
+                                      collapse = " "))
+                    miss <- R_runR2(Rcmd, "R_DEFAULT_PACKAGES=")
+                    if(length(miss)) {
+                        msg3 <- if(length(grep("^importFrom\\(\"methods\"",
+                                               miss))) {
+                            strwrap("to your NAMESPACE (and ensure that your DESCRIPTION Imports field contains 'methods').")
+                        } else "to your NAMESPACE."
+                        out3 <- c(out3,
+                                  c("Consider adding",
+                                    paste0("  ", miss),
+                                    msg3))
+                    }
+                }
+            } else
+                out3 <-  R_runR2(Rcmd, "R_DEFAULT_PACKAGES=")
         }
 
         if(!is_base_pkg && R_check_use_codetools && R_check_dot_internal) {
@@ -2948,89 +2967,13 @@ setRlibs <-
             ## packages, or just base?
             ## FIXME: should we do this for multiple sub-archs?
 
-            checkingLog(Log, "running R code from vignettes")
-            vigns <- pkgVignettes(dir = pkgdir)
-            res <- character()
-            cat("\n")
-            def_enc <- desc["Encoding"]
-            if( (is.na(def_enc))) def_enc <- ""
-            t1 <- proc.time()
-            for (i in seq_along(vigns$docs)) {
-                file <- vigns$docs[i]
-                name <- vigns$names[i]
-                enc <- vigns$encodings[i]
-                cat("  ", sQuote(basename(file)),
-                    if(nzchar(enc)) paste("using", sQuote(enc)),
-                    "...")
-                Rcmd <- paste0("options(warn=1)\ntools:::.run_one_vignette('",
-                               basename(file), "', '", vigns$dir, "'",
-                               if (nzchar(enc))
-                                   paste0(", encoding = '", enc, "'"),
-                               ", pkgdir='", vigns$pkgdir, "')")
-                outfile <- paste0(basename(file), ".log")
-                t1b <- proc.time()
-                status <- R_runR(Rcmd,
-                                 if (use_valgrind) paste(R_opts2, "-d valgrind") else R_opts2,
-                                 ## add timing as footer, as BATCH does
-                                 env = c(jitstr, "R_BATCH=1234", elibs,
-                                 "_R_CHECK_INTERNALS2_=1"),
-                                 stdout = outfile, stderr = outfile)
-                t2b <- proc.time()
-                out <- readLines(outfile, warn = FALSE)
-                savefile <- file.path(dirname(file), paste0(name, ".Rout.save"))
-                if(length(grep("^  When (running|tangling|sourcing)", out,
-                               useBytes = TRUE))) {
-                    cat(" failed\n")
-                    res <- c(res,
-                             paste("when running code in", sQuote(basename(file))),
-                             "  ...",
-                             utils::tail(out, as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_", 10))))
-                } else if(status || ! " *** Run successfully completed ***" %in% out) {
-                    ## (Need not be the final line if running under valgrind)
-                    cat(" failed to complete the test\n")
-                    out <- c(out, "", "... incomplete output.  Crash?")
-                    res <- c(res,
-                             paste("when running code in", sQuote(basename(file))),
-                             "  ...",
-                             utils::tail(out, as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_", 10))))
-                } else if (file.exists(savefile)) {
-                    cmd <- paste0("invisible(tools::Rdiff('",
-                                 outfile, "', '", savefile, "',TRUE,TRUE))")
-                    out2 <- R_runR(cmd, R_opts2)
-                    if(length(out2)) {
-                        print_time(t1b, t2b, NULL)
-                        cat("\ndifferences from ", sQuote(basename(savefile)),
-                            "\n", sep = "")
-                        writeLines(c(out2, ""))
-                    } else {
-                        print_time(t1b, t2b, NULL)
-                        cat(" OK\n")
-                        if (!config_val_to_logical(Sys.getenv("_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_", use_valgrind)))
-                            unlink(outfile)
-                    }
-                } else {
-                    print_time(t1b, t2b, NULL)
-                    cat(" OK\n")
-                    if (!config_val_to_logical(Sys.getenv("_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_", use_valgrind)))
-                        unlink(outfile)
-                }
-            }
-            t2 <- proc.time()
-            print_time(t1, t2, Log)
-            if (R_check_suppress_RandR_message)
-                res <- grep('^Xlib: *extension "RANDR" missing on display', res,
-                            invert = TRUE, value = TRUE, useBytes = TRUE)
-            if(length(res)) {
-                if(length(grep("there is no package called", res,
-                               useBytes = TRUE))) {
-                    warningLog(Log, "Errors in running code in vignettes:")
-                    printLog0(Log, paste(c(res, "", ""), collapse = "\n"))
-                } else {
-                    errorLog(Log, "Errors in running code in vignettes:")
-                    printLog0(Log, paste(c(res, "", ""), collapse = "\n"))
-		    maybe_exit(1L)
-                }
-            } else resultLog(Log, "OK")
+            ## Re-building the vignette outputs also runs the code, so
+            ## doing so as well creates no additional value unless the
+            ## results are compared against saved results (which could
+            ## perhaps also be integrated into buildVignettes().
+            ## Hence, when re-building, skip running the code when there
+            ## are no saved results.
+            ## Could make this controllable via some env var ...
 
             build_vignettes <-
                 parse_description_field(desc, "BuildVignettes", TRUE)
@@ -3039,7 +2982,104 @@ setRlibs <-
                 info <- analyze_license(desc["License"])
                 build_vignettes <- info$is_verified
             }
-            if (do_build_vignettes && build_vignettes) {
+            do_build_vignettes <- do_build_vignettes && build_vignettes
+            skip_run_maybe <-
+                R_check_vignettes_skip_run_maybe && do_build_vignettes
+
+            vigns <- pkgVignettes(dir = pkgdir)
+            savefiles <- 
+                file.path(dirname(vigns$docs),
+                          paste0(vigns$names, ".Rout.save"))
+
+            if(!skip_run_maybe || any(file.exists(savefiles))) {
+                checkingLog(Log, "running R code from vignettes")
+                res <- character()
+                cat("\n")
+                def_enc <- desc["Encoding"]
+                if( (is.na(def_enc))) def_enc <- ""
+                t1 <- proc.time()
+                iseq <- seq_along(savefiles)
+                if(skip_run_maybe)
+                    iseq <- iseq[file.exists(savefiles)]
+                for (i in iseq) {
+                    file <- vigns$docs[i]
+                    name <- vigns$names[i]
+                    enc <- vigns$encodings[i]
+                    cat("  ", sQuote(basename(file)),
+                        if(nzchar(enc)) paste("using", sQuote(enc)),
+                        "...")
+                    Rcmd <- paste0("options(warn=1)\ntools:::.run_one_vignette('",
+                                   basename(file), "', '", vigns$dir, "'",
+                                   if (nzchar(enc))
+                                       paste0(", encoding = '", enc, "'"),
+                                   ", pkgdir='", vigns$pkgdir, "')")
+                    outfile <- paste0(basename(file), ".log")
+                    t1b <- proc.time()
+                    status <- R_runR(Rcmd,
+                                     if (use_valgrind) paste(R_opts2, "-d valgrind") else R_opts2,
+                                     ## add timing as footer, as BATCH does
+                                     env = c(jitstr, "R_BATCH=1234", elibs,
+                                     "_R_CHECK_INTERNALS2_=1"),
+                                     stdout = outfile, stderr = outfile)
+                    t2b <- proc.time()
+                    out <- readLines(outfile, warn = FALSE)
+                    savefile <- savefiles[i]
+                    if(length(grep("^  When (running|tangling|sourcing)", out,
+                                   useBytes = TRUE))) {
+                        cat(" failed\n")
+                        res <- c(res,
+                                 paste("when running code in", sQuote(basename(file))),
+                                 "  ...",
+                                 utils::tail(out, as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_", "10"))))
+                    } else if(status || ! " *** Run successfully completed ***" %in% out) {
+                        ## (Need not be the final line if running under valgrind)
+                        cat(" failed to complete the test\n")
+                        out <- c(out, "", "... incomplete output.  Crash?")
+                        res <- c(res,
+                                 paste("when running code in", sQuote(basename(file))),
+                                 "  ...",
+                                 utils::tail(out, as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_", "10"))))
+                    } else if (file.exists(savefile)) {
+                        cmd <- paste0("invisible(tools::Rdiff('",
+                                      outfile, "', '", savefile, "',TRUE,TRUE))")
+                        out2 <- R_runR(cmd, R_opts2)
+                        if(length(out2)) {
+                            print_time(t1b, t2b, NULL)
+                            cat("\ndifferences from ", sQuote(basename(savefile)),
+                                "\n", sep = "")
+                            writeLines(c(out2, ""))
+                        } else {
+                            print_time(t1b, t2b, NULL)
+                            cat(" OK\n")
+                            if (!config_val_to_logical(Sys.getenv("_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_", use_valgrind)))
+                                unlink(outfile)
+                        }
+                    } else {
+                        print_time(t1b, t2b, NULL)
+                        cat(" OK\n")
+                        if (!config_val_to_logical(Sys.getenv("_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_", use_valgrind)))
+                            unlink(outfile)
+                    }
+                }
+                t2 <- proc.time()
+                print_time(t1, t2, Log)
+                if(R_check_suppress_RandR_message)
+                    res <- grep('^Xlib: *extension "RANDR" missing on display', res,
+                                invert = TRUE, value = TRUE, useBytes = TRUE)
+                if(length(res)) {
+                    if(length(grep("there is no package called", res,
+                                   useBytes = TRUE))) {
+                        warningLog(Log, "Errors in running code in vignettes:")
+                        printLog0(Log, paste(c(res, "", ""), collapse = "\n"))
+                    } else {
+                        errorLog(Log, "Errors in running code in vignettes:")
+                        printLog0(Log, paste(c(res, "", ""), collapse = "\n"))
+                        maybe_exit(1L)
+                    }
+                } else resultLog(Log, "OK")
+            }
+                
+            if (do_build_vignettes) {
                 checkingLog(Log, "re-building of vignette outputs")
                 ## copy the whole pkg directory to check directory
                 ## so we can work in place, and allow ../../foo references.
@@ -3078,13 +3118,13 @@ setRlibs <-
                 warns <- grep("^Warning: file .* is not portable",
                               out, value = TRUE, useBytes = TRUE)
                 if (status) {
-                    noteLog(Log)
-                    out <- utils::tail(out, 25)
+                    if(skip_run_maybe) warningLog(Log) else noteLog(Log)
+                    out <- utils::tail(out, as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_", "25")))
                     printLog0(Log,
                               paste(c("Error in re-building vignettes:",
                                       "  ...", out, "", ""), collapse = "\n"))
                 } else if(nw <- length(warns)) {
-                    noteLog(Log)
+                    if(skip_run_maybe) warningLog(Log) else noteLog(Log)
                     msg <- ngettext(nw,
                                     "Warning in re-building vignettes:\n",
                                     "Warnings in re-building vignettes:\n",
@@ -3355,7 +3395,7 @@ setRlibs <-
                 INSTALL_opts <- c(INSTALL_opts,  "--no-multiarch")
             INSTALL_opts <- paste(INSTALL_opts, collapse = " ")
             args <- c("INSTALL", "-l", shQuote(libdir), INSTALL_opts,
-                      shQuote(if (WINDOWS) shortPathName(pkgdir) else pkgdir))
+                      shQuote(if (WINDOWS) utils::shortPathName(pkgdir) else pkgdir))
             if (!use_install_log) {
                 ## Case A: No redirection of stdout/stderr from installation.
                 ## This is very rare: needs _R_CHECK_USE_INSTALL_LOG_ set
@@ -3779,7 +3819,7 @@ setRlibs <-
                 else resultLog(Log, "Note_to_CRAN_maintainers")
             } else if(length(res$bad_package)) {
                 errorLog(Log)
-                printLog0(Log, paste(c(out, ""), collapse = "\n"))
+                printLog0(Log, c(paste(out, collapse = "\n\n"), "\n"))
 		maybe_exit(1L)
             } else if(length(res$bad_version) ||
                       identical(res$foss_with_BuildVignettes, TRUE) ||
@@ -3788,7 +3828,7 @@ setRlibs <-
                 warningLog(Log)
             else if(length(res) > 1L) noteLog(Log)
             else resultLog(Log, "OK")
-            printLog0(Log, paste(out, "\n", sep = ""))
+            printLog0(Log, c(paste(out, collapse = "\n\n"), "\n"))
         } else resultLog(Log, "OK")
     }
 
@@ -4116,7 +4156,7 @@ setRlibs <-
     options(showErrorCalls=FALSE, warn = 1)
 
     ## Read in check environment file.
-    Renv <- Sys.getenv("R_CHECK_ENVIRON", unset = NA)
+    Renv <- Sys.getenv("R_CHECK_ENVIRON", unset = NA_character_)
     if(!is.na(Renv)) {
         ## Do not read any check environment file if R_CHECK_ENVIRON is
         ## set to empty of something non-existent.
@@ -4291,7 +4331,7 @@ setRlibs <-
             f <- dir(file.path(R.home(), "bin"))
             archs <- f[f %in% c("i386", "x64")]
             ## if we have x64, can only run it on a 64-bit OS
-            if (length(archs) > 1L && !grepl("x64", utils:::win.version()))
+            if (length(archs) > 1L && !grepl("x64", utils::win.version()))
                 archs <- "i386"
         } else {
             wd2 <- setwd(file.path(R.home("bin"), "exec"))
@@ -4400,7 +4440,10 @@ setRlibs <-
         config_val_to_logical(Sys.getenv("_R_CHECK_TOPLEVEL_FILES_", "FALSE"))
     R_check_exit_on_first_error <-
 	config_val_to_logical(Sys.getenv("_R_CHECK_EXIT_ON_FIRST_ERROR_", "FALSE"))
-
+    R_check_vignettes_skip_run_maybe <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_VIGNETTES_SKIP_RUN_MAYBE_",
+                                         "FALSE"))
+    
     if (!nzchar(check_subdirs)) check_subdirs <- R_check_subdirs_strict
 
     if (as_cran) {
@@ -4414,13 +4457,15 @@ setRlibs <-
         Sys.setenv("_R_SHLIB_BUILD_OBJECTS_SYMBOL_TABLES_" = "TRUE")
         Sys.setenv("_R_CHECK_DOT_FIRSTLIB_" = "TRUE")
         Sys.setenv("_R_CHECK_PACKAGES_USED_CRAN_INCOMING_NOTES_" = "TRUE")
-        prev <- Sys.getenv("_R_CHECK_LIMIT_CORES_", NA)
+        prev <- Sys.getenv("_R_CHECK_LIMIT_CORES_", NA_character_)
         if(is.na(prev)) Sys.setenv("_R_CHECK_LIMIT_CORES_" = "TRUE")
-        prev <- Sys.getenv("_R_CHECK_SCREEN_DEVICE_", NA)
+        prev <- Sys.getenv("_R_CHECK_SCREEN_DEVICE_", NA_character_)
         if(is.na(prev)) Sys.setenv("_R_CHECK_SCREEN_DEVICE_" = "stop")
         Sys.setenv("_R_CHECK_CODE_USAGE_VIA_NAMESPACES_" = "TRUE")
         Sys.setenv("_R_CHECK_CODE_USAGE_WITH_ONLY_BASE_ATTACHED_" = "TRUE")
         Sys.setenv("_R_CHECK_S3_METHODS_NOT_REGISTERED_" = "TRUE")
+        Sys.setenv("_R_CHECK_PACKAGE_DATASETS_SUPPRESS_NOTES_" = "TRUE")
+        Sys.setenv("_R_CHECK_PACKAGES_USED_IGNORE_UNUSED_IMPORTS_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
@@ -4433,10 +4478,12 @@ setRlibs <-
         R_check_FF <- "registration"
         do_timings <- TRUE
         R_check_toplevel_files <- TRUE
+        R_check_vignettes_skip_run_maybe <- TRUE
     } else {
         ## do it this way so that INSTALL produces symbols.rds
         ## when called from check but not in general.
-        if(is.na(Sys.getenv("_R_SHLIB_BUILD_OBJECTS_SYMBOL_TABLES_", NA)))
+        if(is.na(Sys.getenv("_R_SHLIB_BUILD_OBJECTS_SYMBOL_TABLES_",
+                            NA_character_)))
             Sys.setenv("_R_SHLIB_BUILD_OBJECTS_SYMBOL_TABLES_" = "TRUE")
     }
 
@@ -4609,7 +4656,7 @@ setRlibs <-
             Sys.setenv(R_LIBS = env_path(libdir, R_LIBS))
         }
         if (WINDOWS && grepl(" ", libdir)) # need to avoid spaces in libdir
-            libdir <- gsub("\\", "/", shortPathName(libdir), fixed = TRUE)
+            libdir <- gsub("\\", "/", utils::shortPathName(libdir), fixed = TRUE)
 
         ## Package sources from the R distribution are special.  They
         ## have a 'DESCRIPTION.in' file (instead of 'DESCRIPTION'),

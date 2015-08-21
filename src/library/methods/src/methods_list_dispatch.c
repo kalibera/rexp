@@ -14,7 +14,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
+ *  https://www.R-project.org/Licenses/
  */
 
 /* <UTF8>
@@ -845,7 +845,7 @@ SEXP R_identC(SEXP e1, SEXP e2)
 {
     if(TYPEOF(e1) == STRSXP && TYPEOF(e2) == STRSXP &&
        LENGTH(e1) == 1 && LENGTH(e2) == 1 &&
-       streql(CHAR(STRING_ELT(e1, 0)), CHAR(STRING_ELT(e2, 0))))
+       STRING_ELT(e1, 0) == STRING_ELT(e2, 0))
 	return R_TRUE;
     else
 	return R_FALSE;

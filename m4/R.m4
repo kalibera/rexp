@@ -1968,25 +1968,16 @@ AC_DEFUN([R_BSD_NETWORKING],
 [AC_CACHE_CHECK([for BSD networking],
                 [r_cv_bsd_networking],
 [if test "${ac_cv_header_netdb_h}" = yes \
+dnl needed for Rhttpd.c but missed before R 3.3.0
+     && test "${ac_cv_header_arpa_inet_h}" = yes \
      && test "${ac_cv_header_netinet_in_h}" = yes \
      && test "${ac_cv_header_sys_socket_h}" = yes \
      && test "${ac_cv_search_connect}" != no \
      && test "${ac_cv_search_gethostbyname}" !=  no; then
   r_cv_bsd_networking=yes
 else
-  r_cv_bsd_networking=no
+  AC_MSG_ERROR([BSD networking functions are required])
 fi])
-if test "${r_cv_bsd_networking}" = yes; then
-  AC_DEFINE(HAVE_BSD_NETWORKING, 1,
-            [Define if you have BSD networking headers and libraries.])
-  AC_DEFINE(HAVE_SOCKETS, 1,
-            [Define if you have support for sockets.])
-  AC_DEFINE(HAVE_INTERNET, 1,
-            [Define if you have support for ftp/http access.])
-  AC_DEFINE(SUPPORT_LIBXML, 1,
-            [Define if you provide support for the libxml ftp/http
-	     functions.])
-fi
 ])# R_BSD_NETWORKING
 
 ## R_BITMAPS
@@ -4029,6 +4020,87 @@ AC_ARG_VAR([SHLIB_CXX1XLD],
             files from the C++11 compiler])
 AC_ARG_VAR([SHLIB_CXX1XLDFLAGS], [special flags used by SHLIB_CXX1XLD])
 ])# R_CXX1X
+
+## R_LIBCURL
+## ----------------
+AC_DEFUN([R_LIBCURL],
+[## curl-config might not match the installed libcurl,
+## so we allow the user to set CURL_CPPFLAGS, CURL_LIBS
+## and check the version directly rather than by curl-config --checkfor
+AC_PATH_PROG(CURL_CONFIG, curl-config)
+if test -n "${CURL_CONFIG}"; then
+  echo "checking libcurl version ..." \
+    `${CURL_CONFIG} --version | sed -e 's,^[[^0-9]]*,,'`
+  if test -z "${CURL_CPPFLAGS}"; then
+    CURL_CPPFLAGS=`${CURL_CONFIG} --cflags`
+  fi
+  ## This should be correct for a static-only build, user will
+  ## need to override to specify static linking (see config.site)
+  if test -z "${CURL_LIBS}"; then
+    CURL_LIBS=`${CURL_CONFIG} --libs`
+  fi
+fi
+r_save_CPPFLAGS="${CPPLAGS}"
+CPPFLAGS="${CURL_CPPFLAGS} ${CPPFLAGS}"
+r_save_LIBS="${LIBS}"
+LIBS="${CURL_LIBS} ${LIBS}"
+AC_CHECK_HEADERS(curl/curl.h, [have_libcurl=yes], [have_libcurl=no])
+
+if test "x${have_libcurl}" = "xyes"; then
+AC_CACHE_CHECK([if libcurl is version 7 and >= 7.28.0], [r_cv_have_curl728],
+[AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <stdlib.h>
+#include <curl/curl.h>
+int main() 
+{
+#ifdef LIBCURL_VERSION_MAJOR
+#if LIBCURL_VERSION_MAJOR > 7
+  exit(1);
+#elif LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 28
+  exit(0);
+#else
+  exit(1);
+#endif
+#else
+  exit(1);
+#endif
+}
+]])], [r_cv_have_curl728=yes], [r_cv_have_curl728=no], [r_cv_have_curl728=no])])
+fi
+if test "x${r_cv_have_curl728}" = xno; then
+  have_libcurl=no
+fi
+
+if test "x${have_libcurl}" = "xyes"; then
+AC_CACHE_CHECK([if libcurl supports https], [r_cv_have_curl_https],
+[AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <string.h>
+#include <curl/curl.h>
+int main()
+{
+    curl_version_info_data *data = curl_version_info(CURLVERSION_NOW);
+    const char * const *p  = data->protocols;
+    int found = 0;
+    for (; *p; p++)
+	if(strcmp(*p, "https") == 0) {found = 1; break;}
+    exit(found ? 0 : 1);
+}
+]])], [r_cv_have_curl_https=yes], [r_cv_have_curl_https=no], [r_cv_have_curl_https=no])])
+fi
+if test "x${r_cv_have_curl_https}" = xno; then
+  have_libcurl=no
+fi
+if test "x${have_libcurl}" = xyes; then
+  AC_DEFINE(HAVE_LIBCURL, 1, [Define if your system has libcurl >= 7.28.0 with support for https.])
+  CPPFLAGS="${r_save_CPPFLAGS}"
+  LIBS="${r_save_LIBS}"
+  AC_SUBST(CURL_CPPFLAGS)
+  AC_SUBST(CURL_LIBS)
+else
+  AC_MSG_ERROR([libcurl >= 7.28.0 library and headers are required with support for https])
+fi
+])# R_LIBCURL
+
 
 
 ### Local variables: ***

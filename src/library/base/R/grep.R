@@ -1,5 +1,5 @@
 #  File src/library/base/R/grep.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 1995-2015 The R Core Team
 #
@@ -14,7 +14,12 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
+
+
+## Q: Why are we using   as.character(.)   all over the place instead of doing that in C ?
+## A: These must work for objects which have their own as.character(.) methods *and*
+##    as.character() is fast [Primitive]
 
 strsplit <-
 function(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE)
@@ -99,9 +104,9 @@ function(pattern, text, ignore.case = FALSE, perl = FALSE,
         attr(pos, "match.length") <- len
         pos
     }
-    
+
     m <- regexpr(pattern, text,
-                 ignore.case = ignore.case, useBytes = useBytes, 
+                 ignore.case = ignore.case, useBytes = useBytes,
                  perl = TRUE)
     y <- vector("list", length(text))
     ind <- (m == -1L)

@@ -1,5 +1,5 @@
 #  File src/library/tools/R/CRANtools.R
-#  Part of the R package, http://www.R-project.org
+#  Part of the R package, https://www.R-project.org
 #
 #  Copyright (C) 2014-2015 The R Core Team
 #
@@ -14,7 +14,7 @@
 #  GNU General Public License for more details.
 #
 #  A copy of the GNU General Public License is available at
-#  http://www.r-project.org/Licenses/
+#  https://www.R-project.org/Licenses/
 
 summarize_CRAN_check_status <-
 function(package, results = NULL, details = NULL, mtnotes = NULL)
@@ -61,7 +61,7 @@ function(package, results = NULL, details = NULL, mtnotes = NULL)
         paste(c(sprintf("Current CRAN status: %s",
                         paste(sprintf("%s: %s", names(tab), tab),
                               collapse = ", ")),
-                sprintf("See: <http://CRAN.R-project.org/web/checks/check_results_%s.html>",
+                sprintf("See: <https://CRAN.R-project.org/web/checks/check_results_%s.html>",
                         p)),
               collapse = "\n")
     }
@@ -105,7 +105,7 @@ function(package, results = NULL, details = NULL, mtnotes = NULL)
                                  gsub("\n", "\n  ", tmp$Output,
                                       perl = TRUE, useBytes = TRUE)),
                          sprintf("See: %s",
-                                 paste(sprintf("<http://www.r-project.org/nosvn/R.check/%s/%s-00check.html>",
+                                 paste(sprintf("<https://www.r-project.org/nosvn/R.check/%s/%s-00check.html>",
                                                flavors,
                                                p),
                                        collapse = ",\n     ")))
@@ -124,7 +124,7 @@ function(package, results = NULL, details = NULL, mtnotes = NULL)
         paste(c(paste("Memtest notes:",
                       paste(unique(tests), collapse = " ")),
                 sprintf("See: %s",
-                        paste(sprintf("<http://www.stats.ox.ac.uk/pub/bdr/memtests/%s/%s>",
+                        paste(sprintf("<https://www.stats.ox.ac.uk/pub/bdr/memtests/%s/%s>",
                                       tests,
                                       paths),
                               collapse = ",\n     "))),
@@ -173,6 +173,29 @@ function(x, ...)
 {
     writeLines(paste(format(x, ...), collapse = "\n\n"))
     invisible(x)
+}
+
+## Summarize complete CRAN check status according to maintainer.
+
+summarize_CRAN_check_status_according_to_maintainer <-
+function()
+{
+    pdb <- CRAN_package_db()
+    ind <- !duplicated(pdb[, "Package"])
+
+    maintainer <- pdb[, "Maintainer"]
+    maintainer <- tolower(sub(".*<(.*)>.*", "\\1", maintainer))
+
+    results <- CRAN_check_results()
+    details <- CRAN_check_details()
+    mtnotes <- CRAN_memtest_notes()
+
+    split(format(summarize_CRAN_check_status(pdb[ind, "Package"],
+                                             results,
+                                             details,
+                                             mtnotes),
+                 header = TRUE),
+          maintainer[ind])
 }
 
 CRAN_baseurl_for_src_area <-
@@ -225,8 +248,9 @@ function()
 
 CRAN_package_db <-
 function()
-    read_CRAN_object(CRAN_baseurl_for_web_area(),
-                     "web/packages/packages.rds")
+    as.data.frame(read_CRAN_object(CRAN_baseurl_for_web_area(),
+                                   "web/packages/packages.rds"),
+                  stringsAsFactors = FALSE)
 
 CRAN_aliases_db <-
 function()
@@ -317,7 +341,7 @@ function(mirrors = NULL, verbose = FALSE)
              )
     }
 
-    master <- "http://CRAN.R-project.org/"
+    master <- "https://CRAN.R-project.org/"
     path_ts1 <- "TIME"
     path_ts2 <- "bin/windows/contrib/r-release/TIME_r-release"
     path_ts3 <- "bin/windows/contrib/r-old-release/TIME_r-old-release"
@@ -375,6 +399,54 @@ function(mirrors, db = NULL)
               )
     list(to = to, body = body)
 }
+
+CRAN_mirror_mirmon_status <-
+function()
+{
+    ## See
+    ## <http://www.projects.science.uu.nl/csg/mirmon/mirmon.html#state_file_format>.
+
+    fields <-
+        c("url",
+          "age",
+          "status_last_probe",
+          "time_last_successful_probe",
+          "probe_history",
+          "state_history",
+          "last_probe")
+    ts_to_POSIXct <- function(ts) {
+        suppressWarnings(as.POSIXct(as.numeric(as.character(ts)),
+                                    origin = "1970-01-01"))
+    }
+    read_mirmon_state_file <- function(con) {
+        db <- utils::read.table(con, header = FALSE, col.names = fields)
+        db$url <- as.character(db$url)
+        db$age <- ts_to_POSIXct(db$age)
+        db$time_last_successful_probe <-
+            ts_to_POSIXct(db$time_last_successful_probe)
+        db$last_probe <- ts_to_POSIXct(db$last_probe)
+        db$delta <- difftime(Sys.time(), db$age, units = "days")
+        db
+    }
+    state_files <-
+        c("TIME" = "mirror.state",
+          "TIME_r-release" = "mirror_release.state",
+          "TIME_r-old-release" = "mirror_old_release.state")
+
+    ## Need to always use master for now (the mirrors do not have the
+    ## state files).
+    do.call(rbind,
+            c(Map(function(u, v) {
+                      u <- paste0("https://cran.r-project.org/mirmon/state/", u)
+                      cbind(read_mirmon_state_file(u),
+                            timestamp = v,
+                            stringsAsFactors = FALSE)
+                  },
+                  state_files,
+                  names(state_files)),
+              list(make.row.names = FALSE)))
+}
+
 
 CRAN_Rd_xref_db_with_expansions <-
 function()
@@ -465,9 +537,10 @@ function()
     maintainer <- db[, "Maintainer"]
     address <- tolower(sub(".*<(.*)>.*", "\\1", maintainer))
     maintainer <- gsub("\n", " ", maintainer)
-    cbind(Package = db[, "Package"],
-          Address = address,
-          Maintainer = maintainer)
+    data.frame(Package = db[, "Package"],
+               Address = address,
+               Maintainer = maintainer,
+               stringsAsFactors = FALSE)
 }
 
 CRAN_package_maintainers_info <-
@@ -506,7 +579,7 @@ function(packages, db = NULL)
               )
     list(to = to, body = body)
 }
-    
+
 CRAN_reverse_depends_and_views <-
 function(packages)
 {
@@ -555,7 +628,7 @@ function(packages)
     class(y) <- "CRAN_reverse_depends_and_views"
     y
 }
-    
+
 format.CRAN_reverse_depends_and_views <-
 function(x, ...)
 {
@@ -573,3 +646,52 @@ function(x, ...)
     writeLines(paste(format(x, ...), collapse = "\n\n"))
     invisible(x)
 }
+
+CRAN_package_dependencies_with_dates <-
+function(packages)
+{
+    a <- utils::available.packages(filters = list(),
+                                   repos = .get_standard_repository_URLs()["CRAN"])
+    p <- CRAN_package_db()
+    d <- package_dependencies(packages, a, which = "most")
+    ## Note that we currently keep the base packages dependencies, which
+    ## have no date.  We could (perhaps at least optionally) do
+    ##   base_packages <- .get_standard_package_names()["base"]
+    ## and then use
+    ##   e <- setdiff(as.character(e), base_packages)
+    ## in the code below.
+    lapply(d,
+           function(e) {
+               e <- as.character(e)
+               d <- as.Date(p[match(e, p[, "Package"]), "Published"])
+               o <- order(d, decreasing = TRUE)
+               data.frame(Package = e[o], Date = d[o],
+                          stringsAsFactors = FALSE)
+           })
+}
+
+CRAN_packages_with_maintainer_matching <-
+function(pattern, ...)
+{
+    pdb <- CRAN_package_db()
+    ind <- grep(pattern, pdb[, "Maintainer"], ...)
+    pdb[ind, "Package"]
+}
+
+write_texts_to_dir <-
+function(lst, dir, verbose = FALSE)
+{
+    dir.create(dir, showWarnings = FALSE, recursive = FALSE)
+
+    Map(function(m, s) {
+        if(verbose)
+            message(sprintf("Processing %s ...", m))
+        writeLines(paste(s, collapse = "\n\n"),
+                   file.path(dir, sprintf("%s.txt", m)))
+    },
+        names(lst),
+        lst)
+
+    invisible()
+}
+

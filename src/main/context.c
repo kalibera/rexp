@@ -15,7 +15,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
- *  http://www.r-project.org/Licenses/
+ *  https://www.R-project.org/Licenses/
  *
  *
  *  Contexts:
@@ -122,7 +122,7 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
     RCNTXT *c;
 
     for (c = R_GlobalContext; c != cptr; c = c->nextcontext) {
-        // a user embedding R incorrectly triggered this (PR#15420)
+	// a user embedding R incorrectly triggered this (PR#15420)
 	if (c == NULL)
 	    error("bad target context--should NEVER happen if R was called correctly");
 	if (c->cend != NULL) {
@@ -168,6 +168,7 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
 void attribute_hidden R_restore_globals(RCNTXT *cptr)
 {
     R_PPStackTop = cptr->cstacktop;
+    R_GCEnabled = cptr->gcenabled;
     R_EvalDepth = cptr->evaldepth;
     vmaxset(cptr->vmax);
     R_interrupts_suspended = cptr->intsusp;
@@ -228,6 +229,7 @@ void begincontext(RCNTXT * cptr, int flags,
 		  SEXP promargs, SEXP callfun)
 {
     cptr->cstacktop = R_PPStackTop;
+    cptr->gcenabled = R_GCEnabled;
     cptr->evaldepth = R_EvalDepth;
     cptr->callflag = flags;
     cptr->call = syscall;
@@ -246,7 +248,7 @@ void begincontext(RCNTXT * cptr, int flags,
 #ifdef BC_INT_STACK
     cptr->intstack = R_BCIntStackTop;
 #endif
-    cptr->srcref = R_Srcref;    
+    cptr->srcref = R_Srcref;
     cptr->browserfinish = R_GlobalContext->browserfinish;
     cptr->nextcontext = R_GlobalContext;
     cptr->returnValue = NULL;
@@ -274,7 +276,7 @@ void endcontext(RCNTXT * cptr)
 	R_Visible = savevis;
     }
     if (R_ExitContext == cptr)
-    	R_ExitContext = NULL;
+	R_ExitContext = NULL;
     R_GlobalContext = cptr->nextcontext;
 }
 
@@ -311,7 +313,7 @@ void attribute_hidden NORET R_JumpToContext(RCNTXT *target, int mask, SEXP val)
 	 cptr = cptr->nextcontext) {
 	if (cptr == target)
 	    jumpfun(cptr, mask, val);
-        if (cptr == R_ExitContext)
+	if (cptr == R_ExitContext)
 	    R_ExitContext = NULL;
     }
     error(_("target context is not on the stack"));
@@ -412,7 +414,7 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
     /* negative n counts back from the current frame */
     /* positive n counts up from the globalEnv */
     SEXP result;
-    
+
     if (n > 0)
 	n = framedepth(cptr) - n;
     else
@@ -423,11 +425,11 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
     while (cptr->nextcontext != NULL) {
 	if (cptr->callflag & CTXT_FUNCTION ) {
 	    if (n == 0) {
-	    	PROTECT(result = shallow_duplicate(cptr->call));
-	    	if (cptr->srcref && !isNull(cptr->srcref))
-	    	    setAttrib(result, R_SrcrefSymbol, duplicate(cptr->srcref));
-	    	UNPROTECT(1);
-	    	return result;
+		PROTECT(result = shallow_duplicate(cptr->call));
+		if (cptr->srcref && !isNull(cptr->srcref))
+		    setAttrib(result, R_SrcrefSymbol, duplicate(cptr->srcref));
+		UNPROTECT(1);
+		return result;
 	    } else
 		n--;
 	}
@@ -504,18 +506,18 @@ int countContexts(int ctxttype, int browser) {
 
     cptr = R_GlobalContext;
     while( cptr != R_ToplevelContext) {
-        if( cptr->callflag == ctxttype ) 
-            n++;
-        else if( browser ) {
-           if(cptr->callflag & CTXT_FUNCTION && RDEBUG(cptr->cloenv) )
-              n++;
-        }
-        cptr = cptr->nextcontext;
+	if( cptr->callflag == ctxttype )
+	    n++;
+	else if( browser ) {
+	   if(cptr->callflag & CTXT_FUNCTION && RDEBUG(cptr->cloenv) )
+	      n++;
+	}
+	cptr = cptr->nextcontext;
     }
     return n;
 }
-  
-   
+
+
 /* functions to support looking up information about the browser */
 /* contexts that are in the evaluation stack */
 
@@ -532,50 +534,50 @@ SEXP attribute_hidden do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* first find the closest  browser context */
     cptr = R_GlobalContext;
     while (cptr != R_ToplevelContext) {
-        if (cptr->callflag == CTXT_BROWSER) {
-                break;
-        }
-        cptr = cptr->nextcontext;
+	if (cptr->callflag == CTXT_BROWSER) {
+		break;
+	}
+	cptr = cptr->nextcontext;
     }
     /* error if not a browser context */
 
     if( !(cptr->callflag == CTXT_BROWSER) )
-        error(_("no browser context to query"));
+	error(_("no browser context to query"));
 
     switch (PRIMVAL(op)) {
     case 1: /* text */
     case 2: /* condition */
-        /* first rewind to the right place if needed */
-        /* note we want n>1, as we have already      */
-        /* rewound to the first context              */
-        if( n > 1 ) {
-           while (cptr != R_ToplevelContext && n > 0 ) {
-               if (cptr->callflag == CTXT_BROWSER) {
-                   n--;
-                   break;
-               }
-               cptr = cptr->nextcontext;
-           }
-        }
-        if( !(cptr->callflag == CTXT_BROWSER) )
-           error(_("not that many calls to browser are active"));
+	/* first rewind to the right place if needed */
+	/* note we want n>1, as we have already      */
+	/* rewound to the first context              */
+	if( n > 1 ) {
+	   while (cptr != R_ToplevelContext && n > 0 ) {
+	       if (cptr->callflag == CTXT_BROWSER) {
+		   n--;
+		   break;
+	       }
+	       cptr = cptr->nextcontext;
+	   }
+	}
+	if( !(cptr->callflag == CTXT_BROWSER) )
+	   error(_("not that many calls to browser are active"));
 
-        if( PRIMVAL(op) == 1 )
-            rval = CAR(cptr->promargs);
-        else
-            rval = CADR(cptr->promargs);
-        break;
+	if( PRIMVAL(op) == 1 )
+	    rval = CAR(cptr->promargs);
+	else
+	    rval = CADR(cptr->promargs);
+	break;
     case 3: /* turn on debugging n levels up */
-        while ( (cptr != R_ToplevelContext) && n > 0 ) {
-            if (cptr->callflag & CTXT_FUNCTION) 
-                  n--;
-            cptr = cptr->nextcontext;
-        } 
-        if( !(cptr->callflag & CTXT_FUNCTION) )
-           error(_("not that many functions on the call stack"));
-        else
-           SET_RDEBUG(cptr->cloenv, 1);
-        break;
+	while ( (cptr != R_ToplevelContext) && n > 0 ) {
+	    if (cptr->callflag & CTXT_FUNCTION)
+		  n--;
+	    cptr = cptr->nextcontext;
+	}
+	if( !(cptr->callflag & CTXT_FUNCTION) )
+	   error(_("not that many functions on the call stack"));
+	else
+	   SET_RDEBUG(cptr->cloenv, 1);
+	break;
     }
     return(rval);
 }

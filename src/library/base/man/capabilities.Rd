@@ -1,5 +1,5 @@
 % File src/library/base/man/capabilities.Rd
-% Part of the R package, http://www.R-project.org
+% Part of the R package, https://www.R-project.org
 % Copyright 1995-2015 R Core Team
 % Distributed under GPL 2 or later
 
@@ -40,12 +40,12 @@ capabilities(what = NULL)
 #endif
   }
 #ifdef unix
-  \item{X11}{Are the \code{\link{X11}} graphics device and the
+  \item{X11}{are the \code{\link{X11}} graphics device and the
     X11-based data editor available?  This loads the X11 module if not
     already loaded, and checks that the default display can be
     contacted unless a \code{X11} device has already been used.}
 
-  \item{aqua}{Is the \code{\link{quartz}} function operational?
+  \item{aqua}{is the \code{\link{quartz}} function operational?
     Only on some OS X builds, including \acronym{CRAN} binary
     distributions of \R.
 
@@ -56,12 +56,13 @@ capabilities(what = NULL)
   \item{X11}{always \code{FALSE} on Windows.}
   \item{aqua}{\code{FALSE} except on OS X.}
 #endif
-  \item{http/ftp}{Are \code{\link{url}} and the internal method for
-    \code{\link{download.file}} available?}
-  \item{sockets}{Are \code{\link{make.socket}} and related functions
-    available?}
+  \item{http/ftp}{does the internal method for \code{\link{url}} and
+    \code{\link{download.file}} support \samp{http://} and \samp{ftp://}
+    URLs?  Always \code{TRUE} as from \R 3.3.0.}
+  \item{sockets}{are  \code{\link{make.socket}} and related functions
+    available?  Always \code{TRUE} as from \R 3.3.0.}
   \item{libxml}{is there support for integrating \code{libxml} with
-    the \R event loop?}
+    the \R event loop?  Always \code{TRUE} as from \R 3.3.0.}
   \item{fifo}{are FIFO \link{connections} supported?}
   \item{cledit}{is command-line editing available in the current \R
     session?  This is false in non-interactive sessions.
@@ -102,15 +103,16 @@ capabilities(what = NULL)
 
   \item{libcurl}{is \code{libcurl} available in this build?  Used by
     function \code{\link{curlGetHeaders}} and optionally by
-    \code{\link{download.file}} and \code{\link{url}}.}
+    \code{\link{download.file}} and \code{\link{url}}.   As from \R
+    3.3.0 always true for Unix-alikes, and true for CRAN Windows builds.}
 }
 \seealso{\code{\link{.Platform}}}
 
 \examples{
 capabilities()
 
-if(!capabilities("http/ftp"))
-   warning("internal download.file() method is not available")
+if(!capabilities("ICU"))
+   warning("ICU is not available")
 
 ## See also the examples for 'connections'.
 }
