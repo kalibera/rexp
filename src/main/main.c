@@ -1117,7 +1117,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP ap, topExp, argList;
 
     /* Cannot call checkArity(op, args), because "op" may be a closure  */
-    /* or a primitive other than "browser".  */    
+    /* or a primitive other than "browser".  */
 
     /* argument matching */
     PROTECT(ap = list4(R_NilValue, R_NilValue, R_NilValue, R_NilValue));
