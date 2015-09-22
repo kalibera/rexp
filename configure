@@ -705,6 +705,8 @@ PAPERCONF
 BUILD_TZONE_FALSE
 BUILD_TZONE_TRUE
 R_PROFILING
+BITMAP_LIBS
+BITMAP_CPPFLAGS
 CURL_LIBS
 CURL_CPPFLAGS
 CURL_CONFIG
@@ -715,7 +717,6 @@ USE_MMAP_ZLIB_TRUE
 TIRPC_CPPFLAGS
 BUILD_XDR_FALSE
 BUILD_XDR_TRUE
-BITMAP_LIBS
 use_tcltk
 TK_CONFIG
 TCL_CONFIG
@@ -855,6 +856,8 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
+PKG_CONFIG_LIBDIR
+PKG_CONFIG_PATH
 PKGCONF
 REALPATH
 NOTANGLE
@@ -1095,6 +1098,9 @@ JAVA_HOME
 R_SHELL
 YACC
 YFLAGS
+PKGCONF
+PKG_CONFIG_PATH
+PKG_CONFIG_LIBDIR
 CC
 CFLAGS
 LDFLAGS
@@ -1879,6 +1885,11 @@ Some influential environment variables:
   YFLAGS      The list of arguments that will be passed by default to $YACC.
               This script will default YFLAGS to the empty string to avoid a
               default value of `-d' given by some make applications.
+  PKGCONF     path to pkg-config utility
+  PKG_CONFIG_PATH
+              directories to add to pkg-config's search path
+  PKG_CONFIG_LIBDIR
+              path overriding pkg-config's default search path
   CC          C compiler command
   CFLAGS      C compiler flags
   LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
@@ -3640,13 +3651,13 @@ _ACEOF
 ## exclude some unsupported OSes
 case "${host_os}" in
    ## Darwin 1.3.1 was OS X 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
-   ## with 13 being 10.9.  We no longer support < 10.4 (Tiger)
+   ## with 13 being 10.9.  We no longer support < 10.6 (Snow Leopard)
    ## http://en.wikipedia.org/wiki/Darwin_OS
    darwin1.*)
-     as_fn_error $? "The earliest supported OS X is 10.4.
+     as_fn_error $? "The earliest supported OS X is 10.6.
      ;;
-  darwin567*" "$LINENO" 5
-     as_fn_error $? "The earliest supported OS X is 10.4.
+  darwin56789*" "$LINENO" 5
+     as_fn_error $? "The earliest supported OS X is 10.6.
      ;;
   aix123*|aix4.01*" "$LINENO" 5
     ## These need a form of linking we no longer support
@@ -3702,8 +3713,9 @@ libnn=lib
 case "${host_os}" in
   linux*)
     ## Not all distros use this: some choose to march out of step
+    ## Allow for ppc64le (Debian calls ppc64el), powerpc64le ...
     case "${host_cpu}" in
-      x86_64|mips64|ppc64|powerpc64|sparc64|s390x)
+      x86_64|mips64|ppc64*|powerpc64*|sparc64|s390x)
         if test -d /usr/lib64; then
           libnn=lib64
 	fi
@@ -5724,6 +5736,9 @@ else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
+
+
+
 
 
 
@@ -22590,65 +22605,8 @@ fi
 
 case "${host_os}" in
   darwin*)
-    ## OS X <= 10.2 dlcompat, >= 10.3 included dlcompat in libSystem
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
-$as_echo_n "checking for library containing dlopen... " >&6; }
-if ${ac_cv_search_dlopen+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char dlopen ();
-int
-main ()
-{
-return dlopen ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' dl; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_dlopen=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if ${ac_cv_search_dlopen+:} false; then :
-  break
-fi
-done
-if ${ac_cv_search_dlopen+:} false; then :
-
-else
-  ac_cv_search_dlopen=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_dlopen" >&5
-$as_echo "$ac_cv_search_dlopen" >&6; }
-ac_res=$ac_cv_search_dlopen
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
-else
-  as_fn_error $? "Your OS X is too old." "$LINENO" 5
-fi
-
+    ## OS X >= 10.3 include dlcompat in libSystem
+    ## This is ancient history
     ## SI says we want '-lcc_dynamic' on Darwin, although currently
     ## http://developer.apple.com/documentation/MacOSX/ has nothing
     ## official.  Bill Northcott <w.northcott@unsw.edu.au> points out
@@ -22656,45 +22614,7 @@ fi
     if test "${GCC}" = yes; then
       case "${CC_VERSION}" in
         2.*|3.*)
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lcc_dynamic" >&5
-$as_echo_n "checking for main in -lcc_dynamic... " >&6; }
-if ${ac_cv_lib_cc_dynamic_main+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcc_dynamic  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-int
-main ()
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_cc_dynamic_main=yes
-else
-  ac_cv_lib_cc_dynamic_main=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_cc_dynamic_main" >&5
-$as_echo "$ac_cv_lib_cc_dynamic_main" >&6; }
-if test "x$ac_cv_lib_cc_dynamic_main" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBCC_DYNAMIC 1
-_ACEOF
-
-  LIBS="-lcc_dynamic $LIBS"
-
-fi
- ;;
+	  as_fn_error $? "Your gcc is too old." "$LINENO" 5
       esac
     fi
     ;;
@@ -24686,7 +24606,9 @@ if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_prog_c_openmp='none needed'
 else
   ac_cv_prog_c_openmp='unsupported'
-	  	  	  	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -openmp -mp -omp -qsmp=omp -homp \
+	  	  	  	  	  	  	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -qopenmp \
+                           -openmp -mp -omp -qsmp=omp -homp \
+			   -fopenmp=libomp \
                            -Popenmp --openmp; do
 	    ac_save_CFLAGS=$CFLAGS
 	    CFLAGS="$CFLAGS $ac_option"
@@ -25133,7 +25055,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_verb"
-(eval echo $as_me:25136: \"$ac_link\") >&5
+(eval echo $as_me:25058: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -25208,7 +25130,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_cv_prog_c_v"
-(eval echo $as_me:25211: \"$ac_link\") >&5
+(eval echo $as_me:25133: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -26189,7 +26111,9 @@ if ac_fn_f77_try_link "$LINENO"; then :
   ac_cv_prog_f77_openmp='none needed'
 else
   ac_cv_prog_f77_openmp='unsupported'
-	  	  	  	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -openmp -mp -omp -qsmp=omp -homp \
+	  	  	  	  	  	  	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -qopenmp \
+                           -openmp -mp -omp -qsmp=omp -homp \
+			   -fopenmp=libomp \
                            -Popenmp --openmp; do
 	    ac_save_FFLAGS=$FFLAGS
 	    FFLAGS="$FFLAGS $ac_option"
@@ -26318,7 +26242,9 @@ if ac_fn_cxx_try_link "$LINENO"; then :
   ac_cv_prog_cxx_openmp='none needed'
 else
   ac_cv_prog_cxx_openmp='unsupported'
-	  	  	  	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -openmp -mp -omp -qsmp=omp -homp \
+	  	  	  	  	  	  	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -qopenmp \
+                           -openmp -mp -omp -qsmp=omp -homp \
+			   -fopenmp=libomp \
                            -Popenmp --openmp; do
 	    ac_save_CXXFLAGS=$CXXFLAGS
 	    CXXFLAGS="$CXXFLAGS $ac_option"
@@ -28122,7 +28048,7 @@ if test "${GCC}" = yes; then
 ## has 32k and so can use -fpic.
 ## However, although the gcc docs do not mention it, it seems s390/s390x
 ## also supports and needs -fPIC
-    sparc*|ppc64|powerpc64|s390*)
+    sparc*|ppc64*|powerpc64*|s390*)
       cpicflags="-fPIC"
       ;;
     *)
@@ -28133,7 +28059,7 @@ if test "${GCC}" = yes; then
 fi
 if test "${G77}" = yes; then
   case "${host_cpu}" in
-    sparc*|ppc64|powerpc64|s390*)
+    sparc*|ppc64*|powerpc64*|s390*)
       fpicflags="-fPIC"
       ;;
     *)
@@ -28143,7 +28069,7 @@ if test "${G77}" = yes; then
 fi
 if test "${GXX}" = yes; then
   case "${host_cpu}" in
-    sparc*|ppc64|powerpc64|s390*)
+    sparc*|ppc64*|powerpc64*|s390*)
       cxxpicflags="-fPIC"
       ;;
     *)
@@ -28201,56 +28127,22 @@ case "${host_os}" in
     darwin_pic="-fPIC"
     dylib_undefined_allowed=no
     darwin_dylib_ldflags="-dynamiclib"
-    ## Want '-mdynamic-no-pic' for GCC 3, says Jan de Leeuw.
-    if test "${GCC}" = yes; then
-      case "${CC_VERSION}" in
-        3.*)
-          separator=""
-test -z "${separator}" && separator=" "
-if test -z "${main_ldflags}"; then
-  main_ldflags="-mdynamic-no-pic"
-else
-  main_ldflags="${main_ldflags}${separator}-mdynamic-no-pic"
-fi ;;
-      esac
-    fi
-    ## some linkers are broken and need to be set to a specific
-    ## OS X version to work better
-    case "${host_os}" in
-       darwin8*)
-          # this is the 'old' way and it doesn't work with recent gcc as the driver
-	  # prepends its own version
-	  ### darwin_min_flag='Wl,-macosx_version_min -Wl,10.4'
-	  # this is the 'new' way, but it's not clear which driver version
-	  # started to support it (Xcode 2.5 is known to work and 2.4 should)
-	  # A work-around for older Xcode is to set MACOSX_DEPLOYMENT_TARGET
-	  # environment variable. It has its own problems, but we may as well
-	  # honor it, assuming that it fixes things.
-	  if test -z "${MACOSX_DEPLOYMENT_TARGET}"; then
-	      darwin_min_flag='-mmacosx-version-min=10.4'
-	  fi
-	  ;;
-       *)
-	  darwin_min_flag=''
-	  ;;
-    esac
-    case "${host_os}" in
-      ## * recent ld has -single_module so it doesn't need -fno-common
-      ##   we have to use dylib instead of a bundle
-      ## * dylib+single_module+flat_namespace=pretty much what other platforms call .so
-      ##   but there can be no multiple symbols (due to flat namespace)
-      ## * since 10.3 we can also use -undefined dynamic_lookup which allows us to
-      ##   use two-level namespace and still have undefined symbols
-      *)
-        ## FIXME: strictly speaking it should be "yes" but libRblas still
-	## needs -lgfortran because the sharing is a one-way street
-        ## dylib_undefined_allowed=yes
+    shlib_ldflags="-dynamiclib -Wl,-headerpad_max_install_names -undefined dynamic_lookup -single_module -multiply_defined suppress"
+    ## * recent ld has -single_module so it doesn't need -fno-common
+    ##   we have to use dylib instead of a bundle
+    ## * dylib+single_module+flat_namespace=pretty much what other platforms call .so
+    ##   but there can be no multiple symbols (due to flat namespace)
+    ## * since 10.3 we can also use -undefined dynamic_lookup which allows us to
+    ##   use two-level namespace and still have undefined symbols
 
-	## we have to test this in case an outdated linker or non-Apple compiler is used
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether linker supports dynamic lookup" >&5
+    ## FIXME: strictly speaking it should be "yes" but libRblas still
+    ## needs -lgfortran because the sharing is a one-way street
+    ## dylib_undefined_allowed=yes
+
+    ## we have to test this in case an outdated linker or non-Apple compiler is used
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether linker supports dynamic lookup" >&5
 $as_echo_n "checking whether linker supports dynamic lookup... " >&6; }
-	shlib_ldflags="-dynamiclib -Wl,-headerpad_max_install_names ${darwin_min_flag} -undefined dynamic_lookup -single_module -multiply_defined suppress"
-	if ${r_cv_has_dynlookup+:} false; then :
+    if ${r_cv_has_dynlookup+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
@@ -28273,37 +28165,36 @@ rm -f libconftest${DYLIB_EXT} conftest.c
 
 fi
 
-	if test -n "${FORCE_FLAT_NAMESPACE}"; then
-	   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Use of flat namespace is requested by user." >&5
+    if test -n "${FORCE_FLAT_NAMESPACE}"; then
+       { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Use of flat namespace is requested by user." >&5
 $as_echo "$as_me: WARNING: Use of flat namespace is requested by user." >&2;}
-	   r_cv_has_dynlookup=forced-no
-	fi
-	if test "${r_cv_has_dynlookup}" != "yes"; then
-	   shlib_ldflags="-dynamiclib -flat_namespace -undefined suppress -single_module -multiply_defined suppress"
-	   dylib_undefined_allowed=yes
-	fi
+       r_cv_has_dynlookup=forced-no
+    fi
+    if test "${r_cv_has_dynlookup}" != "yes"; then
+       shlib_ldflags="-dynamiclib -flat_namespace -undefined suppress -single_module -multiply_defined suppress"
+       dylib_undefined_allowed=yes
+    fi
 
-	## we use the same method for shlib and dylib now
-	darwin_dylib_ldflags="${shlib_ldflags}"
-	## side note: we could use flat namespace instead, but there is an exception:
-	## * libRblas must be 2-level, dyn lookup because of xerbla which is undefined
-        ;;
-    esac
+    ## we use the same method for shlib and dylib now
+    darwin_dylib_ldflags="${shlib_ldflags}"
+    ## side note: we could use flat namespace instead, but there is an exception:
+    ## * libRblas must be 2-level, dyn lookup because of xerbla which is undefined
     cpicflags="${darwin_pic}"
     cxxpicflags="${darwin_pic}"
+    ## OS X does not have a Fortran compiler, so this is speculative
     fpicflags="${darwin_pic}"
     shlib_cxxldflags="${shlib_ldflags}"
-    if test "${ac_cv_lib_cc_dynamic_main}" = yes; then
-      ## Could also try grepping LIBS for '-lcc_dynamic' ...
-      SHLIB_LIBADD="-lcc_dynamic"
-    fi
     ;;
   freebsd*)
-    main_ldflags="-export-dynamic"
+    ## maybe this needs to depend on the compiler:
+    ## -export-dynamic used to work, but does not with clang.
+    ## Seems FreeBSD has used the GNU linker since at least 3.0 (Oct 1998)
+    ## We could also use -rdynamic, which seems to work with clang and gcc.
+    main_ldflags="-Wl,--export-dynamic"
     shlib_ldflags="-shared"
     ;;
-  gnu*)				# GNU Hurd
-    main_ldflags="-export-dynamic"
+  gnu*)				# GNU Hurd, see FreeBSD comment
+    main_ldflags="-Wl,--export-dynamic"
     ;;
   hpux*)
     SHLIB_EXT=".sl"
@@ -28375,8 +28266,8 @@ $as_echo "$as_me: WARNING: Use of flat namespace is requested by user." >&2;}
         ;;
     esac
     ## Luke Tierney says that just '-export-dynamic' does not work for
-    ## Intel compilers (icc).
-    ## Could also use -rdynamic
+    ## Intel compilers (icc).  It is accepted by clang but ignored.
+    ## Could also use -rdynamic, at least for gcc and clang.
     main_ldflags="-Wl,--export-dynamic"
     STATICR1="-Wl,--whole-archive"
     STATICR2="-Wl,--no-whole-archive"
@@ -28389,19 +28280,39 @@ $as_echo "$as_me: WARNING: Use of flat namespace is requested by user." >&2;}
     fcpicflags=
     ;;
   netbsd*)
+    ## See the comments about FreeBSD
     if ${CPP} - -dM < /dev/null | grep __ELF__ >/dev/null ; then
-      main_ldflags="-export-dynamic"
+      main_ldflags="-Wl,--export-dynamic"
       shlib_ldflags="-shared"
     else
       shlib_ldflags="-Bshareable"
     fi
     ;;
   openbsd*)
-    ## looks like ${wl} is not defined here.  Perhaps in libtool code?
+    ## ${wl} is defined by libtool configuration code.
+    ## Both -Wl,-export-dynamic and -Wl,--export-dynamic seem to
+    ## work with the GNU linker, but the second is what is documented.
+    ## libtool seems to use -Wl-E , a GNU ld alias of -Wl,--export-dynamic
     if test -z "`echo __ELF__ | $CC -E - | grep __ELF__`"; then
       main_ldflags="${wl}-export-dynamic"
       shlib_ldflags="-shared -fPIC"
     fi
+    case "${host_cpu}" in
+      powerpc*)
+	## GCC -fpic limits to 2**16 on OpenBSD powerpc.
+	## Error message without -fPIC:
+	##   relocation truncated to fit: R_PPC_GOT16...
+        if test "${GCC}" = yes; then
+          cpicflags="-fPIC"
+        fi
+        if test "${G77}" = yes; then
+          fpicflags="-fPIC"
+        fi
+        if test "${GXX}" = yes; then
+          cxxpicflags="-fPIC"
+        fi
+        ;;
+    esac
     ;;
   osf*)
     cpicflags=
@@ -28476,13 +28387,13 @@ if test -z "${MAIN_LD}"; then
   else
      MAIN_LD="${main_ld}"
   fi
-  separator=""
+fi
+separator=""
 test -z "${separator}" && separator=" "
 if test -z "${MAIN_LDFLAGS}"; then
   MAIN_LDFLAGS="${main_ldflags}"
 else
   MAIN_LDFLAGS="${MAIN_LDFLAGS}${separator}${main_ldflags}"
-fi
 fi
 
 : ${CPICFLAGS="${cpicflags}"}
@@ -28884,12 +28795,30 @@ fi
 ##
 ## (The Fortran 77 compiler is never used for linking by default.)
 
-if test "x${main_ld_was_given}" = xno -a "${MAIN_LD}" = "\$(CC)" -a \
+if test -n "${R_OPENMP_CFLAGS+set}"; then
+  if test -n "${R_OPENMP_CFLAGS}"; then
+    separator=""
+test -z "${separator}" && separator=" "
+if test -z "${MAIN_LDFLAGS}"; then
+  MAIN_LDFLAGS="${R_OPENMP_CFLAGS}"
+else
+  MAIN_LDFLAGS="${MAIN_LDFLAGS}${separator}${R_OPENMP_CFLAGS}"
+fi
+    separator=""
+test -z "${separator}" && separator=" "
+if test -z "${DYLIB_LDFLAGS}"; then
+  DYLIB_LDFLAGS="${R_OPENMP_CFLAGS}"
+else
+  DYLIB_LDFLAGS="${DYLIB_LDFLAGS}${separator}${R_OPENMP_CFLAGS}"
+fi
+
+$as_echo "#define HAVE_OPENMP 1" >>confdefs.h
+
+  fi
+elif test "x${main_ld_was_given}" = xno -a "${MAIN_LD}" = "\$(CC)" -a \
         "x${dylib_ld_was_given}" = xno -a "${DYLIB_LD}" = "\$(CC)" -a \
-        "x${ac_cv_prog_c_openmp}" != "xunsupported" -a \
-        "x${ac_cv_prog_c_openmp}" != "x"; then
+        "x${ac_cv_prog_c_openmp}" != "xunsupported"; then
   R_OPENMP_CFLAGS="${OPENMP_CFLAGS}"
-  R_OPENMP_FFLAGS="${OPENMP_FFLAGS}"
   separator=""
 test -z "${separator}" && separator=" "
 if test -z "${MAIN_LDFLAGS}"; then
@@ -28909,7 +28838,11 @@ $as_echo "#define HAVE_OPENMP 1" >>confdefs.h
 
 else
   R_OPENMP_CFLAGS=
-  R_OPENMP_FFLAGS=
+fi
+## Currently unused: see comment in Makeconf.in
+if test -z "${R_OPENMP_FFLAGS+set}" -a \
+        "x${ac_cv_prog_f77_openmp}" != "xunsupported"; then
+  R_OPENMP_FFLAGS="${OPENMP_FFLAGS}"
 fi
 
 
@@ -29183,11 +29116,11 @@ _ACEOF
 ## C99 functions:
 ## not all C99 runtimes are complete,
 ## but we have substitutes for expm1 hypot log1p and (internally) nearbyint[l]
-## FreeBSD 10 still lacks log1pl
+## FreeBSD used to lack log1pl, but 10 seems to have it.
 ## FreeBSD 8.2 lacks log2
 ## FreeBSD 7.3 lacks nearbyintl/rintl (nearbyint appeared in 5.2)
 ## Apparently rint was once broken on HP-UX: undefine HAVE_RINT for such platforms
-## Cygwin and FreeBSD lack powl
+## Cygwin and FreeBSD lacked powl (FreeBSD 10 seems to have it).
 ## Cygwin has rintl but not nearbyintl
 for ac_func in expm1 hypot log1p log1pl log2 log10 nearbyint nearbyintl powl rint rintl
 do
@@ -33330,7 +33263,6 @@ fi
 
   if test "$use_ICU" = no ; then
     case "${host_os}" in
-      ## darwin has ICU 3.2 in 10.4, 3.6 in 10.5
       darwin*)
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ucol_open in -licucore" >&5
 $as_echo_n "checking for ucol_open in -licucore... " >&6; }
@@ -34499,6 +34431,7 @@ $as_echo "$r_cv_has_cairo" >&6; }
       case "${host_os}" in
         darwin*)
           ## This is for static OS X build
+	  ## FIXME: doing that unconditionally is really not a good idea
           CAIRO_LIBS=`"${PKGCONF}" --static --libs ${modlist}`
           CAIROX11_LIBS=`"${PKGCONF}" --static --libs ${xmodlist}`
           ;;
@@ -34979,6 +34912,7 @@ $as_echo "$r_cv_header_tcl_h" >&6; }
   if test "${have_tcltk}" = yes; then
     ## Part 2.  Check for tk.h.
     found_tk_h=no
+    found_tk_by_config=no
     if test -n "${TK_CONFIG}"; then
       . ${TK_CONFIG}
       ## TK_INCLUDE_SPEC (if set) is what we want.
@@ -34992,6 +34926,7 @@ if test "x$ac_cv_header_tk_h" = xyes; then :
 fi
 
 
+	found_tk_by_config=yes
 	CPPFLAGS="${r_save_CPPFLAGS}"
       fi
       if test "${found_tk_h}" = no; then
@@ -35064,14 +34999,17 @@ $as_echo "$r_cv_header_tk_h" >&6; }
     fi
   fi
 fi
+## TK_XINCLUDES should be empty for Aqua Tk, so earlier test was wrong
+## Our code does not include any X headers, but tk.h may ....
+## That is true even on OS X, but Aqua Tk has a private version of
+## X11 headers, and we want that one and not the XQuartz one.
 if test "${have_tcltk}" = yes; then
-  if test -n "${TK_XINCLUDES}"; then
+  if test "${found_tk_by_config}" = yes; then
     TCLTK_CPPFLAGS="${TCLTK_CPPFLAGS} ${TK_XINCLUDES}"
   else
     TCLTK_CPPFLAGS="${TCLTK_CPPFLAGS} ${X_CFLAGS}"
   fi
 fi
-
 
 
 if test -z "${TCLTK_LIBS}"; then
@@ -35379,363 +35317,6 @@ fi
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $r_cv_bsd_networking" >&5
 $as_echo "$r_cv_bsd_networking" >&6; }
-
-
-## Bitmap headers and libraries.
-BITMAP_LIBS=
-if test "${use_jpeglib}" = yes; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if jpeglib version >= 6b" >&5
-$as_echo_n "checking if jpeglib version >= 6b... " >&6; }
-if ${r_cv_header_jpeglib_h+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <jpeglib.h>
-#if (JPEG_LIB_VERSION >= 62)
-  yes
-#endif
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "yes" >/dev/null 2>&1; then :
-  r_cv_header_jpeglib_h=yes
-else
-  r_cv_header_jpeglib_h=no
-fi
-rm -f conftest*
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $r_cv_header_jpeglib_h" >&5
-$as_echo "$r_cv_header_jpeglib_h" >&6; }
-
-  have_jpeg=${r_cv_header_jpeglib_h}
-  if test "${have_jpeg}" = yes; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for jpeg_destroy_compress in -ljpeg" >&5
-$as_echo_n "checking for jpeg_destroy_compress in -ljpeg... " >&6; }
-if ${ac_cv_lib_jpeg_jpeg_destroy_compress+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-ljpeg ${LIBS} $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char jpeg_destroy_compress ();
-#ifdef F77_DUMMY_MAIN
-
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-
-#endif
-int
-main ()
-{
-return jpeg_destroy_compress ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_jpeg_jpeg_destroy_compress=yes
-else
-  ac_cv_lib_jpeg_jpeg_destroy_compress=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_jpeg_jpeg_destroy_compress" >&5
-$as_echo "$ac_cv_lib_jpeg_jpeg_destroy_compress" >&6; }
-if test "x$ac_cv_lib_jpeg_jpeg_destroy_compress" = xyes; then :
-  have_jpeg=yes
-else
-  have_jpeg=no
-fi
-
-  fi
-  if test "${have_jpeg}" = yes; then
-    BITMAP_LIBS="-ljpeg"
-
-$as_echo "#define HAVE_JPEG 1" >>confdefs.h
-
-  fi
-fi
-if test "${use_libpng}" = yes; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lz" >&5
-$as_echo_n "checking for main in -lz... " >&6; }
-if ${ac_cv_lib_z_main+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lz  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#ifdef F77_DUMMY_MAIN
-
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-
-#endif
-int
-main ()
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_z_main=yes
-else
-  ac_cv_lib_z_main=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_main" >&5
-$as_echo "$ac_cv_lib_z_main" >&6; }
-if test "x$ac_cv_lib_z_main" = xyes; then :
-  have_png=yes
-else
-  have_png=no
-fi
-
-  if test "${have_png}" = yes; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if libpng version >= 1.2.7" >&5
-$as_echo_n "checking if libpng version >= 1.2.7... " >&6; }
-if ${r_cv_header_png_h+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <png.h>
-#if (PNG_LIBPNG_VER >= 10207)
-  yes
-#endif
-
-_ACEOF
-if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
-  $EGREP "yes" >/dev/null 2>&1; then :
-  r_cv_header_png_h=yes
-else
-  r_cv_header_png_h=no
-fi
-rm -f conftest*
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $r_cv_header_png_h" >&5
-$as_echo "$r_cv_header_png_h" >&6; }
-
-    have_png=${r_cv_header_png_h}
-  fi
-  if test "${have_png}" = yes; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for png_create_write_struct in -lpng" >&5
-$as_echo_n "checking for png_create_write_struct in -lpng... " >&6; }
-if ${ac_cv_lib_png_png_create_write_struct+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpng -lz ${LIBS} $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char png_create_write_struct ();
-#ifdef F77_DUMMY_MAIN
-
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-
-#endif
-int
-main ()
-{
-return png_create_write_struct ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_png_png_create_write_struct=yes
-else
-  ac_cv_lib_png_png_create_write_struct=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_png_png_create_write_struct" >&5
-$as_echo "$ac_cv_lib_png_png_create_write_struct" >&6; }
-if test "x$ac_cv_lib_png_png_create_write_struct" = xyes; then :
-  have_png=yes
-else
-  have_png=no
-fi
-
-  fi
-  if test "${have_png}" = yes; then
-    BITMAP_LIBS="${BITMAP_LIBS} -lpng -lz"
-
-$as_echo "#define HAVE_PNG 1" >>confdefs.h
-
-  fi
-fi
-if test "${use_libtiff}" = yes; then
-  for ac_header in tiffio.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "tiffio.h" "ac_cv_header_tiffio_h" "$ac_includes_default"
-if test "x$ac_cv_header_tiffio_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_TIFFIO_H 1
-_ACEOF
-
-fi
-
-done
-
-  if test "x${ac_cv_header_tiffio_h}" = xyes ; then
-    # may need to resolve jpeg routines
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for TIFFOpen in -ltiff" >&5
-$as_echo_n "checking for TIFFOpen in -ltiff... " >&6; }
-if ${ac_cv_lib_tiff_TIFFOpen+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-ltiff ${BITMAP_LIBS} $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char TIFFOpen ();
-#ifdef F77_DUMMY_MAIN
-
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-
-#endif
-int
-main ()
-{
-return TIFFOpen ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_tiff_TIFFOpen=yes
-else
-  ac_cv_lib_tiff_TIFFOpen=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_tiff_TIFFOpen" >&5
-$as_echo "$ac_cv_lib_tiff_TIFFOpen" >&6; }
-if test "x$ac_cv_lib_tiff_TIFFOpen" = xyes; then :
-  have_tiff=yes
-else
-  have_tiff=no
-fi
-
-    if test "x${have_tiff}" = xyes; then
-
-$as_echo "#define HAVE_TIFF 1" >>confdefs.h
-
-      BITMAP_LIBS="-ltiff ${BITMAP_LIBS}"
-    else
-      # tiff 4.0.x may need lzma too: SU's static build does
-      unset ac_cv_lib_tiff_TIFFOpen
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for TIFFOpen in -ltiff" >&5
-$as_echo_n "checking for TIFFOpen in -ltiff... " >&6; }
-if ${ac_cv_lib_tiff_TIFFOpen+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-ltiff -llzma ${BITMAP_LIBS} -llzma $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char TIFFOpen ();
-#ifdef F77_DUMMY_MAIN
-
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-
-#endif
-int
-main ()
-{
-return TIFFOpen ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_tiff_TIFFOpen=yes
-else
-  ac_cv_lib_tiff_TIFFOpen=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_tiff_TIFFOpen" >&5
-$as_echo "$ac_cv_lib_tiff_TIFFOpen" >&6; }
-if test "x$ac_cv_lib_tiff_TIFFOpen" = xyes; then :
-  have_tiff=yes
-else
-  have_tiff=no
-fi
-
-      if test "x${have_tiff}" = xyes; then
-
-$as_echo "#define HAVE_TIFF 1" >>confdefs.h
-
-        BITMAP_LIBS="-ltiff -llzma ${BITMAP_LIBS}"
-      else
-        have_tiff=no
-      fi
-    fi
-  fi
-fi
-
 
 
 ## XDR headers and library routines.
@@ -36445,7 +36026,6 @@ fi
 
 
 
-
 ## libcurl
 ## curl-config might not match the installed libcurl,
 ## so we allow the user to set CURL_CPPFLAGS, CURL_LIBS
@@ -36621,6 +36201,760 @@ else
   as_fn_error $? "libcurl >= 7.28.0 library and headers are required with support for https" "$LINENO" 5
 fi
 
+
+
+## Bitmap headers and libraries.
+if test -n "${PKGCONF}"; then
+BITMAP_CPPFLAGS=
+BITMAP_LIBS=
+if test "${use_jpeglib}" = yes; then
+   save_CPPFLAGS=${CPPFLAGS}
+  ## jpeglib does not support pkg-config, although some OSes add it.
+  ## This is untested.
+  if "${PKGCONF}" --exists jpeg; then
+    JPG_CPPFLAGS=`"${PKGCONF}" --cflags jpeg`
+    JPG_LIBS=`"${PKGCONF}" --libs jpeg`
+    CPPFLAGS="${CPPFLAGS} ${JPG_CPPFLAGS}"
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if jpeglib version >= 6b" >&5
+$as_echo_n "checking if jpeglib version >= 6b... " >&6; }
+if ${r_cv_header_jpeglib_h+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <jpeglib.h>
+#if (JPEG_LIB_VERSION >= 62)
+  yes
+#endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "yes" >/dev/null 2>&1; then :
+  r_cv_header_jpeglib_h=yes
+else
+  r_cv_header_jpeglib_h=no
+fi
+rm -f conftest*
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $r_cv_header_jpeglib_h" >&5
+$as_echo "$r_cv_header_jpeglib_h" >&6; }
+
+  CPPFLAGS=${save_CPPFLAGS}
+  have_jpeg=${r_cv_header_jpeglib_h}
+  if test "${have_jpeg}" = yes; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for jpeg_destroy_compress in -ljpeg" >&5
+$as_echo_n "checking for jpeg_destroy_compress in -ljpeg... " >&6; }
+if ${ac_cv_lib_jpeg_jpeg_destroy_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ljpeg ${JPG_LIBS} ${LIBS} $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char jpeg_destroy_compress ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return jpeg_destroy_compress ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_jpeg_jpeg_destroy_compress=yes
+else
+  ac_cv_lib_jpeg_jpeg_destroy_compress=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_jpeg_jpeg_destroy_compress" >&5
+$as_echo "$ac_cv_lib_jpeg_jpeg_destroy_compress" >&6; }
+if test "x$ac_cv_lib_jpeg_jpeg_destroy_compress" = xyes; then :
+  have_jpeg=yes
+else
+  have_jpeg=no
+fi
+
+  fi
+  if test "${have_jpeg}" = yes; then
+    if test -n "${JPG_LIBS}"; then
+      BITMAP_LIBS="${JPG_LIBS}"
+    else
+      BITMAP_LIBS=-ljpeg
+    fi
+
+$as_echo "#define HAVE_JPEG 1" >>confdefs.h
+
+  fi
+fi
+if test "${use_libpng}" = yes; then
+  if "${PKGCONF}" --exists libpng; then
+    save_CPPFLAGS=${CPPFLAGS}
+    PNG_CPPFLAGS=`"${PKGCONF}" --cflags libpng`
+    CPPFLAGS="${CPPFLAGS} ${PNG_CPPFLAGS}"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if libpng version >= 1.2.7" >&5
+$as_echo_n "checking if libpng version >= 1.2.7... " >&6; }
+if ${r_cv_header_png_h+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <png.h>
+#if (PNG_LIBPNG_VER >= 10207)
+  yes
+#endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "yes" >/dev/null 2>&1; then :
+  r_cv_header_png_h=yes
+else
+  r_cv_header_png_h=no
+fi
+rm -f conftest*
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $r_cv_header_png_h" >&5
+$as_echo "$r_cv_header_png_h" >&6; }
+
+    have_png=${r_cv_header_png_h}
+    CPPFLAGS=${save_CPPFLAGS}
+    if test "${have_png}" = yes; then
+      PNG_LIBS=`"${PKGCONF}" --libs libpng`
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for png_create_write_struct in -lpng" >&5
+$as_echo_n "checking for png_create_write_struct in -lpng... " >&6; }
+if ${ac_cv_lib_png_png_create_write_struct+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpng ${PNG_LIBS} ${LIBS} $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char png_create_write_struct ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return png_create_write_struct ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_png_png_create_write_struct=yes
+else
+  ac_cv_lib_png_png_create_write_struct=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_png_png_create_write_struct" >&5
+$as_echo "$ac_cv_lib_png_png_create_write_struct" >&6; }
+if test "x$ac_cv_lib_png_png_create_write_struct" = xyes; then :
+  have_png=yes
+else
+  have_png=no
+fi
+
+      if test "${have_png}" = no; then
+        PNG_LIBS=`"${PKGCONF}" --static --libs libpng`
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for png_create_write_struct in -lpng" >&5
+$as_echo_n "checking for png_create_write_struct in -lpng... " >&6; }
+if ${ac_cv_lib_png_png_create_write_struct+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpng ${PNG_LIBS} ${LIBS} $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char png_create_write_struct ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return png_create_write_struct ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_png_png_create_write_struct=yes
+else
+  ac_cv_lib_png_png_create_write_struct=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_png_png_create_write_struct" >&5
+$as_echo "$ac_cv_lib_png_png_create_write_struct" >&6; }
+if test "x$ac_cv_lib_png_png_create_write_struct" = xyes; then :
+  have_png=yes
+else
+  have_png=no
+fi
+
+      fi
+    fi
+    if test "${have_png}" = yes; then
+      BITMAP_CPPFLAGS="${BITMAP_CPPFLAGS} ${PNG_CPPFLAGS}"
+      BITMAP_LIBS="${BITMAP_LIBS} ${PNG_LIBS}"
+
+$as_echo "#define HAVE_PNG 1" >>confdefs.h
+
+    fi
+  fi
+fi
+if test "${use_libtiff}" = yes; then
+  mod=
+  ## pkg-config support was introduced in libtiff 4.0.0
+  ## I guess the module name might change in future, so
+  ## program defensively here.
+  if "${PKGCONF}" --exists libtiff-4; then
+    mod=libtiff-4
+  fi
+  if test -n "${mod}"; then
+    save_CPPFLAGS=${CPPFLAGS}
+    TIF_CPPFLAGS=`"${PKGCONF}" --cflags ${mod}`
+    CPPFLAGS="${CPPFLAGS} ${TIF_CPPFLAGS}"
+    for ac_header in tiffio.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "tiffio.h" "ac_cv_header_tiffio_h" "$ac_includes_default"
+if test "x$ac_cv_header_tiffio_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_TIFFIO_H 1
+_ACEOF
+
+fi
+
+done
+
+    CPPFLAGS=${save_CPPFLAGS}
+    if test "x${ac_cv_header_tiffio_h}" = xyes ; then
+      TIF_LIBS=`"${PKGCONF}" --libs ${mod}`
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for TIFFOpen in -ltiff" >&5
+$as_echo_n "checking for TIFFOpen in -ltiff... " >&6; }
+if ${ac_cv_lib_tiff_TIFFOpen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ltiff ${TIF_LIBS} ${BITMAP_LIBS} $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char TIFFOpen ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return TIFFOpen ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_tiff_TIFFOpen=yes
+else
+  ac_cv_lib_tiff_TIFFOpen=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_tiff_TIFFOpen" >&5
+$as_echo "$ac_cv_lib_tiff_TIFFOpen" >&6; }
+if test "x$ac_cv_lib_tiff_TIFFOpen" = xyes; then :
+  have_tiff=yes
+else
+  have_tiff=no
+fi
+
+      if test "x${have_tiff}" = xno; then
+        TIF_LIBS=`"${PKGCONF}" --static --libs ${mod}`
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for TIFFOpen in -ltiff" >&5
+$as_echo_n "checking for TIFFOpen in -ltiff... " >&6; }
+if ${ac_cv_lib_tiff_TIFFOpen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ltiff ${TIF_LIBS} ${BITMAP_LIBS} $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char TIFFOpen ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return TIFFOpen ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_tiff_TIFFOpen=yes
+else
+  ac_cv_lib_tiff_TIFFOpen=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_tiff_TIFFOpen" >&5
+$as_echo "$ac_cv_lib_tiff_TIFFOpen" >&6; }
+if test "x$ac_cv_lib_tiff_TIFFOpen" = xyes; then :
+  have_tiff=yes
+else
+  have_tiff=no
+fi
+
+      fi
+      if test "x${have_tiff}" = xyes; then
+
+$as_echo "#define HAVE_TIFF 1" >>confdefs.h
+
+        BITMAP_LIBS="${TIF_LIBS} ${BITMAP_LIBS}"
+        BITMAP_CPPFLAGS="${BITMAP_CPPFLAGS} ${TIF_CPPFLAGS}"
+      fi
+    fi
+  fi
+fi
+
+
+
+else
+BITMAP_CPPFLAGS=
+BITMAP_LIBS=
+if test "${use_jpeglib}" = yes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if jpeglib version >= 6b" >&5
+$as_echo_n "checking if jpeglib version >= 6b... " >&6; }
+if ${r_cv_header_jpeglib_h+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <jpeglib.h>
+#if (JPEG_LIB_VERSION >= 62)
+  yes
+#endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "yes" >/dev/null 2>&1; then :
+  r_cv_header_jpeglib_h=yes
+else
+  r_cv_header_jpeglib_h=no
+fi
+rm -f conftest*
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $r_cv_header_jpeglib_h" >&5
+$as_echo "$r_cv_header_jpeglib_h" >&6; }
+
+  have_jpeg=${r_cv_header_jpeglib_h}
+  if test "${have_jpeg}" = yes; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for jpeg_destroy_compress in -ljpeg" >&5
+$as_echo_n "checking for jpeg_destroy_compress in -ljpeg... " >&6; }
+if ${ac_cv_lib_jpeg_jpeg_destroy_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ljpeg ${LIBS} $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char jpeg_destroy_compress ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return jpeg_destroy_compress ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_jpeg_jpeg_destroy_compress=yes
+else
+  ac_cv_lib_jpeg_jpeg_destroy_compress=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_jpeg_jpeg_destroy_compress" >&5
+$as_echo "$ac_cv_lib_jpeg_jpeg_destroy_compress" >&6; }
+if test "x$ac_cv_lib_jpeg_jpeg_destroy_compress" = xyes; then :
+  have_jpeg=yes
+else
+  have_jpeg=no
+fi
+
+  fi
+  if test "${have_jpeg}" = yes; then
+    BITMAP_LIBS="-ljpeg"
+
+$as_echo "#define HAVE_JPEG 1" >>confdefs.h
+
+  fi
+fi
+if test "${use_libpng}" = yes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lz" >&5
+$as_echo_n "checking for main in -lz... " >&6; }
+if ${ac_cv_lib_z_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lz  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_z_main=yes
+else
+  ac_cv_lib_z_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_z_main" >&5
+$as_echo "$ac_cv_lib_z_main" >&6; }
+if test "x$ac_cv_lib_z_main" = xyes; then :
+  have_png=yes
+else
+  have_png=no
+fi
+
+  if test "${have_png}" = yes; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking if libpng version >= 1.2.7" >&5
+$as_echo_n "checking if libpng version >= 1.2.7... " >&6; }
+if ${r_cv_header_png_h+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <png.h>
+#if (PNG_LIBPNG_VER >= 10207)
+  yes
+#endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "yes" >/dev/null 2>&1; then :
+  r_cv_header_png_h=yes
+else
+  r_cv_header_png_h=no
+fi
+rm -f conftest*
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $r_cv_header_png_h" >&5
+$as_echo "$r_cv_header_png_h" >&6; }
+
+    have_png=${r_cv_header_png_h}
+  fi
+  if test "${have_png}" = yes; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for png_create_write_struct in -lpng" >&5
+$as_echo_n "checking for png_create_write_struct in -lpng... " >&6; }
+if ${ac_cv_lib_png_png_create_write_struct+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpng -lz ${LIBS} $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char png_create_write_struct ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return png_create_write_struct ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_png_png_create_write_struct=yes
+else
+  ac_cv_lib_png_png_create_write_struct=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_png_png_create_write_struct" >&5
+$as_echo "$ac_cv_lib_png_png_create_write_struct" >&6; }
+if test "x$ac_cv_lib_png_png_create_write_struct" = xyes; then :
+  have_png=yes
+else
+  have_png=no
+fi
+
+  fi
+  if test "${have_png}" = yes; then
+    BITMAP_LIBS="${BITMAP_LIBS} -lpng -lz"
+
+$as_echo "#define HAVE_PNG 1" >>confdefs.h
+
+  fi
+fi
+if test "${use_libtiff}" = yes; then
+  for ac_header in tiffio.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "tiffio.h" "ac_cv_header_tiffio_h" "$ac_includes_default"
+if test "x$ac_cv_header_tiffio_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_TIFFIO_H 1
+_ACEOF
+
+fi
+
+done
+
+  if test "x${ac_cv_header_tiffio_h}" = xyes ; then
+    # may need to resolve jpeg routines
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for TIFFOpen in -ltiff" >&5
+$as_echo_n "checking for TIFFOpen in -ltiff... " >&6; }
+if ${ac_cv_lib_tiff_TIFFOpen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ltiff ${BITMAP_LIBS} $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char TIFFOpen ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return TIFFOpen ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_tiff_TIFFOpen=yes
+else
+  ac_cv_lib_tiff_TIFFOpen=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_tiff_TIFFOpen" >&5
+$as_echo "$ac_cv_lib_tiff_TIFFOpen" >&6; }
+if test "x$ac_cv_lib_tiff_TIFFOpen" = xyes; then :
+  have_tiff=yes
+else
+  have_tiff=no
+fi
+
+    if test "x${have_tiff}" = xyes; then
+
+$as_echo "#define HAVE_TIFF 1" >>confdefs.h
+
+      BITMAP_LIBS="-ltiff ${BITMAP_LIBS}"
+    else
+      # tiff 4.0.x may need lzma too: SU's static build does
+      unset ac_cv_lib_tiff_TIFFOpen
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for TIFFOpen in -ltiff" >&5
+$as_echo_n "checking for TIFFOpen in -ltiff... " >&6; }
+if ${ac_cv_lib_tiff_TIFFOpen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ltiff -llzma ${BITMAP_LIBS} -llzma $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char TIFFOpen ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return TIFFOpen ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_tiff_TIFFOpen=yes
+else
+  ac_cv_lib_tiff_TIFFOpen=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_tiff_TIFFOpen" >&5
+$as_echo "$ac_cv_lib_tiff_TIFFOpen" >&6; }
+if test "x$ac_cv_lib_tiff_TIFFOpen" = xyes; then :
+  have_tiff=yes
+else
+  have_tiff=no
+fi
+
+      if test "x${have_tiff}" = xyes; then
+
+$as_echo "#define HAVE_TIFF 1" >>confdefs.h
+
+        BITMAP_LIBS="-ltiff -llzma ${BITMAP_LIBS}"
+      else
+        have_tiff=no
+      fi
+    fi
+  fi
+fi
+
+
+
+fi
 
 ## POSIX times.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether leap seconds are treated according to POSIX" >&5
@@ -40895,7 +41229,9 @@ if ac_fn_fc_try_link "$LINENO"; then :
   ac_cv_prog_fc_openmp='none needed'
 else
   ac_cv_prog_fc_openmp='unsupported'
-	  	  	  	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -openmp -mp -omp -qsmp=omp -homp \
+	  	  	  	  	  	  	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -qopenmp \
+                           -openmp -mp -omp -qsmp=omp -homp \
+			   -fopenmp=libomp \
                            -Popenmp --openmp; do
 	    ac_save_FCFLAGS=$FCFLAGS
 	    FCFLAGS="$FCFLAGS $ac_option"
@@ -40953,6 +41289,8 @@ FCLIBS=${FCLIBS}
 
 ## OpenMP package stuff (needs to come *after* configuration of all
 ## compilers).
+## We allow the users to override this for packages only (for now)
+## FIXME: what if SHLIB_OPENMP_?FLAGS is set but empty? (could use -n "${VAR+set}")
 if test "x${shlib_ld_was_given}" = xno -a \
         "${SHLIB_LD}" = "\$(CC)" -a \
         "x${ac_cv_prog_c_openmp}" != "xunsupported" -a \
@@ -40963,20 +41301,36 @@ if test "x${shlib_ld_was_given}" = xno -a \
         "x${shlib_fcld_was_given}" = xno -a \
         "${SHLIB_FCLD}" = "\$(FC)" -a \
         "x${ac_cv_prog_fc_openmp}" != "xunsupported"; then
-  SHLIB_OPENMP_CFLAGS="${OPENMP_CFLAGS}"
-  SHLIB_OPENMP_CXXFLAGS="${OPENMP_CXXFLAGS}"
-  SHLIB_OPENMP_FCFLAGS="${OPENMP_FCFLAGS}"
-  SHLIB_OPENMP_FFLAGS="${OPENMP_FFLAGS}"
   ## next macro is copied into Rconfig.h
 
 $as_echo "#define SUPPORT_OPENMP 1" >>confdefs.h
 
-else
-  SHLIB_OPENMP_CFLAGS=
-  SHLIB_OPENMP_CXXFLAGS=
-  SHLIB_OPENMP_FCFLAGS=
-  SHLIB_OPENMP_FFLAGS=
 fi
+## This assumes that OpenMP support in the C compiler includes compilation by F77
+if test -z "${SHLIB_OPENMP_CFLAGS+set}" -a \
+        "x${shlib_ld_was_given}" = xno -a \
+        "${SHLIB_LD}" = "\$(CC)" -a \
+        "x${ac_cv_prog_c_openmp}" != "xunsupported" -a \
+        "x${ac_cv_prog_c_openmp}" != "x"; then
+  SHLIB_OPENMP_CFLAGS="${OPENMP_CFLAGS}"
+  if test -z "${SHLIB_OPENMP_FFLAGS+set}" -a \
+          "x${ac_cv_prog_f77_openmp}" != "xunsupported"; then
+    SHLIB_OPENMP_FFLAGS="${OPENMP_FFLAGS}"
+  fi
+fi
+if test -z "${SHLIB_OPENMP_CXXFLAGS+set}" -a \
+        "x${shlib_cxxld_was_given}" = xno -a \
+        "${SHLIB_CXXLD}" = "\$(CXX)" -a \
+        "x${ac_cv_prog_cxx_openmp}" != "xunsupported"; then
+  SHLIB_OPENMP_CXXFLAGS="${OPENMP_CXXFLAGS}"
+fi
+if test -z "${SHLIB_OPENMP_FCFLAGS+set}" -a \
+        "x${shlib_fcld_was_given}" = xno -a \
+        "${SHLIB_FCLD}" = "\$(FC)" -a \
+        "x${ac_cv_prog_fc_openmp}" != "xunsupported"; then
+  SHLIB_OPENMP_FCFLAGS="${OPENMP_FCFLAGS}"
+fi
+
 
 
 
@@ -40988,7 +41342,7 @@ fi
 ## use this to pick out gfortran (even though it is unreliable).
 if test "${ac_cv_fc_compiler_gnu}" = yes; then
   case "${host_cpu}" in
-    sparc*|ppc64|powerpc64|s390*)
+    sparc*|ppc64*|powerpc64*|s390*)
       fcpicflags="-fPIC"
       ;;
     *)
@@ -40998,7 +41352,8 @@ if test "${ac_cv_fc_compiler_gnu}" = yes; then
 fi
 case "${host_os}" in
   darwin*)
-    fcpicflags="-fno-common"
+     ## OS X does not have a Fortran compiler, so this is speculative
+    fcpicflags="${darwin_pic}"
     ;;
   hpux*)
     case "${FC}" in
@@ -41072,17 +41427,15 @@ LIBS="${LIBS1} ${LIBS2}"
 ## On Linux, do not add the ld.so system directories such as '/lib' and
 ## '/usr/lib', so that the entries from '/etc/ld.so.conf' are not
 ## shadowed (otherwise, e.g. optimized ATLAS libs would not be used).
-## On OS X (Darwin) /usr/X11R6/lib shadows the OpenGL framework and is not
-## needed in DYLD_LIBRARY_PATH.
+
+## On OS X (Darwin) this used to have /usr/X11R6/lib
+## which shadows the OpenGL framework but we add nothing on OS X ....
 case "${host_os}" in
   linux*)
     r_ld_library_defaults="/usr/lib64:/lib64:/usr/lib:/lib"
     ;;
   solaris*)
     r_ld_library_defaults="/usr/lib:/lib"
-    ;;
-  darwin*)
-    r_ld_library_defaults="/usr/X11R6/lib"
     ;;
   *)
     r_ld_library_defaults=

@@ -1234,7 +1234,7 @@ function(fname, envir, mustMatch = TRUE)
     ## 'envir' is (to be considered) an S3 generic function.  Note,
     ## found *in* not found *from*, so envir does not have a default.
     ##
-    ## If it is, does it despatch methods of fname?  We need that to
+    ## If it is, does it dispatch methods of fname?  We need that to
     ## look for possible methods as functions named fname.* ....
     ##
     ## Provided by LT with the following comments:
@@ -1280,6 +1280,25 @@ function(fname, envir, mustMatch = TRUE)
     }
     res <- isUME(body(f))
     if(mustMatch) res == fname else nzchar(res)
+}
+
+### ** .load_namespace_rather_quietly
+
+.load_namespace_rather_quietly <-
+function(package)
+{
+    ## Suppress messages and warnings from loading namespace
+    ## dependencies.
+    .whandler <- function(e) {
+        calls <- sys.calls()
+        if(sum(.call_names(calls) == "loadNamespace") == 1L)
+            signalCondition(e)
+        else
+            invokeRestart("muffleWarning")
+    }
+    expr <- substitute(loadNamespace(package), list(package = package))
+    invisible(withCallingHandlers(suppressMessages(eval(expr)),
+                                  warning = .whandler))
 }
 
 ### ** .load_package_quietly
@@ -1556,6 +1575,12 @@ function(con)
     }
     .try_quietly(readLines(con, warn=FALSE))
 }
+
+### ** .read_additional_repositories_field
+
+.read_additional_repositories_field <-
+function(txt)
+    unique(unlist(strsplit(txt, ",[[:space:]]*")))
 
 ### ** .read_citation_quietly
 

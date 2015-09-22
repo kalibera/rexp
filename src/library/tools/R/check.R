@@ -2401,7 +2401,6 @@ setRlibs <-
         checkingLog(Log, "whether the package can be loaded with stated dependencies")
         out <- R_runR(Rcmd, opts, c(env, env1), arch = arch)
         if (any(grepl("^Error", out)) || length(attr(out, "status"))) {
-            warningLog(Log)
             printLog0(Log, paste(c(out, ""), collapse = "\n"))
             wrapLog("\nIt looks like this package",
                     "(or one of its dependent packages)",
@@ -2429,10 +2428,32 @@ setRlibs <-
         ## the namespace
         if (file.exists(file.path(pkgdir, "NAMESPACE"))) {
             checkingLog(Log, "whether the namespace can be loaded with stated dependencies")
-            Rcmd <- sprintf("loadNamespace(\"%s\")", pkgname)
+            Rcmd <-
+                sprintf("options(warn=1)\ntools:::.load_namespace_rather_quietly(\"%s\")",
+                        pkgname)
             out <- R_runR(Rcmd, opts, c(env, env1), arch = arch)
+            any <- FALSE
             if (any(grepl("^Error", out)) || length(attr(out, "status"))) {
                 warningLog(Log)
+                any <- TRUE
+            } else {
+		## Drop tcltk warning if no DISPLAY variable
+		if(pkgname == "tcltk")
+		    out <- grep("Warning: no DISPLAY variable so Tk is not available",
+				out, fixed = TRUE, invert = TRUE, value = TRUE)
+                ## Drop warnings about replacing previous imports unless
+                ## these were disabled for the installation check.
+                check_imports_flag <-
+                    Sys.getenv("_R_CHECK_REPLACING_IMPORTS_", "TRUE")
+                if(config_val_to_logical(check_imports_flag))
+                    out <- grep("Warning: replacing previous import", out,
+                                fixed = TRUE, invert = TRUE, value = TRUE)
+                if(any(grepl("^Warning", out))) {
+                    noteLog(Log)
+                    any <- TRUE
+                }
+            }
+            if(any) {
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
                 wrapLog("\nA namespace must be able to be loaded",
                         "with just the base namespace loaded:",
@@ -4836,8 +4857,6 @@ setRlibs <-
             }
         }
         summaryLog(Log)
-        if (Log$errors > 0L)
-            do_exit(1L)
 
         if(config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_STATUS_SUMMARY_",
                                             "FALSE"))) {
@@ -4847,6 +4866,9 @@ setRlibs <-
             }
         }
 
+        if(Log$errors > 0L)
+            do_exit(1L)
+        
         closeLog(Log)
         message("")
 

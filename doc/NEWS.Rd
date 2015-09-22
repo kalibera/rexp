@@ -8,7 +8,7 @@
 \section{\Rlogo CHANGES IN R-devel}{
   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
     \itemize{
-      \item \code{nchar(x, *)} gains a new argument \code{keepNA} which
+      \item \code{nchar(x)} gains a new argument \code{keepNA} which
       governs how the result for \code{NA}s in \code{x} is determined.
       The new default \code{keepNA = NA} returns \code{NA} where
       \code{x} is \code{NA}, except for \code{type = "width"} which still
@@ -16,7 +16,7 @@
 
       \code{nzchar(x)} gets the same new argument, but with default
       \code{keepNA = FALSE}.  Hence \code{nzchar(x)} still returns a
-      non-\code{NA} logical vector, back compatibly.
+      non-\code{NA} logical vector.
 
       \item All builds have support for \samp{https:} URLs in the
       default methods for \code{download.file()}, \code{url()} and code
@@ -68,8 +68,8 @@
       \item New function \code{strrep()} for repeating the elements of a
       character vector.
 
-      \item \code{rapply} preserves attributes on the list when
-      \code{how="replace"}.
+      \item \code{rapply()} preserves attributes on the list when
+      \code{how = "replace"}.
 
       \item New S3 generic function \code{sigma()} with methods for
       extracting the estimated standard deviation aka \dQuote{residual
@@ -122,6 +122,52 @@
 	"default"} (and documented).
 
       \item \code{smoothScatter()} gains a \code{ret.selection} argument.
+
+      \item \code{qr()} no longer has a \code{\dots} argument to pass
+      additional arguments to methods.
+
+      \item \code{[} has a method for class \code{"table"}.
+
+      \item It is now possible (again) to \code{replayPlot()} a
+      display list snapshot that was created by \code{recordPlot()}
+      in a different \R session.
+
+      It is still not a good idea to use snapshots as a persistent
+      storage format for \R plots, but it is now not completely silly to
+      use a snapshot as a format for transferring an R plot between two
+      R sessions.
+
+      The underlying changes mean that packages providing graphics
+      devices (e.g., \CRANpkg{Cairo}, \CRANpkg{RSvgDevice},
+      \CRANpkg{cairoDevice}, \CRANpkg{tikzDevice}) will need to be
+      reinstalled.
+
+      Code for restoring snapshots was contributed by Jeroen Ooms
+      and JJ Allaire.
+
+      Some testing code is available at
+      \url{https://github.com/pmur002/R-display-list} .
+
+      \item \code{tools::undoc(dir = D)} and \code{codoc(dir = D)} now
+      also work when \code{D} is a directory whose \code{normalizePath()}ed
+      version no longer ends in the package name, e.g.\sspace{}from a symlink.
+
+      \item \code{abbreviate()} has more support for multi-byte
+      character sets -- it no longer removes bytes within characters and
+      knows about Latin vowels with accents.  It is still only
+      really suitable for (most) European languages, and still warns on
+      non-ASCII input.
+
+      \code{abbreviate(use.classes = FALSE)} is now implemented, and
+      that is more suitable for non-European languages.
+
+      \code{match(x, table)} is faster, sometimes by an order of magnitude,
+      when \code{x} is of length one, % and \code{incomparables} is unchanged
+      thanks to Haverty's \PR{16491}.
+
+      More consistent, partly not back-compatible behavior of \code{NA}
+      and \code{NaN} coercion to complex numbers, operations less often
+      resulting in complex \code{NA} (\code{NA_complex_}).
     }
   }
 
@@ -141,10 +187,10 @@
 
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
-      \item The previously included versions of \code{zlib}, \code{bzip2},
-      \code{xz} and PCRE have been removed, so system versions are
-      required (see the \sQuote{R Installation and Administration}
-      manual).
+      \item The previously included versions of \code{zlib},
+      \code{bzip2}, \code{xz} and PCRE have been removed, so suitable
+      external (usuallly system) versions are required (see the
+      \sQuote{R Installation and Administration} manual).
 
       \item The unexported and undocumented Windows-only devices
       \code{cairo_bmp()}, \code{cairo_png()} and \code{cairo_tiff()}
@@ -175,6 +221,13 @@
 
       \item BSD networking is now required (except on Windows) and so
       \code{capabilities("http/ftp")} is always true.
+
+      \item \command{configure} uses \command{pkg-config} for PNG, TIFF
+      and JPEG where this is available.  This should work better with
+      multiple installs and with static libs.
+
+      \item The minimum supported version of OS X is 10.6 (\sQuote{Snow
+	Leopard}): even that has been unsupported by Apple since 2012.
     }
   }
 
@@ -186,14 +239,19 @@
 
       Code using it will need to be reinstalled. (\PR{16470})
       % no current CRAN packages ....
+
+      \item Use of \samp{SUPPORT_OPENMP} from header \file{Rconfig.h} is
+      deprecated in favour of the standard OpenMP define \samp{_OPENMP}.
+
+      \item \code{R_GE_version} has been increased to \code{11}.
     }
   }
 
   \subsection{BUG FIXES}{
     \itemize{
       \item C-level \code{asChar(x)} is fixed for when \code{x} is not a
-      vector, and it returns \dQuote{TRUE}/\dQuote{FALSE} instead of
-      \dQuote{T}/\dQuote{F} for logical vectors.
+      vector, and it returns \code{"TRUE"}/\code{"FALSE"} instead of
+      \code{"T"}/\code{"F"} for logical vectors.
 
       \item \code{.colSums()} etc (with an initial dot) first argument
       name \code{x} matches \code{colSums()} such that error messages
@@ -202,6 +260,9 @@
       \item A \code{coef()} method for class \code{"maov"} has been
       added to allow \code{vcov()} to work with multivariate
       results. (\PR{16380})
+
+      \item \code{libcurl} connections signal errors rather than
+      retrieving HTTP error pages.
     }
   }
 }
@@ -213,7 +274,7 @@
       to the conversion table used to convert these to Olson names.
       (Including those relating to changes for Russia in Oct 2014, as in
       \PR{16503}.)
-      
+
       \item (Windows) Compatibility information has been added to the
       manifests for \file{Rgui.exe}, \file{Rterm.exe} and
       \file{Rscript.exe}.  This should allow \code{win.version()} and
@@ -223,6 +284,9 @@
       \item Windows \code{"wininet"} FTP first tries EPSV / PASV mode
       rather than only using active mode (reported by Dan Tenenbaum).
       %% https://stat.ethz.ch/pipermail/r-devel/2015-August/071595.html
+
+      \item \code{which.min(x)} and \code{which.max(x)} may be much
+      faster for logical and integer \code{x} and now also work for long vectors.
     }
   }
 
@@ -230,11 +294,25 @@
     \itemize{
       \item The included configuration code for \code{libintl} has been
       updated to that from \code{gettext} version 0.19.5.1 --- this
-      should only affect how an external library is detected. 
-      (Wish of \PR{16464}.)
+      should only affect how an external library is detected (and the
+      only known instance is under OpenBSD).  (Wish of \PR{16464}.)
+
+      \item \command{configure} has a new argument
+      \option{--disable-java} to disable the checks for Java.
+
+      \item The \command{configure} default for \code{MAIN_LDFLAGS} has
+      been changed for the FreeBSD, NetBSD and Hurd OSes to one more
+      likely to work with compilers other than \command{gcc} (FreeBSD 10
+      defaults to \command{clang}).
+
+      \item \command{configure} now supports the OpenMP flags
+      \option{-fopenmp=libomp} (clang) and \option{-qopenmp} (Intel C).
+
+      \item Various OpenMP macros can be set to override the default
+      behaviour of \command{configure}: see file \file{config.site}.
     }
   }
-  
+
   \subsection{BUG FIXES}{
     \itemize{
       \item \code{regexpr(pat, x, perl = TRUE)} with Python-style named
@@ -255,10 +333,10 @@
       \item Coercing a list without names to a data frame is faster if
       the elements are very long. (\PR{16467})
 
-      \item (Unix-only) Under some circumstances piping the output from
-      \command{Rscript} or \command{R -f} could result in attempting to
-      close the input file twice, possibly crashing the process.
-      (\PR{16500})
+      \item (Unix-only) Under some rare circumstances piping the output
+      from \command{Rscript} or \command{R -f} could result in
+      attempting to close the input file twice, possibly crashing the
+      process.  (\PR{16500})
 
       \item (Windows) \code{Sys.info()} was out of step with
       \code{win.version()} and did not report Windows 8.
@@ -269,7 +347,43 @@
 
       \item \code{detach()}ing the \pkg{methods} package keeps
       \code{.isMethodsDispatchOn()} true, as long as the methods
-      namespace is not unloaded.% This keeps a sane state, see the regr-S4 test
+      namespace is not unloaded.% This keeps a sane state, see the reg-S4 test
+
+      \item Removed some spurious warnings from \command{configure} about the
+      preprocessor not finding header files.  (\PR{15989})
+
+      \item \code{rchisq(*, df=0, ncp=0)} now returns \code{0} instead
+      of \code{NaN}, and \code{dchisq(*, df=0, ncp=*)} also no longer
+      returns \code{NaN} in limit cases (where the limit is unique).
+      (\PR{16521})
+
+      \item \code{pchisq(*, df=0, ncp > 0, log.p=TRUE)} no longer
+      underflows (for ncp > ~60).
+
+      \item \code{nchar(x, "w")} returned -1 for characters it did not
+      know about (e.g.\sspace{}zero-width spaces): it now assumes 1.
+      It now knows about most zero-width characters and a few more
+      double-width characters.
+
+      \item Help for \code{which.min()} is now more precise about
+      behavior with logical arguments.  (\PR{16532})
+
+      \item The print width of character strings marked as
+      \code{"latin1"} or \code{"bytes"} was in some cases computed
+      incorrectly.
+
+      \item \code{abbreviate()} did not give names to the return value
+      if \code{minlength} was zero, unlike when it was positive.
+
+      \item (Windows only) \code{dir.create()} did not always warn
+      when it failed to create a directory.  (\PR{16537})
+
+      \item When operating in a multibyte locale, \code{grep()}
+      and related functions did not handle UTF-8 strings properly.
+      (\PR{16264})
+      
+      \item \code{read.dcf()} misread lines longer than 8191 characters.
+      (Reported by Hervé Pagès with a patch.)
     }
   }
 }

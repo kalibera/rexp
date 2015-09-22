@@ -214,7 +214,11 @@ double R_pow(double x, double y) /* = x ^ y */
 	/* There was a special case for y == 0.5 here, but
 	   gcc 4.3.0 -g -O2 mis-compiled it.  Showed up with
 	   100^0.5 as 3.162278, example(pbirthday) failed. */
-	return pow(x, y);
+#ifdef USE_POWL_IN_R_POW
+    return powl(x, y);
+#else
+    return pow(x, y);
+#endif
     }
     if (ISNAN(x) || ISNAN(y))
 	return(x + y);
@@ -1685,7 +1689,7 @@ SEXP attribute_hidden do_log_builtin(SEXP call, SEXP op, SEXP args, SEXP env)
 
 #define FINISH_Math3					\
     if(naflag) warning(R_MSG_NA);			\
-    							\
+							\
     if (n == na) SHALLOW_DUPLICATE_ATTRIB(sy, sa);	\
     else if (n == nb) SHALLOW_DUPLICATE_ATTRIB(sy, sb);	\
     else if (n == nc) SHALLOW_DUPLICATE_ATTRIB(sy, sc);	\
@@ -1931,7 +1935,7 @@ static SEXP math4(SEXP sa, SEXP sb, SEXP sc, SEXP sd,
 
 #define FINISH_Math4					\
     if(naflag) warning(R_MSG_NA);			\
-    							\
+							\
     if (n == na) SHALLOW_DUPLICATE_ATTRIB(sy, sa);	\
     else if (n == nb) SHALLOW_DUPLICATE_ATTRIB(sy, sb);	\
     else if (n == nc) SHALLOW_DUPLICATE_ATTRIB(sy, sc);	\
@@ -2110,7 +2114,7 @@ static SEXP math5(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP se, double (*f)())
 
 #define FINISH_Math5					\
     if(naflag) warning(R_MSG_NA);			\
-    							\
+							\
     if (n == na) SHALLOW_DUPLICATE_ATTRIB(sy, sa);	\
     else if (n == nb) SHALLOW_DUPLICATE_ATTRIB(sy, sb);	\
     else if (n == nc) SHALLOW_DUPLICATE_ATTRIB(sy, sc);	\

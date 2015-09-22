@@ -1511,8 +1511,6 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(args);
     PROTECT(rho);
     PROTECT(val = eval(val, rho));
-    defineVar(sym, R_NilValue, rho);
-    PROTECT(cell = GET_BINDING_CELL(sym, rho));
 
     /* deal with the case where we are iterating over a factor
        we need to coerce to character - then iterate */
@@ -1530,6 +1528,8 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     val_type = TYPEOF(val);
 
+    defineVar(sym, R_NilValue, rho);
+    PROTECT(cell = GET_BINDING_CELL(sym, rho));
     dbg = RDEBUG(rho);
     bgn = BodyHasBraces(body);
 
@@ -5042,7 +5042,7 @@ static R_INLINE Rboolean GETSTACK_LOGICAL_NO_NA_PTR(R_bcstack_t *s, int callidx,
 
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
-  SEXP value, constants;
+  SEXP value = R_NilValue, constants;
   BCODE *pc, *codebase;
   R_bcstack_t *oldntop = R_BCNodeStackTop;
   static int evalcount = 0;
@@ -5448,6 +5448,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (ftype != SPECIALSXP) {
 	  SEXP h = findVar(R_DotsSymbol, rho);
 	  if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
+	    PROTECT(h);
 	    for (; h != R_NilValue; h = CDR(h)) {
 	      SEXP val;
 	      if (ftype == BUILTINSXP) val = eval(CAR(h), rho);
@@ -5455,6 +5456,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	      PUSHCALLARG(val);
 	      SETCALLARG_TAG(TAG(h));
 	    }
+	    UNPROTECT(1); /* h */
 	  }
 	  else if (h != R_MissingArg)
 	    error(_("'...' used in an incorrect context"));
@@ -6179,6 +6181,7 @@ SEXP attribute_hidden do_disassemble(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_bcversion(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
+  checkArity(op, args);
   SEXP ans = allocVector(INTSXP, 1);
   INTEGER(ans)[0] = R_bcVersion;
   return ans;
@@ -6352,6 +6355,7 @@ SEXP do_bcprofcounts(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP val;
     int i;
 
+    checkArity(op, args);
     val = allocVector(INTSXP, OPCOUNT);
     for (i = 0; i < OPCOUNT; i++)
 	INTEGER(val)[i] = opcode_counts[i];
@@ -6372,6 +6376,7 @@ SEXP do_bcprofstart(SEXP call, SEXP op, SEXP args, SEXP env)
     double dinterval = 0.02;
     int i;
 
+    checkArity(op, args);
     if (R_Profiling)
 	error(_("profile timer in use"));
     if (bc_profiling)
@@ -6409,6 +6414,7 @@ SEXP do_bcprofstop(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     struct itimerval itv;
 
+    checkArity(op, args);
     if (! bc_profiling)
 	error(_("not byte code profiling"));
 
@@ -6425,12 +6431,15 @@ SEXP do_bcprofstop(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 #else
 SEXP NORET do_bcprofcounts(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
     error(_("byte code profiling is not supported in this build"));
 }
 SEXP NORET do_bcprofstart(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
     error(_("byte code profiling is not supported in this build"));
 }
 SEXP NORET do_bcprofstop(SEXP call, SEXP op, SEXP args, SEXP env) {
+    checkArity(op, args);
     error(_("byte code profiling is not supported in this build"));
 }
 #endif

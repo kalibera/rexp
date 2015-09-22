@@ -914,3 +914,34 @@ stopifnot(identical(topenv(baseenv()),
                     baseenv()))
 ## accidentally globalenv in R 3.2.[12] only
 
+
+## widths of unknown Unicode characters
+stopifnot(nchar("\u200b", "w") == 0)
+## was -1 in R 3.2.2
+
+
+## abbreviate dropped names in some cases
+x <- c("AA", "AB", "AA", "CBA") # also test handling of duplicates
+for(m in 2:0) {
+    print(y <- abbreviate(x, m))
+    stopifnot(identical(names(y), x))
+}
+## dropped for 0 in R <= 3.2.2
+
+
+## match(<NA>, <NA>)
+stopifnot(
+    isTRUE(NA          %in% c(NA, TRUE)),
+    isTRUE(NA_integer_ %in% c(TRUE, NA)),
+    isTRUE(NA_real_    %in% c(NA, FALSE)),# !
+    isTRUE(!(NaN       %in% c(NA, FALSE))),
+    isTRUE(NA          %in% c(3L, NA)),
+    isTRUE(NA_integer_ %in% c(NA, 3L)),
+    isTRUE(NA_real_    %in% c(3L, NA)),# !
+    isTRUE(!(NaN       %in% c(3L, NA))),
+    isTRUE(NA          %in% c(2., NA)),# !
+    isTRUE(NA_integer_ %in% c(NA, 2.)),# !
+    isTRUE(NA_real_    %in% c(2., NA)),# !
+    isTRUE(!(NaN       %in% c(2., NA))))
+## the "!" gave FALSE in R-devel (around 20.Sep.2015)
+

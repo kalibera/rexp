@@ -2013,13 +2013,9 @@ are available for use in @file{src/Makevars} or @file{src/Makevars.win}.
 Include the appropriate macro in @code{PKG_CFLAGS}, @code{PKG_CPPFLAGS}
 and so on, and also in @code{PKG_LIBS}.  C/C++ code that needs to be
 conditioned on the use of OpenMP can be used inside @code{#ifdef
-SUPPORT_OPENMP}, a macro defined in the header @file{Rconfig.h}
-(@pxref{Platform and version information}) or @code{_OPENMP}: note that
-some toolchains used for @R{} (including most of those using
-@command{clang}@footnote{Some builds of @command{clang} 3.7 have support
-for OpenMP 3.1. However, this needs the compiler/linker flag
-@option{-fopenmp=libomp} which is not currently added by
-@command{configure}.}) have no OpenMP support at all, not even
+_OPENMP}: note that some toolchains used for @R{} (including most of
+those using @command{clang}@footnote{Some builds of @command{clang} 3.7
+have support for OpenMP 3.1}) have no OpenMP support at all, not even
 @file{omp.h}.
 
 For example, a package with C code written for OpenMP should have in
@@ -2034,6 +2030,22 @@ Note that the macro @code{SHLIB_OPENMP_CXXFLAGS} applies to the C++98
 compiler and not necessarily to the C++11 compiler: users of the latter
 should do their own @command{configure} checks.
 
+Some care is needed when compilers are from different families which may
+use different OpenMP runtimes (e.g.@: @command{clang} @emph{vs} GCC
+including @command{gfortran}, although it is currently possible to use
+the @command{clang} runtime with GCC but not @emph{vice versa}).  For a
+package with Fortran 77 code using OpenMP the appropriate lines are
+
+@example
+PKG_FFLAGS = $(SHLIB_OPENMP_FFLAGS)
+PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
+@end example
+
+@noindent
+as the C compiler will be used to link the package code (and there is no
+guarantee that this will work everywhere).
+
+
 There is nothing to say what version of OpenMP is supported: version 3.0
 (May 2008) is supported by recent versions of the Linux, Windows and
 Solaris platforms, but portable packages cannot assume that end users
@@ -2044,8 +2056,8 @@ The performance of OpenMP varies substantially between platforms.  Both
 the Windows and earlier Apple OS X implementations have substantial
 overheads and are only beneficial if quite substantial tasks are run in
 parallel.  Also, on Windows new threads are started with the
-default@footnote{Windows, not MinGW-w64 default.} FPU control word, so
-computations done on OpenMP threads will not make use of
+default@footnote{Windows default, not MinGW-w64 default.} FPU control
+word, so computations done on OpenMP threads will not make use of
 extended-precision arithmetic which is the default for the main process.
 @c mingw64-public, 2015-02-02.
 @c http://stackoverflow.com/questions/2553725/is-the-fpu-control-word-setting-per-thread-or-per-process
@@ -2068,8 +2080,8 @@ dubious assumptions.  The best way to limit resources is to limit the
 overall number of threads available to OpenMP in the @R{} process: this
 can be done via environment variable @env{OMP_THREAD_LIMIT}, where
 implemented.@footnote{Which it was at the time of writing with GCC,
-Solaris Studio and Intel compilers.}  Alternatively, the number of
-threads per region can be limited by the environment variable
+Solaris Studio, Intel and Clang 3.7.x compilers.}  Alternatively, the
+number of threads per region can be limited by the environment variable
 @env{OMP_NUM_THREADS} or API call @code{omp_set_num_threads}, or,
 better, for the regions in your code as part of their
 specification. E.g.@: @R{} uses
@@ -4192,6 +4204,14 @@ are processed first, the Solaris one does not.} the libraries (typically
 specified by @option{-l} options) to be found from those directories,
 and libraries are searched once in the order they are specified.  Not
 all linkers allow a space after @option{-L} .
+
+@item
+Some people have a need to set a locale.  Locale names are not portable,
+and e.g.@: @samp{fr_FR.utf8} is common used on Linux but not accepted on
+either Solaris or OS X.  @samp{fr_FR.UTF-8} is more portable, being
+accepted on recent Linux, AIX, FreBSD, OS X and Solaris (at least).
+However, some Linux distributions micro-package, so locales defined by
+@pkg{glibc} (including these examples) may not be installed.
 
 @end itemize
 
@@ -7892,14 +7912,15 @@ like
 @end example
 
 @noindent
-(@code{return} and @code{vptr} apply to C++).  In addition,
+(@code{function}, @code{return} and @code{vptr} apply only to C++).  In
+addition,
 @example
 -fsanitize=unsigned-integer-overflow
 @end example
 is available as a separate option in some versions of @command{clang}
 (not enabled by @option{-fsanitize=undefined}).
 
-@command{clang} 3.5 and later need
+@command{clang} 3.5 and later may need
 
 @example
 -fsanitize=undefined -fno-sanitize=float-divide-by-zero,vptr
@@ -7909,12 +7930,13 @@ is available as a separate option in some versions of @command{clang}
 for C++ code (in @code{CXX} and @code{CXX1X}) as the run-time library
 for @code{vptr} needs to be linked into the main @R{} executable (and
 that would need to be linked by @code{clang++}, not @code{clang}: you
-could try building @R{} with
+could try building @R{} with something like
 @example
 MAIN_LD="clang++ -fsanitize=undefined"
+R_OPENMP_CFLAGS="-fopenmp=libomp"
 @end example
 or add @code{-lclang_rt.asan_cxx-x86_64}@footnote{This includes the C++
-UBSAN handlers, despite its name.} to @code{LD_FLAGS} or similar).
+UBSAN handlers, despite its name.} or similar to @code{LD_FLAGS}).
 
 See @uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/Debugging-Options.html} (or
 the manual for your version of GCC, installed or @emph{via}
@@ -13628,8 +13650,9 @@ available, that is having @code{getrlimit} and on Linux or having
 @code{sysctl} supporting @code{KERN_USRSTACK}, including FreeBSD and OS
 X.} when @code{Rf_initialize_R} is called, to values appropriate to the
 main thread.  Stack-checking can be disabled by setting
-@code{R_CStackLimit = (uintptr_t)-1}, but it is better to if possible
-set appropriate values.  (What these are and how to determine them are
+@code{R_CStackLimit = (uintptr_t)-1} immediately after
+@code{Rf_initialize_R} is called, but it is better to if possible set
+appropriate values.  (What these are and how to determine them are
 OS-specific, and the stack size limit may differ for secondary threads.
 If you have a choice of stack size, at least 10Mb is recommended.)
 

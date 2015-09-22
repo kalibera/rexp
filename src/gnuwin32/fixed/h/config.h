@@ -150,13 +150,13 @@
 /* Define to 1 if you have the `ctan' function. */
 #define HAVE_CTAN 1
 
+/* Define to 1 if you have the `ctanh' function. */
+#define HAVE_CTANH 1
+
 /* Define to 1 if you have the <curl/curl.h> header file.
    Set on the command line where supported.
 */
 /* #undef HAVE_CURL_CURL_H */
-
-/* Define to 1 if you have the `ctanh' function. */
-#define HAVE_CTANH 1
 
 /* define if the compiler supports basic C++11 syntax */
 #define HAVE_CXX11 1
@@ -421,9 +421,6 @@
 
 /* Define if your <locale.h> file defines LC_MESSAGES. */
 /* #undef HAVE_LC_MESSAGES */
-
-/* Define to 1 if you have the `cc_dynamic' library (-lcc_dynamic). */
-/* #undef HAVE_LIBCC_DYNAMIC */
 
 /* Define if your system has libcurl >= 7.28.0 with support for https.
    Set on the command line where supported.
@@ -1065,6 +1062,11 @@
 /* The size of `size_t', as computed by sizeof. */
 #define SIZEOF_SIZE_T @ST@
 
+/* Workaround for win64 pow() precision issue in Mingw-w64 V3 and higher
+   See http://sourceforge.net/p/mingw-w64/bugs/466 for discussion. */
+#if defined(_WIN64) && defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR >= 3
+#define USE_POWL_IN_R_POW 1
+#endif
 
 /* Define as the maximum value of type 'size_t', if the system doesn't define
    it. (For intl) */

@@ -95,11 +95,11 @@ function(package, dir, lib.loc = NULL)
     if(!missing(package)) {
         if(length(package) != 1L)
             stop("argument 'package' must be of length 1")
-        dir <- find.package(package, lib.loc)
+        dirdir <- dirname(dir <- find.package(package, lib.loc))
         ## Using package installed in @code{dir} ...
         is_base <- package == "base"
 
-        all_doc_topics <- Rd_aliases(package, lib.loc = dirname(dir))
+        all_doc_topics <- Rd_aliases(package, lib.loc = dirdir)
 
         ## Load package into code_env.
         if(!is_base)
@@ -112,13 +112,14 @@ function(package, dir, lib.loc = NULL)
     else {
         if(missing(dir))
             stop("you must specify 'package' or 'dir'")
+        pkgname <- basename(dir)
+        dirdir  <- dirname(dir)
         ## Using sources from directory @code{dir} ...
         if(!dir.exists(dir))
             stop(gettextf("directory '%s' does not exist", dir),
                  domain = NA)
         else
             dir <- file_path_as_absolute(dir)
-        pkgname <- basename(dir)
         is_base <- pkgname == "base"
 
         all_doc_topics <- Rd_aliases(dir = dir)
@@ -143,7 +144,7 @@ function(package, dir, lib.loc = NULL)
         ## working on the sources we (currently?) cannot deal with the
         ## (experimental) alternative way of specifying the namespace.
         if(file.exists(file.path(dir, "NAMESPACE"))) {
-            nsInfo <- parseNamespaceFile(basename(dir), dirname(dir))
+            nsInfo <- parseNamespaceFile(pkgname, dirdir)
             ## Look only at exported objects (and not declared S3
             ## methods).
             OK <- intersect(code_objs, nsInfo$exports)
@@ -156,16 +157,14 @@ function(package, dir, lib.loc = NULL)
     ## Find the data sets to work on.
     data_dir <- file.path(dir, "data")
     data_objs <- if(dir.exists(data_dir))
-	unlist(.try_quietly(list_data_in_pkg(dataDir = data_dir)),
+	unlist(.try_quietly(list_data_in_pkg(pkgname, dataDir = data_dir)),
 	       use.names = FALSE)
     else
         character()
 
     ## There was a time when packages contained code or data (or both).
     ## But not anymore ...
-    if(!missing(package)
-       && (!length(code_objs))
-       && (!length(data_objs))
+    if(!missing(package) && !length(code_objs) && !length(data_objs)
        && getOption("verbose"))
         message("neither code nor data objects found")
 
@@ -324,8 +323,7 @@ function(package, dir, lib.loc = NULL,
         ## Using package installed in @code{dir} ...
         code_dir <- file.path(dir, "R")
         if(!dir.exists(code_dir))
-            stop(gettextf("directory '%s' does not contain R code",
-                          dir),
+            stop(gettextf("directory '%s' does not contain R code", dir),
                  domain = NA)
         if(!.haveRds(dir))
             stop(gettextf("directory '%s' does not contain Rd objects", dir),
@@ -339,8 +337,9 @@ function(package, dir, lib.loc = NULL,
 
         objects_in_code <- sort(names(code_env))
 
+        dirdir <- dirname(dir)
         ## Does the package have a namespace?
-        if(packageHasNamespace(package, dirname(dir))) {
+        if(packageHasNamespace(package, dirdir)) {
             has_namespace <- TRUE
             ns_env <- asNamespace(package)
             S3Table <- get(".__S3MethodsTable__.", envir = ns_env)
@@ -361,27 +360,23 @@ function(package, dir, lib.loc = NULL,
             stop("you must specify 'package' or 'dir'")
         ## Using sources from directory @code{dir} ...
         if(!dir.exists(dir))
-            stop(gettextf("directory '%s' does not exist", dir),
-                 domain = NA)
-        else
-            dir <- file_path_as_absolute(dir)
+            stop(gettextf("directory '%s' does not exist", dir), domain = NA)
+        ## else
+        package_name <- basename(dir) # early, before resolving sym.links etc in next line:
+        dirdir <- dirname(dir)        # early, ...
+        dir <- file_path_as_absolute(dir)
         code_dir <- file.path(dir, "R")
         if(!dir.exists(code_dir))
-            stop(gettextf("directory '%s' does not contain R code",
-                          dir),
+            stop(gettextf("directory '%s' does not contain R code", dir),
                  domain = NA)
         if(!.haveRds(dir))
             stop(gettextf("directory '%s' does not contain Rd objects", dir),
                  domain = NA)
-        package_name <- basename(dir)
         is_base <- package_name == "base"
 
         code_env <- new.env(hash = TRUE)
         dfile <- file.path(dir, "DESCRIPTION")
-        meta <- if(file_test("-f", dfile))
-            .read_description(dfile)
-        else
-            character()
+        meta <- if(file_test("-f", dfile)) .read_description(dfile) else character()
         .source_assignments_in_code_dir(code_dir, code_env, meta)
         sys_data_file <- file.path(code_dir, "sysdata.rda")
         if(file_test("-f", sys_data_file)) load(sys_data_file, code_env)
@@ -398,7 +393,7 @@ function(package, dir, lib.loc = NULL,
             objects_in_ns <- objects_in_code
             functions_in_S3Table <- character()
             ns_env <- code_env
-            nsInfo <- parseNamespaceFile(basename(dir), dirname(dir))
+            nsInfo <- parseNamespaceFile(package_name, dirdir)
             ## Look only at exported objects.
             OK <- intersect(objects_in_code, nsInfo$exports)
             for(p in nsInfo$exportPatterns)
@@ -410,7 +405,7 @@ function(package, dir, lib.loc = NULL,
     ## Find the data sets to work on.
     data_dir <- file.path(dir, "data")
     data_sets_in_code <- if(dir.exists(data_dir))
-        names(.try_quietly(list_data_in_pkg(dataDir = data_dir)))
+        names(.try_quietly(list_data_in_pkg(package_name, dataDir = data_dir)))
     else
         character()
 
@@ -550,7 +545,7 @@ function(package, dir, lib.loc = NULL,
     }
 
     db <- if(!missing(package))
-        Rd_db(package, lib.loc = dirname(dir))
+        Rd_db(package, lib.loc = dirdir)
     else
         Rd_db(dir = dir)
 
@@ -1300,7 +1295,7 @@ function(package, dir, lib.loc = NULL)
     else
         Rd_db(dir = dir)
 
-    db_aliases <- lapply(db, .Rd_get_metadata, "alias")
+    db_aliases  <- lapply(db, .Rd_get_metadata, "alias")
     db_keywords <- lapply(db, .Rd_get_metadata, "keyword")
 
     db_names <- .Rd_get_names_from_Rd_db(db)
@@ -1374,9 +1369,9 @@ function(package, dir, lib.loc = NULL)
         ## Replacement functions.
         if(length(replace_exprs)) {
             replace_funs <-
-                paste0(sapply(replace_exprs,
-                             function(e) as.character(e[[2L]][[1L]])),
-                      "<-")
+                paste0(vapply(replace_exprs,
+			      function(e) as.character(e[[2L]][[1L]]), ""),
+		       "<-")
             functions <- c(functions, replace_funs)
             arg_names_in_usage <-
                 c(arg_names_in_usage,
@@ -1462,9 +1457,8 @@ function(package, dir, lib.loc = NULL)
 
     }
 
-    class(bad_doc_objects) <- "checkDocFiles"
-    attr(bad_doc_objects, "bad_lines") <- bad_lines
-    bad_doc_objects
+    structure(bad_doc_objects, class = "checkDocFiles",
+	      "bad_lines" = bad_lines)
 }
 
 format.checkDocFiles <-
@@ -1571,6 +1565,7 @@ function(package, dir, lib.loc = NULL)
     else {
         if(missing(dir))
             stop("you must specify 'package' or 'dir'")
+        package_name <- basename(dir) # early, before resolving sym.links
         ## Using sources from directory @code{dir} ...
         if(!dir.exists(dir))
             stop(gettextf("directory '%s' does not exist", dir),
@@ -1585,7 +1580,6 @@ function(package, dir, lib.loc = NULL)
         if(!.haveRds(dir))
             stop(gettextf("directory '%s' does not contain Rd objects", dir),
                  domain = NA)
-        package_name <- basename(dir)
         is_base <- package_name == "base"
 
         code_env <- new.env(hash = TRUE)
@@ -1603,7 +1597,7 @@ function(package, dir, lib.loc = NULL)
         ## Do the package sources have a NAMESPACE file?
         if(file.exists(file.path(dir, "NAMESPACE"))) {
             has_namespace <- TRUE
-            nsInfo <- parseNamespaceFile(basename(dir), dirname(dir))
+            nsInfo <- parseNamespaceFile(package_name, dirname(dir))
             ## Determine exported objects.
             OK <- intersect(objects_in_code, nsInfo$exports)
             for(p in nsInfo$exportPatterns)
@@ -1641,7 +1635,7 @@ function(package, dir, lib.loc = NULL)
     ## generic functions.
     ## Change in 3.0.0: we only look for methods named generic.class,
     ## not those registered by a 3-arg S3method().
-    methods_stop_list <- nonS3methods(basename(dir))
+    methods_stop_list <- nonS3methods(package_name)
     methods_in_package <- sapply(all_S3_generics, function(g) {
         ## This isn't really right: it assumes the generics are visible.
         if(!exists(g, envir = code_env)) return(character())
@@ -4021,10 +4015,13 @@ function(package, lib.loc = NULL)
     ## look for globalVariables declaration in package
     ## (This loads the namespace if not already loaded.)
     .glbs <- suppressMessages(utils::globalVariables(, package))
-    if(length(.glbs))
-        ## codetools doesn't allow adding to its default
-        args$suppressUndefined <-
-            c(codetools:::dfltSuppressUndefined, .glbs)
+    if(length(.glbs)) {
+        ## Cannot use globalVariables() for base
+        ## (and potentially tools and utils)
+        dflt <- c(if(package == "base") "last.dump",
+                  ".Generic", ".Method", ".Class")
+        args$suppressUndefined <- c(dflt, .glbs)
+    }
 
     if(check_without_loading) {
         args <- c(list(env, report = foo), args)
@@ -4076,6 +4073,8 @@ function(package, dir, lib.loc = NULL)
     ## and recommended packages.
     base <- unlist(.get_standard_package_names()[c("base", "recommended")],
                    use.names = FALSE)
+    ## May not have recommended packages
+    base <- base[dir.exists(file.path(.Library, base))]
     aliases <- lapply(base, Rd_aliases, lib.loc = NULL)
     ## (Don't use lib.loc = .Library, as recommended packages may have
     ## been installed to a different place.)
@@ -4209,8 +4208,7 @@ function(package, dir, lib.loc = NULL)
         ## Also allow for additionally specified repositories.
         aurls <- pkgInfo[["DESCRIPTION"]]["Additional_repositories"]
         if(!is.na(aurls)) {
-            repos <- c(repos,
-                       unique(unlist(strsplit(aurls, ",[[:space:]]*"))))
+            repos <- c(repos, .read_additional_repositories_field(aurls))
         }
         known <-
             try(suppressWarnings(utils::available.packages(utils::contrib.url(repos, "source"),
@@ -5541,6 +5539,8 @@ function(package, dir, lib.loc = NULL)
             imp3f <- imp3f[(maintainers != db["Maintainer"])]
         }
     } else imp32 <- imp3f <- imp3ff <- unknown <- character()
+    ## An unexported function only available on Windows, used in tools
+    imp3ff <- setdiff(sort(unique(imp3ff)), "utils:::unpackPkgZip")
     res <- list(others = unique(bad_exprs),
                 bad_practice = unique(bad_prac),
                 imports = unique(bad_imports),
@@ -5551,8 +5551,7 @@ function(package, dir, lib.loc = NULL)
                 imp2un = sort(unique(imp2un)),
                 imp32 = sort(unique(imp32)),
                 imp3 = imp3, imp3f = sort(unique(imp3f)),
-                imp3ff = sort(unique(imp3ff)),
-                imp3self = imp3self,
+                imp3ff = imp3ff, imp3self = imp3self,
                 imp3selfcalls = sort(unique(imp3selfcalls)),
                 imp3unknown = unknown,
                 methods_message = methods_message)
@@ -6539,7 +6538,7 @@ function(dir)
                                         "FALSE"))) {
         ignore <-
             list(c("(?<=[ \t[:punct:]])'[^']*'(?=[ \t[:punct:]])",
-                   "(?<=[ \t[:punct:]])[[:alnum:]_.]*\\(\\)(?=[ \t[:punct:]])"),
+                   "(?<=[ \t[:punct:]])([[:alnum:]]+::)?[[:alnum:]_.]*\\(\\)(?=[ \t[:punct:]])"),
                  perl = TRUE)
         a <- utils:::aspell_package_description(dir,
                                                 ignore = ignore,
@@ -6741,7 +6740,7 @@ function(dir)
             suggests_or_enhances
     }
     if(!is.na(aurls <- meta["Additional_repositories"])) {
-        aurls <- unique(unlist(strsplit(aurls, ",[[:space:]]*")))
+        aurls <- .read_additional_repositories_field(aurls)
         ## Get available packages separately for each given URL, so that
         ## we can spot the ones which do not provide any packages.
         adb <-
@@ -7099,6 +7098,8 @@ function(dir)
         out$bad_version <- list(v_m, v_d)
     if((v_m$major == v_d$major) & (v_m$minor >= v_d$minor + 10))
         out$version_with_jump_in_minor <- list(v_m, v_d)
+    if(any(unlist(v_m) >= 1234))
+        out$version_with_large_components <- meta["Version"]
 
     ## Check submission recency and frequency.
     current_db <- CRAN_current_db()
@@ -7151,7 +7152,7 @@ function(x, ...)
     fmt <- function(x) {
         if(length(x)) paste(x, collapse = "\n") else character()
     }
-    
+
     c(character(),
       if(length(x$Maintainer))
           sprintf("Maintainer: %s", sQuote(paste(x$Maintainer, collapse = " ")))
@@ -7176,6 +7177,8 @@ function(x, ...)
                         y[[1L]], y[[2L]]),
             if(length(y <- x$version_with_leading_zeroes))
                 sprintf("Version contains leading zeroes (%s)", y),
+            if(length(y <- x$version_with_large_components))
+                sprintf("Version contains large components (%s)", y),
             if(length(y <- x$version_with_jump_in_minor))
                 sprintf("Version jumps in minor (submitted: %s, existing: %s)",
                         y[[1L]], y[[2L]]))),
