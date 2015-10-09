@@ -220,15 +220,13 @@ char *R_HomeDir(void)
 }
 
 /* This is a primitive (with no arguments) */
-SEXP attribute_hidden do_interactive(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_interactive()
 {
-    checkArity(op, args);
     return ScalarLogical( (R_Interactive) ? 1 : 0 );
 }
 
-SEXP attribute_hidden do_tempdir(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_tempdir()
 {
-    checkArity(op, args);
     return mkString(R_TempDir);
 }
 
@@ -346,20 +344,18 @@ extern char ** environ;
 # include <windows.h> /* _wgetenv etc */
 #endif
 
-SEXP attribute_hidden do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_getenv(SEXP arg1, SEXP arg2)
 {
     int i, j;
     SEXP ans;
 
-    checkArity(op, args);
-
-    if (!isString(CAR(args)))
+    if (!isString(arg1))
 	error(_("wrong type for argument"));
 
-    if (!isString(CADR(args)) || LENGTH(CADR(args)) != 1)
+    if (!isString(arg2) || LENGTH(arg2) != 1)
 	error(_("wrong type for argument"));
 
-    i = LENGTH(CAR(args));
+    i = LENGTH(arg1);
     if (i == 0) {
 #ifdef Win32
 	int n = 0, N;
@@ -396,9 +392,9 @@ SEXP attribute_hidden do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
 		SET_STRING_ELT(ans, j, mkCharCE(buf, CE_UTF8));
 	    }
 #else
-	    char *s = getenv(translateChar(STRING_ELT(CAR(args), j)));
+	    char *s = getenv(translateChar(STRING_ELT(arg1, j)));
 	    if (s == NULL)
-		SET_STRING_ELT(ans, j, STRING_ELT(CADR(args), 0));
+		SET_STRING_ELT(ans, j, STRING_ELT(arg2, 0));
 	    else {
 		SEXP tmp;
 		if(known_to_be_latin1) tmp = mkCharCE(s, CE_LATIN1);
@@ -439,17 +435,15 @@ static int Rputenv(const char *nm, const char *val)
 #endif
 
 
-SEXP attribute_hidden do_setenv(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_setenv(SEXP arg1, SEXP arg2)
 {
 #if defined(HAVE_PUTENV) || defined(HAVE_SETENV)
     int i, n;
     SEXP ans, nm, vars;
 
-    checkArity(op, args);
-
-    if (!isString(nm = CAR(args)))
+    if (!isString(nm = arg1))
 	error(_("wrong type for argument"));
-    if (!isString(vars = CADR(args)))
+    if (!isString(vars = arg2))
 	error(_("wrong type for argument"));
     if(LENGTH(nm) != LENGTH(vars))
 	error(_("wrong length for argument"));
@@ -478,14 +472,12 @@ SEXP attribute_hidden do_setenv(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
 }
 
-SEXP attribute_hidden do_unsetenv(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_unsetenv(SEXP arg1)
 {
     int i, n;
     SEXP ans, vars;
 
-    checkArity(op, args);
-
-    if (!isString(vars = CAR(args)))
+    if (!isString(vars = arg1))
 	error(_("wrong type for argument"));
     n = LENGTH(vars);
 
@@ -1669,11 +1661,10 @@ char * R_tmpnam2(const char *prefix, const char *tempdir, const char *fileext)
     return res;
 }
 
-SEXP attribute_hidden do_proctime(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_proctime()
 {
     SEXP ans, nm;
 
-    checkArity(op, args);
     PROTECT(ans = allocVector(REALSXP, 5));
     PROTECT(nm = allocVector(STRSXP, 5));
     R_getProcTime(REAL(ans));
@@ -1707,17 +1698,15 @@ void attribute_hidden resetTimeLimits()
 	cpuLimit = cpuLimit2;
 }
 
-SEXP attribute_hidden
-do_setTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_setTimeLimit(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     double cpu, elapsed, old_cpu = cpuLimitValue,
 	old_elapsed = elapsedLimitValue;
     int transient;
 
-    checkArity(op, args);
-    cpu = asReal(CAR(args));
-    elapsed = asReal(CADR(args));
-    transient = asLogical(CADDR(args));
+    cpu = asReal(arg1);
+    elapsed = asReal(arg2);
+    transient = asLogical(arg3);
 
     if (R_FINITE(cpu) && cpu > 0) cpuLimitValue = cpu; else cpuLimitValue = -1;
 
@@ -1734,14 +1723,12 @@ do_setTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden
-do_setSessionTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_setSessionTimeLimit(SEXP arg1, SEXP arg2)
 {
     double cpu, elapsed, data[5];
 
-    checkArity(op, args);
-    cpu = asReal(CAR(args));
-    elapsed = asReal(CADR(args));
+    cpu = asReal(arg1);
+    elapsed = asReal(arg2);
     R_getProcTime(data);
 
     if (R_FINITE(cpu) && cpu > 0)
@@ -1772,7 +1759,7 @@ do_setSessionTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
 #  define GLOB_QUOTE 0
 # endif
 #endif
-SEXP attribute_hidden do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_glob(SEXP arg1, SEXP arg2)
 {
     SEXP x, ans;
     R_xlen_t i, n;
@@ -1782,11 +1769,10 @@ SEXP attribute_hidden do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 #endif
 
-    checkArity(op, args);
-    if (!isString(x = CAR(args)))
+    if (!isString(x = arg1))
 	error(_("invalid '%s' argument"), "paths");
     if (!XLENGTH(x)) return allocVector(STRSXP, 0);
-    dirmark = asLogical(CADR(args));
+    dirmark = asLogical(arg2);
     if (dirmark == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "dirmark");
 #ifndef GLOB_MARK

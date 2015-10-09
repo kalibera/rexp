@@ -658,14 +658,13 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 }
 
-SEXP attribute_hidden do_parentframe(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_parentframe(SEXP arg1)
 {
     int n;
     SEXP t;
     RCNTXT *cptr;
 
-    checkArity(op, args);
-    t = CAR(args);
+    t = arg1;
     n = asInteger(t);
 
     if(n == NA_INTEGER || n < 1 )

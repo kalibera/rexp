@@ -351,6 +351,8 @@ typedef struct {
 	unsigned int rightassoc;  /* right associative? */
 } PPinfo;
 
+#include <R_ext/Rdynload.h>
+
 /* The type definitions for the table of built-in functions. */
 /* This table can be found in ../main/names.c */
 typedef struct {
@@ -360,6 +362,7 @@ typedef struct {
     int	   eval;     /* evaluate args? */
     int	   arity;    /* function arity */
     PPinfo gram;     /* pretty-print info */
+    DL_FUNC dcfun;   /* .Call entry point */
 } FUNTAB;
 
 #ifdef USE_RINTERNALS
@@ -377,6 +380,10 @@ typedef struct {
 #define PPINFO(x)	(R_FunTab[(x)->u.primsxp.offset].gram)
 #define PRIMPRINT(x)	(((R_FunTab[(x)->u.primsxp.offset].eval)/100)%10)
 #define PRIMINTERNAL(x)	(((R_FunTab[(x)->u.primsxp.offset].eval)%100)/10)
+#define PRIMDCFUN(x)	(R_FunTab[(x)->u.primsxp.offset].dcfun)
+
+SEXP prepareArgsForFun(SEXP, SEXP, SEXP, SEXP);
+SEXP callFun(SEXP, SEXP, SEXP, SEXP);
 
 /* Promise Access Macros */
 #define PRCODE(x)	((x)->u.promsxp.expr)
@@ -1046,6 +1053,7 @@ SEXP Rf_append(SEXP, SEXP); /* apparently unused now */
 R_xlen_t asVecSize(SEXP x);
 void check1arg(SEXP, SEXP, const char *);
 void Rf_checkArityCall(SEXP, SEXP, SEXP);
+void checkArityCallLength(SEXP, SEXP, R_len_t);
 void CheckFormals(SEXP);
 void R_check_locale(void);
 void check_stack_balance(SEXP op, int save);

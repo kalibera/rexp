@@ -331,10 +331,9 @@ void attribute_hidden InitOptions(void)
 }
 
 
-SEXP attribute_hidden do_getOption(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_getOption(SEXP arg1)
 {
-    checkArity(op, args);
-    SEXP x = CAR(args);
+    SEXP x = arg1;
     if (!isString(x) || LENGTH(x) != 1)
 	error(_("'%s' must be a character string"), "x");
     return duplicate(GetOption1(install(CHAR(STRING_ELT(x, 0)))));

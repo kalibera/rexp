@@ -497,17 +497,16 @@ static void Norm_kind(N01type kind)
 
 /*------ .Internal interface ------------------------*/
 
-SEXP attribute_hidden do_RNGkind (SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_RNGkind (SEXP arg1, SEXP arg2)
 {
     SEXP ans, rng, norm;
 
-    checkArity(op,args);
     GetRNGstate(); /* might not be initialized */
     PROTECT(ans = allocVector(INTSXP, 2));
     INTEGER(ans)[0] = RNG_kind;
     INTEGER(ans)[1] = N01_kind;
-    rng = CAR(args);
-    norm = CADR(args);
+    rng = arg1;
+    norm = arg2;
     GetRNGkind(R_NilValue); /* pull from .Random.seed if present */
     if(!isNull(rng)) { /* set a new RNG kind */
 	RNGkind((RNGtype) asInteger(rng));
@@ -520,19 +519,18 @@ SEXP attribute_hidden do_RNGkind (SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-SEXP attribute_hidden do_setseed (SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_setseed (SEXP arg1, SEXP arg2, SEXP arg3)
 {
     SEXP skind, nkind;
     int seed;
 
-    checkArity(op, args);
-    if(!isNull(CAR(args))) {
-	seed = asInteger(CAR(args));
+    if(!isNull(arg1)) {
+	seed = asInteger(arg1);
 	if (seed == NA_INTEGER)
 	    error(_("supplied seed is not a valid integer"));
     } else seed = TimeToSeed();
-    skind = CADR(args);
-    nkind = CADDR(args);
+    skind = arg2;
+    nkind = arg3;
     GetRNGkind(R_NilValue); /* pull RNG_kind, N01_kind from
 			       .Random.seed if present */
     if (!isNull(skind)) RNGkind((RNGtype) asInteger(skind));

@@ -889,13 +889,11 @@ static SEXP inherits3(SEXP x, SEXP what, SEXP which)
     return rval;
 }
 
-SEXP attribute_hidden do_inherits(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_inherits(SEXP arg1, SEXP arg2, SEXP arg3)
 {
-    checkArity(op, args);
-
-    return inherits3(/* x = */ CAR(args),
-		     /* what = */ CADR(args),
-		     /* which = */ CADDR(args));
+    return inherits3(/* x = */ arg1,
+		     /* what = */ arg2,
+		     /* which = */ arg3);
 }
 
 
@@ -1609,12 +1607,11 @@ Rboolean attribute_hidden R_seemsOldStyleS4Object(SEXP object)
 	    getAttrib(klass, R_PackageSymbol) != R_NilValue) ? TRUE: FALSE;
 }
 
-SEXP attribute_hidden do_setS4Object(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_setS4Object(SEXP arg1, SEXP arg2, SEXP arg3)
 {
-    checkArity(op, args);
-    SEXP object = CAR(args);
-    int flag = asLogical(CADR(args)), complete = asInteger(CADDR(args));
-    if(length(CADR(args)) != 1 || flag == NA_INTEGER)
+    SEXP object = arg1;
+    int flag = asLogical(arg2), complete = asInteger(arg3);
+    if(length(arg2) != 1 || flag == NA_INTEGER)
 	error("invalid '%s' argument", "flag");
     if(complete == NA_INTEGER)
 	error("invalid '%s' argument", "complete");

@@ -320,7 +320,7 @@ static void con_cleanup(void *data)
     if(con->isopen) con->close(con);
 }
 
-SEXP attribute_hidden do_dput(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_dput(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     SEXP saveenv, tval;
     int i, ifile, res;
@@ -328,27 +328,25 @@ SEXP attribute_hidden do_dput(SEXP call, SEXP op, SEXP args, SEXP rho)
     Rconnection con = (Rconnection) 1; /* stdout */
     RCNTXT cntxt;
 
-    checkArity(op, args);
-
-    tval = CAR(args);
+    tval = arg1;
     saveenv = R_NilValue;	/* -Wall */
     if (TYPEOF(tval) == CLOSXP) {
 	PROTECT(saveenv = CLOENV(tval));
 	SET_CLOENV(tval, R_GlobalEnv);
     }
     opts = SHOWATTRIBUTES;
-    if(!isNull(CADDR(args)))
-	opts = asInteger(CADDR(args));
+    if(!isNull(arg3))
+	opts = asInteger(arg3);
 
     tval = deparse1(tval, 0, opts);
-    if (TYPEOF(CAR(args)) == CLOSXP) {
-	SET_CLOENV(CAR(args), saveenv);
+    if (TYPEOF(arg1) == CLOSXP) {
+	SET_CLOENV(arg1, saveenv);
 	UNPROTECT(1);
     }
     PROTECT(tval); /* against Rconn_printf */
-    if(!inherits(CADR(args), "connection"))
+    if(!inherits(arg2, "connection"))
 	error(_("'file' must be a character string or connection"));
-    ifile = asInteger(CADR(args));
+    ifile = asInteger(arg2);
 
     wasopen = 1;
     if (ifile != 1) {
@@ -379,7 +377,7 @@ SEXP attribute_hidden do_dput(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     UNPROTECT(1); /* tval */
     if(!wasopen) {endcontext(&cntxt); con->close(con);}
-    return (CAR(args));
+    return (arg1);
 }
 
 SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)

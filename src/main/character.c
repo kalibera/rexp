@@ -299,19 +299,18 @@ static void substr(char *buf, const char *str, int ienc, int sa, int so)
     *buf = '\0';
 }
 
+<<<<<<< 784fa9ce095788586e930781f83459da6f36f6c9
 SEXP attribute_hidden
-do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
+do_substr(SEXP arg1, SEXP arg2, SEXP arg3)
 {
-    SEXP s, x;
-    checkArity(op, args);
-    x = CAR(args);
+    x = arg1;
     if (!isString(x))
 	error(_("extracting substrings from a non-character object"));
     R_xlen_t len = XLENGTH(x);
     PROTECT(s = allocVector(STRSXP, len));
     if (len > 0) {
-	SEXP sa = CADR(args),
-	    so = CADDR(args);
+	SEXP sa = arg2,
+	    so = arg3;
 	int
 	    k = LENGTH(sa),
 	    l = LENGTH(so);
@@ -492,7 +491,7 @@ substrset(char *buf, const char *const str, cetype_t ienc, int sa, int so)
     }
 }
 
-SEXP attribute_hidden do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_substrgets(SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4)
 {
     SEXP s, x, sa, so, value, el, v_el;
     R_xlen_t i, len;
@@ -503,11 +502,10 @@ SEXP attribute_hidden do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
     char *buf;
     const void *vmax;
 
-    checkArity(op, args);
-    x = CAR(args);
-    sa = CADR(args);
-    so = CADDR(args);
-    value = CADDDR(args);
+    x = arg1;
+    sa = arg2;
+    so = arg3;
+    value = arg4;
     k = LENGTH(sa);
     l = LENGTH(so);
 
@@ -774,17 +772,16 @@ donewsc:
 }
 
 
-SEXP attribute_hidden do_abbrev(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_abbrev(SEXP arg1, SEXP arg2, SEXP arg3)
 {
-    checkArity(op,args);
-    SEXP x = CAR(args);
+    SEXP x = arg1;
 
     if (!isString(x))
 	error(_("the first argument must be a character vector"));
-    int minlen = asInteger(CADR(args));
+    int minlen = asInteger(arg2);
     if (minlen == NA_INTEGER)
 	error(_("invalid '%s' argument"), "minlength");
-    int usecl = asLogical(CADDR(args));
+    int usecl = asLogical(arg3);
     if (usecl == NA_INTEGER)
 	error(_("invalid '%s' argument"), "use.classes");
 
@@ -825,7 +822,7 @@ SEXP attribute_hidden do_abbrev(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_makenames(SEXP arg1, SEXP arg2)
 {
     SEXP arg, ans;
     R_xlen_t i, n;
@@ -835,12 +832,11 @@ SEXP attribute_hidden do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean need_prefix;
     const void *vmax;
 
-    checkArity(op ,args);
-    arg = CAR(args);
+    arg = arg1;
     if (!isString(arg))
 	error(_("non-character names"));
     n = XLENGTH(arg);
-    allow_ = asLogical(CADR(args));
+    allow_ = asLogical(arg2);
     if (allow_ == NA_LOGICAL)
 	error(_("invalid '%s' value"), "allow_");
     PROTECT(ans = allocVector(STRSXP, n));
@@ -1502,7 +1498,7 @@ SEXP attribute_hidden do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
     return(y);
 }
 
-SEXP attribute_hidden do_strtrim(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_strtrim(SEXP arg1, SEXP arg2)
 {
     SEXP s, x, width;
     R_xlen_t i, len;
@@ -1515,14 +1511,13 @@ SEXP attribute_hidden do_strtrim(SEXP call, SEXP op, SEXP args, SEXP env)
     mbstate_t mb_st;
     const void *vmax;
 
-    checkArity(op, args);
     /* as.character happens at R level now */
-    if (!isString(x = CAR(args)))
+    if (!isString(x = arg1))
 	error(_("strtrim() requires a character vector"));
     len = XLENGTH(x);
     PROTECT(s = allocVector(STRSXP, len));
     if(len > 0) {
-	PROTECT(width = coerceVector(CADR(args), INTSXP));
+	PROTECT(width = coerceVector(arg2, INTSXP));
 	nw = LENGTH(width);
 	if (!nw || (nw < len && len % nw))
 	    error(_("invalid '%s' argument"), "width");

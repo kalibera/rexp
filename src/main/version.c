@@ -45,12 +45,11 @@ Type 'contributors()' for more information and\n\
 Type 'q()' to quit R.\n\n"));
 }
 
-SEXP attribute_hidden do_version(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_version()
 {
     SEXP value, names;
     char buf[128];
 
-    checkArity(op, args);
     PROTECT(value = allocVector(VECSXP,14));
     PROTECT(names = allocVector(STRSXP,14));
 

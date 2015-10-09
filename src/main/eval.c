@@ -31,7 +31,7 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 #include <R_ext/Print.h>
-
+#include <Rdynpriv.h>
 
 #define ARGUSED(x) LEVELS(x)
 
@@ -491,7 +491,6 @@ void attribute_hidden check_stack_balance(SEXP op, int save)
 	     PRIMNAME(op), save, R_PPStackTop);
 }
 
-
 static SEXP forcePromise(SEXP e)
 {
     if (PRVALUE(e) == R_UnboundValue) {
@@ -525,6 +524,126 @@ static SEXP forcePromise(SEXP e)
 	SET_PRENV(e, R_NilValue);
     }
     return PRVALUE(e);
+}
+
+/* like evalList, but the returned type is VECSEXP and tags are ignored */
+static SEXP evalListToNewList(SEXP list, SEXP rho, SEXP call, int n)
+{
+    SEXP el = list;
+    R_len_t anslen = 0;
+
+    /* Compute the length of the new list - need to handle dots */
+    while (el != R_NilValue) {
+	if (CAR(el) == R_DotsSymbol) {
+	    /* If we have a ... symbol, we look to see what it is bound to.
+	     * If its binding is Null (i.e. zero length)
+	     *	we just ignore it and return the cdr with all its expressions evaluated;
+	     * if it is bound to a ... list of promises,
+	     *	we force all the promises and then splice
+	     *	the list of resulting values into the return value.
+	     * Anything else bound to a ... symbol is an error
+	     */
+	    SEXP h = findVar(CAR(el), rho);
+	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
+	        anslen += length(h);
+	    }
+	    else if (h != R_MissingArg)
+		error(_("'...' used in an incorrect context"));
+
+	} else if (CAR(el) == R_MissingArg) {
+	    /* It was an empty element: most likely get here from evalArgs
+	       which may have been called on part of the args. */
+	    errorcall(call, _("argument %d is empty"), n);
+#ifdef CHECK_IS_MISSING_IN_evalList
+	    /* Radford Newl drops this R_isMissing check in pqR in
+	       03-zap-isMissing (but it seems to creep in again later
+	       with helper thread stuff?)  as it takes quite a bit of
+	       time (essentially the equivalent of evaluating the
+	       symbol, but maybe not as efficiently as eval) and only
+	       serves to change the error message, not always for the
+	       better. Also, the byte code interpreter does not do
+	       this, so dropping this makes compiled and interreted
+	       cod emore consistent. */
+	} else if (isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)) {
+	    /* It was missing */
+	    errorcall(call, _("'%s' is missing"), EncodeChar(PRINTNAME(CAR(el))));
+#endif
+	} else {
+	    anslen++;
+	}
+	el = CDR(el);
+    }
+
+    SEXP ans = allocVector(VECSXP, anslen);
+    PROTECT(ans);
+    el = list;
+    R_len_t i = 0;
+
+    while (el != R_NilValue) {
+        if (CAR(el) == R_DotsSymbol) {
+	    SEXP h = findVar(CAR(el), rho); // FIXME: double lookup of ...
+	    PROTECT(h);
+	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
+		while (h != R_NilValue) {
+		    SET_VECTOR_ELT(ans, i++, eval(CAR(h), rho));
+		    /* TAG is not copied */
+		    h = CDR(h);
+		}
+	    }
+	    UNPROTECT(1); /* h */
+        } else {
+            SET_VECTOR_ELT(ans, i++, eval(CAR(el), rho));
+            /* TAG is not copied */
+        }
+        el = CDR(el);
+    }
+
+    UNPROTECT(1); /* ans */
+    return ans;
+}
+
+SEXP prepareArgsForFun(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    int hasDCFun = (PRIMDCFUN(op) != NULL);
+
+    if (TYPEOF(op) == SPECIALSXP) {
+        if (hasDCFun) {
+            /* old list to new list */
+            int nargs = length(args);
+            SEXP ans = allocVector(VECSXP, nargs);
+            SEXP a = args;
+            for(int i = 0; i < nargs; i++) {
+                SET_VECTOR_ELT(ans, i, CAR(a));
+                a = CDR(a);
+            }
+            return ans;
+        } else {
+            return args;
+        }
+    }
+
+    if (TYPEOF(op) == BUILTINSXP) {
+        if (hasDCFun)
+            return evalListToNewList(args, env, call, 0);
+        else
+            return evalList(args, env, call, 0);
+    }
+
+    errorcall(call, "unsupported op type '%s' in prepareArgsForFun",
+        type2char(TYPEOF(op)));
+}
+
+SEXP callFun(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    if (TYPEOF(args) == VECSXP) {
+        R_len_t nargs = LENGTH(args);
+        checkArityCallLength(op, call, nargs);
+            // FIXME: could use a function that does not support -1
+
+        return R_doDotCall( PRIMDCFUN(op), nargs, (SEXP *) DATAPTR(args), call );
+    }
+    // FIXME: could assert that op is a builtin or special
+    return PRIMFUN(op) (call, op, args, env);
 }
 
 /* Return value of "e" evaluated in "rho". */
@@ -680,9 +799,9 @@ SEXP eval(SEXP e, SEXP rho)
 	if (TYPEOF(op) == SPECIALSXP) {
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
-	    PROTECT(CDR(e));
+	    PROTECT(tmp = prepareArgsForFun(e, op, CDR(e), rho));
 	    R_Visible = flag != 1;
-	    tmp = PRIMFUN(op) (e, op, CDR(e), rho);
+	    tmp = callFun(e, op, tmp, rho);
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
 		char *nm = PRIMNAME(op);
@@ -701,7 +820,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    RCNTXT cntxt;
-	    PROTECT(tmp = evalList(CDR(e), rho, e, 0));
+	    PROTECT(tmp = prepareArgsForFun(e, op, CDR(e), rho));
 	    if (flag < 2) R_Visible = flag != 1;
 	    /* We used to insert a context only if profiling,
 	       but helps for tracebacks on .C etc. */
@@ -710,11 +829,11 @@ SEXP eval(SEXP e, SEXP rho)
 		begincontext(&cntxt, CTXT_BUILTIN, e,
 			     R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 		R_Srcref = NULL;
-		tmp = PRIMFUN(op) (e, op, tmp, rho);
+		tmp = callFun(e, op, tmp, rho);
 		R_Srcref = oldref;
 		endcontext(&cntxt);
 	    } else {
-		tmp = PRIMFUN(op) (e, op, tmp, rho);
+		tmp = callFun(e, op, tmp, rho);
 	    }
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
@@ -895,11 +1014,11 @@ static Rboolean R_compileAndExecute(SEXP call, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden do_enablejit(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_enablejit(SEXP arg1)
 {
     int old = R_jit_enabled, new;
-    checkArity(op, args);
-    new = asInteger(CAR(args));
+
+    new = asInteger(arg1);
     if (new >= 0) {
 	if (new > 0)
 	    loadCompilerNamespace();
@@ -910,11 +1029,10 @@ SEXP attribute_hidden do_enablejit(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ScalarInteger(old);
 }
 
-SEXP attribute_hidden do_compilepkgs(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_compilepkgs(SEXP arg1)
 {
     int old = R_compile_pkgs, new;
-    checkArity(op, args);
-    new = asLogical(CAR(args));
+    new = asLogical(arg1);
     if (new != NA_LOGICAL && new)
 	loadCompilerNamespace();
     R_compile_pkgs = new;
@@ -1259,15 +1377,15 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 
     if (TYPEOF(fun) == SPECIALSXP) {
 	int flag = PRIMPRINT(fun);
-	PROTECT(CDR(e));
+	PROTECT(tmp = prepareArgsForFun(e, fun, CDR(e), rho));
 	R_Visible = flag != 1;
-	tmp = PRIMFUN(fun) (e, fun, CDR(e), rho);
+	tmp = callFun(e, fun, tmp, rho);
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
     }
     else if (TYPEOF(fun) == BUILTINSXP) {
 	int flag = PRIMPRINT(fun);
-	PROTECT(tmp = evalList(CDR(e), rho, e, 0));
+	PROTECT(tmp = prepareArgsForFun(e, fun, CDR(e), rho));
 	if (flag < 2) R_Visible = flag != 1;
 	/* We used to insert a context only if profiling,
 	   but helps for tracebacks on .C etc. */
@@ -1277,11 +1395,11 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	    begincontext(&cntxt, CTXT_BUILTIN, e,
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 	    R_Srcref = NULL;
-	    tmp = PRIMFUN(fun) (e, fun, tmp, rho);
+	    tmp = callFun(e, fun, tmp, rho);
 	    R_Srcref = oldref;
 	    endcontext(&cntxt);
 	} else {
-	    tmp = PRIMFUN(fun) (e, fun, tmp, rho);
+	    tmp = callFun(e, fun, tmp, rho);
 	}
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
@@ -1784,10 +1902,9 @@ SEXP attribute_hidden NORET do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-SEXP attribute_hidden do_paren(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_paren(SEXP arg1)
 {
-    checkArity(op, args);
-    return CAR(args);
+    return arg1;
 }
 
 SEXP attribute_hidden do_begin(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -6233,13 +6350,12 @@ SEXP R_bcEncode(SEXP x) { return x; }
 SEXP R_bcDecode(SEXP x) { return duplicate(x); }
 #endif
 
-SEXP attribute_hidden do_mkcode(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_mkcode(SEXP arg1, SEXP arg2)
 {
     SEXP bytes, consts, ans;
 
-    checkArity(op, args);
-    bytes = CAR(args);
-    consts = CADR(args);
+    bytes = arg1;
+    consts = arg2;
     ans = CONS(R_bcEncode(bytes), consts);
     SET_TYPEOF(ans, BCODESXP);
     return ans;
@@ -6325,9 +6441,8 @@ SEXP attribute_hidden do_disassemble(SEXP call, SEXP op, SEXP args, SEXP rho)
   return disassemble(code);
 }
 
-SEXP attribute_hidden do_bcversion(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_bcversion()
 {
-  checkArity(op, args);
   SEXP ans = allocVector(INTSXP, 1);
   INTEGER(ans)[0] = R_bcVersion;
   return ans;
@@ -6427,13 +6542,12 @@ FILE *R_OpenCompiledFile(char *fname, char *buf, size_t bsize)
 }
 #endif
 
-SEXP attribute_hidden do_growconst(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_growconst(SEXP arg1)
 {
     SEXP constBuf, ans;
     int i, n;
 
-    checkArity(op, args);
-    constBuf = CAR(args);
+    constBuf = arg1;
     if (TYPEOF(constBuf) != VECSXP)
 	error(_("constant buffer must be a generic vector"));
 
@@ -6445,22 +6559,20 @@ SEXP attribute_hidden do_growconst(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_putconst(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_putconst(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     SEXP constBuf, x;
     int i, constCount;
 
-    checkArity(op, args);
-
-    constBuf = CAR(args);
+    constBuf = arg1;
     if (TYPEOF(constBuf) != VECSXP)
 	error(_("constant buffer must be a generic vector"));
 
-    constCount = asInteger(CADR(args));
+    constCount = asInteger(arg2);
     if (constCount < 0 || constCount >= LENGTH(constBuf))
 	error("bad constCount value");
 
-    x = CADDR(args);
+    x = arg3;
 
     /* check for a match and return index if one is found */
     for (i = 0; i < constCount; i++) {
@@ -6478,14 +6590,13 @@ SEXP attribute_hidden do_putconst(SEXP call, SEXP op, SEXP args, SEXP env)
     return ScalarInteger(constCount);
 }
 
-SEXP attribute_hidden do_getconst(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_getconst(SEXP arg1, SEXP arg2)
 {
     SEXP constBuf, ans;
     int i, n;
 
-    checkArity(op, args);
-    constBuf = CAR(args);
-    n = asInteger(CADR(args));
+    constBuf = arg1;
+    n = asInteger(arg2);
 
     if (TYPEOF(constBuf) != VECSXP)
 	error(_("constant buffer must be a generic vector"));
@@ -6580,37 +6691,32 @@ SEXP do_bcprofstop(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
 }
 #else
-SEXP NORET do_bcprofcounts(SEXP call, SEXP op, SEXP args, SEXP env) {
-    checkArity(op, args);
+SEXP attribute_hidden dc_bcprofcounts() {
     error(_("byte code profiling is not supported in this build"));
 }
-SEXP NORET do_bcprofstart(SEXP call, SEXP op, SEXP args, SEXP env) {
-    checkArity(op, args);
+SEXP attribute_hidden dc_bcprofstart() {
     error(_("byte code profiling is not supported in this build"));
 }
-SEXP NORET do_bcprofstop(SEXP call, SEXP op, SEXP args, SEXP env) {
-    checkArity(op, args);
+SEXP attribute_hidden dc_bcprofstop() {
     error(_("byte code profiling is not supported in this build"));
 }
 #endif
 
 /* end of byte code section */
 
-SEXP attribute_hidden do_setnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_setnumthreads(SEXP arg1)
 {
     int old = R_num_math_threads, new;
-    checkArity(op, args);
-    new = asInteger(CAR(args));
+    new = asInteger(arg1);
     if (new >= 0 && new <= R_max_num_math_threads)
 	R_num_math_threads = new;
     return ScalarInteger(old);
 }
 
-SEXP attribute_hidden do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_setmaxnumthreads(SEXP arg1)
 {
     int old = R_max_num_math_threads, new;
-    checkArity(op, args);
-    new = asInteger(CAR(args));
+    new = asInteger(arg1);
     if (new >= 0) {
 	R_max_num_math_threads = new;
 	if (R_num_math_threads > R_max_num_math_threads)
@@ -6619,13 +6725,12 @@ SEXP attribute_hidden do_setmaxnumthreads(SEXP call, SEXP op, SEXP args, SEXP rh
     return ScalarInteger(old);
 }
 
-SEXP attribute_hidden do_returnValue(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_returnValue(SEXP arg1)
 {
     SEXP val;
-    checkArity(op, args);
     if (R_ExitContext && (val = R_ExitContext->returnValue)){
 	MARK_NOT_MUTABLE(val);
 	return val;
     }
-    return CAR(args); /* default */
+    return arg1; /* default */
 }

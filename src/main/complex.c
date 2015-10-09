@@ -741,18 +741,17 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
     return sy;
 }
 
-SEXP attribute_hidden do_complex(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_complex(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     /* complex(length, real, imaginary) */
     SEXP ans, re, im;
     R_xlen_t i, na, nr, ni;
 
-    checkArity(op, args);
-    na = asInteger(CAR(args));
+    na = asInteger(arg1);
     if(na == NA_INTEGER || na < 0)
 	error(_("invalid length"));
-    PROTECT(re = coerceVector(CADR(args), REALSXP));
-    PROTECT(im = coerceVector(CADDR(args), REALSXP));
+    PROTECT(re = coerceVector(arg2, REALSXP));
+    PROTECT(im = coerceVector(arg3, REALSXP));
     nr = XLENGTH(re);
     ni = XLENGTH(im);
     /* is always true: if (na >= 0) {*/
@@ -779,14 +778,13 @@ SEXP attribute_hidden do_complex(SEXP call, SEXP op, SEXP args, SEXP rho)
 static void R_cpolyroot(double *opr, double *opi, int *degree,
 			double *zeror, double *zeroi, Rboolean *fail);
 
-SEXP attribute_hidden do_polyroot(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_polyroot(SEXP arg1)
 {
     SEXP z, zr, zi, r, rr, ri;
     Rboolean fail;
     int degree, i, n;
 
-    checkArity(op, args);
-    z = CAR(args);
+    z = arg1;
     switch(TYPEOF(z)) {
     case CPLXSXP:
 	PROTECT(z);
