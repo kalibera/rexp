@@ -67,13 +67,11 @@ R_set_command_line_arguments(int argc, char **argv)
   The .Internal which returns the command line arguments that are stored
   in global variables.
  */
-SEXP attribute_hidden
-do_commandArgs(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_commandArgs()
 {
     int i;
     SEXP vals;
 
-    checkArity(op, args);
     /* need protection as mkChar allocates */
     vals = PROTECT(allocVector(STRSXP, NumCommandLineArgs));
     for(i = 0; i < NumCommandLineArgs; i++)

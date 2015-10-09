@@ -2236,8 +2236,7 @@ do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Used from readRDS().
    This became public in R 2.13.0, and that version added support for
    connections internally */
-SEXP attribute_hidden
-do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_unserializeFromConn(SEXP arg1, SEXP arg2)
 {
     /* unserializeFromConn(conn, hook) */
 
@@ -2248,11 +2247,9 @@ do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean wasopen;
     RCNTXT cntxt;
 
-    checkArity(op, args);
+    con = getConnection(asInteger(arg1));
 
-    con = getConnection(asInteger(CAR(args)));
-
-    fun = CADR(args);
+    fun = arg2;
     hook = fun != R_NilValue ? CallHook : NULL;
 
     /* Now we need to do some sanity checking of the arguments.
@@ -2627,13 +2624,10 @@ static int used = 0;
 static char names[NC][PATH_MAX];
 static char *ptr[NC];
 
-SEXP attribute_hidden
-do_lazyLoadDBflush(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_lazyLoadDBflush(SEXP arg1)
 {
-    checkArity(op, args);
-
     int i;
-    const char *cfile = CHAR(STRING_ELT(CAR(args), 0));
+    const char *cfile = CHAR(STRING_ELT(arg1, 0));
 
     /* fprintf(stderr, "flushing file %s", cfile); */
     for (i = 0; i < used; i++)
@@ -2860,11 +2854,9 @@ do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
     return val;
 }
 
-SEXP attribute_hidden
-do_getVarsFromFrame(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_getVarsFromFrame(SEXP arg1, SEXP arg2, SEXP arg3)
 {
-    checkArity(op, args);
-    return R_getVarsFromFrame(CAR(args), CADR(args), CADDR(args));
+    return R_getVarsFromFrame(arg1, arg2, arg3);
 }
 
 

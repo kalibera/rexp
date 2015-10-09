@@ -92,6 +92,7 @@ void NORET R_SignalCStackOverflow(intptr_t usage)
     cntxt.cend = &reset_stack_limit;
     cntxt.cenddata = &stacklimit;
 
+    *(int *)0 = 1;
     errorcall(R_NilValue, "C stack usage  %ld is too close to the limit", usage);
     /* Do not translate this, to save stack space */
 }
@@ -744,11 +745,10 @@ void NORET errorcall(SEXP call, const char *format,...)
     va_end(ap);
 }
 
-SEXP attribute_hidden do_geterrmessage(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_geterrmessage()
 {
     SEXP res;
 
-    checkArity(op, args);
     PROTECT(res = allocVector(STRSXP, 1));
     SET_STRING_ELT(res, 0, mkChar(errbuf));
     UNPROTECT(1);
@@ -1374,12 +1374,11 @@ SEXP R_GetTraceback(int skip)
     return s;
 }
 
-SEXP attribute_hidden do_traceback(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_traceback(SEXP arg1)
 {
     int skip;
     
-    checkArity(op, args);
-    skip = asInteger(CAR(args));
+    skip = asInteger(arg1);
     
     if (skip == NA_INTEGER || skip < 0 )
     	error(_("invalid '%s' value"), "skip");
@@ -1514,10 +1513,9 @@ SEXP attribute_hidden do_addCondHands(SEXP call, SEXP op, SEXP args, SEXP rho)
     return oldstack;
 }
 
-SEXP attribute_hidden do_resetCondHands(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_resetCondHands(SEXP arg1)
 {
-    checkArity(op, args);
-    R_HandlerStack = CAR(args);
+    R_HandlerStack = arg1;
     return R_NilValue;
 }
 
@@ -1622,15 +1620,13 @@ static SEXP findConditionHandler(SEXP cond)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_signalCondition(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_signalCondition(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     SEXP list, cond, msg, ecall, oldstack;
 
-    checkArity(op, args);
-
-    cond = CAR(args);
-    msg = CADR(args);
-    ecall = CADDR(args);
+    cond = arg1;
+    msg = arg2;
+    ecall = arg3;
 
     PROTECT(oldstack = R_HandlerStack);
     while ((list = findConditionHandler(cond)) != R_NilValue) {
@@ -1735,48 +1731,42 @@ R_InsertRestartHandlers(RCNTXT *cptr, Rboolean browser)
     UNPROTECT(2);
 }
 
-SEXP attribute_hidden do_dfltWarn(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_dfltWarn(SEXP arg1, SEXP arg2)
 {
     const char *msg;
     SEXP ecall;
 
-    checkArity(op, args);
-
-    if (TYPEOF(CAR(args)) != STRSXP || LENGTH(CAR(args)) != 1)
+    if (TYPEOF(arg1) != STRSXP || LENGTH(arg1) != 1)
 	error(_("bad error message"));
-    msg = translateChar(STRING_ELT(CAR(args), 0));
-    ecall = CADR(args);
+    msg = translateChar(STRING_ELT(arg1, 0));
+    ecall = arg2;
 
     warningcall_dflt(ecall, "%s", msg);
     return R_NilValue;
 }
 
-SEXP attribute_hidden NORET do_dfltStop(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_dfltStop(SEXP arg1, SEXP arg2)
 {
     const char *msg;
     SEXP ecall;
 
-    checkArity(op, args);
-
-    if (TYPEOF(CAR(args)) != STRSXP || LENGTH(CAR(args)) != 1)
+    if (TYPEOF(arg1) != STRSXP || LENGTH(arg1) != 1)
 	error(_("bad error message"));
-    msg = translateChar(STRING_ELT(CAR(args), 0));
-    ecall = CADR(args);
+    msg = translateChar(STRING_ELT(arg1, 0));
+    ecall = arg2;
 
     errorcall_dflt(ecall, "%s", msg);
 }
-
 
 /*
  * Restart Handling
  */
 
-SEXP attribute_hidden do_getRestart(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_getRestart(SEXP arg1)
 {
     int i;
     SEXP list;
-    checkArity(op, args);
-    i = asInteger(CAR(args));
+    i = asInteger(arg1);
     for (list = R_RestartStack;
 	 list != R_NilValue && i > 1;
 	 list = CDR(list), i--);
@@ -1803,11 +1793,10 @@ SEXP attribute_hidden do_getRestart(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("bad restart")); \
 } while (0)
 
-SEXP attribute_hidden do_addRestart(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_addRestart(SEXP arg1)
 {
-    checkArity(op, args);
-    CHECK_RESTART(CAR(args));
-    R_RestartStack = CONS(CAR(args), R_RestartStack);
+    CHECK_RESTART(arg1);
+    R_RestartStack = CONS(arg1, R_RestartStack);
     return R_NilValue;
 }
 
@@ -1836,11 +1825,10 @@ static void NORET invokeRestart(SEXP r, SEXP arglist)
     }
 }
 
-SEXP attribute_hidden NORET do_invokeRestart(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_invokeRestart(SEXP arg1, SEXP arg2)
 {
-    checkArity(op, args);
-    CHECK_RESTART(CAR(args));
-    invokeRestart(CAR(args), CADR(args));
+    CHECK_RESTART(arg1);
+    invokeRestart(arg1, arg2);
 }
 
 SEXP attribute_hidden do_addTryHandlers(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -1854,22 +1842,19 @@ SEXP attribute_hidden do_addTryHandlers(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_seterrmessage(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_seterrmessage(SEXP arg1)
 {
     SEXP msg;
 
-    checkArity(op, args);
-    msg = CAR(args);
+    msg = arg1;
     if(!isString(msg) || LENGTH(msg) != 1)
 	error(_("error message must be a character string"));
     R_SetErrmessage(CHAR(STRING_ELT(msg, 0)));
     return R_NilValue;
 }
 
-SEXP attribute_hidden
-do_printDeferredWarnings(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_printDeferredWarnings()
 {
-    checkArity(op, args);
     R_PrintDeferredWarnings();
     return R_NilValue;
 }

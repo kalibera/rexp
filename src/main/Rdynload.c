@@ -1299,17 +1299,15 @@ R_getRegisteredRoutines(SEXP dll)
     return(ans);
 }
 
-SEXP attribute_hidden
-do_getSymbolInfo(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_getSymbolInfo(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     const char *package = "", *name;
     R_RegisteredNativeSymbol symbol = {R_ANY_SYM, {NULL}, NULL};
     SEXP sym = R_NilValue;
     DL_FUNC f = NULL;
 
-    checkArity(op, args);
-    SEXP sname = CAR(args), spackage = CADR(args),
-	withRegistrationInfo = CADDR(args);
+    SEXP sname = arg1, spackage = arg2,
+	withRegistrationInfo = arg3;
 
     name = translateChar(STRING_ELT(sname, 0));
     if(length(spackage)) {
@@ -1331,14 +1329,11 @@ do_getSymbolInfo(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* .Internal(getLoadedDLLs()) */
-SEXP attribute_hidden
-do_getDllTable(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_getDllTable()
 {
     SEXP ans, nm;
 
-    checkArity(op, args);
-
- again:
+    again:
     PROTECT(ans = allocVector(VECSXP, CountDLL));
     for(int i = 0; i < CountDLL; i++)
 	SET_VECTOR_ELT(ans, i, Rf_MakeDLLInfo(&(LoadedDLL[i])));
@@ -1362,13 +1357,11 @@ do_getDllTable(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden
-do_getRegisteredRoutines(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_getRegisteredRoutines(SEXP arg1)
 {
     const char * const names[] = {".C", ".Call", ".Fortran", ".External"};
 
-    checkArity(op, args);
-    SEXP dll = CAR(args), ans, snames;
+    SEXP dll = arg1, ans, snames;
 
     if(TYPEOF(dll) != EXTPTRSXP &&
        R_ExternalPtrTag(dll) != install("DLLInfo"))

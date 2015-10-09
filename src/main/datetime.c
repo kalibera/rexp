@@ -672,16 +672,15 @@ makelt(stm *tm, SEXP ans, R_xlen_t i, int valid, double frac_secs)
 
 // We assume time zone names/abbreviations are ASCII, as all known ones are.
 
-SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_asPOSIXlt(SEXP arg1, SEXP arg2)
 {
     SEXP stz, x, ans, ansnames, klass, tzone;
     int isgmt = 0, valid, settz = 0;
     char oldtz[1001] = "";
     const char *tz = NULL;
 
-    checkArity(op, args);
-    PROTECT(x = coerceVector(CAR(args), REALSXP));
-    if(!isString((stz = CADR(args))) || LENGTH(stz) != 1)
+    PROTECT(x = coerceVector(arg1, REALSXP));
+    if(!isString((stz = arg2)) || LENGTH(stz) != 1)
 	error(_("invalid '%s' value"), "tz");
     tz = CHAR(STRING_ELT(stz, 0));
     if(strlen(tz) == 0) {
@@ -769,7 +768,7 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_asPOSIXct(SEXP arg1, SEXP arg2)
 {
     SEXP stz, x, ans;
     R_xlen_t n = 0, nlen[9];
@@ -779,11 +778,10 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
     stm tm;
     double tmp;
 
-    checkArity(op, args);
-    PROTECT(x = duplicate(CAR(args))); /* coerced below */
+    PROTECT(x = duplicate(arg1)); /* coerced below */
     if(!isVectorList(x) || LENGTH(x) < 9)
 	error(_("invalid '%s' argument"), "x");
-    if(!isString((stz = CADR(args))) || LENGTH(stz) != 1)
+    if(!isString((stz = arg2)) || LENGTH(stz) != 1)
 	error(_("invalid '%s' value"), "tz");
 
     tz = CHAR(STRING_ELT(stz, 0));
@@ -860,7 +858,7 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_formatPOSIXlt(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     SEXP x, sformat, ans, tz;
     R_xlen_t n = 0, m, N, nlen[9];
@@ -869,14 +867,13 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     char oldtz[1001] = "";
     stm tm;
 
-    checkArity(op, args);
-    PROTECT(x = duplicate(CAR(args))); /* coerced below */
+    PROTECT(x = duplicate(arg1)); /* coerced below */
     if(!isVectorList(x) || LENGTH(x) < 9)
 	error(_("invalid '%s' argument"), "x");
-    if(!isString((sformat = CADR(args))) || XLENGTH(sformat) == 0)
+    if(!isString((sformat = arg2)) || XLENGTH(sformat) == 0)
 	error(_("invalid '%s' argument"), "format");
     m = XLENGTH(sformat);
-    UseTZ = asLogical(CADDR(args));
+    UseTZ = asLogical(arg3);
     if(UseTZ == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "usetz");
     tz = getAttrib(x, install("tzone"));
@@ -1027,7 +1024,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_strptime(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     SEXP x, sformat, ans, ansnames, klass, stz, tzone = R_NilValue;
     int invalid, isgmt = 0, settz = 0, offset;
@@ -1037,12 +1034,11 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
     double psecs = 0.0;
     R_xlen_t n, m, N;
 
-    checkArity(op, args);
-    if(!isString((x = CAR(args))))
+    if(!isString((x = arg1)))
 	error(_("invalid '%s' argument"), "x");
-    if(!isString((sformat = CADR(args))) || XLENGTH(sformat) == 0)
+    if(!isString((sformat = arg2)) || XLENGTH(sformat) == 0)
 	error(_("invalid '%s' argument"), "x");
-    if(!isString((stz = CADDR(args))) || LENGTH(stz) != 1)
+    if(!isString((stz = arg3)) || LENGTH(stz) != 1)
 	error(_("invalid '%s' value"), "tz");
     tz = CHAR(STRING_ELT(stz, 0));
     if(strlen(tz) == 0) {
@@ -1175,15 +1171,14 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_D2POSIXlt(SEXP arg1)
 {
     SEXP x, ans, ansnames, klass;
     R_xlen_t n;
     int valid, day, y, tmp, mon;
     stm tm;
 
-    checkArity(op, args);
-    PROTECT(x = coerceVector(CAR(args), REALSXP));
+    PROTECT(x = coerceVector(arg1, REALSXP));
     n = XLENGTH(x);
     PROTECT(ans = allocVector(VECSXP, 9));
     for(int i = 0; i < 9; i++)
@@ -1237,14 +1232,13 @@ SEXP attribute_hidden do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_POSIXlt2D(SEXP arg1)
 {
     SEXP x, ans, klass;
     R_xlen_t n = 0, nlen[9];
     stm tm;
 
-    checkArity(op, args);
-    PROTECT(x = duplicate(CAR(args)));
+    PROTECT(x = duplicate(arg1));
     if(!isVectorList(x) || LENGTH(x) < 9)
 	error(_("invalid '%s' argument"), "x");
 

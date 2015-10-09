@@ -2786,11 +2786,10 @@ SEXP attribute_hidden do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_pcre_config(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_pcre_config()
 {
     int res;
 
-    checkArity(op, args);
     SEXP ans = PROTECT(allocVector(LGLSXP, 3));
     int *lans = LOGICAL(ans);
     SEXP nm = allocVector(STRSXP, 3);

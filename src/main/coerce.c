@@ -1739,10 +1739,9 @@ Rcomplex asComplex(SEXP x)
 
 
 /* return the type (= "detailed mode") of the SEXP */
-SEXP attribute_hidden do_typeof(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_typeof(SEXP arg1)
 {
-    checkArity(op, args);
-    return type2rstr(TYPEOF(CAR(args)));
+    return type2rstr(TYPEOF(arg1));
 }
 
 /* Define many of the <primitive> "is.xxx" functions :

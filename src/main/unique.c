@@ -1008,7 +1008,7 @@ SEXP attribute_hidden do_match(SEXP call, SEXP op, SEXP args, SEXP env)
  * Empty strings are unmatched			      BDR 2000/2/16
  */
 
-SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_pmatch(SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4)
 {
     SEXP ans, input, target;
     int mtch, n_target, mtch_count, dups_ok, no_match;
@@ -1018,13 +1018,12 @@ SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean no_dups;
     Rboolean useBytes = FALSE, useUTF8 = FALSE;
 
-    checkArity(op, args);
-    input = CAR(args);
+    input = arg1;
     R_xlen_t n_input = XLENGTH(input);
-    target = CADR(args);
+    target = arg2;
     n_target = LENGTH(target); // not allowed to be long
-    no_match = asInteger(CADDR(args));
-    dups_ok = asLogical(CADDDR(args));
+    no_match = asInteger(arg3);
+    dups_ok = asLogical(arg4);
     if (dups_ok == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "duplicates.ok");
     no_dups = !dups_ok;
@@ -1154,22 +1153,20 @@ SEXP attribute_hidden do_pmatch(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Partial Matching of Strings */
 /* Based on Therneau's charmatch. */
 
-SEXP attribute_hidden do_charmatch(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_charmatch(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     SEXP ans, input, target;
     const char *ss, *st;
     Rboolean useBytes = FALSE, useUTF8 = FALSE;
 
-    checkArity(op, args);
-
-    input = CAR(args);
+    input = arg1;
     R_xlen_t n_input = LENGTH(input);
-    target = CADR(args);
+    target = arg2;
     int n_target = LENGTH(target);
 
     if (!isString(input) || !isString(target))
 	error(_("argument is not of mode character"));
-    int no_match = asInteger(CADDR(args));
+    int no_match = asInteger(arg3);
 
     for(R_xlen_t i = 0; i < n_input; i++) {
 	if(IS_BYTES(STRING_ELT(input, i))) {
@@ -1619,7 +1616,7 @@ static SEXP duplicated2(SEXP x, HashData *d)
     return ans;
 }
 
-SEXP attribute_hidden do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_makeunique(SEXP arg1, SEXP arg2)
 {
     SEXP names, sep, ans, dup, newx;
     int i, cnt, *cnts, dp;
@@ -1628,12 +1625,11 @@ SEXP attribute_hidden do_makeunique(SEXP call, SEXP op, SEXP args, SEXP env)
     const char *csep, *ss;
     const void *vmax;
 
-    checkArity(op, args);
-    names = CAR(args);
+    names = arg1;
     if(!isString(names))
 	error(_("'names' must be a character vector"));
     n = LENGTH(names);
-    sep = CADR(args);
+    sep = arg2;
     if(!isString(sep) || LENGTH(sep) != 1)
 	error(_("'%s' must be a character string"), "sep");
     csep = translateChar(STRING_ELT(sep, 0));
@@ -1736,12 +1732,11 @@ static R_INLINE double ru()
 }
 
 // sample.int(.) --> .Internal(sample2(n, size)) :
-SEXP attribute_hidden do_sample2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_sample2(SEXP arg1, SEXP arg2)
 {
-    checkArity(op, args);
     SEXP ans;
-    double dn = asReal(CAR(args));
-    int k = asInteger(CADR(args));
+    double dn = asReal(arg1);
+    int k = asInteger(arg2);
     if (!R_FINITE(dn) || dn < 0 || dn > 4.5e15 || (k > 0 && dn == 0))
 	error(_("invalid first argument"));
     if (k < 0) error(_("invalid '%s' argument"), "size");

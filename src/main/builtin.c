@@ -239,28 +239,25 @@ SEXP attribute_hidden do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_formals(SEXP arg1)
 {
-    checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP)
-	return duplicate(FORMALS(CAR(args)));
+    if (TYPEOF(arg1) == CLOSXP)
+	return duplicate(FORMALS(arg1));
     else
 	return R_NilValue;
 }
 
-SEXP attribute_hidden do_body(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_body(SEXP arg1)
 {
-    checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP)
-	return duplicate(BODY_EXPR(CAR(args)));
+    if (TYPEOF(arg1) == CLOSXP)
+	return duplicate(BODY_EXPR(arg1));
     else return R_NilValue;
 }
 
-SEXP attribute_hidden do_bodyCode(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_bodyCode(SEXP arg1)
 {
-    checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP)
-	return duplicate(BODY(CAR(args)));
+    if (TYPEOF(arg1) == CLOSXP)
+	return duplicate(BODY(arg1));
     else return R_NilValue;
 }
 
@@ -268,14 +265,13 @@ SEXP attribute_hidden do_bodyCode(SEXP call, SEXP op, SEXP args, SEXP rho)
 #define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) : arg)
 
 
-SEXP attribute_hidden do_envir(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_envir(SEXP arg1)
 {
-    checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP)
-	return CLOENV(CAR(args));
-    else if (CAR(args) == R_NilValue)
+    if (TYPEOF(arg1) == CLOSXP)
+	return CLOENV(arg1);
+    else if (arg1 == R_NilValue)
 	return R_GlobalContext->sysparent;
-    else return getAttrib(CAR(args), R_DotEnvSymbol);
+    else return getAttrib(arg1, R_DotEnvSymbol);
 }
 
 SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -344,10 +340,9 @@ SEXP attribute_hidden do_newenv(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden do_parentenv(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_parentenv(SEXP arg1)
 {
-    checkArity(op, args);
-    SEXP arg = CAR(args);
+    SEXP arg = arg1;
 
     if( !isEnvironment(arg)  &&
 	!isEnvironment((arg = simple_as_environment(arg))))
@@ -375,12 +370,10 @@ static Rboolean R_IsImportsEnv(SEXP env)
 	return FALSE;
 }
 
-SEXP attribute_hidden do_parentenvgets(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_parentenvgets(SEXP arg1, SEXP arg2)
 {
     SEXP env, parent;
-    checkArity(op, args);
-
-    env = CAR(args);
+    env = arg1;
     if (isNull(env)) {
 	error(_("use of NULL environment is defunct"));
 	env = R_BaseEnv;
@@ -394,7 +387,7 @@ SEXP attribute_hidden do_parentenvgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("can not set the parent environment of a namespace"));
     if (R_EnvironmentIsLocked(env) && R_IsImportsEnv(env))
 	error(_("can not set the parent environment of package imports"));
-    parent = CADR(args);
+    parent = arg2;
     if (isNull(parent)) {
 	error(_("use of NULL environment is defunct"));
 	parent = R_BaseEnv;
@@ -405,14 +398,13 @@ SEXP attribute_hidden do_parentenvgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SET_ENCLOS(env, parent);
 
-    return( CAR(args) );
+    return( arg1 );
 }
 
-SEXP attribute_hidden do_envirName(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_envirName(SEXP arg1)
 {
-    SEXP env = CAR(args), ans=mkString(""), res;
+    SEXP env = arg1, ans=mkString(""), res;
 
-    checkArity(op, args);
     PROTECT(ans);
     if (TYPEOF(env) == ENVSXP ||
 	TYPEOF((env = simple_as_environment(env))) == ENVSXP) {
@@ -756,16 +748,15 @@ SEXP attribute_hidden do_expression(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* vector(mode="logical", length=0) */
-SEXP attribute_hidden do_makevector(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_makevector(SEXP arg1, SEXP arg2)
 {
     R_xlen_t len;
     SEXP s;
     SEXPTYPE mode;
-    checkArity(op, args);
-    if (length(CADR(args)) != 1) error(_("invalid '%s' argument"), "length");
-    len = asVecSize(CADR(args));
+    if (length(arg2) != 1) error(_("invalid '%s' argument"), "length");
+    len = asVecSize(arg2);
     if (len < 0) error(_("invalid '%s' argument"), "length");
-    s = coerceVector(CAR(args), STRSXP);
+    s = coerceVector(arg1, STRSXP);
     if (length(s) != 1) error(_("invalid '%s' argument"), "mode");
     mode = str2type(CHAR(STRING_ELT(s, 0))); /* ASCII */
     if (mode == -1 && streql(CHAR(STRING_ELT(s, 0)), "double"))

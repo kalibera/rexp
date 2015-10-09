@@ -314,24 +314,22 @@ void revsort(double *a, int *ib, int n)
 }
 
 
-SEXP attribute_hidden do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_sort(SEXP arg1, SEXP arg2)
 {
     SEXP ans;
     Rboolean decreasing;
 
-    checkArity(op, args);
-
-    decreasing = asLogical(CADR(args));
+    decreasing = asLogical(arg2);
     if(decreasing == NA_LOGICAL)
 	error(_("'decreasing' must be TRUE or FALSE"));
-    if(CAR(args) == R_NilValue) return R_NilValue;
-    if(!isVectorAtomic(CAR(args)))
+    if(arg1 == R_NilValue) return R_NilValue;
+    if(!isVectorAtomic(arg1))
 	error(_("only atomic vectors can be sorted"));
-    if(TYPEOF(CAR(args)) == RAWSXP)
+    if(TYPEOF(arg1) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
     /* we need consistent behaviour here, including dropping attibutes,
        so as from 2.3.0 we always duplicate. */
-    PROTECT(ans = duplicate(CAR(args)));
+    PROTECT(ans = duplicate(arg1));
     SET_ATTRIB(ans, R_NilValue);  /* this is never called with names */
     SET_OBJECT(ans, 0);		  /* we may have just stripped off the class */
     sortVector(ans, decreasing);
@@ -1384,20 +1382,18 @@ SEXP attribute_hidden do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 #include <R_ext/RS.h>
 
 /* also returns integers/doubles (a method for sort.list) */
-SEXP attribute_hidden do_radixsort(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_radixsort(SEXP arg1, SEXP arg2, SEXP arg3)
 {
     SEXP x, ans;
     Rboolean nalast, decreasing;
     R_xlen_t i, n;
     int tmp, xmax = NA_INTEGER, xmin = NA_INTEGER, off, napos;
 
-    checkArity(op, args);
-
-    x = CAR(args);
-    nalast = asLogical(CADR(args));
+    x = arg1;
+    nalast = asLogical(arg2);
     if(nalast == NA_LOGICAL)
 	error(_("invalid '%s' value"), "na.last");
-    decreasing = asLogical(CADDR(args));
+    decreasing = asLogical(arg3);
     if(decreasing == NA_LOGICAL)
 	error(_("'decreasing' must be TRUE or FALSE"));
     off = nalast^decreasing ? 0 : 1;

@@ -902,13 +902,12 @@ SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* which(x) : indices of non-NA TRUE values in x */
-SEXP attribute_hidden do_which(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_which(SEXP arg1)
 {
     SEXP v, v_nms, ans, ans_nms = R_NilValue;
     int i, j = 0, len, *buf;
 
-    checkArity(op, args);
-    v = CAR(args);
+    v = arg1;
     if (!isLogical(v))
 	error(_("argument to 'which' is not logical"));
     len = length(v);
