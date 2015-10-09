@@ -176,15 +176,15 @@ SEXP getAttrib(SEXP vec, SEXP name)
 
 // R's .row_names_info(x, type = 1L) := .Internal(shortRowNames(x, type)) :
 attribute_hidden
-SEXP attribute_hidden dc_shortRowNames(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_shortRowNames(SEXP x, SEXP argtype)
 {
     /* return  n if the data frame 'vec' has c(NA, n) rownames;
      *	       nrow(.) otherwise;  note that data frames with nrow(.) == 0
      *		have no row.names.
      ==> is also used in dim.data.frame() */
 
-    SEXP s = getAttrib0(arg1, R_RowNamesSymbol), ans = s;
-    int type = asInteger(arg2);
+    SEXP s = getAttrib0(x, R_RowNamesSymbol), ans = s;
+    int type = asInteger(argtype);
 
     if( type < 0 || type > 2)
 	error(_("invalid '%s' argument"), "type");
@@ -198,9 +198,8 @@ SEXP attribute_hidden dc_shortRowNames(SEXP arg1, SEXP arg2)
 }
 
 /* This is allowed to change 'out' */
-SEXP attribute_hidden dc_copyDFattr(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_copyDFattr(SEXP in, SEXP out)
 {
-    SEXP in = arg1, out = arg2;
     SET_ATTRIB(out, shallow_duplicate(ATTRIB(in)));
     IS_S4_OBJECT(in) ?  SET_S4_OBJECT(out) : UNSET_S4_OBJECT(out);
     SET_OBJECT(out, OBJECT(in));
@@ -470,9 +469,9 @@ SEXP attribute_hidden do_commentgets(SEXP call, SEXP op, SEXP args, SEXP env)
     return CAR(args);
 }
 
-SEXP attribute_hidden dc_comment(SEXP arg1)
+SEXP attribute_hidden dc_comment(SEXP x)
 {
-    return getAttrib(arg1, R_CommentSymbol);
+    return getAttrib(x, R_CommentSymbol);
 }
 
 SEXP classgets(SEXP vec, SEXP klass)
