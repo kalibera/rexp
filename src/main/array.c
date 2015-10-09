@@ -390,12 +390,11 @@ SEXP DropDims(SEXP x)
     return x;
 }
 
-SEXP attribute_hidden dc_drop(SEXP arg1)
+SEXP attribute_hidden dc_drop(SEXP x)
 {
-    SEXP x, xdims;
+    SEXP xdims;
     int i, n, shorten;
 
-    x = arg1;
     if ((xdims = getAttrib(x, R_DimSymbol)) != R_NilValue) {
 	n = LENGTH(xdims);
 	shorten = 0;
@@ -1042,14 +1041,12 @@ SEXP attribute_hidden do_matprod(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 #undef YDIMS_ET_CETERA
 
-SEXP attribute_hidden dc_transpose(SEXP arg1)
+SEXP attribute_hidden dc_transpose(SEXP a)
 {
-    SEXP a, r, dims, dimnames, dimnamesnames = R_NilValue,
+    SEXP r, dims, dimnames, dimnamesnames = R_NilValue,
 	ndimnamesnames, rnames, cnames;
     int ldim, ncol = 0, nrow = 0;
     R_xlen_t len = 0;
-
-    a = arg1;
 
     if (isVector(a)) {
 	dims = getAttrib(a, R_DimSymbol);
@@ -1188,12 +1185,11 @@ SEXP attribute_hidden dc_transpose(SEXP arg1)
 	lj += iip[itmp] * stride[itmp];
 
 /* aperm (a, perm, resize = TRUE) */
-SEXP attribute_hidden dc_aperm(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_aperm(SEXP a, SEXP perm, SEXP argresize)
 {
-    SEXP a, perm, r, dimsa, dimsr, dna;
+    SEXP r, dimsa, dimsr, dna;
     int i, j, n, itmp;
 
-    a = arg1;
     if (!isArray(a))
 	error(_("invalid first argument, must be an array"));
 
@@ -1204,7 +1200,6 @@ SEXP attribute_hidden dc_aperm(SEXP arg1, SEXP arg2, SEXP arg3)
     /* check the permutation */
 
     int *pp = (int *) R_alloc((size_t) n, sizeof(int));
-    perm = arg2;
     if (length(perm) == 0) {
 	for (i = 0; i < n; i++) pp[i] = n-1-i;
     } else {
@@ -1318,7 +1313,7 @@ SEXP attribute_hidden dc_aperm(SEXP arg1, SEXP arg2, SEXP arg3)
     }
 
     /* handle the resize */
-    int resize = asLogical(arg3);
+    int resize = asLogical(argresize);
     if (resize == NA_LOGICAL) error(_("'resize' must be TRUE or FALSE"));
     setAttrib(r, R_DimSymbol, resize ? dimsr : dimsa);
 
@@ -1526,12 +1521,11 @@ SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
 */
 
 /* array(data, dim, dimnames) */
-SEXP attribute_hidden dc_array(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_array(SEXP vals, SEXP dims, SEXP dimnames)
 {
-    SEXP vals, ans, dims, dimnames;
+    SEXP ans;
     R_xlen_t lendat, i, nans;
 
-    vals = arg1;
     /* at least NULL can get here */
     switch(TYPEOF(vals)) {
 	case LGLSXP:
@@ -1548,8 +1542,6 @@ SEXP attribute_hidden dc_array(SEXP arg1, SEXP arg2, SEXP arg3)
 		type2char(TYPEOF(vals)));
     }
     lendat = XLENGTH(vals);
-    dims = arg2;
-    dimnames = arg3;
     PROTECT(dims = coerceVector(dims, INTSXP));
     int nd = LENGTH(dims);
     if (nd == 0) error(_("'dims' cannot be of length 0"));
@@ -1640,14 +1632,11 @@ SEXP attribute_hidden dc_array(SEXP arg1, SEXP arg2, SEXP arg3)
     return ans;
 }
 
-SEXP attribute_hidden dc_diag(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_diag(SEXP x, SEXP snr, SEXP snc)
 {
-    SEXP ans, x, snr, snc;
+    SEXP ans;
     int nr = 1, nc = 1, nprotect = 1;
 
-    x = arg1;
-    snr = arg2;
-    snc = arg3;
     nr = asInteger(snr);
     if (nr == NA_INTEGER)
 	error(_("invalid 'nrow' value (too large or NA)"));
@@ -1744,10 +1733,9 @@ SEXP attribute_hidden do_backsolve(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* max.col(m, ties.method) */
-SEXP attribute_hidden dc_maxcol(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_maxcol(SEXP m, SEXP argmethod)
 {
-    SEXP m = arg1;
-    int method = asInteger(arg2);
+    int method = asInteger(argmethod);
     int nr = nrows(m), nc = ncols(m), nprot = 1;
     if (TYPEOF(m) != REALSXP) {PROTECT(m = coerceVector(m, REALSXP)); nprot++;}
     SEXP ans = PROTECT(allocVector(INTSXP, nr));

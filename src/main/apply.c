@@ -368,14 +368,12 @@ static Rboolean islistfactor(SEXP X)
 
 /* is this a tree with only factor leaves? */
 
-SEXP attribute_hidden dc_islistfactor(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_islistfactor(SEXP X, SEXP argrecursive)
 {
-    SEXP X;
     Rboolean lans = TRUE, recursive;
     int i, n;
 
-    X = arg1;
-    recursive = asLogical(arg2);
+    recursive = asLogical(argrecursive);
     n = length(X);
     if(n == 0 || !isVectorList(X)) {
 	lans = FALSE;

@@ -1299,15 +1299,12 @@ R_getRegisteredRoutines(SEXP dll)
     return(ans);
 }
 
-SEXP attribute_hidden dc_getSymbolInfo(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_getSymbolInfo(SEXP sname, SEXP spackage, SEXP withRegistrationInfo)
 {
     const char *package = "", *name;
     R_RegisteredNativeSymbol symbol = {R_ANY_SYM, {NULL}, NULL};
     SEXP sym = R_NilValue;
     DL_FUNC f = NULL;
-
-    SEXP sname = arg1, spackage = arg2,
-	withRegistrationInfo = arg3;
 
     name = translateChar(STRING_ELT(sname, 0));
     if(length(spackage)) {
@@ -1357,11 +1354,11 @@ SEXP attribute_hidden dc_getDllTable()
     return ans;
 }
 
-SEXP attribute_hidden dc_getRegisteredRoutines(SEXP arg1)
+SEXP attribute_hidden dc_getRegisteredRoutines(SEXP dll)
 {
     const char * const names[] = {".C", ".Call", ".Fortran", ".External"};
 
-    SEXP dll = arg1, ans, snames;
+    SEXP ans, snames;
 
     if(TYPEOF(dll) != EXTPTRSXP &&
        R_ExternalPtrTag(dll) != install("DLLInfo"))

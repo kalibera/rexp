@@ -239,25 +239,25 @@ SEXP attribute_hidden do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden dc_formals(SEXP arg1)
+SEXP attribute_hidden dc_formals(SEXP fun)
 {
-    if (TYPEOF(arg1) == CLOSXP)
-	return duplicate(FORMALS(arg1));
+    if (TYPEOF(fun) == CLOSXP)
+	return duplicate(FORMALS(fun));
     else
 	return R_NilValue;
 }
 
-SEXP attribute_hidden dc_body(SEXP arg1)
+SEXP attribute_hidden dc_body(SEXP fun)
 {
-    if (TYPEOF(arg1) == CLOSXP)
-	return duplicate(BODY_EXPR(arg1));
+    if (TYPEOF(fun) == CLOSXP)
+	return duplicate(BODY_EXPR(fun));
     else return R_NilValue;
 }
 
-SEXP attribute_hidden dc_bodyCode(SEXP arg1)
+SEXP attribute_hidden dc_bodyCode(SEXP fun)
 {
-    if (TYPEOF(arg1) == CLOSXP)
-	return duplicate(BODY(arg1));
+    if (TYPEOF(fun) == CLOSXP)
+	return duplicate(BODY(fun));
     else return R_NilValue;
 }
 
@@ -265,13 +265,13 @@ SEXP attribute_hidden dc_bodyCode(SEXP arg1)
 #define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) : arg)
 
 
-SEXP attribute_hidden dc_envir(SEXP arg1)
+SEXP attribute_hidden dc_envir(SEXP fun)
 {
-    if (TYPEOF(arg1) == CLOSXP)
-	return CLOENV(arg1);
-    else if (arg1 == R_NilValue)
+    if (TYPEOF(fun) == CLOSXP)
+	return CLOENV(fun);
+    else if (fun == R_NilValue)
 	return R_GlobalContext->sysparent;
-    else return getAttrib(arg1, R_DotEnvSymbol);
+    else return getAttrib(fun, R_DotEnvSymbol);
 }
 
 SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -340,16 +340,14 @@ SEXP attribute_hidden do_newenv(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden dc_parentenv(SEXP arg1)
+SEXP attribute_hidden dc_parentenv(SEXP env)
 {
-    SEXP arg = arg1;
-
-    if( !isEnvironment(arg)  &&
-	!isEnvironment((arg = simple_as_environment(arg))))
+    if( !isEnvironment(env)  &&
+	!isEnvironment((env = simple_as_environment(env))))
 	error( _("argument is not an environment"));
-    if( arg == R_EmptyEnv )
+    if( env == R_EmptyEnv )
 	error(_("the empty environment has no parent"));
-    return( ENCLOS(arg) );
+    return( ENCLOS(env) );
 }
 
 static Rboolean R_IsImportsEnv(SEXP env)
@@ -370,10 +368,9 @@ static Rboolean R_IsImportsEnv(SEXP env)
 	return FALSE;
 }
 
-SEXP attribute_hidden dc_parentenvgets(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_parentenvgets(SEXP argenv, SEXP parent)
 {
-    SEXP env, parent;
-    env = arg1;
+    SEXP env = argenv;
     if (isNull(env)) {
 	error(_("use of NULL environment is defunct"));
 	env = R_BaseEnv;
@@ -387,7 +384,6 @@ SEXP attribute_hidden dc_parentenvgets(SEXP arg1, SEXP arg2)
 	error(_("can not set the parent environment of a namespace"));
     if (R_EnvironmentIsLocked(env) && R_IsImportsEnv(env))
 	error(_("can not set the parent environment of package imports"));
-    parent = arg2;
     if (isNull(parent)) {
 	error(_("use of NULL environment is defunct"));
 	parent = R_BaseEnv;
@@ -398,12 +394,12 @@ SEXP attribute_hidden dc_parentenvgets(SEXP arg1, SEXP arg2)
 
     SET_ENCLOS(env, parent);
 
-    return( arg1 );
+    return( argenv );
 }
 
-SEXP attribute_hidden dc_envirName(SEXP arg1)
+SEXP attribute_hidden dc_envirName(SEXP env)
 {
-    SEXP env = arg1, ans=mkString(""), res;
+    SEXP ans = mkString(""), res;
 
     PROTECT(ans);
     if (TYPEOF(env) == ENVSXP ||
@@ -748,15 +744,15 @@ SEXP attribute_hidden do_expression(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* vector(mode="logical", length=0) */
-SEXP attribute_hidden dc_makevector(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_makevector(SEXP argmode, SEXP arglen)
 {
     R_xlen_t len;
     SEXP s;
     SEXPTYPE mode;
-    if (length(arg2) != 1) error(_("invalid '%s' argument"), "length");
-    len = asVecSize(arg2);
+    if (length(arglen) != 1) error(_("invalid '%s' argument"), "length");
+    len = asVecSize(arglen);
     if (len < 0) error(_("invalid '%s' argument"), "length");
-    s = coerceVector(arg1, STRSXP);
+    s = coerceVector(argmode, STRSXP);
     if (length(s) != 1) error(_("invalid '%s' argument"), "mode");
     mode = str2type(CHAR(STRING_ELT(s, 0))); /* ASCII */
     if (mode == -1 && streql(CHAR(STRING_ELT(s, 0)), "double"))
