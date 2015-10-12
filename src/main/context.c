@@ -658,13 +658,13 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 }
 
-SEXP attribute_hidden dc_parentframe(SEXP arg1)
+SEXP attribute_hidden dc_parentframe(SEXP argn)
 {
     int n;
     SEXP t;
     RCNTXT *cptr;
 
-    t = arg1;
+    t = argn;
     n = asInteger(t);
 
     if(n == NA_INTEGER || n < 1 )

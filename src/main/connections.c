@@ -5819,14 +5819,14 @@ SEXP R_decompress3(SEXP in, Rboolean *err)
     return ans;
 }
 
-SEXP attribute_hidden dc_memCompress(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_memCompress(SEXP argfrom, SEXP argtype)
 {
     SEXP ans, from;
     int type, res;
 
-    ans = from = arg1;
+    ans = from = argfrom;
     if(TYPEOF(from) != RAWSXP) error("'from' must be raw or character");
-    type = asInteger(arg2);
+    type = asInteger(argtype);
     switch(type) {
     case 1: break; /* none */
     case 2: /*gzip */
@@ -5897,14 +5897,14 @@ SEXP attribute_hidden dc_memCompress(SEXP arg1, SEXP arg2)
     return ans;
 }
 
-SEXP attribute_hidden dc_memDecompress(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_memDecompress(SEXP argfrom, SEXP argtype)
 {
     SEXP ans, from;
     int type, subtype = 0;
 
-    ans = from = arg1;
+    ans = from = argfrom;
     if(TYPEOF(from) != RAWSXP) error("'from' must be raw or character");
-    type = asInteger(arg2);
+    type = asInteger(argtype);
     if (type == 5) {/* type = 5 is "unknown" */
 	char *p = (char *) RAW(from);
 	if (strncmp(p, "BZh", 3) == 0) type = 3; /* bzip2 always uses a header */
