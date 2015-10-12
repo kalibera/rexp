@@ -476,11 +476,11 @@ SEXP attribute_hidden R_sysfunction(int n, RCNTXT *cptr)
    then get the context of the call that owns the environment.  As it
    is, it will restart the wrong function if used in a promise.
    L.T. */
-SEXP attribute_hidden dc_restart(SEXP arg1)
+SEXP attribute_hidden dc_restart(SEXP dummy)
 {
     RCNTXT *cptr;
 
-    if( !isLogical(arg1) || LENGTH(arg1)!= 1 )
+    if( !isLogical(dummy) || LENGTH(dummy)!= 1 )
 	return(R_NilValue);
     for(cptr = R_GlobalContext->nextcontext; cptr!= R_ToplevelContext;
 	    cptr = cptr->nextcontext) {
@@ -662,13 +662,13 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 }
 
-SEXP attribute_hidden dc_parentframe(SEXP arg1)
+SEXP attribute_hidden dc_parentframe(SEXP argn)
 {
     int n;
     SEXP t;
     RCNTXT *cptr;
 
-    t = arg1;
+    t = argn;
     n = asInteger(t);
 
     if(n == NA_INTEGER || n < 1 )
