@@ -300,9 +300,9 @@ static void substr(char *buf, const char *str, int ienc, int sa, int so)
     *buf = '\0';
 }
 
-SEXP attribute_hidden dc_substr(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_substr(SEXP x, SEXP sa, SEXP so)
 {
-    SEXP s, x, sa, so, el;
+    SEXP s, el;
     R_xlen_t i, len;
     int start, stop, k, l;
     size_t slen;
@@ -310,9 +310,6 @@ SEXP attribute_hidden dc_substr(SEXP arg1, SEXP arg2, SEXP arg3)
     const char *ss;
     char *buf;
 
-    x = arg1;
-    sa = arg2;
-    so = arg3;
     k = LENGTH(sa);
     l = LENGTH(so);
 
@@ -392,9 +389,9 @@ substrset(char *buf, const char *const str, cetype_t ienc, int sa, int so)
     }
 }
 
-SEXP attribute_hidden dc_substrgets(SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4)
+SEXP attribute_hidden dc_substrgets(SEXP x, SEXP sa, SEXP so, SEXP value)
 {
-    SEXP s, x, sa, so, value, el, v_el;
+    SEXP s, el, v_el;
     R_xlen_t i, len;
     int start, stop, k, l, v;
     size_t slen;
@@ -403,10 +400,6 @@ SEXP attribute_hidden dc_substrgets(SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4)
     char *buf;
     const void *vmax;
 
-    x = arg1;
-    sa = arg2;
-    so = arg3;
-    value = arg4;
     k = LENGTH(sa);
     l = LENGTH(so);
 
@@ -673,16 +666,14 @@ donewsc:
 }
 
 
-SEXP attribute_hidden dc_abbrev(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_abbrev(SEXP x, SEXP argminlen, SEXP argusecl)
 {
-    SEXP x = arg1;
-
     if (!isString(x))
 	error(_("the first argument must be a character vector"));
-    int minlen = asInteger(arg2);
+    int minlen = asInteger(argminlen);
     if (minlen == NA_INTEGER)
 	error(_("invalid '%s' argument"), "minlength");
-    int usecl = asLogical(arg3);
+    int usecl = asLogical(argusecl);
     if (usecl == NA_INTEGER)
 	error(_("invalid '%s' argument"), "use.classes");
 
@@ -723,9 +714,9 @@ SEXP attribute_hidden dc_abbrev(SEXP arg1, SEXP arg2, SEXP arg3)
     return ans;
 }
 
-SEXP attribute_hidden dc_makenames(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_makenames(SEXP names, SEXP argallow_)
 {
-    SEXP arg, ans;
+    SEXP ans;
     R_xlen_t i, n;
     int l, allow_;
     char *p, *tmp = NULL, *cbuf;
@@ -733,17 +724,16 @@ SEXP attribute_hidden dc_makenames(SEXP arg1, SEXP arg2)
     Rboolean need_prefix;
     const void *vmax;
 
-    arg = arg1;
-    if (!isString(arg))
+    if (!isString(names))
 	error(_("non-character names"));
-    n = XLENGTH(arg);
-    allow_ = asLogical(arg2);
+    n = XLENGTH(names);
+    allow_ = asLogical(argallow_);
     if (allow_ == NA_LOGICAL)
 	error(_("invalid '%s' value"), "allow_");
     PROTECT(ans = allocVector(STRSXP, n));
     vmax = vmaxget();
     for (i = 0 ; i < n ; i++) {
-	This = translateChar(STRING_ELT(arg, i));
+	This = translateChar(STRING_ELT(names, i));
 	l = (int) strlen(This);
 	/* need to prefix names not beginning with alpha or ., as
 	   well as . followed by a number */
@@ -770,10 +760,10 @@ SEXP attribute_hidden dc_makenames(SEXP arg1, SEXP arg2)
 	if (need_prefix) {
 	    tmp = Calloc(l+2, char);
 	    strcpy(tmp, "X");
-	    strcat(tmp, translateChar(STRING_ELT(arg, i)));
+	    strcat(tmp, translateChar(STRING_ELT(names, i)));
 	} else {
 	    tmp = Calloc(l+1, char);
-	    strcpy(tmp, translateChar(STRING_ELT(arg, i)));
+	    strcpy(tmp, translateChar(STRING_ELT(names, i)));
 	}
 	if (mbcslocale) {
 	    /* This cannot lengthen the string, so safe to overwrite it.
@@ -1399,9 +1389,9 @@ SEXP attribute_hidden do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
     return(y);
 }
 
-SEXP attribute_hidden dc_strtrim(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_strtrim(SEXP x, SEXP argwidth)
 {
-    SEXP s, x, width;
+    SEXP s, width;
     R_xlen_t i, len;
     int nw, w, nc;
     const char *This;
@@ -1413,10 +1403,10 @@ SEXP attribute_hidden dc_strtrim(SEXP arg1, SEXP arg2)
     const void *vmax;
 
     /* as.character happens at R level now */
-    if (!isString(x = arg1))
+    if (!isString(x))
 	error(_("strtrim() requires a character vector"));
     len = XLENGTH(x);
-    PROTECT(width = coerceVector(arg2, INTSXP));
+    PROTECT(width = coerceVector(argwidth, INTSXP));
     nw = LENGTH(width);
     if (!nw || (nw < len && len % nw))
 	error(_("invalid '%s' argument"), "width");
