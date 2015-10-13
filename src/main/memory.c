@@ -1463,20 +1463,20 @@ void R_RegisterCFinalizer(SEXP s, R_CFinalizer_t fun)
 
 /* R interface function */
 
-SEXP attribute_hidden dc_regFinaliz(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_regFinaliz(SEXP args, SEXP argfun, SEXP argonexit)
 {
     int onexit;
 
-    if (TYPEOF(arg1) != ENVSXP && TYPEOF(arg1) != EXTPTRSXP)
+    if (TYPEOF(args) != ENVSXP && TYPEOF(args) != EXTPTRSXP)
 	error(_("first argument must be environment or external pointer"));
-    if (TYPEOF(arg2) != CLOSXP)
+    if (TYPEOF(argfun) != CLOSXP)
 	error(_("second argument must be a function"));
 
-    onexit = asLogical(arg3);
+    onexit = asLogical(argonexit);
     if(onexit == NA_LOGICAL)
 	error(_("third argument must be 'TRUE' or 'FALSE'"));
 
-    R_RegisterFinalizerEx(arg1, arg2, onexit);
+    R_RegisterFinalizerEx(args, argfun, onexit);
     return R_NilValue;
 }
 
@@ -1841,33 +1841,33 @@ void R_gc_torture(int gap, int wait, Rboolean inhibit)
 #endif
 }
 
-SEXP attribute_hidden dc_gctorture(SEXP arg1)
+SEXP attribute_hidden dc_gctorture(SEXP arggap)
 {
     int gap;
     SEXP old = ScalarLogical(gc_force_wait > 0);
 
-    if (isLogical(arg1)) {
-	Rboolean on = asLogical(arg1);
+    if (isLogical(arggap)) {
+	Rboolean on = asLogical(arggap);
 	if (on == NA_LOGICAL) gap = NA_INTEGER;
 	else if (on) gap = 1;
 	else gap = 0;
     }
-    else gap = asInteger(arg1);
+    else gap = asInteger(arggap);
 
     R_gc_torture(gap, 0, FALSE);
 
     return old;
 }
 
-SEXP attribute_hidden dc_gctorture2(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_gctorture2(SEXP arggap, SEXP argwait, SEXP arginhibit)
 {
     int gap, wait;
     Rboolean inhibit;
     int old = gc_force_gap;
 
-    gap = asInteger(arg1);
-    wait = asInteger(arg2);
-    inhibit = asLogical(arg3);
+    gap = asInteger(arggap);
+    wait = asInteger(argwait);
+    inhibit = asLogical(arginhibit);
     R_gc_torture(gap, wait, inhibit);
 
     return ScalarInteger(old);
@@ -1899,11 +1899,11 @@ static void init_gctorture(void)
     }
 }
 
-SEXP attribute_hidden dc_gcinfo(SEXP arg1)
+SEXP attribute_hidden dc_gcinfo(SEXP arggc_reporting)
 {
     int i;
     SEXP old = ScalarLogical(gc_reporting);
-    i = asLogical(arg1);
+    i = asLogical(arggc_reporting);
     if (i != NA_LOGICAL)
 	gc_reporting = i;
     return old;
@@ -1921,15 +1921,15 @@ void attribute_hidden get_current_mem(size_t *smallvsize,
     return;
 }
 
-SEXP attribute_hidden dc_gc(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_gc(SEXP arggc_reporting, SEXP argreset_max)
 {
     SEXP value;
     int ogc, reset_max;
     R_size_t onsize = R_NSize /* can change during collection */;
 
     ogc = gc_reporting;
-    gc_reporting = asLogical(arg1);
-    reset_max = asLogical(arg2);
+    gc_reporting = asLogical(arggc_reporting);
+    reset_max = asLogical(argreset_max);
     num_old_gens_to_collect = NUM_OLD_GENERATIONS;
     R_gc();
 #ifndef IMMEDIATE_FINALIZERS
@@ -2952,14 +2952,14 @@ static void R_gc_internal(R_size_t size_needed)
     }
 }
 
-SEXP attribute_hidden dc_memlimits(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_memlimits(SEXP argnsize, SEXP argvsize)
 {
     SEXP ans;
     double nsize, vsize;
     R_size_t tmp;
 
-    nsize = asReal(arg1);
-    vsize = asReal(arg2);
+    nsize = asReal(argnsize);
+    vsize = asReal(argvsize);
 
     if (ISNAN(nsize) || nsize <= 0) ;
     else if (nsize >= R_SIZE_T_MAX) R_MaxNSize = R_SIZE_T_MAX;

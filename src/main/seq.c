@@ -319,9 +319,8 @@ static SEXP rep3(SEXP s, R_xlen_t ns, R_xlen_t na)
     return a;
 }
 
-SEXP attribute_hidden dc_rep_int(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_rep_int(SEXP s, SEXP ncopy)
 {
-    SEXP s = arg1, ncopy = arg2;
     R_xlen_t nc;
     SEXP a;
 
@@ -373,17 +372,14 @@ SEXP attribute_hidden dc_rep_int(SEXP arg1, SEXP arg2)
     return a;
 }
 
-SEXP attribute_hidden dc_rep_len(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_rep_len(SEXP s, SEXP len)
 {
     R_xlen_t ns, na;
-    SEXP a, s, len;
-
-    s = arg1;
+    SEXP a;
 
     if (!isVector(s) && s != R_NilValue)
 	error(_("attempt to replicate non-vector"));
 
-    len = arg2;
     if(length(len) != 1)
 	error(_("invalid '%s' value"), "length.out");
 #ifdef LONG_VECTOR_SUPPORT

@@ -338,18 +338,18 @@ extern char ** environ;
 # include <windows.h> /* _wgetenv etc */
 #endif
 
-SEXP attribute_hidden dc_getenv(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_getenv(SEXP argx, SEXP argunset)
 {
     int i, j;
     SEXP ans;
 
-    if (!isString(arg1))
+    if (!isString(argx))
 	error(_("wrong type for argument"));
 
-    if (!isString(arg2) || LENGTH(arg2) != 1)
+    if (!isString(argunset) || LENGTH(argunset) != 1)
 	error(_("wrong type for argument"));
 
-    i = LENGTH(arg1);
+    i = LENGTH(argx);
     if (i == 0) {
 #ifdef Win32
 	int n = 0, N;
@@ -386,9 +386,9 @@ SEXP attribute_hidden dc_getenv(SEXP arg1, SEXP arg2)
 		SET_STRING_ELT(ans, j, mkCharCE(buf, CE_UTF8));
 	    }
 #else
-	    char *s = getenv(translateChar(STRING_ELT(arg1, j)));
+	    char *s = getenv(translateChar(STRING_ELT(argx, j)));
 	    if (s == NULL)
-		SET_STRING_ELT(ans, j, STRING_ELT(arg2, 0));
+		SET_STRING_ELT(ans, j, STRING_ELT(argunset, 0));
 	    else {
 		SEXP tmp;
 		if(known_to_be_latin1) tmp = mkCharCE(s, CE_LATIN1);
@@ -429,15 +429,15 @@ static int Rputenv(const char *nm, const char *val)
 #endif
 
 
-SEXP attribute_hidden dc_setenv(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_setenv(SEXP nm, SEXP vars)
 {
 #if defined(HAVE_PUTENV) || defined(HAVE_SETENV)
     int i, n;
-    SEXP ans, nm, vars;
+    SEXP ans;
 
-    if (!isString(nm = arg1))
+    if (!isString(nm))
 	error(_("wrong type for argument"));
-    if (!isString(vars = arg2))
+    if (!isString(vars))
 	error(_("wrong type for argument"));
     if(LENGTH(nm) != LENGTH(vars))
 	error(_("wrong length for argument"));
@@ -466,12 +466,12 @@ SEXP attribute_hidden dc_setenv(SEXP arg1, SEXP arg2)
 #endif
 }
 
-SEXP attribute_hidden dc_unsetenv(SEXP arg1)
+SEXP attribute_hidden dc_unsetenv(SEXP vars)
 {
     int i, n;
-    SEXP ans, vars;
+    SEXP ans;
 
-    if (!isString(vars = arg1))
+    if (!isString(vars))
 	error(_("wrong type for argument"));
     n = LENGTH(vars);
 
@@ -1692,15 +1692,15 @@ void attribute_hidden resetTimeLimits()
 	cpuLimit = cpuLimit2;
 }
 
-SEXP attribute_hidden dc_setTimeLimit(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_setTimeLimit(SEXP argcpu, SEXP argelapsed, SEXP argtransient)
 {
     double cpu, elapsed, old_cpu = cpuLimitValue,
 	old_elapsed = elapsedLimitValue;
     int transient;
 
-    cpu = asReal(arg1);
-    elapsed = asReal(arg2);
-    transient = asLogical(arg3);
+    cpu = asReal(argcpu);
+    elapsed = asReal(argelapsed);
+    transient = asLogical(argtransient);
 
     if (R_FINITE(cpu) && cpu > 0) cpuLimitValue = cpu; else cpuLimitValue = -1;
 
@@ -1717,12 +1717,12 @@ SEXP attribute_hidden dc_setTimeLimit(SEXP arg1, SEXP arg2, SEXP arg3)
     return R_NilValue;
 }
 
-SEXP attribute_hidden dc_setSessionTimeLimit(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_setSessionTimeLimit(SEXP argcpu, SEXP argelapsed)
 {
     double cpu, elapsed, data[5];
 
-    cpu = asReal(arg1);
-    elapsed = asReal(arg2);
+    cpu = asReal(argcpu);
+    elapsed = asReal(argelapsed);
     R_getProcTime(data);
 
     if (R_FINITE(cpu) && cpu > 0)
@@ -1753,9 +1753,9 @@ SEXP attribute_hidden dc_setSessionTimeLimit(SEXP arg1, SEXP arg2)
 #  define GLOB_QUOTE 0
 # endif
 #endif
-SEXP attribute_hidden dc_glob(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_glob(SEXP x, SEXP argdirmark)
 {
-    SEXP x, ans;
+    SEXP ans;
     R_xlen_t i, n; 
     int res, dirmark, initialized=FALSE;
     glob_t globbuf;
@@ -1763,10 +1763,10 @@ SEXP attribute_hidden dc_glob(SEXP arg1, SEXP arg2)
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 #endif
 
-    if (!isString(x = arg1))
+    if (!isString(x))
 	error(_("invalid '%s' argument"), "paths");
     if (!XLENGTH(x)) return allocVector(STRSXP, 0);
-    dirmark = asLogical(arg2);
+    dirmark = asLogical(argdirmark);
     if (dirmark == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "dirmark");
 #ifndef GLOB_MARK

@@ -314,22 +314,22 @@ void revsort(double *a, int *ib, int n)
 }
 
 
-SEXP attribute_hidden dc_sort(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_sort(SEXP x, SEXP argdecreasing)
 {
     SEXP ans;
     Rboolean decreasing;
 
-    decreasing = asLogical(arg2);
+    decreasing = asLogical(argdecreasing);
     if(decreasing == NA_LOGICAL)
 	error(_("'decreasing' must be TRUE or FALSE"));
-    if(arg1 == R_NilValue) return R_NilValue;
-    if(!isVectorAtomic(arg1))
+    if(x == R_NilValue) return R_NilValue;
+    if(!isVectorAtomic(x))
 	error(_("only atomic vectors can be sorted"));
-    if(TYPEOF(arg1) == RAWSXP)
+    if(TYPEOF(x) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
     /* we need consistent behaviour here, including dropping attibutes,
        so as from 2.3.0 we always duplicate. */
-    PROTECT(ans = duplicate(arg1));
+    PROTECT(ans = duplicate(x));
     SET_ATTRIB(ans, R_NilValue);  /* this is never called with names */
     SET_OBJECT(ans, 0);		  /* we may have just stripped off the class */
     sortVector(ans, decreasing);
@@ -1382,18 +1382,17 @@ SEXP attribute_hidden do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 #include <R_ext/RS.h>
 
 /* also returns integers/doubles (a method for sort.list) */
-SEXP attribute_hidden dc_radixsort(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_radixsort(SEXP x, SEXP argnalast, SEXP argdecreasing)
 {
-    SEXP x, ans;
+    SEXP ans;
     Rboolean nalast, decreasing;
     R_xlen_t i, n;
     int tmp, xmax = NA_INTEGER, xmin = NA_INTEGER, off, napos;
 
-    x = arg1;
-    nalast = asLogical(arg2);
+    nalast = asLogical(argnalast);
     if(nalast == NA_LOGICAL)
 	error(_("invalid '%s' value"), "na.last");
-    decreasing = asLogical(arg3);
+    decreasing = asLogical(argdecreasing);
     if(decreasing == NA_LOGICAL)
 	error(_("'decreasing' must be TRUE or FALSE"));
     off = nalast^decreasing ? 0 : 1;

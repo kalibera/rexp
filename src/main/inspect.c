@@ -254,9 +254,9 @@ SEXP attribute_hidden do_inspect(SEXP call, SEXP op, SEXP args, SEXP env) {
     return obj;
 }
 
-SEXP attribute_hidden dc_address(SEXP arg1)
+SEXP attribute_hidden dc_address(SEXP p)
 {
-    return R_MakeExternalPtr((void *) arg1, R_NilValue, R_NilValue);
+    return R_MakeExternalPtr((void *) p, R_NilValue, R_NilValue);
 }
 
 SEXP attribute_hidden do_refcnt(SEXP call, SEXP op, SEXP args, SEXP rho)

@@ -991,13 +991,12 @@ SEXP attribute_hidden do_scan(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden dc_readln(SEXP arg1)
+SEXP attribute_hidden dc_readln(SEXP prompt)
 {
     int c;
     char buffer[MAXELTSIZE], *bufp = buffer;
-    SEXP ans, prompt;
+    SEXP ans;
 
-    prompt = arg1;
     if (prompt == R_NilValue) {
 	ConsolePrompt[0] = '\0'; /* precaution */
 	PROTECT(prompt);

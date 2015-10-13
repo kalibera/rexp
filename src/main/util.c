@@ -628,23 +628,21 @@ static void isort_with_index(int *x, int *indx, int n)
    The return value is a list with 4 elements (xi, yi, x.alone, y.alone),
    which are index vectors for rows of x or y.
 */
-SEXP attribute_hidden dc_merge(SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4)
+SEXP attribute_hidden dc_merge(SEXP xi, SEXP yi, SEXP argall_x, SEXP argall_y)
 {
-    SEXP xi, yi, ansx, ansy, ans;
+    SEXP ansx, ansy, ans;
     int nx = 0, ny = 0, i, j, k, nx_lone = 0, ny_lone = 0;
     int all_x = 0, all_y = 0, ll = 0/* "= 0" : for -Wall */;
     int nnx, nny;
 
-    xi = arg1;
     // NB: long vectors are not supported for input
     if ( !isInteger(xi) || !(nx = LENGTH(xi)) )
 	error(_("invalid '%s' argument"), "xinds");
-    yi = arg2;
     if ( !isInteger(yi) || !(ny = LENGTH(yi)) )
 	error(_("invalid '%s' argument"), "yinds");
-    if(!LENGTH(ans = arg3) || NA_LOGICAL == (all_x = asLogical(ans)))
+    if(!LENGTH(ans = argall_x) || NA_LOGICAL == (all_x = asLogical(ans)))
 	error(_("'all.x' must be TRUE or FALSE"));
-    if(!LENGTH(ans = arg4)|| NA_LOGICAL == (all_y = asLogical(ans)))
+    if(!LENGTH(ans = argall_y)|| NA_LOGICAL == (all_y = asLogical(ans)))
 	error(_("'all.y' must be TRUE or FALSE"));
 
     /* 0. sort the indices */
@@ -821,14 +819,14 @@ SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 #else
-SEXP attribute_hidden dc_basename(SEXP arg1)
+SEXP attribute_hidden dc_basename(SEXP s)
 {
-    SEXP ans, s = R_NilValue;	/* -Wall */
+    SEXP ans;
     char  buf[PATH_MAX], *p, fsp = FILESEP[0];
     const char *pp;
     int i, n;
 
-    if (TYPEOF(s = arg1) != STRSXP)
+    if (TYPEOF(s) != STRSXP)
 	error(_("a character vector argument expected"));
     PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
@@ -903,14 +901,14 @@ SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
     return(ans);
 }
 #else
-SEXP attribute_hidden dc_dirname(SEXP arg1)
+SEXP attribute_hidden dc_dirname(SEXP s)
 {
-    SEXP ans, s = R_NilValue;	/* -Wall */
+    SEXP ans;
     char buf[PATH_MAX], *p, fsp = FILESEP[0];
     const char *pp;
     int i, n;
 
-    if (TYPEOF(s = arg1) != STRSXP)
+    if (TYPEOF(s) != STRSXP)
 	error(_("a character vector argument expected"));
     PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
@@ -1030,35 +1028,34 @@ const char *getTZinfo(void)
 
 
 /* encodeString(x, w, quote, justify) */
-SEXP attribute_hidden dc_encodeString(SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4, SEXP arg5)
+SEXP attribute_hidden dc_encodeString(SEXP x, SEXP argw, SEXP s, SEXP argjustify, SEXP argna)
 {
-    SEXP ans, x, s;
+    SEXP ans;
     R_xlen_t i, len;
     int w, quote = 0, justify, na;
     const char *cs;
     Rboolean findWidth;
 
-    if (TYPEOF(x = arg1) != STRSXP)
+    if (TYPEOF(x) != STRSXP)
 	error(_("a character vector argument expected"));
-    if(isNull(arg2)) w = NA_INTEGER;
+    if(isNull(argw)) w = NA_INTEGER;
     else {
-	w = asInteger(arg2);
+	w = asInteger(argw);
 	if(w != NA_INTEGER && w < 0)
 	    error(_("invalid '%s' value"), "width");
     }
     findWidth = (w == NA_INTEGER);
-    s = arg3;
     if(LENGTH(s) != 1 || TYPEOF(s) != STRSXP)
 	error(_("invalid '%s' value"), "quote");
     cs = translateChar(STRING_ELT(s, 0));
     if(strlen(cs) > 0) quote = cs[0];
     if(strlen(cs) > 1)
 	warning(_("only the first character of 'quote' will be used"));
-    justify = asInteger(arg4);
+    justify = asInteger(argjustify);
     if(justify == NA_INTEGER || justify < 0 || justify > 3)
 	error(_("invalid '%s' value"), "justify");
     if(justify == 3) w = 0;
-    na = asLogical(arg5);
+    na = asLogical(argna);
     if(na == NA_LOGICAL) error(_("invalid '%s' value"), "na.encode");
 
     len = XLENGTH(x);
@@ -1090,13 +1087,13 @@ SEXP attribute_hidden dc_encodeString(SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4
     return ans;
 }
 
-SEXP attribute_hidden dc_encoding(SEXP arg1)
+SEXP attribute_hidden dc_encoding(SEXP x)
 {
-    SEXP ans, x;
+    SEXP ans;
     R_xlen_t i, n;
     char *tmp;
 
-    if (TYPEOF(x = arg1) != STRSXP)
+    if (TYPEOF(x) != STRSXP)
 	error(_("a character vector argument expected"));
     n = XLENGTH(x);
     PROTECT(ans = allocVector(STRSXP, n));
@@ -1111,16 +1108,16 @@ SEXP attribute_hidden dc_encoding(SEXP arg1)
     return ans;
 }
 
-SEXP attribute_hidden dc_setencoding(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_setencoding(SEXP x, SEXP enc)
 {
-    SEXP x, enc, tmp;
+    SEXP tmp;
     int m;
     R_xlen_t i, n;
     const char *this;
 
-    if (TYPEOF(x = arg1) != STRSXP)
+    if (TYPEOF(x) != STRSXP)
 	error(_("a character vector argument expected"));
-    if (TYPEOF(enc = arg2) != STRSXP)
+    if (TYPEOF(enc) != STRSXP)
 	error(_("a character vector 'value' expected"));
     m = LENGTH(enc);
     if(m == 0)
@@ -1365,9 +1362,8 @@ Rboolean utf8Valid(const char *str)
     return valid_utf8(str, strlen(str)) == 0;
 }
 
-SEXP attribute_hidden dc_validUTF8(SEXP arg1)
+SEXP attribute_hidden dc_validUTF8(SEXP x)
 {
-    SEXP x = arg1;
     if (!isString(x))
 	error(_("invalid '%s' argument"), "x");
     R_xlen_t n = XLENGTH(x);
@@ -1378,9 +1374,8 @@ SEXP attribute_hidden dc_validUTF8(SEXP arg1)
     return ans;
 }
 
-SEXP attribute_hidden dc_validEnc(SEXP arg1)
+SEXP attribute_hidden dc_validEnc(SEXP x)
 {
-    SEXP x = arg1;
     if (!isString(x))
 	error(_("invalid '%s' argument"), "x");
     R_xlen_t n = XLENGTH(x);
@@ -2013,14 +2008,14 @@ SEXP attribute_hidden do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden dc_ICUget(SEXP arg1)
+SEXP attribute_hidden dc_ICUget(SEXP argtype)
 {
     const char *ans = "unknown", *res;
     if (collationLocaleSet == 2) {
 	ans = "ASCII";
     } else if(collator) {
 	UErrorCode  status = U_ZERO_ERROR;
-	int type = asInteger(arg1);
+	int type = asInteger(argtype);
 	if (type < 1 || type > 2)
 	    error(_("invalid '%s' value"), "type");
 
@@ -2121,9 +2116,8 @@ int Scollate(SEXP a, SEXP b)
 
 #include <lzma.h>
 
-SEXP attribute_hidden dc_crc64(SEXP arg1)
+SEXP attribute_hidden dc_crc64(SEXP in)
 {
-    SEXP in = arg1;
     uint64_t crc = 0;
     char ans[17];
     if (!isString(in)) error("input must be a character string");
@@ -2194,9 +2188,8 @@ SEXP attribute_hidden do_bincode(SEXP call, SEXP op, SEXP args, SEXP rho)
     return codes;
 }
 
-SEXP attribute_hidden dc_tabulate(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_tabulate(SEXP in, SEXP nbin)
 {
-    SEXP in = arg1, nbin = arg2;
     if (TYPEOF(in) != INTSXP)  error("invalid input");
     R_xlen_t n = XLENGTH(in);
     /* FIXME: could in principle be a long vector */

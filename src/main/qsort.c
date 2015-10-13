@@ -41,15 +41,14 @@ static void R_qsort_int_R(int *v, double *I, size_t i, size_t j);
 #endif
 
 /* R function  qsort(x, index.return) */
-SEXP attribute_hidden dc_qsort(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_qsort(SEXP x, SEXP argindx_ret)
 {
-    SEXP x, sx;
+    SEXP sx;
     int indx_ret;
     double *vx = NULL;
     int *ivx = NULL;
     Rboolean x_real, x_int;
 
-    x = arg1;
     if (!isNumeric(x))
 	error(_("argument is not a numeric vector"));
     x_real= TYPEOF(x) == REALSXP;
@@ -57,7 +56,7 @@ SEXP attribute_hidden dc_qsort(SEXP arg1, SEXP arg2)
     PROTECT(sx = (x_real || x_int) ? duplicate(x) : coerceVector(x, REALSXP));
     SET_ATTRIB(sx, R_NilValue);
     SET_OBJECT(sx, 0);
-    indx_ret = asLogical(arg2);
+    indx_ret = asLogical(argindx_ret);
     R_xlen_t n = XLENGTH(x);
 #ifdef LONG_VECTOR_SUPPORT
     Rboolean isLong = n > INT_MAX;

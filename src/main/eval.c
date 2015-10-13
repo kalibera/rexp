@@ -930,20 +930,20 @@ static SEXP R_compileAndExecute(SEXP call, SEXP rho)
     return val;
 }
 
-SEXP attribute_hidden dc_enablejit(SEXP arg1)
+SEXP attribute_hidden dc_enablejit(SEXP argnew)
 {
     int old = R_jit_enabled, new;
-    new = asInteger(arg1);
+    new = asInteger(argnew);
     if (new > 0)
 	loadCompilerNamespace();
     R_jit_enabled = new;
     return ScalarInteger(old);
 }
 
-SEXP attribute_hidden dc_compilepkgs(SEXP arg1)
+SEXP attribute_hidden dc_compilepkgs(SEXP argnew)
 {
     int old = R_compile_pkgs, new;
-    new = asLogical(arg1);
+    new = asLogical(argnew);
     if (new != NA_LOGICAL && new)
 	loadCompilerNamespace();
     R_compile_pkgs = new;
@@ -1811,9 +1811,9 @@ SEXP attribute_hidden NORET do_break(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-SEXP attribute_hidden dc_paren(SEXP arg1)
+SEXP attribute_hidden dc_paren(SEXP x)
 {
-    return arg1;
+    return x;
 }
 
 SEXP attribute_hidden do_begin(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -6203,12 +6203,10 @@ SEXP R_bcEncode(SEXP x) { return x; }
 SEXP R_bcDecode(SEXP x) { return duplicate(x); }
 #endif
 
-SEXP attribute_hidden dc_mkcode(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_mkcode(SEXP bytes, SEXP consts)
 {
-    SEXP bytes, consts, ans;
+    SEXP ans;
 
-    bytes = arg1;
-    consts = arg2;
     ans = CONS(R_bcEncode(bytes), consts);
     SET_TYPEOF(ans, BCODESXP);
     return ans;
@@ -6395,12 +6393,11 @@ FILE *R_OpenCompiledFile(char *fname, char *buf, size_t bsize)
 }
 #endif
 
-SEXP attribute_hidden dc_growconst(SEXP arg1)
+SEXP attribute_hidden dc_growconst(SEXP constBuf)
 {
-    SEXP constBuf, ans;
+    SEXP ans;
     int i, n;
 
-    constBuf = arg1;
     if (TYPEOF(constBuf) != VECSXP)
 	error(_("constant buffer must be a generic vector"));
 
@@ -6412,20 +6409,16 @@ SEXP attribute_hidden dc_growconst(SEXP arg1)
     return ans;
 }
 
-SEXP attribute_hidden dc_putconst(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_putconst(SEXP constBuf, SEXP argconstCount, SEXP x)
 {
-    SEXP constBuf, x;
     int i, constCount;
 
-    constBuf = arg1;
     if (TYPEOF(constBuf) != VECSXP)
 	error(_("constant buffer must be a generic vector"));
 
-    constCount = asInteger(arg2);
+    constCount = asInteger(argconstCount);
     if (constCount < 0 || constCount >= LENGTH(constBuf))
 	error("bad constCount value");
-
-    x = arg3;
 
     /* check for a match and return index if one is found */
     for (i = 0; i < constCount; i++) {
@@ -6439,13 +6432,12 @@ SEXP attribute_hidden dc_putconst(SEXP arg1, SEXP arg2, SEXP arg3)
     return ScalarInteger(constCount);
 }
 
-SEXP attribute_hidden dc_getconst(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_getconst(SEXP constBuf, SEXP argn)
 {
-    SEXP constBuf, ans;
+    SEXP ans;
     int i, n;
 
-    constBuf = arg1;
-    n = asInteger(arg2);
+    n = asInteger(argn);
 
     if (TYPEOF(constBuf) != VECSXP)
 	error(_("constant buffer must be a generic vector"));
@@ -6553,19 +6545,19 @@ SEXP attribute_hidden dc_bcprofstop() {
 
 /* end of byte code section */
 
-SEXP attribute_hidden dc_setnumthreads(SEXP arg1)
+SEXP attribute_hidden dc_setnumthreads(SEXP argnew)
 {
     int old = R_num_math_threads, new;
-    new = asInteger(arg1);
+    new = asInteger(argnew);
     if (new >= 0 && new <= R_max_num_math_threads)
 	R_num_math_threads = new;
     return ScalarInteger(old);
 }
 
-SEXP attribute_hidden dc_setmaxnumthreads(SEXP arg1)
+SEXP attribute_hidden dc_setmaxnumthreads(SEXP argnew)
 {
     int old = R_max_num_math_threads, new;
-    new = asInteger(arg1);
+    new = asInteger(argnew);
     if (new >= 0) {
 	R_max_num_math_threads = new;
 	if (R_num_math_threads > R_max_num_math_threads)
@@ -6574,12 +6566,12 @@ SEXP attribute_hidden dc_setmaxnumthreads(SEXP arg1)
     return ScalarInteger(old);
 }
 
-SEXP attribute_hidden dc_returnValue(SEXP arg1)
+SEXP attribute_hidden dc_returnValue(SEXP dflt)
 {
     SEXP val;
     if (R_ExitContext && (val = R_ExitContext->returnValue)){
 	MARK_NOT_MUTABLE(val);
 	return val;
     }
-    return arg1; /* default */
+    return dflt; /* default */
 }

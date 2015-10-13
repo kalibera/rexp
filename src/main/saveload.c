@@ -2053,19 +2053,18 @@ static SEXP R_LoadSavedData(FILE *fp, SEXP aenv)
 }
 
 /* This is only used for version 1 or earlier formats */
-SEXP attribute_hidden dc_load(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_load(SEXP fname, SEXP aenv)
 {
-    SEXP fname, aenv, val;
+    SEXP val;
     FILE *fp;
     RCNTXT cntxt;
 
-    if (!isValidString(fname = arg1))
+    if (!isValidString(fname))
 	error(_("first argument must be a file name"));
 
     /* GRW 1/26/99 GRW : added environment parameter so that */
     /* the loaded objects can be placed where desired  */
 
-    aenv = arg2;
     if (TYPEOF(aenv) == NILSXP)
 	error(_("use of NULL environment is defunct"));
     else if (TYPEOF(aenv) != ENVSXP)
@@ -2324,19 +2323,19 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* Read and checks the magic number, open the connection if needed */
 
-SEXP attribute_hidden dc_loadFromConn2(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_loadFromConn2(SEXP argcon, SEXP aenv, SEXP argverbose)
 {
     /* loadFromConn2(conn, environment, verbose) */
 
     struct R_inpstream_st in;
     Rconnection con;
-    SEXP aenv, res = R_NilValue;
+    SEXP res = R_NilValue;
     unsigned char buf[6];
     size_t count;
     Rboolean wasopen;
     RCNTXT cntxt;
 
-    con = getConnection(asInteger(arg1));
+    con = getConnection(asInteger(argcon));
 
     wasopen = con->isopen;
     if(!wasopen) {
@@ -2355,7 +2354,6 @@ SEXP attribute_hidden dc_loadFromConn2(SEXP arg1, SEXP arg2, SEXP arg3)
     if(!con->canread) error(_("connection not open for reading"));
     if(con->text) error(_("can only load() from a binary connection"));
 
-    aenv = arg2;
     if (TYPEOF(aenv) == NILSXP)
 	error(_("use of NULL environment is defunct"));
     else if (TYPEOF(aenv) != ENVSXP)
@@ -2370,7 +2368,7 @@ SEXP attribute_hidden dc_loadFromConn2(SEXP arg1, SEXP arg2, SEXP arg3)
 	strncmp((char*)buf, "RDX2\n", 5) == 0) {
 	R_InitConnInPStream(&in, con, R_pstream_any_format, NULL, NULL);
 	/* PROTECT is paranoia: some close() method might allocate */
-	R_InitReadItemDepth = R_ReadItemDepth = -asInteger(arg3);
+	R_InitReadItemDepth = R_ReadItemDepth = -asInteger(argverbose);
 	PROTECT(res = RestoreToEnv(R_Unserialize(&in), aenv));
 	R_ReadItemDepth = 0;
 	if(!wasopen) {endcontext(&cntxt); con->close(con);}
