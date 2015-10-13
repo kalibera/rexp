@@ -377,13 +377,11 @@ static int R_AppendFile(SEXP file1, SEXP file2)
     return status;
 }
 
-SEXP attribute_hidden dc_fileappend(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_fileappend(SEXP f1, SEXP f2)
 {
-    SEXP f1, f2, ans;
+    SEXP ans;
     int n, n1, n2;
 
-    f1 = arg1;
-    f2 = arg2;
     if (!isString(f1))
 	error(_("invalid '%s' argument"), "file1");
     if (!isString(f2))
@@ -435,16 +433,15 @@ done:
     return ans;
 }
 
-SEXP attribute_hidden dc_filecreate(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_filecreate(SEXP fn, SEXP argshow)
 {
-    SEXP fn, ans;
+    SEXP ans;
     FILE *fp;
     int i, n, show;
 
-    fn = arg1;
     if (!isString(fn))
 	error(_("invalid filename argument"));
-    show = asLogical(arg2);
+    show = asLogical(argshow);
     if (show == NA_LOGICAL) show = 0;
     n = LENGTH(fn);
     PROTECT(ans = allocVector(LGLSXP, n));
@@ -463,11 +460,10 @@ SEXP attribute_hidden dc_filecreate(SEXP arg1, SEXP arg2)
     return ans;
 }
 
-SEXP attribute_hidden dc_fileremove(SEXP arg1)
+SEXP attribute_hidden dc_fileremove(SEXP f)
 {
-    SEXP f, ans;
+    SEXP ans;
     int i, n;
-    f = arg1;
     if (!isString(f))
 	error(_("invalid first filename"));
     n = LENGTH(f);
@@ -527,16 +523,13 @@ const char *formatError(DWORD res);  /* extra.c */
    have, and which many people report granting in the Policy Editor
    fails to work.
 */
-SEXP attribute_hidden dc_filesymlink(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_filesymlink(SEXP f1, SEXP f2)
 {
-    SEXP f1, f2;
     int n, n1, n2;
 #ifdef HAVE_SYMLINK
     SEXP ans;
     int i;
 #endif
-    f1 = arg1;
-    f2 = arg2;
     if (!isString(f1))
 	error(_("invalid first filename"));
     if (!isString(f2))
@@ -609,16 +602,13 @@ SEXP attribute_hidden dc_filesymlink(SEXP arg1, SEXP arg2)
 }
 
 
-SEXP attribute_hidden dc_filelink(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_filelink(SEXP f1, SEXP f2)
 {
-    SEXP f1, f2;
     int n, n1, n2;
 #ifdef HAVE_LINK
     SEXP ans;
     int i;
 #endif
-    f1 = arg1;
-    f2 = arg2;
     if (!isString(f1))
 	error(_("invalid first filename"));
     if (!isString(f2))
@@ -682,9 +672,9 @@ int Rwin_rename(char *from, char *to);  /* in src/gnuwin32/extra.c */
 int Rwin_wrename(const wchar_t *from, const wchar_t *to);
 #endif
 
-SEXP attribute_hidden dc_filerename(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_filerename(SEXP f1, SEXP f2)
 {
-    SEXP f1, f2, ans;
+    SEXP ans;
     int i, n1, n2;
 #ifdef Win32
     wchar_t from[PATH_MAX], to[PATH_MAX];
@@ -695,8 +685,6 @@ SEXP attribute_hidden dc_filerename(SEXP arg1, SEXP arg2)
     int res;
 #endif
 
-    f1 = arg1;
-    f2 = arg2;
     if (!isString(f1))
 	error(_("invalid '%s' argument"), "from");
     if (!isString(f2))
@@ -769,9 +757,9 @@ SEXP attribute_hidden dc_filerename(SEXP arg1, SEXP arg2)
 # define STAT_TIMESPEC_NS(st, st_xtim) ((st).st_xtim.st__tim.tv_nsec)
 #endif
 
-SEXP attribute_hidden dc_fileinfo(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_fileinfo(SEXP fn, SEXP argextras)
 {
-    SEXP fn, ans, ansnames, fsize, mtime, ctime, atime, isdir,
+    SEXP ans, ansnames, fsize, mtime, ctime, atime, isdir,
 	mode, xxclass;
 #ifdef UNIX_EXTRAS
     SEXP uid = R_NilValue, gid = R_NilValue,
@@ -784,10 +772,9 @@ SEXP attribute_hidden dc_fileinfo(SEXP arg1, SEXP arg2)
     struct stat sb;
 #endif
 
-    fn = arg1;
     if (!isString(fn))
 	error(_("invalid filename argument"));
-    int extras = asInteger(arg2);
+    int extras = asInteger(argextras);
     if(extras == NA_INTEGER)
 	error(_("invalid '%s' argument"), "extra_cols");
     int n = LENGTH(fn), ncols = 6;
@@ -955,9 +942,9 @@ SEXP attribute_hidden dc_fileinfo(SEXP arg1, SEXP arg2)
     return ans;
 }
 
-SEXP attribute_hidden dc_direxists(SEXP arg1)
+SEXP attribute_hidden dc_direxists(SEXP fn)
 {
-    SEXP fn, ans;
+    SEXP ans;
 
 #ifdef Win32
     struct _stati64 sb;
@@ -965,7 +952,6 @@ SEXP attribute_hidden dc_direxists(SEXP arg1)
     struct stat sb;
 #endif
 
-    fn = arg1;
     if (!isString(fn))
 	error(_("invalid filename argument"));
     int n = LENGTH(fn);
@@ -1284,11 +1270,11 @@ static Rboolean attribute_hidden R_WFileExists(const wchar_t *path)
 }
 #endif
 
-SEXP attribute_hidden dc_fileexists(SEXP arg1)
+SEXP attribute_hidden dc_fileexists(SEXP file)
 {
-    SEXP file, ans;
+    SEXP ans;
     int i, nfile;
-    if (!isString(file = arg1))
+    if (!isString(file))
 	error(_("invalid '%s' argument"), "file");
     nfile = LENGTH(file);
     ans = PROTECT(allocVector(LGLSXP, nfile));
@@ -1315,11 +1301,11 @@ SEXP attribute_hidden dc_fileexists(SEXP arg1)
 #define CHOOSEBUFSIZE 1024
 
 #ifndef Win32
-SEXP attribute_hidden dc_filechoose(SEXP arg1)
+SEXP attribute_hidden dc_filechoose(SEXP argnew)
 {
     int _new, len;
     char buf[CHOOSEBUFSIZE];
-    _new = asLogical(arg1);
+    _new = asLogical(argnew);
     if ((len = R_ChooseFile(_new, buf, CHOOSEBUFSIZE)) == 0)
 	error(_("file choice cancelled"));
     if (len >= CHOOSEBUFSIZE - 1)
@@ -1338,16 +1324,15 @@ extern int winAccessW(const wchar_t *path, int mode);
 #endif
 
 /* we require 'access' as from 2.12.0 */
-SEXP attribute_hidden dc_fileaccess(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_fileaccess(SEXP fn, SEXP argmode)
 {
-    SEXP fn, ans;
+    SEXP ans;
     int i, n, mode, modemask;
 
-    fn = arg1;
     if (!isString(fn))
 	error(_("invalid '%s' argument"), "names");
     n = LENGTH(fn);
-    mode = asInteger(arg2);
+    mode = asInteger(argmode);
     if (mode < 0 || mode > 7) error(_("invalid '%s' argument"), "mode");
     modemask = 0;
     if (mode & 1) modemask |= X_OK;
@@ -1584,9 +1569,8 @@ SEXP attribute_hidden do_unlink(SEXP call, SEXP op, SEXP args, SEXP env)
 #  include <glob.h>
 # endif
 
-SEXP attribute_hidden dc_unlink(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_unlink(SEXP fn, SEXP argrecursive, SEXP argforce)
 {
-    SEXP  fn;
     int i, nfiles, failures = 0, recursive, force;
     const char *names;
 #if defined(HAVE_GLOB)
@@ -1594,15 +1578,14 @@ SEXP attribute_hidden dc_unlink(SEXP arg1, SEXP arg2, SEXP arg3)
     glob_t globbuf;
 #endif
 
-    fn = arg1;
     nfiles = length(fn);
     if (nfiles > 0) {
 	if (!isString(fn))
 	    error(_("invalid '%s' argument"), "x");
-	recursive = asLogical(arg2);
+	recursive = asLogical(argrecursive);
 	if (recursive == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "recursive");
-	force = asLogical(arg3);
+	force = asLogical(argforce);
 	if (force == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "force");
 	for (i = 0; i < nfiles; i++) {
@@ -1632,12 +1615,13 @@ SEXP attribute_hidden dc_unlink(SEXP arg1, SEXP arg2, SEXP arg3)
 }
 #endif
 
-SEXP attribute_hidden dc_getlocale(SEXP arg1)
+
+SEXP attribute_hidden dc_getlocale(SEXP argcat)
 {
     int cat;
     char *p = NULL;
 
-    cat = asInteger(arg1);
+    cat = asInteger(argcat);
     if (cat == NA_INTEGER || cat < 0)
 	error(_("invalid '%s' argument"), "category");
     switch(cat) {
@@ -1663,13 +1647,13 @@ SEXP attribute_hidden dc_getlocale(SEXP arg1)
 }
 
 /* Locale specs are always ASCII */
-SEXP attribute_hidden dc_setlocale(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_setlocale(SEXP argcat, SEXP locale)
 {
-    SEXP locale = arg2, ans;
+    SEXP ans;
     int cat;
     const char *p;
 
-    cat = asInteger(arg1);
+    cat = asInteger(argcat);
     if (cat == NA_INTEGER || cat < 0)
 	error(_("invalid '%s' argument"), "category");
     if (!isString(locale) || LENGTH(locale) != 1)
@@ -1820,12 +1804,11 @@ SEXP attribute_hidden dc_localeconv()
 }
 
 /* .Internal function for path.expand */
-SEXP attribute_hidden dc_pathexpand(SEXP arg1)
+SEXP attribute_hidden dc_pathexpand(SEXP fn)
 {
-    SEXP fn, ans;
+    SEXP ans;
     int i, n;
 
-    fn = arg1;
     if (!isString(fn))
 	error(_("invalid '%s' argument"), "path");
     n = LENGTH(fn);
@@ -2041,53 +2024,7 @@ SEXP attribute_hidden dc_capabilities()
     return ans;
 }
 
-<<<<<<< 784fa9ce095788586e930781f83459da6f36f6c9
-SEXP attribute_hidden do_sysgetpid(SEXP call, SEXP op, SEXP args, SEXP rho)
-=======
-// As from 3.3.0 this means on Unix.
-#if defined(HAVE_ARPA_INET_H)
-#include <netdb.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-SEXP attribute_hidden do_nsl(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    SEXP ans = R_NilValue;
-    const char *name; char ip[] = "xxx.xxx.xxx.xxx";
-    struct hostent *hp;
-
-    checkArity(op, args);
-    if (!isString(CAR(args)) || LENGTH(CAR(args)) != 1)
-	error(_("'hostname' must be a character vector of length 1"));
-    name = translateChar(STRING_ELT(CAR(args), 0));
-
-    hp = gethostbyname(name);
-
-    if (hp == NULL) {		/* cannot resolve the address */
-	warning(_("nsl() was unable to resolve host '%s'"), name);
-    } else {
-	if (hp->h_addrtype == AF_INET) {
-	    struct in_addr in;
-	    memcpy(&in.s_addr, *(hp->h_addr_list), sizeof (in.s_addr));
-	    strcpy(ip, inet_ntoa(in));
-	} else {
-	    warning(_("unknown format returned by C function 'gethostbyname'"));
-	}
-	ans = mkString(ip);
-    }
-    return ans;
-}
-#else
-SEXP attribute_hidden do_nsl(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    warning(_("nsl() is not supported on this platform"));
-    return R_NilValue;
-}
-#endif
-
 SEXP attribute_hidden dc_sysgetpid()
->>>>>>> Rewritten simple do-functions and some of the interpretter for direct args.
 {
     return ScalarInteger(getpid());
 }
@@ -2101,21 +2038,19 @@ SEXP attribute_hidden dc_sysgetpid()
 */
 #ifndef Win32
 /* mkdir is defined in <sys/stat.h> */
-SEXP attribute_hidden dc_dircreate(SEXP arg1, SEXP arg2, SEXP arg3, SEXP arg4)
+SEXP attribute_hidden dc_dircreate(SEXP path, SEXP argshow, SEXP argrecursive, SEXP argmode)
 {
-    SEXP path;
     int res, show, recursive, mode, serrno = 0;
     char *p, dir[PATH_MAX];
 
-    path = arg1;
     if (!isString(path) || LENGTH(path) != 1)
 	error(_("invalid '%s' argument"), "path");
     if (STRING_ELT(path, 0) == NA_STRING) return ScalarLogical(FALSE);
-    show = asLogical(arg2);
+    show = asLogical(argshow);
     if (show == NA_LOGICAL) show = 0;
-    recursive = asLogical(arg3);
+    recursive = asLogical(argrecursive);
     if (recursive == NA_LOGICAL) recursive = 0;
-    mode = asInteger(arg4);
+    mode = asInteger(argmode);
     if (mode == NA_LOGICAL) mode = 0777;
     strcpy(dir, R_ExpandFileName(translateChar(STRING_ELT(path, 0))));
     /* remove trailing slashes */
@@ -2657,22 +2592,21 @@ SEXP attribute_hidden dc_l10n_info()
 
 /* do_normalizepath moved to util.c in R 2.13.0 */
 
-SEXP attribute_hidden dc_syschmod(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_syschmod(SEXP paths, SEXP argsmode, SEXP arguseMask)
 {
 #ifdef HAVE_CHMOD
-    SEXP paths, smode, ans;
+    SEXP smode, ans;
     int i, m, n, *modes, res;
     mode_t um = 0;
 
-    paths = arg1;
     if (!isString(paths))
 	error(_("invalid '%s' argument"), "paths");
     n = LENGTH(paths);
-    PROTECT(smode = coerceVector(arg2, INTSXP));
+    PROTECT(smode = coerceVector(argsmode, INTSXP));
     modes = INTEGER(smode);
     m = LENGTH(smode);
     if(!m && n) error(_("'mode' must be of length at least one"));
-    int useUmask = asLogical(arg3);
+    int useUmask = asLogical(arguseMask);
     if (useUmask == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "use_umask");
 #ifdef HAVE_UMASK
@@ -2704,11 +2638,9 @@ SEXP attribute_hidden dc_syschmod(SEXP arg1, SEXP arg2, SEXP arg3)
     UNPROTECT(2);
     return ans;
 #else
-    SEXP paths, ans;
+    SEXP ans;
     int i, n;
 
-    checkArity(op, args);
-    paths = CAR(args);
     if (!isString(paths))
 	error(_("invalid '%s' argument"), "paths");
     n = LENGTH(paths);
@@ -2720,13 +2652,13 @@ SEXP attribute_hidden dc_syschmod(SEXP arg1, SEXP arg2, SEXP arg3)
 #endif
 }
 
-SEXP attribute_hidden dc_sysumask(SEXP arg1)
+SEXP attribute_hidden dc_sysumask(SEXP argmode)
 {
     SEXP ans;
     int mode;
     mode_t res = 0;
 
-    mode = asInteger(arg1);
+    mode = asInteger(argmode);
 #ifdef HAVE_UMASK
     if (mode == NA_INTEGER) {
 	res = umask(0);
@@ -2746,9 +2678,9 @@ SEXP attribute_hidden dc_sysumask(SEXP arg1)
     return ans;
 }
 
-SEXP attribute_hidden dc_readlink(SEXP arg1)
+SEXP attribute_hidden dc_readlink(SEXP paths)
 {
-    SEXP paths, ans;
+    SEXP ans;
     int n;
 #ifdef HAVE_READLINK
     char buf[PATH_MAX+1];
@@ -2756,7 +2688,6 @@ SEXP attribute_hidden dc_readlink(SEXP arg1)
     int i;
 #endif
 
-    paths = arg1;
     if(!isString(paths))
 	error(_("invalid '%s' argument"), "paths");
     n = LENGTH(paths);
@@ -2828,10 +2759,10 @@ static int winSetFileTime(const char *fn, time_t ftime)
 }
 #endif
 
-SEXP attribute_hidden dc_setFileTime(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_setFileTime(SEXP argfn, SEXP argftime)
 {
-    const char *fn = translateChar(STRING_ELT(arg1, 0));
-    int ftime = asInteger(arg2), res;
+    const char *fn = translateChar(STRING_ELT(argfn, 0));
+    int ftime = asInteger(argftime), res;
 
 #ifdef Win32
     res  = winSetFileTime(fn, (time_t)ftime);

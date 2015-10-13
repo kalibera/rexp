@@ -83,8 +83,12 @@ void NORET R_SignalCStackOverflow(intptr_t usage)
 	R_CStackLimit = (uintptr_t) (R_CStackLimit / 0.95);
     }
 
+<<<<<<< b425c6e8425ec6d53b10bdd87f19c1abbc24f882
     errorcall(R_NilValue, "C stack usage  %ld is too close to the limit",
 	      usage);
+=======
+    errorcall(R_NilValue, "C stack usage  %ld is too close to the limit", usage);
+>>>>>>> Naming direct arguments in builtin methods (next part)
     /* Do not translate this, to save stack space */
 }
 
@@ -1349,11 +1353,11 @@ SEXP R_GetTraceback(int skip)
     return s;
 }
 
-SEXP attribute_hidden dc_traceback(SEXP arg1)
+SEXP attribute_hidden dc_traceback(SEXP argskip)
 {
     int skip;
 
-    skip = asInteger(arg1);
+    skip = asInteger(argskip);
 
     if (skip == NA_INTEGER || skip < 0 )
 	error(_("invalid '%s' value"), "skip");
@@ -1488,9 +1492,9 @@ SEXP attribute_hidden do_addCondHands(SEXP call, SEXP op, SEXP args, SEXP rho)
     return oldstack;
 }
 
-SEXP attribute_hidden dc_resetCondHands(SEXP arg1)
+SEXP attribute_hidden dc_resetCondHands(SEXP newstack)
 {
-    R_HandlerStack = arg1;
+    R_HandlerStack = newstack;
     return R_NilValue;
 }
 
@@ -1599,13 +1603,9 @@ static SEXP findConditionHandler(SEXP cond)
     return R_NilValue;
 }
 
-SEXP attribute_hidden dc_signalCondition(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_signalCondition(SEXP cond, SEXP msg, SEXP ecall)
 {
-    SEXP list, cond, msg, ecall, oldstack;
-
-    cond = arg1;
-    msg = arg2;
-    ecall = arg3;
+    SEXP list, oldstack;
 
     PROTECT(oldstack = R_HandlerStack);
     while ((list = findConditionHandler(cond)) != R_NilValue) {
@@ -1710,29 +1710,25 @@ R_InsertRestartHandlers(RCNTXT *cptr, Rboolean browser)
     UNPROTECT(2);
 }
 
-SEXP attribute_hidden dc_dfltWarn(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_dfltWarn(SEXP argmsg, SEXP ecall)
 {
     const char *msg;
-    SEXP ecall;
 
-    if (TYPEOF(arg1) != STRSXP || LENGTH(arg1) != 1)
+    if (TYPEOF(argmsg) != STRSXP || LENGTH(argmsg) != 1)
 	error(_("bad error message"));
-    msg = translateChar(STRING_ELT(arg1, 0));
-    ecall = arg2;
+    msg = translateChar(STRING_ELT(argmsg, 0));
 
     warningcall_dflt(ecall, "%s", msg);
     return R_NilValue;
 }
 
-SEXP attribute_hidden dc_dfltStop(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_dfltStop(SEXP argmsg, SEXP ecall)
 {
     const char *msg;
-    SEXP ecall;
 
-    if (TYPEOF(arg1) != STRSXP || LENGTH(arg1) != 1)
+    if (TYPEOF(argmsg) != STRSXP || LENGTH(argmsg) != 1)
 	error(_("bad error message"));
-    msg = translateChar(STRING_ELT(arg1, 0));
-    ecall = arg2;
+    msg = translateChar(STRING_ELT(argmsg, 0));
 
     errorcall_dflt(ecall, "%s", msg);
 }
@@ -1741,11 +1737,11 @@ SEXP attribute_hidden dc_dfltStop(SEXP arg1, SEXP arg2)
  * Restart Handling
  */
 
-SEXP attribute_hidden dc_getRestart(SEXP arg1)
+SEXP attribute_hidden dc_getRestart(SEXP argi)
 {
     int i;
     SEXP list;
-    i = asInteger(arg1);
+    i = asInteger(argi);
     for (list = R_RestartStack;
 	 list != R_NilValue && i > 1;
 	 list = CDR(list), i--);
@@ -1772,10 +1768,10 @@ SEXP attribute_hidden dc_getRestart(SEXP arg1)
 	error(_("bad restart")); \
 } while (0)
 
-SEXP attribute_hidden dc_addRestart(SEXP arg1)
+SEXP attribute_hidden dc_addRestart(SEXP r)
 {
-    CHECK_RESTART(arg1);
-    R_RestartStack = CONS(arg1, R_RestartStack);
+    CHECK_RESTART(r);
+    R_RestartStack = CONS(r, R_RestartStack);
     return R_NilValue;
 }
 
@@ -1804,10 +1800,10 @@ static void NORET invokeRestart(SEXP r, SEXP arglist)
     }
 }
 
-SEXP attribute_hidden dc_invokeRestart(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_invokeRestart(SEXP r, SEXP arglist)
 {
-    CHECK_RESTART(arg1);
-    invokeRestart(arg1, arg2);
+    CHECK_RESTART(r);
+    invokeRestart(r, arglist);
 }
 
 SEXP attribute_hidden do_addTryHandlers(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -1821,11 +1817,8 @@ SEXP attribute_hidden do_addTryHandlers(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden dc_seterrmessage(SEXP arg1)
+SEXP attribute_hidden dc_seterrmessage(SEXP msg)
 {
-    SEXP msg;
-
-    msg = arg1;
     if(!isString(msg) || LENGTH(msg) != 1)
 	error(_("error message must be a character string"));
     R_SetErrmessage(CHAR(STRING_ELT(msg, 0)));

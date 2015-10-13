@@ -889,11 +889,9 @@ static SEXP inherits3(SEXP x, SEXP what, SEXP which)
     return rval;
 }
 
-SEXP attribute_hidden dc_inherits(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_inherits(SEXP x, SEXP what, SEXP which)
 {
-    return inherits3(/* x = */ arg1,
-		     /* what = */ arg2,
-		     /* which = */ arg3);
+    return inherits3(x, what, which);
 }
 
 
@@ -1607,11 +1605,10 @@ Rboolean attribute_hidden R_seemsOldStyleS4Object(SEXP object)
 	    getAttrib(klass, R_PackageSymbol) != R_NilValue) ? TRUE: FALSE;
 }
 
-SEXP attribute_hidden dc_setS4Object(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_setS4Object(SEXP object, SEXP argflag, SEXP argcomplete)
 {
-    SEXP object = arg1;
-    int flag = asLogical(arg2), complete = asInteger(arg3);
-    if(length(arg2) != 1 || flag == NA_INTEGER)
+    int flag = asLogical(argflag), complete = asInteger(argcomplete);
+    if(length(argflag) != 1 || flag == NA_INTEGER)
 	error("invalid '%s' argument", "flag");
     if(complete == NA_INTEGER)
 	error("invalid '%s' argument", "complete");

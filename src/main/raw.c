@@ -27,9 +27,9 @@
 #define isRaw(x) (TYPEOF(x) == RAWSXP)
 
 /* charToRaw works at byte level, ignores encoding */
-SEXP attribute_hidden dc_charToRaw(SEXP arg1)
+SEXP attribute_hidden dc_charToRaw(SEXP x)
 {
-    SEXP ans, x = arg1;
+    SEXP ans;
     int nc;
 
     if (!isString(x) || LENGTH(x) == 0)
@@ -43,13 +43,13 @@ SEXP attribute_hidden dc_charToRaw(SEXP arg1)
 }
 
 /* <UTF8>  rawToChar should work at byte level */
-SEXP attribute_hidden dc_rawToChar(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_rawToChar(SEXP x, SEXP argmultiple)
 {
-    SEXP ans, x = arg1;
+    SEXP ans;
 
     if (!isRaw(x))
 	error(_("argument 'x' must be a raw vector"));
-    int multiple = asLogical(arg2);
+    int multiple = asLogical(argmultiple);
     if (multiple == NA_LOGICAL)
 	error(_("argument 'multiple' must be TRUE or FALSE"));
     if (multiple) {
@@ -77,10 +77,10 @@ SEXP attribute_hidden dc_rawToChar(SEXP arg1, SEXP arg2)
 }
 
 
-SEXP attribute_hidden dc_rawShift(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_rawShift(SEXP x, SEXP argshift)
 {
-    SEXP ans, x = arg1;
-    int shift = asInteger(arg2);
+    SEXP ans;
+    int shift = asInteger(argshift);
 
     if (!isRaw(x))
 	error(_("argument 'x' must be a raw vector"));
@@ -97,9 +97,9 @@ SEXP attribute_hidden dc_rawShift(SEXP arg1, SEXP arg2)
     return ans;
 }
 
-SEXP attribute_hidden dc_rawToBits(SEXP arg1)
+SEXP attribute_hidden dc_rawToBits(SEXP x)
 {
-    SEXP ans, x = arg1;
+    SEXP ans;
     R_xlen_t i, j = 0;
     unsigned int tmp;
 
@@ -115,13 +115,13 @@ SEXP attribute_hidden dc_rawToBits(SEXP arg1)
     return ans;
 }
 
-SEXP attribute_hidden dc_intToBits(SEXP arg1)
+SEXP attribute_hidden dc_intToBits(SEXP x)
 {
-    SEXP ans, x;
+    SEXP ans;
     R_xlen_t i, j = 0;
     unsigned int tmp;
 
-    PROTECT(x = coerceVector(arg1, INTSXP));
+    PROTECT(x = coerceVector(x, INTSXP));
     if (!isInteger(x))
 	error(_("argument 'x' must be an integer vector"));
     PROTECT(ans = allocVector(RAWSXP, 32*XLENGTH(x)));
@@ -134,9 +134,9 @@ SEXP attribute_hidden dc_intToBits(SEXP arg1)
     return ans;
 }
 
-SEXP attribute_hidden dc_packBits(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_packBits(SEXP x, SEXP stype)
 {
-    SEXP ans, x = arg1, stype = arg2;
+    SEXP ans;
     Rboolean useRaw;
     R_xlen_t i, len = XLENGTH(x), slen;
     int fac;
@@ -258,9 +258,9 @@ static int mbrtoint(int *w, const char *s)
     /* return -2; not reached */
 }
 
-SEXP attribute_hidden dc_utf8ToInt(SEXP arg1)
+SEXP attribute_hidden dc_utf8ToInt(SEXP x)
 {
-    SEXP ans, x = arg1;
+    SEXP ans;
     int tmp, used = 0; /* -Wall */
     R_xlen_t i, j, nc;
 
@@ -311,17 +311,17 @@ static size_t inttomb(char *s, const int wc)
 
 #include <R_ext/RS.h>  /* for Calloc/Free */
 
-SEXP attribute_hidden dc_intToUtf8(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_intToUtf8(SEXP x, SEXP argmultiple)
 {
-    SEXP ans, x;
+    SEXP ans;
     int multiple;
     size_t used, len;
     char buf[10], *tmp;
 
-    PROTECT(x = coerceVector(arg1, INTSXP));
+    PROTECT(x = coerceVector(x, INTSXP));
     if (!isInteger(x))
 	error(_("argument 'x' must be an integer vector"));
-    multiple = asLogical(arg2);
+    multiple = asLogical(argmultiple);
     if (multiple == NA_LOGICAL)
 	error(_("argument 'multiple' must be TRUE or FALSE"));
     if (multiple) {

@@ -313,22 +313,22 @@ void revsort(double *a, int *ib, int n)
 }
 
 
-SEXP attribute_hidden dc_sort(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_sort(SEXP x, SEXP argdecreasing)
 {
     SEXP ans;
     Rboolean decreasing;
 
-    decreasing = asLogical(arg2);
+    decreasing = asLogical(argdecreasing);
     if(decreasing == NA_LOGICAL)
 	error(_("'decreasing' must be TRUE or FALSE"));
-    if(arg1 == R_NilValue) return R_NilValue;
-    if(!isVectorAtomic(arg1))
+    if(x == R_NilValue) return R_NilValue;
+    if(!isVectorAtomic(x))
 	error(_("only atomic vectors can be sorted"));
-    if(TYPEOF(arg1) == RAWSXP)
+    if(TYPEOF(x) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
     /* we need consistent behaviour here, including dropping attibutes,
        so as from 2.3.0 we always duplicate. */
-    PROTECT(ans = duplicate(arg1));
+    PROTECT(ans = duplicate(x));
     SET_ATTRIB(ans, R_NilValue);  /* this is never called with names */
     SET_OBJECT(ans, 0);		  /* we may have just stripped off the class */
     sortVector(ans, decreasing);

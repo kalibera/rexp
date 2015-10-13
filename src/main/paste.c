@@ -602,23 +602,21 @@ SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
  * for complex : 2 x 3 integers for (Re, Im)
  */
 
-SEXP attribute_hidden dc_formatinfo(SEXP arg1, SEXP arg2, SEXP arg3)
+SEXP attribute_hidden dc_formatinfo(SEXP x, SEXP argdigits, SEXP argnsmall)
 {
-    SEXP x;
     int digits, nsmall, no = 1, w, d, e, wi, di, ei;
 
-    x = arg1;
     R_xlen_t n = XLENGTH(x);
     PrintDefaults();
 
-    if (!isNull(arg2)) {
-	digits = asInteger(arg2);
+    if (!isNull(argdigits)) {
+	digits = asInteger(argdigits);
 	if (digits == NA_INTEGER || digits < R_MIN_DIGITS_OPT
 	    || digits > R_MAX_DIGITS_OPT)
 	    error(_("invalid '%s' argument"), "digits");
 	R_print.digits = digits;
     }
-    nsmall = asInteger(arg3);
+    nsmall = asInteger(argnsmall);
     if (nsmall == NA_INTEGER || nsmall < 0 || nsmall > 20)
 	error(_("invalid '%s' argument"), "nsmall");
 

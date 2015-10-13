@@ -26,20 +26,18 @@
 #include <Internal.h>
 #include <R_ext/Itermacros.h>
 
-SEXP attribute_hidden dc_split(SEXP arg1, SEXP arg2)
+SEXP attribute_hidden dc_split(SEXP x, SEXP f)
 {
-    SEXP x, f, counts, vec, nm, nmj;
+    SEXP counts, vec, nm, nmj;
     Rboolean have_names;
 
-    x = arg1;
-    f = arg2;
     if (!isVector(x))
 	error(_("first argument must be a vector"));
     if (!isFactor(f))
 	error(_("second argument must be a factor"));
     int nlevs = nlevels(f);
-    R_xlen_t nfac = XLENGTH(arg2);
-    R_xlen_t nobs = XLENGTH(arg1);
+    R_xlen_t nfac = XLENGTH(f);
+    R_xlen_t nobs = XLENGTH(x);
     if (nfac <= 0 && nobs > 0)
 	error(_("group length is 0 but data length > 0"));
     if (nfac > 0 && (nobs % nfac) != 0)
