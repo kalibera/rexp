@@ -784,16 +784,15 @@ SEXP attribute_hidden do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* remove portion of path before file separator if one exists */
 
 #ifdef Win32
-SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_basename(SEXP s)
 {
-    SEXP ans, s = R_NilValue;	/* -Wall */
+    SEXP ans;
     char sp[4*PATH_MAX];
     wchar_t  buf[PATH_MAX], *p;
     const wchar_t *pp;
     int i, n;
 
-    checkArity(op, args);
-    if (TYPEOF(s = CAR(args)) != STRSXP)
+    if (TYPEOF(s) != STRSXP)
 	error(_("a character vector argument expected"));
     PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
@@ -858,16 +857,15 @@ SEXP attribute_hidden dc_basename(SEXP s)
    */
 
 #ifdef Win32
-SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_dirname(SEXP s)
 {
-    SEXP ans, s = R_NilValue;	/* -Wall */
+    SEXP ans;
     wchar_t buf[PATH_MAX], *p;
     const wchar_t *pp;
     char sp[4*PATH_MAX];
     int i, n;
 
-    checkArity(op, args);
-    if (TYPEOF(s = CAR(args)) != STRSXP)
+    if (TYPEOF(s) != STRSXP)
 	error(_("a character vector argument expected"));
     PROTECT(ans = allocVector(STRSXP, n = LENGTH(s)));
     for(i = 0; i < n; i++) {
@@ -2077,9 +2075,8 @@ SEXP attribute_hidden do_ICUset(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_ICUget(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_ICUget(SEXP argtype)
 {
-    checkArity(op, args);
     return mkString("ICU not in use");
 }
 
