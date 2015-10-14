@@ -380,10 +380,10 @@ SEXP attribute_hidden dc_getenv(SEXP argx, SEXP argunset)
 	PROTECT(ans = allocVector(STRSXP, i));
 	for (j = 0; j < i; j++) {
 #ifdef Win32
-	    const wchar_t *wnm = wtransChar(STRING_ELT(CAR(args), j));
+	    const wchar_t *wnm = wtransChar(STRING_ELT(argx, j));
 	    wchar_t *w = _wgetenv(wnm);
 	    if (w == NULL)
-		SET_STRING_ELT(ans, j, STRING_ELT(CADR(args), 0));
+		SET_STRING_ELT(ans, j, STRING_ELT(argunset, 0));
 	    else {
 		int n = wcslen(w), N = 3*n+1; /* UCS-2 maps to <=3 UTF-8 */
 		R_CheckStack2(N);

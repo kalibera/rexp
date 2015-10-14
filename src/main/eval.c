@@ -6603,12 +6603,11 @@ SEXP attribute_hidden dc_getconst(SEXP constBuf, SEXP argn)
 }
 
 #ifdef BC_PROFILING
-SEXP do_bcprofcounts(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP dc_bcprofcounts()
 {
     SEXP val;
     int i;
 
-    checkArity(op, args);
     val = allocVector(INTSXP, OPCOUNT);
     for (i = 0; i < OPCOUNT; i++)
 	INTEGER(val)[i] = opcode_counts[i];
@@ -6622,14 +6621,13 @@ static void dobcprof(int sig)
     signal(SIGPROF, dobcprof);
 }
 
-SEXP do_bcprofstart(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP dc_bcprofstart()
 {
     struct itimerval itv;
     int interval;
     double dinterval = 0.02;
     int i;
 
-    checkArity(op, args);
     if (R_Profiling)
 	error(_("profile timer in use"));
     if (bc_profiling)
@@ -6663,11 +6661,10 @@ static void dobcprof_null(int sig)
     signal(SIGPROF, dobcprof_null);
 }
 
-SEXP do_bcprofstop(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP dc_bcprofstop()
 {
     struct itimerval itv;
 
-    checkArity(op, args);
     if (! bc_profiling)
 	error(_("not byte code profiling"));
 

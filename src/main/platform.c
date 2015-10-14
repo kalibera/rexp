@@ -1530,23 +1530,20 @@ static int R_unlink(const char *name, int recursive, int force)
 /* Note that wildcards are allowed in 'names' */
 #ifdef Win32
 # include <dos_wglob.h>
-SEXP attribute_hidden do_unlink(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden do_unlink(SEXP fn, SEXP argrecursive, SEXP argforce)
 {
-    SEXP  fn;
     int i, j, nfiles, res, failures = 0, recursive, force;
     const wchar_t *names;
     wglob_t globbuf;
 
-    checkArity(op, args);
-    fn = CAR(args);
     nfiles = length(fn);
     if (nfiles > 0) {
 	if (!isString(fn))
 	    error(_("invalid '%s' argument"), "x");
-	recursive = asLogical(CADR(args));
+	recursive = asLogical(argrecursive);
 	if (recursive == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "recursive");
-	force = asLogical(CADDR(args));
+	force = asLogical(argforce);
 	if (force == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "force");
 	for (i = 0; i < nfiles; i++) {
@@ -2095,20 +2092,17 @@ end:
 }
 #else /* Win32 */
 #include <io.h> /* mkdir is defined here */
-SEXP attribute_hidden do_dircreate(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_dircreate(SEXP path, SEXP argshow, SEXP argrecursive, SEXP argmode_ignored)
 {
-    SEXP  path;
     wchar_t *p, dir[MAX_PATH];
     int res, show, recursive, serrno = 0;
 
-    checkArity(op, args);
-    path = CAR(args);
     if (!isString(path) || LENGTH(path) != 1)
 	error(_("invalid '%s' argument"), "path");
     if (STRING_ELT(path, 0) == NA_STRING) return ScalarLogical(FALSE);
-    show = asLogical(CADR(args));
+    show = asLogical(argshow);
     if (show == NA_LOGICAL) show = 0;
-    recursive = asLogical(CADDR(args));
+    recursive = asLogical(argrecursive);
     if (recursive == NA_LOGICAL) recursive = 0;
     wcscpy(dir, filenameToWchar(STRING_ELT(path, 0), TRUE));
     for (p = dir; *p; p++) if (*p == L'/') *p = L'\\';
