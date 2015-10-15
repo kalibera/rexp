@@ -405,7 +405,7 @@ SEXP attribute_hidden do_parentenvgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SET_ENCLOS(env, parent);
 
-    return( CAR(args) );
+    return( env );
 }
 
 SEXP attribute_hidden do_envirName(SEXP call, SEXP op, SEXP args, SEXP rho)
