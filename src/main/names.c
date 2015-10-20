@@ -237,7 +237,7 @@ FUNTAB R_FunTab[] =
 {"drop",	dcfun,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_drop},
 {"all.names",	do_allnames,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment",	dcfun,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_comment},
-{"comment<-",	dcfun,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}, (DL_FUNC) dc_comment},
+{"comment<-",	do_commentgets,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"get",		do_get,		1,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"get0",	do_get,		2,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"mget",	do_mget,	1,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
