@@ -1330,7 +1330,7 @@ SEXP attribute_hidden dc_getDllTable()
 {
     SEXP ans, nm;
 
-    again:
+ again:
     PROTECT(ans = allocVector(VECSXP, CountDLL));
     for(int i = 0; i < CountDLL; i++)
 	SET_VECTOR_ELT(ans, i, Rf_MakeDLLInfo(&(LoadedDLL[i])));
