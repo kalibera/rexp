@@ -1035,9 +1035,9 @@ static R_size_t fgrepraw1(SEXP pat, SEXP text, R_size_t offset) {
 
 /* grepRaw(pattern, text, offset, ignore.case, fixed, value, all, invert) */
 // FIXME:  allow long vectors.
-SEXP attribute_hidden do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_grepraw(SEXP pat, SEXP text, SEXP argoffset, SEXP argigcase, SEXP argfixed, SEXP argvalue, SEXP argall, SEXP arginvert)
 {
-    SEXP pat, text, ans, res_head, res_tail;
+    SEXP ans, res_head, res_tail;
     regex_t reg;
     int nmatches = 0, rc, cflags, eflags = 0;
     int *res_val;
@@ -1047,15 +1047,12 @@ SEXP attribute_hidden do_grepraw(SEXP call, SEXP op, SEXP args, SEXP env)
     R_size_t res_ptr, offset, i;
     int igcase_opt, fixed_opt, all, value, invert;
 
-    checkArity(op, args);
-    pat = CAR(args); args = CDR(args);
-    text = CAR(args); args = CDR(args);
-    offset = asInteger(CAR(args)); args = CDR(args);
-    igcase_opt = asLogical(CAR(args)); args = CDR(args);
-    fixed_opt = asLogical(CAR(args)); args = CDR(args);
-    value = asLogical(CAR(args)); args = CDR(args);
-    all = asLogical(CAR(args)); args = CDR(args);
-    invert = asLogical(CAR(args));
+    offset = asInteger(argoffset);
+    igcase_opt = asLogical(argigcase);
+    fixed_opt = asLogical(argfixed);
+    value = asLogical(argvalue);
+    all = asLogical(argall);
+    invert = asLogical(arginvert);
     if (igcase_opt == NA_INTEGER) igcase_opt = 0;
     if (fixed_opt == NA_INTEGER) fixed_opt = 0;
     if (all == NA_INTEGER) all = 0;
@@ -2611,9 +2608,9 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_regexec(SEXP pat, SEXP text, SEXP argicase, SEXP argfixed, SEXP arguseBytes)
 {
-    SEXP pat, text, ans, matchpos, matchlen;
+    SEXP ans, matchpos, matchlen;
     int opt_icase, opt_fixed, useBytes;
 
     Rboolean use_WC = FALSE;
@@ -2627,13 +2624,9 @@ SEXP attribute_hidden do_regexec(SEXP call, SEXP op, SEXP args, SEXP env)
     int j, so;
     int rc, cflags = REG_EXTENDED;
 
-    checkArity(op, args);
-
-    pat = CAR(args); args = CDR(args);
-    text = CAR(args); args = CDR(args);
-    opt_icase = asLogical(CAR(args)); args = CDR(args);
-    opt_fixed = asLogical(CAR(args)); args = CDR(args);
-    useBytes = asLogical(CAR(args));
+    opt_icase = asLogical(argicase);
+    opt_fixed = asLogical(argfixed);
+    useBytes = asLogical(arguseBytes);
 
     if(opt_icase == NA_INTEGER) opt_icase = 0;
     if(opt_fixed == NA_INTEGER) opt_fixed = 0;

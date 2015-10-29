@@ -3099,42 +3099,32 @@ SEXP attribute_hidden dc_textconvalue(SEXP argcon)
 
 
 /* socketConnection(host, port, server, blocking, open, encoding) */
-SEXP attribute_hidden do_sockconn(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_sockconn(SEXP scmd, SEXP argport, SEXP argserver, SEXP argblocking, SEXP sopen, SEXP enc, SEXP argtimeout)
 {
-    SEXP scmd, sopen, ans, class, enc;
+    SEXP ans, class;
     const char *host, *open;
     int ncon, port, server, blocking, timeout;
     Rconnection con = NULL;
 
-    checkArity(op, args);
-    scmd = CAR(args);
     if(!isString(scmd) || LENGTH(scmd) != 1)
 	error(_("invalid '%s' argument"), "host");
     host = translateChar(STRING_ELT(scmd, 0));
-    args = CDR(args);
-    port = asInteger(CAR(args));
+    port = asInteger(argport);
     if(port == NA_INTEGER || port < 0)
 	error(_("invalid '%s' argument"), "port");
-    args = CDR(args);
-    server = asLogical(CAR(args));
+    server = asLogical(argserver);
     if(server == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "server");
-    args = CDR(args);
-    blocking = asLogical(CAR(args));
+    blocking = asLogical(argblocking);
     if(blocking == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "blocking");
-    args = CDR(args);
-    sopen = CAR(args);
     if(!isString(sopen) || LENGTH(sopen) != 1)
 	error(_("invalid '%s' argument"), "open");
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
-    args = CDR(args);
-    enc = CAR(args);
     if(!isString(enc) || LENGTH(enc) != 1 ||
        strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
-    args = CDR(args);
-    timeout = asInteger(CAR(args));
+    timeout = asInteger(argtimeout);
 
     ncon = NextConnection();
     con = R_newsock(host, port, server, open, timeout);
@@ -3486,7 +3476,7 @@ static void con_cleanup(void *data)
 
 /* readLines(con = stdin(), n = 1, ok = TRUE, warn = TRUE) */
 #define BUF_SIZE 1000
-SEXP attribute_hidden do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_readLines(SEXP argcon, SEXP argn, SEXP argok, SEXP argwarn, SEXP argencoding, SEXP argskipNul)
 {
     SEXP ans = R_NilValue, ans2;
     int ok, warn, skipNul, c, nbuf, buf_size = BUF_SIZE;
@@ -3498,23 +3488,22 @@ SEXP attribute_hidden do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
     RCNTXT cntxt;
     R_xlen_t i, n, nn, nnn, nread;
 
-    checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inherits(argcon, "connection"))
 	error(_("'con' is not a connection"));
-    con = getConnection(asInteger(CAR(args))); args = CDR(args);
-    n = asVecSize(CAR(args)); args = CDR(args);
+    con = getConnection(asInteger(argcon));
+    n = asVecSize(argn);
     if(n == -999)
 	error(_("invalid '%s' argument"), "n");
-    ok = asLogical(CAR(args));  args = CDR(args);
+    ok = asLogical(argok);
     if(ok == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "ok");
-    warn = asLogical(CAR(args));  args = CDR(args);
+    warn = asLogical(argwarn);
     if(warn == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "warn");
-    if(!isString(CAR(args)) || LENGTH(CAR(args)) != 1)
+    if(!isString(argencoding) || LENGTH(argencoding) != 1)
 	error(_("invalid '%s' value"), "encoding");
-    encoding = CHAR(STRING_ELT(CAR(args), 0));  args = CDR(args); /* ASCII */
-    skipNul = asLogical(CAR(args));
+    encoding = CHAR(STRING_ELT(argencoding, 0)); /* ASCII */
+    skipNul = asLogical(argskipNul);
     if(skipNul == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "skipNul");
 
@@ -3754,9 +3743,9 @@ static SEXP rawOneString(Rbyte *bytes, R_xlen_t nbytes, R_xlen_t *np)
 
 /* readBin(con, what, n, swap) */
 #define BLOCK 8096
-SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_readbin(SEXP argcon, SEXP swhat, SEXP argn, SEXP argsize, SEXP argsignd, SEXP argswap)
 {
-    SEXP ans = R_NilValue, swhat;
+    SEXP ans = R_NilValue;
     int size, signd, swap, sizedef= 4, mode = 1;
     const char *what;
     void *p = NULL;
@@ -3766,29 +3755,25 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
     RCNTXT cntxt;
     R_xlen_t i, n,  m = 0, nbytes = 0, np = 0;
 
-    checkArity(op, args);
-
-    if(TYPEOF(CAR(args)) == RAWSXP) {
+    if(TYPEOF(argcon) == RAWSXP) {
 	isRaw = TRUE;
-	bytes = RAW(CAR(args));
-	nbytes = XLENGTH(CAR(args));
+	bytes = RAW(argcon);
+	nbytes = XLENGTH(argcon);
     } else {
-	con = getConnection(asInteger(CAR(args)));
+	con = getConnection(asInteger(argcon));
 	if(con->text) error(_("can only read from a binary connection"));
     }
 
-    args = CDR(args);
-    swhat = CAR(args); args = CDR(args);
     if(!isString(swhat) || LENGTH(swhat) != 1)
 	error(_("invalid '%s' argument"), "what");
     what = CHAR(STRING_ELT(swhat, 0)); /* ASCII */
-    n = asVecSize(CAR(args)); args = CDR(args);
+    n = asVecSize(argn);
     if(n < 0) error(_("invalid '%s' argument"), "n");
-    size = asInteger(CAR(args)); args = CDR(args);
-    signd = asLogical(CAR(args)); args = CDR(args);
+    size = asInteger(argsize);
+    signd = asLogical(argsignd);
     if(signd == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "signed");
-    swap = asLogical(CAR(args));
+    swap = asLogical(argswap);
     if(swap == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "swap");
     if(!isRaw) {

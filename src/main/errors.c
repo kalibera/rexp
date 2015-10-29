@@ -1471,19 +1471,13 @@ static SEXP mkHandlerEntry(SEXP klass, SEXP parentenv, SEXP handler, SEXP rho,
 
 #define RESULT_SIZE 3
 
-SEXP attribute_hidden do_addCondHands(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_addCondHands(SEXP classes, SEXP handlers, SEXP parentenv, SEXP target, SEXP argcalling)
 {
-    SEXP classes, handlers, parentenv, target, oldstack, newstack, result;
+    SEXP oldstack, newstack, result;
     int calling, i, n;
     PROTECT_INDEX osi;
 
-    checkArity(op, args);
-
-    classes = CAR(args); args = CDR(args);
-    handlers = CAR(args); args = CDR(args);
-    parentenv = CAR(args); args = CDR(args);
-    target = CAR(args); args = CDR(args);
-    calling = asLogical(CAR(args));
+    calling = asLogical(argcalling);
 
     if (classes == R_NilValue || handlers == R_NilValue)
 	return R_HandlerStack;

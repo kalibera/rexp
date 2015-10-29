@@ -89,29 +89,21 @@ static void namewalk(SEXP s, NameWalkData *d)
 
 /* Also does all.vars with functions=FALSE
    .Internal(all.names(expr, functions, max.names, unique)) */
-SEXP attribute_hidden do_allnames(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_allnames(SEXP expr, SEXP argfunctions, SEXP argmaxNames, SEXP argunique)
 {
-    SEXP expr;
     int i, savecount;
     NameWalkData data = {NULL, 0, 0, 0, 0, 0};
 
-    checkArity(op, args);
-
-    expr = CAR(args);
-    args = CDR(args);
-
-    data.IncludeFunctions = asLogical(CAR(args));
+    data.IncludeFunctions = asLogical(argfunctions);
     if(data.IncludeFunctions == NA_LOGICAL)
 	data.IncludeFunctions = 0;
-    args = CDR(args);
 
-    data.MaxCount = asInteger(CAR(args));
+    data.MaxCount = asInteger(argmaxNames);
     if(data.MaxCount == -1) data.MaxCount = INT_MAX;
     if(data.MaxCount < 0 || data.MaxCount == NA_INTEGER)
 	data.MaxCount = 0;
-    args = CDR(args);
 
-    data.UniqueNames = asLogical(CAR(args));
+    data.UniqueNames = asLogical(argunique);
     if(data.UniqueNames == NA_LOGICAL)
 	data.UniqueNames = 1;
 

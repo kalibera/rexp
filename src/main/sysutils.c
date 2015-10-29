@@ -231,17 +231,16 @@ SEXP attribute_hidden dc_tempdir()
 }
 
 
-SEXP attribute_hidden do_tempfile(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_tempfile(SEXP pattern, SEXP tempdir, SEXP fileext)
 {
-    SEXP  ans, pattern, fileext, tempdir;
+    SEXP  ans;
     const char *tn, *td, *te;
     char *tm;
     int i, n1, n2, n3, slen;
 
-    checkArity(op, args);
-    pattern = CAR(args); n1 = length(pattern); args = CDR(args);
-    tempdir = CAR(args); n2 = length(tempdir); args = CDR(args);
-    fileext = CAR(args); n3 = length(fileext);
+    n1 = length(pattern);
+    n2 = length(tempdir);
+    n3 = length(fileext);
     if (!isString(pattern))
 	error(_("invalid filename pattern"));
     if (!isString(tempdir))
@@ -551,9 +550,9 @@ write_one (unsigned int namescount, const char * const *names, void *data)
 #include "RBufferUtils.h"
 
 /* iconv(x, from, to, sub, mark) */
-SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_iconv(SEXP x, SEXP argfrom, SEXP argto, SEXP argsub, SEXP argmark, SEXP argtoraw)
 {
-    SEXP ans, x = CAR(args), si;
+    SEXP ans, si;
     void * obj;
     const char *inbuf;
     char *outbuf;
@@ -562,7 +561,6 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
     Rboolean isRawlist = FALSE;
 
-    checkArity(op, args);
     if(isNull(x)) {  /* list locales */
 #ifdef HAVE_ICONVLIST
 	cnt = 0;
@@ -578,25 +576,20 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 	const char *from, *to;
 	Rboolean isLatin1 = FALSE, isUTF8 = FALSE;
 
-	args = CDR(args);
-	if(!isString(CAR(args)) || length(CAR(args)) != 1)
+	if(!isString(argfrom) || length(argfrom) != 1)
 	    error(_("invalid '%s' argument"), "from");
-	from = CHAR(STRING_ELT(CAR(args), 0)); /* ASCII */
-	args = CDR(args);
-	if(!isString(CAR(args)) || length(CAR(args)) != 1)
+	from = CHAR(STRING_ELT(argfrom, 0)); /* ASCII */
+	if(!isString(argto) || length(argto) != 1)
 	    error(_("invalid '%s' argument"), "to");
-	to = CHAR(STRING_ELT(CAR(args), 0));
-	args = CDR(args);
-	if(!isString(CAR(args)) || length(CAR(args)) != 1)
+	to = CHAR(STRING_ELT(argto, 0));
+	if(!isString(argsub) || length(argsub) != 1)
 	    error(_("invalid '%s' argument"), "sub");
-	if(STRING_ELT(CAR(args), 0) == NA_STRING) sub = NULL;
-	else sub = translateChar(STRING_ELT(CAR(args), 0));
-	args = CDR(args);
-	mark = asLogical(CAR(args));
+	if(STRING_ELT(argsub, 0) == NA_STRING) sub = NULL;
+	else sub = translateChar(STRING_ELT(argsub, 0));
+	mark = asLogical(argmark);
 	if(mark == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "mark");	
-	args = CDR(args);
-	toRaw = asLogical(CAR(args));
+	toRaw = asLogical(argtoraw);
 	if(toRaw == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "toRaw");	
 	/* some iconv's allow "UTF8", but libiconv does not */

@@ -367,87 +367,80 @@ SEXP attribute_hidden do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* format.default(x, trim, digits, nsmall, width, justify, na.encode,
 		  scientific, decimal.mark) */
-SEXP attribute_hidden do_format(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_format(SEXP x, SEXP argtrim, SEXP argdigits, SEXP argnsmall, SEXP swd, SEXP argadj, SEXP argna, SEXP argsci, SEXP argdec)
 {
-    SEXP l, x, y, swd;
+    SEXP l, y;
     int il, digits, trim = 0, nsmall = 0, wd = 0, adj = -1, na, sci = 0;
     int w, d, e;
     int wi, di, ei, scikeep;
     const char *strp;
     R_xlen_t i, n;
 
-    checkArity(op, args);
     PrintDefaults();
     scikeep = R_print.scipen;
 
-    if (isEnvironment(x = CAR(args))) {
+    if (isEnvironment(x)) {
 	return mkString(EncodeEnvironment(x));
     }
     else if (!isVector(x))
 	error(_("first argument must be atomic"));
-    args = CDR(args);
 
-    trim = asLogical(CAR(args));
+    trim = asLogical(argtrim);
     if (trim == NA_INTEGER)
 	error(_("invalid '%s' argument"), "trim");
-    args = CDR(args);
 
-    if (!isNull(CAR(args))) {
-	digits = asInteger(CAR(args));
+    if (!isNull(argdigits)) {
+	digits = asInteger(argdigits);
 	if (digits == NA_INTEGER || digits < R_MIN_DIGITS_OPT
 	    || digits > R_MAX_DIGITS_OPT)
 	    error(_("invalid '%s' argument"), "digits");
 	R_print.digits = digits;
     }
-    args = CDR(args);
 
-    nsmall = asInteger(CAR(args));
+    nsmall = asInteger(argnsmall);
     if (nsmall == NA_INTEGER || nsmall < 0 || nsmall > 20)
 	error(_("invalid '%s' argument"), "nsmall");
-    args = CDR(args);
 
-    if (isNull(swd = CAR(args))) wd = 0; else wd = asInteger(swd);
+    if (isNull(swd)) wd = 0; else wd = asInteger(swd);
     if(wd == NA_INTEGER)
 	error(_("invalid '%s' argument"), "width");
-    args = CDR(args);
 
-    adj = asInteger(CAR(args));
+    adj = asInteger(argadj);
     if(adj == NA_INTEGER || adj < 0 || adj > 3)
 	error(_("invalid '%s' argument"), "justify");
-    args = CDR(args);
 
-    na = asLogical(CAR(args));
+    na = asLogical(argna);
     if(na == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "na.encode");
-    args = CDR(args);
-    if(LENGTH(CAR(args)) != 1)
+
+    if(LENGTH(argsci) != 1)
 	error(_("invalid '%s' argument"), "scientific");
-    if(isLogical(CAR(args))) {
-	int tmp = LOGICAL(CAR(args))[0];
+    if(isLogical(argsci)) {
+	int tmp = LOGICAL(argsci)[0];
 	if(tmp == NA_LOGICAL) sci = NA_INTEGER;
 	else sci = tmp > 0 ?-100 : 100;
-    } else if (isNumeric(CAR(args))) {
-	sci = asInteger(CAR(args));
+    } else if (isNumeric(argsci)) {
+	sci = asInteger(argsci);
     } else
 	error(_("invalid '%s' argument"), "scientific");
     if(sci != NA_INTEGER) R_print.scipen = sci;
-    args = CDR(args);
+
     // copy/paste from "OutDec" part of ./options.c
-    if (TYPEOF(CAR(args)) != STRSXP || LENGTH(CAR(args)) != 1)
+    if (TYPEOF(argdec) != STRSXP || LENGTH(argdec) != 1)
 	error(_("invalid '%s' argument"), "decimal.mark");
     char *my_OutDec;
-    if(STRING_ELT(CAR(args), 0) == NA_STRING)
+    if(STRING_ELT(argdec, 0) == NA_STRING)
 	my_OutDec = OutDec; // default
     else {
 	static char sdec[11];
 // not warning here by default for now
 #ifdef _WARN_decimal_mark_non_1
-	if(R_nchar(STRING_ELT(CAR(args), 0), Chars,
+	if(R_nchar(STRING_ELT(argdec, 0), Chars,
 		   /* allowNA = */ FALSE, /* keepNA = */ FALSE,
 		   "decimal.mark") != 1) // will become an error
 	    warning(_("'decimal.mark' must be a string of one character"));
 #endif
-	strncpy(sdec, CHAR(STRING_ELT(CAR(args), 0)), 10);
+	strncpy(sdec, CHAR(STRING_ELT(argdec, 0)), 10);
 	sdec[10] = '\0';
 	my_OutDec = sdec;
     }

@@ -60,14 +60,12 @@ SEXP GetColNames(SEXP dimnames)
 	return R_NilValue;
 }
 
-SEXP attribute_hidden do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_matrix(SEXP vals, SEXP snr, SEXP snc, SEXP argbyrow, SEXP dimnames, SEXP argmiss_nr, SEXP argmiss_nc)
 {
-    SEXP vals, ans, snr, snc, dimnames;
+    SEXP ans;
     int nr = 1, nc = 1, byrow, miss_nr, miss_nc;
     R_xlen_t lendat;
 
-    checkArity(op, args);
-    vals = CAR(args); args = CDR(args);
     switch(TYPEOF(vals)) {
 	case LGLSXP:
 	case INTSXP:
@@ -83,15 +81,11 @@ SEXP attribute_hidden do_matrix(SEXP call, SEXP op, SEXP args, SEXP rho)
 		type2char(TYPEOF(vals)));
     }
     lendat = XLENGTH(vals);
-    snr = CAR(args); args = CDR(args);
-    snc = CAR(args); args = CDR(args);
-    byrow = asLogical(CAR(args)); args = CDR(args);
+    byrow = asLogical(argbyrow);
     if (byrow == NA_INTEGER)
 	error(_("invalid '%s' argument"), "byrow");
-    dimnames = CAR(args);
-    args = CDR(args);
-    miss_nr = asLogical(CAR(args)); args = CDR(args);
-    miss_nc = asLogical(CAR(args));
+    miss_nr = asLogical(argmiss_nr);
+    miss_nc = asLogical(argmiss_nc);
 
     if (!miss_nr) {
 	if (!isNumeric(snr)) error(_("non-numeric matrix extent"));
@@ -1688,24 +1682,20 @@ SEXP attribute_hidden dc_diag(SEXP x, SEXP snr, SEXP snc)
 
 
 /* backsolve(r, b, k, upper.tri, transpose) */
-SEXP attribute_hidden do_backsolve(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_backsolve(SEXP r, SEXP b, SEXP argk, SEXP argupper, SEXP argtrans)
 {
     int nprot = 1;
-    checkArity(op, args);
-
-    SEXP r = CAR(args); args = CDR(args);
-    SEXP b = CAR(args); args = CDR(args);
     int nrr = nrows(r), nrb = nrows(b), ncb = ncols(b);
-    int k = asInteger(CAR(args)); args = CDR(args);
+    int k = asInteger(argk);
     /* k is the number of rows to be used: there must be at least that
        many rows and cols in the rhs and at least that many rows on
        the rhs.
     */
     if (k == NA_INTEGER || k <= 0 || k > nrr || k > ncols(r) || k > nrb)
 	error(_("invalid '%s' argument"), "k");
-    int upper = asLogical(CAR(args)); args = CDR(args);
+    int upper = asLogical(argupper);
     if (upper == NA_INTEGER) error(_("invalid '%s' argument"), "upper.tri");
-    int trans = asLogical(CAR(args));
+    int trans = asLogical(argtrans);
     if (trans == NA_INTEGER) error(_("invalid '%s' argument"), "transpose");
     if (TYPEOF(r) != REALSXP) {PROTECT(r = coerceVector(r, REALSXP)); nprot++;}
     if (TYPEOF(b) != REALSXP) {PROTECT(b = coerceVector(b, REALSXP)); nprot++;}

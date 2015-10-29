@@ -2159,14 +2159,8 @@ bincode(double *x, R_xlen_t n, double *breaks, int nb,
 }
 
 /* 'breaks' cannot be a long vector as the return codes are integer. */
-SEXP attribute_hidden do_bincode(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_bincode(SEXP x, SEXP breaks, SEXP right, SEXP lowest)
 {
-    checkArity(op, args);
-    SEXP x, breaks, right, lowest;
-    x = CAR(args); args = CDR(args);
-    breaks = CAR(args); args = CDR(args);
-    right = CAR(args); args = CDR(args);
-    lowest = CAR(args);
 #ifdef LONG_VECTOR_SUPPORT
     if (IS_LONG_VEC(breaks))
 	error(_("long vector '%s' is not supported"), "breaks");
@@ -2202,14 +2196,8 @@ SEXP attribute_hidden dc_tabulate(SEXP in, SEXP nbin)
 }
 
 /* x can be a long vector but xt cannot since the result is integer */
-SEXP attribute_hidden do_findinterval(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_findinterval(SEXP xt, SEXP x, SEXP right, SEXP inside)
 {
-    checkArity(op, args);
-    SEXP xt, x, right, inside;
-    xt = CAR(args); args = CDR(args);
-    x = CAR(args); args = CDR(args);
-    right = CAR(args); args = CDR(args);
-    inside = CAR(args);
     if(TYPEOF(xt) != REALSXP || TYPEOF(x) != REALSXP) error("invalid input");
 #ifdef LONG_VECTOR_SUPPORT
     if (IS_LONG_VEC(xt))
@@ -2242,29 +2230,28 @@ SEXP attribute_hidden do_findinterval(SEXP call, SEXP op, SEXP args, SEXP rho)
 # undef ERROR
 #endif
 #include <R_ext/Applic.h>
-SEXP attribute_hidden do_pretty(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_pretty(SEXP argl, SEXP argu, SEXP argn, SEXP argmin_n, SEXP argshrink, SEXP arghi, SEXP argeps)
 {
-    checkArity(op, args);
     SEXP ans, nm, hi;
-    double l = asReal(CAR(args)); args = CDR(args);
+    double l = asReal(argl);
     if (!R_FINITE(l)) error(_("invalid '%s' argument"), "l");
-    double u = asReal(CAR(args)); args = CDR(args);
+    double u = asReal(argu);
     if (!R_FINITE(u)) error(_("invalid '%s' argument"), "u");
-    int n = asInteger(CAR(args)); args = CDR(args);
+    int n = asInteger(argn);
     if (n == NA_INTEGER || n < 0) error(_("invalid '%s' argument"), "n");
-    int min_n = asInteger(CAR(args)); args = CDR(args);
+    int min_n = asInteger(argmin_n);
     if (min_n == NA_INTEGER || min_n < 0 || min_n > n)
 	error(_("invalid '%s' argument"), "min.n");
-    double shrink = asReal(CAR(args)); args = CDR(args);
+    double shrink = asReal(argshrink);
     if (!R_FINITE(shrink) || shrink <= 0.)
 	error(_("invalid '%s' argument"), "shrink.sml");
-    PROTECT(hi = coerceVector(CAR(args), REALSXP)); args = CDR(args);
+    PROTECT(hi = coerceVector(arghi, REALSXP));
     double z;
     if (!R_FINITE(z = REAL(hi)[0]) || z < 0.)
 	error(_("invalid '%s' argument"), "high.u.bias");
     if (!R_FINITE(z = REAL(hi)[1]) || z < 0.)
 	error(_("invalid '%s' argument"), "u5.bias");
-    int eps = asInteger(CAR(args)); /* eps.correct */
+    int eps = asInteger(argeps); /* eps.correct */
     if (eps == NA_INTEGER || eps < 0 || eps > 2)
 	error(_("'eps.correct' must be 0, 1, or 2"));
     R_pretty(&l, &u, &n, min_n, shrink, REAL(hi), eps, 1);
@@ -2290,18 +2277,16 @@ static void
 str_signif(void *x, R_xlen_t n, const char *type, int width, int digits,
 	   const char *format, const char *flag, char **result);
 
-SEXP attribute_hidden do_formatC(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_formatC(SEXP x, SEXP argtype, SEXP argwidth, SEXP argdigits, SEXP argfmt, SEXP argflag, SEXP argstrlen)
 {
-    checkArity(op, args);
-    SEXP x = CAR(args); args = CDR(args);
     if (!isVector(x)) error(_("'x' must be a vector"));
     R_xlen_t n = XLENGTH(x);
-    const char *type = CHAR(STRING_ELT(CAR(args), 0)); args = CDR(args);
-    int width = asInteger(CAR(args)); args = CDR(args);
-    int digits = asInteger(CAR(args)); args = CDR(args);
-    const char *fmt = CHAR(STRING_ELT(CAR(args), 0)); args = CDR(args);
-    const char *flag = CHAR(STRING_ELT(CAR(args), 0)); args = CDR(args);
-    SEXP i_strlen = PROTECT(coerceVector(CAR(args), INTSXP));
+    const char *type = CHAR(STRING_ELT(argtype, 0));
+    int width = asInteger(argwidth);
+    int digits = asInteger(argdigits);
+    const char *fmt = CHAR(STRING_ELT(argfmt, 0));
+    const char *flag = CHAR(STRING_ELT(argflag, 0));
+    SEXP i_strlen = PROTECT(coerceVector(argstrlen, INTSXP));
     char **cptr = (char **) R_alloc(n, sizeof(char*));
     for (R_xlen_t i = 0; i < n; i++) {
 	int ix = INTEGER(i_strlen)[i] + 2;
