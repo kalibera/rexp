@@ -1253,9 +1253,9 @@ static R_INLINE int xtable_key_comp(const void *a, const void *b)
     }                                                          \
 }
 
-SEXP attribute_hidden do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_chartr(SEXP old, SEXP _new, SEXP x)
 {
-    SEXP old, _new, x, y;
+    SEXP y;
     R_xlen_t i, n;
     char *cbuf;
     SEXP el;
@@ -1263,10 +1263,6 @@ SEXP attribute_hidden do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean use_UTF8 = FALSE;
     const void *vmax;
 
-    checkArity(op, args);
-    old = CAR(args); args = CDR(args);
-    _new = CAR(args); args = CDR(args);
-    x = CAR(args);
     n = XLENGTH(x);
     if (!isString(old) || LENGTH(old) < 1 || STRING_ELT(old, 0) == NA_STRING)
 	error(_("invalid '%s' argument"), "old");
@@ -1563,16 +1559,11 @@ static int strtoi(SEXP s, int base)
     return (int) res;
 }
 
-SEXP attribute_hidden do_strtoi(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_strtoi(SEXP x, SEXP b)
 {
-    SEXP ans, x, b;
+    SEXP ans;
     R_xlen_t i, n;
     int base;
-
-    checkArity(op, args);
-
-    x = CAR(args); args = CDR(args);
-    b = CAR(args);
 
     if(!isInteger(b) || (LENGTH(b) < 1))
 	error(_("invalid '%s' argument"), "base");
@@ -1606,20 +1597,15 @@ SEXP attribute_hidden stringSuffix(SEXP string, int fromIndex) {
     return res;
 }
 
-SEXP attribute_hidden do_strrep(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_strrep(SEXP x, SEXP n)
 {
-    SEXP d, s, x, n;
+    SEXP d, s;
     R_xlen_t is, ix, in, ns, nx, nn;
     const char *xi;
     int j, ni, nc;
     const char *cbuf;
     char *buf;
     const void *vmax;
-
-    checkArity(op, args);
-
-    x = CAR(args); args = CDR(args);
-    n = CAR(args);
 
     nx = XLENGTH(x);
     nn = XLENGTH(n);

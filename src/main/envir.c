@@ -1846,29 +1846,23 @@ static int RemoveVariable(SEXP name, int hashcode, SEXP env)
     return found;
 }
 
-SEXP attribute_hidden do_remove(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_remove(SEXP name, SEXP envarg, SEXP arginherits)
 {
     /* .Internal(remove(list, envir, inherits)) */
 
-    SEXP name, envarg, tsym, tenv;
+    SEXP tsym, tenv;
     int ginherits = 0;
     int done, i, hashcode;
-    checkArity(op, args);
 
-    name = CAR(args);
     if (!isString(name))
 	error(_("invalid first argument"));
-    args = CDR(args);
-
-    envarg = CAR(args);
     if (TYPEOF(envarg) == NILSXP)
 	error(_("use of NULL environment is defunct"));
     if (TYPEOF(envarg) != ENVSXP &&
 	TYPEOF((envarg = simple_as_environment(envarg))) != ENVSXP)
 	error(_("invalid '%s' argument"), "envir");
-    args = CDR(args);
 
-    ginherits = asLogical(CAR(args));
+    ginherits = asLogical(arginherits);
     if (ginherits == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "inherits");
 
@@ -3563,21 +3557,13 @@ SEXP attribute_hidden dc_getNSRegistry()
     return R_NamespaceRegistry;
 }
 
-SEXP attribute_hidden do_importIntoEnv(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_importIntoEnv(SEXP impenv, SEXP impnames, SEXP expenv, SEXP expnames)
 {
     /* This function copies values of variables from one environment
        to another environment, possibly with different names.
        Promises are not forced and active bindings are preserved. */
-    SEXP impenv, impnames, expenv, expnames;
     SEXP impsym, expsym, val;
     int i, n;
-
-    checkArity(op, args);
-
-    impenv = CAR(args); args = CDR(args);
-    impnames = CAR(args); args = CDR(args);
-    expenv = CAR(args); args = CDR(args);
-    expnames = CAR(args); args = CDR(args);
 
     if (TYPEOF(impenv) == NILSXP)
 	error(_("use of NULL environment is defunct"));

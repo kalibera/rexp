@@ -2819,19 +2819,13 @@ R_lazyLoadDBinsertValue(SEXP value, SEXP file, SEXP ascii,
    If the result is a promise, then the promise is forced. */
 
 SEXP attribute_hidden
-do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
+dc_lazyLoadDBfetch(SEXP key, SEXP file, SEXP compsxp, SEXP hook)
 {
-    SEXP key, file, compsxp, hook;
     PROTECT_INDEX vpi;
     int compressed;
     Rboolean err = FALSE;
     SEXP val;
 
-    checkArity(op, args);
-    key = CAR(args); args = CDR(args);
-    file = CAR(args); args = CDR(args);
-    compsxp = CAR(args); args = CDR(args);
-    hook = CAR(args);
     compressed = asInteger(compsxp);
 
     PROTECT_WITH_INDEX(val = readRawFromFile(file, key), &vpi);
@@ -2860,15 +2854,8 @@ SEXP attribute_hidden dc_getVarsFromFrame(SEXP vars, SEXP env, SEXP forcesxp)
 
 
 SEXP attribute_hidden
-do_lazyLoadDBinsertValue(SEXP call, SEXP op, SEXP args, SEXP env)
+dc_lazyLoadDBinsertValue(SEXP value, SEXP file, SEXP ascii, SEXP compsxp, SEXP hook)
 {
-    checkArity(op, args);
-    SEXP value, file, ascii, compsxp, hook;
-    value = CAR(args); args = CDR(args);
-    file = CAR(args); args = CDR(args);
-    ascii = CAR(args); args = CDR(args);
-    compsxp = CAR(args); args = CDR(args);
-    hook = CAR(args); args = CDR(args);
     return R_lazyLoadDBinsertValue(value, file, ascii, compsxp, hook);
 }
 

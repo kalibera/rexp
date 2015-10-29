@@ -458,18 +458,14 @@ static R_INLINE double ru()
 /* do_sample - probability sampling with/without replacement.
    .Internal(sample(n, size, replace, prob))
 */
-SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_sample(SEXP sn, SEXP sk, SEXP sreplace, SEXP prob)
 {
-    SEXP x, y, sn, sk, prob, sreplace;
+    SEXP x, y;
 
-    checkArity(op, args);
-    sn = CAR(args); args = CDR(args);
-    sk = CAR(args); args = CDR(args); /* size */
-    sreplace = CAR(args); args = CDR(args);
+    /* sk is size */
     if(length(sreplace) != 1)
 	 error(_("invalid '%s' argument"), "replace");
     int replace = asLogical(sreplace);
-    prob = CAR(args);
     if (replace == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "replace");
     GetRNGstate();

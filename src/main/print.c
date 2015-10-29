@@ -119,22 +119,15 @@ SEXP attribute_hidden do_invisible(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* This is *only* called via outdated R_level prmatrix() : */
-SEXP attribute_hidden do_prmatrix(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_prmatrix(SEXP x, SEXP rowlab, SEXP collab, SEXP argquote, SEXP argright, SEXP naprint)
 {
     int quote;
-    SEXP a, x, rowlab, collab, naprint;
     char *rowname = NULL, *colname = NULL;
 
-    checkArity(op,args);
     PrintDefaults();
-    a = args;
-    x = CAR(a); a = CDR(a);
-    rowlab = CAR(a); a = CDR(a);
-    collab = CAR(a); a = CDR(a);
 
-    quote = asInteger(CAR(a)); a = CDR(a);
-    R_print.right = (Rprt_adj) asInteger(CAR(a)); a = CDR(a);
-    naprint = CAR(a);
+    quote = asInteger(argquote);
+    R_print.right = (Rprt_adj) asInteger(argright);
     if(!isNull(naprint))  {
 	if(!isString(naprint) || LENGTH(naprint) < 1)
 	    error(_("invalid 'na.print' specification"));

@@ -483,11 +483,9 @@ adist_full(SEXP x, SEXP y, double *costs, Rboolean opt_counts)
 
 #define OFFSETS(I, J, K)	INTEGER(offsets)[I + J * nx + K * nxy]
 
-SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_adist(SEXP x, SEXP y, SEXP opt_costs, SEXP argcounts, SEXP argfixed, SEXP argpartial, SEXP argicase, SEXP arguseBytes)
 {
-    SEXP x, y;
     SEXP ans, counts, offsets, dimnames, names, elt;
-    SEXP opt_costs;
     int opt_fixed, opt_partial, opt_counts, opt_icase, useBytes;
     int i = 0, j = 0, m, nx, ny, nxy;
     const char *s, *t;
@@ -503,15 +501,11 @@ SEXP attribute_hidden do_adist(SEXP call, SEXP op, SEXP args, SEXP env)
 
     int rc, cflags = REG_EXTENDED;
 
-    checkArity(op, args);
-    x = CAR(args); args = CDR(args);
-    y = CAR(args); args = CDR(args);
-    opt_costs = CAR(args); args = CDR(args);
-    opt_counts = asLogical(CAR(args)); args = CDR(args);
-    opt_fixed = asInteger(CAR(args)); args = CDR(args);
-    opt_partial = asInteger(CAR(args)); args = CDR(args);
-    opt_icase = asLogical(CAR(args)); args = CDR(args);
-    useBytes = asLogical(CAR(args));
+    opt_counts = asLogical(argcounts);
+    opt_fixed = asInteger(argfixed);
+    opt_partial = asInteger(argpartial);
+    opt_icase = asLogical(argicase);
+    useBytes = asLogical(arguseBytes);
 
     if(opt_counts == NA_INTEGER) opt_counts = 0;
     if(opt_fixed == NA_INTEGER) opt_fixed = 1;

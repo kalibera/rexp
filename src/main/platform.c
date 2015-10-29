@@ -285,19 +285,13 @@ SEXP attribute_hidden dc_date()
  */
 
 // .Internal so manages R_alloc stack used by acopy_string
-SEXP attribute_hidden do_fileshow(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_fileshow(SEXP fn, SEXP hd, SEXP tl, SEXP argdl, SEXP pg)
 {
-    SEXP fn, tl, hd, pg;
     const char **f, **h, *t, *pager = NULL /* -Wall */;
     Rboolean dl;
     int i, n;
 
-    checkArity(op, args);
-    fn = CAR(args); args = CDR(args);
-    hd = CAR(args); args = CDR(args);
-    tl = CAR(args); args = CDR(args);
-    dl = (Rboolean) asLogical(CAR(args)); args = CDR(args);
-    pg = CAR(args);
+    dl = (Rboolean) asLogical(argdl);
     n = 0;			/* -Wall */
     if (!isString(fn) || (n = LENGTH(fn)) < 1)
 	error(_("invalid filename specification"));
@@ -1106,35 +1100,33 @@ list_files(const char *dnp, const char *stem, int *count, SEXP *pans,
 }
 #undef IF_MATCH_ADD_TO_ANS
 
-SEXP attribute_hidden do_listfiles(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_listfiles(SEXP d, SEXP p, SEXP argallfiles, SEXP argfullnames, SEXP argrecursive, SEXP argigcase, SEXP argidirs, SEXP argnodots)
 {
     int countmax = 128;
 
-    checkArity(op, args);
-    SEXP d = CAR(args);  args = CDR(args); // d := directory = path
+    // d := directory = path
     if (!isString(d)) error(_("invalid '%s' argument"), "path");
-    SEXP p = CAR(args); args = CDR(args);
     Rboolean pattern = FALSE;
     if (isString(p) && LENGTH(p) >= 1 && STRING_ELT(p, 0) != NA_STRING)
 	pattern = TRUE;
     else if (!isNull(p) && !(isString(p) && LENGTH(p) < 1))
 	error(_("invalid '%s' argument"), "pattern");
-    int allfiles = asLogical(CAR(args)); args = CDR(args);
+    int allfiles = asLogical(argallfiles);
     if (allfiles == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "all.files");
-    int fullnames = asLogical(CAR(args)); args = CDR(args);
+    int fullnames = asLogical(argfullnames);
     if (fullnames == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "full.names");
-    int recursive = asLogical(CAR(args)); args = CDR(args);
+    int recursive = asLogical(argrecursive);
     if (recursive == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "recursive");
-    int igcase = asLogical(CAR(args)); args = CDR(args);
+    int igcase = asLogical(argigcase);
     if (igcase == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "ignore.case");
-    int idirs = asLogical(CAR(args)); args = CDR(args);
+    int idirs = asLogical(argidirs);
     if (idirs == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "include.dirs");
-    int nodots = asLogical(CAR(args));
+    int nodots = asLogical(argnodots);
     if (nodots == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "no..");
 
@@ -1223,21 +1215,19 @@ static void list_dirs(const char *dnp, const char *nm,
     }
 }
 
-SEXP attribute_hidden do_listdirs(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_listdirs(SEXP d, SEXP argfullnames, SEXP argrecursive)
 {
     PROTECT_INDEX idx;
-    SEXP d, ans;
+    SEXP ans;
     int fullnames, count, i, recursive;
     const char *dnp;
     int countmax = 128;
 
-    checkArity(op, args);
-    d = CAR(args); args = CDR(args);
     if (!isString(d)) error(_("invalid '%s' argument"), "directory");
-    fullnames = asLogical(CAR(args)); args = CDR(args);
+    fullnames = asLogical(argfullnames);
     if (fullnames == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "full.names");
-    recursive = asLogical(CAR(args)); args = CDR(args);
+    recursive = asLogical(argrecursive);
     if (recursive == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "recursive");
 
@@ -2270,33 +2260,29 @@ copy_error:
 }
 
 /* file.copy(files, dir, over, recursive=TRUE, perms), only */
-SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_filecopy(SEXP fn, SEXP to, SEXP argover, SEXP argrecursive, SEXP argperms, SEXP argdates)
 {
     SEXP fn, to, ans;
     wchar_t *p, dir[PATH_MAX], from[PATH_MAX], name[PATH_MAX];
     int i, nfiles, over, recursive, perms, dates, nfail;
 
-    checkArity(op, args);
-    fn = CAR(args);
     nfiles = length(fn);
     PROTECT(ans = allocVector(LGLSXP, nfiles));
     if (nfiles > 0) {
-	args = CDR(args);
 	if (!isString(fn))
 	    error(_("invalid '%s' argument"), "from");
-	to = CAR(args); args = CDR(args);
 	if (!isString(to) || LENGTH(to) != 1)
 	    error(_("invalid '%s' argument"), "to");
-	over = asLogical(CAR(args)); args = CDR(args);
+	over = asLogical(argover);
 	if (over == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "overwrite");
-	recursive = asLogical(CAR(args)); args = CDR(args);
+	recursive = asLogical(argrecursive);
 	if (recursive == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "recursive");
-	perms = asLogical(CAR(args)); args = CDR(args);
+	perms = asLogical(argperms);
 	if (perms == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "copy.mode");
-	dates = asLogical(CAR(args));
+	dates = asLogical(argdates);
 	if (dates == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "copy.dates");
 	wcsncpy(dir,
@@ -2491,33 +2477,29 @@ copy_error:
 }
 
 /* file.copy(files, dir, recursive), only */
-SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_filecopy(SEXP fn, SEXP to, SEXP argover, SEXP argrecursive, SEXP argperms, SEXP argdates)
 {
-    SEXP fn, to, ans;
+    SEXP ans;
     char *p, dir[PATH_MAX], from[PATH_MAX], name[PATH_MAX];
     int i, nfiles, over, recursive, perms, dates, nfail;
 
-    checkArity(op, args);
-    fn = CAR(args);
     nfiles = length(fn);
     PROTECT(ans = allocVector(LGLSXP, nfiles));
     if (nfiles > 0) {
-	args = CDR(args);
 	if (!isString(fn))
 	    error(_("invalid '%s' argument"), "from");
-	to = CAR(args); args = CDR(args);
 	if (!isString(to) || LENGTH(to) != 1)
 	    error(_("invalid '%s' argument"), "to");
-	over = asLogical(CAR(args)); args = CDR(args);
+	over = asLogical(argover);
 	if (over == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "overwrite");
-	recursive = asLogical(CAR(args)); args = CDR(args);
+	recursive = asLogical(argrecursive);
 	if (recursive == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "recursive");
-	perms = asLogical(CAR(args)); args = CDR(args);
+	perms = asLogical(argperms);
 	if (perms == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "copy.mode");
-	dates = asLogical(CAR(args));
+	dates = asLogical(argdates);
 	if (dates == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "copy.dates");
 	strncpy(dir,

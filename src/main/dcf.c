@@ -66,7 +66,7 @@ static char *Rconn_getline2(Rconnection con, char *buf, int bufsize)
     return buf;
 }
 
-SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_readDCF(SEXP file, SEXP argwhat, SEXP argfold_excludes)
 {
     int nwhat, nret, nc, nr, m, k, lastm, need;
     Rboolean blank_skip, field_skip = FALSE;
@@ -74,7 +74,7 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
     char *line, *buf;
     regex_t blankline, contline, trailblank, regline, eblankline;
     regmatch_t regmatch[1];
-    SEXP file, what, what2, retval, retval2, dims, dimnames;
+    SEXP what, what2, retval, retval2, dims, dimnames;
     Rconnection con = NULL;
     Rboolean wasopen, is_eblankline;
     RCNTXT cntxt;
@@ -84,9 +84,6 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
     const char *field_name;
     int offset = 0; /* -Wall */
 
-    checkArity(op, args);
-
-    file = CAR(args);
     con = getConnection(asInteger(file));
     wasopen = con->isopen;
     if(!wasopen) {
@@ -99,13 +96,11 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     if(!con->canread) error(_("cannot read from this connection"));
 
-    args = CDR(args);
-    PROTECT(what = coerceVector(CAR(args), STRSXP)); /* argument fields */
+    PROTECT(what = coerceVector(argwhat, STRSXP)); /* argument fields */
     nwhat = LENGTH(what);
     dynwhat = (nwhat == 0);
 
-    args = CDR(args);
-    PROTECT(fold_excludes = coerceVector(CAR(args), STRSXP));
+    PROTECT(fold_excludes = coerceVector(argfold_excludes, STRSXP));
     has_fold_excludes = (LENGTH(fold_excludes) > 0);
 
     buf = (char *) malloc(buflen);
