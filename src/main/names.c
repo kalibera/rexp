@@ -1379,7 +1379,9 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(args = prepareArgsForFun(call, INTERNAL(fun), CDR(s), env));
     flag = PRIMPRINT(INTERNAL(fun));
     R_Visible = flag != 1;
-    ans = callFun(call, INTERNAL(fun), args, env);
+    /* "s" below cannot be changed to "call" as some code expects name
+       of the internal like "rbind" as opposed to ".Internal" */
+    ans = callFun(s, INTERNAL(fun), args, env);
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
     if (flag < 2) R_Visible = flag != 1;
