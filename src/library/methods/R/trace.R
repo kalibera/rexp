@@ -253,7 +253,10 @@
             ## loaded packages that import package pname
 
             spname = sub("^namespace:", "", pname)
-            for(importingPkg in getNamespaceUsers(spname)) {
+                # catching error in case when spname is not a name of a namespace, but
+                # e.g. a reference class
+            ipkgs = tryCatch(getNamespaceUsers(spname), error=function(e){c()})
+            for(importingPkg in ipkgs) {
               .updateInImportsEnv(what, newFun, importingPkg)
             }
         }
