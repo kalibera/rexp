@@ -251,7 +251,9 @@
         if (length(pname) != 0) {
             ## update the function also in "imports:" environments of already
             ## loaded packages that import package pname
-            for(importingPkg in getNamespaceUsers(pname)) {
+
+            spname = sub("^namespace:", "", pname)
+            for(importingPkg in getNamespaceUsers(spname)) {
               .updateInImportsEnv(what, newFun, importingPkg)
             }
         }
