@@ -469,7 +469,8 @@ static SEXP forcePromise(SEXP e)
 }
 
 /* like evalList, but the returned type is VECSEXP and tags are ignored */
-static SEXP evalListToNewList(SEXP list, SEXP rho, SEXP call, int n)
+/* also add call, op, env to the beginning of the list, if needed by op */
+static SEXP evalListToNewList(SEXP list, SEXP rho, SEXP call, SEXP op, int n)
 {
     SEXP el = list;
     R_len_t anslen = 0;
@@ -516,14 +517,20 @@ static SEXP evalListToNewList(SEXP list, SEXP rho, SEXP call, int n)
 	el = CDR(el);
     }
 
-    SEXP ans = allocVector(VECSXP, anslen);
-    PROTECT(ans);
+    SEXP ans;
+    R_len_t i;
+
+    if (PRIMDCKIND(op) == DC_COE)
+        // leave space for call, op, rho
+        i = 3;
+    else
+        i = 0;
+    ans = PROTECT(allocVector(VECSXP, anslen + i));
     el = list;
-    R_len_t i = 0;
 
     while (el != R_NilValue) {
         if (CAR(el) == R_DotsSymbol) {
-	    SEXP h = findVar(CAR(el), rho); // FIXME: double lookup of ...
+	    SEXP h = findVar(CAR(el), rho); // FIXME: double lookup of "..."
 	    PROTECT(h);
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
@@ -548,25 +555,33 @@ SEXP prepareArgsForFun(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int hasDCFun = (PRIMDCFUN(op) != NULL);
 
+
     if (TYPEOF(op) == SPECIALSXP) {
         if (hasDCFun) {
-            /* old list to new list */
+
             int nargs = length(args);
-            SEXP ans = allocVector(VECSXP, nargs);
+            SEXP ans;
+            int start;
+
+            if (PRIMDCKIND(op) == DC_COE) // leave space for call, op, env
+                start = 3;
+            else
+                start = 0;
+
+            ans = allocVector(VECSXP, nargs + start);
             SEXP a = args;
             for(int i = 0; i < nargs; i++) {
-                SET_VECTOR_ELT(ans, i, CAR(a));
+                SET_VECTOR_ELT(ans, i + start, CAR(a));
                 a = CDR(a);
             }
             return ans;
-        } else {
+        } else
             return args;
-        }
     }
 
     if (TYPEOF(op) == BUILTINSXP) {
         if (hasDCFun)
-            return evalListToNewList(args, env, call, 0);
+            return evalListToNewList(args, env, call, op, 0);
         else
             return evalList(args, env, call, 0);
     }
@@ -579,8 +594,15 @@ SEXP callFun(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     if (TYPEOF(args) == VECSXP) {
         R_len_t nargs = LENGTH(args);
-        checkArityCallLength(op, call, nargs);
-            // FIXME: could use a function that does not support -1
+
+        // FIXME: could use a function that does not support -1 for better performance
+        if (PRIMDCKIND(op) == DC_COE) {
+            checkArityCallLength(op, call, nargs - 3);
+            SET_VECTOR_ELT(args, 0, call);
+            SET_VECTOR_ELT(args, 1, op);
+            SET_VECTOR_ELT(args, 2, env);
+        } else
+            checkArityCallLength(op, call, nargs);
 
         return R_doDotCall( PRIMDCFUN(op), nargs, (SEXP *) DATAPTR(args), call );
     }

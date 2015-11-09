@@ -119,7 +119,7 @@ FUNTAB R_FunTab[] =
 {".primTrace",	do_trace,	0,	101,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".primUntrace",do_trace,	1,	101,	1,	{PP_FUNCALL, PREC_FN,	  0}},
 {".Internal",	do_internal,	0,	200,	1,	{PP_FUNCALL, PREC_FN,	  0}},
-{".Primitive",	do_primitive,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	  0}},
+{".Primitive",	dcfun,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	  0}, (DL_FUNC) dc_primitive, DC_COE},
 {"call",	do_call,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"quote",	do_quote,	0,	0,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"substitute",	do_substitute,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -1015,11 +1015,22 @@ SEXP attribute_hidden R_Primitive(const char *primname)
     return R_NilValue;
 }
 
+SEXP attribute_hidden dc_primitive(SEXP call, SEXP op, SEXP env, SEXP name)
+{
+    SEXP prim;
+    if (!isString(name) || LENGTH(name) != 1 ||
+	STRING_ELT(name, 0) == R_NilValue)
+	errorcall(call, _("string argument required"));
+    prim = R_Primitive(CHAR(STRING_ELT(name, 0)));
+    if (prim == R_NilValue)
+	errorcall(call, _("no such primitive function"));
+    return prim;
+}
+
 SEXP attribute_hidden do_primitive(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP name, prim;
-    checkArity(op, args);
-    name = CAR(args);
+    SEXP name = CAR(args);
+    SEXP prim;
     if (!isString(name) || LENGTH(name) != 1 ||
 	STRING_ELT(name, 0) == R_NilValue)
 	errorcall(call, _("string argument required"));
@@ -1309,9 +1320,20 @@ static SEXP dcfun(SEXP call, SEXP op, SEXP args, SEXP env)
     R_len_t nargs = length(args);
     checkArityCallLength(op, call, nargs);
 
-    /* convert list to new list */
-    SEXP pargs = PROTECT(allocVector(VECSXP, nargs));
-    R_len_t i = 0;
+    SEXP pargs;
+    R_len_t i;
+    if (PRIMDCKIND(op) == DC_COE) {
+        pargs = PROTECT(allocVector(VECSXP, nargs + 3));
+        SET_VECTOR_ELT(pargs, 0, call);
+        SET_VECTOR_ELT(pargs, 1, op);
+        SET_VECTOR_ELT(pargs, 2, env);
+        i = 3;
+        nargs += 3;
+    } else {
+        pargs = PROTECT(allocVector(VECSXP, nargs));
+        i = 0;
+    }
+
     SEXP a = args;
     while(a != R_NilValue) {
         SET_VECTOR_ELT(pargs, i++, CAR(a));
