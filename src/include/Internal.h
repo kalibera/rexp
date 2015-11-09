@@ -164,7 +164,6 @@ SEXP do_parse(SEXP, SEXP, SEXP, SEXP);
 SEXP do_paste(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pmin(SEXP, SEXP, SEXP, SEXP);
 SEXP do_pos2env(SEXP, SEXP, SEXP, SEXP);
-SEXP do_primitive(SEXP, SEXP, SEXP, SEXP);
 SEXP do_printdefault(SEXP, SEXP, SEXP, SEXP);
 SEXP do_printfunction(SEXP, SEXP, SEXP, SEXP);
 SEXP do_psort(SEXP, SEXP, SEXP, SEXP);
@@ -509,5 +508,10 @@ SEXP dc_writechar(SEXP object, SEXP argcon, SEXP nchars, SEXP sep, SEXP arguseBy
 SEXP dc_writelines(SEXP text, SEXP argcon, SEXP sep, SEXP arguseBytes);
 SEXP NORET dc_dfltStop(SEXP argmsg, SEXP ecall);
 SEXP NORET dc_invokeRestart(SEXP r, SEXP arglist);
+
+/* .Call implementations of do_functions requiring call, op, env */
+
+SEXP dc_primitive(SEXP call, SEXP op, SEXP env, SEXP name);
+SEXP do_primitive(SEXP call, SEXP op, SEXP args, SEXP env);
 
 #endif /* not R_INTERNAL_H */

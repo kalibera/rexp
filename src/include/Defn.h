@@ -351,6 +351,11 @@ typedef struct {
 	unsigned int rightassoc;  /* right associative? */
 } PPinfo;
 
+typedef enum {
+    DC_SIMPLE	 = 0,    /* no meta-arguments, no tags, fixed arity */
+    DC_COE       = 1     /* call, op, env meta args, no tags, fixed arity */
+} DCFUNCkind;
+
 #include <R_ext/Rdynload.h>
 
 /* The type definitions for the table of built-in functions. */
@@ -363,6 +368,7 @@ typedef struct {
     int	   arity;    /* function arity */
     PPinfo gram;     /* pretty-print info */
     DL_FUNC dcfun;   /* .Call entry point */
+    DCFUNCkind dckind;  /* kind of .Call entry point*/
 } FUNTAB;
 
 #ifdef USE_RINTERNALS
@@ -381,6 +387,7 @@ typedef struct {
 #define PRIMPRINT(x)	(((R_FunTab[(x)->u.primsxp.offset].eval)/100)%10)
 #define PRIMINTERNAL(x)	(((R_FunTab[(x)->u.primsxp.offset].eval)%100)/10)
 #define PRIMDCFUN(x)	(R_FunTab[(x)->u.primsxp.offset].dcfun)
+#define PRIMDCKIND(x)	(R_FunTab[(x)->u.primsxp.offset].dckind)
 
 SEXP prepareArgsForFun(SEXP, SEXP, SEXP, SEXP);
 SEXP callFun(SEXP, SEXP, SEXP, SEXP);
