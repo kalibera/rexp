@@ -1422,58 +1422,51 @@ static SEXP math2B(SEXP sa, SEXP sb, double (*f)(double, double, double *),
     return sy;
 } /* math2B() */
 
-#define Math2(A, FUN)	  math2(CAR(A), CADR(A), FUN, call);
-#define Math2_1(A, FUN)	math2_1(CAR(A), CADR(A), CADDR(A), FUN, call);
-#define Math2_2(A, FUN) math2_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN, call)
-#define Math2B(A, FUN)	  math2B(CAR(A), CADR(A), FUN, call);
-
-SEXP attribute_hidden do_math2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+dc_math2(SEXP call, SEXP op, SEXP env, SEXP sa, SEXP sb, SEXP sI, SEXP sJ)
 {
-    checkArity(op, args);
-
-    if (isComplex(CAR(args)) ||
-	(PRIMVAL(op) == 0 && isComplex(CADR(args))))
-	return complex_math2(call, op, args, env);
-
+    if (isComplex(sa) ||
+	(PRIMVAL(op) == 0 && isComplex(sb)))
+	return complex_math2(call, op, env, sa, sb);
 
     switch (PRIMVAL(op)) {
 
-    case  0: return Math2(args, atan2);
-    case 10001: return Math2(args, fround);// round(),  ../nmath/fround.c
-    case 10004: return Math2(args, fprec); // signif(), ../nmath/fprec.c
+    case  0: return math2(sa, sb, atan2, call);
+    case 10001: return math2(sa, sb, fround, call);// round(),  ../nmath/fround.c
+    case 10004: return math2(sa, sb, fprec, call); // signif(), ../nmath/fprec.c
 
-    case  2: return Math2(args, lbeta);
-    case  3: return Math2(args, beta);
-    case  4: return Math2(args, lchoose);
-    case  5: return Math2(args, choose);
+    case  2: return math2(sa, sb, lbeta, call);
+    case  3: return math2(sa, sb, beta, call);
+    case  4: return math2(sa, sb, lchoose, call);
+    case  5: return math2(sa, sb, choose, call);
 
-    case  6: return Math2_1(args, dchisq);
-    case  7: return Math2_2(args, pchisq);
-    case  8: return Math2_2(args, qchisq);
+    case  6: return math2_1(sa, sb, sI, dchisq, call);
+    case  7: return math2_2(sa, sb, sI, sJ, pchisq, call);
+    case  8: return math2_2(sa, sb, sI, sJ, qchisq, call);
 
-    case  9: return Math2_1(args, dexp);
-    case 10: return Math2_2(args, pexp);
-    case 11: return Math2_2(args, qexp);
+    case  9: return math2_1(sa, sb, sI, dexp, call);
+    case 10: return math2_2(sa, sb, sI, sJ, pexp, call);
+    case 11: return math2_2(sa, sb, sI, sJ, qexp, call);
 
-    case 12: return Math2_1(args, dgeom);
-    case 13: return Math2_2(args, pgeom);
-    case 14: return Math2_2(args, qgeom);
+    case 12: return math2_1(sa, sb, sI, dgeom, call);
+    case 13: return math2_2(sa, sb, sI, sJ, pgeom, call);
+    case 14: return math2_2(sa, sb, sI, sJ, qgeom, call);
 
-    case 15: return Math2_1(args, dpois);
-    case 16: return Math2_2(args, ppois);
-    case 17: return Math2_2(args, qpois);
+    case 15: return math2_1(sa, sb, sI, dpois, call);
+    case 16: return math2_2(sa, sb, sI, sJ, ppois, call);
+    case 17: return math2_2(sa, sb, sI, sJ, qpois, call);
 
-    case 18: return Math2_1(args, dt);
-    case 19: return Math2_2(args, pt);
-    case 20: return Math2_2(args, qt);
+    case 18: return math2_1(sa, sb, sI, dt, call);
+    case 19: return math2_2(sa, sb, sI, sJ, pt, call);
+    case 20: return math2_2(sa, sb, sI, sJ, qt, call);
 
-    case 21: return Math2_1(args, dsignrank);
-    case 22: return Math2_2(args, psignrank);
-    case 23: return Math2_2(args, qsignrank);
+    case 21: return math2_1(sa, sb, sI, dsignrank, call);
+    case 22: return math2_2(sa, sb, sI, sJ, psignrank, call);
+    case 23: return math2_2(sa, sb, sI, sJ, qsignrank, call);
 
-    case 24: return Math2B(args, bessel_j_ex);
-    case 25: return Math2B(args, bessel_y_ex);
-    case 26: return Math2(args, psigamma);
+    case 24: return math2B(sa, sb, bessel_j_ex, call);
+    case 25: return math2B(sa, sb, bessel_y_ex, call);
+    case 26: return math2(sa, sb, psigamma, call);
 
     default:
 	errorcall(call,
@@ -1525,7 +1518,7 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (length(CADR(args)) == 0)
 		errorcall(call, _("invalid second argument of length 0"));
 	}
-	res = do_math2(call, op, args, env);
+	res = dc_math2(call, op, env, CAR(args), CADR(args), R_NilValue, R_NilValue);
     }
     UNPROTECT(nprotect);
     return res;
@@ -1549,7 +1542,7 @@ SEXP attribute_hidden do_log1arg(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(args2 = lang2(CAR(args), tmp));
     if (! DispatchGroup("Math", call2, op, args2, env, &res)) {
 	if (isComplex(CAR(args)))
-	    res = complex_math2(call2, op, args2, env);
+	    res = complex_math2(call2, op, env, CAR(args), tmp);
 	else
 	    res = math2(CAR(args), tmp, logbase, call);
     }
@@ -1600,7 +1593,7 @@ SEXP attribute_hidden do_log_builtin(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (x != R_MissingArg && y != R_MissingArg &&
 	    ! OBJECT(x) && ! OBJECT(y)) {
 	    if (isComplex(x) || isComplex(y))
-		res = complex_math2(call, op, args, env);
+		res = complex_math2(call, op, env, x, y);
 	    else
 		res = math2(x, y, logbase, call);
 	    UNPROTECT(1);
@@ -1644,7 +1637,7 @@ SEXP attribute_hidden do_log_builtin(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (length(CADR(args)) == 0)
 		errorcall(call, _("invalid argument 'base' of length 0"));
 	    if (isComplex(CAR(args)) || isComplex(CADR(args)))
-		res = complex_math2(call, op, args, env);
+		res = complex_math2(call, op, env, CAR(args), CADR(args));
 	    else
 		res = math2(CAR(args), CADR(args), logbase, call);
 	}
@@ -1795,78 +1788,73 @@ static SEXP math3B(SEXP sa, SEXP sb, SEXP sc,
     return sy;
 } /* math3B */
 
-#define Math3_1(A, FUN)	math3_1(CAR(A), CADR(A), CADDR(A), CADDDR(A), FUN, call);
-#define Math3_2(A, FUN) math3_2(CAR(A), CADR(A), CADDR(A), CADDDR(A), CAD4R(A), FUN, call)
-#define Math3B(A, FUN)  math3B (CAR(A), CADR(A), CADDR(A), FUN, call);
-
-SEXP attribute_hidden do_math3(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+dc_math3(SEXP call, SEXP op, SEXP env, SEXP sa, SEXP sb, SEXP sc, SEXP sI, SEXP sJ)
 {
-    checkArity(op, args);
-
     switch (PRIMVAL(op)) {
 
-    case  1:  return Math3_1(args, dbeta);
-    case  2:  return Math3_2(args, pbeta);
-    case  3:  return Math3_2(args, qbeta);
+    case  1:  return math3_1(sa, sb, sc, sI, dbeta, call);
+    case  2:  return math3_2(sa, sb, sc, sI, sJ, pbeta, call);
+    case  3:  return math3_2(sa, sb, sc, sI, sJ, qbeta, call);
 
-    case  4:  return Math3_1(args, dbinom);
-    case  5:  return Math3_2(args, pbinom);
-    case  6:  return Math3_2(args, qbinom);
+    case  4:  return math3_1(sa, sb, sc, sI, dbinom, call);
+    case  5:  return math3_2(sa, sb, sc, sI, sJ, pbinom, call);
+    case  6:  return math3_2(sa, sb, sc, sI, sJ, qbinom, call);
 
-    case  7:  return Math3_1(args, dcauchy);
-    case  8:  return Math3_2(args, pcauchy);
-    case  9:  return Math3_2(args, qcauchy);
+    case  7:  return math3_1(sa, sb, sc, sI, dcauchy, call);
+    case  8:  return math3_2(sa, sb, sc, sI, sJ, pcauchy, call);
+    case  9:  return math3_2(sa, sb, sc, sI, sJ, qcauchy, call);
 
-    case 10:  return Math3_1(args, df);
-    case 11:  return Math3_2(args, pf);
-    case 12:  return Math3_2(args, qf);
+    case 10:  return math3_1(sa, sb, sc, sI, df, call);
+    case 11:  return math3_2(sa, sb, sc, sI, sJ, pf, call);
+    case 12:  return math3_2(sa, sb, sc, sI, sJ, qf, call);
 
-    case 13:  return Math3_1(args, dgamma);
-    case 14:  return Math3_2(args, pgamma);
-    case 15:  return Math3_2(args, qgamma);
+    case 13:  return math3_1(sa, sb, sc, sI, dgamma, call);
+    case 14:  return math3_2(sa, sb, sc, sI, sJ, pgamma, call);
+    case 15:  return math3_2(sa, sb, sc, sI, sJ, qgamma, call);
 
-    case 16:  return Math3_1(args, dlnorm);
-    case 17:  return Math3_2(args, plnorm);
-    case 18:  return Math3_2(args, qlnorm);
+    case 16:  return math3_1(sa, sb, sc, sI, dlnorm, call);
+    case 17:  return math3_2(sa, sb, sc, sI, sJ, plnorm, call);
+    case 18:  return math3_2(sa, sb, sc, sI, sJ, qlnorm, call);
 
-    case 19:  return Math3_1(args, dlogis);
-    case 20:  return Math3_2(args, plogis);
-    case 21:  return Math3_2(args, qlogis);
+    case 19:  return math3_1(sa, sb, sc, sI, dlogis, call);
+    case 20:  return math3_2(sa, sb, sc, sI, sJ, plogis, call);
+    case 21:  return math3_2(sa, sb, sc, sI, sJ, qlogis, call);
 
-    case 22:  return Math3_1(args, dnbinom);
-    case 23:  return Math3_2(args, pnbinom);
-    case 24:  return Math3_2(args, qnbinom);
+    case 22:  return math3_1(sa, sb, sc, sI, dnbinom, call);
+    case 23:  return math3_2(sa, sb, sc, sI, sJ, pnbinom, call);
+    case 24:  return math3_2(sa, sb, sc, sI, sJ, qnbinom, call);
 
-    case 25:  return Math3_1(args, dnorm);
-    case 26:  return Math3_2(args, pnorm);
-    case 27:  return Math3_2(args, qnorm);
+    case 25:  return math3_1(sa, sb, sc, sI, dnorm, call);
+    case 26:  return math3_2(sa, sb, sc, sI, sJ, pnorm, call);
+    case 27:  return math3_2(sa, sb, sc, sI, sJ, qnorm, call);
 
-    case 28:  return Math3_1(args, dunif);
-    case 29:  return Math3_2(args, punif);
-    case 30:  return Math3_2(args, qunif);
+    case 28:  return math3_1(sa, sb, sc, sI, dunif, call);
+    case 29:  return math3_2(sa, sb, sc, sI, sJ, punif, call);
+    case 30:  return math3_2(sa, sb, sc, sI, sJ, qunif, call);
 
-    case 31:  return Math3_1(args, dweibull);
-    case 32:  return Math3_2(args, pweibull);
-    case 33:  return Math3_2(args, qweibull);
+    case 31:  return math3_1(sa, sb, sc, sI, dweibull, call);
+    case 32:  return math3_2(sa, sb, sc, sI, sJ, pweibull, call);
+    case 33:  return math3_2(sa, sb, sc, sI, sJ, qweibull, call);
 
-    case 34:  return Math3_1(args, dnchisq);
-    case 35:  return Math3_2(args, pnchisq);
-    case 36:  return Math3_2(args, qnchisq);
+    case 34:  return math3_1(sa, sb, sc, sI, dnchisq, call);
+    case 35:  return math3_2(sa, sb, sc, sI, sJ, pnchisq, call);
+    case 36:  return math3_2(sa, sb, sc, sI, sJ, qnchisq, call);
 
-    case 37:  return Math3_1(args, dnt);
-    case 38:  return Math3_2(args, pnt);
-    case 39:  return Math3_2(args, qnt);
+    case 37:  return math3_1(sa, sb, sc, sI, dnt, call);
+    case 38:  return math3_2(sa, sb, sc, sI, sJ, pnt, call);
+    case 39:  return math3_2(sa, sb, sc, sI, sJ, qnt, call);
 
-    case 40:  return Math3_1(args, dwilcox);
-    case 41:  return Math3_2(args, pwilcox);
-    case 42:  return Math3_2(args, qwilcox);
+    case 40:  return math3_1(sa, sb, sc, sI, dwilcox, call);
+    case 41:  return math3_2(sa, sb, sc, sI, sJ, pwilcox, call);
+    case 42:  return math3_2(sa, sb, sc, sI, sJ, qwilcox, call);
 
-    case 43:  return Math3B(args, bessel_i_ex);
-    case 44:  return Math3B(args, bessel_k_ex);
+    case 43:  return math3B(sa, sb, sc, bessel_i_ex, call);
+    case 44:  return math3B(sa, sb, sc, bessel_k_ex, call);
 
-    case 45:  return Math3_1(args, dnbinom_mu);
-    case 46:  return Math3_2(args, pnbinom_mu);
-    case 47:  return Math3_2(args, qnbinom_mu);
+    case 45:  return math3_1(sa, sb, sc, sI, dnbinom_mu, call);
+    case 46:  return math3_2(sa, sb, sc, sI, sJ, pnbinom_mu, call);
+    case 47:  return math3_2(sa, sb, sc, sI, sJ, qnbinom_mu, call);
 
     default:
 	errorcall(call,
@@ -1883,6 +1871,7 @@ SEXP attribute_hidden do_math3(SEXP call, SEXP op, SEXP args, SEXP env)
 #define if_NA_Math4_set(y,a,b,c,d)				\
 	if      (ISNA (a)|| ISNA (b)|| ISNA (c)|| ISNA (d)) y = NA_REAL;\
 	else if (ISNAN(a)|| ISNAN(b)|| ISNAN(c)|| ISNAN(d)) y = R_NaN;
+
 
 static SEXP math4(SEXP sa, SEXP sb, SEXP sc, SEXP sd,
 		  double (*f)(double, double, double, double), SEXP lcall)
@@ -2003,43 +1992,30 @@ static SEXP math4_2(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ,
     return sy;
 } /* math4_2() */
 
-
-#define CAD3R	CADDDR
-/* This is not (yet) in Rinternals.h : */
-#define CAD5R(e)	CAR(CDR(CDR(CDR(CDR(CDR(e))))))
-
-#define Math4(A, FUN)   math4  (CAR(A), CADR(A), CADDR(A), CAD3R(A), FUN, call)
-#define Math4_1(A, FUN) math4_1(CAR(A), CADR(A), CADDR(A), CAD3R(A), CAD4R(A), \
-				FUN, call)
-#define Math4_2(A, FUN) math4_2(CAR(A), CADR(A), CADDR(A), CAD3R(A), CAD4R(A), \
-				CAD5R(A), FUN, call)
-
-
-SEXP attribute_hidden do_math4(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_math4(SEXP call, SEXP op, SEXP env,
+  SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ)
 {
-    checkArity(op, args);
-
-
     switch (PRIMVAL(op)) {
 
 	/* Completely dummy for -Wall -- math4() at all! : */
-    case -99: return Math4(args, (double (*)(double, double, double, double))NULL);
+    case -99: return math4(sa, sb, sc, sd,
+                (double (*)(double, double, double, double))NULL, call);
 
-    case  1: return Math4_1(args, dhyper);
-    case  2: return Math4_2(args, phyper);
-    case  3: return Math4_2(args, qhyper);
+    case  1: return math4_1(sa, sb, sc, sd, sI, dhyper, call);
+    case  2: return math4_2(sa, sb, sc, sd, sI, sJ, phyper, call);
+    case  3: return math4_2(sa, sb, sc, sd, sI, sJ, qhyper, call);
 
-    case  4: return Math4_1(args, dnbeta);
-    case  5: return Math4_2(args, pnbeta);
-    case  6: return Math4_2(args, qnbeta);
-    case  7: return Math4_1(args, dnf);
-    case  8: return Math4_2(args, pnf);
-    case  9: return Math4_2(args, qnf);
+    case  4: return math4_1(sa, sb, sc, sd, sI, dnbeta, call);
+    case  5: return math4_2(sa, sb, sc, sd, sI, sJ, pnbeta, call);
+    case  6: return math4_2(sa, sb, sc, sd, sI, sJ, qnbeta, call);
+    case  7: return math4_1(sa, sb, sc, sd, sI, dnf, call);
+    case  8: return math4_2(sa, sb, sc, sd, sI, sJ, pnf, call);
+    case  9: return math4_2(sa, sb, sc, sd, sI, sJ, qnf, call);
 #ifdef UNIMP
-    case 10: return Math4_1(args, dtukey);
+    case 10: return math4_1(sa, sb, sc, sd, sI, dtukey, call);
 #endif
-    case 11: return Math4_2(args, ptukey);
-    case 12: return Math4_2(args, qtukey);
+    case 11: return math4_2(sa, sb, sc, sd, sI, sJ, ptukey, call);
+    case 12: return math4_2(sa, sb, sc, sd, sI, sJ, qtukey, call);
     default:
 	errorcall(call,
 		  _("unimplemented real function of %d numeric arguments"), 4);
@@ -2155,6 +2131,10 @@ SEXP attribute_hidden do_math5(SEXP call, SEXP op, SEXP args, SEXP env)
 /* This is used for experimenting with parallelized nmath functions -- LT */
 CCODE R_get_arith_function(int which)
 {
+    // if this functionality is needed, we can implement wrappers to
+    // emulate the old interface
+    error("R_get_arith_function is now defunct"); return NULL;
+/*
     switch (which) {
     case 1: return do_math1;
     case 2: return do_math2;
@@ -2164,4 +2144,5 @@ CCODE R_get_arith_function(int which)
     case 12: return complex_math2;
     default: error("bad arith function index"); return NULL;
     }
+*/
 }

@@ -739,9 +739,11 @@ static int fgrep_one_bytes(const char *pat, const char *target, int len,
     return -1;
 }
 
-SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+dc_grep(SEXP call, SEXP op, SEXP env, SEXP pat, SEXP text, SEXP argigcase,
+    SEXP argvalue, SEXP argperl, SEXP argfixed, SEXP arguseBytes, SEXP arginvert)
 {
-    SEXP pat, text, ind, ans;
+    SEXP ind, ans;
     regex_t reg;
     R_xlen_t i, j, n;
     int nmatches = 0, ov[3], rc;
@@ -754,15 +756,12 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
     const void *vmax;
     int nwarn = 0;
 
-    checkArity(op, args);
-    pat = CAR(args); args = CDR(args);
-    text = CAR(args); args = CDR(args);
-    igcase_opt = asLogical(CAR(args)); args = CDR(args);
-    value_opt = asLogical(CAR(args)); args = CDR(args);
-    perl_opt = asLogical(CAR(args)); args = CDR(args);
-    fixed_opt = asLogical(CAR(args)); args = CDR(args);
-    useBytes = asLogical(CAR(args)); args = CDR(args);
-    invert = asLogical(CAR(args));
+    igcase_opt = asLogical(argigcase);
+    value_opt = asLogical(argvalue);
+    perl_opt = asLogical(argperl);
+    fixed_opt = asLogical(argfixed);
+    useBytes = asLogical(arguseBytes);
+    invert = asLogical(arginvert);
     if (igcase_opt == NA_INTEGER) igcase_opt = 0;
     if (value_opt == NA_INTEGER) value_opt = 0;
     if (perl_opt == NA_INTEGER) perl_opt = 0;
@@ -1481,9 +1480,10 @@ static int wcount_subs(const wchar_t *repl)
  * either once or globally.
  * The functions are loosely patterned on the "sub" and "gsub" in "nawk". */
 
-SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_gsub(SEXP call, SEXP op, SEXP env, SEXP pat, SEXP rep,
+    SEXP text, SEXP argigcase, SEXP argperl, SEXP argfixed, SEXP arguseBytes)
 {
-    SEXP pat, rep, text, ans;
+    SEXP ans;
     regex_t reg;
     regmatch_t regmatch[10];
     R_xlen_t i, n;
@@ -1499,17 +1499,12 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     const unsigned char *tables = NULL;
     const void *vmax = vmaxget();
 
-    checkArity(op, args);
-
     global = PRIMVAL(op);
 
-    pat = CAR(args); args = CDR(args);
-    rep = CAR(args); args = CDR(args);
-    text = CAR(args); args = CDR(args);
-    igcase_opt = asLogical(CAR(args)); args = CDR(args);
-    perl_opt = asLogical(CAR(args)); args = CDR(args);
-    fixed_opt = asLogical(CAR(args)); args = CDR(args);
-    useBytes = asLogical(CAR(args)); args = CDR(args);
+    igcase_opt = asLogical(argigcase);
+    perl_opt = asLogical(argperl);
+    fixed_opt = asLogical(argfixed);
+    useBytes = asLogical(arguseBytes);
     if (igcase_opt == NA_INTEGER) igcase_opt = 0;
     if (perl_opt == NA_INTEGER) perl_opt = 0;
     if (fixed_opt == NA_INTEGER) fixed_opt = 0;
@@ -2299,9 +2294,10 @@ static SEXP gregexpr_BadStringAns(void)
     return ans;
 }
 
-SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_regexpr(SEXP call, SEXP op, SEXP env, SEXP pat,
+    SEXP text, SEXP argigcase, SEXP argperl, SEXP argfixed, SEXP arguseBytes)
 {
-    SEXP pat, text, ans;
+    SEXP ans;
     regex_t reg;
     regmatch_t regmatch[10];
     R_xlen_t i, n;
@@ -2319,13 +2315,10 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP capture_names = R_NilValue;
     int nwarn = 0;
 
-    checkArity(op, args);
-    pat = CAR(args); args = CDR(args);
-    text = CAR(args); args = CDR(args);
-    igcase_opt = asLogical(CAR(args)); args = CDR(args);
-    perl_opt = asLogical(CAR(args)); args = CDR(args);
-    fixed_opt = asLogical(CAR(args)); args = CDR(args);
-    useBytes = asLogical(CAR(args)); args = CDR(args);
+    igcase_opt = asLogical(argigcase);
+    perl_opt = asLogical(argperl);
+    fixed_opt = asLogical(argfixed);
+    useBytes = asLogical(arguseBytes);
     if (igcase_opt == NA_INTEGER) igcase_opt = 0;
     if (perl_opt == NA_INTEGER) perl_opt = 0;
     if (fixed_opt == NA_INTEGER) fixed_opt = 0;

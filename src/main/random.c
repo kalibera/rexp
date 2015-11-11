@@ -63,32 +63,32 @@ random1(double (*f) (double), double *a, R_xlen_t na, double *x, R_xlen_t n)
 /* "do_random1" - random sampling from 1 parameter families. */
 /* See switch below for distributions. */
 
-SEXP attribute_hidden do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_random1(SEXP call, SEXP op, SEXP rho, SEXP argn, SEXP arga)
 {
     SEXP x, a;
     R_xlen_t i, n, na;
-    checkArity(op, args);
-    if (!isVector(CAR(args)) || !isNumeric(CADR(args)))
+    if (!isVector(argn) || !isNumeric(arga))
 	invalid(call);
-    if (XLENGTH(CAR(args)) == 1) {
+    if (XLENGTH(argn) == 1) {
 #ifdef LONG_VECTOR_SUPPORT
-	double dn = asReal(CAR(args));
+	double dn = asReal(argn);
 	if (ISNAN(dn) || dn < 0 || dn > R_XLEN_T_MAX)
 	    invalid(call);
 	n = (R_xlen_t) dn;
 #else
-	n = asInteger(CAR(args));
+	n = asInteger(argn);
 	if (n == NA_INTEGER || n < 0)
 	    invalid(call);
 #endif
     }
-    else n = XLENGTH(CAR(args));
+    else n = XLENGTH(argn);
     PROTECT(x = allocVector(REALSXP, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
     }
-    na = XLENGTH(CADR(args));
+    na = XLENGTH(arga);
     if (na < 1) {
 	for (i = 0; i < n; i++)
 	    REAL(x)[i] = NA_REAL;
@@ -96,7 +96,7 @@ SEXP attribute_hidden do_random1(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(CADR(args), REALSXP));
+	PROTECT(a = coerceVector(arga, REALSXP));
 	GetRNGstate();
 	switch (PRIMVAL(op)) {
 	    RAND1(0, rchisq);
@@ -143,35 +143,35 @@ static Rboolean random2(double (*f) (double, double),
 /* "do_random2" - random sampling from 2 parameter families. */
 /* See switch below for distributions. */
 
-SEXP attribute_hidden do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_random2(SEXP call, SEXP op, SEXP rho, SEXP argn, SEXP arga, SEXP argb)
 {
     SEXP x, a, b;
     R_xlen_t i, n, na, nb;
-    checkArity(op, args);
-    if (!isVector(CAR(args)) ||
-	!isNumeric(CADR(args)) ||
-	!isNumeric(CADDR(args)))
+    if (!isVector(argn) ||
+	!isNumeric(arga) ||
+	!isNumeric(argb))
 	invalid(call);
-    if (XLENGTH(CAR(args)) == 1) {
+    if (XLENGTH(argn) == 1) {
 #ifdef LONG_VECTOR_SUPPORT
-	double dn = asReal(CAR(args));
+	double dn = asReal(argn);
 	if (ISNAN(dn) || dn < 0 || dn > R_XLEN_T_MAX)
 	    invalid(call);
 	n = (R_xlen_t) dn;
 #else
-	n = asInteger(CAR(args));
+	n = asInteger(argn);
 	if (n == NA_INTEGER || n < 0)
 	    invalid(call);
 #endif
     }
-    else n = XLENGTH(CAR(args));
+    else n = XLENGTH(argn);
     PROTECT(x = allocVector(REALSXP, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
     }
-    na = XLENGTH(CADR(args));
-    nb = XLENGTH(CADDR(args));
+    na = XLENGTH(arga);
+    nb = XLENGTH(argb);
     if (na < 1 || nb < 1) {
 	for (i = 0; i < n; i++)
 	    REAL(x)[i] = NA_REAL;
@@ -179,8 +179,8 @@ SEXP attribute_hidden do_random2(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     else {
 	Rboolean naflag = FALSE;
-	PROTECT(a = coerceVector(CADR(args), REALSXP));
-	PROTECT(b = coerceVector(CADDR(args), REALSXP));
+	PROTECT(a = coerceVector(arga, REALSXP));
+	PROTECT(b = coerceVector(argb, REALSXP));
 	GetRNGstate();
 	switch (PRIMVAL(op)) {
 	    RAND2(0, rbeta);
@@ -238,34 +238,31 @@ random3(double (*f) (double, double, double), double *a,
 /* "do_random3" - random sampling from 3 parameter families. */
 /* See switch below for distributions. */
 
-SEXP attribute_hidden do_random3(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_random3(SEXP call, SEXP op, SEXP rho, SEXP argn, SEXP a, SEXP b, SEXP c)
 {
-    SEXP x, a, b, c;
+    SEXP x;
     R_xlen_t i, n, na, nb, nc;
-    checkArity(op, args);
-    if (!isVector(CAR(args))) invalid(call);
-    if (LENGTH(CAR(args)) == 1) {
+    if (!isVector(argn)) invalid(call);
+    if (LENGTH(argn) == 1) {
 #ifdef LONG_VECTOR_SUPPORT
-	double dn = asReal(CAR(args));
+	double dn = asReal(argn);
 	if (ISNAN(dn) || dn < 0 || dn > R_XLEN_T_MAX)
 	    invalid(call);
 	n = (R_xlen_t) dn;
 #else
-	n = asInteger(CAR(args));
+	n = asInteger(argn);
 	if (n == NA_INTEGER || n < 0)
 	    invalid(call);
 #endif
     }
-    else n = XLENGTH(CAR(args));
+    else n = XLENGTH(argn);
     PROTECT(x = allocVector(REALSXP, n));
     if (n == 0) {
 	UNPROTECT(1);
 	return(x);
     }
 
-    args = CDR(args); a = CAR(args);
-    args = CDR(args); b = CAR(args);
-    args = CDR(args); c = CAR(args);
     if (!isNumeric(a) || !isNumeric(b) || !isNumeric(c))
 	invalid(call);
     na = XLENGTH(a);

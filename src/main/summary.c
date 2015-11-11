@@ -809,15 +809,14 @@ SEXP attribute_hidden do_range(SEXP call, SEXP op, SEXP args, SEXP env)
 
 // which.min(x) : The index (starting at 1), of the first min(x) in x
 // which.max(x) : The index (starting at 1), of the first max(x) in x
-SEXP attribute_hidden do_first_min(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_first_min(SEXP call, SEXP op, SEXP rho, SEXP sx)
 {
-    SEXP sx = CAR(args), ans;
+    SEXP ans;
     int nprot = 1;
     R_xlen_t i, n, indx = -1;
 
-    checkArity(op, args);
     if (!isNumeric(sx)) {
-	PROTECT(sx = coerceVector(CAR(args), REALSXP)); nprot++;
+	PROTECT(sx = coerceVector(sx, REALSXP)); nprot++;
     }
     n = XLENGTH(sx);
     switch(TYPEOF(sx)) {

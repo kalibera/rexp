@@ -871,31 +871,30 @@ static void GetFullDLLPath(SEXP call, char *buf, const char *const path)
   call routines from "incomplete" DLLs.
  */
 
-SEXP attribute_hidden do_dynload(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+dc_dynload(SEXP call, SEXP op, SEXP env, SEXP x, SEXP local, SEXP now, SEXP path)
 {
     char buf[2 * PATH_MAX];
     DllInfo *info;
 
-    checkArity(op,args);
-    if (!isString(CAR(args)) || LENGTH(CAR(args)) != 1)
+    if (!isString(x) || LENGTH(x) != 1)
 	error(_("character argument expected"));
-    GetFullDLLPath(call, buf, translateChar(STRING_ELT(CAR(args), 0)));
+    GetFullDLLPath(call, buf, translateChar(STRING_ELT(x, 0)));
     /* AddDLL does this DeleteDLL(buf); */
-    info = AddDLL(buf, LOGICAL(CADR(args))[0], LOGICAL(CADDR(args))[0],
-		  translateChar(STRING_ELT(CADDDR(args), 0)));
+    info = AddDLL(buf, LOGICAL(local)[0], LOGICAL(now)[0],
+		  translateChar(STRING_ELT(path, 0)));
     if(!info)
 	error(_("unable to load shared object '%s':\n  %s"), buf, DLLerror);
     return(Rf_MakeDLLInfo(info));
 }
 
-SEXP attribute_hidden do_dynunload(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_dynunload(SEXP call, SEXP op, SEXP env, SEXP x)
 {
     char buf[2 * PATH_MAX];
 
-    checkArity(op,args);
-    if (!isString(CAR(args)) || LENGTH(CAR(args)) != 1)
+    if (!isString(x) || LENGTH(x) != 1)
 	error(_("character argument expected"));
-    GetFullDLLPath(call, buf, translateChar(STRING_ELT(CAR(args), 0)));
+    GetFullDLLPath(call, buf, translateChar(STRING_ELT(x, 0)));
     if(!DeleteDLL(buf))
 	error(_("shared object '%s\' was not loaded"), buf);
     return R_NilValue;

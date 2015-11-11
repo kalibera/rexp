@@ -217,32 +217,28 @@ void PrintLanguage(SEXP s, Rboolean useSource)
 
 /* .Internal(print.default(x, digits, quote, na.print, print.gap,
 			   right, max, useS4)) */
-SEXP attribute_hidden do_printdefault(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_printdefault(SEXP call, SEXP op, SEXP rho, SEXP x, SEXP argdigits, SEXP argquote,
+    SEXP naprint, SEXP argprintgap, SEXP argright, SEXP argmax, SEXP arguseSource,
+    SEXP argtryS4)
 {
-    SEXP x, naprint;
     int tryS4;
     Rboolean callShow = FALSE;
 
-    checkArity(op, args);
     PrintDefaults();
 
-    x = CAR(args); args = CDR(args);
-
-    if(!isNull(CAR(args))) {
-	R_print.digits = asInteger(CAR(args));
+    if(!isNull(argdigits)) {
+	R_print.digits = asInteger(argdigits);
 	if (R_print.digits == NA_INTEGER ||
 	    R_print.digits < R_MIN_DIGITS_OPT ||
 	    R_print.digits > R_MAX_DIGITS_OPT)
 	    error(_("invalid '%s' argument"), "digits");
     }
-    args = CDR(args);
 
-    R_print.quote = asLogical(CAR(args));
+    R_print.quote = asLogical(argquote);
     if(R_print.quote == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "quote");
-    args = CDR(args);
 
-    naprint = CAR(args);
     if(!isNull(naprint))  {
 	if(!isString(naprint) || LENGTH(naprint) < 1)
 	    error(_("invalid 'na.print' specification"));
@@ -250,35 +246,31 @@ SEXP attribute_hidden do_printdefault(SEXP call, SEXP op, SEXP args, SEXP rho)
 	R_print.na_width = R_print.na_width_noquote =
 	    (int) strlen(CHAR(R_print.na_string));
     }
-    args = CDR(args);
 
-    if(!isNull(CAR(args))) {
-	R_print.gap = asInteger(CAR(args));
+    if(!isNull(argprintgap)) {
+	R_print.gap = asInteger(argprintgap);
 	if (R_print.gap == NA_INTEGER || R_print.gap < 0)
 	    error(_("'gap' must be non-negative integer"));
     }
-    args = CDR(args);
 
-    R_print.right = (Rprt_adj) asLogical(CAR(args)); /* Should this be asInteger()? */
+    /* Should this be asInteger()? */
+    R_print.right = (Rprt_adj) asLogical(argright);
     if(R_print.right == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "right");
-    args = CDR(args);
 
-    if(!isNull(CAR(args))) {
-	R_print.max = asInteger(CAR(args));
+    if(!isNull(argmax)) {
+	R_print.max = asInteger(argmax);
 	if(R_print.max == NA_INTEGER || R_print.max < 0)
 	    error(_("invalid '%s' argument"), "max");
 	else if(R_print.max == INT_MAX) R_print.max--; // so we can add
     }
-    args = CDR(args);
 
-    R_print.useSource = asLogical(CAR(args));
+    R_print.useSource = asLogical(arguseSource);
     if(R_print.useSource == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "useSource");
     if(R_print.useSource) R_print.useSource = USESOURCE;
-    args = CDR(args);
 
-    tryS4 = asLogical(CAR(args));
+    tryS4 = asLogical(argtryS4);
     if(tryS4 == NA_LOGICAL)
 	error(_("invalid 'tryS4' internal argument"));
 

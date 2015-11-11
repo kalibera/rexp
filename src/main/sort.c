@@ -1287,20 +1287,18 @@ SEXP attribute_hidden do_order(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* FUNCTION: rank(x, length, ties.method) */
-SEXP attribute_hidden do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_rank(SEXP call, SEXP op, SEXP rho, SEXP x, SEXP sn, SEXP argties)
 {
-    SEXP rank, x;
+    SEXP rank;
     int *ik = NULL /* -Wall */;
     double *rk = NULL /* -Wall */;
     enum {AVERAGE, MAX, MIN} ties_kind = AVERAGE;
     Rboolean isLong = FALSE;
 
-    checkArity(op, args);
-    x = CAR(args);
     if(TYPEOF(x) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
 #ifdef LONG_VECTOR_SUPPORT
-    SEXP sn = CADR(args);
     R_xlen_t n;
     if (TYPEOF(sn) == REALSXP)  {
 	double d = REAL(x)[0];
@@ -1317,11 +1315,11 @@ SEXP attribute_hidden do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     isLong = n > INT_MAX;
 #else
-    int n = asInteger(CADR(args));
+    int n = asInteger(sn);
     if (n == NA_INTEGER || n < 0)
 	error(_("invalid '%s' value"), "length(xx)");
 #endif
-    const char *ties_str = CHAR(asChar(CADDR(args)));
+    const char *ties_str = CHAR(asChar(argties));
     if(!strcmp(ties_str, "average"))	ties_kind = AVERAGE;
     else if(!strcmp(ties_str, "max"))	ties_kind = MAX;
     else if(!strcmp(ties_str, "min"))	ties_kind = MIN;

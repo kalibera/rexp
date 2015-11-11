@@ -465,13 +465,13 @@ static SEXP do_lengths_long(SEXP x, SEXP call, SEXP rho)
 }
 #endif
 
-SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_lengths(SEXP call, SEXP op, SEXP rho, SEXP x, SEXP arguseNames)
 {
-    checkArity(op, args);
-    SEXP x = CAR(args), ans;
+    SEXP ans;
     R_xlen_t x_len, i;
     int *ans_elt;
-    int useNames = asLogical(CADR(args));
+    int useNames = asLogical(arguseNames);
     if (useNames == NA_LOGICAL)
 	error(_("invalid '%s' value"), "USE.NAMES");
     Rboolean isList = isVectorList(x);
@@ -515,14 +515,12 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-SEXP attribute_hidden do_rowscols(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_rowscols(SEXP call, SEXP op, SEXP rho, SEXP x)
 {
-    SEXP x, ans;
+    SEXP ans;
     int i, j, nr, nc;
 
-    checkArity(op, args);
     /* This is the dimensions vector */
-    x = CAR(args);
     if (!isInteger(x) || LENGTH(x) != 2)
 	error(_("a matrix-like object is required as argument to '%s'"),
 	      (PRIMVAL(op) == 2) ? "col" : "row");
@@ -1342,17 +1340,16 @@ SEXP attribute_hidden dc_aperm(SEXP a, SEXP perm, SEXP argresize)
 }
 
 /* colSums(x, n, p, na.rm) and friends */
-SEXP attribute_hidden do_colsum(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_colsum(SEXP call, SEXP op, SEXP rho, SEXP x, SEXP argn, SEXP argp, SEXP argNaRm)
 {
-    SEXP x, ans = R_NilValue;
+    SEXP ans = R_NilValue;
     int type;
     Rboolean NaRm, keepNA;
 
-    checkArity(op, args);
-    x = CAR(args); args = CDR(args);
-    R_xlen_t n = asVecSize(CAR(args)); args = CDR(args);
-    R_xlen_t p = asVecSize(CAR(args)); args = CDR(args);
-    NaRm = asLogical(CAR(args));
+    R_xlen_t n = asVecSize(argn);
+    R_xlen_t p = asVecSize(argp);
+    NaRm = asLogical(argNaRm);
     if (n == NA_INTEGER || n < 0)
 	error(_("invalid '%s' argument"), "n");
     if (p == NA_INTEGER || p < 0)

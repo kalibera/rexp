@@ -95,10 +95,8 @@ static Rboolean tracing_state = TRUE, debugging_state = TRUE;
 #define SET_TRACE_STATE(value) tracing_state = value
 #define SET_DEBUG_STATE(value) debugging_state = value
 
-SEXP attribute_hidden do_traceOnOff(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_traceOnOff(SEXP call, SEXP op, SEXP rho, SEXP onOff)
 {
-    checkArity(op, args);
-    SEXP onOff = CAR(args);
     Rboolean trace = (PRIMVAL(op) == 0),
 	prev = trace ? GET_TRACE_STATE : GET_DEBUG_STATE;
 

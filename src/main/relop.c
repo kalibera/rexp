@@ -838,17 +838,16 @@ static SEXP bitwiseShiftR(SEXP a, SEXP b)
     return ans;
 }
 
-SEXP attribute_hidden do_bitwise(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_bitwise(SEXP call, SEXP op, SEXP env, SEXP a, SEXP b)
 {
-    checkArity(op, args);
     SEXP ans = R_NilValue; /* -Wall */
     switch(PRIMVAL(op)) {
-    case 1: ans = bitwiseAnd(CAR(args), CADR(args)); break;
-    case 2: ans = bitwiseNot(CAR(args)); break;
-    case 3: ans = bitwiseOr(CAR(args), CADR(args)); break;
-    case 4: ans = bitwiseXor(CAR(args), CADR(args)); break;
-    case 5: ans = bitwiseShiftL(CAR(args), CADR(args)); break;
-    case 6: ans = bitwiseShiftR(CAR(args), CADR(args)); break;
+    case 1: ans = bitwiseAnd(a, b); break;
+    case 2: ans = bitwiseNot(a); break;
+    case 3: ans = bitwiseOr(a, b); break;
+    case 4: ans = bitwiseXor(a, b); break;
+    case 5: ans = bitwiseShiftL(a, b); break;
+    case 6: ans = bitwiseShiftR(a, b); break;
     }
     return ans;
 }

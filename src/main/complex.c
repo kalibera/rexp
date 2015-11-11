@@ -690,7 +690,8 @@ static void z_atan2(Rcomplex *r, Rcomplex *csn, Rcomplex *ccs)
 	/* Complex Functions of Two Arguments */
 
 typedef void (*cm2_fun)(Rcomplex *, Rcomplex *, Rcomplex *);
-SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+complex_math2(SEXP call, SEXP op, SEXP env, SEXP arga, SEXP argb)
 {
     R_xlen_t i, n, na, nb, ia, ib;
     Rcomplex ai, bi, *a, *b, *y;
@@ -713,8 +714,8 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	errorcall_return(call, _("unimplemented complex function"));
     }
 
-    PROTECT(sa = coerceVector(CAR(args), CPLXSXP));
-    PROTECT(sb = coerceVector(CADR(args), CPLXSXP));
+    PROTECT(sa = coerceVector(arga, CPLXSXP));
+    PROTECT(sb = coerceVector(argb, CPLXSXP));
     na = XLENGTH(sa); nb = XLENGTH(sb);
     if ((na == 0) || (nb == 0)) {
 	UNPROTECT(2);

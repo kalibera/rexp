@@ -2635,12 +2635,10 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 /* This is a special .Internal */
-SEXP attribute_hidden do_withVisible(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_withVisible(SEXP call, SEXP op, SEXP rho, SEXP x)
 {
-    SEXP x, nm, ret;
+    SEXP nm, ret;
 
-    checkArity(op, args);
-    x = CAR(args);
     x = eval(x, rho);
     PROTECT(x);
     PROTECT(ret = allocVector(VECSXP, 2));
@@ -3667,6 +3665,15 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   NEXT(); \
 } while(0)
 
+#define COEBuiltin2(dc_fun,which,rho) do {		     \
+  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SETSTACK(-2, dc_fun(call, getPrimitive(which, BUILTINSXP),	\
+		      rho, GETSTACK(-2), GETSTACK(-1)));			\
+  R_BCNodeStackTop--; \
+  NEXT(); \
+} while(0)
+
+
 #define Arith1(opsym) do {		\
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SEXP x = GETSTACK(-1); \
@@ -3948,7 +3955,7 @@ static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
 		NEXT();							\
 	    }								\
 	}								\
-	Builtin2(do_colon, R_ColonSymbol, rho);				\
+	COEBuiltin2(dc_colon, R_ColonSymbol, rho);				\
     } while (0)
 
 #define DO_SEQ_ALONG() do {					\
@@ -6234,15 +6241,9 @@ SEXP attribute_hidden dc_mkcode(SEXP bytes, SEXP consts)
     return ans;
 }
 
-SEXP attribute_hidden do_bcclose(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_bcclose(SEXP call, SEXP op, SEXP rho, SEXP forms, SEXP body, SEXP env)
 {
-    SEXP forms, body, env;
-
-    checkArity(op, args);
-    forms = CAR(args);
-    body = CADR(args);
-    env = CADDR(args);
-
     CheckFormals(forms);
 
     if (! isByteCode(body))
@@ -6258,12 +6259,10 @@ SEXP attribute_hidden do_bcclose(SEXP call, SEXP op, SEXP args, SEXP rho)
     return mkCLOSXP(forms, body, env);
 }
 
-SEXP attribute_hidden do_is_builtin_internal(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_is_builtin_internal(SEXP call, SEXP op, SEXP rho, SEXP symbol)
 {
-    SEXP symbol, i;
-
-    checkArity(op, args);
-    symbol = CAR(args);
+    SEXP i;
 
     if (!isSymbol(symbol))
 	errorcall(call, _("invalid symbol"));
@@ -6303,12 +6302,8 @@ static SEXP disassemble(SEXP bc)
   return ans;
 }
 
-SEXP attribute_hidden do_disassemble(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_disassemble(SEXP call, SEXP op, SEXP rho, SEXP code)
 {
-  SEXP code;
-
-  checkArity(op, args);
-  code = CAR(args);
   if (! isByteCode(code))
     errorcall(call, _("argument is not a byte code object"));
   return disassemble(code);
@@ -6321,14 +6316,12 @@ SEXP attribute_hidden dc_bcversion()
   return ans;
 }
 
-SEXP attribute_hidden do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_loadfile(SEXP call, SEXP op, SEXP env, SEXP argfile)
 {
     SEXP file, s;
     FILE *fp;
 
-    checkArity(op, args);
-
-    PROTECT(file = coerceVector(CAR(args), STRSXP));
+    PROTECT(file = coerceVector(argfile, STRSXP));
 
     if (! isValidStringF(file))
 	errorcall(call, _("bad file name"));
@@ -6343,22 +6336,21 @@ SEXP attribute_hidden do_loadfile(SEXP call, SEXP op, SEXP args, SEXP env)
     return s;
 }
 
-SEXP attribute_hidden do_savefile(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_savefile(SEXP call, SEXP op, SEXP env,
+    SEXP code, SEXP argfile, SEXP argascii)
 {
     FILE *fp;
 
-    checkArity(op, args);
-
-    if (!isValidStringF(CADR(args)))
+    if (!isValidStringF(argfile))
 	errorcall(call, _("'file' must be non-empty string"));
-    if (TYPEOF(CADDR(args)) != LGLSXP)
+    if (TYPEOF(argascii) != LGLSXP)
 	errorcall(call, _("'ascii' must be logical"));
 
-    fp = RC_fopen(STRING_ELT(CADR(args), 0), "wb", TRUE);
+    fp = RC_fopen(STRING_ELT(argfile, 0), "wb", TRUE);
     if (!fp)
 	errorcall(call, _("unable to open 'file'"));
 
-    R_SaveToFileV(CAR(args), fp, INTEGER(CADDR(args))[0], 0);
+    R_SaveToFileV(code, fp, INTEGER(argascii)[0], 0);
 
     fclose(fp);
     return R_NilValue;

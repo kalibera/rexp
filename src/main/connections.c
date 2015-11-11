@@ -1966,36 +1966,33 @@ newxzfile(const char *description, const char *mode, int type, int compress)
 }
 
 /* op 0 is gzfile, 1 is bzfile, 2 is xv/lzma */
-SEXP attribute_hidden do_gzfile(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_gzfile(SEXP call, SEXP op, SEXP env,
+    SEXP sfile, SEXP sopen, SEXP enc, SEXP argcompress)
 {
-    SEXP sfile, sopen, ans, class, enc;
+    SEXP ans, class;
     const char *file, *open;
     int ncon, compress = 9;
     Rconnection con = NULL;
     int type = PRIMVAL(op);
     int subtype = 0;
 
-    checkArity(op, args);
-    sfile = CAR(args);
     if(!isString(sfile) || LENGTH(sfile) != 1)
 	error(_("invalid '%s' argument"), "description");
     if(LENGTH(sfile) > 1)
 	warning(_("only first element of 'description' argument used"));
     file = translateChar(STRING_ELT(sfile, 0));
-    sopen = CADR(args);
     if(!isString(sopen) || LENGTH(sopen) != 1)
 	error(_("invalid '%s' argument"), "open");
-    enc = CADDR(args);
     if(!isString(enc) || LENGTH(enc) != 1 ||
        strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
     if(type < 2) {
-	compress = asInteger(CADDDR(args));
+	compress = asInteger(argcompress);
 	if(compress == NA_LOGICAL || compress < 0 || compress > 9)
 	    error(_("invalid '%s' argument"), "compress");
     }
     if(type == 2) {
-	compress = asInteger(CADDDR(args));
+	compress = asInteger(argcompress);
 	if(compress == NA_LOGICAL || abs(compress) > 9)
 	    error(_("invalid '%s' argument"), "compress");
     }
@@ -4884,9 +4881,10 @@ R_newCurlUrl(const char *description, const char * const mode, int type);
 /* op = 0: .Internal( url(description, open, blocking, encoding, method))
    op = 1: .Internal(file(description, open, blocking, encoding, method, raw))
 */
-SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_url(SEXP call, SEXP op, SEXP env,
+    SEXP scmd, SEXP sopen, SEXP argblock, SEXP enc, SEXP argmeth, SEXP argraw)
 {
-    SEXP scmd, sopen, ans, class, enc;
+    SEXP ans, class;
     char *class2 = "url";
     const char *url, *open;
     int ncon, block, raw = 0, defmeth,
@@ -4895,9 +4893,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
     cetype_t ienc = CE_NATIVE;
     Rconnection con = NULL;
 
-    checkArity(op, args);
     // --------- description
-    scmd = CAR(args);
     if(!isString(scmd) || LENGTH(scmd) != 1)
 	error(_("invalid '%s' argument"), "description");
     if(LENGTH(scmd) > 1)
@@ -4936,22 +4932,20 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	inet = FALSE; // file:// URL or a file path
 
     // --------- open
-    sopen = CADR(args);
     if(!isString(sopen) || LENGTH(sopen) != 1)
 	error(_("invalid '%s' argument"), "open");
     open = CHAR(STRING_ELT(sopen, 0)); /* ASCII */
     // --------- blocking
-    block = asLogical(CADDR(args));
+    block = asLogical(argblock);
     if(block == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "blocking");
     // --------- encoding
-    enc = CADDDR(args);
     if(!isString(enc) || LENGTH(enc) != 1 ||
        strlen(CHAR(STRING_ELT(enc, 0))) > 100) /* ASCII */
 	error(_("invalid '%s' argument"), "encoding");
 
     // --------- method
-    const char *cmeth = CHAR(asChar(CAD4R(args)));
+    const char *cmeth = CHAR(asChar(argmeth));
     meth = streql(cmeth, "libcurl"); // 1 if "libcurl", else 0
     defmeth = streql(cmeth, "default");
     if (streql(cmeth, "wininet")) {
@@ -4967,7 +4961,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 
     // --------- raw, for file() only
     if(PRIMVAL(op) == 1) {
-	raw = asLogical(CAD4R(CDR(args)));
+	raw = asLogical(argraw);
 	if(raw == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "raw");
     }

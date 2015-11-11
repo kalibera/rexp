@@ -654,18 +654,16 @@ R_xlen_t any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last)
   .Internal(unique(x))		  [op=1]
    .Internal(anyDuplicated(x))	  [op=2]
 */
-SEXP attribute_hidden do_duplicated(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_duplicated(SEXP call, SEXP op, SEXP env,
+    SEXP x, SEXP incomp, SEXP argfromLast, SEXP argnmax)
 {
-    SEXP x, incomp, dup, ans;
+    SEXP dup, ans;
     int fromLast, nmax = NA_INTEGER;
     R_xlen_t i, k, n;
 
-    checkArity(op, args);
-    x = CAR(args);
-    incomp = CADR(args);
-    if (length(CADDR(args)) < 1)
+    if (length(argfromLast) < 1)
 	error(_("'fromLast' must be length 1"));
-    fromLast = asLogical(CADDR(args));
+    fromLast = asLogical(argfromLast);
     if (fromLast == NA_LOGICAL)
 	error(_("'fromLast' must be TRUE or FALSE"));
 
@@ -683,7 +681,7 @@ SEXP attribute_hidden do_duplicated(SEXP call, SEXP op, SEXP args, SEXP env)
 	       (PRIMVAL(op) == 1 ? "unique" : /* 2 */ "anyDuplicated")));
     }
     if (PRIMVAL(op) <= 1) {
-	nmax = asInteger(CADDDR(args));
+	nmax = asInteger(argnmax);
 	if (nmax != NA_INTEGER && nmax <= 0)
 	    error(_("'nmax' must be positive"));
     }
@@ -976,22 +974,20 @@ SEXP match(SEXP itable, SEXP ix, int nmatch)
 
 
 // .Internal(match(x, table, nomatch, incomparables)) :
-SEXP attribute_hidden do_match(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_match(SEXP call, SEXP op, SEXP env,
+    SEXP x, SEXP table, SEXP argnomatch, SEXP incomp)
 {
-    checkArity(op, args);
-
-    if ((!isVector(CAR(args)) && !isNull(CAR(args)))
-	|| (!isVector(CADR(args)) && !isNull(CADR(args))))
+    if ((!isVector(x) && !isNull(x))
+	|| (!isVector(table) && !isNull(table)))
 	error(_("'match' requires vector arguments"));
 
-    int nomatch = asInteger(CADDR(args));
-    SEXP incomp = CADDDR(args);
+    int nomatch = asInteger(argnomatch);
 
     if (isNull(incomp) || /* S has FALSE to mean empty */
 	(length(incomp) == 1 && isLogical(incomp) && LOGICAL(incomp)[0] == 0))
-	return match5(CADR(args), CAR(args), nomatch, NULL, env);
+	return match5(table, x, nomatch, NULL, env);
     else
-	return match5(CADR(args), CAR(args), nomatch, incomp, env);
+	return match5(table, x, nomatch, incomp, env);
 }
 
 /* pmatch and charmatch return integer positions, so cannot be used
@@ -1312,16 +1308,13 @@ static SEXP subDots(SEXP rho)
 }
 
 
-SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_matchcall(SEXP call, SEXP op, SEXP env,
+    SEXP b, SEXP funcall, SEXP argexpdots, SEXP sysp)
 {
     SEXP formals, actuals, rlist;
-    SEXP funcall, f, b, rval, sysp, t1, t2, tail;
+    SEXP f, rval, t1, t2, tail;
 //    RCNTXT *cptr;
     int expdots;
-
-    checkArity(op,args);
-
-    funcall = CADR(args);
 
     if (TYPEOF(funcall) == EXPRSXP)
 	funcall = VECTOR_ELT(funcall, 0);
@@ -1329,17 +1322,15 @@ SEXP attribute_hidden do_matchcall(SEXP call, SEXP op, SEXP args, SEXP env)
     if (TYPEOF(funcall) != LANGSXP)
 	error(_("invalid '%s' argument"), "call");
 
-    b = CAR(args);
     if (TYPEOF(b) != CLOSXP)
 	error(_("invalid '%s' argument"), "definition");
 
-    sysp = CAR(CDDDR(args));
     if (!isEnvironment(sysp))
 	error(_("'envir' must be an environment"));
 
     /* Do we expand ... ? */
 
-    expdots = asLogical(CAR(CDDR(args)));
+    expdots = asLogical(argexpdots);
     if (expdots == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "expand.dots");
 
@@ -1565,15 +1556,13 @@ rowsum_df(SEXP x, SEXP g, SEXP uniqueg, SEXP snarm, SEXP rn)
     return ans;
 }
 
-SEXP attribute_hidden do_rowsum(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_rowsum(SEXP call, SEXP op, SEXP env,
+    SEXP x, SEXP g, SEXP uniqueg, SEXP snarm, SEXP rn)
 {
-    checkArity(op, args);
     if(PRIMVAL(op) == 1)
-	return rowsum_df(CAR(args), CADR(args), CADDR(args), CADDDR(args),
-			 CAD4R(args));
+	return rowsum_df(x, g, uniqueg, snarm, rn);
     else
-	return rowsum(CAR(args), CADR(args), CADDR(args), CADDDR(args),
-		      CAD4R(args));
+	return rowsum(x, g, uniqueg, snarm, rn);
 }
 
 

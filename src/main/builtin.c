@@ -66,20 +66,15 @@ R_xlen_t asVecSize(SEXP x)
     return -999;  /* which gives error in the caller */
 }
 
-SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_delayed(SEXP call, SEXP op, SEXP rho, SEXP argname, SEXP expr, SEXP eenv, SEXP aenv)
 {
-    SEXP name = R_NilValue /* -Wall */, expr, eenv, aenv;
-    checkArity(op, args);
-
-    if (!isString(CAR(args)) || LENGTH(CAR(args)) == 0)
+    SEXP name = R_NilValue /* -Wall */;
+    if (!isString(argname) || LENGTH(argname) == 0)
 	error(_("invalid first argument"));
     else
-	name = installTrChar(STRING_ELT(CAR(args), 0));
-    args = CDR(args);
-    expr = CAR(args);
+	name = installTrChar(STRING_ELT(argname, 0));
 
-    args = CDR(args);
-    eenv = CAR(args);
     if (isNull(eenv)) {
 	error(_("use of NULL environment is defunct"));
 	eenv = R_BaseEnv;
@@ -87,8 +82,6 @@ SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isEnvironment(eenv))
 	errorcall(call, _("invalid '%s' argument"), "eval.env");
 
-    args = CDR(args);
-    aenv = CAR(args);
     if (isNull(aenv)) {
 	error(_("use of NULL environment is defunct"));
 	aenv = R_BaseEnv;
@@ -497,11 +490,12 @@ static void cat_cleanup(void *data)
 #endif
 }
 
-SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_cat(SEXP call, SEXP op, SEXP rho,
+    SEXP objs, SEXP file, SEXP sepr, SEXP fill, SEXP labs, SEXP argappend)
 {
     cat_info ci;
     RCNTXT cntxt;
-    SEXP objs, file, fill, sepr, labs, s;
+    SEXP s;
     int ifile;
     Rconnection con;
     int append;
@@ -509,30 +503,20 @@ SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
     char buf[512];
     const char *p = "";
 
-    checkArity(op, args);
-
     /* Use standard printing defaults */
     PrintDefaults();
 
-    objs = CAR(args);
-    args = CDR(args);
-
-    file = CAR(args);
     ifile = asInteger(file);
     con = getConnection(ifile);
     if(!con->canwrite) /* if it is not open, we may not know yet */
 	error(_("cannot write to this connection"));
-    args = CDR(args);
 
-    sepr = CAR(args);
     if (!isString(sepr))
 	error(_("invalid '%s' specification"), "sep");
     nlsep = 0;
     for (i = 0; i < LENGTH(sepr); i++)
 	if (strstr(CHAR(STRING_ELT(sepr, i)), "\n")) nlsep = 1; /* ASCII */
-    args = CDR(args);
 
-    fill = CAR(args);
     if ((!isNumeric(fill) && !isLogical(fill)) || (LENGTH(fill) != 1))
 	error(_("invalid '%s' argument"), "fill");
     if (isLogical(fill)) {
@@ -546,15 +530,12 @@ SEXP attribute_hidden do_cat(SEXP call, SEXP op, SEXP args, SEXP rho)
 	warning(_("non-positive 'fill' argument will be ignored"));
 	pwidth = INT_MAX;
     }
-    args = CDR(args);
 
-    labs = CAR(args);
     if (!isString(labs) && labs != R_NilValue)
 	error(_("invalid '%s' argument"), "labels");
     lablen = length(labs);
-    args = CDR(args);
 
-    append = asLogical(CAR(args));
+    append = asLogical(argappend);
     if (append == NA_LOGICAL)
 	error(_("invalid '%s' specification"), "append");
 

@@ -814,9 +814,9 @@ SEXP attribute_hidden dc_makenames(SEXP names, SEXP argallow_)
 }
 
 
-SEXP attribute_hidden do_tolower(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_tolower(SEXP call, SEXP op, SEXP env, SEXP x)
 {
-    SEXP x, y;
+    SEXP y;
     R_xlen_t i, n;
     int ul;
     char *p;
@@ -825,10 +825,8 @@ SEXP attribute_hidden do_tolower(SEXP call, SEXP op, SEXP args, SEXP env)
     Rboolean use_UTF8 = FALSE;
     const void *vmax;
 
-    checkArity(op, args);
     ul = PRIMVAL(op); /* 0 = tolower, 1 = toupper */
 
-    x = CAR(args);
     /* coercion is done in wrapper */
     if (!isString(x)) error(_("non-character argument"));
     n = XLENGTH(x);

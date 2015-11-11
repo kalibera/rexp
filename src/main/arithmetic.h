@@ -18,16 +18,16 @@
  */
 
 SEXP do_math1(SEXP, SEXP, SEXP, SEXP);
-SEXP do_math2(SEXP, SEXP, SEXP, SEXP);
-SEXP do_math3(SEXP, SEXP, SEXP, SEXP);
-SEXP do_math4(SEXP, SEXP, SEXP, SEXP);
+SEXP dc_math2(SEXP call, SEXP op, SEXP env, SEXP sa, SEXP sb, SEXP sI, SEXP sJ);
+SEXP dc_math3(SEXP call, SEXP op, SEXP env, SEXP sa, SEXP sb, SEXP sc, SEXP sI, SEXP sJ);
+SEXP dc_math4(SEXP call, SEXP op, SEXP env, SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP sI, SEXP sJ);
 #ifdef WHEN_MATH5_IS_THERE
  SEXP do_math5(SEXP, SEXP, SEXP, SEXP);
 #endif
 SEXP do_cmathfuns(SEXP, SEXP, SEXP, SEXP);
 
 SEXP complex_math1(SEXP, SEXP, SEXP, SEXP);
-SEXP complex_math2(SEXP, SEXP, SEXP, SEXP);
+SEXP complex_math2(SEXP call, SEXP op, SEXP env, SEXP arga, SEXP argb);
 SEXP complex_unary(ARITHOP_TYPE, SEXP, SEXP);
 SEXP complex_binary(ARITHOP_TYPE, SEXP, SEXP);
 
