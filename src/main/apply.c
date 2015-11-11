@@ -31,16 +31,14 @@
 
    FUN must be unevaluated for use in e.g. bquote .
 */
-SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_lapply(SEXP call, SEXP op, SEXP rho, SEXP X, SEXP FUN)
 {
     PROTECT_INDEX px;
 
-    checkArity(op, args);
-    SEXP X, XX, FUN;
-    PROTECT_WITH_INDEX(X =CAR(args), &px);
-    XX = PROTECT(eval(CAR(args), rho));
+    SEXP XX;
+    PROTECT_WITH_INDEX(X, &px);
+    XX = PROTECT(eval(X, rho));
     R_xlen_t n = xlength(XX);  // a vector, so will be valid.
-    FUN = CADR(args);
     Rboolean realIndx = n > INT_MAX;
 
     SEXP ans = PROTECT(allocVector(VECSXP, n));
@@ -79,10 +77,11 @@ SEXP attribute_hidden do_lapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* .Internal(vapply(X, FUN, FUN.VALUE, USE.NAMES)) */
 
 /* This is a special .Internal */
-SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_vapply(SEXP call, SEXP op, SEXP rho, SEXP X, SEXP FUN, SEXP argvalue, SEXP arguseNames)
 {
     SEXP R_fcall, ans, names = R_NilValue, rowNames = R_NilValue,
-	X, XX, FUN, value, dim_v;
+	XX, value, dim_v;
     R_xlen_t i, n;
     int commonLen;
     int useNames, rnk_v = -1; // = array_rank(value) := length(dim(value))
@@ -90,13 +89,12 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXPTYPE commonType;
     PROTECT_INDEX index = 0; /* initialize to avoid a warning */
 
-    checkArity(op, args);
-    PROTECT(X = CAR(args));
-    PROTECT(XX = eval(CAR(args), rho));
-    FUN = CADR(args);  /* must be unevaluated for use in e.g. bquote */
-    PROTECT(value = eval(CADDR(args), rho));
+    PROTECT(X);
+    PROTECT(XX = eval(X, rho));
+    /* FUN must be unevaluated for use in e.g. bquote */
+    PROTECT(value = eval(argvalue, rho));
     if (!isVector(value)) error(_("'FUN.VALUE' must be a vector"));
-    useNames = asLogical(eval(CADDDR(args), rho));
+    useNames = asLogical(eval(arguseNames, rho));
     if (useNames == NA_LOGICAL) error(_("invalid '%s' value"), "USE.NAMES");
 
     n = xlength(XX);
@@ -318,20 +316,15 @@ static SEXP do_one(SEXP X, SEXP FUN, SEXP classes, SEXP deflt,
     else return lazy_duplicate(deflt);
 }
 
-SEXP attribute_hidden do_rapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_rapply(SEXP call, SEXP op, SEXP rho,
+    SEXP X, SEXP FUN, SEXP classes, SEXP deflt, SEXP how)
 {
-    SEXP X, FUN, classes, deflt, how, ans, names;
+    SEXP ans, names;
     int i, n;
     Rboolean replace;
 
-    checkArity(op, args);
-    X = CAR(args); args = CDR(args);
-    FUN = CAR(args); args = CDR(args);
     if(!isFunction(FUN)) error(_("invalid '%s' argument"), "f");
-    classes = CAR(args); args = CDR(args);
     if(!isString(classes)) error(_("invalid '%s' argument"), "classes");
-    deflt = CAR(args); args = CDR(args);
-    how = CAR(args);
     if(!isString(how)) error(_("invalid '%s' argument"), "how");
     replace = strcmp(CHAR(STRING_ELT(how, 0)), "replace") == 0; /* ASCII */
     n = length(X);

@@ -94,10 +94,10 @@ amatch_regaparams(regaparams_t *params, int patlen,
     }
 }
 
-SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_agrep(SEXP call, SEXP op, SEXP env, SEXP pat, SEXP vec, SEXP argicase,
+    SEXP argvalue, SEXP opt_costs, SEXP opt_bounds, SEXP arguseBytes, SEXP argfixed)
 {
-    SEXP pat, vec, ind, ans;
-    SEXP opt_costs, opt_bounds;
+    SEXP ind, ans;
     int opt_icase, opt_value, opt_fixed, useBytes;
     R_xlen_t i, j, n;
     int nmatches, patlen;
@@ -109,16 +109,10 @@ SEXP attribute_hidden do_agrep(SEXP call, SEXP op, SEXP args, SEXP env)
     regamatch_t match;
     int rc, cflags = REG_NOSUB;
 
-    checkArity(op, args);
-    pat = CAR(args); args = CDR(args);
-    vec = CAR(args); args = CDR(args);
-    opt_icase = asLogical(CAR(args)); args = CDR(args);
-    opt_value = asLogical(CAR(args)); args = CDR(args);
-    opt_costs = CAR(args); args = CDR(args);
-    opt_bounds = CAR(args); args = CDR(args);
-    useBytes = asLogical(CAR(args));
-    args = CDR(args);
-    opt_fixed = asLogical(CAR(args));
+    opt_icase = asLogical(argicase);
+    opt_value = asLogical(argvalue);
+    useBytes = asLogical(arguseBytes);
+    opt_fixed = asLogical(argfixed);
 
     if(opt_icase == NA_INTEGER) opt_icase = 0;
     if(opt_value == NA_INTEGER) opt_value = 0;
@@ -724,10 +718,11 @@ SEXP attribute_hidden dc_adist(SEXP x, SEXP y, SEXP opt_costs, SEXP argcounts, S
     return ans;
 }
 
-SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+dc_aregexec(SEXP call, SEXP op, SEXP env, SEXP pat, SEXP vec, SEXP opt_bounds,
+    SEXP opt_costs, SEXP argicase, SEXP argfixed, SEXP arguseBytes)
 {
-    SEXP pat, vec, ans, matchpos, matchlen;
-    SEXP opt_bounds, opt_costs;
+    SEXP ans, matchpos, matchlen;
     int opt_icase, opt_fixed, useBytes;
 
     Rboolean haveBytes, useWC = FALSE;
@@ -743,15 +738,9 @@ SEXP attribute_hidden do_aregexec(SEXP call, SEXP op, SEXP args, SEXP env)
     R_xlen_t i, n;
     int rc, cflags = REG_EXTENDED;
 
-    checkArity(op, args);
-
-    pat = CAR(args); args = CDR(args);
-    vec = CAR(args); args = CDR(args);
-    opt_bounds = CAR(args); args = CDR(args);
-    opt_costs = CAR(args); args = CDR(args);
-    opt_icase = asLogical(CAR(args)); args = CDR(args);
-    opt_fixed = asLogical(CAR(args)); args = CDR(args);
-    useBytes = asLogical(CAR(args));
+    opt_icase = asLogical(argicase);
+    opt_fixed = asLogical(argfixed);
+    useBytes = asLogical(arguseBytes);
 
     if(opt_icase == NA_INTEGER) opt_icase = 0;
     if(opt_fixed == NA_INTEGER) opt_fixed = 0;

@@ -23,12 +23,9 @@
 
 #include <Defn.h>
 
-SEXP attribute_hidden
-do_mapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_mapply(SEXP call, SEXP op, SEXP rho, SEXP f,
+    SEXP varyingArgs, SEXP constantArgs)
 {
-    checkArity(op, args);
-
-    SEXP f = CAR(args), varyingArgs = CADR(args), constantArgs = CADDR(args);
     int m, zero = 0;
     R_xlen_t *lengths, *counters, longest = 0;
 

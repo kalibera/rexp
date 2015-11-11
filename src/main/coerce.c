@@ -1926,17 +1926,16 @@ SEXP attribute_hidden do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
  */
 
 // is.vector(x, mode) :
-SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_isvector(SEXP call, SEXP op, SEXP rho, SEXP x, SEXP argtype)
 {
-    SEXP ans, a, x;
+    SEXP ans, a;
     const char *stype;
 
-    checkArity(op, args);
-    x = CAR(args);
-    if (!isString(CADR(args)) || LENGTH(CADR(args)) != 1)
+    if (!isString(argtype) || LENGTH(argtype) != 1)
 	errorcall_return(call, R_MSG_mode);
 
-    stype = CHAR(STRING_ELT(CADR(args), 0)); /* ASCII */
+    stype = CHAR(STRING_ELT(argtype, 0)); /* ASCII */
 
     /* "name" and "symbol" are synonymous */
     if (streql(stype, "name"))
@@ -1959,8 +1958,8 @@ SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 	LOGICAL(ans)[0] = 0;
 
     /* We allow a "names" attribute on any vector. */
-    if (LOGICAL(ans)[0] && ATTRIB(CAR(args)) != R_NilValue) {
-	a = ATTRIB(CAR(args));
+    if (LOGICAL(ans)[0] && ATTRIB(x) != R_NilValue) {
+	a = ATTRIB(x);
 	while(a != R_NilValue) {
 	    if (TAG(a) != R_NamesSymbol) {
 		LOGICAL(ans)[0] = 0;

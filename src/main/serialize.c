@@ -2860,17 +2860,10 @@ dc_lazyLoadDBinsertValue(SEXP value, SEXP file, SEXP ascii, SEXP compsxp, SEXP h
 }
 
 SEXP attribute_hidden
-do_serialize(SEXP call, SEXP op, SEXP args, SEXP env)
+dc_serialize(SEXP call, SEXP op, SEXP env,
+    SEXP object, SEXP icon, SEXP type, SEXP ver, SEXP fun)
 {
-    checkArity(op, args);
-    if (PRIMVAL(op) == 2) return R_unserialize(CAR(args), CADR(args));
-
-    SEXP object, icon, type, ver, fun;
-    object = CAR(args); args = CDR(args);
-    icon = CAR(args); args = CDR(args);
-    type = CAR(args); args = CDR(args);
-    ver = CAR(args); args = CDR(args);
-    fun = CAR(args);
+    if (PRIMVAL(op) == 2) return R_unserialize(object, icon);
 
     if(PRIMVAL(op) == 1)
 	return R_serializeb(object, icon, type, ver, fun);

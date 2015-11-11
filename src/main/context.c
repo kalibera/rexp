@@ -515,14 +515,13 @@ int countContexts(int ctxttype, int browser) {
 /* functions to support looking up information about the browser */
 /* contexts that are in the evaluation stack */
 
-SEXP attribute_hidden do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_sysbrowser(SEXP call, SEXP op, SEXP rho, SEXP argn)
 {
     SEXP rval=R_NilValue;
     RCNTXT *cptr;
     int n;
 
-    checkArity(op, args);
-    n = asInteger(CAR(args));
+    n = asInteger(argn);
     if(n < 1 ) error(_("number of contexts must be positive"));
 
     /* first find the closest  browser context */

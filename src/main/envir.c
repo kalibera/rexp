@@ -1900,34 +1900,33 @@ SEXP attribute_hidden dc_remove(SEXP name, SEXP envarg, SEXP arginherits)
       get0   (x, envir, mode, inherits, value_if_not_exists)
 */
 
-SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_get(SEXP call, SEXP op, SEXP rho, SEXP argx, SEXP argenvir,
+    SEXP argmode, SEXP arginherits, SEXP value_if_not_exists)
 {
     SEXP rval, genv, t1 = R_NilValue;
     SEXPTYPE gmode;
     int ginherits = 0, where;
-    checkArity(op, args);
-
     /* The first arg is the object name */
     /* It must be present and a non-empty string */
 
-    if (!isValidStringF(CAR(args)))
+    if (!isValidStringF(argx))
 	error(_("invalid first argument"));
     else
-	t1 = installTrChar(STRING_ELT(CAR(args), 0));
+	t1 = installTrChar(STRING_ELT(argx, 0));
 
     /* envir :	originally, the "where=" argument */
 
-    if (TYPEOF(CADR(args)) == REALSXP || TYPEOF(CADR(args)) == INTSXP) {
-	where = asInteger(CADR(args));
+    if (TYPEOF(argenvir) == REALSXP || TYPEOF(argenvir) == INTSXP) {
+	where = asInteger(argenvir);
 	genv = R_sysframe(where, R_GlobalContext);
     }
-    else if (TYPEOF(CADR(args)) == NILSXP) {
+    else if (TYPEOF(argenvir) == NILSXP) {
 	error(_("use of NULL environment is defunct"));
 	genv = R_NilValue;  /* -Wall */
     }
-    else if (TYPEOF(CADR(args)) == ENVSXP)
-	genv = CADR(args);
-    else if(TYPEOF((genv = simple_as_environment(CADR(args)))) != ENVSXP) {
+    else if (TYPEOF(argenvir) == ENVSXP)
+	genv = argenvir;
+    else if(TYPEOF((genv = simple_as_environment(argenvir))) != ENVSXP) {
 	error(_("invalid '%s' argument"), "envir");
 	genv = R_NilValue;  /* -Wall */
     }
@@ -1938,17 +1937,17 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
        storage.mode.
     */
 
-    if (isString(CADDR(args))) {
-	if (!strcmp(CHAR(STRING_ELT(CADDR(args), 0)), "function")) /* ASCII */
+    if (isString(argmode)) {
+	if (!strcmp(CHAR(STRING_ELT(argmode, 0)), "function")) /* ASCII */
 	    gmode = FUNSXP;
 	else
-	    gmode = str2type(CHAR(STRING_ELT(CADDR(args), 0))); /* ASCII */
+	    gmode = str2type(CHAR(STRING_ELT(argmode, 0))); /* ASCII */
     } else {
 	error(_("invalid '%s' argument"), "mode");
 	gmode = FUNSXP;/* -Wall */
     }
 
-    ginherits = asLogical(CADDDR(args));
+    ginherits = asLogical(arginherits);
     if (ginherits == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "inherits");
 
@@ -1970,7 +1969,7 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    else
 		error(_("object '%s' of mode '%s' was not found"),
 		      CHAR(PRINTNAME(t1)),
-		      CHAR(STRING_ELT(CADDR(args), 0))); /* ASCII */
+		      CHAR(STRING_ELT(argmode, 0))); /* ASCII */
 	}
 
 #     define GET_VALUE(rval)				\
@@ -1989,7 +1988,7 @@ SEXP attribute_hidden do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     case 2: // get0(.)
 	if (rval == R_UnboundValue)
-	    return CAD4R(args);// i.e.  value_if_not_exists
+	    return value_if_not_exists;// i.e.  value_if_not_exists
 	GET_VALUE(rval);
 	break;
     }
@@ -2034,14 +2033,11 @@ static SEXP gfind(const char *name, SEXP env, SEXPTYPE mode,
  *
  * @return  a list of the same length as x, a character vector (of names).
  */
-SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_mget(SEXP call, SEXP op, SEXP rho,
+    SEXP x, SEXP env, SEXP mode, SEXP argifnotfound, SEXP arginherits)
 {
-    SEXP ans, env, x, mode, ifnotfound;
+    SEXP ans, ifnotfound;
     int ginherits = 0, nvals, nmode, nifnfnd;
-
-    checkArity(op, args);
-
-    x = CAR(args);
 
     nvals = length(x);
 
@@ -2053,13 +2049,11 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if( isNull(STRING_ELT(x, i)) || !CHAR(STRING_ELT(x, 0))[0] )
 	    error(_("invalid name in position %d"), i+1);
 
-    env = CADR(args);
     if (ISNULL(env)) {
 	error(_("use of NULL environment is defunct"));
     } else if( !isEnvironment(env) )
 	error(_("second argument must be an environment"));
 
-    mode = CADDR(args);
     nmode = length(mode);
     if( !isString(mode) )
 	error(_("invalid '%s' argument"), "mode");
@@ -2067,7 +2061,7 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
     if( nmode != nvals && nmode != 1 )
 	error(_("wrong length for '%s' argument"), "mode");
 
-    PROTECT(ifnotfound = coerceVector(CADDDR(args), VECSXP));
+    PROTECT(ifnotfound = coerceVector(argifnotfound, VECSXP));
     nifnfnd = length(ifnotfound);
     if( !isVector(ifnotfound) )
 	error(_("invalid '%s' argument"), "ifnotfound");
@@ -2075,7 +2069,7 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
     if( nifnfnd != nvals && nifnfnd != 1 )
 	error(_("wrong length for '%s' argument"), "ifnotfound");
 
-    ginherits = asLogical(CAD4R(args));
+    ginherits = asLogical(arginherits);
     if (ginherits == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "inherits");
 
@@ -2083,10 +2077,10 @@ SEXP attribute_hidden do_mget(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     for(int i = 0; i < nvals; i++) {
 	SEXPTYPE gmode;
-	if (!strcmp(CHAR(STRING_ELT(CADDR(args), i % nmode)), "function"))
+	if (!strcmp(CHAR(STRING_ELT(mode, i % nmode)), "function"))
 	    gmode = FUNSXP;
 	else {
-	    gmode = str2type(CHAR(STRING_ELT(CADDR(args), i % nmode)));
+	    gmode = str2type(CHAR(STRING_ELT(mode, i % nmode)));
 	    if(gmode == (SEXPTYPE) (-1))
 		error(_("invalid '%s' argument"), "mode");
 	}
@@ -2839,30 +2833,28 @@ SEXP attribute_hidden dc_env2list(SEXP env, SEXP argall, SEXP argsort_nms)
  * Equivalent to lapply(as.list(env, all.names=all.names), FUN, ...)
  */
 /* This is a special .Internal */
-SEXP attribute_hidden do_eapply(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_eapply(SEXP call, SEXP op, SEXP rho,
+    SEXP argenv, SEXP FUN, SEXP argall, SEXP arguseNms)
 {
-    SEXP env, ans, R_fcall, FUN, tmp, tmp2, ind;
+    SEXP env, ans, R_fcall, tmp, tmp2, ind;
     int i, k, k2;
     int /* boolean */ all, useNms;
 
-    checkArity(op, args);
-
-    PROTECT(env = eval(CAR(args), rho));
+    PROTECT(env = eval(argenv, rho));
     if (ISNULL(env))
 	error(_("use of NULL environment is defunct"));
     if( !isEnvironment(env) )
 	error(_("argument must be an environment"));
 
-    FUN = CADR(args);
     if (!isSymbol(FUN))
 	error(_("arguments must be symbolic"));
 
     /* 'all.names' : */
-    all = asLogical(eval(CADDR(args), rho));
+    all = asLogical(eval(argall, rho));
     if (all == NA_LOGICAL) all = 0;
 
     /* 'USE.NAMES' : */
-    useNms = asLogical(eval(CADDDR(args), rho));
+    useNms = asLogical(eval(arguseNms, rho));
     if (useNms == NA_LOGICAL) useNms = 0;
 
     if (env == R_BaseEnv || env == R_BaseNamespace)
@@ -3314,12 +3306,9 @@ Rboolean R_HasFancyBindings(SEXP rho)
     }
 }
 
-SEXP attribute_hidden do_lockBnd(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_lockBnd(SEXP call, SEXP op, SEXP rho, SEXP sym, SEXP env)
 {
-    SEXP sym, env;
-    checkArity(op, args);
-    sym = CAR(args);
-    env = CADR(args);
     switch(PRIMVAL(op)) {
     case 0:
 	R_LockBinding(sym, env);
@@ -3503,24 +3492,23 @@ static SEXP checkNSname(SEXP call, SEXP name)
     return name;
 }
 
-SEXP attribute_hidden do_regNS(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_regNS(SEXP call, SEXP op, SEXP rho, SEXP argname, SEXP val)
 {
-    SEXP name, val;
-    checkArity(op, args);
-    name = checkNSname(call, CAR(args));
-    val = CADR(args);
+    SEXP name;
+    name = checkNSname(call, argname);
     if (findVarInFrame(R_NamespaceRegistry, name) != R_UnboundValue)
 	errorcall(call, _("namespace already registered"));
     defineVar(name, val, R_NamespaceRegistry);
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_unregNS(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_unregNS(SEXP call, SEXP op, SEXP rho, SEXP argname)
 {
     SEXP name;
     int hashcode;
-    checkArity(op, args);
-    name = checkNSname(call, CAR(args));
+    name = checkNSname(call, argname);
     if (findVarInFrame(R_NamespaceRegistry, name) == R_UnboundValue)
 	errorcall(call, _("namespace not registered"));
     if( !HASHASH(PRINTNAME(name)))
@@ -3531,11 +3519,11 @@ SEXP attribute_hidden do_unregNS(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_getRegNS(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_getRegNS(SEXP call, SEXP op, SEXP rho, SEXP argname)
 {
     SEXP name, val;
-    checkArity(op, args);
-    name = checkNSname(call, coerceVector(CAR(args), SYMSXP));
+    name = checkNSname(call, coerceVector(argname, SYMSXP));
     val = findVarInFrame(R_NamespaceRegistry, name);
 
     switch(PRIMVAL(op)) {
@@ -3939,10 +3927,10 @@ SEXP topenv(SEXP target, SEXP envir) {
  *
  * @return
  */
-SEXP attribute_hidden do_topenv(SEXP call, SEXP op, SEXP args, SEXP rho) {
-    checkArity(op, args);
-    SEXP envir = CAR(args);
-    SEXP target = CADR(args); // = matchThisEnv, typically NULL (R_NilValue)
+SEXP attribute_hidden
+dc_topenv(SEXP call, SEXP op, SEXP rho, SEXP envir, SEXP target)
+{
+    // target = matchThisEnv, typically NULL (R_NilValue)
     if (TYPEOF(envir) != ENVSXP) envir = rho; // envir = parent.frame()
     if (target != R_NilValue && TYPEOF(target) != ENVSXP)  target = R_NilValue;
     return topenv(target, envir);

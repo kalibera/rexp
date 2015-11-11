@@ -2895,10 +2895,9 @@ SEXP attribute_hidden dc_eSoftVersion()
 /* platform-specific */
 extern void Rsleep(double timeint);
 
-SEXP attribute_hidden do_syssleep(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_syssleep(SEXP call, SEXP op, SEXP rho, SEXP argtime)
 {
-    checkArity(op, args);
-    double time = asReal(CAR(args));
+    double time = asReal(argtime);
     if (ISNAN(time) || time < 0.)
 	errorcall(call, _("invalid '%s' value"), "time");
     Rsleep(time);

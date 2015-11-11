@@ -49,9 +49,9 @@ static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 /* Note that NA_STRING is not handled separately here.  This is
    deliberate -- see ?paste -- and implicitly coerces it to "NA"
 */
-SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_paste(SEXP call, SEXP op, SEXP env, SEXP x, SEXP argsepcoll, SEXP argcollapse)
 {
-    SEXP ans, collapse, sep, x;
+    SEXP ans, collapse, sep;
     int sepw, u_sepw, ienc;
     R_xlen_t i, j, k, maxlen, nx, pwidth;
     const char *s, *cbuf, *csep=NULL, *u_csep=NULL;
@@ -61,21 +61,18 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	use_sep = (PRIMVAL(op) == 0);
     const void *vmax;
 
-    checkArity(op, args);
-
     /* We use formatting and so we must initialize printing. */
 
     PrintDefaults();
 
     /* Check the arguments */
 
-    x = CAR(args);
     if (!isVectorList(x))
 	error(_("invalid first argument"));
     nx = xlength(x);
 
     if(use_sep) { /* paste(..., sep, .) */
-	sep = CADR(args);
+	sep = argsepcoll;
 	if (!isString(sep) || LENGTH(sep) <= 0 || STRING_ELT(sep, 0) == NA_STRING)
 	    error(_("invalid separator"));
 	sep = STRING_ELT(sep, 0);
@@ -85,10 +82,10 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
 	sepKnown = ENC_KNOWN(sep) > 0;
 	sepUTF8 = IS_UTF8(sep);
 	sepBytes = IS_BYTES(sep);
-	collapse = CADDR(args);
+	collapse = argcollapse;
     } else { /* paste0(..., .) */
 	u_sepw = sepw = 0; sep = R_NilValue;/* -Wall */
-	collapse = CADR(args);
+	collapse = argsepcoll;
     }
     if (!isNull(collapse))
 	if(!isString(collapse) || LENGTH(collapse) <= 0 ||
@@ -277,25 +274,21 @@ SEXP attribute_hidden do_paste(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_filepath(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+dc_filepath(SEXP call, SEXP op, SEXP env, SEXP x, SEXP sep)
 {
-    SEXP ans, sep, x;
+    SEXP ans;
     int i, j, k, ln, maxlen, nx, nzero, pwidth, sepw;
     const char *s, *csep, *cbuf;
     char *buf;
 
-    checkArity(op, args);
-
     /* Check the arguments */
 
-    x = CAR(args);
     if (!isVectorList(x))
 	error(_("invalid first argument"));
     nx = length(x);
     if(nx == 0) return allocVector(STRSXP, 0);
 
-
-    sep = CADR(args);
     if (!isString(sep) || LENGTH(sep) <= 0 || STRING_ELT(sep, 0) == NA_STRING)
 	error(_("invalid separator"));
     sep = STRING_ELT(sep, 0);

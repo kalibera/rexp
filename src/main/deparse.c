@@ -380,9 +380,10 @@ SEXP attribute_hidden dc_dput(SEXP x, SEXP file, SEXP argopts)
     return (x);
 }
 
-SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_dump(SEXP call, SEXP op, SEXP rho,
+    SEXP names, SEXP file, SEXP source, SEXP argopts, SEXP argevaluate)
 {
-    SEXP file, names, o, objs, tval, source, outnames;
+    SEXP o, objs, tval, outnames;
     int i, j, nobjs, nout, res;
     Rboolean wasopen, havewarned = FALSE, evaluate;
     Rconnection con;
@@ -390,10 +391,6 @@ SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
     const char *obj_name;
     RCNTXT cntxt;
 
-    checkArity(op, args);
-
-    names = CAR(args);
-    file = CADR(args);
     if(!inherits(file, "connection"))
 	error(_("'file' must be a character string or connection"));
     if(!isString(names))
@@ -401,14 +398,13 @@ SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
     nobjs = length(names);
     if(nobjs < 1 || length(file) < 1)
 	error(_("zero-length argument"));
-    source = CADDR(args);
     if (source != R_NilValue && TYPEOF(source) != ENVSXP)
 	error(_("invalid '%s' argument"), "envir");
-    opts = asInteger(CADDDR(args));
+    opts = asInteger(argopts);
     /* <NOTE>: change this if extra options are added */
     if(opts == NA_INTEGER || opts < 0 || opts > 1024)
 	errorcall(call, _("'opts' should be small non-negative integer"));
-    evaluate = asLogical(CAD4R(args));
+    evaluate = asLogical(argevaluate);
     if (!evaluate) opts |= DELAYPROMISES;
 
     PROTECT(o = objs = allocList(nobjs));

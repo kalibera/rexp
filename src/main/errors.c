@@ -910,21 +910,20 @@ void NORET jump_to_toplevel()
 /* #define DEBUG_GETTEXT 1 */
 
 /* gettext(domain, string) */
-SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_gettext(SEXP call, SEXP op, SEXP rho, SEXP argdomain, SEXP string)
 {
-    checkArity(op, args);
-#ifdef ENABLE_NLS
+    #ifdef ENABLE_NLS
     const char *domain = "", *cfn;
     char *buf;
-    SEXP ans, string = CADR(args);
+    SEXP ans;
     int i, n = LENGTH(string);
 
-    checkArity(op, args);
     if(isNull(string) || !n) return string;
 
     if(!isString(string)) errorcall(call, _("invalid '%s' value"), "string");
 
-    if(isNull(CAR(args))) {
+    if(isNull(argdomain)) {
 	RCNTXT *cptr;
 	SEXP rho = R_BaseEnv;
 	for (cptr = R_GlobalContext->nextcontext;
@@ -952,9 +951,12 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    snprintf(buf, len, "R-%s", domain);
 	    domain = buf;
 	}
-    } else if(isString(CAR(args)))
-	domain = translateChar(STRING_ELT(CAR(args),0));
-    else if(isLogical(CAR(args)) && LENGTH(CAR(args)) == 1 && LOGICAL(CAR(args))[0] == NA_LOGICAL) ;
+    } else if(isString(argdomain))
+	domain = translateChar(STRING_ELT(argdomain,0));
+
+    else if(isLogical(argdomain) && LENGTH(argdomain) == 1
+	&& LOGICAL(argdomain)[0] == NA_LOGICAL);
+
     else errorcall(call, _("invalid '%s' value"), "domain");
 
     if(strlen(domain)) {
@@ -1005,24 +1007,23 @@ SEXP attribute_hidden do_gettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	UNPROTECT(1);
 	return ans;
-    } else return CADR(args);
+    } else return string;
 #else
-    return CADR(args);
+    return string;
 #endif
 }
 
 /* ngettext(n, msg1, msg2, domain) */
-SEXP attribute_hidden do_ngettext(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_ngettext(SEXP call, SEXP op, SEXP rho,
+    SEXP argn, SEXP msg1, SEXP msg2, SEXP sdom)
 {
 #ifdef ENABLE_NLS
     const char *domain = "", *cfn;;
     char *buf;
-    SEXP ans, sdom = CADDDR(args);
+    SEXP ans;
 #endif
-    SEXP msg1 = CADR(args), msg2 = CADDR(args);
-    int n = asInteger(CAR(args));
+    int n = asInteger(argn);
 
-    checkArity(op, args);
     if(n == NA_INTEGER || n < 0) error(_("invalid '%s' argument"), "n");
     if(!isString(msg1) || LENGTH(msg1) != 1)
 	error(_("'%s' must be a character string"), "msg1");
@@ -1079,21 +1080,21 @@ SEXP attribute_hidden do_ngettext(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 
 /* bindtextdomain(domain, dirname) */
-SEXP attribute_hidden do_bindtextdomain(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_bindtextdomain(SEXP call, SEXP op, SEXP rho, SEXP argdomain, SEXP argdirname)
 {
 #ifdef ENABLE_NLS
     char *res;
 
-    checkArity(op, args);
-    if(!isString(CAR(args)) || LENGTH(CAR(args)) != 1)
+    if(!isString(argdomain) || LENGTH(argdomain) != 1)
 	errorcall(call, _("invalid '%s' value"), "domain");
-    if(isNull(CADR(args))) {
-	res = bindtextdomain(translateChar(STRING_ELT(CAR(args),0)), NULL);
+    if(isNull(argdirname)) {
+	res = bindtextdomain(translateChar(STRING_ELT(argdomain,0)), NULL);
     } else {
-	if(!isString(CADR(args)) || LENGTH(CADR(args)) != 1)
+	if(!isString(argdirname) || LENGTH(argdirname) != 1)
 	    errorcall(call, _("invalid '%s' value"), "dirname");
-	res = bindtextdomain(translateChar(STRING_ELT(CAR(args),0)),
-			     translateChar(STRING_ELT(CADR(args),0)));
+	res = bindtextdomain(translateChar(STRING_ELT(argdomain,0)),
+			     translateChar(STRING_ELT(argdirname,0)));
     }
     if(res) return mkString(res);
     /* else this failed */
@@ -1800,9 +1801,8 @@ SEXP attribute_hidden dc_invokeRestart(SEXP r, SEXP arglist)
     invokeRestart(r, arglist);
 }
 
-SEXP attribute_hidden do_addTryHandlers(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_addTryHandlers(SEXP call, SEXP op, SEXP rho)
 {
-    checkArity(op, args);
     if (R_GlobalContext == R_ToplevelContext ||
 	! (R_GlobalContext->callflag & CTXT_FUNCTION))
 	errorcall(call, _("not in a try context"));

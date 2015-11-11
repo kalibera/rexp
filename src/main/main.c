@@ -1287,21 +1287,21 @@ void R_dot_Last(void)
     UNPROTECT(1);
 }
 
-SEXP attribute_hidden do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_quit(SEXP call, SEXP op, SEXP rho,
+    SEXP argsave, SEXP argstatus, SEXP argrunLast)
 {
     const char *tmp;
     SA_TYPE ask=SA_DEFAULT;
     int status, runLast;
 
-    checkArity(op, args);
     /* if there are any browser contexts active don't quit */
     if(countContexts(CTXT_BROWSER, 1)) {
 	warning(_("cannot quit from browser"));
 	return R_NilValue;
     }
-    if( !isString(CAR(args)) )
+    if( !isString(argsave) )
 	errorcall(call, _("one of \"yes\", \"no\", \"ask\" or \"default\" expected."));
-    tmp = CHAR(STRING_ELT(CAR(args), 0)); /* ASCII */
+    tmp = CHAR(STRING_ELT(argsave, 0)); /* ASCII */
     if( !strcmp(tmp, "ask") ) {
 	ask = SA_SAVEASK;
 	if(!R_Interactive)
@@ -1314,12 +1314,12 @@ SEXP attribute_hidden do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
 	ask = SA_DEFAULT;
     else
 	errorcall(call, _("unrecognized value of 'save'"));
-    status = asInteger(CADR(args));
+    status = asInteger(argstatus);
     if (status == NA_INTEGER) {
 	warning(_("invalid 'status', 0 assumed"));
 	runLast = 0;
     }
-    runLast = asLogical(CADDR(args));
+    runLast = asLogical(argrunLast);
     if (runLast == NA_LOGICAL) {
 	warning(_("invalid 'runLast', FALSE assumed"));
 	runLast = 0;

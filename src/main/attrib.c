@@ -1780,20 +1780,19 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
     return obj;
 }
 
-SEXP attribute_hidden do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+dc_AT(SEXP call, SEXP op, SEXP env, SEXP argobj, SEXP nlist)
 {
-    SEXP  nlist, object, ans, klass;
+    SEXP object, ans, klass;
 
-    checkArity(op, args);
     if(!isMethodsDispatchOn())
 	error(_("formal classes cannot be used without the 'methods' package"));
-    nlist = CADR(args);
     /* Do some checks here -- repeated in R_do_slot, but on repeat the
      * test expression should kick out on the first element. */
     if(!(isSymbol(nlist) || (isString(nlist) && LENGTH(nlist) == 1)))
 	error(_("invalid type or length for slot name"));
     if(isString(nlist)) nlist = installTrChar(STRING_ELT(nlist, 0));
-    PROTECT(object = eval(CAR(args), env));
+    PROTECT(object = eval(argobj, env));
     if(!s_dot_Data) init_slot_handling();
     if(nlist != s_dot_Data && !IS_S4_OBJECT(object)) {
 	klass = getAttrib(object, R_ClassSymbol);

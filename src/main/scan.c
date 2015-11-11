@@ -819,9 +819,14 @@ static SEXP scanFrame(SEXP what, int maxitems, int maxlines, int flush,
     return ans;
 }
 
-SEXP attribute_hidden do_scan(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_scan(SEXP call, SEXP op, SEXP rho, SEXP file, SEXP what, SEXP argnmax,
+    SEXP sep, SEXP dec, SEXP quotes, SEXP argskip, SEXP argnlines,
+    SEXP nastrings, SEXP argflush, SEXP argfill, SEXP stripwhite,
+    SEXP argquiet, SEXP argblskip, SEXP argmultiline, SEXP comstr,
+    SEXP argescapes, SEXP argencoding, SEXP argskipNul)
 {
-    SEXP ans, file, sep, what, stripwhite, dec, quotes, comstr;
+    SEXP ans;
     int i, c, nlines, nmax, nskip, flush, fill, blskip, multiline,
 	escapes, skipNul;
     const char *p, *encoding;
@@ -830,31 +835,22 @@ SEXP attribute_hidden do_scan(SEXP call, SEXP op, SEXP args, SEXP rho)
 		      FALSE, 0, FALSE, FALSE, FALSE, FALSE};
     data.NAstrings = R_NilValue;
 
-    checkArity(op, args);
-
-    file = CAR(args);		   args = CDR(args);
-    what = CAR(args);		   args = CDR(args);
-    nmax = asInteger(CAR(args));   args = CDR(args);
-    sep = CAR(args);		   args = CDR(args);
-    dec = CAR(args);		   args = CDR(args);
-    quotes = CAR(args);		   args = CDR(args);
-    nskip = asInteger(CAR(args));  args = CDR(args);
-    nlines = asInteger(CAR(args)); args = CDR(args);
-    data.NAstrings = CAR(args);	   args = CDR(args);
-    flush = asLogical(CAR(args));  args = CDR(args);
-    fill  = asLogical(CAR(args));  args = CDR(args);
-    stripwhite = CAR(args);	   args = CDR(args);
-    data.quiet = asLogical(CAR(args));  args = CDR(args);
-    blskip = asLogical(CAR(args)); args = CDR(args);
-    multiline = asLogical(CAR(args)); args = CDR(args);
-    comstr = CAR(args);            args = CDR(args);
-    escapes = asLogical(CAR(args));args = CDR(args);
-    if(!isString(CAR(args)) || LENGTH(CAR(args)) != 1)
+    nmax = asInteger(argnmax);
+    nskip = asInteger(argskip);
+    nlines = asInteger(argnlines);
+    data.NAstrings = nastrings;
+    flush = asLogical(argflush);
+    fill  = asLogical(argfill);
+    data.quiet = asLogical(argquiet);
+    blskip = asLogical(argblskip);
+    multiline = asLogical(argmultiline);
+    escapes = asLogical(argescapes);
+    if(!isString(argencoding) || LENGTH(argencoding) != 1)
 	error(_("invalid '%s' argument"), "encoding");
-    encoding = CHAR(STRING_ELT(CAR(args), 0)); args = CDR(args); /* ASCII */
+    encoding = CHAR(STRING_ELT(argencoding, 0)); /* ASCII */
     if(streql(encoding, "latin1")) data.isLatin1 = TRUE;
     if(streql(encoding, "UTF-8"))  data.isUTF8 = TRUE;
-    skipNul = asLogical(CAR(args));
+    skipNul = asLogical(argskipNul);
 
     if (data.quiet == NA_LOGICAL)		data.quiet = 0;
     if (blskip == NA_LOGICAL)			blskip = 1;
