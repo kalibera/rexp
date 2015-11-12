@@ -40,7 +40,6 @@ SEXP do_X11(SEXP, SEXP, SEXP, SEXP);
 #endif
 
 SEXP do_abs(SEXP, SEXP, SEXP, SEXP);
-SEXP do_addTryHandlers(SEXP, SEXP, SEXP, SEXP);
 SEXP do_anyNA(SEXP, SEXP, SEXP, SEXP);
 SEXP do_args(SEXP, SEXP, SEXP, SEXP);
 SEXP do_arith(SEXP, SEXP, SEXP, SEXP);
@@ -80,7 +79,6 @@ SEXP do_docall(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotcall(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotcallgr(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotCode(SEXP, SEXP, SEXP, SEXP);
-SEXP do_eapply(SEXP, SEXP, SEXP, SEXP);
 SEXP do_edit(SEXP, SEXP, SEXP, SEXP);
 SEXP do_enc2(SEXP, SEXP, SEXP, SEXP);
 SEXP do_envirgets(SEXP, SEXP, SEXP, SEXP);
@@ -94,7 +92,6 @@ SEXP do_function(SEXP, SEXP, SEXP, SEXP);
 SEXP do_gctime(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getGraphicsEvent(SEXP, SEXP, SEXP, SEXP);
 SEXP do_getGraphicsEventEnv(SEXP, SEXP, SEXP, SEXP);
-SEXP do_gettext(SEXP, SEXP, SEXP, SEXP);
 SEXP do_ICUset(SEXP, SEXP, SEXP, SEXP);
 SEXP do_identical(SEXP, SEXP, SEXP, SEXP);
 SEXP do_if(SEXP, SEXP, SEXP, SEXP);
@@ -198,9 +195,6 @@ SEXP R_do_set_class(SEXP call, SEXP op, SEXP args, SEXP env);
 SEXP R_getS4DataSlot(SEXP obj, SEXPTYPE type);
 
 /* Connections */
-SEXP do_unregNS(SEXP call, SEXP op, SEXP args, SEXP rho);
-SEXP do_getRegNS(SEXP call, SEXP op, SEXP args, SEXP rho);
-
 SEXP do_tracemem(SEXP, SEXP, SEXP, SEXP);
 SEXP do_retracemem(SEXP, SEXP, SEXP, SEXP);
 SEXP do_untracemem(SEXP, SEXP, SEXP, SEXP);
