@@ -26,61 +26,60 @@
 #include <Defn.h>
 #include <Internal.h>
 
-SEXP attribute_hidden do_debug(SEXP call, SEXP op, SEXP args, SEXP rho)
+static SEXP find_char_fun(SEXP str, SEXP rho)
+{
+    if (isValidString(str)) {
+	SEXP s = installTrChar(STRING_ELT(str, 0));
+	return findFun(s, rho);
+    }
+    return str;
+}
+
+/* FIXME: 'text' and 'condition' are ignored */
+SEXP attribute_hidden
+dc_debug(SEXP call, SEXP op, SEXP rho, SEXP fun, SEXP text, SEXP condition)
 {
     SEXP ans = R_NilValue;
 
-    checkArity(op,args);
-#define find_char_fun \
-    if (isValidString(CAR(args))) {				\
-	SEXP s;							\
-	PROTECT(s = installTrChar(STRING_ELT(CAR(args), 0)));	\
-	SETCAR(args, findFun(s, rho));				\
-	UNPROTECT(1);						\
-    }
-    find_char_fun
-
-    if (TYPEOF(CAR(args)) != CLOSXP &&
-	TYPEOF(CAR(args)) != SPECIALSXP &&
-	TYPEOF(CAR(args)) != BUILTINSXP)
+    fun = find_char_fun(fun, rho);
+    if (TYPEOF(fun) != CLOSXP &&
+	TYPEOF(fun) != SPECIALSXP &&
+	TYPEOF(fun) != BUILTINSXP)
 	errorcall(call, _("argument must be a function"));
     switch(PRIMVAL(op)) {
     case 0: // debug()
-	SET_RDEBUG(CAR(args), 1);
+	SET_RDEBUG(fun, 1);
 	break;
     case 1: // undebug()
-	if( RDEBUG(CAR(args)) != 1 )
+	if( RDEBUG(fun) != 1 )
 	    warningcall(call, "argument is not being debugged");
-	SET_RDEBUG(CAR(args), 0);
+	SET_RDEBUG(fun, 0);
 	break;
     case 2: // isdebugged()
-	ans = ScalarLogical(RDEBUG(CAR(args)));
+	ans = ScalarLogical(RDEBUG(fun));
 	break;
     case 3: // debugonce()
-	SET_RSTEP(CAR(args), 1);
+	SET_RSTEP(fun, 1);
 	break;
     }
     return ans;
 }
 
 /* primitives .primTrace() and .primUntrace() */
-SEXP attribute_hidden do_trace(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_trace(SEXP call, SEXP op, SEXP rho, SEXP fun)
 {
-    checkArity(op, args);
-
-    find_char_fun
-
-    if (TYPEOF(CAR(args)) != CLOSXP &&
-	TYPEOF(CAR(args)) != SPECIALSXP &&
-	TYPEOF(CAR(args)) != BUILTINSXP)
+    fun = find_char_fun(fun, rho);
+    if (TYPEOF(fun) != CLOSXP &&
+	TYPEOF(fun) != SPECIALSXP &&
+	TYPEOF(fun) != BUILTINSXP)
 	    errorcall(call, _("argument must be a function"));
 
     switch(PRIMVAL(op)) {
     case 0:
-	SET_RTRACE(CAR(args), 1);
+	SET_RTRACE(fun, 1);
 	break;
     case 1:
-	SET_RTRACE(CAR(args), 0);
+	SET_RTRACE(fun, 0);
 	break;
     }
     return R_NilValue;
