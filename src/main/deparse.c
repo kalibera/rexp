@@ -146,37 +146,29 @@ static void vec2buff(SEXP, LocalParseData *);
 static void linebreak(Rboolean *lbreak, LocalParseData *);
 static void deparse2(SEXP, SEXP, LocalParseData *);
 
-SEXP attribute_hidden do_deparse(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_deparse(SEXP expr, SEXP argcutoff, SEXP argbacktick,
+    SEXP argopts, SEXP argnlines)
 {
-    SEXP ca1;
     int  cut0, backtick, opts, nlines;
 
-    checkArity(op, args);
-
-    if(length(args) < 1) error(_("too few arguments"));
-
-    ca1 = CAR(args); args = CDR(args);
     cut0 = DEFAULT_Cutoff;
-    if(!isNull(CAR(args))) {
-	cut0 = asInteger(CAR(args));
+    if(!isNull(argcutoff)) {
+	cut0 = asInteger(argcutoff);
 	if(cut0 == NA_INTEGER|| cut0 < MIN_Cutoff || cut0 > MAX_Cutoff) {
 	    warning(_("invalid 'cutoff' value for 'deparse', using default"));
 	    cut0 = DEFAULT_Cutoff;
 	}
     }
-    args = CDR(args);
     backtick = 0;
-    if(!isNull(CAR(args)))
-	backtick = asLogical(CAR(args));
-    args = CDR(args);
+    if(!isNull(argbacktick))
+	backtick = asLogical(argbacktick);
     opts = SHOWATTRIBUTES;
-    if(!isNull(CAR(args)))
-	opts = asInteger(CAR(args));
-    args = CDR(args);
-    nlines = asInteger(CAR(args));
+    if(!isNull(argopts))
+	opts = asInteger(argopts);
+    nlines = asInteger(argnlines);
     if (nlines == NA_INTEGER) nlines = -1;
-    ca1 = deparse1WithCutoff(ca1, 0, cut0, backtick, opts, nlines);
-    return ca1;
+    expr = deparse1WithCutoff(expr, 0, cut0, backtick, opts, nlines);
+    return expr;
 }
 
 SEXP deparse1(SEXP call, Rboolean abbrev, int opts)
