@@ -2430,17 +2430,11 @@ SEXP attribute_hidden do_call(SEXP call, SEXP op, SEXP args, SEXP rho)
     return (rfun);
 }
 
-SEXP attribute_hidden do_docall(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_docall(SEXP fun, SEXP args, SEXP envir)
 {
-    SEXP c, fun, names, envir;
+    SEXP c, call, names;
     int i, n;
     /* RCNTXT *cptr; */
-
-    checkArity(op, args);
-
-    fun = CAR(args);
-    envir = CADDR(args);
-    args = CADR(args);
 
     /* must be a string or a function:
        zero-length string check used to be here but install gives
