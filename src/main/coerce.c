@@ -1508,20 +1508,17 @@ SEXP attribute_hidden do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_asfunction(SEXP call, SEXP op, SEXP rho, SEXP arglist, SEXP envir)
 {
-    SEXP arglist, envir, names, pargs, body;
+    SEXP names, pargs, body;
     int i, n;
-
-    checkArity(op, args);
 
     /* Check the arguments; we need a list and environment. */
 
-    arglist = CAR(args);
     if (!isNewList(arglist))
 	errorcall(call, _("list argument expected"));
 
-    envir = CADR(args);
     if (isNull(envir)) {
 	error(_("use of NULL environment is defunct"));
 	envir = R_BaseEnv;
@@ -1533,6 +1530,7 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (n < 1)
 	errorcall(call, _("argument must have length at least 1"));
     PROTECT(names = getAttrib(arglist, R_NamesSymbol));
+    SEXP args;
     PROTECT(pargs = args = allocList(n - 1));
     for (i = 0; i < n - 1; i++) {
 	SETCAR(pargs, VECTOR_ELT(arglist, i));
