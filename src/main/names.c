@@ -262,7 +262,7 @@ FUNTAB R_FunTab[] =
 {"tcrossprod",	do_matprod,	2,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"lengths",	dcfun,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_lengths, DC_COE},
 
-{"attach",	do_attach,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"attach",	dcfun,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_attach},
 {"detach",	dcfun,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_detach},
 {"search",	dcfun,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_search},
 {"setFileTime",	dcfun,	0,	111,	2,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_setFileTime},

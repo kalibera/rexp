@@ -180,12 +180,14 @@ SEXP attribute_hidden dc_args(SEXP call, SEXP op, SEXP rho, SEXP name)
 	s = installTrChar(STRING_ELT(name, 0));
 	name = findFun(s, rho);
     }
+    PROTECT(name);
 
     if (TYPEOF(name) == CLOSXP) {
 	s = allocSExp(CLOSXP);
 	SET_FORMALS(s, FORMALS(name));
 	SET_BODY(s, R_NilValue);
 	SET_CLOENV(s, R_GlobalEnv);
+	UNPROTECT(1); /* name */
 	return s;
     }
 
@@ -203,7 +205,7 @@ SEXP attribute_hidden dc_args(SEXP call, SEXP op, SEXP rho, SEXP name)
 	if(s2 != R_UnboundValue) {
 	    s = duplicate(s2);
 	    SET_CLOENV(s, R_GlobalEnv);
-	    UNPROTECT(2);
+	    UNPROTECT(3); /* name, env, s2 */
 	    return s;
 	}
 	UNPROTECT(1); /* s2 */
@@ -216,11 +218,12 @@ SEXP attribute_hidden dc_args(SEXP call, SEXP op, SEXP rho, SEXP name)
 	    SET_FORMALS(s, FORMALS(s2));
 	    SET_BODY(s, R_NilValue);
 	    SET_CLOENV(s, R_GlobalEnv);
-	    UNPROTECT(2);
+	    UNPROTECT(3); /* name, env, s2 */
 	    return s;
 	}
-	UNPROTECT(2);
+	UNPROTECT(2); /* env, s2 */
     }
+    UNPROTECT(1); /* name */
     return R_NilValue;
 }
 
