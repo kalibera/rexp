@@ -63,8 +63,6 @@ SEXP do_cum(SEXP, SEXP, SEXP, SEXP);
 SEXP do_curlDownload(SEXP, SEXP, SEXP, SEXP);
 SEXP do_curlGetHeaders(SEXP, SEXP, SEXP, SEXP);
 SEXP do_curlVersion(SEXP, SEXP, SEXP, SEXP);
-SEXP do_devAskNewPage(SEXP, SEXP, SEXP, SEXP);
-SEXP do_deparse(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dim(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dimgets(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dimnames(SEXP, SEXP, SEXP, SEXP);
@@ -473,6 +471,7 @@ SEXP dc_colsum(SEXP call, SEXP op, SEXP rho, SEXP x, SEXP argn, SEXP argp, SEXP 
 SEXP dc_commentgets(SEXP x, SEXP value);
 SEXP dc_debug(SEXP call, SEXP op, SEXP rho, SEXP fun, SEXP text, SEXP condition);
 SEXP dc_delayed(SEXP call, SEXP op, SEXP rho, SEXP argname, SEXP expr, SEXP eenv, SEXP aenv);
+SEXP dc_deparse(SEXP expr, SEXP argcutoff, SEXP argbacktick, SEXP argopts, SEXP argnlines);
 SEXP dc_disassemble(SEXP call, SEXP op, SEXP rho, SEXP code);
 SEXP dc_dump(SEXP call, SEXP op, SEXP rho, SEXP names, SEXP file, SEXP source, SEXP argopts, SEXP argevaluate);
 SEXP dc_duplicated(SEXP call, SEXP op, SEXP env, SEXP x, SEXP incomp, SEXP argfromLast, SEXP argnmax);
