@@ -459,14 +459,15 @@ static SEXP commentgets(SEXP vec, SEXP comment)
     return R_NilValue;/*- just for -Wall */
 }
 
-SEXP attribute_hidden do_commentgets(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_commentgets(SEXP x, SEXP value)
 {
-    checkArity(op, args);
-    if (MAYBE_SHARED(CAR(args))) SETCAR(args, duplicate(CAR(args)));
-    if (length(CADR(args)) == 0) SETCADR(args, R_NilValue);
-    setAttrib(CAR(args), R_CommentSymbol, CADR(args));
-    SET_NAMED(CAR(args), 0);
-    return CAR(args);
+    if (MAYBE_SHARED(x)) x = duplicate(x);
+    PROTECT(x);
+    if (length(value) == 0) value = R_NilValue;
+    setAttrib(x, R_CommentSymbol, value);
+    SET_NAMED(x, 0);
+    UNPROTECT(1); /* x */
+    return x;
 }
 
 SEXP attribute_hidden dc_comment(SEXP x)
