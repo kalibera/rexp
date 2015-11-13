@@ -519,8 +519,8 @@ FUNTAB R_FunTab[] =
 {"file.path",	dcfun,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_filepath, DC_COE},
 {"format",	dcfun,	0,	11,	9,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_format},
 {"format.info",	dcfun,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_formatinfo},
-{"cat",		dcfun,		0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_cat, DC_COE},
-{"do.call",	do_docall,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"cat",		dcfun,	0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_cat, DC_COE},
+{"do.call",	dcfun,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_docall},
 
 /* String Manipulation */
 

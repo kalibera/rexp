@@ -67,7 +67,6 @@ SEXP do_dim(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dimgets(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dimnames(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dimnamesgets(SEXP, SEXP, SEXP, SEXP);
-SEXP do_docall(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotcall(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotcallgr(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotCode(SEXP, SEXP, SEXP, SEXP);
@@ -456,6 +455,7 @@ SEXP dc_debug(SEXP call, SEXP op, SEXP rho, SEXP fun, SEXP text, SEXP condition)
 SEXP dc_delayed(SEXP call, SEXP op, SEXP rho, SEXP argname, SEXP expr, SEXP eenv, SEXP aenv);
 SEXP dc_deparse(SEXP expr, SEXP argcutoff, SEXP argbacktick, SEXP argopts, SEXP argnlines);
 SEXP dc_disassemble(SEXP call, SEXP op, SEXP rho, SEXP code);
+SEXP dc_docall(SEXP fun, SEXP args, SEXP envir);
 SEXP dc_dump(SEXP call, SEXP op, SEXP rho, SEXP names, SEXP file, SEXP source, SEXP argopts, SEXP argevaluate);
 SEXP dc_duplicated(SEXP call, SEXP op, SEXP env, SEXP x, SEXP incomp, SEXP argfromLast, SEXP argnmax);
 SEXP dc_dynload(SEXP call, SEXP op, SEXP env, SEXP x, SEXP local, SEXP now, SEXP path);
