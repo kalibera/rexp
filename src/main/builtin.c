@@ -172,27 +172,25 @@ SEXP attribute_hidden do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_args(SEXP call, SEXP op, SEXP rho, SEXP name)
 {
     SEXP s;
 
-    checkArity(op,args);
-    if (TYPEOF(CAR(args)) == STRSXP && LENGTH(CAR(args)) == 1) {
-	PROTECT(s = installTrChar(STRING_ELT(CAR(args), 0)));
-	SETCAR(args, findFun(s, rho));
-	UNPROTECT(1);
+    if (TYPEOF(name) == STRSXP && LENGTH(name) == 1) {
+	s = installTrChar(STRING_ELT(name, 0));
+	name = findFun(s, rho);
     }
 
-    if (TYPEOF(CAR(args)) == CLOSXP) {
+    if (TYPEOF(name) == CLOSXP) {
 	s = allocSExp(CLOSXP);
-	SET_FORMALS(s, FORMALS(CAR(args)));
+	SET_FORMALS(s, FORMALS(name));
 	SET_BODY(s, R_NilValue);
 	SET_CLOENV(s, R_GlobalEnv);
 	return s;
     }
 
-    if (TYPEOF(CAR(args)) == BUILTINSXP || TYPEOF(CAR(args)) == SPECIALSXP) {
-	char *nm = PRIMNAME(CAR(args));
+    if (TYPEOF(name) == BUILTINSXP || TYPEOF(name) == SPECIALSXP) {
+	char *nm = PRIMNAME(name);
 	SEXP env, s2;
 	PROTECT_INDEX xp;
 
