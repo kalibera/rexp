@@ -2298,35 +2298,34 @@ SEXP attribute_hidden dc_emptyenv()
 
 */
 
-SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_attach(SEXP what, SEXP argpos, SEXP name)
 {
-    SEXP name, s, t, x;
+    SEXP s, t, x;
     int pos, hsize;
     Rboolean isSpecial;
 
-    checkArity(op, args);
-
-    pos = asInteger(CADR(args));
+    pos = asInteger(argpos);
     if (pos == NA_INTEGER)
 	error(_("'pos' must be an integer"));
 
-    name = CADDR(args);
     if (!isValidStringF(name))
 	error(_("invalid '%s' argument"), "name");
 
-    isSpecial = IS_USER_DATABASE(CAR(args));
+    isSpecial = IS_USER_DATABASE(what);
 
     if(!isSpecial) {
-	if (isNewList(CAR(args))) {
-	    SETCAR(args, VectorToPairList(CAR(args)));
+	if (isNewList(what)) {
+	    PROTECT(what = VectorToPairList(what));
 
-	    for (x = CAR(args); x != R_NilValue; x = CDR(x))
+	    for (x = what; x != R_NilValue; x = CDR(x))
 		if (TAG(x) == R_NilValue)
 		    error(_("all elements of a list must be named"));
 	    PROTECT(s = allocSExp(ENVSXP));
-	    SET_FRAME(s, shallow_duplicate(CAR(args)));
-	} else if (isEnvironment(CAR(args))) {
-	    SEXP p, loadenv = CAR(args);
+	    SET_FRAME(s, shallow_duplicate(what));
+	    UNPROTECT(2); /* s, what */
+	    PROTECT(s);
+	} else if (isEnvironment(what)) {
+	    SEXP p, loadenv = what;
 
 	    PROTECT(s = allocSExp(ENVSXP));
 	    if (HASHTAB(loadenv) != R_NilValue) {
@@ -2366,11 +2365,11 @@ SEXP attribute_hidden do_attach(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* Having this here (rather than below) means that the onAttach routine
 	   is called before the table is attached. This may not be necessary or
 	   desirable. */
-	R_ObjectTable *tb = (R_ObjectTable*) R_ExternalPtrAddr(CAR(args));
+	R_ObjectTable *tb = (R_ObjectTable*) R_ExternalPtrAddr(what);
 	if(tb->onAttach)
 	    tb->onAttach(tb);
 	PROTECT(s = allocSExp(ENVSXP));
-	SET_HASHTAB(s, CAR(args));
+	SET_HASHTAB(s, what);
 	setAttrib(s, R_ClassSymbol, getAttrib(HASHTAB(s), R_ClassSymbol));
     }
 
