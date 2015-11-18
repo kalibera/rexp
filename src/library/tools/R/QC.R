@@ -2800,10 +2800,9 @@ function(x, ...)
     as.character(unlist(lapply(names(x), .fmt)))
 }
 
-### * .check__depends
+### * .check_package_depends
 
 ## changed in 2.3.0 to refer to a source dir.
-
 
 .check_package_depends <-
 function(dir, force_suggests = TRUE, check_incoming = FALSE,
@@ -3009,7 +3008,8 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE,
     ## check header-only packages
     if (check_incoming) {
         hdOnly <- c("BH", "RcppArmadillo", "RcppEigen")
-        hd <- intersect(hdOnly, c(depends, imports))
+        hd <- setdiff(intersect(hdOnly, c(depends, imports)),
+                      .get_namespace_package_depends(dir, TRUE))
         if(length(hd)) bad_depends$hdOnly <- hd
     }
 
@@ -3750,7 +3750,7 @@ function(dir, makevars = c("Makevars.in", "Makevars"))
     if(!length(lines) || inherits(lines, "error"))
         return(bad_flags)
 
-    prefixes <- c("CPP", "C", "CXX", "F", "FC", "OBJC", "OBJCXX")
+    prefixes <- c("CPP", "C", "CXX", "CXX1X", "F", "FC", "OBJC", "OBJCXX")
 
     uflags_re <- sprintf("^(%s)FLAGS: *(.*)$",
                          paste(prefixes, collapse = "|"))
@@ -6275,19 +6275,23 @@ function(dir, silent = FALSE, def_enc = FALSE, minlevel = -1)
         if(is.na(enc)) enc <- "ASCII"
         else def_enc <- TRUE
     } else enc <- "ASCII"
+    macros <- file.path(R.home("share"), "Rd", "macros", "system.Rd")
+    macros <- loadPkgRdMacros(dir, macros)
     owd <- setwd(file.path(dir, "man"))
     on.exit(setwd(owd))
     pg <- c(Sys.glob("*.Rd"), Sys.glob("*.rd"),
             Sys.glob(file.path("*", "*.Rd")),
             Sys.glob(file.path("*", "*.rd")))
+    pg <- pg[basename(dirname(pg)) != "macros"]
     ## (Note that using character classes as in '*.[Rr]d' is not
     ## guaranteed to be portable.)
     bad <- character()
     for (f in pg) {
         ## Kludge for now
-        if(basename(f) %in%  c("iconv.Rd", "showNonASCII.Rd")) def_enc <- TRUE
+        if(basename(f) %in% c("iconv.Rd", "showNonASCII.Rd")) def_enc <- TRUE
 	tmp <- tryCatch(suppressMessages(checkRd(f, encoding = enc,
-						 def_enc = def_enc)),
+						 def_enc = def_enc,
+                                                 macros = macros)),
 			error = function(e)e)
 	if(inherits(tmp, "error")) {
 	    bad <- c(bad, f)
@@ -6531,6 +6535,8 @@ function(dir)
         stop("Package has no 'Version' field", call. = FALSE)
     if(grepl("(^|[.-])0[0-9]+", ver))
         out$version_with_leading_zeroes <- ver
+    if(any(unlist(package_version(ver)) >= 1234))
+        out$version_with_large_components <- ver
 
     language <- meta["Language"]
     if((is.na(language) || language == "en") &&
@@ -6994,6 +7000,10 @@ function(dir)
         language <- meta["Language"]
         if(is.na(language) || (language == "en")) {
             title2 <- toTitleCase(title)
+            ## Keep single quoted elements unchanged.
+            p <- "(^|(?<=[ \t[:punct:]]))'[^']*'($|(?=[ \t[:punct:]]))"
+            m <- gregexpr(p, title, perl = TRUE)
+            regmatches(title2, m) <- regmatches(title, m)
             if(title != title2)
                 out$title_case <- c(title, title2)
         }
@@ -7029,6 +7039,14 @@ function(dir)
         if(inherits(bad, "error") || NROW(bad))
             out$bad_urls <- bad
     } else out$no_url_checks <- TRUE
+
+    ## Check DOIs.
+    if(capabilities("libcurl")) {
+        bad <- tryCatch(check_doi_db(doi_db_from_package_sources(dir)),
+                        error = identity)
+        if(inherits(bad, "error") || NROW(bad))
+            out$bad_dois <- bad
+    }
 
     ## Are there non-ASCII characters in the R source code without a
     ## package encoding in DESCRIPTION?
@@ -7098,8 +7116,6 @@ function(dir)
         out$bad_version <- list(v_m, v_d)
     if((v_m$major == v_d$major) & (v_m$minor >= v_d$minor + 10))
         out$version_with_jump_in_minor <- list(v_m, v_d)
-    if(any(unlist(v_m) >= 1234))
-        out$version_with_large_components <- meta["Version"]
 
     ## Check submission recency and frequency.
     current_db <- CRAN_current_db()
@@ -7326,10 +7342,10 @@ function(x, ...)
           "Package has a VignetteBuilder field but no prebuilt vignette index."
       },
       fmt(c(if(length(y <- x$missing_manual_rdb)) {
-                "Package has help file(s) containing build-stage \\Sexpr{} expresssons but no 'build/partial.rdb' file."
+                "Package has help file(s) containing build-stage \\Sexpr{} expressions but no 'build/partial.rdb' file."
             },
             if(length(y <- x$missing_manual_pdf)) {
-                "Package has help file(s) containing install/render-stage \\Sexpr{} expresssons but no prebuilt PDF manual."
+                "Package has help file(s) containing install/render-stage \\Sexpr{} expressions but no prebuilt PDF manual."
             })),
       fmt(c(if(length(y <- x$dotjava)) {
                 "Package installs .java files."
@@ -7355,7 +7371,7 @@ function(x, ...)
                             conditionMessage(y)),
                           collapse = "\n")
                 else
-                    paste(c(if (length(y) > 1L)
+                    paste(c(if(length(y) > 1L)
                                 "Found the following (possibly) invalid URLs:"
                             else
                                 "Found the following (possibly) invalid URL:",
@@ -7373,6 +7389,19 @@ function(x, ...)
             if(length(y <- x$no_url_checks) && y) {
                 "Checking URLs requires 'libcurl' support in the R build"
             })),
+      fmt(if(length(y <- x$bad_dois)) {
+              if(inherits(y, "error"))
+                  paste(c("Checking DOIs failed with message:",
+                          conditionMessage(y)),
+                        collapse = "\n")
+              else
+                  paste(c(if(length(y) > 1L)
+                              "Found the following (possibly) invalid DOIs:"
+                          else
+                              "Found the following (possibly) invalid DOI:",
+                          paste(" ", gsub("\n", "\n    ", format(y)))),
+                        collapse = "\n")
+          }),
       if(length(y <- x$R_files_non_ASCII)) {
           paste(c("No package encoding and non-ASCII characters in the following R files:",
                   paste0("  ", names(y), "\n    ",

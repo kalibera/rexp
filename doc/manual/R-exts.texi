@@ -1201,7 +1201,7 @@ lines of
 execs <- c("one", "two", "three")
 if(WINDOWS) execs <- paste0(execs, ".exe")
 if ( any(file.exists(execs)) ) @{
-  dest <- file.path(R_PACKAGE_DIR,  paste0('bin', R_ARCH)
+  dest <- file.path(R_PACKAGE_DIR,  paste0('bin', R_ARCH))
   dir.create(dest, recursive = TRUE, showWarnings = FALSE)
   file.copy(execs, dest, overwrite = TRUE)
 @}
@@ -1561,6 +1561,7 @@ You will very likely need to ensure that the same C compiler and
 compiler flags are used in the @file{configure} tests as when compiling
 @R{} or your package.  Under a Unix-alike, you can achieve this by
 including the following fragment early in @file{configure.ac}
+(@emph{before} calling @code{AC_PROG_CC})
 
 @example
 @group
@@ -1588,8 +1589,10 @@ LDFLAGS=`"$@{R_HOME@}/bin/R" CMD config LDFLAGS`
 
 @noindent
 and packages written with C++ need to pick up the details for the C++
-compiler and switch the current language to C++ by
+compiler and switch the current language to C++ by something like
 @example
+CXX=`"$@{R_HOME@}/bin/R" CMD config CXX`
+CXXFLAGS=`"$@{R_HOME@}/bin/R" CMD config CXXFLAGS`
 AC_LANG(C++)
 @end example
 
@@ -1625,9 +1628,8 @@ override the test for the FORTRAN linker flags.)
 
 @strong{N.B.}: If the @command{configure} script creates files, e.g.@:
 @file{src/Makevars}, you do need a @command{cleanup} script to remove
-them.  Otherwise if the package has vignettes, @command{R CMD build}
-will ship the files that are created.  For example, package
-@CRANpkg{RODBC} has
+them.  Otherwise @command{R CMD build} may ship the files that are
+created.  For example, package @CRANpkg{RODBC} has
 
 @example
 #!/bin/sh
@@ -4209,7 +4211,7 @@ all linkers allow a space after @option{-L} .
 Some people have a need to set a locale.  Locale names are not portable,
 and e.g.@: @samp{fr_FR.utf8} is common used on Linux but not accepted on
 either Solaris or OS X.  @samp{fr_FR.UTF-8} is more portable, being
-accepted on recent Linux, AIX, FreBSD, OS X and Solaris (at least).
+accepted on recent Linux, AIX, FreeBSD, OS X and Solaris (at least).
 However, some Linux distributions micro-package, so locales defined by
 @pkg{glibc} (including these examples) may not be installed.
 
@@ -4527,9 +4529,14 @@ typically upper-case, may be defined by the compiler or system headers
 and can cause problems.
 @c http://lists.x.org/archives/xorg-devel/2013-November/038808.html
 The most common issue involves the names of the Intel CPU registers such
-as @code{CS}, @code{DS} and @code{SS} defined on i586/x64 Solaris in
+as @code{CS}, @code{DS}, @code{ES}, @code{FS}, @code{GS} and @code{SS}
+(and more with longer abbreviations) defined on i586/x64 Solaris in
 @file{<sys/regset.h>} and often included indirectly by @file{<stdlib.h>}
 and other core headers.
+
+@item
+@code{typedef}s in OS headers can conflict with those in the package: an
+example is @code{index_t} defined in @file{<sys/types.h>} on Solaris.
 @end itemize
 
 Some additional information for C++ is available at
@@ -12417,16 +12424,21 @@ available to users' C code.
 The following is declared in header file @file{Rinternals.h}.
 
 @deftypefun void  R_orderVector (int* @var{indx}, int @var{n}, SEXP @var{arglist}, Rboolean @var{nalast}, Rboolean @var{decreasing})
+@deftypefunx void R_orderVector1 (int* @var{indx}, int @var{n}, SEXP @var{x}, Rboolean @var{nalast}, Rboolean @var{decreasing})
 
-This corresponds to @R{}'s @code{order(..., na.last, decreasing)}.
+@code{R_orderVector()} corresponds to @R{}'s @code{order(..., na.last, decreasing)}.
 More specifically, @code{indx <- order(x, y, na.last, decreasing)} corresponds to
 @code{R_orderVector(indx, n, Rf_lang2(x, y), nalast, decreasing)} and for
 three vectors, @code{Rf_lang3(x,y,z)} is used as @var{arglist}.
 
-Note that  @code{R_orderVector()} assumes the vector @code{indx}
-to be allocated to length @eqn{\ge n, >= n}.  On return, @code{indx[]}
-contains a permutation of @code{0:(n-1)}, i.e., 0-based C indices (and not
-1-based @R{} indices, as @R{}'s @code{order()}).
+Both @code{R_orderVector} and @code{R_orderVector1} assume the vector
+@code{indx} to be allocated to length @eqn{\ge n, >= n}.  On return,
+@code{indx[]} contains a permutation of @code{0:(n-1)}, i.e., 0-based C
+indices (and not 1-based @R{} indices, as @R{}'s @code{order()}).
+
+When ordering only one vector, @code{R_orderVector1} is faster and
+corresponds (but is 0-based) to @R{}'s @code{indx <- order(x, na.last,
+decreasing)}.  It was added in @R{} 3.3.0.
 @end deftypefun
 
 All other sort routines are declared in header file

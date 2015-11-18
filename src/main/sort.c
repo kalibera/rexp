@@ -179,7 +179,6 @@ SEXP attribute_hidden do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    ScalarLogical(isUnsorted(x, strictly));
     }
     if(isObject(x)) {
-	// try dispatch -- fails entirely for S4: need "DispatchOrEval()" ?
 	SEXP call;
 	PROTECT(call = 	// R>  .gtn(x, strictly) :
 		lang3(install(".gtn"), x, CADR(args)));
@@ -927,6 +926,12 @@ GREATER_2_SUB_DEF(intdbl2greater,    int, double, icmp, rcmp)
     }
 
 
+/* TODO: once LONG_VECTOR_SUPPORT and  R_xlen_t  belong to the R API,
+ * ----  also add "long" versions, say,
+ *    R_orderVectorl (R_xlen_t *indx, R_xlen_t n, SEXP arglist, ...)
+ *    R_orderVector1l(R_xlen_t *indx, R_xlen_t n, SEXP arg,  ...)
+ * to the API */
+
 // Usage:  R_orderVector(indx, n,  Rf_lang2(x,y),  nalast, decreasing)
 void R_orderVector(int *indx, // must be pre-allocated to length >= n
 		   int n,
@@ -937,6 +942,14 @@ void R_orderVector(int *indx, // must be pre-allocated to length >= n
     for(int i = 0; i < n; i++) indx[i] = i;
     orderVector(indx, n, arglist, nalast, decreasing, listgreater);
     return;
+}
+
+// Fast version of 1-argument case of R_orderVector()
+void R_orderVector1(int *indx, int n, SEXP x,
+		    Rboolean nalast, Rboolean decreasing)
+{
+    for(int i = 0; i < n; i++) indx[i] = i;
+    orderVector1(indx, n, x, nalast, decreasing, R_NilValue);
 }
 
 

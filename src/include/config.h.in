@@ -309,6 +309,9 @@
 /* Define to 1 if you have the `getgrgid' function. */
 #undef HAVE_GETGRGID
 
+/* Define to 1 if you have the `getline' function. */
+#undef HAVE_GETLINE
+
 /* Define to 1 if you have the `getpagesize' function. */
 #undef HAVE_GETPAGESIZE
 

@@ -506,9 +506,13 @@ SEXP R_standardGeneric(SEXP fname, SEXP ev, SEXP fdef)
     switch(TYPEOF(f)) {
     case CLOSXP:
 	{
-	    SEXP R_execMethod(SEXP, SEXP);
-	    PROTECT(f); nprotect++; /* is this needed?? */
-	    val = R_execMethod(f, ev);
+	    if (inherits(f, "internalDispatchMethod")) {
+                val = R_deferred_default_method();
+            } else {
+                SEXP R_execMethod(SEXP, SEXP);
+                PROTECT(f); nprotect++; /* is this needed?? */
+                val = R_execMethod(f, ev);
+            }
 	}
 	break;
     case SPECIALSXP: case BUILTINSXP:
@@ -685,7 +689,8 @@ SEXP R_nextMethodCall(SEXP matched_call, SEXP ev)
     appears) in which case ... was appended. */
     for(i=0; i<nargs; i++) {
 	this_sym = TAG(args);
-        if(CAR(args) != R_MissingArg) /* "missing" only possible in primitive */
+  /* "missing" only possible in primitive */
+        if(this_sym != R_NilValue && CAR(args) != R_MissingArg)
 	    SETCAR(args, this_sym);
 	args = CDR(args);
     }
@@ -1034,9 +1039,13 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
     switch(TYPEOF(f)) {
     case CLOSXP:
     {
-	SEXP R_execMethod(SEXP, SEXP);
-	PROTECT(f); nprotect++; /* is this needed?? */
-	val = R_execMethod(f, ev);
+        if (inherits(f, "internalDispatchMethod")) {
+            val = R_deferred_default_method();
+        } else {
+            SEXP R_execMethod(SEXP, SEXP);
+            PROTECT(f); nprotect++; /* is this needed?? */
+            val = R_execMethod(f, ev);
+        }
     }
     break;
     case SPECIALSXP: case BUILTINSXP:

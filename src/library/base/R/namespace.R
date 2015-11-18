@@ -300,7 +300,7 @@ loadNamespace <- function (package, lib.loc = NULL,
                                       if(exists(varName, envir = env))
                                           warning(gettextf("failed to assign RegisteredNativeSymbol for %s to %s since %s is already defined in the %s namespace",
                                                            sym$name, varName, varName, sQuote(package)),
-                                                  domain = NA)
+                                                  domain = NA, call. = FALSE)
                                       else
                                           assign(varName, sym, envir = env)
                                   })
@@ -324,11 +324,11 @@ loadNamespace <- function (package, lib.loc = NULL,
                            if(origVarName != varName)
                                warning(gettextf("failed to assign NativeSymbolInfo for %s to %s since %s is already defined in the %s namespace",
                                                 origVarName, varName, varName, sQuote(package)),
-                                       domain = NA)
+                                       domain = NA, call. = FALSE)
                            else
                                warning(gettextf("failed to assign NativeSymbolInfo for %s since %s is already defined in the %s namespace",
                                                 origVarName, varName, sQuote(package)),
-                                       domain = NA)
+                                       domain = NA, call. = FALSE)
                        else
                            assign(varName, symbols[[origVarName]], envir = env)
 
@@ -951,14 +951,15 @@ namespaceImportMethods <- function(self, ns, vars, from = NULL)
                 allVars <- c(allVars, g)
                 generics <- c(generics, g)
                 packages <- c(packages, p)
-            }
-            else { # should be primitive
+            } else if (g %in% c("as.vector", "is.unsorted", "unlist")) {
+                ## implicit generics
+            } else { # should be primitive
                 fun <- methods::getFunction(g, mustFind = FALSE, where = self)
                 if(is.primitive(fun) || methods::is(fun, "genericFunction")) {}
                 else
-                    warning(gettextf("No generic function found corresponding to requested imported methods for \"%s\" from package \"%s\" (malformed exports?)",
-                                 g, pkg),
-                        domain = NA)
+                    warning(gettextf("No generic function %s found corresponding to requested imported methods from package %s when loading %s (malformed exports?)",
+                                 sQuote(g), sQuote(pkg), sQuote(from)),
+                        domain = NA, call. = FALSE)
             }
         }
     }
@@ -1233,7 +1234,7 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
                            warning(gettextf("duplicate symbol names %s in useDynLib(\"%s\")",
                                             paste(sQuote(names(symNames)[dup]),
                                                   collapse = ", "), dyl),
-                                   domain = NA)
+                                   domain = NA, call. = FALSE)
 
                        symNames <- symNames[!dup]
 

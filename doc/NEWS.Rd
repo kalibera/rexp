@@ -27,9 +27,10 @@
       have to successfully negotiate a cryptographic protocol (TLS/SSL,
       \dots) and the server's identity has to be verifiable \emph{via}
       the available certificates.  Different access methods may allow
-      different protocols or use certificate bundles: we have experienced a
-      \samp{https:} CRAN mirror which can be accessed by one browser but
-      not another nor by \code{download.file()} on the same Linux machine.
+      different protocols or use private certificate bundles: we have
+      experienced a \samp{https:} CRAN mirror which can be accessed by
+      one browser but not another nor by \code{download.file()} on the
+      same Linux machine.
     }
   }
   \subsection{NEW FEATURES}{
@@ -92,13 +93,17 @@
       now allow non-default values of the cairographics \sQuote{fallback
 	resolution} to be set.
 
-      \item \code{file()} gets an explicit \code{method} argument
-      instead of implicitly using
+      This now defaults to 300 on all platforms: that is the default
+      documented by cairographics, but apparently was not used by all
+      system installations.
+
+      \item \code{file()} gains an explicit \code{method} argument
+      rather than implicitly using
       \code{getOption("url.method", "default")}.
 
       \item Thanks to a patch from Tomas Kalibera, \code{x[x != 0]} is
-      now typically \emph{faster} than \code{x[which(x != 0)]} (in the
-      case where \code{x} has no NAs, the two are equivalent).
+      now typically faster than \code{x[which(x != 0)]} (in the case
+      where \code{x} has no NAs, the two are equivalent).
 
       \item \code{read.table()} now always uses the names for a named
       \code{colClasses} argument (previously names were only used when
@@ -118,8 +123,8 @@
       \item \code{available.packages()} gains a \code{repos} argument.
 
       \item The undocumented switching of methods for \code{url()} on
-      \samp{https:} and \samp{ftps:} URLs is confined to \code{method =
-	"default"} (and documented).
+      \samp{https:} and \samp{ftps:} URLs is confined to
+      \code{method = "default"} (and documented).
 
       \item \code{smoothScatter()} gains a \code{ret.selection} argument.
 
@@ -146,7 +151,7 @@
       and JJ Allaire.
 
       Some testing code is available at
-      \url{https://github.com/pmur002/R-display-list} .
+      \url{https://github.com/pmur002/R-display-list}.
 
       \item \code{tools::undoc(dir = D)} and \code{codoc(dir = D)} now
       also work when \code{D} is a directory whose \code{normalizePath()}ed
@@ -161,13 +166,56 @@
       \code{abbreviate(use.classes = FALSE)} is now implemented, and
       that is more suitable for non-European languages.
 
-      \code{match(x, table)} is faster, sometimes by an order of magnitude,
-      when \code{x} is of length one, % and \code{incomparables} is unchanged
-      thanks to Haverty's \PR{16491}.
+      \item \code{match(x, table)} is faster, sometimes by an order of
+      magnitude, when \code{x} is of length one and \code{incomparables}
+      is unchanged, thanks to Haverty's \PR{16491}.
 
-      More consistent, partly not back-compatible behavior of \code{NA}
-      and \code{NaN} coercion to complex numbers, operations less often
-      resulting in complex \code{NA} (\code{NA_complex_}).
+      \item More consistent, partly not back-compatible behavior of
+      \code{NA} and \code{NaN} coercion to complex numbers, operations
+      less often resulting in complex \code{NA} (\code{NA_complex_}).
+
+      \item \code{lengths()} considers methods for \code{length} and
+      \code{[[} on \code{x}, so it should work automatically on any
+      objects for which appropriate methods on those generics are
+      defined.
+
+      \item The logic for selecting the default screen device on OS X
+      has been simplified: it is now \code{quartz()} if that is
+      available even if environment variable \env{DISPLAY} has been set
+      by the user.
+
+      The choice can easily be overridden \emph{via} environment
+      variable \env{R_INTERACTIVE_DEVICE}.
+
+      \item On unixy platforms (with the \command{getline} C library function),
+      \code{system(*,intern=TRUE)} no longer truncates (output) lines
+      longer than 8192 characters, thanks to Karl Millar's \PR{16544}.
+
+      \item \code{rank()} gains a \code{ties.method = "last"} option,
+      for convenience (and symmetry).
+
+      %% \item \code{getSource(vignette(..))} is the \R source file name of
+      %% a vignette.
+
+      \item \code{regmatches(invert = NA)} can now be used to extract
+      both non-matched and matched substrings.
+
+      \item \code{data.frame()} gains argument \code{fix.empty.names};
+      \code{as.data.frame.list()} gets new \code{cut.names},
+      \code{col.names} and \code{fix.empty.names}.
+
+      \item \code{plot(x ~ x, *)} now warns that it is the same as
+      \code{plot(x ~ 1, *)}.
+
+      \item \code{recordPlot()} has new arguments \code{load} and
+      \code{attach} to allow package names to be stored as part of a
+      recorded plot.  \code{replayPlot()} has new argument
+      \code{reloadPkgs} to load/attach any package names that were
+      stored as part of a recorded plot.
+
+      \item S4 dispatch works within calls to \code{.Internal()}. This means
+      explicit S4 generics are no longer needed for \code{unlist},
+      \code{is.unsorted} and \code{as.vector}.
     }
   }
 
@@ -182,6 +230,8 @@
       functions from default packages other than base which are used in
       the package code but not imported are reported as undefined
       globals.
+
+      It now also checks DOIs in package \file{CITATION} and Rd files.
     }
   }
 
@@ -189,13 +239,13 @@
     \itemize{
       \item The previously included versions of \code{zlib},
       \code{bzip2}, \code{xz} and PCRE have been removed, so suitable
-      external (usuallly system) versions are required (see the
+      external (usually system) versions are required (see the
       \sQuote{R Installation and Administration} manual).
 
       \item The unexported and undocumented Windows-only devices
       \code{cairo_bmp()}, \code{cairo_png()} and \code{cairo_tiff()}
-      have been removed.  (The devices should be used as e.g.
-      \code{bmp(type = "cairo")}.)
+      have been removed.  (These devices should be used as
+      e.g.\sspace{}\code{bmp(type = "cairo")}.)
 
       \item (Windows only)  Function \code{setInternet2()} has no effect
       and will be removed in due course.  The choice between methods
@@ -210,7 +260,7 @@
   \subsection{INSTALLATION and INCLUDED SOFTWARE}{
     \itemize{
       \item Support for very old versions of \command{valgrind}
-      (e.g. 3.3.0) has been removed.
+      (e.g., 3.3.0) has been removed.
 
       \item The included \command{libtool} script (generated by
       \command{configure}) has been updated to version 2.4.6 (from 2.2.6a).
@@ -224,10 +274,14 @@
 
       \item \command{configure} uses \command{pkg-config} for PNG, TIFF
       and JPEG where this is available.  This should work better with
-      multiple installs and with static libs.
+      multiple installs and with those using static libraries.
 
       \item The minimum supported version of OS X is 10.6 (\sQuote{Snow
 	Leopard}): even that has been unsupported by Apple since 2012.
+
+      \item The \command{configure} default on OS X is
+      \option{--disable-R-framework}: enable this if you intend to
+      install under \file{/Library/Frameworks} and use with \code{R.app}.
     }
   }
 
@@ -244,6 +298,9 @@
       deprecated in favour of the standard OpenMP define \samp{_OPENMP}.
 
       \item \code{R_GE_version} has been increased to \code{11}.
+
+      \item New API call \code{R_orderVector1()}, a faster
+      one-argument version of \code{R_orderVector()}.
     }
   }
 
@@ -253,16 +310,32 @@
       vector, and it returns \code{"TRUE"}/\code{"FALSE"} instead of
       \code{"T"}/\code{"F"} for logical vectors.
 
-      \item \code{.colSums()} etc (with an initial dot) first argument
-      name \code{x} matches \code{colSums()} such that error messages
-      are correct.
+      \item The first arguments of \code{.colSums()} etc (with an
+      initial dot) are now named \code{x} rather than \code{X} (matching
+      \code{colSums()}): thus error messages are corrected.
 
       \item A \code{coef()} method for class \code{"maov"} has been
       added to allow \code{vcov()} to work with multivariate
       results. (\PR{16380})
 
-      \item \code{libcurl} connections signal errors rather than
-      retrieving HTTP error pages.
+      \item \code{method = "libcurl"} connections signal errors rather
+      than retrieving HTTP error pages (where the ISP reports the
+      error).
+
+      \item \code{xpdrows.data.frame()} was not checking for unique
+      row names; in particular, this affected assignment to non-existing
+      rows via numerical indexing. (\PR{16570})
+
+      \item \code{tail.matrix()} did not work for zero rows matrices,
+      and could produce row \dQuote{labels} such as \code{"[1e+05,]"}.
+
+      \item Data frames with column name \code{"stringsAsFactors"} now
+      format and print correctly.  (\PR{16580})
+
+      \item The \code{X11()} device sometimes froze on Red Hat
+      Enterprise Linux 6. It now waits for \code{MapNotify} events
+      instead of \code{Expose} events, thanks to Siteshwar
+      Vashisht. (\PR{16497})
     }
   }
 }
@@ -286,7 +359,23 @@
       %% https://stat.ethz.ch/pipermail/r-devel/2015-August/071595.html
 
       \item \code{which.min(x)} and \code{which.max(x)} may be much
-      faster for logical and integer \code{x} and now also work for long vectors.
+      faster for logical and integer \code{x} and now also work for long
+      vectors.
+
+      \item The \sQuote{emulation} part of \code{tools::texi2dvi()} has
+      been somewhat enhanced, including supporting \code{quiet = TRUE}.
+      It can be selected by \code{texi2dvi = "emulation"}.
+
+      (Windows) MiKTeX removed its \code{texi2dvi.exe} command in Sept
+      2015: \code{tools::texi2dvi()} tries \code{texify.exe} if it is
+      not found.
+
+      \item (Windows only) Shortcuts for printing and saving have
+      been added to menus in \command{Rgui.exe}.  (Request of \PR{16572}.)
+
+      \item \code{loess(..., iterTrace=TRUE)} now provides diagnostics
+      for robustness iterations, and the \code{print()} method for
+      \code{summary(<loess>)} shows slightly more.
     }
   }
 
@@ -308,8 +397,13 @@
       \item \command{configure} now supports the OpenMP flags
       \option{-fopenmp=libomp} (clang) and \option{-qopenmp} (Intel C).
 
-      \item Various OpenMP macros can be set to override the default
-      behaviour of \command{configure}: see file \file{config.site}.
+      \item Various macros can be set to override the default
+      behaviour of \command{configure} when detecting OpenMP: see file
+      \file{config.site}.
+
+      \item Source installation on Windows has been modified to allow
+      for MiKTeX installations without \command{texi2dvi.exe}.  See file
+      \file{MkRules.dist}.
     }
   }
 
@@ -378,12 +472,50 @@
       \item (Windows only) \code{dir.create()} did not always warn
       when it failed to create a directory.  (\PR{16537})
 
-      \item When operating in a multibyte locale, \code{grep()}
-      and related functions did not handle UTF-8 strings properly.
+      \item When operating in a non-UTF-8 multibyte locale
+      (e.g.\sspace{}an East Asian locale on Windows), \code{grep()} and
+      related functions did not handle UTF-8 strings properly.
       (\PR{16264})
-      
-      \item \code{read.dcf()} misread lines longer than 8191 characters.
-      (Reported by Hervé Pagès with a patch.)
+
+      \item \code{read.dcf()} sometimes misread lines longer than 8191
+      characters.  (Reported by Hervé Pagès with a patch.)
+
+      \item \code{within(df, ..)} no longer drops columns whose name
+      start with a \code{"."}.
+
+      \item The built-in \code{HTTP} server converted entire
+      \code{Content-Type} to lowercase including parameters which
+      can cause issues for multi-part form boundaries (\PR{16541}).
+
+      \item Modifying slots of S4 objects could fail when the
+      \pkg{methods} package was not attached. (\PR{16545})
+
+      \item \code{splineDesign(*, outer.ok=TRUE)} (\pkg{splines}) is better now
+      (\PR{16549}), and \code{interpSpline()} now allows \code{sparse=TRUE}
+      for speedup with non-small sizes.
+
+      \item If the expression in the traceback was too long,
+      \code{traceback()} did not report the source line number.  (Patch
+      by Kirill Müller.)
+
+      \item The browser did not truncate the display of the function when
+      exiting with \code{options("deparse.max.lines")} set.
+      (\PR{16581})
+
+      \item When \code{bs(*, Boundary.knots=)} had boundary knots inside
+      the data range, extrapolation was somewhat off.  (Patch by Trevor
+      Hastie.)
+
+      \item \code{var()} and hence \code{sd()} warn about
+      \code{factor} arguments which are deprecated now. (\PR{16564})
+
+      \item \code{loess(*, weights = *)} stored wrong weights and hence
+      gave slightly wrong predictions for \code{newdata}.  (\PR{16587})
+
+      \item \code{aperm(a, *)} now preserves \code{names(dim(a))}.
+
+      \item \code{poly(x, ..)} now works when either \code{raw=TRUE} or
+      \code{coef} is specified.  (\PR{16597})
     }
   }
 }

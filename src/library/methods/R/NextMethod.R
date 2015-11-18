@@ -58,7 +58,7 @@ callNextMethod <- function(...) {
         } else {
             f <- as.character(mcall[[1L]])
         }
-        fdef <- genericForPrimitive(f)
+        fdef <- genericForBasic(f)
         ## check that this could be a basic function with methods
         if(is.null(fdef))
             stop(gettextf("a call to callNextMethod() appears in a call to %s, but the call does not seem to come from either a generic function or another 'callNextMethod'",
@@ -123,6 +123,8 @@ callNextMethod <- function(...) {
                    length(fnames) <- i
                    fnames <- c(fnames, rep("", length(call) - i))
                }
+               if (substring(f, nchar(f)-1L) == "<-")
+                   fnames[length(fnames)] <- "value"
                names(call) <- fnames
                call <- as.call(call)
            }

@@ -170,28 +170,29 @@ as.data.frame.data.frame <- function(x, row.names = NULL, ...)
 ## prior to 1.8.0 this coerced names - PR#3280
 as.data.frame.list <-
     function(x, row.names = NULL, optional = FALSE, ...,
+	     cut.names = FALSE, col.names = names(x), fix.empty.names = TRUE,
              stringsAsFactors = default.stringsAsFactors())
 {
     ## need to protect names in x.
-    cn <- names(x)
-    m <- match(c("row.names", "check.rows", "check.names", "stringsAsFactors"),
-               cn, 0L)
-    if(any(m)) {
-        cn[m] <- paste0("..adfl.", cn[m])
-        names(x) <- cn
+    ## truncate any of more than 256 (or cut.names) bytes:
+    new.nms <- !missing(col.names)
+    if(cut.names) {
+	maxL <- if(is.logical(cut.names)) 256L else as.integer(cut.names)
+	if(any(long <- nchar(col.names, "bytes", keepNA = FALSE) > maxL))
+	    col.names[long] <- paste(substr(col.names[long], 1L, maxL - 6L), "...")
+	else cut.names <- FALSE
     }
-    x <- eval(as.call(c(expression(data.frame), x, check.names = !optional,
-                        stringsAsFactors = stringsAsFactors)))
-    if(any(m)) names(x) <- sub("^\\.\\.adfl\\.", "", names(x))
-    if(!is.null(row.names)) {
-	# row.names <- as.character(row.names)
-	if(length(row.names) != dim(x)[[1L]])
-            stop(sprintf(ngettext(length(row.names),
-                                  "supplied %d row name for %d rows",
-                                  "supplied %d row names for %d rows"),
-                         length(row.names), dim(x)[[1L]]), domain = NA)
-	attr(x, "row.names") <- row.names
-    }
+    m <- match(names(formals(data.frame))[-1L],
+	       ## c("row.names", "check.rows", ...., "stringsAsFactors"),
+	       col.names, 0L)
+    if(any.m <- any(m)) col.names[m] <- paste0("..adfl.", col.names[m])
+    if(new.nms || any.m || cut.names) names(x) <- col.names
+    if(is.null(check.n <- list(...)$check.names)) check.n <- !optional
+    x <- do.call(data.frame,
+                 c(x, list(check.names = check.n, row.names = row.names,
+                           fix.empty.names = fix.empty.names,
+                           stringsAsFactors = stringsAsFactors)))
+    if(any.m) names(x) <- sub("^\\.\\.adfl\\.", "", names(x))
     x
 }
 
@@ -367,6 +368,7 @@ as.data.frame.AsIs <- function(x, row.names = NULL, optional = FALSE, ...)
 
 data.frame <-
     function(..., row.names = NULL, check.rows = FALSE, check.names = TRUE,
+	     fix.empty.names = TRUE,
              stringsAsFactors = default.stringsAsFactors())
 {
     data.row.names <-
@@ -380,14 +382,17 @@ data.frame <-
 		    return(new)
 		if(all(current == new) || all(current == ""))
 		    return(new)
-		stop(gettextf("mismatch of row names in arguments of 'data.frame\', item %d", i), domain = NA)
+		stop(gettextf(
+		    "mismatch of row names in arguments of 'data.frame\', item %d", i),
+		    domain = NA)
 	    }
 	else function(current, new, i) {
 	    if(is.null(current)) {
 		if(anyDuplicated(new)) {
-		    warning(gettextf("some row.names duplicated: %s --> row.names NOT used",
-                                     paste(which(duplicated(new)), collapse=",")),
-                            domain = NA)
+		    warning(gettextf(
+                        "some row.names duplicated: %s --> row.names NOT used",
+                        paste(which(duplicated(new)), collapse=",")),
+                        domain = NA)
 		    current
 		} else new
 	    } else current
@@ -431,27 +436,23 @@ data.frame <-
 	namesi <- names(xi)
 	if(ncols[i] > 1L) {
 	    if(length(namesi) == 0L) namesi <- seq_len(ncols[i])
-	    if(no.vn[i]) vnames[[i]] <- namesi
-	    else vnames[[i]] <- paste(vnames[[i]], namesi, sep=".")
-	}
-	else {
-            if(length(namesi)) vnames[[i]] <- namesi
-            else if (no.vn[[i]]) {
-                tmpname <- deparse(object[[i]], nlines = 1L)[1L]
-                if( substr(tmpname, 1L, 2L) == "I(" ) {
-                    ntmpn <- nchar(tmpname, "c")
-                    if(substr(tmpname, ntmpn, ntmpn) == ")")
-                        tmpname <- substr(tmpname, 3L, ntmpn - 1L)
-                }
-                vnames[[i]] <- tmpname
-            }
-        } # end of ncols[i] <= 1
+	    vnames[[i]] <- if(no.vn[i]) namesi
+			   else paste(vnames[[i]], namesi, sep=".")
+	} else if(length(namesi)) {
+	    vnames[[i]] <- namesi
+	} else if (fix.empty.names && no.vn[[i]]) {
+	    tmpname <- deparse(object[[i]], nlines = 1L)[1L]
+	    if(substr(tmpname, 1L, 2L) == "I(") { ## from 'I(*)', only keep '*':
+		ntmpn <- nchar(tmpname, "c")
+		if(substr(tmpname, ntmpn, ntmpn) == ")")
+		    tmpname <- substr(tmpname, 3L, ntmpn - 1L)
+	    }
+	    vnames[[i]] <- tmpname
+	} ## else vnames[[i]] are not changed
 	if(mirn && nrows[i] > 0L) {
             rowsi <- attr(xi, "row.names")
             ## Avoid all-blank names
-            nc <- nchar(rowsi, allowNA = FALSE)
-            nc <- nc[!is.na(nc)]
-            if(length(nc) && any(nc))
+            if(any(nzchar(rowsi)))
                 row.names <- data.row.names(row.names, rowsi, i)
         }
         nrows[i] <- abs(nrows[i])
@@ -490,11 +491,16 @@ data.frame <-
     value <- unlist(vlist, recursive=FALSE, use.names=FALSE)
     ## unlist() drops i-th component if it has 0 columns
     vnames <- unlist(vnames[ncols > 0L])
-    noname <- !nzchar(vnames)
-    if(any(noname))
+    if(fix.empty.names && any(noname <- !nzchar(vnames)))
 	vnames[noname] <- paste("Var", seq_along(vnames), sep = ".")[noname]
-    if(check.names)
-	vnames <- make.names(vnames, unique=TRUE)
+    if(check.names) {
+	if(fix.empty.names)
+	    vnames <- make.names(vnames, unique=TRUE)
+	else { ## do not fix ""
+	    nz <- nzchar(vnames)
+	    vnames[nz] <- make.names(vnames[nz], unique=TRUE)
+	}
+    }
     names(value) <- vnames
     if(!mrn) { # non-null row.names arg was supplied
         if(length(row.names) == 1L && nr != 1L) {  # one of the variables
@@ -866,6 +872,9 @@ data.frame <-
     n <- length(iseq)
     if(n == 0L) n <- nrows
     p <- length(jseq)
+    if (is.null(value)) {
+        value <- list(NULL)
+    }
     m <- length(value)
     if(!is.list(value)) {
         if(p == 1L) {
@@ -944,7 +953,7 @@ data.frame <-
     ncolv <- dimv[2L]
     jvseq <- seq_len(p)
     if(ncolv < p) jvseq <- rep_len(seq_len(ncolv), p)
-    else if(ncolv > p) {
+    else if(p != 0L && ncolv > p) {
         warning(sprintf(ngettext(ncolv,
                                  "provided %d variable to replace %d variables",
                                  "provided %d variables to replace %d variables"),
@@ -1181,7 +1190,9 @@ xpdrows.data.frame <- function(x, old.rows, new.rows)
 	    x[[i]] <- y
 	}
     }
-    attr(x, "row.names") <- c(old.rows, new.rows)
+    nm <- c(old.rows, new.rows)
+    if (any(duplicated(nm))) nm <- make.unique(as.character(nm))
+    attr(x, "row.names") <- nm
     x
 }
 
@@ -1219,8 +1230,8 @@ rbind.data.frame <- function(..., deparse.level = 1, make.row.names = TRUE)
     allargs <- list(...)
     allargs <- allargs[lengths(allargs) > 0L]
     if(length(allargs)) {
-    ## drop any zero-row data frames, as they may not have proper column
-    ## types (e.g. NULL).
+        ## drop any zero-row data frames, as they may not have proper column
+        ## types (e.g. NULL).
         nr <- vapply(allargs, function(x)
                      if(is.data.frame(x)) .row_names_info(x, 2L)
                      else if(is.list(x)) length(x[[1L]]) # mismatched lists are checked later
@@ -1377,7 +1388,7 @@ rbind.data.frame <- function(..., deparse.level = 1, make.row.names = TRUE)
 	    rlabs <- make.unique(as.character(rlabs), sep = "")
     }
     if(is.null(cl)) {
-	as.data.frame(value, row.names = rlabs)
+	as.data.frame(value, row.names = rlabs, fix.empty.names = TRUE)
     } else {
 	structure(value, class = cl,
 		  row.names = if(is.null(rlabs)) .set_row_names(nrow) else rlabs)

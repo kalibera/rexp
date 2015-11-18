@@ -16,6 +16,7 @@
 #  A copy of the GNU General Public License is available at
 #  https://www.R-project.org/Licenses/
 
+
 ## a few class name definitions needed elsewhere
 .anyClassName <- structure("ANY", package = "methods")
 .signatureClassName <- structure("signature", package = "methods")
@@ -177,11 +178,11 @@
 	slotnames <- if(is.null(argnames)) FALSE else {
             nzchar(argnames) & is.na(match(argnames, .tsArgNames)) }
 	if(any(slotnames)) {
-	    value <- do.call(ts, args[!slotnames])
+	    value <- do.call(stats::ts, args[!slotnames])
 	    .mergeAttrs(value, .Object, args[slotnames])
 	}
 	else
-	    .mergeAttrs(ts(...), .Object)
+	    .mergeAttrs(stats::ts(...), .Object)
     }
     setMethod("initialize", "ts", .init_ts, where = envir)
     setMethod("initialize", "mts", .init_ts, where = envir) #else, it's ambiguous
@@ -411,7 +412,7 @@
 }
 
 
-.tsArgNames <- names(formals(ts))
+.tsArgNames <- names(formals(stats::ts))
 
 ### The following methods are now activated
 ### via the last line of the function .InitMethodDefinitions in ./MethodsListClass.R
@@ -537,9 +538,8 @@
        list(c("ordered", "factor"), ordered(character())),
        list("table",  table(factor())),
        list("summary.table",  summary.table(table(factor())))
-      ## pkg 'stats' :
-       , list("ts", ts())
-       , list("formula", formula())
+       , list("ts", stats::ts())
+       , list("formula", stats::formula())
        )
 .OldClassesList <-
     list(

@@ -19,20 +19,11 @@
 get_IANA_URI_scheme_db <-
 function()
 {
-    ## See <http://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml>.
+    ## See
+    ## <http://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml>.
     baseurl <- "http://www.iana.org/assignments/uri-schemes/"
-    permanent <- utils::read.csv(url(paste0(baseurl, "uri-schemes-1.csv")),
-                                 stringsAsFactors = FALSE)
-    provisional <- utils::read.csv(url(paste0(baseurl, "uri-schemes-2.csv")),
-                                   stringsAsFactors = FALSE)
-    historical <- utils::read.csv(url(paste0(baseurl, "uri-schemes-3.csv")),
-                                  stringsAsFactors = FALSE)
-    db <- rbind(permanent, provisional, historical)
-    db$Category <-
-        rep.int(c("permanent", "provisional", "historical"),
-                c(nrow(permanent),
-                  nrow(provisional),
-                  nrow(historical)))
+    db <- utils::read.csv(url(paste0(baseurl, "uri-schemes-1.csv")),
+                          stringsAsFactors = FALSE)
     names(db) <- chartr(".", "_", names(db))
     db
 }
@@ -435,10 +426,12 @@ function(db, verbose = FALSE)
     ind <- is.na(match(schemes, c("", IANA_URI_scheme_db$URI_Scheme)))
     if(any(ind)) {
         len <- sum(ind)
+        msg <- rep.int("Invalid URI scheme", len)
+        doi <- schemes[ind] == "doi"
+        if(any(doi))
+            msg[doi] <- paste(msg[doi], "(use \\doi for DOIs)")
         bad <- rbind(bad,
-                     .gather(urls[ind],
-                             parents[ind],
-                             m = rep.int("Invalid URI scheme", len)))
+                     .gather(urls[ind], parents[ind], m = msg))
     }
 
     ## ftp.

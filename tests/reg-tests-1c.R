@@ -945,3 +945,174 @@ stopifnot(
     isTRUE(!(NaN       %in% c(2., NA))))
 ## the "!" gave FALSE in R-devel (around 20.Sep.2015)
 
+
+## oversight in  within.data.frame()  [R-help, Sep 20 2015 14:23 -04]
+df <- data.frame(.id = 1:3 %% 3 == 2, a = 1:3)
+d2 <- within(df, {d = a + 2})
+stopifnot(identical(names(d2), c(".id", "a", "d")))
+## lost the '.id' column in R <= 3.2.2
+
+
+## system() truncating and splitting long lines of output, PR#16544
+op <- options(warn = 2)# no warnings allowed
+if(.Platform$OS.type == "unix") { # only works when platform has getline() in stdio.h
+    cn <- paste(1:2222, collapse=" ")
+    rs <- system(paste("echo", cn), intern=TRUE)
+    stopifnot(identical(rs, cn))
+}
+options(op)
+
+
+## tail.matrix()
+B <- 100001; op <- options(max.print = B + 99)
+mat.l <- list(m0  = matrix(, 0,2),
+              m0n = matrix(, 0,2, dimnames = list(NULL, paste0("c",1:2))),
+              m2  = matrix(1:2,   2,1),
+              m2n = matrix(1:2,   2,3, dimnames = list(NULL, paste0("c",1:3))),
+              m9n = matrix(1:9,   9,1, dimnames = list(paste0("r",1:9),"CC")),
+              m12 = matrix(1:12, 12,1),
+              mBB = matrix(1:B, B, 1))
+## tail() used to fail for 0-rows matrices m0*
+n.s <- -3:3
+hl <- lapply(mat.l, function(M) lapply(n.s, function(n) head(M, n)))
+tl <- lapply(mat.l, function(M) lapply(n.s, function(n) tail(M, n)))
+## Check dimensions of resulting matrices --------------
+## ncol:
+Mnc <- do.call(rbind, rep(list(vapply(mat.l, ncol, 1L)), length(n.s)))
+stopifnot(identical(Mnc, sapply(hl, function(L) vapply(L, ncol, 1L))),
+          identical(Mnc, sapply(tl, function(L) vapply(L, ncol, 1L))))
+## nrow:
+fNR <- function(L) vapply(L, nrow, 1L)
+tR <- sapply(tl, fNR)
+stopifnot(identical(tR, sapply(hl, fNR)), # head() & tail  both
+          tR[match(0, n.s),] == 0, ## tail(*,0) has always 0 rows
+          identical(tR, outer(n.s, fNR(mat.l), function(x,y)
+              ifelse(x < 0, pmax(0L, y+x), pmin(y,x)))))
+for(j in c("m0", "m0n")) { ## 0-row matrices: tail() and head() look like identity
+    co <- capture.output(mat.l[[j]])
+    stopifnot(vapply(hl[[j]], function(.) identical(co, capture.output(.)), NA),
+              vapply(tl[[j]], function(.) identical(co, capture.output(.)), NA))
+}
+
+CO1 <- function(.) capture.output(.)[-1] # drop the printed column names
+## checking tail(.) rownames formatting
+nP <- n.s > 0
+for(nm in c("m9n", "m12", "mBB")) { ## rownames: rather [100000,] than [1e5,]
+    tf <- file(); capture.output(mat.l[[nm]], file=tf)
+    co <- readLines(tf); close(tf)
+    stopifnot(identical(# tail(.) of full output == output of tail(.) :
+        lapply(n.s[nP], function(n) tail(co, n)),
+        lapply(tl[[nm]][nP], CO1)))
+}
+
+identCO <- function(x,y, ...) identical(capture.output(x), capture.output(y), ...)
+headI <- function(M, n) M[head(seq_len(nrow(M)), n), , drop=FALSE]
+tailI <- function(M, n) M[tail(seq_len(nrow(M)), n), , drop=FALSE]
+for(mat in mat.l) {
+    ## do not capture.output for  tail(<large>, <small negative>)
+    n.set <- if(nrow(mat) < 999) -3:3 else 0:3
+    stopifnot(
+        vapply(n.set, function(n) identCO (head(mat, n), headI(mat, n)), NA),
+        vapply(n.set, function(n) identCO (tail (mat, n, addrownums=FALSE),
+                                           tailI(mat, n)), NA),
+        vapply(n.set, function(n) all.equal(tail(mat, n), tailI(mat, n),
+                                            check.attributes=FALSE), NA))
+}
+options(op)
+## end{tail.matrix check} ------------------
+
+## format.data.frame() & as.data.frame.list() - PR#16580
+myL <- list(x=1:20, y=rnorm(20), stringsAsFactors = gl(4,5))
+names(myL)[1:2] <- lapply(1:2, function(i)
+    paste(sample(letters, 300, replace=TRUE), collapse=""))
+nD  <- names(myD  <- as.data.frame(myL))
+nD2 <- names(myD2 <- as.data.frame(myL, cut.names = 280))
+nD3 <- names(myD3 <- as.data.frame(myL, cut.names = TRUE))
+stopifnot(nchar(nD) == c(300,300,16), is.data.frame(myD),  dim(myD)  == c(20,3),
+	  nchar(nD2)== c(278,278,16), is.data.frame(myD2), dim(myD2) == c(20,3),
+	  nchar(nD3)== c(254,254,16), is.data.frame(myD3), dim(myD3) == c(20,3),
+	  identical(nD[3], "stringsAsFactors"),
+	  identical(nD[3], nD2[3]), identical(nD[3], nD3[3]))
+
+names(myD)[1:2] <- c("Variable.1", "")# 2nd col.name is "empty"
+## A data frame with a column that is an empty data frame:
+d20 <- structure(list(type = c("F", "G"), properties = data.frame(i=1:2)[,-1]),
+                 class = "data.frame", row.names = c(NA, -2L))
+stopifnot(is.data.frame(d20), dim(d20) == c(2,2),
+	  identical(colnames(d20), c("type", "properties")),
+	  identical(capture.output(d20), c("  type", "1    F", "2    G")))
+## format(d20) failed in intermediate R versions
+stopifnot(identical(names(myD), names(format(head(myD)))),
+	  identical(names(myD), c("Variable.1", "", "stringsAsFactors")),
+	  identical(rbind.data.frame(2:1, 1:2), ## was wrong for some days
+		    data.frame(c.2L..1L. = c(2L, 1L), X1.2 = 1:2)))
+## format.data.frame() did not show "stringsAsFactors" in R <= 3.2.2
+## Follow up: the new as.data.frame.list() must be careful with 'AsIs' columns:
+desc <- structure( c("a", NA, "z"), .Names = c("A", NA, "Z"))
+tools::assertError( data.frame(desc = desc, stringsAsFactors = FALSE) )
+## however
+dd <- data.frame(desc = structure(desc, class="AsIs"),
+                 row.names = c("A","M","Z"), stringsAsFactors = FALSE)
+## is "legal" (because "AsIs" can be 'almost anything')
+dd ## <- did not format nor print correctly in R-devel early Nov.2015
+fdesc <- structure(c("a", "NA", "z"), .Names=names(desc), class="AsIs")
+stopifnot(identical(format(dd),
+                    data.frame(desc = fdesc, row.names = c("A", "M", "Z"))),
+          identical(capture.output(dd),
+                    c("  desc", "A    a",
+                      "M <NA>", "Z    z")))
+
+
+## var(x) and hence sd(x)  with factor x, PR#16564
+tools::assertError(cov(1:6, f <- gl(2,3)))# was ok already
+tools::assertWarning(var(f))
+tools::assertWarning( sd(f))
+## var() "worked" in R <= 3.2.2  using the underlying integer codes
+
+
+## loess(*, .. weights) - PR#16587
+d.loess <-
+    do.call(expand.grid,
+            c(formals(loess.control)[1:3],
+              list(iterations = c(1, 10),
+                   KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)))
+d.loess $ iterTrace <- (d.loess$ iterations > 1)
+## apply(d.loes, 1L, ...) would coerce everything to atomic, i.e, "character":
+loess.c.list <- lapply(1:nrow(d.loess), function(i)
+    do.call(loess.control, as.list(d.loess[i,])))
+set.seed(123)
+for(n in 1:6) { if(n %% 10 == 0) cat(n,"\n")
+    wt <- runif(nrow(cars))
+    for(ctrl in loess.c.list) {
+        cars.wt <- loess(dist ~ speed, data = cars, weights = wt,
+                         family = if(ctrl$iterations > 1) "symmetric" else "gaussian",
+                         control = ctrl)
+        cPr  <- predict(cars.wt)
+        cPrN <- predict(cars.wt, newdata=cars)
+        stopifnot(all.equal(cPr, cPrN, check.attributes = FALSE, tol=1e-14))
+    }
+}
+## gave (typically slightly) wrong predictions in R <= 3.2.2
+
+
+## aperm() for named dim()s:
+na <- list(A=LETTERS[1:2], B=letters[1:3], C=LETTERS[21:25], D=letters[11:17])
+da <- lengths(na)
+A <- array(1:210, dim=da, dimnames=na)
+aA <- aperm(A)
+a2 <- aperm(A, (pp <- c(3:1,4)))
+stopifnot(identical(     dim(aA), rev(da)),# including names(.)
+	  identical(dimnames(aA), rev(na)),
+	  identical(     dim(a2), da[pp]), # including names(.)
+	  identical(dimnames(a2), na[pp]))
+## dim(aperm(..)) did lose names() in R <= 3.2.2
+
+
+## poly() / predict(poly()) with NAs -- PR#16597
+fm <- lm(y ~ poly(x, 3), data=data.frame(x=1:7, y=sin(1:7)))
+x <- c(1,NA,3:7)
+stopifnot(all.equal(c(predict(fm, newdata=list(x = 1:3)), `4`=NA),
+		      predict(fm, newdata=list(x=c(1:3,NA))), tol=1e-15),
+	  all.equal(unclass(poly(x, degree=2, raw=TRUE)),
+		    cbind(x, x^2), check.attributes=FALSE))
+## both gave error about NA in R <= 3.2.2
