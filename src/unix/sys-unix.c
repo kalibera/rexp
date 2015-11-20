@@ -157,9 +157,8 @@ const char *R_ExpandFileName(const char *s)
  *  7) PLATFORM DEPENDENT FUNCTIONS
  */
 
-SEXP attribute_hidden do_machine(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_machine()
 {
-    checkArity(op, args);
     return mkString("Unix");
 }
 

@@ -236,19 +236,13 @@ static SEXP lunary(SEXP call, SEXP op, SEXP arg)
 }
 
 /* && || */
-SEXP attribute_hidden do_logic2(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+dc_logic2(SEXP call, SEXP op, SEXP env, SEXP s1, SEXP s2)
 {
 /*  &&	and  ||	 */
-    SEXP s1, s2;
     int x1, x2;
     int ans = FALSE;
 
-    if (length(args) != 2)
-	error(_("'%s' operator requires 2 arguments"),
-	      PRIMVAL(op) == 1 ? "&&" : "||");
-
-    s1 = CAR(args);
-    s2 = CADR(args);
     s1 = eval(s1, env);
     if (!isNumber(s1))
 	errorcall(call, _("invalid 'x' type in 'x %s y'"),

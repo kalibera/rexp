@@ -477,6 +477,7 @@ static SEXP evalListToNewList(SEXP list, SEXP rho, SEXP call, SEXP op, int n)
 
     /* Compute the length of the new list - need to handle dots */
     while (el != R_NilValue) {
+	n++;
 	if (CAR(el) == R_DotsSymbol) {
 	    /* If we have a ... symbol, we look to see what it is bound to.
 	     * If its binding is Null (i.e. zero length)
@@ -1622,7 +1623,8 @@ static R_INLINE Rboolean SET_BINDING_VALUE(SEXP loc, SEXP value) {
 	return FALSE;
 }
 
-SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_for(SEXP call, SEXP op, SEXP rho, SEXP sym, SEXP value, SEXP body)
 {
     /* Need to declare volatile variables whose values are relied on
        after for_next or for_break longjmps and might change between
@@ -1632,13 +1634,8 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
     volatile int i = 0, n, bgn;
     volatile SEXP v, val, cell;
     int dbg, val_type;
-    SEXP sym, body;
     RCNTXT cntxt;
     PROTECT_INDEX vpi;
-
-    sym = CAR(args);
-    val = CADR(args);
-    body = CADDR(args);
 
     if ( !isSymbol(sym) ) errorcall(call, _("non-symbol loop variable"));
 
@@ -1647,9 +1644,9 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return R_NilValue;
     }
 
-    PROTECT(args);
+    PROTECT(body);
     PROTECT(rho);
-    PROTECT(val = eval(val, rho));
+    PROTECT(val = eval(value, rho));
 
     /* deal with the case where we are iterating over a factor
        we need to coerce to character - then iterate */
@@ -1756,14 +1753,12 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_while(SEXP call, SEXP op, SEXP rho, SEXP value, SEXP body)
 {
     int dbg;
     volatile int bgn;
-    volatile SEXP body;
     RCNTXT cntxt;
-
-    checkArity(op, args);
 
     if (R_jit_enabled > 2) {
 	R_compileAndExecute(call, rho);
@@ -1771,13 +1766,12 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     dbg = RDEBUG(rho);
-    body = CADR(args);
     bgn = BodyHasBraces(body);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
-	while (asLogicalNoNA(eval(CAR(args), rho), call)) {
+	while (asLogicalNoNA(eval(value, rho), call)) {
 	    if (RDEBUG(rho) && !bgn && !R_GlobalContext->browserfinish) {
 		SrcrefPrompt("debug", R_Srcref);
 		PrintValue(body);
@@ -1787,7 +1781,7 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (RDEBUG(rho) && !R_GlobalContext->browserfinish) {
 		SrcrefPrompt("debug", R_Srcref);
 		Rprintf("(while) ");
-		PrintValue(CAR(args));
+		PrintValue(value);
 		do_browser(call, op, R_NilValue, rho);
 	    }
 	}
@@ -1798,13 +1792,10 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_repeat(SEXP call, SEXP op, SEXP rho, SEXP body)
 {
     int dbg;
-    volatile SEXP body;
     RCNTXT cntxt;
-
-    checkArity(op, args);
 
     if (R_jit_enabled > 2) {
 	R_compileAndExecute(call, rho);
@@ -1812,7 +1803,6 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     dbg = RDEBUG(rho);
-    body = CAR(args);
 
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
