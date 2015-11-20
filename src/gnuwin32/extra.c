@@ -414,19 +414,18 @@ const char *formatError(DWORD res)
 
 
 void R_UTF8fixslash(char *s); /* from main/util.c */
-SEXP do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP dc_normalizepath(SEXP call, SEXP op, SEXP rho,
+    SEXP paths, SEXP slash, SEXP argmustWork)
 {
-    SEXP ans, paths = CAR(args), el, slash;
+    SEXP ans, el, slash;
     int i, n = LENGTH(paths), res;
     char tmp[MAX_PATH], longpath[MAX_PATH], *tmp2;
     wchar_t wtmp[32768], wlongpath[32768], *wtmp2;
     int mustWork, fslash = 0;
 
-    checkArity(op, args);
     if(!isString(paths))
 	errorcall(call, _("'path' must be a character vector"));
 
-    slash = CADR(args);
     if(!isString(slash) || LENGTH(slash) != 1)
 	errorcall(call, "'winslash' must be a character string");
     const char *sl = CHAR(STRING_ELT(slash, 0));
@@ -434,7 +433,7 @@ SEXP do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, "'winslash' must be '/' or '\\\\'");
     if (strcmp(sl, "/") == 0) fslash = 1;
     
-    mustWork = asLogical(CADDR(args));
+    mustWork = asLogical(argmustWork);
 
     PROTECT(ans = allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {

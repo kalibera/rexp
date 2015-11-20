@@ -959,18 +959,18 @@ SEXP attribute_hidden dc_dirname(SEXP s)
 extern char *realpath(const char *path, char *resolved_path);
 #endif
 
-SEXP attribute_hidden do_normalizepath(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP dc_normalizepath(SEXP call, SEXP op, SEXP rho,
+    SEXP paths, SEXP slash, SEXP argmustWork)
 {
-    SEXP ans, paths = CAR(args);
+    SEXP ans;
     int i, n = LENGTH(paths);
     const char *path;
     char abspath[PATH_MAX+1];
 
-    checkArity(op, args);
     if (!isString(paths))
 	error(_("'path' must be a character vector"));
 
-    int mustWork = asLogical(CADDR(args)); /* 1, NA_LOGICAL or 0 */
+    int mustWork = asLogical(argmustWork); /* 1, NA_LOGICAL or 0 */
 
 /* Does any platform not have this? */
 #ifdef HAVE_REALPATH

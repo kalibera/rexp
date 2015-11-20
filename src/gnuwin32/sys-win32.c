@@ -105,9 +105,8 @@ const char *R_ExpandFileName(const char *s)
  *  7) PLATFORM DEPENDENT FUNCTIONS
  */
 
-SEXP do_machine(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP dc_machine()
 {
-    checkArity(op, args);
     return mkString("Win32");
 }
 

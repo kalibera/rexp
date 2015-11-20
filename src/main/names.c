@@ -93,9 +93,9 @@ FUNTAB R_FunTab[] =
 
 /* Primitives */
 {"if",		do_if,		0,	200,	-1,	{PP_IF,	     PREC_FN,	  1}},
-{"while",	do_while,	0,	100,	2,	{PP_WHILE,   PREC_FN,	  0}},
-{"for",		do_for,		0,	100,	3,	{PP_FOR,     PREC_FN,	  0}},
-{"repeat",	do_repeat,	0,	100,	1,	{PP_REPEAT,  PREC_FN,	  0}},
+{"while",	dcfun,		0,	100,	2,	{PP_WHILE,   PREC_FN,	  0}, (DL_FUNC) dc_while, DC_COE},
+{"for",		dcfun,		0,	100,	3,	{PP_FOR,     PREC_FN,	  0}, (DL_FUNC) dc_for, DC_COE},
+{"repeat",	dcfun,		0,	100,	1,	{PP_REPEAT,  PREC_FN,	  0}, (DL_FUNC) dc_repeat, DC_COE},
 {"break",	dcfun, CTXT_BREAK,	0,	0,	{PP_BREAK,   PREC_FN,	  0}, (DL_FUNC) dc_break, DC_COE},
 {"next",	dcfun, CTXT_NEXT,	0,	0,	{PP_NEXT,    PREC_FN,	  0}, (DL_FUNC) dc_break, DC_COE},
 {"return",	do_return,	0,	0,	-1,	{PP_RETURN,  PREC_FN,	  0}},
@@ -181,8 +181,8 @@ FUNTAB R_FunTab[] =
 {"!",		do_logic,	3,	1,	1,	{PP_UNARY,   PREC_NOT,	  0}},
 
 /* specials as conditionally evaluate second arg */
-{"&&",		do_logic2,	1,	0,	2,	{PP_BINARY,  PREC_AND,	  0}},
-{"||",		do_logic2,	2,	0,	2,	{PP_BINARY,  PREC_OR,	  0}},
+{"&&",		dcfun,	1,	0,	2,	{PP_BINARY,  PREC_AND,	  0}, (DL_FUNC) dc_logic2, DC_COE},
+{"||",		dcfun,	2,	0,	2,	{PP_BINARY,  PREC_OR,	  0}, (DL_FUNC) dc_logic2, DC_COE},
 {":",		dcfun,	0,	1,	2,	{PP_BINARY2, PREC_COLON,  0}, (DL_FUNC) dc_colon, DC_COE},
 /* does not evaluate */
 {"~",		do_tilde,	0,	0,	-1,	{PP_BINARY,  PREC_TILDE,  0}},
@@ -647,7 +647,7 @@ FUNTAB R_FunTab[] =
 
 /* .Internal */
 {"Version",	dcfun,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_version},
-{"machine",	do_machine,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"machine",	dcfun,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_machine},
 {"commandArgs", dcfun, 0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_commandArgs},
 
 #ifdef Win32
@@ -793,7 +793,7 @@ FUNTAB R_FunTab[] =
 {"Sys.localeconv",dcfun,0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_localeconv},
 {"path.expand",	dcfun,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_pathexpand},
 {"Sys.getpid",	dcfun,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_sysgetpid},
-{"normalizePath",do_normalizepath,0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"normalizePath",dcfun,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_normalizepath, DC_COE},
 {"Sys.glob",	dcfun,	0,      11,	2,      {PP_FUNCALL, PREC_FN,   0}, (DL_FUNC) dc_glob},
 {"unlink",	dcfun,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_unlink},
 
@@ -804,7 +804,7 @@ FUNTAB R_FunTab[] =
 /* Objects */
 {"inherits",	dcfun,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_inherits},
 {"UseMethod",	do_usemethod,	0,     200,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-{"NextMethod",	do_nextmethod,	0,     210,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"NextMethod",	dcfun,	0,     210,	3,	{PP_FUNCALL, PREC_FN,	0}, (DL_FUNC) dc_nextmethod, DC_COE},
 {"standardGeneric",do_standardGeneric,0, 201,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* date-time manipulations */

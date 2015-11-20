@@ -558,7 +558,8 @@ static R_INLINE SEXP getPrimitive(SEXP symbol)
 #define ARGUSED(x) LEVELS(x)
 
 /* This is a special .Internal */
-SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_nextmethod(SEXP call, SEXP op, SEXP env,
+    SEXP arggeneric, SEXP dummy, SEXP argdots)
 {
     const char *sb, *sg, *sk;
     SEXP ans, s, t, klass, method, matchedarg, generic;
@@ -624,7 +625,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
       White Book
     */
 
-    s = CADDR(args); /* this is ... and we need to see if it's bound */
+    s = argdots; /* this is ... and we need to see if it's bound */
     if (s == R_DotsSymbol) {
 	t = findVarInFrame3(env, s, TRUE);
 	if (t != R_NilValue && t != R_MissingArg) {
@@ -654,7 +655,7 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* the generic comes from either the sysparent or it's named */
     if (generic == R_UnboundValue)
-	generic = eval(CAR(args), env);
+	generic = eval(arggeneric, env);
     if (generic == R_NilValue)
 	error(_("generic function not specified"));
     PROTECT(generic);
