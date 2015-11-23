@@ -341,11 +341,20 @@
               function(e1, e2)
                  callGeneric(as.vector(e1), e2@.Data)
               )
-    ## but for two array-based strucures, we let the underlying
-    ## code for matrix/array stand.
+
+#
+# disabled: this causes infinite recursion e.g. for Ops(matrix(), matrix())
+#
+#    ## but for two array-based strucures, we let the underlying
+#    ## code for matrix/array stand.
+#    setMethod("Ops", c("array", "array"), where = where,
+#              function(e1, e2)
+#                 callGeneric(e1@.Data, e2@.Data)
+#              )
+
     setMethod("Ops", c("array", "array"), where = where,
               function(e1, e2)
-                 callGeneric(e1@.Data, e2@.Data)
+                 callGeneric(as.vector(e1@.Data), as.vector(e2@.Data))
               )
 
 
@@ -354,6 +363,12 @@
                   x@.Data <- callGeneric(x@.Data)
                   x
               })
+    setMethod("Math", "array", where = where,
+              function(x) {
+                  x@.Data <- callGeneric(as.vector(x))
+                  x
+              })
+
     setMethod("Math2", "structure", where = where,
               function(x, digits) {
                   value <- x
@@ -361,6 +376,15 @@
                   value@.Data  <- callGeneric()
                   value
               })
+
+    setMethod("Math2", "array", where = where,
+              function(x, digits) {
+                  value <- x
+                  x <- as.vector(x@.Data)
+                  value@.Data  <- callGeneric()
+                  value
+              })
+
     ## some methods for nonStructure, ensuring that the class and slots
     ## will be discarded
     setMethod("Ops", c("nonStructure", "vector"), where = where,
