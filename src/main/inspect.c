@@ -259,10 +259,9 @@ SEXP attribute_hidden dc_address(SEXP p)
     return R_MakeExternalPtr((void *) p, R_NilValue, R_NilValue);
 }
 
-SEXP attribute_hidden do_refcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_refcnt(SEXP x)
 {
-    checkArity(op, args);
-    return ScalarInteger(REFCNT(CAR(args)));
+    return ScalarInteger(REFCNT(x));
 }
 
 /* the following functions can be use internally and for debugging purposes -
