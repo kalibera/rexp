@@ -2166,12 +2166,11 @@ static void con_cleanup(void *data)
 /* Used from saveRDS().
    This became public in R 2.13.0, and that version added support for
    connections internally */
-SEXP attribute_hidden
-do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_serializeToConn(SEXP object, SEXP argconn,
+    SEXP argascii, SEXP argversion, SEXP fun)
 {
     /* serializeToConn(object, conn, ascii, version, hook) */
 
-    SEXP object, fun;
     Rboolean ascii, wasopen;
     int version;
     Rconnection con;
@@ -2180,28 +2179,24 @@ do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP (*hook)(SEXP, SEXP);
     RCNTXT cntxt;
 
-    checkArity(op, args);
+    con = getConnection(asInteger(argconn));
 
-    object = CAR(args);
-    con = getConnection(asInteger(CADR(args)));
-
-    if (TYPEOF(CADDR(args)) != LGLSXP)
+    if (TYPEOF(argascii) != LGLSXP)
 	error(_("'ascii' must be logical"));
-    ascii = INTEGER(CADDR(args))[0];
+    ascii = INTEGER(argascii)[0];
     if (ascii == NA_LOGICAL) type = R_pstream_asciihex_format;
     else if (ascii) type = R_pstream_ascii_format;
     else type = R_pstream_xdr_format;
 
-    if (CADDDR(args) == R_NilValue)
+    if (argversion == R_NilValue)
 	version = R_DefaultSerializeVersion;
     else
-	version = asInteger(CADDDR(args));
+	version = asInteger(argversion);
     if (version == NA_INTEGER || version <= 0)
 	error(_("bad version value"));
     if (version < 2)
 	error(_("cannot save to connections in version %d format"), version);
 
-    fun = CAR(nthcdr(args,4));
     hook = fun != R_NilValue ? CallHook : NULL;
 
     /* Now we need to do some sanity checking of the arguments.

@@ -1926,40 +1926,37 @@ static void saveload_cleanup(void *data)
 }
 
 /* Only used for version 1 saves */
-SEXP attribute_hidden do_save(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_save(SEXP list, SEXP argfile, SEXP argascii,
+    SEXP argversion, SEXP source, SEXP argep)
 {
-    /* save(list, file, ascii, version, environment) */
+    /* save(list, file, ascii, version, environment, eval.promises) */
 
-    SEXP s, t, source, tmp;
+    SEXP s, t, tmp;
     int len, j, version, ep;
     FILE *fp;
     RCNTXT cntxt;
 
-    checkArity(op, args);
-
-
-    if (TYPEOF(CAR(args)) != STRSXP)
+    if (TYPEOF(list) != STRSXP)
 	error(_("first argument must be a character vector"));
-    if (!isValidStringF(CADR(args)))
+    if (!isValidStringF(argfile))
 	error(_("'file' must be non-empty string"));
-    if (TYPEOF(CADDR(args)) != LGLSXP)
+    if (TYPEOF(argascii) != LGLSXP)
 	error(_("'ascii' must be logical"));
-    if (CADDDR(args) == R_NilValue)
+    if (argversion == R_NilValue)
 	version = R_DefaultSaveFormatVersion;
     else
-	version = asInteger(CADDDR(args));
+	version = asInteger(argversion);
     if (version == NA_INTEGER || version <= 0)
 	error(_("invalid '%s' argument"), "version");
-    source = CAR(nthcdr(args,4));
     if (source != R_NilValue && TYPEOF(source) != ENVSXP)
 	error(_("invalid '%s' argument"), "environment");
-    ep = asLogical(CAR(nthcdr(args,5)));
+    ep = asLogical(argep);
     if (ep == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "eval.promises");
 
-    fp = RC_fopen(STRING_ELT(CADR(args), 0), "wb", TRUE);
+    fp = RC_fopen(STRING_ELT(argfile, 0), "wb", TRUE);
     if (!fp) {
-	const char *cfile = CHAR(STRING_ELT(CADR(args), 0));
+	const char *cfile = CHAR(STRING_ELT(argfile, 0));
 	error(_("cannot open file '%s': %s"), cfile, strerror(errno));
     }
 
@@ -1969,12 +1966,12 @@ SEXP attribute_hidden do_save(SEXP call, SEXP op, SEXP args, SEXP env)
     cntxt.cend = &saveload_cleanup;
     cntxt.cenddata = fp;
 
-    len = length(CAR(args));
+    len = length(list);
     PROTECT(s = allocList(len));
 
     t = s;
     for (j = 0; j < len; j++, t = CDR(t)) {
-	SET_TAG(t, installChar(STRING_ELT(CAR(args), j)));
+	SET_TAG(t, installChar(STRING_ELT(list, j)));
 	tmp = findVar(TAG(t), source);
 	if (tmp == R_UnboundValue)
 	    error(_("object '%s' not found"), EncodeChar(PRINTNAME(TAG(t))));
@@ -1986,7 +1983,7 @@ SEXP attribute_hidden do_save(SEXP call, SEXP op, SEXP args, SEXP env)
 	SETCAR(t, tmp);
    }
 
-    R_SaveToFileV(s, fp, INTEGER(CADDR(args))[0], version);
+    R_SaveToFileV(s, fp, INTEGER(argascii)[0], version);
 
     UNPROTECT(1);
     /* end the context after anything that could raise an error but before
@@ -2218,11 +2215,12 @@ static void con_cleanup(void *data)
    with either a pairlist or list.
 */
 
-SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_saveToConn(SEXP list, SEXP argconn, SEXP argascii,
+    SEXP argversion, SEXP source, SEXP argep)
 {
-    /* saveToConn(list, conn, ascii, version, environment) */
+    /* saveToConn(list, conn, ascii, version, environment, eval.promises) */
 
-    SEXP s, t, source, list, tmp;
+    SEXP s, t, tmp;
     Rboolean ascii, wasopen;
     int len, j, version, ep;
     Rconnection con;
@@ -2231,30 +2229,26 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     char *magic;
     RCNTXT cntxt;
 
-    checkArity(op, args);
-
-    if (TYPEOF(CAR(args)) != STRSXP)
+    if (TYPEOF(list) != STRSXP)
 	error(_("first argument must be a character vector"));
-    list = CAR(args);
 
-    con = getConnection(asInteger(CADR(args)));
+    con = getConnection(asInteger(argconn));
 
-    if (TYPEOF(CADDR(args)) != LGLSXP)
+    if (TYPEOF(argascii) != LGLSXP)
 	error(_("'ascii' must be logical"));
-    ascii = INTEGER(CADDR(args))[0];
+    ascii = INTEGER(argascii)[0];
 
-    if (CADDDR(args) == R_NilValue)
+    if (argversion == R_NilValue)
 	version = R_DefaultSaveFormatVersion;
     else
-	version = asInteger(CADDDR(args));
+	version = asInteger(argversion);
     if (version == NA_INTEGER || version <= 0)
 	error(_("invalid '%s' argument"), "version");
     if (version < 2)
 	error(_("cannot save to connections in version %d format"), version);
-    source = CAR(nthcdr(args,4));
     if (source != R_NilValue && TYPEOF(source) != ENVSXP)
 	error(_("invalid '%s' argument"), "environment");
-    ep = asLogical(CAR(nthcdr(args,5)));
+    ep = asLogical(argep);
     if (ep == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "eval.promises");
 

@@ -150,13 +150,12 @@ SEXP attribute_hidden dc_prmatrix(SEXP x, SEXP rowlab, SEXP collab, SEXP argquot
 }/* do_prmatrix */
 
 /* .Internal( print.function(f, useSource, ...)) */
-SEXP attribute_hidden do_printfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_printfunction(SEXP call, SEXP op, SEXP rho, SEXP s, SEXP arguseSource)
 {
-    checkArity(op,args);
-    SEXP s = CAR(args);
     switch (TYPEOF(s)) {
     case CLOSXP:
-	PrintLanguageEtc(s, asLogical(CADR(args)), /*is closure = */ TRUE);
+	PrintLanguageEtc(s, asLogical(arguseSource), /*is closure = */ TRUE);
 	printAttributes(s, rho, FALSE);
 	break;
     case BUILTINSXP:

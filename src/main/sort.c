@@ -588,11 +588,8 @@ Psort0(SEXP x, R_xlen_t lo, R_xlen_t hi, R_xlen_t *ind, int nind)
 
 
 /* FUNCTION psort(x, indices) */
-SEXP attribute_hidden do_psort(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_psort(SEXP x, SEXP p)
 {
-    checkArity(op, args);
-    SEXP x = CAR(args), p = CADR(args);
-
     if (!isVectorAtomic(x))
 	error(_("only atomic vectors can be sorted"));
     if(TYPEOF(x) == RAWSXP)
@@ -600,8 +597,8 @@ SEXP attribute_hidden do_psort(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_xlen_t n = XLENGTH(x);
 #ifdef LONG_VECTOR_SUPPORT
     if(!IS_LONG_VEC(x) || TYPEOF(p) != REALSXP)
-	SETCADR(args, coerceVector(p, INTSXP));
-    p = CADR(args);
+	p = coerceVector(p, INTSXP);
+    PROTECT(p);
     int nind = LENGTH(p);
     R_xlen_t *l = (R_xlen_t *) R_alloc(nind, sizeof(R_xlen_t));
     if (TYPEOF(p) == REALSXP) {
@@ -622,8 +619,8 @@ SEXP attribute_hidden do_psort(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
 #else
-    SETCADR(args, coerceVector(p, INTSXP));
-    p = CADR(args);
+    p = coerceVector(p, INTSXP);
+    PROTECT(p);
     int nind = LENGTH(p);
     int *l = INTEGER(p);
     for (int i = 0; i < nind; i++) {
@@ -633,11 +630,12 @@ SEXP attribute_hidden do_psort(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("index %d outside bounds"), l[i]);
     }
 #endif
-    SETCAR(args, duplicate(x));
-    SET_ATTRIB(CAR(args), R_NilValue);  /* remove all attributes */
-    SET_OBJECT(CAR(args), 0);           /* and the object bit    */
-    Psort0(CAR(args), 0, n - 1, l, nind);
-    return CAR(args);
+    PROTECT(x = duplicate(x));
+    SET_ATTRIB(x, R_NilValue);  /* remove all attributes */
+    SET_OBJECT(x, 0);           /* and the object bit    */
+    Psort0(x, 0, n - 1, l, nind);
+    UNPROTECT(2); /* p,x */
+    return x;
 }
 
 
