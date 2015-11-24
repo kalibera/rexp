@@ -585,13 +585,12 @@ SEXP attribute_hidden dc_sysbrowser(SEXP call, SEXP op, SEXP rho, SEXP argn)
 /* We don't want to count the closure that do_sys is contained in, so the */
 /* indexing is adjusted to handle this. */
 
-SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_sys(SEXP call, SEXP op, SEXP rho, SEXP argn)
 {
-    int i, n  = -1, nframe;
+    int i, n, nframe;
     SEXP rval, t;
     RCNTXT *cptr;
 
-    checkArity(op, args);
     /* first find the context that sys.xxx needs to be evaluated in */
     cptr = R_GlobalContext;
     t = cptr->sysparent;
@@ -602,7 +601,7 @@ SEXP attribute_hidden do_sys(SEXP call, SEXP op, SEXP args, SEXP rho)
 	cptr = cptr->nextcontext;
     }
 
-    if (length(args) == 1) n = asInteger(CAR(args));
+    n = asInteger(argn);
 
     switch (PRIMVAL(op)) {
     case 1: /* parent */

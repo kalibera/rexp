@@ -1152,40 +1152,40 @@ SEXP attribute_hidden NORET do_stop(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* never called: */
 }
 
-SEXP attribute_hidden do_warning(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden
+dc_warning(SEXP argcall, SEXP argimmediate, SEXP argnobreak, SEXP argmsg)
 {
-    SEXP c_call;
-    checkArity(op, args);
+    SEXP c_call, msg;
 
-    if(asLogical(CAR(args))) /* find context -> "... in: ..:" */
+    if(asLogical(argcall)) /* find context -> "... in: ..:" */
 	c_call = findCall();
     else
 	c_call = R_NilValue;
 
-    args = CDR(args);
-    if(asLogical(CAR(args))) { /* immediate = TRUE */
+    if(asLogical(argimmediate)) { /* immediate = TRUE */
 	immediateWarning = 1;
     } else
 	immediateWarning = 0;
-    args = CDR(args);
-    if(asLogical(CAR(args))) { /* noBreak = TRUE */
+
+    if(asLogical(argnobreak)) { /* noBreak = TRUE */
 	noBreakWarning = 1;
     } else
 	noBreakWarning = 0;
-    args = CDR(args);
-    if (CAR(args) != R_NilValue) {
-	SETCAR(args, coerceVector(CAR(args), STRSXP));
-	if(!isValidString(CAR(args)))
+
+    if (argmsg != R_NilValue) {
+	PROTECT(msg = coerceVector(argmsg, STRSXP));
+	if(!isValidString(msg))
 	    warningcall(c_call, _(" [invalid string in warning(.)]"));
 	else
-	    warningcall(c_call, "%s", translateChar(STRING_ELT(CAR(args), 0)));
+	    warningcall(c_call, "%s", translateChar(STRING_ELT(msg, 0)));
+	UNPROTECT(1); /* msg */
     }
     else
 	warningcall(c_call, "");
     immediateWarning = 0; /* reset to internal calls */
     noBreakWarning = 0;
 
-    return CAR(args);
+    return msg;
 }
 
 /* Error recovery for incorrect argument count error. */

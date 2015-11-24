@@ -133,9 +133,10 @@ static SEXP mkCharW(const wchar_t *wc)
  * list is the collection of splits for the corresponding element of x.
 */
 
-SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden
+dc_strsplit(SEXP x, SEXP tok, SEXP argfixed, SEXP argperl, SEXP arguseBytes)
 {
-    SEXP args0 = args, ans, tok, x;
+    SEXP ans;
     R_xlen_t i, itok, len, tlen;
     size_t j, ntok;
     int fixed_opt, perl_opt, useBytes;
@@ -146,12 +147,9 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
     const void *vmax, *vmax2;
     int nwarn = 0;
 
-    checkArity(op, args);
-    x = CAR(args); args = CDR(args);
-    tok = CAR(args); args = CDR(args);
-    fixed_opt = asLogical(CAR(args)); args = CDR(args);
-    perl_opt = asLogical(CAR(args)); args = CDR(args);
-    useBytes = asLogical(CAR(args));
+    fixed_opt = asLogical(argfixed);
+    perl_opt = asLogical(argperl);
+    useBytes = asLogical(arguseBytes);
     if (fixed_opt == NA_INTEGER) fixed_opt = 0;
     if (perl_opt == NA_INTEGER) perl_opt = 0;
     if (useBytes == NA_INTEGER) useBytes = 0;
@@ -167,7 +165,8 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
     tlen = XLENGTH(tok);
 
     /* treat split = NULL as split = "" */
-    if (!tlen) { tlen = 1; SETCADR(args0, tok = mkString("")); }
+    if (!tlen) { tlen = 1; tok = mkString(""); }
+    PROTECT(tok);
 
     if (!useBytes) {
 	for (i = 0; i < tlen; i++)
@@ -639,6 +638,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(1);
     Free(pt); Free(wpt);
     if (tables) pcre_free((void *)tables);
+    UNPROTECT(1); /* tok */
     return ans;
 }
 

@@ -1039,7 +1039,6 @@
  do_unsetenv
  do_untracemem
  do_unz
- do_unzip
  do_updateform
  do_url
  do_usemethod

@@ -237,15 +237,14 @@ double R_getClockIncrement(void)
 #endif
 
 #define INTERN_BUFSIZE 8096
-SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_system(SEXP argcmd, SEXP argintern)
 {
     SEXP tlist = R_NilValue;
     int intern = 0;
 
-    checkArity(op, args);
-    if (!isValidStringF(CAR(args)))
+    if (!isValidStringF(argcmd))
 	error(_("non-empty character argument expected"));
-    intern = asLogical(CADR(args));
+    intern = asLogical(argintern);
     if (intern == NA_INTEGER)
 	error(_("'intern' must be logical and not NA"));
     if (intern) { /* intern = TRUE */
@@ -256,7 +255,7 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SEXP tchar, rval;
 
 	PROTECT(tlist);
-	cmd = translateChar(STRING_ELT(CAR(args), 0));
+	cmd = translateChar(STRING_ELT(argcmd, 0));
 	errno = 0; /* precaution */
 	if(!(fp = R_popen(cmd, x)))
 	    error(_("cannot popen '%s', probable reason '%s'"),
@@ -318,7 +317,7 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 	tlist = PROTECT(allocVector(INTSXP, 1));
 	fflush(stdout);
-	INTEGER(tlist)[0] = R_system(translateChar(STRING_ELT(CAR(args), 0)));
+	INTEGER(tlist)[0] = R_system(translateChar(STRING_ELT(argcmd, 0)));
 #ifdef HAVE_AQUA
 	R_Busy(0);
 #endif
@@ -339,13 +338,12 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 #  include <pwd.h>
 # endif
 
-SEXP attribute_hidden do_sysinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_sysinfo()
 {
     SEXP ans, ansnames;
     struct utsname name;
     char *login;
 
-    checkArity(op, args);
     PROTECT(ans = allocVector(STRSXP, 8));
     if(uname(&name) == -1) {
 	UNPROTECT(1);
@@ -390,7 +388,7 @@ SEXP attribute_hidden do_sysinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 #else /* not HAVE_SYS_UTSNAME_H */
-SEXP do_sysinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP dc_sysinfo()
 {
     warning(_("Sys.info() is not implemented on this system"));
     return R_NilValue;		/* -Wall */

@@ -168,7 +168,7 @@ typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
 
 /* base::Sys.info */
 // keep in step with src/library/utils/src/windows/util.c
-SEXP do_sysinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP dc_sysinfo()
 {
     SEXP ans, ansnames;
     OSVERSIONINFOEX osvi;
@@ -176,7 +176,6 @@ SEXP do_sysinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
     wchar_t name[MAX_COMPUTERNAME_LENGTH + 1], user[UNLEN+1];
     DWORD namelen = MAX_COMPUTERNAME_LENGTH + 1, userlen = UNLEN+1;
 
-    checkArity(op, args);
     PROTECT(ans = allocVector(STRSXP, 8));
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
     if(!GetVersionEx((OSVERSIONINFO *)&osvi))
