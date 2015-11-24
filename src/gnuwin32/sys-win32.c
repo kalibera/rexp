@@ -165,31 +165,24 @@ double R_getClockIncrement(void)
 #include "run.h"
 
 #define INTERN_BUFSIZE 8096
-SEXP do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP dc_system(SEXP call, SEXP op, SEXP rho,
+    SEXP cmd, SEXP argflag, SEXP fin, SEXP Stdout, SEXP Stderr)
 {
     rpipe *fp;
     char  buf[INTERN_BUFSIZE];
     const char *fout = "", *ferr = "";
     int   vis = 0, flag = 2, i = 0, j, ll = 0;
-    SEXP  cmd, fin, Stdout, Stderr, tlist = R_NilValue, tchar, rval;
+    SEXP  fin, Stdout, Stderr, tlist = R_NilValue, tchar, rval;
 
-    checkArity(op, args);
-    cmd = CAR(args);
     if (!isString(cmd) || LENGTH(cmd) != 1)
 	errorcall(call, _("character string expected as first argument"));
-    args = CDR(args);
-    flag = asInteger(CAR(args)); args = CDR(args);
+    flag = asInteger(argflag);
     if (flag >= 20) {vis = -1; flag -= 20;}
     else if (flag >= 10) {vis = 0; flag -= 10;}
     else vis = 1;
 
-    fin = CAR(args);
     if (!isString(fin))
 	errorcall(call, _("character string expected as third argument"));
-    args = CDR(args);
-    Stdout = CAR(args);
-    args = CDR(args);
-    Stderr = CAR(args);
     
     if (CharacterMode == RGui) {
 	/* This is a rather conservative approach: if

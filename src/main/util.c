@@ -766,12 +766,11 @@ SEXP attribute_hidden dc_getwd()
 # include <direct.h> /* for chdir, via io.h */
 #endif
 
-SEXP attribute_hidden do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
+SEXP attribute_hidden dc_setwd(SEXP s)
 {
-    SEXP s = R_NilValue, wd = R_NilValue;	/* -Wall */
+    SEXP wd = R_NilValue;	/* -Wall */
 
-    checkArity(op, args);
-    if (!isPairList(args) || !isValidString(s = CAR(args)))
+    if (!isValidString(s))
 	error(_("character argument expected"));
     if (STRING_ELT(s, 0) == NA_STRING)
 	error(_("missing value is invalid"));

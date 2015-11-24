@@ -3306,14 +3306,13 @@ static void con_destroy(int i)
 }
 
 
-SEXP attribute_hidden do_close(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_close(SEXP argcon, SEXP dummy)
 {
     int i, j;
 
-    checkArity(op, args);
-    if(!inherits(CAR(args), "connection"))
+    if(!inherits(argcon, "connection"))
 	error(_("'con' is not a connection"));
-    i = asInteger(CAR(args));
+    i = asInteger(argcon);
     if(i < 3) error(_("cannot close standard connections"));
     for(j = 0; j < R_SinkNumber; j++)
 	if(i == SinkCons[j])
