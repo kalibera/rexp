@@ -903,7 +903,6 @@
  do_readClipboard
  do_readDCF
  do_readEnviron
- do_readLines
  do_readRegistry
  do_readbin
  do_readchar
