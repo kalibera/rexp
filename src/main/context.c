@@ -597,10 +597,9 @@ SEXP attribute_hidden dc_sys(SEXP call, SEXP op, SEXP rho, SEXP argn)
 	cptr = cptr->nextcontext;
     }
 
-    n = asInteger(argn);
-
     switch (PRIMVAL(op)) {
     case 1: /* parent */
+	n = asInteger(argn);
 	if(n == NA_INTEGER)
 	    error(_("invalid '%s' argument"), "n");
 	i = nframe = framedepth(cptr);
@@ -610,10 +609,12 @@ SEXP attribute_hidden dc_sys(SEXP call, SEXP op, SEXP rho, SEXP argn)
 	    i = R_sysparent(nframe - i + 1, cptr);
 	return ScalarInteger(i);
     case 2: /* call */
+	n = asInteger(argn);
 	if(n == NA_INTEGER)
 	    error(_("invalid '%s' argument"), "which");
 	return R_syscall(n, cptr);
     case 3: /* frame */
+	n = asInteger(argn);
 	if(n == NA_INTEGER)
 	    error(_("invalid '%s' argument"), "which");
 	return R_sysframe(n, cptr);
@@ -647,6 +648,7 @@ SEXP attribute_hidden dc_sys(SEXP call, SEXP op, SEXP rho, SEXP argn)
 	    INTEGER(rval)[i] = R_sysparent(nframe - i, cptr);
 	return rval;
     case 9: /* sys.function */
+	n = asInteger(argn);
 	if(n == NA_INTEGER)
 	    error(_("invalid '%s' value"), "which");
 	return(R_sysfunction(n, cptr));
