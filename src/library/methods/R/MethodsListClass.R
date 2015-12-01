@@ -307,10 +307,7 @@
     assign(".NeedPrimitiveMethods", needed, where)
     setMethod("Ops", c("structure", "vector"), where = where,
               function(e1, e2) {
-                  e1d <- e1@.Data
-                  if (identical(e1, e1d)) # avoid infinite recusion
-                      stop("there is no inherited method for type 'structure, vector'")
-                  value <- callGeneric(e1d, e2)
+                  value <- callGeneric(e1@.Data, e2)
                   if(length(value) == length(e1)) {
                       e1@.Data <- value
                       e1
@@ -320,10 +317,7 @@
               })
     setMethod("Ops", c("vector", "structure"), where = where,
               function(e1, e2) {
-                  e2d <- e2@.Data
-                  if (identical(e2, e2d)) # avoid infinite recusion
-                      stop("there is no inherited method for type 'vector, structure'")
-                  value <- callGeneric(e1, e2d)
+                  value <- callGeneric(e1, e2@.Data)
                   if(length(value) == length(e2)) {
                       e2@.Data <- value
                       e2
@@ -332,53 +326,34 @@
                     value
               })
     setMethod("Ops", c("structure", "structure"), where = where,
-              function(e1, e2) {
+              function(e1, e2)
                  callGeneric(e1@.Data, e2@.Data)
-              })
+              )
     ## We need some special cases for matrix and array.
     ## Although they extend "structure", their .Data "slot" is the matrix/array
     ## So op'ing them with a structure gives the matrix/array:  Not good?
     ## Following makes them obey the structure rule.
     setMethod("Ops", c("structure", "array"), where = where,
-              function(e1, e2) {
-                 e1d <- e1@.Data
-                 if (identical(e1, e1d)) # avoid infinite recusion
-                      stop("there is no inherited method for type 'structure, array'")
-                 callGeneric(e1d, as.vector(e2))
-              })
+              function(e1, e2)
+                 callGeneric(e1@.Data, as.vector(e2))
+              )
     setMethod("Ops", c("array", "structure"), where = where,
-              function(e1, e2) {
-                 e2d <- e2@.Data
-                 if (identical(e2, e2d)) # avoid infinite recusion
-                      stop("there is no inherited method for type 'array, structure'")
-                 callGeneric(as.vector(e1), e2d)
-              })
-
+              function(e1, e2)
+                 callGeneric(as.vector(e1), e2@.Data)
+              )
     ## but for two array-based strucures, we let the underlying
     ## code for matrix/array stand.
     setMethod("Ops", c("array", "array"), where = where,
-              function(e1, e2) {
-                 e1d <- e1@.Data
-                 e2d <- e2@.Data
-                 if (identical(e1, e1d) && identical(e2, e2d)) # avoid infinite recusion
-                      stop("there is no inherited method for type 'array, array'")
-                 callGeneric(e1d, e2d)
-              })
+              function(e1, e2)
+                 callGeneric(e1@.Data, e2@.Data)
+              )
+
 
     setMethod("Math", "structure", where = where,
               function(x) {
                   x@.Data <- callGeneric(x@.Data)
                   x
               })
-    setMethod("Math", "array", where = where,
-              function(x) {
-                 xd <- x@.Data
-                 if (identical(x, xd)) # avoid infinite recursion
-                      stop("there is no inherited method for type 'array'")
-                  x@.Data <- callGeneric(xd)
-                  x
-              })
-
     setMethod("Math2", "structure", where = where,
               function(x, digits) {
                   value <- x
@@ -386,17 +361,6 @@
                   value@.Data  <- callGeneric()
                   value
               })
-
-    setMethod("Math2", "array", where = where,
-              function(x, digits) {
-                  value <- x
-                  x <- x@.Data
-                  if (identical(value, x)) # avoid infinite recursion
-                      stop("there is no inherited method for type 'array'")
-                  value@.Data  <- callGeneric()
-                  value
-              })
-
     ## some methods for nonStructure, ensuring that the class and slots
     ## will be discarded
     setMethod("Ops", c("nonStructure", "vector"), where = where,
