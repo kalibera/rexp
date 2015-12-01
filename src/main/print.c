@@ -149,7 +149,7 @@ SEXP attribute_hidden dc_prmatrix(SEXP x, SEXP rowlab, SEXP collab, SEXP argquot
     return x;
 }/* do_prmatrix */
 
-/* .Internal( print.function(f, useSource, ...)) */
+/* .Internal( print.function(f, useSource)) */
 SEXP attribute_hidden
 dc_printfunction(SEXP call, SEXP op, SEXP rho, SEXP s, SEXP arguseSource)
 {
