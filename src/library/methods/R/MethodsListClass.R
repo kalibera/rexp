@@ -322,6 +322,30 @@
                   else
                     value
               })
+    setMethod("Ops", c("array", "vector"), where = where,
+              function(e1, e2) {
+                  value <- callGeneric(as.vector(e1), e2)
+                  if(length(value) == length(e1)) {
+                      orige1 <- e1
+                      e1 <- value
+                      .Internal(copyDFattr(orige1, e1))
+                      e1
+                  }
+                  else
+                    value
+              })
+    setMethod("Ops", c("vector", "array"), where = where,
+              function(e1, e2) {
+                  value <- callGeneric(e1, as.vector(e2))
+                  if(length(value) == length(e2)) {
+                      orige2 <- e2
+                      e2 <- value
+                      .Internal(copyDFattr(orige2, e2))
+                      e2
+                  }
+                  else
+                    value
+              })
     setMethod("Ops", c("structure", "structure"), where = where,
               function(e1, e2)
                  callGeneric(e1@.Data, e2@.Data)
@@ -351,11 +375,27 @@
                   x@.Data <- callGeneric(x@.Data)
                   x
               })
+    setMethod("Math", "array", where = where,
+              function(x) {
+                  origx <- x
+                  x <- callGeneric(as.vector(x))
+                  .Internal(copyDFattr(origx, x))
+                  x
+              })
     setMethod("Math2", "structure", where = where,
               function(x, digits) {
                   value <- x
                   x <- x@.Data
-                  value@.Data  <- callGeneric()
+                  value@.Data <- callGeneric()
+                  value
+              })
+    setMethod("Math2", "array", where = where,
+              function(x, digits) {
+                  origx <- x
+                  value <- x
+                  x <- as.vector(x)
+                  value <- callGeneric()
+                  .Internal(copyDFattr(origx, value))
                   value
               })
     ## some methods for nonStructure, ensuring that the class and slots
