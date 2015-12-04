@@ -1505,21 +1505,48 @@ cmpComplexAssign <- function(symbol, lhs, value, superAssign, cb, cntxt) {
     TRUE;
 }
 
-cmpSetterCall <- function(place, vexpr, cb, cntxt) {
+cmpSetterCall <- function(place, vexpr, cb, cntxt) {  #place is e.g. language: storage.mode(`*tmp*`)  vexpr is e.g. "character" (value expression)
     afun <- getAssignFun(place[[1]])
     acall <- as.call(c(afun, as.list(place[-1]), list(value = vexpr)))
     acall[[2]] <- as.name("*tmp*")
+    callargs <- as.list(place[-c(2)])
+    callargs[1] <- list(NULL)
+    callargs <- as.call(callargs) # callargs is <NULL, place[3:]>
     ncntxt <- make.callContext(cntxt, acall)
     if (is.null(afun))
         ## **** warn instead and arrange for cmpSpecial?
         ## **** or generate code to signal runtime error?
         cntxt$stop(gettext("invalid function in complex assignment"))
     else if (typeof(afun) == "symbol") {
-        if (! trySetterInline(afun, place, acall, cb, ncntxt)) {
+        if (!trySetterInline(afun, place, acall, cb, ncntxt)) {
+            adef <- findFunDef(afun, cntxt)
+            if (checkCall(adef, acall, NULL)) {
+                if (typeof(adef) == "builtin" && isBaseVar(afun, cntxt)) { # builtin setter call
+                    realcall <- as.call(c(as.list(afun), as.list(callargs)))
+                    cmpBuiltin(realcall, cb, cntxt, withCall = FALSE)
+                    cci <- cb$putconst(acall)
+                    cvi <- cb$putconst(vexpr)
+                    cb$putcode(SETTER_CALL.OP, cci, cvi)=
+                    return()
+                }
+                icall <- inlineSimpleInternalCall(acall, adef)
+                if (!is.null(icall)) { # .Internal setter call via a closure wrapper
+                    iexpr <- icall[[2]]
+                    ifun <- iexpr[[1]]
+                    if (.Internal(is.builtin.internal(ifun))) {
+                        realcall <- as.call(c(as.list(ifun), as.list(callargs)))
+                        cmpBuiltin(realcall, cb, cntxt, internal = TRUE, withCall = FALSE)
+                        cci <- cb$putconst(acall)
+                        cvi <- cb$putconst(vexpr)
+                        cb$putcode(SETTER_CALL.OP, cci, cvi)=
+                        return()
+                    }
+                    # cannot inline specials because SETTER_CALL needs the function on the call frame
+                }
+            }
             ci <- cb$putconst(afun)
             cb$putcode(GETFUN.OP, ci)
-            cb$putcode(PUSHNULLARG.OP)
-            cmpCallArgs(place[-c(1, 2)], cb, ncntxt)
+            cmpCallArgs(callargs, cb, ncntxt)
             cci <- cb$putconst(acall)
             cvi <- cb$putconst(vexpr)
             cb$putcode(SETTER_CALL.OP, cci, cvi)
@@ -1528,8 +1555,7 @@ cmpSetterCall <- function(place, vexpr, cb, cntxt) {
     else {
         cmp(afun, cb, ncntxt)
         cb$putcode(CHECKFUN.OP)
-        cb$putcode(PUSHNULLARG.OP)
-        cmpCallArgs(place[-c(1, 2)], cb, ncntxt)
+        cmpCallArgs(callargs, cb, ncntxt)
         cci <- cb$putconst(acall)
         cvi <- cb$putconst(vexpr)
         cb$putcode(SETTER_CALL.OP, cci, cvi)
@@ -2014,7 +2040,7 @@ setInlineHandler("(", function(e, cb, cntxt) {
 ## Inline handlers for general BUILTIN and SPECIAL functions
 ##
 
-cmpBuiltin <- function(e, cb, cntxt, internal = FALSE) {
+cmpBuiltin <- function(e, cb, cntxt, internal = FALSE, withCall = TRUE) {
     fun <- e[[1]]
     args <- e[-1]
     names <- names(args)
@@ -2027,9 +2053,11 @@ cmpBuiltin <- function(e, cb, cntxt, internal = FALSE) {
         else
             cb$putcode(GETBUILTIN.OP, ci)
         cmpBuiltinArgs(args, names, cb, cntxt)
-        ci <- cb$putconst(e)
-        cb$putcode(CALLBUILTIN.OP, ci)
-        if (cntxt$tailcall) cb$putcode(RETURN.OP)
+        if (withCall) {
+            ci <- cb$putconst(e)
+            cb$putcode(CALLBUILTIN.OP, ci)
+            if (cntxt$tailcall) cb$putcode(RETURN.OP)
+        }
         TRUE
     }
 }
@@ -2333,7 +2361,7 @@ cmpSimpleInternal <- function(e, cb, cntxt) {
 safeBaseInternals <- c("atan2", "besselY", "beta", "choose",
                        "drop", "inherits", "is.vector", "lbeta", "lchoose",
                        "nchar", "polyroot", "typeof", "vector", "which.max",
-                       "which.min", "is.loaded", "identical")
+                       "which.min", "is.loaded", "identical", "storage.mode<-")
 
 for (i in safeBaseInternals) setInlineHandler(i,  cmpSimpleInternal)
 
