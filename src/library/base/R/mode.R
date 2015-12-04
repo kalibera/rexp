@@ -53,4 +53,5 @@ storage.mode <- function(x)
 	   ## otherwise
 	   tx)
 
-### storage.mode<- is primitive as from R 2.6.0
+`storage.mode<-` <- function(x, value)
+    .Internal(`storage.mode<-`(x, value))

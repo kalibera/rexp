@@ -2796,7 +2796,6 @@ SEXP attribute_hidden R_do_set_class(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_set_class(CAR(args), CADR(args), call);
 }
 
-/* primitive */
 SEXP attribute_hidden do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /* storage.mode(obj) <- value */
@@ -2804,7 +2803,6 @@ SEXP attribute_hidden do_storage_mode(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXPTYPE type;
 
     checkArity(op, args);
-    check1arg(args, call, "x");
 
     obj = CAR(args);
 
