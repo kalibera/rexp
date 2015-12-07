@@ -1505,7 +1505,7 @@ cmpComplexAssign <- function(symbol, lhs, value, superAssign, cb, cntxt) {
     TRUE;
 }
 
-cmpSetterCall <- function(place, vexpr, cb, cntxt) {  #place is e.g. language: storage.mode(`*tmp*`)  vexpr is e.g. "character" (value expression)
+cmpSetterCall <- function(place, vexpr, cb, cntxt) {
     afun <- getAssignFun(place[[1]])
     acall <- as.call(c(afun, as.list(place[-1]), list(value = vexpr)))
     acall[[2]] <- as.name("*tmp*")
@@ -1520,13 +1520,13 @@ cmpSetterCall <- function(place, vexpr, cb, cntxt) {  #place is e.g. language: s
     else if (typeof(afun) == "symbol") {
         if (!trySetterInline(afun, place, acall, cb, ncntxt)) {
             adef <- findFunDef(afun, cntxt)
-            if (checkCall(adef, acall, NULL)) {
-                if (typeof(adef) == "builtin" && isBaseVar(afun, cntxt)) { # builtin setter call
+            if (!is.null(adef) && identical(checkCall(adef, acall, NULL), TRUE)) {
+                if (typeof(adef) == "builtin" && isBaseVar(as.character(afun), cntxt)) { # builtin setter call
                     realcall <- as.call(c(as.list(afun), as.list(callargs)))
                     cmpBuiltin(realcall, cb, cntxt, withCall = FALSE)
                     cci <- cb$putconst(acall)
                     cvi <- cb$putconst(vexpr)
-                    cb$putcode(SETTER_CALL.OP, cci, cvi)=
+                    cb$putcode(SETTER_CALL.OP, cci, cvi)
                     return()
                 }
                 icall <- inlineSimpleInternalCall(acall, adef)
@@ -1538,7 +1538,7 @@ cmpSetterCall <- function(place, vexpr, cb, cntxt) {  #place is e.g. language: s
                         cmpBuiltin(realcall, cb, cntxt, internal = TRUE, withCall = FALSE)
                         cci <- cb$putconst(acall)
                         cvi <- cb$putconst(vexpr)
-                        cb$putcode(SETTER_CALL.OP, cci, cvi)=
+                        cb$putcode(SETTER_CALL.OP, cci, cvi)
                         return()
                     }
                     # cannot inline specials because SETTER_CALL needs the function on the call frame
