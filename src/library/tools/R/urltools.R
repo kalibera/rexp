@@ -293,7 +293,7 @@ function()
     db[db$Description != "Unassigned", ]
 }
 
-## See <http://en.wikipedia.org/wiki/List_of_FTP_server_return_codes>
+## See <https://en.wikipedia.org/wiki/List_of_FTP_server_return_codes>
 ## and <http://tools.ietf.org/html/rfc959>,
 ## Section 4.2.2 "Numeric Order List of Reply Codes",
 ## and <https://tools.ietf.org/html/rfc2228>,
@@ -423,7 +423,13 @@ function(db, verbose = FALSE)
 
     ## Invalid URI schemes.
     schemes <- parts[, 1L]
-    ind <- is.na(match(schemes, c("", IANA_URI_scheme_db$URI_Scheme)))
+    ind <- is.na(match(schemes,
+                       c("",
+                         IANA_URI_scheme_db$URI_Scheme,
+                         ## Also allow 'javascript' scheme, see
+                         ## <https://tools.ietf.org/html/draft-hoehrmann-javascript-scheme-03>
+                         ## (but apparently never registered with IANA).
+                         "javascript")))
     if(any(ind)) {
         len <- sum(ind)
         msg <- rep.int("Invalid URI scheme", len)

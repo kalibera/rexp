@@ -16,7 +16,7 @@
 ###
 ### You should have received a copy of the GNU General Public License
 ### along with R; if not, a copy is available at
-### http://www.r-project.org/Licenses/
+### https://www.r-project.org/Licenses/
 
 ### * General support macros
 
@@ -2591,7 +2591,7 @@ AC_SUBST(use_tcltk)
 ##
 ## This is based on ACX_BLAS by Steven G. Johnson <stevenj@alum.mit.edu>
 ## from the Official Autoconf Macro Archive
-## (http://www.gnu.org/software/ac-archive/htmldoc/acx_blas.m4),
+## (https://www.gnu.org/software/ac-archive/htmldoc/acx_blas.m4),
 ## with the following changes:
 ## * We also handle HPUX .sl command line specifications.
 ## * We explictly deal with the case of f2c.  Most likely pointless.
@@ -2957,7 +2957,7 @@ AC_SUBST(BLAS_LIBS)
 ##
 ## This is roughly based on ACX_LAPACK by Steven G. Johnson
 ## <stevenj@alum.mit.edu> from the Official Autoconf Macro Archive
-## (http://www.gnu.org/software/ac-archive/htmldoc/acx_lapack.m4),
+## (https://www.gnu.org/software/ac-archive/htmldoc/acx_lapack.m4),
 ## with the following changes:
 ## * We also handle HPUX .sl command line specifications.
 ## * We explictly deal with the case of f2c.  Most likely pointless.
@@ -3153,7 +3153,7 @@ caddr_t hello() {
 ## ------
 ## If selected, try finding system pcre library and headers.
 ## RedHat put the headers in /usr/include/pcre.
-## There are known problems < 8.10.
+## There are known problems < 8.10, and important bug fixes in 8.32
 AC_DEFUN([R_PCRE],
 [AC_CHECK_LIB(pcre, pcre_fullinfo, [have_pcre=yes], [have_pcre=no])
 if test "${have_pcre}" = yes; then
@@ -3197,12 +3197,35 @@ fi
 if test "x${r_cv_have_pcre810}" != xyes; then
   have_pcre=no
   LIBS="${r_save_LIBS}"
+else
+AC_CACHE_CHECK([if PCRE version >= 8.32], [r_cv_have_pcre832],
+[AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#ifdef HAVE_PCRE_PCRE_H
+#include <pcre/pcre.h>
+#else
+#ifdef HAVE_PCRE_H
+#include <pcre.h>
+#endif
+#endif
+int main() {
+#if PCRE_MAJOR == 8 && PCRE_MINOR >= 32
+  exit(0);
+#else
+  exit(1);
+#endif
+}
+]])], [r_cv_have_pcre832=yes], [r_cv_have_pcre832=no], [r_cv_have_pcre832=no])])
 fi
+
 AC_MSG_CHECKING([whether PCRE support suffices])
 if test "x${r_cv_have_pcre810}" != xyes; then
-  AC_MSG_ERROR([pcre library and headers are required])
+  AC_MSG_ERROR([pcre >= 8.10 library and headers are required])
 else
   AC_MSG_RESULT([yes])
+fi
+if test "x${r_cv_have_pcre832}" != xyes; then
+  warn_pcre_version="pcre < 8.32 is deprecated"
+  AC_MSG_WARN([${warn_pcre_version}])
 fi
 ])# R_PCRE
 

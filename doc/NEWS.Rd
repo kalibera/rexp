@@ -8,15 +8,11 @@
 \section{\Rlogo CHANGES IN R-devel}{
   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
     \itemize{
-      \item \code{nchar(x)} gains a new argument \code{keepNA} which
-      governs how the result for \code{NA}s in \code{x} is determined.
-      The new default \code{keepNA = NA} returns \code{NA} where
+      \item \code{nchar(x, *)}'s argument \code{keepNA} governing how
+      the result for \code{NA}s in \code{x} is determined, gets a new
+      default \code{keepNA = NA} which returns \code{NA} where
       \code{x} is \code{NA}, except for \code{type = "width"} which still
       returns \code{2}, the formatting / printing width of \code{NA}.
-
-      \code{nzchar(x)} gets the same new argument, but with default
-      \code{keepNA = FALSE}.  Hence \code{nzchar(x)} still returns a
-      non-\code{NA} logical vector.
 
       \item All builds have support for \samp{https:} URLs in the
       default methods for \code{download.file()}, \code{url()} and code
@@ -216,6 +212,10 @@
       \item S4 dispatch works within calls to \code{.Internal()}. This means
       explicit S4 generics are no longer needed for \code{unlist},
       \code{is.unsorted} and \code{as.vector}.
+      
+      \item Only font family names starting with \samp{"Hershey"} (and
+      not \samp{"Her"} as before) are given special treatment by the
+      graphics engine.
     }
   }
 
@@ -282,6 +282,11 @@
       \item The \command{configure} default on OS X is
       \option{--disable-R-framework}: enable this if you intend to
       install under \file{/Library/Frameworks} and use with \code{R.app}.
+
+      \item The minimum preferred version of PCRE has since \R 3.0.0
+      been 8.32 (released in Nov 2012).  Versions 8.10 to 8.31 are now
+      deprecated (with warnings from \command{configure}), but for now
+      still accepted.
     }
   }
 
@@ -340,7 +345,7 @@
   }
 }
 
-\section{\Rlogo CHANGES IN R 3.2.2 patched}{
+\section{\Rlogo CHANGES IN R 3.2.3}{
   \subsection{NEW FEATURES}{
     \itemize{
       \item Some recently-added Windows time zone names have been added
@@ -376,6 +381,12 @@
       \item \code{loess(..., iterTrace=TRUE)} now provides diagnostics
       for robustness iterations, and the \code{print()} method for
       \code{summary(<loess>)} shows slightly more.
+      
+      \item The included version of PCRE has been updated to 8.38, a
+      bug-fix release.
+      
+      \item \code{View()} now displays nested data frames in a more
+      friendly way.  (Request with patch in \PR{15915}.)
     }
   }
 
@@ -516,6 +527,11 @@
 
       \item \code{poly(x, ..)} now works when either \code{raw=TRUE} or
       \code{coef} is specified.  (\PR{16597})
+
+      \item \code{data(package=*)} is more careful in determining the path.
+
+      \item \code{prettyNum(*, decimal.mark, big.mark)}: fixed bug
+      introduced when fixing \PR{16411}.
     }
   }
 }
@@ -699,10 +715,12 @@
 
       \item \code{nchar(x, *)} and \code{nzchar(x)} gain a new argument
       \code{keepNA} which governs how the result for \code{NA}s in
-      \code{x} is determined.  For the \R 3.2.x series, the default
+      \code{x} is determined.  For \code{nzchar()} in general and
+      \code{nchar()} in the \R 3.2.x series, the default
       remains \code{FALSE} which is fully back compatible.
-      From \R 3.3.0, the default will change to \code{keepNA = NA} and
-      you are advised to consider this for code portability.
+      From \R 3.3.0, \code{nchar()}'s default will change to
+      \code{keepNA = NA} and you are advised to consider this for code
+      portability.
 
       \item \code{news()} more flexibly extracts dates from package
       \file{NEWS.Rd} files.
@@ -1527,7 +1545,7 @@
       was complex.  (\PR{16047})
 
       \item \code{"noquote"} objects may now be used as columns in
-      dataframes.  (\PR{15997})
+      data frames.  (\PR{15997})
 
       \item Some values with extremely long names were printed
       incorrectly.  (\PR{15999})
@@ -2953,7 +2971,7 @@
       \code{NA} returned that time.  (The platforms affected include
       Linux and OS X, but not Windows nor Solaris.)
 
-      \item \code{rowsum()} has more support for matrices and dataframes
+      \item \code{rowsum()} has more support for matrices and data frames
       with \eqn{2^{31}}{2^31} or more elements. (\PR{15587})
 
       \item \code{predict(<lm object>, interval = "confidence", scale =
@@ -3760,7 +3778,7 @@
       which is representable as an integer (as often happens for package
       \CRANpkg{Matrix}), this is converted to an integer.
 
-      \item Matrix indexing of dataframes by two-column numeric indices
+      \item Matrix indexing of data frames by two-column numeric indices
       is now supported for replacement as well as extraction.
 
       \item \code{setNames()} now has a default for its \code{object}

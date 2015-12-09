@@ -4208,6 +4208,16 @@ and libraries are searched once in the order they are specified.  Not
 all linkers allow a space after @option{-L} .
 
 @item
+The @command{ar} utility is often used in makefiles to make static
+libraries.  Its modifier @code{u} is defined by POSIX but is disabled in
+GNU @command{ar} on some recent Linux distributions which use
+`deterministic mode'.  The safe way to make a static library is to first
+remove any existing file of that name then use @command{ar -cr} and then
+@command{ranlib} if needed (which is system-dependent: on most
+systems@footnote{some versions of OS X did not.} @command{ar} always
+maintains a symbol table).
+
+@item
 Some people have a need to set a locale.  Locale names are not portable,
 and e.g.@: @samp{fr_FR.utf8} is common used on Linux but not accepted on
 either Solaris or OS X.  @samp{fr_FR.UTF-8} is more portable, being
@@ -4319,7 +4329,7 @@ and suitable options might be
 @end example
 
 @noindent
-; see @uref{https://www.ghostscript.com/@/doc/@/current/@/Ps2pdf.htm} for
+; see @uref{http://www.ghostscript.com/@/doc/@/current/@/Ps2pdf.htm} for
 more such and consider all the options for image downsampling).  There
 have been examples in @acronym{CRAN} packages for which Ghostscript 9.06
 and later produced much better reductions than 9.05 or earlier.
@@ -7901,7 +7911,7 @@ Finer control of what is checked can be achieved by other options: for
 @command{clang} see
 @uref{http://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation}.@footnote{or
 the user manual for your version of @command{clang}, e.g.@:
-@uref{http://llvm.org/@/releases/@/3.6.2@//tools/@/clang/@/docs/@/UsersManual.html}.}
+@uref{http://llvm.org/@/releases/@/3.6.2@//tools/@/docs/@/UsersManual.html}.}
 The current set for @command{clang} is (on a single line):
 @example
 -fsanitize=alignment,bool,bounds,enum,float-cast-overflow,
