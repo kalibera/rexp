@@ -766,6 +766,7 @@ void attribute_hidden R_init_jit_enabled(void)
 
 SEXP attribute_hidden R_cmpfun(SEXP fun)
 {
+    int old_visible = R_Visible;
     SEXP packsym, funsym, call, fcall, val;
 
     packsym = install("compiler");
@@ -775,11 +776,13 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
     PROTECT(call = lang2(fcall, fun));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(2);
+    R_Visible = old_visible;
     return val;
 }
 
 static SEXP R_compileExpr(SEXP expr, SEXP rho)
 {
+    int old_visible = R_Visible;
     SEXP packsym, funsym, quotesym;
     SEXP qexpr, call, fcall, val;
 
@@ -792,18 +795,21 @@ static SEXP R_compileExpr(SEXP expr, SEXP rho)
     PROTECT(call = lang3(fcall, qexpr, rho));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(3);
+    R_Visible = old_visible;
     return val;
 }
 
 static SEXP R_compileAndExecute(SEXP call, SEXP rho)
 {
     int old_enabled = R_jit_enabled;
+    int old_visible = R_Visible;
     SEXP code, val;
 
     R_jit_enabled = 0;
     PROTECT(call);
     PROTECT(rho);
     PROTECT(code = R_compileExpr(call, rho));
+    R_Visible = old_visible;
     R_jit_enabled = old_enabled;
 
     val = bcEval(code, rho, TRUE);

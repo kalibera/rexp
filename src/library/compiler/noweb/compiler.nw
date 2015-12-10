@@ -4293,7 +4293,7 @@ setSetterInlineHandler("@<-", function(afun, place, acall, cb, cntxt) {
         TRUE
     }
     else FALSE
-}, "methods")
+})
 @ 
 
 

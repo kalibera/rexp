@@ -111,6 +111,17 @@
 #include <Defn.h>
 #include <Internal.h>
 
+/* Check if we are out of the C stack, but do not trigger an error if we are.
+   Performs the same check as R_CheckStack. */
+
+static int outOfCStack(void)
+{
+    int dummy;
+    intptr_t usage = R_CStackDir * (R_CStackStart - (uintptr_t)&dummy);
+
+    return R_CStackLimit != -1 && usage > ((intptr_t) R_CStackLimit);
+}
+
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
    This routine does not stop at a CTXT_TOPLEVEL--the code that
@@ -147,7 +158,24 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
 	       stack overflow. To be safe it is good to also call
 	       R_CheckStack. LT */
 	    R_Expressions = R_Expressions_keep + 500;
-	    R_CheckStack();
+	    if (outOfCStack()) {
+	        /* Disable on.exit handlers in the following contexts to
+                   prevent a segfault due to C stack overflow. The on.exit
+                   handlers would not have been executed anyway, because we
+                   are out of the C stack already, but repeated triggering
+                   of the stack overflow error will result in recursive
+                   calls to R_run_onexits.  While this recursion will not be
+                   infinite, the corresponding growth of the C stack may
+                   result in a segfault. This reduces the risk. */
+                RCNTXT *cc;
+                for (cc = c->nextcontext; cc != cptr; cc = cc->nextcontext) {
+                    // a user embedding R incorrectly triggered this (PR#15420)
+                    if (cc == NULL)
+                        error("bad target context--should NEVER happen if R was called correctly");
+                    cc->conexit = R_NilValue;
+                }
+                R_CheckStack(); /* will trigger */
+	    }
 	    eval(s, c->cloenv);
 	    UNPROTECT(1);
 	    R_ExitContext = savecontext;
@@ -155,6 +183,7 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
 	if (R_ExitContext == c)
 	    R_ExitContext = NULL; /* Not necessary?  Better safe than sorry. */
     }
+
 }
 
 

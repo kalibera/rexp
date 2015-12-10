@@ -2556,7 +2556,7 @@ setSetterInlineHandler("@<-", function(afun, place, acall, cb, cntxt) {
         TRUE
     }
     else FALSE
-}, "methods")
+})
 
 setInlineHandler("with", function(e, cb, cntxt) {
     cntxt$suppressUndefined <- TRUE
