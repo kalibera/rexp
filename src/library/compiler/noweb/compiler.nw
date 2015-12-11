@@ -4629,7 +4629,7 @@ cmpfun <- function(f, options = NULL) {
             val <- asS4(val)
         val
     }
-    else if (typeof(f) == "builtin" || type == "special")
+    else if (type == "builtin" || type == "special")
         f
     else stop("cannot compile a non-function")
 }
