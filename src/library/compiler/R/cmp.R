@@ -1134,9 +1134,12 @@ haveInlineHandler <- function(name, package = "base") {
 ## Inlining is controlled by the optimize compiler option, with possible
 ## values 0, 1, 2, 3.
 
+
+noInlineSymbols <- c("standardGeneric")
+
 getInlineInfo <- function(name, cntxt) {
     optimize <- cntxt$optimize
-    if (optimize > 0) {
+    if (optimize > 0 && !(name %in% noInlineSymbols)) {
         info <- findCenvVar(name, cntxt$env)
         if (is.null(info))
             NULL
@@ -2682,7 +2685,7 @@ cmpfun <- function(f, options = NULL) {
             val <- asS4(val)
         val
     }
-    else if (typeof(f) == "builtin" || type == "special")
+    else if (type == "builtin" || type == "special")
         f
     else stop("cannot compile a non-function")
 }

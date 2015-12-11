@@ -1782,9 +1782,12 @@ tryInline <- function(e, cb, cntxt) {
 The function [[getInlineInfo]] implements the optimization rules
 described at the beginning of this section.
 <<[[getInlineInfo]] function>>=
+
+noInlineSymbols <- c("standardGeneric")
+
 getInlineInfo <- function(name, cntxt) {
     optimize <- cntxt$optimize
-    if (optimize > 0) {
+    if (optimize > 0 && !(name %in% noInlineSymbols)) {
         info <- findCenvVar(name, cntxt$env)
         if (is.null(info))
             NULL

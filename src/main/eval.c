@@ -5393,6 +5393,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = getPrimitive(symbol, BUILTINSXP);
+#define REPORT_OVERRIDEN_BUILTINS
+#ifdef REPORT_OVERRIDEN_BUILTINS
+	if (value != findFun(symbol, rho)) {
+	    Rprintf("Possibly overriden builtin: %s\n", PRIMNAME(value));
+	}
+#endif
 	if (RTRACE(value)) {
 	  Rprintf("trace: ");
 	  PrintValue(symbol);
