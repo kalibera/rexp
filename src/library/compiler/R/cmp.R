@@ -91,26 +91,20 @@ frameTypes <- function(env) {
     empty <- emptyenv()
     nl <- 0
     while (! identical(env, top)) {
-        env <- parent.env(env)
         nl <- nl + 1
+        env <- parent.env(env)
         if (identical(env, empty))
             stop("not a proper evaluation environment")
     }
-    nn <- 0
-    if (isNamespace(env)) {
-        while (! identical(env, .GlobalEnv)) {
-            env <- parent.env(env)
-            nn <- nn + 1
-            if (identical(env, empty))
-                stop("not a proper evaluation environment")
-        }
-    }
-    ng <- 0
+    ftypes <- rep("local", nl)
     while (! identical(env, empty)) {
+        if (isNamespace(env))
+            ftypes <- append(ftypes, "namespace")
+        else
+            ftypes <- append(ftypes, "global")
         env <- parent.env(env)
-        ng <- ng + 1
     }
-    rep(c("local", "namespace", "global"), c(nl, nn, ng))
+    ftypes
 }
 
 ## Given a symbol name and a namespace environment (or a namespace
@@ -2814,6 +2808,13 @@ setCompilerOptions <- function(...) {
                    if (length(op) == 1 && 0 <= op && op <= 3) {
                        old <- c(old, list(optimize =
                                           compilerOptions$optimize))
+                       if (op < 2) {
+                           enabled <- enableJIT(0)
+                           if (enabled > 2)
+                               stop("enableJIT>2 requires optimize>=2")
+                                cat("ENABLE is ", enabled, "\n")
+                           enableJIT(enabled)
+                       }                       
                        compilerOptions$optimize <- op
                    }
                },
