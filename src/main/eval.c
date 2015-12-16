@@ -722,6 +722,22 @@ static void loadCompilerNamespace(void)
     UNPROTECT(3);
 }
 
+static void checkCompilerOptions(int jitEnabled)
+{
+    int old_visible = R_Visible;
+    SEXP packsym, funsym, call, fcall, arg;
+
+    packsym = install("compiler");
+    funsym = install("checkCompilerOptions");
+
+    PROTECT(arg = ScalarInteger(jitEnabled));
+    PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
+    PROTECT(call = lang2(fcall, arg));
+    eval(call, R_GlobalEnv);
+    UNPROTECT(3);
+    R_Visible = old_visible;
+}
+
 static int R_disable_bytecode = 0;
 
 void attribute_hidden R_init_jit_enabled(void)
@@ -737,6 +753,7 @@ void attribute_hidden R_init_jit_enabled(void)
 	    int val = atoi(enable);
 	    if (val > 0)
 		loadCompilerNamespace();
+	    checkCompilerOptions(val);
 	    R_jit_enabled = val;
 	}
     }
@@ -824,6 +841,7 @@ SEXP attribute_hidden do_enablejit(SEXP call, SEXP op, SEXP args, SEXP rho)
     new = asInteger(CAR(args));
     if (new > 0)
 	loadCompilerNamespace();
+    checkCompilerOptions(new);
     R_jit_enabled = new;
     return ScalarInteger(old);
 }

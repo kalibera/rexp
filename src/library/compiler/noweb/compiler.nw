@@ -1218,14 +1218,6 @@ notifyMultipleSwitchDefaults <- function(ndflt, cntxt)
                    cntxt)
 @ %def notifyMultipleSwitchDefaults
 
-When [[enableJIT]] is set to 3, loops should be compiled before executing. 
-However, if the [[optimize]] option is set to 0 or 1, the compiled loop will
-have a call to the same primitive function as is used by the AST
-interpretter, and hence the compilation would run into infinite recursion. 
-To prevent this problem, the compiler detects when compiling a loop at
-optimization level less than 2, and if [[enableJIT]] is set to a number
-higher than 2, the compiler changes it down to 2.
-%% **** could also change the interface and atomically set enableJIT and optimize
 
 \section{Compilation environments}
 \label{sec:environments}
@@ -4808,6 +4800,7 @@ setCompilerOptions <- function(...) {
             stop(gettextf("'%s' is not a valid compiler option", n),
                  domain = NA)
     old <- list()
+    newOptions <- compilerOptions
     for (n in nm) {
         op <- options[[n]]
         switch(n,
@@ -4816,21 +4809,14 @@ setCompilerOptions <- function(...) {
                    if (length(op) == 1 && 0 <= op && op <= 3) {
                        old <- c(old, list(optimize =
                                           compilerOptions$optimize))
-                       if (op < 2) {
-                           enabled <- enableJIT(0)
-                           if (enabled > 2)
-                               stop("enableJIT>2 requires optimize>=2")
-				cat("ENABLE is ", enabled, "\n")
-                           enableJIT(enabled)
-                       }                       
-                       compilerOptions$optimize <- op
+                       newOptions$optimize <- op
                    }
                },
                suppressAll = {
                    if (identical(op, TRUE) || identical(op, FALSE)) {
                        old <- c(old, list(suppressAll =
                                           compilerOptions$suppressAll))
-                       compilerOptions$suppressAll <- op
+                       newOptions$suppressAll <- op
                    }
                },
                suppressUndefined = {
@@ -4838,10 +4824,13 @@ setCompilerOptions <- function(...) {
                        is.character(op)) {
                        old <- c(old, list(suppressUndefined =
                                           compilerOptions$suppressUndefined))
-                       compilerOptions$suppressUndefined <- op
+                       newOptions$suppressUndefined <- op
                    }
                })
     }
+    jitEnabled <- enableJIT(0)
+    enableJIT(jitEnabled)
+    checkCompilerOptions(jitEnabled, newOptions)
     invisible(old)
 }
 @ %def
@@ -4867,6 +4856,26 @@ optimization level to be specified using environment variables.
 }
 @ %def .onLoad
 
+When [[enableJIT]] is set to 3, loops should be compiled before executing. 
+However, if the [[optimize]] option is set to 0 or 1, a compiled loop will
+call to the same primitive function as is used by the AST interpretter (e.g. 
+[[do_for]]), and the compilation would run into infinite recursion. 
+[[checkCompilerOptions]] will detect invalid combinations of [[enableJIT]]
+and [[optimize]] and report a warning.
+%% **** could also change the interface and atomically set enableJIT and optimize
+<<[[checkCompilerOptions]] function>>=
+checkCompilerOptions <- function(jitEnabled, options = NULL) {
+    optimize <- getCompilerOption("optimize", options)
+    if (jitEnabled <= 2 || optimize >= 2)
+        TRUE
+    else {
+        warning(gettextf(
+            "invalid compiler options: optimize(==%d)<2 and jitEnabled(==%d)>2",
+            optimize, jitEnabled))
+        FALSE
+    }
+}
+@ %def checkCompilerOptions
 
 \subsection{Disassembler}
 A minimal disassembler is provided by [[disassemble]]. This is
@@ -6226,6 +6235,7 @@ Opcodes.names <- names(Opcodes.argc)
 
 <<[[.onLoad]] function>>
 
+<<[[checkCompilerOptions]] function>>
 
 ##
 ## Disassembler
