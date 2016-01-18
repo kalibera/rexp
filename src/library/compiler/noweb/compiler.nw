@@ -1219,6 +1219,11 @@ notifyMultipleSwitchDefaults <- function(ndflt, cntxt)
                    cntxt)
 @ %def notifyMultipleSwitchDefaults
 
+<<[[notifyNoSwitchcases]] function>>=
+notifyNoSwitchcases <- function(cntxt)
+    if (! suppressAll(cntxt))
+        cntxt$warn(gettext("'switch' with no alternatives"), cntxt)
+@ %def notifyNoSwitchcases
 
 \section{Compilation environments}
 \label{sec:environments}
@@ -1782,9 +1787,11 @@ tryInline <- function(e, cb, cntxt) {
 The function [[getInlineInfo]] implements the optimization rules
 described at the beginning of this section.
 <<[[getInlineInfo]] function>>=
+noInlineSymbols <- c("standardGeneric")
+
 getInlineInfo <- function(name, cntxt) {
     optimize <- cntxt$optimize
-    if (optimize > 0) {
+    if (optimize > 0 && ! (name %in% noInlineSymbols)) {
         info <- findCenvVar(name, cntxt$env)
         if (is.null(info))
             NULL
@@ -3548,12 +3555,16 @@ setInlineHandler("switch", function(e, cb, cntxt) {
 The first step in processing the [[switch]] expression is to extract
 the selector expression [[expr]] and the case expressions, to identify
 which, if any, of the cases are empty, and to extract the names of the
-cases as [[nm]].  If there is only one case and that case is not named
-then setting [[nm = ""]] allows this situation to be processed by code
-used when names are present.
+cases as [[nm]].  A warning is issued if there are no cases.  If there
+is only one case and that case is not named then setting [[nm = ""]]
+allows this situation to be processed by code used when names are
+present.
 <<extract the [[switch]] expression components>>=
 expr <- e[[2]]
 cases <-e[-c(1, 2)]
+
+if (is.null(cases))
+    notifyNoSwitchcases(cntxt)
 
 miss <- missingArgs(cases)
 nm <- names(cases)
@@ -3663,7 +3674,7 @@ cmp(expr, cb, ncntxt)
 @ %def
 
 The switch instruction takes the selector off the stack and four
-operands form the instruction stream: the call index, an index for the
+operands from the instruction stream: the call index, an index for the
 names, or [[NULL]] if there are none, and indices for the labels for a
 character selector and for a numeric selector.  At this point lists of
 labels are placed in the instruction buffer.  At code extraction time
@@ -4293,7 +4304,7 @@ setSetterInlineHandler("@<-", function(afun, place, acall, cb, cntxt) {
         TRUE
     }
     else FALSE
-}, "methods")
+})
 @ 
 
 
@@ -4629,7 +4640,7 @@ cmpfun <- function(f, options = NULL) {
             val <- asS4(val)
         val
     }
-    else if (typeof(f) == "builtin" || type == "special")
+    else if (type == "builtin" || type == "special")
         f
     else stop("cannot compile a non-function")
 }
@@ -4798,6 +4809,7 @@ setCompilerOptions <- function(...) {
             stop(gettextf("'%s' is not a valid compiler option", n),
                  domain = NA)
     old <- list()
+    newOptions <- compilerOptions
     for (n in nm) {
         op <- options[[n]]
         switch(n,
@@ -4806,14 +4818,14 @@ setCompilerOptions <- function(...) {
                    if (length(op) == 1 && 0 <= op && op <= 3) {
                        old <- c(old, list(optimize =
                                           compilerOptions$optimize))
-                       compilerOptions$optimize <- op
+                       newOptions$optimize <- op
                    }
                },
                suppressAll = {
                    if (identical(op, TRUE) || identical(op, FALSE)) {
                        old <- c(old, list(suppressAll =
                                           compilerOptions$suppressAll))
-                       compilerOptions$suppressAll <- op
+                       newOptions$suppressAll <- op
                    }
                },
                suppressUndefined = {
@@ -4821,10 +4833,12 @@ setCompilerOptions <- function(...) {
                        is.character(op)) {
                        old <- c(old, list(suppressUndefined =
                                           compilerOptions$suppressUndefined))
-                       compilerOptions$suppressUndefined <- op
+                       newOptions$suppressUndefined <- op
                    }
                })
     }
+    jitEnabled <- enableJIT(-1)
+    checkCompilerOptions(jitEnabled, newOptions)
     invisible(old)
 }
 @ %def
@@ -4849,6 +4863,27 @@ optimization level to be specified using environment variables.
         }, error = function(e) e, warning = function(w) w)
 }
 @ %def .onLoad
+
+When [[enableJIT]] is set to 3, loops should be compiled before executing. 
+However, if the [[optimize]] option is set to 0 or 1, a compiled loop will
+call to the same primitive function as is used by the AST interpretter (e.g. 
+[[do_for]]), and the compilation would run into infinite recursion. 
+[[checkCompilerOptions]] will detect invalid combinations of [[enableJIT]]
+and [[optimize]] and report a warning.
+%% **** could also change the interface and atomically set enableJIT and optimize
+<<[[checkCompilerOptions]] function>>=
+checkCompilerOptions <- function(jitEnabled, options = NULL) {
+    optimize <- getCompilerOption("optimize", options)
+    if (jitEnabled <= 2 || optimize >= 2)
+        TRUE
+    else {
+        stop(gettextf(
+            "invalid compiler options: optimize(==%d)<2 and jitEnabled(==%d)>2",
+            optimize, jitEnabled))
+        FALSE
+    }
+}
+@ %def checkCompilerOptions
 
 
 \subsection{Disassembler}
@@ -6195,6 +6230,8 @@ Opcodes.names <- names(Opcodes.argc)
 
 <<[[notifyMultipleSwitchDefaults]] function>>
 
+<<[[notifyNoSwitchcases]] function>>
+
 
 ##
 ## Compiler interface
@@ -6221,6 +6258,8 @@ Opcodes.names <- names(Opcodes.argc)
 <<[[setCompilerOptions]] function>>
 
 <<[[.onLoad]] function>>
+
+<<[[checkCompilerOptions]] function>>
 
 
 ##

@@ -651,8 +651,12 @@ SEXP attribute_hidden do_merge(SEXP call, SEXP op, SEXP args, SEXP rho)
     isort_with_index(INTEGER(yi), iy, ny);
 
     /* 1. determine result sizes */
-    for (i = 0; i < nx; i++) if (INTEGER(xi)[i] > 0) break; nx_lone = i;
-    for (i = 0; i < ny; i++) if (INTEGER(yi)[i] > 0) break; ny_lone = i;
+    for (i = 0; i < nx; i++) 
+	if (INTEGER(xi)[i] > 0) break; 
+    nx_lone = i;
+    for (i = 0; i < ny; i++) 
+	if (INTEGER(yi)[i] > 0) break;
+    ny_lone = i;
     double dnans = 0;
     for (i = nx_lone, j = ny_lone; i < nx; i = nnx, j = nny) {
 	int tmp = INTEGER(xi)[i];
@@ -2219,15 +2223,19 @@ SEXP attribute_hidden do_tabulate(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
-/* x can be a long vector but xt cannot since the result is integer */
+/* .Internal(findInterval(vec, x, rightmost.closed, all.inside,  left.open))
+ *                         xt  x    right             inside       leftOp
+ * x can be a long vector but xt cannot since the result is integer
+*/
 SEXP attribute_hidden do_findinterval(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    SEXP xt, x, right, inside;
+    SEXP xt, x, right, inside, leftOp;
     xt = CAR(args); args = CDR(args);
     x = CAR(args); args = CDR(args);
     right = CAR(args); args = CDR(args);
-    inside = CAR(args);
+    inside = CAR(args);args = CDR(args);
+    leftOp = CAR(args);
     if(TYPEOF(xt) != REALSXP || TYPEOF(x) != REALSXP) error("invalid input");
 #ifdef LONG_VECTOR_SUPPORT
     if (IS_LONG_VEC(xt))
@@ -2236,7 +2244,7 @@ SEXP attribute_hidden do_findinterval(SEXP call, SEXP op, SEXP args, SEXP rho)
     int n = LENGTH(xt);
     if (n == NA_INTEGER) error(_("invalid '%s' argument"), "vec");
     R_xlen_t nx = XLENGTH(x);
-    int sr = asLogical(right), si = asLogical(inside);
+    int sr = asLogical(right), si = asLogical(inside), lO = asLogical(leftOp);
     if (sr == NA_INTEGER)
 	error(_("invalid '%s' argument"), "rightmost.closed");
     if (si == NA_INTEGER)
@@ -2245,10 +2253,11 @@ SEXP attribute_hidden do_findinterval(SEXP call, SEXP op, SEXP args, SEXP rho)
     double *rxt = REAL(xt), *rx = REAL(x);
     int ii = 1;
     for(int i = 0; i < nx; i++) {
-	if (ISNAN(REAL(x)[i])) ii = NA_INTEGER;
+	if (ISNAN(rx[i]))
+	    ii = NA_INTEGER;
 	else {
-	    int mfl = si;
-	    ii = findInterval(rxt, n, rx[i], sr, si, ii, &mfl);
+	    int mfl;
+	    ii = findInterval2(rxt, n, rx[i], sr, si, lO, ii, &mfl); // -> ../appl/interv.c
 	}
 	INTEGER(ans)[i] = ii;
     }

@@ -1143,3 +1143,76 @@ nr2 <- nr + (nd > 1)
 stopifnot(identical(r.2,               rep_len(b.m, length(r.2))),
           identical(substr(r, nr,nr2), rep_len(dm.s, length(r))))
 ## several cases (1, 5, 9, 10,..) were wrong in R 3.2.2
+
+
+## kmeans with just one center -- PR#16623
+set.seed(23)
+x <- rbind(matrix(rnorm(100,           sd = 0.3), ncol = 2),
+           matrix(rnorm(100, mean = 1, sd = 0.3), ncol = 2))
+k1 <- kmeans(x, 1)
+k2 <- kmeans(x, centers = k1$centers)
+stopifnot(all.equal(k1, k2), k1$cluster == 1)
+## the kmeans(*, centers=.) called failed in R <= 3.2.3
+
+
+## invalid dimnames for array()
+tools::assertError(array(1, 2:3, dimnames="foo"))
+## were silently disregarded in R <= 3.2.3
+
+
+## addmargins() - dimnames with (by default) "Sum"
+m <- rbind(1, 2:3)
+m2 <- addmargins(m, 2)
+am <- addmargins(m)
+stopifnot(
+    identical(dimnames(m2), list(NULL, c("", "", "Sum"))),
+    identical(am[,"Sum"], setNames(c(2, 5, 7), c("", "", "Sum"))))
+## the dimnames array() bug above hid the addmargins() not adding "Sum"
+
+
+## dim( x[,] ) -- should keep names(dim(.)) --
+## ---  ----
+##_ 1 D _
+A1 <- array(1:6, (d <- c(nam=6L)))
+stopifnot(identical(dim(A1), d),
+          identical(dim(A1), dim(A1[])))
+##_ 2 D _
+A2 <- A[1,2,,]
+stopifnot(identical(names(dim(A2)), c("C", "D")),
+          identical(dim(A2), dim(A)[-(1:2)]),
+          identical(dim(A2[ ]), dim(A2)),
+          identical(dim(A2[,]), dim(A2)),
+          identical(dim(A2[1, , drop=FALSE]), c(C = 1L, D = 7L)),
+          identical(dim(A2[, 1, drop=FALSE]), c(C = 5L, D = 1L)))
+##_ higher D_
+A3 <- A[1, ,,]
+stopifnot(
+    identical(dim(A ), dim(A [,,,])),# was already wrong: [,,,] losing names(dim(.))
+    identical(dim(A[,-1,-1,-1]), dim(A) - c(0:1,1L,1L)),
+    identical(dim(A3), dim(A)[-1]),
+    identical(dim(A3), dim(A3[,, ])),
+    identical(dim(A3[,1,]), c(B = 3L, D = 7L)))
+## all subsetting of arrays lost names(dim(.)) in R < 3.3.0
+
+
+## NextMethod() dispatch for  `$`  and  `$<-`
+`$.foo` <- function(x, fun) paste("foo:", NextMethod())
+x <- list(a = 1, b = 2)
+class(x) <- "foo"
+stopifnot(identical(x$b, "foo: 2"))  # 'x$b' failed prior to R 3.3.0
+
+`$<-.foo` <- function(x, value, fun) {
+    attr(x, "modified") <- "yes"
+    NextMethod()
+}
+x$y <- 10 ## failed prior to R 3.3.0
+stopifnot(identical(attr(x, "modified"), "yes"))
+
+
+## illegal 'row.names' for as.data.frame():  -- for now just a warning --
+tools::assertWarning(
+    d3 <- as.data.frame(1:3, row.names = letters[1:2])
+)
+stopifnot(dim(d3) == c(3,1)) ## was (2, 1) in R <= 3.2.3
+## 'row.names' were not checked and produced a "corrupted" data frame in R <= 3.2.3
+

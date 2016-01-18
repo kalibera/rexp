@@ -624,7 +624,7 @@ The @samp{Type} field specifies the type of the package:
 One can add subject classifications for the content of the package using
 the fields @samp{Classification/ACM} or @samp{Classification/ACM-2012}
 (using the Computing Classification System of the Association for
-Computing Machinery, @uref{http://www.acm.org/class/}; the former refers
+Computing Machinery, @uref{http://www.acm.org/about/class/}; the former refers
 to the 1998 version), @samp{Classification/JEL} (the Journal of Economic
 Literature Classification System,
 @uref{https://www.aeaweb.org/@/econlit/@/jelCodes.php}, or
@@ -648,15 +648,20 @@ language subtags which in essence are 2-letter ISO 639-1
 codes.
 
 @c DESCRIPTION field RdMacros
-As of @R{} 3.2.0, an @samp{RdMacros} field can be used to hold a
-comma-separated list of packages from which the current package will import
-Rd macro definitions.  These will be imported after the system macros,
-in the order listed in the @samp{RdMacros} field, before any macro
-definitions in the current package are loaded.  Macro definitions in
-individual @file{.Rd} files in the @file{man} directory are loaded
-last, and are local to later parts of that file.  In case of any
-duplicates, the last loaded definition will be used@footnote{Duplicate
-definitions may trigger a warning:  see @ref{User-defined macros}.}
+An @samp{RdMacros} field can be used to hold a comma-separated list of
+packages from which the current package will import @file{Rd} macro
+definitions.  These will be imported after the system macros, in the
+order listed in the @samp{RdMacros} field, before any macro definitions
+in the current package are loaded.  Macro definitions in individual
+@file{.Rd} files in the @file{man} directory are loaded last, and are
+local to later parts of that file.  In case of duplicates, the last
+loaded definition will be used@footnote{Duplicate definitions may
+trigger a warning: see @ref{User-defined macros}.}  Both @command{R CMD
+Rd2pdf} and @command{R CMD Rdconv} have an optional flag
+@option{--RdMacros=pkglist}.  The option is also a comma-separated list
+of package names, and has priority over the value given in
+@file{DESCRIPTION}.  Packages using @file{Rd} macros should depend on
+@R{} 3.2.0 or later.
 
 @c DESCRIPTION field Built
 @c DESCRIPTION field Packaged
@@ -1816,7 +1821,9 @@ point to an external LAPACK library, or may be empty if an external BLAS
 library also contains LAPACK.
 
 [@code{libRlapack} includes all the double-precision LAPACK routines
-current in 2003: a list of which routines are included is in file
+which were current in 2003 and have not been deprecated
+since:@footnote{some were removed in LAPACK 3.6.0 in late 2015.} a list
+of which routines are included is in file
 @file{src/modules/lapack/README}.]
 
 For portability, the macros @code{BLAS_LIBS} and @code{FLIBS} should
@@ -4011,6 +4018,11 @@ SystemRequirements: GNU make
 @end example
 
 @noindent
+and ensure that you use the value of environment variable @env{MAKE}
+(and not just @command{make}) in your scripts.  (On some platforms GNU
+make is available under a name such as @command{gmake}, and there
+@code{SystemRequirements} is used to set @env{MAKE}.)
+
 If you only need GNU make for parts of the package which are rarely
 needed (for example to create bibliography files under
 @file{vignettes}), use a file called @file{GNUmakefile} rather than
@@ -4458,7 +4470,8 @@ and possibly more.  This means that calling @code{sqrt} on an integer
 type may have `overloading ambiguity' as it could be promoted to any of
 the supported floating-point types: this is commonly seen on Solaris,
 but for @code{pow} also seen on OS X.  (C++11 requires additional
-overloads for integer types.)
+overloads for integer types, and ambiguous overloads are more common in
+C++11/C++14 compiler modes.)
 
 A not-uncommonly-seen problem is to mistakenly call @code{floor(x/y)} or
 @code{ceil(x/y)} for @code{int} arguments @code{x} and @code{y}.  Since
@@ -4542,7 +4555,9 @@ The most common issue involves the names of the Intel CPU registers such
 as @code{CS}, @code{DS}, @code{ES}, @code{FS}, @code{GS} and @code{SS}
 (and more with longer abbreviations) defined on i586/x64 Solaris in
 @file{<sys/regset.h>} and often included indirectly by @file{<stdlib.h>}
-and other core headers.
+and other core headers.  Further examples are @code{ERR}, and @code{I}
+which is defined in Solaris' @file{<complex.h>} as a compiler intrinsic
+for the imaginary unit.
 
 @item
 @code{typedef}s in OS headers can conflict with those in the package: an
@@ -5446,18 +5461,18 @@ info).
 
 Finally, there is @code{\donttest}, used (at the beginning of a separate
 line) to mark code that should be run by @code{example()} but not by
-@code{R CMD check} (by default: as from @R{} 3.2.0 the option
-@option{--run-donttest} can be used).  This should be needed only
-occasionally but can be used for code which might fail in circumstances
-that are hard to test for, for example in some locales.  (Use
-e.g. @code{capabilities()} or @code{nzchar(Sys.which("someprogram"))} to
-test for features needed in the examples wherever possible, and you can
-also use @code{try()} or @code{tryCatch()}.  Use @code{interactive()} to
-condition examples which need someone to interact with.)  Note that code
-included in @code{\donttest} must be correct @R{} code, and any packages
-used should be declared in the @file{DESCRIPTION} file.  It is good
-practice to include a comment in the @code{\donttest} section explaining
-why it is needed.
+@code{R CMD check} (by default: the option @option{--run-donttest} can
+be used).  This should be needed only occasionally but can be used for
+code which might fail in circumstances that are hard to test for, for
+example in some locales.  (Use e.g. @code{capabilities()} or
+@code{nzchar(Sys.which("someprogram"))} to test for features needed in
+the examples wherever possible, and you can also use @code{try()} or
+@code{tryCatch()}.  Use @code{interactive()} to condition examples which
+need someone to interact with.)  Note that code included in
+@code{\donttest} must be correct @R{} code, and any packages used should
+be declared in the @file{DESCRIPTION} file.  It is good practice to
+include a comment in the @code{\donttest} section explaining why it is
+needed.
 
 @findex \keyword
 @item \keyword@{@var{key}@}
@@ -7748,13 +7763,11 @@ threaded programs.
 @command{AddressSanitizer} (`ASan') is a tool with similar aims to the
 memory checker in @command{valgrind}.  It is available with suitable
 builds@footnote{currently only on @cputype{ix86}/@cputype{x86_64} Linux
-and OS X (including the builds in Xcode 7 beta but not earlier Apple
-releases).  On some platforms, e.g.@: Fedora, the runtime library,
-@pkg{libasan}, needs to be installed separately. OS X users can install
-a suitable @command{clang} from the sources,
-@url{http://llvm.org/releases/} or possibly distributions such as
-MacPorts or Homebrew.} of @command{gcc} and @command{clang} on common
-Linux and OS X platforms.  See
+and OS X (including the builds in Xcode 7 but not earlier Apple
+releases).  On some platforms the runtime library, @pkg{libasan}, needs
+to be installed separately, and for checking C++ you may also need
+@pkg{libubsan}.} of @command{gcc} and @command{clang} on common Linux
+and OS X platforms.  See
 @uref{http://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation},
 @uref{http://clang.llvm.org/@/docs/@/AddressSanitizer.html} and
 @uref{https://code.google.com/@/p/@/address-sanitizer/}.
@@ -7809,10 +7822,10 @@ which will ensure that the @code{libasan} run-time library is compiled
 into the @R{} executable.  However this check can be enabled on a
 per-package basis by using a @file{~/.R/Makevars} file like
 @example
-CC = gcc-4.9 -std=gnu99 -fsanitize=address -fno-omit-frame-pointer
-CXX = g++-4.9 -fsanitize=address -fno-omit-frame-pointer
-F77 = gfortran-4.9 -fsanitize=address
-FC = gfortran-4.9 -fsanitize=address
+CC = gcc -std=gnu99 -fsanitize=address -fno-omit-frame-pointer
+CXX = g++ -fsanitize=address -fno-omit-frame-pointer
+F77 = gfortran -fsanitize=address
+FC = gfortran -fsanitize=address
 @end example
 (Note that @code{-fsanitize=address} has to be part of the compiler
 specification to ensure it is used for linking.  These settings will not
@@ -7895,14 +7908,15 @@ packages are attempts to coerce a @code{NaN} or infinity to type
 might be @code{NA_INTEGER}.
 
 `UBSanitizer' is a tool for C/C++ source code selected by
-@option{-fsanitize=undefined} in suitable builds of @command{clang}, and
-GCC as from 4.9.0.  Its (main) runtime library is linked into each
-package's DLL, so it is less often needed to be included in
-@env{MAIN_LDFLAGS}.
+@option{-fsanitize=undefined} in suitable builds@footnote{On some
+platforms the runtime library, @pkg{libubsan}, needs to be installed
+separately.} of @command{clang} and GCC.  Its (main) runtime library is
+linked into each package's DLL, so it is less often needed to be
+included in @env{MAIN_LDFLAGS}.
 
 Some versions have greatly increased compilation times on a few
 files@footnote{e.g.@: @file{src/main/dotcode.c} and parts of the
-@pkg{Matrix} sources with @command{clang} 3.7.0).}.
+@pkg{Matrix} sources with @command{clang} 3.7.0 amd later.}.
 
 This sanitizer can be combined with the Address Sanitizer by
 @option{-fsanitize=undefined,address} (where both are supported).
@@ -7950,15 +7964,20 @@ that would need to be linked by @code{clang++}, not @code{clang}: you
 could try building @R{} with something like
 @example
 MAIN_LD="clang++ -fsanitize=undefined"
+@end example
+@noindent
+and perhaps for @command{clang} 3.7.x
+@example
 R_OPENMP_CFLAGS="-fopenmp=libomp"
 @end example
+@noindent
 or add @code{-lclang_rt.asan_cxx-x86_64}@footnote{This includes the C++
 UBSAN handlers, despite its name.} or similar to @code{LD_FLAGS}).
 
 See @uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/Debugging-Options.html} (or
 the manual for your version of GCC, installed or @emph{via}
 @uref{https://gcc.gnu.org/@/onlinedocs/}) for the options supported by
-GCC: 5.2.0 supports
+GCC: 5.3 supports
 @example
 -fsanitize=alignment,bool,bounds,enum,float-cast-overflow,
 integer-divide-by-zero,non-null-attribute,null,object-size,
@@ -7975,6 +7994,13 @@ as a separate option not enabled by @code{-fsanitize=undefined} (and not
 desirable for @R{} uses).  At the time of writing the @code{object-size}
 and @code{vptr} checks produced many warnings on GCC's own C++ headers,
 so should be disabled.
+
+GCC 6 will add
+@example
+-fsanitize=bounds-strict
+@end example
+@noindent
+an extension of @code{bounds} to `flexible array member-like arrays'.
 
 
 Other useful flags include
@@ -12518,6 +12544,7 @@ See @R{}'s help page @code{?max.col}.
 @end deftypefun
 
 @deftypefun int findInterval (double* @var{xt}, int @var{n}, double @var{x}, Rboolean @var{rightmost_closed}, Rboolean @var{all_inside}, int @var{ilo}, int* @var{mflag})
+@deftypefunx int findInterval2(double* @var{xt}, int @var{n}, double @var{x}, Rboolean @var{rightmost_closed}, Rboolean @var{all_inside}, Rboolean @var{left_open}, int @var{ilo}, int* @var{mflag})
 Given the ordered vector @var{xt} of length @var{n}, return the interval
 or index of @var{x} in @code{@var{xt}[]}, typically max(@math{i}; @eqn{1
 \le i \le @var{n}, 1 <= i <= @var{n}} & @math{@var{xt}[i]} @eqn{\le, <=}
@@ -12533,9 +12560,17 @@ The algorithm is particularly fast when @var{ilo} is set to the last
 result of @code{findInterval()} and @var{x} is a value of a sequence which
 is increasing or decreasing for subsequent calls.
 
+ @code{findInterval2()} is a generalization of @code{findInterval()}, with
+ an extra @code{Rboolean} argument @var{left_open}.  Setting
+ @code{left_open = TRUE} basically replaces all left-closed right-open
+ intervals @eqn{[s, t)} by left-open ones @eqn{(s, t]}, see the help page
+ of @R{} function @code{findInterval} for details.
+
 There is also an @code{F77_CALL(interv)()} version of
 @code{findInterval()} with the same arguments, but all pointers.
 @end deftypefun
+
+
 
 A system-independent interface to produce the name of a temporary
 file is provided as
@@ -12644,12 +12679,8 @@ platform-specific macros that are mainly for use in other header files.
 The macro @code{WORDS_BIGENDIAN} is defined on
 big-endian@footnote{@uref{https://en.wikipedia.org/@/wiki/@/Endianness}.}
 systems (e.g.@: most OSes on Sparc and PowerPC hardware) and not on
-little-endian systems (such as @code{i686} and @code{x86_64} on all
-OSes, and Linux on Alpha and Itanium).  It can be useful when
-manipulating binary files.  The macro @code{SUPPORT_OPENMP} is defined
-on suitable systems and can be used in conjunction with the
-@code{SUPPORT_OPENMP_*} macros in packages that want to make use of
-OpenMP.
+little-endian systems (nowadays all the commoner @R{} platforms).  It
+can be useful when manipulating binary files.
 
 Header file @file{Rversion.h} (@strong{not} included by @file{R.h})
 defines a macro @code{R_VERSION} giving the version number encoded as an
@@ -12672,8 +12703,8 @@ header file @file{Rversion.h} for their format.  Note that the minor
 version includes the patchlevel (as in @samp{2.2}).
 
 Packages which use @code{alloca} need to ensure it is defined: as it is
-neither C99 nor POSIX there is no standard way to do so.  As from @R{}
-3.2.2 one can use
+part of neither C nor POSIX there is no standard way to do so.  As
+from @R{} 3.2.2 one can use
 
 @example
 #include <Rconfig.h> // for HAVE_ALLOCA_H
@@ -12697,11 +12728,11 @@ platforms.
 @section Inlining C functions
 @findex R_INLINE
 
-The C99 keyword @code{inline} should be recognized by all compilers now
-used to build @R{}.  Portable code which might be used with earlier
-versions of @R{} can be written using the macro @code{R_INLINE} (defined
-in file @file{Rconfig.h} included by @file{R.h}), as for example from
-package @CRANpkg{cluster}
+The C99 keyword @code{inline} should be recognized by all compilers
+nowadays used to build @R{}.  Portable code which might be used with
+earlier versions of @R{} can be written using the macro @code{R_INLINE}
+(defined in file @file{Rconfig.h} included by @file{R.h}), as for
+example from package @CRANpkg{cluster}
 
 @example
 #include <R.h>

@@ -23,8 +23,8 @@
       have to successfully negotiate a cryptographic protocol (TLS/SSL,
       \dots) and the server's identity has to be verifiable \emph{via}
       the available certificates.  Different access methods may allow
-      different protocols or use private certificate bundles: we have
-      experienced a \samp{https:} CRAN mirror which can be accessed by
+      different protocols or use private certificate bundles: we
+      encountered a \samp{https:} CRAN mirror which can be accessed by
       one browser but not another nor by \code{download.file()} on the
       same Linux machine.
     }
@@ -209,13 +209,46 @@
       \code{reloadPkgs} to load/attach any package names that were
       stored as part of a recorded plot.
 
-      \item S4 dispatch works within calls to \code{.Internal()}. This means
-      explicit S4 generics are no longer needed for \code{unlist},
-      \code{is.unsorted} and \code{as.vector}.
-      
+      \item S4 dispatch works within calls to \code{.Internal()}. This
+      means explicit S4 generics are no longer needed for \code{unlist}
+      and \code{as.vector}.
+
       \item Only font family names starting with \samp{"Hershey"} (and
       not \samp{"Her"} as before) are given special treatment by the
       graphics engine.
+
+      \item S4 values are automatically coerced to vector (via
+      \code{as.vector}) when subassigned into atomic vectors.
+
+      \item \code{findInterval()} gets a \code{left.open} option.
+
+      \item The version of LAPACK included in the sources has been
+      updated to 3.6.0.  (It does not include most of the deprecated
+      routines removed in that version.  For the time being, the
+      deprecated routines \code{dgegv} and \code{dggsvd} \emph{are}
+      included as they are used by current packages.)
+
+      \item \code{tapply()} has been made considerably more efficient
+      without changing functionality, thanks to proposals from Peter
+      Haverty and Suharto Anggono.  (\PR{16640})
+
+      \item \code{match.arg(arg)} (the one-argument case) is faster; so
+      is \code{sort.int()}.  (\PR{16640})
+
+      \item The \code{format} method for \code{object_size} objects now
+      also accepts \dQuote{binary} units such as \code{"KiB"} and e.g.,
+      \code{"Tb"}.  (partly from \PR{16649})
+
+      \item Profiling now records calls of the form \code{foo::bar} and
+      some similar cases directly rather than as calls to
+      \code{<Anonymous>}.  Contributed by Winston Chang.
+
+      \item New string utilities \code{startsWith(x, prefix)} and
+      \code{endsWith(x, suffix)}.  Also provide speedups for some
+      \code{grepl("^...",*)} uses, related to proposals in (\PR{16490}).
+
+      \item Reference class finalizers run at exit, as well as on
+      garbage collection.
     }
   }
 
@@ -232,6 +265,12 @@
       globals.
 
       It now also checks DOIs in package \file{CITATION} and Rd files.
+
+      \item \command{R CMD Rdconv} and \command{R CMD Rd2pdf} each have
+      a new option \option{--RdMacros=pkglist} which allows Rd macros
+      to be specified before processing.
+
+      \item \code{switch()} now warns when no alternatives are provided,
     }
   }
 
@@ -254,6 +293,12 @@
       and their defaults can be set \emph{via} options.  The
       out-of-the-box default remains \code{"wininet"} (as it has been
       since \R 3.2.2).
+
+      \item \code{[<-} with an S4 value into a list currently embeds the
+      S4 object into its own list such that the end result is roughly
+      equivalent to using \code{[[<-}. That behavior is deprecated. In
+      the future, the S4 value will be coerced to a list with
+      \code{as.list}.
     }
   }
 
@@ -290,6 +335,14 @@
     }
   }
 
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item The \command{make} macro \code{AWK} which used to be made
+      available to files such as \file{src/Makefile} is no longer set.
+      [Announced and will be implemented once packages are updated.]
+    }
+  }
+
   \subsection{C-LEVEL FACILITIES}{
     \itemize{
       \item The API call \code{logspace_sum} introduced in \R 3.2.0 is
@@ -298,9 +351,6 @@
 
       Code using it will need to be reinstalled. (\PR{16470})
       % no current CRAN packages ....
-
-      \item Use of \samp{SUPPORT_OPENMP} from header \file{Rconfig.h} is
-      deprecated in favour of the standard OpenMP define \samp{_OPENMP}.
 
       \item \code{R_GE_version} has been increased to \code{11}.
 
@@ -341,6 +391,88 @@
       Enterprise Linux 6. It now waits for \code{MapNotify} events
       instead of \code{Expose} events, thanks to Siteshwar
       Vashisht. (\PR{16497})
+
+      \item \code{cor()} is now guaranteed to return a value with
+      absolute value less than or equal to 1. (\PR{16638})
+
+      \item Array subsetting now keeps \code{names(dim(.))}.
+
+      \item \code{withCallingHandler()} now (again) handles warnings
+      even during S4 generic's argument evaluation.  (\PR{16111})% TODO: port to r-patched
+
+      \item Blocking socket connection selection recovers more
+      gracefully on signal interrupts.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.2.3 patched}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{install.packages()} and related functions now give a
+      more informative warning when an attempt is made to install a base
+      package.
+
+      \item \code{summary(x)} now prints with less rounding when
+      \code{x} contains infinite values. (Request of \PR{16620}.)
+
+      \item \code{provideDimnames()} gets an optional \code{unique} argument.
+
+      \item \code{shQuote()} gains \code{type = "cmd2"} for quoting
+      in \command{cmd.exe} in Windows.  (Response to \PR{16636}.)
+
+      \item \code{rbind.data.frame()} gets optional argument \code{stringsAsFactors}
+      (instead of only depending on \code{getOption("stringsAsFactors")}).
+    }
+  }
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item Use of \samp{SUPPORT_OPENMP} from header \file{Rconfig.h} is
+      deprecated in favour of the standard OpenMP define \samp{_OPENMP}.
+
+      (This has been the recommendation in the manual for a while now.)
+
+      \item The \command{make} macro \code{AWK} which is long unused by
+      \R itself but recorded in file \file{etc/Makeconf} is deprecated
+      and will be removed in \R 3.3.0.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{kmeans(x, centers = <1-row>)} now works. (\PR{16623})
+
+      \item \code{Vectorize()} now checks for clashes in argument names.
+      (\PR{16577})
+
+      \item \code{file.copy(overwrite = FALSE)} would signal a successful
+      copy when none had taken place.  (\PR{16576})
+
+      \item \code{ngettext()} now uses the same default domain as
+      \code{gettext()}.  (\PR{14605})
+
+      \item \code{array(.., dimnames = *)} now warns about
+      non-\code{list} dimnames and, from \R 3.3.0, will signal the same
+      error for invalid dimnames as \code{matrix()} has always done.
+
+      \item \code{addmargins()} now adds dimnames for the extended
+      margins in all cases, as always documented.
+
+      \item \code{heatmap()} evaluated its \code{add.expr} argument
+      in the wrong environment.  (\PR{16583})
+
+      \item \code{require()} etc now give the correct entry of
+      \code{lib.loc} in the warning about an old version of a package
+      masking a newer required one.
+
+      \item The internal deparser did not add parentheses when
+      necessary,  e.g. before \code{[]} or \code{[[]]}.  (Reported by
+      Lukas Stadler; additional fixes included as well).
+
+      \item \code{as.data.frame.vector(*, row.names=*)} no longer
+      produces \dQuote{corrupted} data frames from row names of wrong
+      length, but rather warns about them.  This will become an error.
     }
   }
 }
@@ -381,10 +513,10 @@
       \item \code{loess(..., iterTrace=TRUE)} now provides diagnostics
       for robustness iterations, and the \code{print()} method for
       \code{summary(<loess>)} shows slightly more.
-      
+
       \item The included version of PCRE has been updated to 8.38, a
       bug-fix release.
-      
+
       \item \code{View()} now displays nested data frames in a more
       friendly way.  (Request with patch in \PR{15915}.)
     }
@@ -1835,7 +1967,7 @@
 
       \item \code{sub()} and \code{gsub()} did not handle regular
       expressions like \code{"\\s{2,}"} properly if the text
-      contained \code{NA} or non-ascii elements in a UTF-8
+      contained \code{NA} or non-ASCII elements in a UTF-8
       locale.  Part of this was due to a bug in the TRE library.
       (\PR{16009})
 

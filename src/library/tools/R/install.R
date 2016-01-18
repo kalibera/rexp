@@ -1,7 +1,7 @@
 #  File src/library/tools/R/install.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 # NB: also copyright dates in Usages.
 #
@@ -475,7 +475,7 @@
 		## important since we will blow away .o files so there
 		## is no way to create it later.
 
-		if (dsym && grepl("^darwin", R.version$os) ) {
+		if (dsym && startsWith(R.version$os, "darwin")) {
 		    message(gettextf("generating debug symbols (%s)", "dSYM"),
                             domain = NA)
 		    dylib <- Sys.glob(paste0(dest, "/*", SHLIB_EXT))
@@ -1096,7 +1096,12 @@
             BC <- if (!is.na(byte_compile)) byte_compile
             else
                 parse_description_field(desc, "ByteCompile", default = FALSE)
-            rcp <- as.numeric(Sys.getenv("R_COMPILE_PKGS"))
+            rcps <- Sys.getenv("R_COMPILE_PKGS")
+            rcp <- switch(rcps,
+                "TRUE"=, "true"=, "True"=, "yes"=, "Yes"= 1,
+                "FALSE"=,"false"=,"False"=, "no"=, "No" = 0,
+                as.numeric(rcps)
+            )
             BC <- BC || (!is.na(rcp) && rcp > 0)
             if (BC) {
                 starsmsg(stars,

@@ -76,7 +76,8 @@ list(
 ## functions.
 
 .addBasicGeneric <-
-    function(funslist, f, fdef, group = list(), internal = FALSE)
+    function(funslist, f, fdef, group = list(), internal = FALSE,
+             internalArgs = names(formals(deflt)))
 {
     deflt <- get(f, "package:base")
     ## use the arguments of the base package function
@@ -85,12 +86,19 @@ list(
     ## => constructing a call to the base function from the default
     if(is.primitive(deflt)) {
         signature <- attr(fdef, "signature") #typically NULL, but see the case for "$"
-        body(fdef, envir = globalenv()) <-
+        body(fdef, envir = topenv()) <-
             substitute(standardGeneric(FNAME, DEFLT), list(FNAME=f, DEFLT=deflt))
     }
     else {
+        if (internal) {
+            formals(deflt) <- setNames(rep(alist(x=), length(internalArgs)),
+                                       internalArgs)
+            call <- as.call(c(as.name(f), lapply(internalArgs, as.name)))
+            body(deflt, envir = baseenv()) <-
+                substitute(.Internal(CALL), list(CALL=call))
+        }
         fdef <- deflt
-        body(fdef, envir = globalenv()) <-
+        body(fdef, envir = topenv()) <-
             substitute(standardGeneric(FNAME), list(FNAME=f))
     }
     deflt <- .derivedDefaultMethod(deflt, internal = if (internal) f)
@@ -125,7 +133,7 @@ list(
 ## temporary versions while primitives are still handled by a global table
 
 isBaseFun <- function(fun) {
-    is.primitive(fun) || identical(environment(fun), baseenv())
+    is.primitive(fun) || identical(environment(fun), .BaseNamespaceEnv)
 }
 
 inBasicFuns <- function(f) {

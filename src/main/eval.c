@@ -234,8 +234,66 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 	    SEXP fun = CAR(cptr->call);
 	    if(strlen(buf) < PROFLINEMAX) {
 		strcat(buf, "\"");
-		strcat(buf, TYPEOF(fun) == SYMSXP ? CHAR(PRINTNAME(fun)) :
-		       "<Anonymous>");
+
+		char itembuf[PROFITEMMAX];
+
+		if (TYPEOF(fun) == SYMSXP) {
+		    snprintf(itembuf, PROFITEMMAX-1, "%s", CHAR(PRINTNAME(fun)));
+
+		} else if ((CAR(fun) == R_DoubleColonSymbol ||
+			    CAR(fun) == R_TripleColonSymbol ||
+			    CAR(fun) == R_DollarSymbol) &&
+			   TYPEOF(CADR(fun)) == SYMSXP &&
+			   TYPEOF(CADDR(fun)) == SYMSXP) {
+		    /* Function accessed via ::, :::, or $. Both args must be
+		       symbols. It is possible to use strings with these
+		       functions, as in "base"::"list", but that's a very rare
+		       case so we won't bother handling it. */
+		    snprintf(itembuf, PROFITEMMAX-1, "%s%s%s",
+			     CHAR(PRINTNAME(CADR(fun))),
+			     CHAR(PRINTNAME(CAR(fun))),
+			     CHAR(PRINTNAME(CADDR(fun))));
+
+		} else if (CAR(fun) == R_Bracket2Symbol &&
+			   TYPEOF(CADR(fun)) == SYMSXP &&
+			   ((TYPEOF(CADDR(fun)) == SYMSXP ||
+			     TYPEOF(CADDR(fun)) == STRSXP ||
+			     TYPEOF(CADDR(fun)) == INTSXP ||
+			     TYPEOF(CADDR(fun)) == REALSXP) &&
+			    length(CADDR(fun)) > 0)) {
+		    /* Function accessed via [[. The first arg must be a symbol
+		       and the second can be a symbol, string, integer, or
+		       real. */
+		    SEXP arg1 = CADR(fun);
+		    SEXP arg2 = CADDR(fun);
+		    char arg2buf[PROFITEMMAX];
+
+		    if (TYPEOF(arg2) == SYMSXP) {
+			snprintf(arg2buf, PROFITEMMAX-1, "%s", CHAR(PRINTNAME(arg2)));
+
+		    } else if (TYPEOF(arg2) == STRSXP) {
+			snprintf(arg2buf, PROFITEMMAX-1, "\"%s\"", CHAR(STRING_ELT(arg2, 0)));
+
+		    } else if (TYPEOF(arg2) == INTSXP) {
+			snprintf(arg2buf, PROFITEMMAX-1, "%d", INTEGER(arg2)[0]);
+
+		    } else if (TYPEOF(arg2) == REALSXP) {
+			snprintf(arg2buf, PROFITEMMAX-1, "%.0f", REAL(arg2)[0]);
+
+		    } else {
+			/* Shouldn't get here, but just in case. */
+			arg2buf[0] = '\0';
+		    }
+
+		    snprintf(itembuf, PROFITEMMAX-1, "%s[[%s]]",
+			     CHAR(PRINTNAME(arg1)),
+			     arg2buf);
+
+		} else {
+		    sprintf(itembuf, "<Anonymous>");
+		}
+
+		strcat(buf, itembuf);
 		strcat(buf, "\" ");
 		if (R_Line_Profiling)
 		    lineprof(buf, cptr->srcref);
@@ -722,6 +780,22 @@ static void loadCompilerNamespace(void)
     UNPROTECT(3);
 }
 
+static void checkCompilerOptions(int jitEnabled)
+{
+    int old_visible = R_Visible;
+    SEXP packsym, funsym, call, fcall, arg;
+
+    packsym = install("compiler");
+    funsym = install("checkCompilerOptions");
+
+    PROTECT(arg = ScalarInteger(jitEnabled));
+    PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
+    PROTECT(call = lang2(fcall, arg));
+    eval(call, R_GlobalEnv);
+    UNPROTECT(3);
+    R_Visible = old_visible;
+}
+
 static int R_disable_bytecode = 0;
 
 void attribute_hidden R_init_jit_enabled(void)
@@ -737,6 +811,7 @@ void attribute_hidden R_init_jit_enabled(void)
 	    int val = atoi(enable);
 	    if (val > 0)
 		loadCompilerNamespace();
+	    checkCompilerOptions(val);
 	    R_jit_enabled = val;
 	}
     }
@@ -766,6 +841,7 @@ void attribute_hidden R_init_jit_enabled(void)
 
 SEXP attribute_hidden R_cmpfun(SEXP fun)
 {
+    int old_visible = R_Visible;
     SEXP packsym, funsym, call, fcall, val;
 
     packsym = install("compiler");
@@ -775,11 +851,13 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
     PROTECT(call = lang2(fcall, fun));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(2);
+    R_Visible = old_visible;
     return val;
 }
 
 static SEXP R_compileExpr(SEXP expr, SEXP rho)
 {
+    int old_visible = R_Visible;
     SEXP packsym, funsym, quotesym;
     SEXP qexpr, call, fcall, val;
 
@@ -792,18 +870,21 @@ static SEXP R_compileExpr(SEXP expr, SEXP rho)
     PROTECT(call = lang3(fcall, qexpr, rho));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(3);
+    R_Visible = old_visible;
     return val;
 }
 
 static SEXP R_compileAndExecute(SEXP call, SEXP rho)
 {
     int old_enabled = R_jit_enabled;
+    int old_visible = R_Visible;
     SEXP code, val;
 
     R_jit_enabled = 0;
     PROTECT(call);
     PROTECT(rho);
     PROTECT(code = R_compileExpr(call, rho));
+    R_Visible = old_visible;
     R_jit_enabled = old_enabled;
 
     val = bcEval(code, rho, TRUE);
@@ -816,9 +897,13 @@ SEXP attribute_hidden do_enablejit(SEXP call, SEXP op, SEXP args, SEXP rho)
     int old = R_jit_enabled, new;
     checkArity(op, args);
     new = asInteger(CAR(args));
-    if (new > 0)
-	loadCompilerNamespace();
-    R_jit_enabled = new;
+    if (new >= 0) {
+	if (new > 0)
+	    loadCompilerNamespace();
+	checkCompilerOptions(new);
+	R_jit_enabled = new;
+    }
+    /* negative 'new' just returns 'old' */
     return ScalarInteger(old);
 }
 
@@ -877,7 +962,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 {
     SEXP formals, actuals, savedrho;
     volatile SEXP body, newrho;
-    SEXP f, a, tmp;
+    SEXP f, a, tmp, savesrc;
     RCNTXT cntxt;
 
     /* formals = list of formal parameters */
@@ -964,6 +1049,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	the generic as the sysparent of the method because the method
 	is a straight substitution of the generic.  */
 
+    PROTECT(savesrc = R_Srcref);
     if( R_GlobalContext->callflag == CTXT_GENERIC )
 	begincontext(&cntxt, CTXT_RETURN, call,
 		     newrho, R_GlobalContext->sysparent, arglist, op);
@@ -1045,13 +1131,14 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	PROTECT(tmp = eval(body, newrho));
     }
     cntxt.returnValue = tmp; /* make it available to on.exit */
+    R_Srcref = savesrc;
     endcontext(&cntxt);
 
     if (RDEBUG(op) && R_current_debug_state()) {
 	Rprintf("exiting from: ");
 	PrintCall(call, rho);
     }
-    UNPROTECT(3);
+    UNPROTECT(4);
     return (tmp);
 }
 
@@ -5387,6 +5474,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = getPrimitive(symbol, BUILTINSXP);
+//#define REPORT_OVERRIDEN_BUILTINS
+#ifdef REPORT_OVERRIDEN_BUILTINS
+	if (value != findFun(symbol, rho)) {
+	    Rprintf("Possibly overriden builtin: %s\n", PRIMNAME(value));
+	}
+#endif
 	if (RTRACE(value)) {
 	  Rprintf("trace: ");
 	  PrintValue(symbol);
@@ -5820,7 +5913,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  /* duplicate arguments and protect */
 	  PROTECT(args = duplicate(CDR(call)));
 	  /* insert evaluated promise for LHS as first argument */
-	  /* promise won't be captured so don't track refrences */
+	  /* promise won't be captured so don't track references */
 	  prom = R_mkEVPROMISE_NR(R_TmpvalSymbol, lhs);
 	  SETCAR(args, prom);
 	  /* insert evaluated promise for RHS as last argument */
@@ -5942,21 +6035,31 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 		       "switch(as.character( * ), ...)");
        if (TYPEOF(value) == STRSXP) {
 	   int i, n, which;
-	   if (names == R_NilValue)
-	       errorcall(call, _("numeric EXPR required for 'switch' without named alternatives"));
-	   if (TYPEOF(coffsets) != INTSXP)
-	       errorcall(call, "bad character 'switch' offsets");
-	   if (TYPEOF(names) != STRSXP || LENGTH(names) != LENGTH(coffsets))
-	       errorcall(call, "bad 'switch' names");
-	   n = LENGTH(names);
-	   which = n - 1;
-	   for (i = 0; i < n - 1; i++)
-	       if (pmatch(STRING_ELT(value, 0),
-			  STRING_ELT(names, i), 1 /* exact */)) {
-		   which = i;
-		   break;
+	   if (names == R_NilValue) {
+	       if (TYPEOF(ioffsets) != INTSXP)
+		   errorcall(call, _("bad numeric 'switch' offsets"));
+	       if (LENGTH(ioffsets) == 1) {
+		   pc = codebase + INTEGER(ioffsets)[0]; /* returns NULL */
+		   warningcall(call, _("'switch' with no alternatives"));
 	       }
-	   pc = codebase + INTEGER(coffsets)[which];
+	       else
+		   errorcall(call, _("numeric EXPR required for 'switch' "
+				     "without named alternatives"));
+	   } else {
+	       if (TYPEOF(coffsets) != INTSXP)
+		   errorcall(call, _("bad character 'switch' offsets"));
+	       if (TYPEOF(names) != STRSXP || LENGTH(names) != LENGTH(coffsets))
+		   errorcall(call, "bad 'switch' names");
+	       n = LENGTH(names);
+	       which = n - 1;
+	       for (i = 0; i < n - 1; i++)
+		   if (pmatch(STRING_ELT(value, 0),
+			      STRING_ELT(names, i), 1 /* exact */)) {
+		       which = i;
+		       break;
+		   }
+	       pc = codebase + INTEGER(coffsets)[which];
+	   }
        }
        else {
 	   if (TYPEOF(ioffsets) != INTSXP)
@@ -5965,6 +6068,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	   if (which != NA_INTEGER) which--;
 	   if (which < 0 || which >= LENGTH(ioffsets))
 	       which = LENGTH(ioffsets) - 1;
+	   if (LENGTH(ioffsets) == 1)
+	       warningcall(call, _("'switch' with no alternatives"));
 	   pc = codebase + INTEGER(ioffsets)[which];
        }
        NEXT();

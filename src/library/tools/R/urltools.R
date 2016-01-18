@@ -1,7 +1,7 @@
 #  File src/library/tools/R/urltools.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 2015 The R Core Team
+#  Copyright (C) 2015-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -69,23 +69,9 @@ function(x)
 .get_urls_from_HTML_file <-
 function(f)
 {
-    hrefs <- character()
-    XML::htmlParse(f,
-                   handlers =
-                       list(a = function(node) {
-                           href <- XML::xmlAttrs(node)["href"]
-                           ## <FIXME>
-                           ## ? XML::xmlAttrs says the value is always a
-                           ## named character vector, but
-                           ##   XML::xmlAttrs(XML::xmlNode("a", "foobar"))
-                           ## gives NULL ...
-                           ## Hence, use an extra is.null() test.
-                           if(!is.null(href) && !is.na(href))
-                               hrefs <<- c(hrefs, href)
-                           ## </FIXME>
-                       })
-                   )
-    unique(unname(hrefs[!grepl("^#", hrefs)]))
+    nodes <- xml2::xml_find_all(xml2::read_html(f), "//a")
+    hrefs <- xml2::xml_attr(nodes, "href")
+    unique(hrefs[!is.na(hrefs) & !startsWith(hrefs, "#")])
 }
 
 url_db <-
@@ -159,8 +145,7 @@ function(dir, installed = FALSE)
     path <- if(installed) "NEWS.Rd" else file.path("inst", "NEWS.Rd")
     nfile <- file.path(dir, path)
     if(file.exists(nfile)) {
-        macros <- loadRdMacros(file.path(R.home("share"),
-                                         "Rd", "macros", "system.Rd"))
+        macros <- initialRdMacros()
         urls <- .get_urls_from_Rd(prepare_Rd(tools::parse_Rd(nfile,
                                                              macros = macros),
                                              stages = "install"))
@@ -235,7 +220,7 @@ function(dir, add = FALSE) {
                 url_db_from_package_Rd_db(Rd_db(dir = dir)),
                 url_db_from_package_citation(dir, meta),
                 url_db_from_package_news(dir))
-    if(requireNamespace("XML", quietly = TRUE)) {
+    if(requireNamespace("xml2", quietly = TRUE)) {
         db <- rbind(db,
                     url_db_from_package_HTML_files(dir),
                     url_db_from_package_README_md(dir),
@@ -263,7 +248,7 @@ function(packages, lib.loc = NULL, verbose = FALSE)
                     url_db_from_package_citation(dir, meta,
                                                  installed = TRUE),
                     url_db_from_package_news(dir, installed = TRUE))
-        if(requireNamespace("XML", quietly = TRUE)) {
+        if(requireNamespace("xml2", quietly = TRUE)) {
             db <- rbind(db,
                         url_db_from_package_HTML_files(dir,
                                                        installed = TRUE),

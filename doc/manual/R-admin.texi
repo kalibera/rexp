@@ -1797,12 +1797,13 @@ pkgutil --files org.r-project.x86_64.texinfo
 @noindent
 These are paths relative to @file{/}, the root of the file system.
 @c Maybe too dangerous for naive users.
+@c file.remove removes empty directories on Unix.
 @c The second could be uninstalled by an @R{} script like
 
 @c @example
 @c lis <- system2("pkgutil", "--files org.r-project.x86_64.texinfo", stdout = TRUE)
 @c setwd("/")
-@c unlink(rev(lis))
+@c file.remove(rev(lis))
 @c @end example
 
 @c @noindent
@@ -1985,6 +1986,7 @@ library paths, separated by colons (semicolons on Windows).
 * Customizing package compilation::  
 * Multiple sub-architectures::  
 * Byte-compilation::            
+* External software::           
 @end menu
 
 
@@ -2221,12 +2223,6 @@ CFLAGS=-mtune=native -g -O2 -Wall -pedantic -Wconversion
 CXXFLAGS=-mtune=native -g -O2 -Wall -pedantic -Wconversion
 @end example
 
-@noindent
-and for a version of @command{gfortran-4.2} we needed
-@example
-FLIBS=-lgfortran
-@end example
-
 
 @node Customizing package compilation, Multiple sub-architectures, OS X packages, Installing packages
 @subsection Customizing package compilation
@@ -2324,7 +2320,7 @@ additional sub-architecture.  There is also @command{R CMD INSTALL
 --merge-multiarch} to build and merge the two architectures, starting
 with a source tarball.
 
-@node Byte-compilation,  , Multiple sub-architectures, Installing packages
+@node Byte-compilation, External software, Multiple sub-architectures, Installing packages
 @subsection Byte-compilation
 
 The base and recommended packages are byte-compiled by default.  Other
@@ -2343,6 +2339,65 @@ package.
 
 Byte-compilation can be controlled on a per-package basis by the
 @samp{ByteCompile} field in the @file{DESCRIPTION} file.
+
+@node External software,  , Byte-compilation, Installing packages
+@subsection External software
+
+Some @R{} packages contain compiled code which links to external
+software libraries.  Unless the external library is statically linked
+(which is done as much as possible for binary packages on Windows and OS
+X), the libraries have to be found when the package is loaded and not
+just when it is installed.  How this should be done depends on the OS
+(and in some cases the version).
+
+For Unix-alikes except OS X the primary mechanism is the @code{ld.so}
+cache controlled by @command{ldconfig}: external dynamic libraries
+recorded in that cache will be found.  Standard library locations will
+be covered by the cache, and well-designed software will add its
+locations (as for example @pkg{openmpi} does on Fedora).  The secondary
+mechanism is to consult the environment variable @env{LD_LIBRARY_PATH}.
+Now the @R{} script controls that variable, and sets it to the
+concatentation of @env{R_LD_LIBRARY_PATH}, @env{R_JAVA_LD_LIBRARY_PATH}
+and the environment value of @env{LD_LIBRARY_PATH}.  The first two have
+defaults which are normally set when @R{} is installed (but can be
+overridden in the environment) so @env{LD_LIBRARY_PATH} is the best
+choice for a user to set.
+
+On OS X the primary mechanism is to embed the absolute path to dependent
+dynamic libraries into an object when it is compiled.  Few @R{} packages
+arrange to do so, but it can be edited@footnote{They need to have been
+created using @option{-headerpad_max_install_names}, which is the
+default for an @R{} package.} @emph{via} @command{install_name_tool} ---
+that only deals with direct dependencies and those would also need to be
+compiled to include the absolute paths of their dependencies.  If the
+choice of absolute path is to be deferred to load time, how they are
+resolved is described in @command{man dyld}: the role of
+@env{LD_LIBRARY_PATH} is replaced on OS X by @env{DYLD_LIBRARY_PATH} and
+latterly @env{DYLD_FALLBACK_LIBRARY_PATH}.  Running @command{R CMD otool
+-L} on the package shared object will show where (if anywhere) its
+dependencies are resolved. @env{DYLD_FALLBACK_LIBRARY_PATH} is preferred
+(and it is that which is manipulated by the @R{} script), but as from
+10.11 (`El Capitan') the default behaviour had been changed for security
+reasons to discard these environment variables when invoking a shell
+script (and @file{R} is a shell script).  That makes the only portable
+option to set @env{R_LD_LIBRARY_PATH} in the environment, something like
+
+@example
+export R_LD_LIBRARY_PATH="`R RHOME`/lib:/opt/local/lib"
+@end example
+
+The precise rules for where Windows looks for DLLs are complex and
+depend on the version of Windows.  But for present purposes the main
+solution is to put the directories containing the DLLs the package
+links to (and any those DLLs link to) on the @env{PATH}.  64-bit
+versions of Windows will ignore 32-bit DLLs from 64-bit @R{} and
+@emph{vice versa}.
+
+The danger with any of the methods which involve setting environment
+variables is of inadvertently masking a system library.  This is less
+for @env{DYLD_FALLBACK_LIBRARY_PATH} and for @emph{appending} to
+@env{PATH} on Windows (as it should already contain the system library
+paths).
 
 @node Updating packages, Removing packages, Installing packages, Add-on packages
 @section Updating packages
@@ -2929,7 +2984,7 @@ test the process (via @command{make test}).  Note that you will probably
 not be able to run it unless you add the directory containing
 @enindex LD_LIBRARY_PATH
 @file{libRmath.so} to the @env{LD_LIBRARY_PATH} environment variable
-(@file{libRmath.dylib}, @env{DYLD_LIBRARY_PATH} on OS X).
+(@file{libRmath.dylib}, @env{DYLD_FALLBACK_LIBRARY_PATH} on OS X).
 
 The targets
 
@@ -3375,16 +3430,17 @@ a sub-architecture-specific version).  A typical setting for
 @cputype{x86_64} Linux is
 
 @example
-JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.51-4.b16.fc21.x86_64/jre
+JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.65-3.b17.fc22.x86_64/jre
 R_JAVA_LD_LIBRARY_PATH=$@{JAVA_HOME@}/lib/amd64/server
 @end example
 
-Note that this unfortunately depends on the exact version of the JRE/JDK
+Unfortunately this depends on the exact version of the JRE/JDK
 installed, and so may need updating if the Java installation is updated.
 This can be done by running @code{R CMD javareconf} which updates
-settings in both @file{etc/Makeconf} and
+settings in both @file{@var{R_HOME}/etc/Makeconf} and
 @file{@var{R_HOME}/etc/ldpaths}. See @code{R CMD javareconf --help} for
-details.
+details: note that this needs to be done by the account owning the @R{}
+installation.
 
 Another way of overriding those settings is to set the environment variable
 @enindex R_JAVA_LD_LIBRARY_PATH
@@ -3397,7 +3453,7 @@ R_JAVA_LD_LIBRARY_PATH=/usr/lib/jvm/java-1.8.0/jre/lib/amd64/server
 @end example
 
 It may be possible to avoid this by specifying an invariant link as the
-path. For example, on that system any of
+path when configuring. For example, on that system any of
 
 @example
 JAVA_HOME=/usr/lib/jvm/java
@@ -4804,13 +4860,6 @@ some upgrades but not others).
 @node El Capitan, Tcl/Tk headers and libraries, OS X, OS X
 @subsection El Capitan
 
-@c Claimed that XQuartz does not install out-of-the-box:
-@c http://forums.macrumors.com/threads/os-x-el-capitan-working-not-working-apps.1890772/
-
-El Capitan was released at the end of September 2015, and experience to
-date is with systems which have been updated from Yosemite or earlier.
-Upgraded systems need the Command Line Tools reinstalled.
-
 There are problems resulting from the new-to-El-Capitan restriction that
 only Apple is allowed to install software under @file{/usr}: this
 affects @emph{inter alia} @code{MacTeX} and @code{XQuartz}.  For
@@ -4829,15 +4878,6 @@ includes @file{/usr/X11R6}, @file{/usr/texbin}, @file{/usr/bin/R},
 @noindent
 although the linked versions under @file{/usr/X11} will be found (if the
 link is present).
-
-@c It may be necessary for a clean installation for @code{XQuartz} to
-@c replace @file{/usr/X11} by @file{/opt/X11} in file
-@c @file{/usr/local/lib/tkConfig.sh}, and to use
-@c @command{install_name_tool} to adjust
-@c @file{/usr/local/lib/libtk8.6.dylib} to link to libraries under
-@c @file{/opt/X11} rather than @file{/usr/X11}.  Updated installations seem
-@c to preserve @file{/usr/X11}, but there are packages assuming
-@c @file{/usr/X11R6}, a link that no longer exists.
 
 @node Tcl/Tk headers and libraries, Java (OS X), El Capitan, OS X
 @subsection Tcl/Tk headers and libraries
