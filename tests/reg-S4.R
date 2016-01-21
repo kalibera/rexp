@@ -803,19 +803,3 @@ stopifnot(identical(C1@slot1, pi))
 stopifnot(require("methods"))
 ## Slot assignment failed in R <= 3.2.2, C code calling checkAtAssignment()
 
-## Error in argument evaluation of S4 generic - PR#16111
-f <- function() {
-    signal <- FALSE
-    withCallingHandlers({ g(sqrt(-1)) }, warning = function(w) {
-        signal <<- TRUE
-        invokeRestart("muffleWarning")
-    })
-    signal
-}
-g <- function(x) x
-op <- options(warn = 2)# warnings give errors
-stopifnot(isTRUE( f() ))
-setGeneric("g")
-stopifnot(isTRUE( f() ))
-options(op)
-## the second  f()  gave a warning and FALSE in  R versions  2.12.0 <= . <= 3.2.3
