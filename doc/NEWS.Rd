@@ -223,10 +223,13 @@
       \item \code{findInterval()} gets a \code{left.open} option.
 
       \item The version of LAPACK included in the sources has been
-      updated to 3.6.0.  (It does not include most of the deprecated
-      routines removed in that version.  For the time being, the
-      deprecated routines \code{dgegv} and \code{dggsvd} \emph{are}
-      included as they are used by current packages.)
+      updated to 3.6.0, including those \sQuote{deprecated} routines
+      which were previously included.  \emph{Ca} 40 double-complex
+      routines have been added at the request of a package maintainer.
+
+      As before, the details of what is included are in
+      \file{src/modules/lapack/README} and this now gives information on
+      earlier additions.
 
       \item \code{tapply()} has been made considerably more efficient
       without changing functionality, thanks to proposals from Peter
@@ -237,7 +240,7 @@
 
       \item The \code{format} method for \code{object_size} objects now
       also accepts \dQuote{binary} units such as \code{"KiB"} and e.g.,
-      \code{"Tb"}.  (partly from \PR{16649})
+      \code{"Tb"}.  (Partly from \PR{16649})
 
       \item Profiling now records calls of the form \code{foo::bar} and
       some similar cases directly rather than as calls to
@@ -249,6 +252,9 @@
 
       \item Reference class finalizers run at exit, as well as on
       garbage collection.
+
+      \item Avoid \pkg{parallel} dependency on \pkg{stats} for port
+      choice and random number seeds.  (\PR{16668})
     }
   }
 
@@ -402,6 +408,14 @@
 
       \item Blocking socket connection selection recovers more
       gracefully on signal interrupts.
+
+      \item The \code{data.frame} method of \code{rbind()} construction
+      \code{row.names} works better in borderline integer cases, but
+      may change the names assigned.  (\PR{16666})
+
+      \item \code{url} connections with \code{method = "libcurl"} are
+      destroyed properly. (\PR{16681})
+
     }
   }
 }
@@ -421,8 +435,9 @@
       \item \code{shQuote()} gains \code{type = "cmd2"} for quoting
       in \command{cmd.exe} in Windows.  (Response to \PR{16636}.)
 
-      \item \code{rbind.data.frame()} gets optional argument \code{stringsAsFactors}
-      (instead of only depending on \code{getOption("stringsAsFactors")}).
+      \item The \code{data.frame} method of \code{rbind()} gains an
+      optional argument \code{stringsAsFactors} (instead of only
+      depending on \code{getOption("stringsAsFactors")}).
     }
   }
 
@@ -471,7 +486,7 @@
       Lukas Stadler; additional fixes included as well).
 
       \item \code{as.data.frame.vector(*, row.names=*)} no longer
-      produces \dQuote{corrupted} data frames from row names of wrong
+      produces \sQuote{corrupted} data frames from row names of incorrect
       length, but rather warns about them.  This will become an error.
     }
   }

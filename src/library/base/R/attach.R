@@ -54,7 +54,7 @@ attach <- function(what, pos = 2L, name = deparse(substitute(what)),
         }
         ob <- names(as.environment(db.pos))
         if(.isMethodsDispatchOn()) { ## {see note in library() about this}
-            these <- ob[substr(ob, 1L, 6L) == ".__T__"]
+            these <- ob[startsWith(ob,".__T__")]
             gen  <- gsub(".__T__(.*):([^:]+)", "\\1", these)
             from <- gsub(".__T__(.*):([^:]+)", "\\2", these)
             gen <- gen[from != ".GlobalEnv"]
@@ -66,7 +66,7 @@ attach <- function(what, pos = 2L, name = deparse(substitute(what)),
             if (any(obj.same > 0L)) {
                 same <- ob[obj.same]
                 same <- same[!(same %in% dont.mind)]
-                Classobjs <- grep("^\\.__", same)
+                Classobjs <- which(startsWith(same,".__"))
                 if(length(Classobjs)) same <- same[-Classobjs]
                 ## report only objects which are both functions or
                 ## both non-functions.
