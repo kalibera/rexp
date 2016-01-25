@@ -4654,6 +4654,11 @@ tryCmpfun <- function(f)
     tryCatch(cmpfun(f), error = function(e) f)
 @ %def tryCmpfun
 
+<<[[tryCompile]] function>>=
+tryCompile <- function(e, ...)
+    tryCatch(compile(e, ...), error = function(err) e)
+@ %def tryCompile
+
 
 \subsection{Compiling and loading files}
 A file can be compiled with [[cmpfile]] and loaded with [[loadcmp]].
@@ -6242,6 +6247,8 @@ Opcodes.names <- names(Opcodes.argc)
 <<[[cmpfun]] function>>
 
 <<[[tryCmpfun]] function>>
+
+<<[[tryCompile]] function>>
 
 <<[[cmpframe]] function>>
 

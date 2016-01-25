@@ -862,10 +862,10 @@ static SEXP R_compileExpr(SEXP expr, SEXP rho)
     SEXP qexpr, call, fcall, val;
 
     packsym = install("compiler");
-    funsym = install("compile");
+    funsym = install("tryCompile");
     quotesym = install("quote");
 
-    PROTECT(fcall = lang3(R_DoubleColonSymbol, packsym, funsym));
+    PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
     PROTECT(qexpr = lang2(quotesym, expr));
     PROTECT(call = lang3(fcall, qexpr, rho));
     val = eval(call, R_GlobalEnv);

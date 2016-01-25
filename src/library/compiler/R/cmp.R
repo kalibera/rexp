@@ -2699,6 +2699,9 @@ cmpfun <- function(f, options = NULL) {
 tryCmpfun <- function(f)
     tryCatch(cmpfun(f), error = function(e) f)
 
+tryCompile <- function(e, ...)
+    tryCatch(compile(e, ...), error = function(err) e)
+
 cmpframe <- function(inpos, file) {
     expr.needed <- 1000
     expr.old <- getOption("expressions")
