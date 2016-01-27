@@ -5295,6 +5295,7 @@ result using [[rep]].
 frameTypes <- function(env) {
     top <- topenv(env)
     empty <- emptyenv()
+    base <- baseenv()
     <<find the number [[nl]] of local frames>>
     <<find the number [[nn]] of namespace frames>>
     <<find the number [[ng]] of global frames>>
@@ -5306,6 +5307,8 @@ frames with [[parent.env]] until the top level environment is reached.
 <<find the number [[nl]] of local frames>>=
 nl <- 0
 while (! identical(env, top)) {
+    if (isNamespace(env))
+        stop("namespace found within local environments")
     env <- parent.env(env)
     nl <- nl + 1
     if (identical(env, empty))
@@ -5318,6 +5321,11 @@ parent frames until [[.GlobalEnv]] is reached.
 nn <- 0
 if (isNamespace(env)) {
     while (! identical(env, .GlobalEnv)) {
+        if (!isNamespace(env)) {
+            name <- attr(env, "name")
+            if (!is.character(name) || !startsWith(name, "imports:"))
+		stop("non-namespace found within namespace environments")
+        }
         env <- parent.env(env)
         nn <- nn + 1
         if (identical(env, empty))
@@ -5331,6 +5339,8 @@ the length of the result returned by [[search]]
 <<find the number [[ng]] of global frames>>=
 ng <- 0
 while (! identical(env, empty)) {
+    if (isNamespace(env))
+	stop("namespace found within global environments")
     env <- parent.env(env)
     ng <- ng + 1
 }
