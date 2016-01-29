@@ -2419,7 +2419,7 @@ As from version 6 (to be released in 2016), @command{g++} will default
 to C++14: earlier versions aim to support C++03 with many extensions
 (including support for TR1).  @command{clang} with its
 native@footnote{Some distributions, notably Debian, have supplied a
-buiild of @command{clang} with @command{g++}'s headers and library.
+build of @command{clang} with @command{g++}'s headers and library.
 Conversely, Apple's command named @command{g++} is based on
 @command{clang} using @code{libcxx}.}  @code{libcxx} headers and library
 includes many C++11 features, and does not support TR1.
@@ -4471,6 +4471,15 @@ functions at @uref{http://www.cplusplus.com/reference/} or
 @uref{http://en.cppreference.com/w/} and compare what is defined in the
 various standards.
 
+Both the compiler and OS (@emph{via} system header files, which differ
+by architecture even for nominally the same OS) affect the compilability
+of C/C++ code.  Compilers from the GCC, @command{clang}, Intel and
+Solaris Studio suites are routinely used with @R{}, and both
+@command{clang} and Solaris have more than one implementation of C++
+headers and library.  The range of possibilities makes comprehensive
+empirical checking impossible, and regretably compilers are patchy at
+best on warning about non-standard code.
+
 @itemize
 @item
 Mathematical functions such as @code{sqrt} are defined in C++ for
@@ -4522,15 +4531,17 @@ Some (but not all) extensions are listed at
 @uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/C_002b_002b-Extensions.html}.
 
 @item
-Including C headers in C++ code is not portable.  Including the C header
-@file{math.h} in C++ code often causes conflicts with @file{cmath} which
+Including C-style headers in C++ code is not portable.  Including the
+legacy header@footnote{which often is the same as the header included by
+the C compiler, but some compilers have wrappers for some of the C
+headers.} @file{math.h} in C++ code may conflict with @file{cmath} which
 may be included by other headers.  This is particularly problematic with
 C++11 compilers, as functions like @code{sqrt} and @code{isnan} are
 defined for @code{double} arguments in @file{math.h} and for a range of
-types including @code{double} in @file{cmath}.  Similar issues have
-been seen for @file{stdlib.h} and @file{cstdlib}.  Historically,
-including the C++ version first was a sufficient workaround but for some
-2016 compilers only one can be included.
+types including @code{double} in @file{cmath}.  Similar issues have been
+seen for @file{stdlib.h} and @file{cstdlib}.  Historically, including
+the C++ version first was a sufficient workaround but for some 2016
+compilers only one can be included.
 
 @item
 Variable-length arrays are C99, not supported by C++98 nor by the C++
@@ -9284,27 +9295,29 @@ possible.  Examples have been seen where merely loading a DLL that
 contained calls to C++ I/O upset @R{}'s own C I/O (for example by
 resetting buffers on open files).
 
-Most @R{} header files can be included within C++ programs, and they
+Most @R{} header files can be included within C++ programs but they
 should @strong{not} be included within an @code{extern "C"} block (as
-they include C++ system headers).  It may not be possible to include
-some @R{} headers as they in turn include C header files that may cause
-conflicts---if this happens, try defining @samp{NO_C_HEADERS} before
-including the @R{} headers, and include C++ versions (such as
-@samp{cmath} and @samp{cstdlib}) of the appropriate headers yourself
-before the @R{} headers. (Headers @file{R.h} and @file{Rmath.h} support
-@samp{NO_C_HEADERS}: @file{S.h} does not.)
+they include system headers@footnote{Even including C system headers in
+such a block has caused compilation errors.}).  It may not be possible
+to include some @R{} headers as they in turn include system header files
+that may cause conflicts---if this happens, try defining
+@samp{NO_C_HEADERS} before including the @R{} headers, and include C++
+versions (such as @samp{cmath} and @samp{cstdlib}) of the appropriate
+headers yourself before the @R{} headers. (Headers @file{R.h} and
+@file{Rmath.h} support @samp{NO_C_HEADERS}: the legacy header @file{S.h}
+does not.  Header @file{Rinternals.h} does as from @R{} 3.3.0.)
 
-By default header @file{Rmath.h} includes @file{math.h}.  Header
-@file{R.h} includes
+By default header @file{Rmath.h} includes @file{math.h} or @file{cmath}.
+Header @file{R.h} includes
 
 @example
 limits.h math.h stddef.h stdio.h stdlib.h string.h
 @end example
 
 @noindent
-directly or indirectly, and either @file{stddef.h} or @file{cstddef}
-needs to be included before @file{R.h} if @samp{NO_C_HEADERS} is
-defined.
+or their C++ equivalents directly or indirectly, and either
+@file{stddef.h} or @file{cstddef} needs to be included before @file{R.h}
+if @samp{NO_C_HEADERS} is defined.
 
 @node Fortran I/O, Linking to other packages, Interfacing C++ code, System and foreign language interfaces
 @section Fortran I/O
@@ -11417,19 +11430,8 @@ This will include several other header files from the directory
 there that can be included too, but many of the features they contain
 should be regarded as undocumented and unstable.
 
-An alternative is to include the header file @file{S.h}, which may be
-useful when porting code from @Sl{}.  This includes rather less than
-@file{R.h}, and has some extra compatibility definitions (for example
-the @code{S_complex} type from @Sl{}).
-
-The defines used for compatibility with @Sl{} sometimes causes
-conflicts (notably with Windows headers), and the known
-problematic defines can be removed by defining @code{STRICT_R_HEADERS}.
-
 Most of these header files, including all those included by @file{R.h},
-can be used from C++ code.  Some others need to be included within an
-@code{extern "C"} declaration, and for clarity this is advisable for all
-@R{} header files.
+can be used from C++ code.
 
 @quotation Note
 Because @R{} re-maps many of its external names to avoid clashes with

@@ -24,9 +24,9 @@
       \dots) and the server's identity has to be verifiable \emph{via}
       the available certificates.  Different access methods may allow
       different protocols or use private certificate bundles: we
-      encountered a \samp{https:} CRAN mirror which can be accessed by
-      one browser but not another nor by \code{download.file()} on the
-      same Linux machine.
+      encountered a \samp{https:} CRAN mirror which could be accessed by
+      one browser but not by another nor by \code{download.file()} on
+      the same Linux machine.
     }
   }
   \subsection{NEW FEATURES}{
@@ -255,6 +255,23 @@
 
       \item Avoid \pkg{parallel} dependency on \pkg{stats} for port
       choice and random number seeds.  (\PR{16668})
+
+      \item The radix sort algorithm and implementation from data.table
+      (forder) replaces the existing but limited radix (counting) sort
+      and adds a new method for \code{order()}. Contributed by Matt
+      Dowle and Arun Srinivasan, the new algorithm supports logical,
+      integer (even with large values), real, and character vectors. It
+      outperforms all other methods, but there are some caveats (see
+      \code{?sort}).
+
+      \item The \code{order()} function gains a \code{method} argument
+      for choosing between \code{"shell"} and \code{"radix"}.
+
+      \item New function \code{grouping} returns a permutation that
+      stably rearranges data so that identical values are
+      adjacent.  The return value includes extra partitioning
+      information on the groups. The implementation came included with
+      the new radix sort.
     }
   }
 
@@ -356,12 +373,26 @@
       first argument has gained a \code{const} qualifier.
 
       Code using it will need to be reinstalled. (\PR{16470})
-      % no current CRAN packages ....
 
       \item \code{R_GE_version} has been increased to \code{11}.
 
       \item New API call \code{R_orderVector1()}, a faster
       one-argument version of \code{R_orderVector()}.
+
+      \item When \R{} headers such as \file{R.h} and \file{Rmath.h} are
+      called from C++ code in packages they include the C++ versions of
+      system headers such as \file{<cmath>} rather than the legacy
+      headers such as \file{<math.h>}.  (Headers \file{Rinternals.h} and
+      \file{Rinterface.h} already did, and inclusion of system headers
+      can still be circumvented by defining \code{NO_C_HEADERS},
+      including as from this version for those two headers.)
+
+      The manual has long said that \R{} headers should \bold{not} be
+      included within an \code{extern "C"} block, and almost all the
+      packages affected by this change are doing so.
+
+      \item Including header \file{S.h} from C++ code will fail on some
+      platforms, and so gives a compilation warning on all.
     }
   }
 
@@ -403,9 +434,6 @@
 
       \item Array subsetting now keeps \code{names(dim(.))}.
 
-      \item \code{withCallingHandler()} now (again) handles warnings
-      even during S4 generic's argument evaluation.  (\PR{16111})% TODO: port to r-patched
-
       \item Blocking socket connection selection recovers more
       gracefully on signal interrupts.
 
@@ -413,9 +441,11 @@
       \code{row.names} works better in borderline integer cases, but
       may change the names assigned.  (\PR{16666})
 
-      \item \code{url} connections with \code{method = "libcurl"} are
-      destroyed properly. (\PR{16681})
-
+      \item \code{dummy.coef.lm()} now works in more cases, thanks to a
+      proposal by Werner Stahel (\PR{16665}).  In addition, it now works
+      for multivariate linear models (\code{"mlm"}, \code{\link{manova}})
+      thanks to a propsal by Daniel Wollschlaeger.
+      % port to r-patched
     }
   }
 }
@@ -451,6 +481,9 @@
       \item The \command{make} macro \code{AWK} which is long unused by
       \R itself but recorded in file \file{etc/Makeconf} is deprecated
       and will be removed in \R 3.3.0.
+
+      The C header file \file{S.h} is no longer documented: its use
+      should be replaced by \file{R.h}.
     }
   }
 
@@ -488,6 +521,15 @@
       \item \code{as.data.frame.vector(*, row.names=*)} no longer
       produces \sQuote{corrupted} data frames from row names of incorrect
       length, but rather warns about them.  This will become an error.
+
+      \item \code{url} connections with \code{method = "libcurl"} are
+      destroyed properly. (\PR{16681})
+
+      \item \code{withCallingHandler()} now (again) handles warnings
+      even during S4 generic's argument evaluation.  (\PR{16111})
+      
+      \item \code{deparse(..., control = "quoteExpressions")} 
+      incorrectly quoted empty expressions.  (\PR{16686})
     }
   }
 }

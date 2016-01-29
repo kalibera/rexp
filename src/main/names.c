@@ -508,6 +508,7 @@ FUNTAB R_FunTab[] =
 {"as.call",	do_ascall,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"as.environment",do_as_environment,0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"storage.mode<-",do_storage_mode,0,	1,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"asCharacterFactor",	do_asCharacterFactor,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"as.vector",	do_asvector,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"paste",	do_paste,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
@@ -709,8 +710,7 @@ FUNTAB R_FunTab[] =
 {"is.unsorted",	do_isunsorted,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"psort",	do_psort,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"qsort",	do_qsort,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
-{"radixsort",	do_radixsort,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"radixsort2",	do_radixsort2,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"radixsort",	do_radixsort,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"order",	do_order,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rank",	do_rank,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"scan",	do_scan,	0,	11,	19,	{PP_FUNCALL, PREC_FN,	0}},

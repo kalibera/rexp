@@ -4654,6 +4654,12 @@ tryCmpfun <- function(f)
     tryCatch(cmpfun(f), error = function(e) f)
 @ %def tryCmpfun
 
+A similar usility for expressions for use in JIT compilation of loops:
+<<[[tryCompile]] function>>=
+tryCompile <- function(e, ...)
+    tryCatch(compile(e, ...), error = function(err) e)
+@ %def tryCompile
+
 
 \subsection{Compiling and loading files}
 A file can be compiled with [[cmpfile]] and loaded with [[loadcmp]].
@@ -4809,7 +4815,7 @@ setCompilerOptions <- function(...) {
             stop(gettextf("'%s' is not a valid compiler option", n),
                  domain = NA)
     old <- list()
-    newOptions <- compilerOptions
+    newOptions <- as.list(compilerOptions) # copy options
     for (n in nm) {
         op <- options[[n]]
         switch(n,
@@ -4838,7 +4844,9 @@ setCompilerOptions <- function(...) {
                })
     }
     jitEnabled <- enableJIT(-1)
-    checkCompilerOptions(jitEnabled, newOptions)
+    if (checkCompilerOptions(jitEnabled, newOptions))
+        for(n in names(newOptions)) # commit the new options
+            assign(n, newOptions[[n]], compilerOptions)
     invisible(old)
 }
 @ %def
@@ -5290,6 +5298,7 @@ result using [[rep]].
 frameTypes <- function(env) {
     top <- topenv(env)
     empty <- emptyenv()
+    base <- baseenv()
     <<find the number [[nl]] of local frames>>
     <<find the number [[nn]] of namespace frames>>
     <<find the number [[ng]] of global frames>>
@@ -5301,6 +5310,8 @@ frames with [[parent.env]] until the top level environment is reached.
 <<find the number [[nl]] of local frames>>=
 nl <- 0
 while (! identical(env, top)) {
+    if (isNamespace(env))
+        stop("namespace found within local environments")
     env <- parent.env(env)
     nl <- nl + 1
     if (identical(env, empty))
@@ -5313,6 +5324,11 @@ parent frames until [[.GlobalEnv]] is reached.
 nn <- 0
 if (isNamespace(env)) {
     while (! identical(env, .GlobalEnv)) {
+        if (!isNamespace(env)) {
+            name <- attr(env, "name")
+            if (!is.character(name) || !startsWith(name, "imports:"))
+		stop("non-namespace found within namespace environments")
+        }
         env <- parent.env(env)
         nn <- nn + 1
         if (identical(env, empty))
@@ -5326,6 +5342,8 @@ the length of the result returned by [[search]]
 <<find the number [[ng]] of global frames>>=
 ng <- 0
 while (! identical(env, empty)) {
+    if (isNamespace(env))
+	stop("namespace found within global environments")
     env <- parent.env(env)
     ng <- ng + 1
 }
@@ -6242,6 +6260,8 @@ Opcodes.names <- names(Opcodes.argc)
 <<[[cmpfun]] function>>
 
 <<[[tryCmpfun]] function>>
+
+<<[[tryCompile]] function>>
 
 <<[[cmpframe]] function>>
 

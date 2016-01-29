@@ -1225,3 +1225,72 @@ stopifnot(identical(dimnames(d4),
 ## the rownames were       "3"  "4"  "31" "41"  in R <= 3.3.0
           identical(attr(rbind(mk1(5:8), 7, mk1(6:3)), "row.names"), 1:9)
           )
+
+## sort on integer() should drop NAs by default
+stopifnot(identical(1L, sort(c(NA, 1L))))
+## and other data types for method="radix"
+stopifnot(identical("a", sort(c(NA, "a"), method="radix")))
+stopifnot(identical(character(0L), sort(c(NA, NA_character_), method="radix")))
+stopifnot(identical(1, sort(c(NA, 1), method="radix")))
+
+
+## dummy.coef(.) in the case of "non-trivial terms" -- PR#16665
+op <- options(contrasts = c("contr.treatment", "contr.poly"))
+fm1 <- lm(Fertility ~ cut(Agriculture, breaks=4) + Infant.Mortality, data=swiss)
+(dc1 <- dummy.coef(fm1)) ## failed in R <= 3.3.0
+## (R-help, Alexandra Kuznetsova, 24 Oct 2013):
+set.seed(56)
+group <- gl(2, 10, 20, labels = c("Ctl","Trt"))
+weight <- c(rnorm(10, 4), rnorm(10, 5))
+x <- rnorm(20)
+lm9 <- lm(weight ~ group + x + I(x^2))
+dc9 <- dummy.coef(lm9)
+## failed in R <= 3.3.0
+stopifnot( # depends on contrasts:
+    all.equal(unname(coef(fm1)), unlist(dc1, use.names=FALSE)[-2], tol= 1e-14),
+    all.equal(unname(coef(lm9)), unlist(dc9, use.names=FALSE)[-2], tol= 1e-14))
+## a 'use.na=TRUE' example
+dd <- data.frame(x1 = rep(letters[1:2], each=3),
+                 x2 = rep(LETTERS[1:3], 2),
+                 y = rnorm(6))
+dd[6,2] <- "B" # => no (b,C) combination => that coef should be NA
+fm3 <- lm(y ~ x1*x2, dd)
+(d3F <- dummy.coef(fm3, use.na=FALSE))
+(d3T <- dummy.coef(fm3, use.na=TRUE))
+stopifnot(all.equal(d3F[-4], d3T[-4]),
+	  all.equal(d3F[[4]][-6], d3T[[4]][-6]),
+	  all.equal(drop(d3T$`x1:x2`),
+		    c("a:A"= 0, "b:A"= 0, "a:B"= 0,
+		      "b:B"= 0.4204843786, "a:C"=0, "b:C"=NA)))
+## in R <= 3.2.3, d3T$`x1:x2` was *all* NA
+##
+## dummy.coef() for "manova"
+## artificial data inspired by the  summary.manova  example
+rate <- gl(2,10, labels=c("Lo", "Hi"))
+additive <- gl(4, 1, length = 20, labels = paste("d", 1:4, sep="."))
+additive <- C(additive, "contr.sum")# => less trivial dummy.coef
+X <- model.matrix(~ rate*additive)
+E <- matrix(round(rnorm(20*3), 2), 20,3) %*% cbind(1, c(.5,-1,.5), -1:1)
+bet <- outer(1:8, c(tear = 2, gloss = 5, opacity = 20))
+Y <- X %*% bet + E
+
+fit <- manova(Y ~ rate * additive)
+## For consistency checking, one of the univariate models:
+flm <- lm(Y[,"tear"] ~ rate * additive)
+dclm <- lapply(dummy.coef(flm), drop); names(dclm[[1]]) <- "tear"
+
+op <- options(digits = 3, width = 88)
+(cf <- coef(fit))
+(dcf <- dummy.coef(fit))
+options(op)
+stopifnot(all.equal(coef(flm), cf[,"tear"]),
+          all.equal(dclm,
+                    lapply(dcf, function(cc)
+                        if(is.matrix(cc)) cc["tear",] else cc["tear"])),
+          identical(lengths(dcf),
+                    c("(Intercept)" = 3L, "rate" = 6L,
+                      "additive" = 12L, "rate:additive" = 24L)),
+          identical(sapply(dcf[-1], dim),
+                    cbind(rate = 3:2, additive = 3:4,
+                          `rate:additive` = c(3L, 8L))))
+## dummy.coef() were missing coefficients in R <= 3.2.3
