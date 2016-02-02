@@ -272,6 +272,9 @@
       adjacent.  The return value includes extra partitioning
       information on the groups. The implementation came included with
       the new radix sort.
+
+      \item \code{rhyper(nn, m,n,k)} no longer returns \code{NA} when
+      one of the three parameters exceeds the maximal integer.
     }
   }
 
@@ -444,7 +447,7 @@
       \item \code{dummy.coef.lm()} now works in more cases, thanks to a
       proposal by Werner Stahel (\PR{16665}).  In addition, it now works
       for multivariate linear models (\code{"mlm"}, \code{\link{manova}})
-      thanks to a propsal by Daniel Wollschlaeger.
+      thanks to a proposal by Daniel Wollschlaeger.
       % port to r-patched
     }
   }
@@ -527,9 +530,14 @@
 
       \item \code{withCallingHandler()} now (again) handles warnings
       even during S4 generic's argument evaluation.  (\PR{16111})
-      
-      \item \code{deparse(..., control = "quoteExpressions")} 
+
+      \item \code{deparse(..., control = "quoteExpressions")}
       incorrectly quoted empty expressions.  (\PR{16686})
+
+      \item \code{format()}ting datetime objects (\code{"POSIX[cl]?t"})
+      could segfault or recycle wrongly.  (\PR{16685})
+
+      \item \code{plot.ts(<matrix>, las = 1)} now does use \code{las}.
     }
   }
 }
