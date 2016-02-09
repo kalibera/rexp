@@ -409,12 +409,29 @@ int attribute_hidden framedepth(RCNTXT *cptr)
     return nframe;
 }
 
+static SEXP getCallWithSrcref(RCNTXT *cptr)
+{
+    SEXP result;
+
+    PROTECT(result = shallow_duplicate(cptr->call));
+    if (cptr->srcref && !isNull(cptr->srcref)) {
+	SEXP sref;
+	if (cptr->srcref == R_InBCInterpreter)
+	    /* FIXME: this is expensive, it might be worth changing sys.call */
+	    /* to return srcrefs only on request (add `with.source` option) */
+	    sref = R_findBCInterpreterScrref(cptr->nodestack);
+	else
+	    sref = cptr->srcref;
+	setAttrib(result, R_SrcrefSymbol, duplicate(sref));
+    }
+    UNPROTECT(1);
+    return result;
+}
+
 SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
 {
     /* negative n counts back from the current frame */
     /* positive n counts up from the globalEnv */
-    SEXP result;
-
     if (n > 0)
 	n = framedepth(cptr) - n;
     else
@@ -424,24 +441,15 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
 		  _("not that many frames on the stack"));
     while (cptr->nextcontext != NULL) {
 	if (cptr->callflag & CTXT_FUNCTION ) {
-	    if (n == 0) {
-		PROTECT(result = shallow_duplicate(cptr->call));
-		if (cptr->srcref && !isNull(cptr->srcref))
-		    setAttrib(result, R_SrcrefSymbol, duplicate(cptr->srcref));
-		UNPROTECT(1);
-		return result;
-	    } else
+	    if (n == 0)
+		return getCallWithSrcref(cptr);
+	    else
 		n--;
 	}
 	cptr = cptr->nextcontext;
     }
-    if (n == 0 && cptr->nextcontext == NULL) {
-	PROTECT(result = shallow_duplicate(cptr->call));
-	if (cptr->srcref && !isNull(cptr->srcref))
-	    setAttrib(result, R_SrcrefSymbol, duplicate(cptr->srcref));
-	UNPROTECT(1);
-	return result;
-    }
+    if (n == 0 && cptr->nextcontext == NULL)
+	return getCallWithSrcref(cptr);
     errorcall(R_GlobalContext->call, _("not that many frames on the stack"));
     return R_NilValue;	/* just for -Wall */
 }

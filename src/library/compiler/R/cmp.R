@@ -772,15 +772,89 @@ SEQLEN.OP <- 122
 ## Code buffer implementation
 ##
 
-make.codeBuf <- function(expr) {
+extractSrcref <- function(sref, idx) {
+  if (is.list(sref) && length(sref) >= idx)
+    sref <- sref[[idx]]
+  else if (is.integer(sref) && length(sref) >= 6)
+    sref
+  else
+    NULL
+}
+getExprSrcref <- function(expr) {
+  sattr <- attr(expr, "srcref")
+  extractSrcref(sattr, 1)
+}
+# if block is a block srcref, get its idx'th entry
+# if block is a single srcref, return this srcref
+getBlockSrcref <- function(block, idx) {
+  extractSrcref(block, idx)
+}
+
+make.codeBuf <- function(expr, loc = NULL) {
+
+    if (is.null(loc)) {
+      curExpr <- expr
+      curSrcref <- getExprSrcref(expr)
+    } else {
+      curExpr <- loc$expr
+      curSrcref <- loc$srcref
+    }
+    exprBuf <- integer()   ## exprBuf will have the same length as codeBuf
+    srcrefBuf <- integer() ## srcrefBuf will have the same length as codeBuf
+
+    ## set the current expression
+    ## also update the srcref according to expr, if expr has srcref attribute
+    ##   (note: never clears current srcref)
+    setcurexpr <- function(expr) {
+      curExpr <<- expr
+      sref <- getExprSrcref(expr)
+      if (!is.null(sref))
+        curSrcref <<- sref
+    }
+    ## unconditionally sets the current expression and srcrefs
+    setcurloc <- function(expr, sref) {
+      curExpr <<- expr
+      curSrcref <<- sref
+    }
+    ## add location information (current expressions, srcrefs) to the constant pool
+    commitlocs <- function() {
+      exprs <- exprBuf[1:codeCount]
+      class(exprs) <- "expressionsIndex"
+      putconst(exprs)
+
+      srefs <- srcrefBuf[1:codeCount]
+      class(srefs) <- "srcrefsIndex"
+      putconst(srefs)
+
+      ## these entries will be at the end of the constant pool, assuming only the compiler
+      ## uses these two classes
+      NULL
+    }
+    savecurloc <- function() {
+      list(expr = curExpr, srcref = curSrcref)
+    }
+    restorecurloc <- function(saved) {
+      curExpr <<- saved$expr
+      curSrcref <<- saved$srcref
+    }
     codeBuf <- list(.Internal(bcVersion()))
     codeCount <- 1
     putcode <- function(...) {
         new <- list(...)
         newLen <- length(new)
-        while (codeCount + newLen > length(codeBuf))
+        while (codeCount + newLen > length(codeBuf)) {
             codeBuf <<- c(codeBuf, vector("list", length(codeBuf)))
+            exprBuf <<- c(exprBuf, vector("integer", length(exprBuf)))
+            srcrefBuf <<- c(srcrefBuf, vector("integer", length(srcrefBuf)))
+        }
         codeBuf[(codeCount + 1) : (codeCount + newLen)] <<- new
+
+        ei <- putconst(curExpr)    ## put current expression
+        si <- putconst(curSrcref)  ##   and srcref into the constant pool
+
+        exprBuf[(codeCount + 1) : (codeCount + newLen)] <<- ei
+        srcrefBuf[(codeCount + 1) : (codeCount + newLen)] <<- si
+
         codeCount <<- codeCount + newLen
     }
     getcode <- function() as.integer(codeBuf[1 : codeCount])
@@ -824,18 +898,26 @@ make.codeBuf <- function(expr) {
                putconst = putconst,
                makelabel = makelabel,
                putlabel = putlabel,
-               patchlabels = patchlabels)
+               patchlabels = patchlabels,
+               setcurexpr = setcurexpr,
+               setcurloc = setcurloc,
+               commitlocs = commitlocs,
+               savecurloc = savecurloc,
+               restorecurloc = restorecurloc)
     cb$putconst(expr) ## insert expression as first constant.
+      ## NOTE: this will also insert the srcref directly into the constant
+      ## pool
     cb
 }
 
 codeBufCode <- function(cb) {
     cb$patchlabels()
+    cb$commitlocs()
     .Internal(mkCode(cb$code(), cb$const()))
 }
 
-genCode <- function(e, cntxt, gen = NULL) {
-    cb <- make.codeBuf(e)
+genCode <- function(e, cntxt, gen = NULL, loc = NULL) {
+    cb <- make.codeBuf(e, loc)
     if (is.null(gen))
         cmp(e, cb, cntxt)
     else
@@ -1043,7 +1125,7 @@ cmpCallArgs <- function(args, cb, cntxt) {
                        cntxt)
         else {
             if (is.symbol(a) || typeof(a) == "language") {
-                ci <- cb$putconst(genCode(a, pcntxt))
+                ci <- cb$putconst(genCode(a, pcntxt, loc = cb$savecurloc()))
                 cb$putcode(MAKEPROM.OP, ci)
             }
             else
@@ -1201,7 +1283,7 @@ setInlineHandler("function", function(e, cb, cntxt) {
     forms <- e[[2]]
     body <- e[[3]]
     ncntxt <- make.functionContext(cntxt, forms, body)
-    cbody <- genCode(body, ncntxt)
+    cbody <- genCode(body, ncntxt, loc = cb$savecurloc())
     ci <- cb$putconst(list(forms, cbody))
     cb$putcode(MAKECLOSURE.OP, ci)
     if (cntxt$tailcall) cb$putcode(RETURN.OP)
@@ -1213,14 +1295,21 @@ setInlineHandler("{", function(e, cb, cntxt) {
     if (n == 1)
         cmp(NULL, cb, cntxt)
     else {
+        sloc <- cb$savecurloc()
+        bsrefs <- attr(e, "srcref")
         if (n > 2) {
             ncntxt <- make.noValueContext(cntxt)
             for (i in 2 : (n - 1)) {
-                cmp(e[[i]], cb, ncntxt)
+                subexp <- e[[i]]
+                cb$setcurloc(subexp, getBlockSrcref(bsrefs, i))
+                cmp(subexp, cb, ncntxt)
                 cb$putcode(POP.OP)
             }
         }
-        cmp(e[[n]], cb, cntxt)
+        subexp <- e[[n]]
+        cb$setcurloc(subexp, getBlockSrcref(bsrefs, n))
+        cmp(subexp, cb, cntxt)
+        cb$restorecurloc(sloc)
     }
     TRUE
 })
@@ -1730,7 +1819,7 @@ setInlineHandler("repeat", function(e, cb, cntxt) {
                         function(cb, cntxt) {
                             cmpRepeatBody(body, cb, cntxt)
                             cb$putcode(ENDLOOPCNTXT.OP)
-                        })
+                        }, loc = cb$savecurloc())
         bi <- cb$putconst(code)
         cb$putcode(STARTLOOPCNTXT.OP, bi)
     }
@@ -1764,7 +1853,7 @@ setInlineHandler("while", function(e, cb, cntxt) {
                         function(cb, cntxt) {
                             cmpWhileBody(e, cond, body, cb, cntxt)
                             cb$putcode(ENDLOOPCNTXT.OP)
-                        })
+                        }, loc = cb$savecurloc())
         bi <- cb$putconst(code)
         cb$putcode(STARTLOOPCNTXT.OP, bi)
     }
@@ -1813,7 +1902,7 @@ setInlineHandler("for", function(e, cb, cntxt) {
                         function(cb, cntxt) {
                             cmpForBody(NULL, body, NULL, cb, cntxt)
                             cb$putcode(ENDLOOPCNTXT.OP)
-                        })
+                        }, loc = cb$savecurloc())
         bi <- cb$putconst(code)
         cb$putcode(STARTLOOPCNTXT.OP, bi)
     }
@@ -2680,11 +2769,14 @@ notifyNoSwitchcases <- function(cntxt)
 ## Compiler interface
 ##
 
-compile <- function(e, env = .GlobalEnv, options = NULL) {
+compile <- function(e, env = .GlobalEnv, options = NULL, srcref = NULL) {
     cenv <- makeCenv(env)
     cntxt <- make.toplevelContext(cenv, options)
     cntxt$env <- addCenvVars(cenv, findLocals(e, cntxt))
-    genCode(e, cntxt)
+    if (is.null(srcref))
+        genCode(e, cntxt)
+    else
+        genCode(e, cntxt, loc = list(expr = e, srcref = srcref))
 }
 
 cmpfun <- function(f, options = NULL) {
@@ -2692,7 +2784,11 @@ cmpfun <- function(f, options = NULL) {
     if (type == "closure") {
         cntxt <- make.toplevelContext(makeCenv(environment(f)), options)
         ncntxt <- make.functionContext(cntxt, formals(f), body(f))
-        b <- genCode(body(f), ncntxt)
+        if (length(body(f) < 2))
+            loc <- list(expr = body(f), srcref = getExprSrcref(f))
+        else
+            loc <- NULL
+        b <- genCode(body(f), ncntxt, loc = loc)
         val <- .Internal(bcClose(formals(f), b, environment(f)))
         attrs <- attributes(f)
         if (! is.null(attrs))
@@ -2707,10 +2803,12 @@ cmpfun <- function(f, options = NULL) {
 }
 
 tryCmpfun <- function(f)
-    tryCatch(cmpfun(f), error = function(e) f)
+    tryCatch(cmpfun(f), error = function(e) { cat("COMPILATION FAILED:", e$message, " at ", deparse(e$call), "\n"); f })
+##    tryCatch(cmpfun(f), error = function(e) f)
 
 tryCompile <- function(e, ...)
-    tryCatch(compile(e, ...), error = function(err) e)
+    tryCatch(compile(e, ...), error = function(err) { cat("COMPILATION FAILED:", e$message, " at ", deparse(e$call), "\n"); e })
+##    tryCatch(compile(e, ...), error = function(err) e)
 
 cmpframe <- function(inpos, file) {
     expr.needed <- 1000
