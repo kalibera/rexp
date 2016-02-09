@@ -270,11 +270,11 @@ section on @ref{Package namespaces}.
 @cindex configure file
 @cindex cleanup file
 
-The optional files @file{configure} and @file{cleanup} are (Bourne
-shell) script files which are, respectively, executed before and
-(provided that option @option{--clean} was given) after installation on
-Unix-alikes, see @ref{Configure and cleanup}.  The analogues on Windows
-are @file{configure.win} and @file{cleanup.win}.
+The optional files @file{configure} and @file{cleanup} are (Bourne)
+shell scripts which are, respectively, executed before and (if option
+@option{--clean} was given) after installation on Unix-alikes, see
+@ref{Configure and cleanup}.  The analogues on Windows are
+@file{configure.win} and @file{cleanup.win}.
 
 For the conventions for files @file{NEWS} and @file{ChangeLog} in the
 @acronym{GNU} project see
@@ -1492,7 +1492,13 @@ Note that most of this section is specific to Unix-alikes: see the
 comments later on about the Windows port of @R{}.
 
 If your package needs some system-dependent configuration before
-installation you can include an executable (Bourne shell) script
+installation you can include an executable (Bourne@footnote{The script
+should only assume a POSIX-compliant @command{/bin/sh} -- see
+@uref{http://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html}.
+In particular @command{bash} extensions must not be used, and not all
+@R{} platforms have a @command{bash} command, let alone one at
+@file{/bin/bash}.  All known shells used with @R{} support the use of
+backticks, but not all support @samp{$(@var{cmd})}.}) shell script
 @file{configure} in your package which (if present) is executed by
 @code{R CMD INSTALL} before any other action is performed.  This can be
 a script created by the Autoconf mechanism, but may also be a script
@@ -2827,8 +2833,8 @@ environment of a function for later use.
 Complete checking of a package which contains a file @file{README.md}
 needs @command{pandoc} installed: see
 @uref{http://johnmacfarlane.net/@/pandoc/@/installing.html}.  This
-should be reasonably current: @acronym{CRAN} used version 1.12.4.1 to
-process these files at the time of writing
+should be reasonably current: at the time of writing @acronym{CRAN} used
+version 1.12.4.2 to process these files.
 
 You do need to ensure that the package is checked in a suitable locale
 if it contains non-@acronym{ASCII} characters.  Such packages are likely
@@ -4046,13 +4052,13 @@ Bash extensions also need to be avoided in shell scripts, including
 expressions in Makefiles (which are passed to the shell for processing).
 Some @R{} platforms use strict@footnote{For example, @command{test}
 options @option{-a} and @option{-e} are not portable, and not supported
-in the AT&T Bourne shell used on Solaris, even though they are in the
-POSIX standard.} Bourne shells: the @R{} toolset on Windows and some
-Unix-alike OSes use @command{ash}
-(@uref{https://en.wikipedia.org/@/wiki/@/Almquist_shell}), a rather
-minimal shell with few builtins.  Beware of assuming that all the POSIX
-command-line utilities are available, especially on Windows where only a
-minimal set is provided for use with @R{}.
+in the AT&T Bourne shell used on Solaris 10/11, even though they are in
+the 2008 POSIX standard.  Nor does Solaris support @samp{$(@var{cmd})}.}
+Bourne shells: the @R{} toolset on Windows and some Unix-alike OSes use
+@command{ash} (@uref{https://en.wikipedia.org/@/wiki/@/Almquist_shell}),
+a rather minimal shell with few builtins.  Beware of assuming that all
+the POSIX command-line utilities are available, especially on Windows
+where only a minimal set is provided for use with @R{}.
 @ifset UseExternalXrefs
 (@xref{The command line tools, , The command line tools,
 R-admin, R Installation and Administration}.)
@@ -4558,6 +4564,12 @@ compilers only one can be included.
 @item
 Variable-length arrays are C99, not supported by C++98 nor by the C++
 compilers in use with @R{} on some platforms.
+
+@item
+The @code{restrict} qualifier is C99/C11 but not part of C++11 and not
+supported by some C++ compilers used with @R{}.
+@c but package treatSens attempted to use it.
+@c http://stackoverflow.com/questions/6434549/does-c11-add-the-c99-restrict-specifier-if-not-why-not
 
 @item
 Be careful to include the headers which define the functions you use.
@@ -9586,7 +9598,8 @@ In each case the @R{} objects are available for manipulation @emph{via}
 a set of functions and macros defined in the header file
 @file{Rinternals.h} or some @Sl{}-compatibility macros@footnote{That is,
 similar to those defined in @Sl{} version 4 from the 1990s: these are
-not kept up to date and are not recommended for new projects.} defined
+not kept up to date and are not recommended for new projects.  Prior to
+@R{} 3.3.0 it was not compatible with defining @code{R_NO_REMAP}.} defined
 in @file{Rdefines.h}.  See @ref{Interface functions .Call and .External}
 for details on @code{.Call} and @code{.External}.
 
@@ -11326,8 +11339,9 @@ obtained by defining @samp{USE_RINTERNALS} before including
 that your code compiles without @samp{USE_RINTERNALS} defined, as this
 provides a stricter test that the accessors have been used correctly.
 Note too that the use of @samp{USE_RINTERNALS} when the header is
-included in C++ code is not supported: doing so uses C99 features which
-are not necessarily in C++.
+included in C++ code is not supported: doing so may use C99 features
+which are not necessarily supported by the C++ compiler.  Nor is use
+with @file{Rdefines.h} supported.
 
 @node Character encoding issues,  , Vector accessor functions, System and foreign language interfaces
 @section Character encoding issues
@@ -12195,21 +12209,30 @@ accurately, notably for half integer @var{x}.
 
 This might be provided by your platform@footnote{It is an optional C11
 extension.}, in which case it is not included in @file{Rmath.h}, but is
-in @file{math.h} which @file{Rmath.h} includes.
+in @file{math.h} which @file{Rmath.h} includes.  (Ensure that
+neither @file{math.h} nor @file{cmath} is included before
+@file{Rmath.h} or define
+@example
+#define __STDC_WANT_IEC_60559_FUNCS_EXT__ 1
+@end example
+@noindent
+before the first inclusion.)
 @end deftypefun
 
 @deftypefun double sinpi (double @var{x})
 Computes @code{sin(pi * x)} accurately, notably for (half) integer @var{x}.
 
-This might be provided by your platform, in which case it is not included
-in @file{Rmath.h}, but is in @file{math.h} which @file{Rmath.h} includes.
+This might be provided by your platform, in which case it is not
+included in @file{Rmath.h}, but is in @file{math.h} which @file{Rmath.h}
+includes (but see the comments for @code{cospi}).
 @end deftypefun
 
 @deftypefun double tanpi (double @var{x})
 Computes @code{tan(pi * x)} accurately, notably for (half) integer @var{x}.
 
 This might be provided by your platform, in which case it is not included
-in @file{Rmath.h}, but is in @file{math.h} which @file{Rmath.h} includes.
+in @file{Rmath.h}, but is in @file{math.h} which @file{Rmath.h} includes
+(but see the comments for @code{cospi}).
 @end deftypefun
 
 @deftypefun double logspace_add (double @var{logx}, double @var{logy})
@@ -12604,11 +12627,11 @@ The algorithm is particularly fast when @var{ilo} is set to the last
 result of @code{findInterval()} and @var{x} is a value of a sequence which
 is increasing or decreasing for subsequent calls.
 
- @code{findInterval2()} is a generalization of @code{findInterval()}, with
- an extra @code{Rboolean} argument @var{left_open}.  Setting
- @code{left_open = TRUE} basically replaces all left-closed right-open
- intervals @eqn{[s, t)} by left-open ones @eqn{(s, t]}, see the help page
- of @R{} function @code{findInterval} for details.
+@code{findInterval2()} is a generalization of @code{findInterval()},
+with an extra @code{Rboolean} argument @var{left_open}.  Setting
+@code{left_open = TRUE} basically replaces all left-closed right-open
+intervals @eqn{[s, t)} by left-open ones @eqn{(s, t]}, see the help page
+of @R{} function @code{findInterval} for details.
 
 There is also an @code{F77_CALL(interv)()} version of
 @code{findInterval()} with the same arguments, but all pointers.

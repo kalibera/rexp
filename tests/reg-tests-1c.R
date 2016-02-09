@@ -339,6 +339,7 @@ badstructure(20, "children")
 d <- as.dendrogram(hclust(dist(sin(1:7))))
 (dl <- d[[c(2,1,2)]]) # single-leaf dendrogram
 stopifnot(inherits(dl, "dendrogram"), is.leaf(dl),
+	  identical(attributes(reorder(dl, 1:7)), c(attributes(dl), value = 5L)),
 	  identical(order.dendrogram(dl), as.vector(dl)),
 	  identical(d, as.dendrogram(d)))
 ## as.dendrogram() was hidden;  order.*() failed for leaf
@@ -459,11 +460,14 @@ stopifnot(identical(options(list()), options(NULL)))
 
 
 ## merge.dendrogram(), PR#15648
-mkDend <- function(n, lab, rGen = function(n) 1+round(16*abs(rnorm(n)))) {
+mkDend <- function(n, lab, method = "complete",
+                   ## gives *ties* often:
+		   rGen = function(n) 1+round(16*abs(rnorm(n)))) {
     stopifnot(is.numeric(n), length(n) == 1, n >= 1, is.character(lab))
     a <- matrix(rGen(n*n), n, n)
     colnames(a) <- rownames(a) <- paste0(lab, 1:n)
-    as.dendrogram(hclust(as.dist(a + t(a))))
+    .HC. <<- hclust(as.dist(a + t(a)), method=method)
+    as.dendrogram(.HC.)
 }
 set.seed(7)
 da <- mkDend(4, "A")
@@ -473,6 +477,13 @@ hcab <- as.hclust(d.ab)
 stopifnot(hcab$order == c(2, 4, 1, 3, 7, 5, 6),
 	  hcab$labels == c(paste0("A", 1:4), paste0("B", 1:3)))
 ## was wrong in R <= 3.1.1
+set.seed(1) ; h1 <- as.hclust(mkDend(5, "S", method="single")); hc1 <- .HC.
+set.seed(5) ; h5 <- as.hclust(mkDend(5, "S", method="single")); hc5 <- .HC.
+set.seed(42); h3 <- as.hclust(mkDend(5, "A", method="single")); hc3 <- .HC.
+## all failed (differently!) because of ties in R <= 3.2.3
+stopifnot(all.equal(h1[1:4], hc1[1:4], tol = 1e-12),
+	  all.equal(h5[1:4], hc5[1:4], tol = 1e-12),
+	  all.equal(h3[1:4], hc3[1:4], tol = 1e-12))
 
 
 ## bw.SJ() and similar with NA,Inf values, PR#16024
@@ -952,15 +963,15 @@ d2 <- within(df, {d = a + 2})
 stopifnot(identical(names(d2), c(".id", "a", "d")))
 ## lost the '.id' column in R <= 3.2.2
 
-
 ## system() truncating and splitting long lines of output, PR#16544
-op <- options(warn = 2)# no warnings allowed
-if(.Platform$OS.type == "unix") { # only works when platform has getline() in stdio.h
-    cn <- paste(1:2222, collapse=" ")
-    rs <- system(paste("echo", cn), intern=TRUE)
-    stopifnot(identical(rs, cn))
-}
-options(op)
+## only works when platform has getline() in stdio.h, and Solaris does not.
+## op <- options(warn = 2)# no warnings allowed
+## if(.Platform$OS.type == "unix") { # only works when platform has getline() in stdio.h
+##     cn <- paste(1:2222, collapse=" ")
+##     rs <- system(paste("echo", cn), intern=TRUE)
+##     stopifnot(identical(rs, cn))
+## }
+## options(op)
 
 
 ## tail.matrix()
@@ -1299,15 +1310,13 @@ stopifnot(all.equal(coef(flm), cf[,"tear"]),
 ## format.POSIXlt() with modified 'zone' or length-2 format
 f0 <- "2016-01-28 01:23:45"; tz0 <- "Europe/Stockholm"
 d2 <- d1 <- rep(as.POSIXlt(f0, tz = tz0), 2)
-f1 <- format(d1, usetz=TRUE)
+(f1 <- format(d1, usetz=TRUE))
+identical(f1, rep(paste(f0, "CET"), 2))# often TRUE (but too platform dependent)
 d2$zone <- d1$zone[1] # length 1 instead of 2
 f2 <- format(d2, usetz=TRUE)## -> segfault
 f1.2 <- format(as.POSIXlt("2016-01-28 01:23:45"), format=c("%d", "%y"))# segfault
-stopifnot(
-    identical(f1, rep(paste(f0, "CET"), 2)),
-    identical(f2, rep(paste(f0,  tz0 ), 2)),
-    identical(f1.2, c("28", "16"))
-    )
+stopifnot(identical(f2, rep(paste(f0,  tz0 ), 2)),
+	  identical(f1.2, c("28", "16")))
 tims <- seq.POSIXt(as.POSIXct("2016-01-01"),
 		   as.POSIXct("2017-11-11"), by = as.difftime(pi, units="weeks"))
 form <- c("%m/%d/%y %H:%M:%S", "", "%Y-%m-%d %H:%M:%S")
@@ -1323,3 +1332,36 @@ stopifnot(identical(rf1[1:3], c("01/01/16 00:00:00", "2016-01-22 23:47:15",
 options(op)
 ## Wrong-length 'zone' or short 'x' segfaulted -- PR#16685
 ## Default 'format' setting sometimes failed for length(format) > 1
+
+
+## saveRDS(*, compress= .)
+opts <- setNames(,c("bzip2", "xz", "gzip"))
+fil <- tempfile(paste0("xx", 1:6, "_"), fileext = ".rds")
+names(fil) <- c("default", opts, FALSE,TRUE)
+xx <- 1:11
+saveRDS(xx, fil["default"])
+saveRDS(xx, fil[opts[1]], compress = opts[1])
+saveRDS(xx, fil[opts[2]], compress = opts[2])
+saveRDS(xx, fil[opts[3]], compress = opts[3])
+saveRDS(xx, fil["FALSE"], compress = FALSE)
+saveRDS(xx, fil["TRUE" ], compress = TRUE)
+f.raw <- lapply(fil, readBin, what = "raw", n = 100)
+lengths(f.raw) # 'gzip' is best in this case
+for(i in 1:6) stopifnot(identical(xx, readRDS(fil[i])))
+eMsg <- tryCatch(saveRDS(xx, tempfile(), compress = "Gzip"),
+                 error = function(e) e$message)
+stopifnot(
+    grepl("'compress'.*Gzip", eMsg), # had ".. not interpretable as logical"
+    identical(f.raw[["default"]], f.raw[["TRUE"]]),
+    identical(f.raw[["default"]], f.raw[[opts["gzip"]]]))
+## compress = "gzip" failed (PR#16653), but compress = c(a = "xz") did too
+
+
+## recursive dendrogram methods and deeply nested dendrograms
+op <- options(expressions = 999, verbose = TRUE)
+set.seed(11); d <- mkDend(1500, "A", method="single")
+rd <- reorder(d, nobs(d):1)
+## Error: evaluation nested too deeply: infinite recursion .. in R <= 3.2.3
+stopifnot(is.leaf(r1 <- rd[[1]]),    is.leaf(r2 <- rd[[2:1]]),
+	  attr(r1, "label") == "A1458", attr(r2, "label") == "A1317")
+options(op)# revert
