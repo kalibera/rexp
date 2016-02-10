@@ -1368,8 +1368,14 @@ SEXP R_GetTraceback(int skip)
 		skip--;
 	    else {
 		SETCAR(t, deparse1(c->call, 0, DEFAULTDEPARSE));
-		if (c->srcref && !isNull(c->srcref))
-		    setAttrib(CAR(t), R_SrcrefSymbol, duplicate(c->srcref));
+		if (c->srcref && !isNull(c->srcref)) {
+		    SEXP sref;
+		    if (c->srcref == R_InBCInterpreter)
+			sref = R_findBCInterpreterScrref(c->nodestack);
+		    else
+			sref = c->srcref;
+		    setAttrib(CAR(t), R_SrcrefSymbol, duplicate(sref));
+		}
 		t = CDR(t);
 	    }
 	}
