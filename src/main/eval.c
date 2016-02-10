@@ -226,7 +226,7 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 	strcat(buf, "\"<GC>\" ");
 
     if (R_Line_Profiling)
-	lineprof(buf, R_Srcref);
+	lineprof(buf, R_getCurrentSrcref());
 
     for (cptr = R_GlobalContext; cptr; cptr = cptr->nextcontext) {
 	if ((cptr->callflag & (CTXT_FUNCTION | CTXT_BUILTIN))
@@ -295,8 +295,12 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 
 		strcat(buf, itembuf);
 		strcat(buf, "\" ");
-		if (R_Line_Profiling)
-		    lineprof(buf, cptr->srcref);
+		if (R_Line_Profiling) {
+		    if (cptr->srcref == R_InBCInterpreter)
+			lineprof(buf, R_findBCInterpreterScrref(cptr->nodestack));
+		    else
+			lineprof(buf, cptr->srcref);
+		}
 	    }
 	}
     }
