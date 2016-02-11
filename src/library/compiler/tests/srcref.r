@@ -34,7 +34,7 @@ code <- quote({
   }
   stopifnot(identical(plus23, start+23L))
   ff <- function() for(i in 1) return(ln()) # start + 26
-  plus26 <- ff()                        
+  plus26 <- ff()
   stopifnot(identical(plus26, start+26L))
   ff1 <- function() {
     for(i in 1) return(ln())             # start + 30
