@@ -507,6 +507,7 @@ SEXP attribute_hidden do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP rval=R_NilValue;
     RCNTXT *cptr;
+    RCNTXT *prevcptr = NULL;
     int n;
 
     checkArity(op, args);
@@ -553,12 +554,19 @@ SEXP attribute_hidden do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
 	while ( (cptr != R_ToplevelContext) && n > 0 ) {
 	    if (cptr->callflag & CTXT_FUNCTION)
 		  n--;
+	    prevcptr = cptr;
 	    cptr = cptr->nextcontext;
 	}
 	if( !(cptr->callflag & CTXT_FUNCTION) )
-	   error(_("not that many functions on the call stack"));
-	else
-	   SET_RDEBUG(cptr->cloenv, 1);
+	    error(_("not that many functions on the call stack"));
+	if( prevcptr && prevcptr->srcref == R_InBCInterpreter ) {
+	    if ( TYPEOF(cptr->callfun) == CLOSXP &&
+		    TYPEOF(BODY(cptr->callfun)) == BCODESXP )
+		warning(_("debug flag in compiled function has no effect"));
+	    else
+		warning(_("debug will apply when function leaves compiled code"));
+	}
+	SET_RDEBUG(cptr->cloenv, 1);
 	break;
     }
     return(rval);
