@@ -29288,10 +29288,11 @@ _ACEOF
 fi
 
 
-## Functions from draft C11 extensions, some of which are already in glibc
+## Functions from ISO/IEC TS 18661-4:2015 C11 extensions.
 ## For now, do not define _GNU_SOURCE here.
-## All but pown have long been in libsunmath
-for ac_func in atanpi atan2pi cospi exp10 pown sinpi tanpi
+## All but pown have long been in Solaris' libsunmath
+## OS X has __cospi __sinpi __tanpi
+for ac_func in atanpi atan2pi cospi exp10 pown sinpi tanpi __cospi __sinpi __tanpi
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -29299,7 +29300,7 @@ if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
 #define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
 _ACEOF
- #define __STDC_WANT_IEC_60559_TYPES_EXT__ 1
+ #define __STDC_WANT_IEC_60559_FUNCS_EXT__ 1
 #include <math.h>
 #ifdef HAVE_SUNMATH_H
 #include <sunmath.h>

@@ -258,9 +258,9 @@
 
       \item The radix sort algorithm and implementation from data.table
       (forder) replaces the existing but limited radix (counting) sort
-      and adds a new method for \code{order()}. Contributed by Matt
+      and adds a new method for \code{order()}.  Contributed by Matt
       Dowle and Arun Srinivasan, the new algorithm supports logical,
-      integer (even with large values), real, and character vectors. It
+      integer (even with large values), real, and character vectors.  It
       outperforms all other methods, but there are some caveats (see
       \code{?sort}).
 
@@ -270,11 +270,29 @@
       \item New function \code{grouping} returns a permutation that
       stably rearranges data so that identical values are
       adjacent.  The return value includes extra partitioning
-      information on the groups. The implementation came included with
+      information on the groups.  The implementation came included with
       the new radix sort.
 
-      \item \code{rhyper(nn, m,n,k)} no longer returns \code{NA} when
+      \item \code{rhyper(nn, m, n, k)} no longer returns \code{NA} when
       one of the three parameters exceeds the maximal integer.
+
+      \item \code{switch()} now warns when no alternatives are provided.
+
+      \item \code{parallel::detectCores()} now has default \code{logical
+	= TRUE)} on all platforms -- as this was the default on Windows,
+      this change only affects Sparc Solaris.
+
+      Option \code{logical = FALSE} is now supported on Linux and recent
+      versions of OS X (for the latter, thanks to a suggestion of Kyaw
+      Sint).
+
+      \item \code{hist()} for \code{"Date"} or \code{"POSIXt"} objects
+      would sometimes give misleading labels on the breaks, as they
+      were set to the day before the start of the period being
+      displayed.  The display format has been changed, and the shift of the
+      start day has been made conditional on \code{right = TRUE} (the
+      default).  (\PR{16679})
+
     }
   }
 
@@ -284,19 +302,25 @@
       \option{--ignore-vignettes} for use with non-Sweave vignettes
       whose \samp{VignetteBuilder} package is not available.
 
-      \item \command{R CMD check --as-cran} now checks code usage (via
-      \CRANpkg{codetools}) with only the base package attached, so that
-      functions from default packages other than base which are used in
-      the package code but not imported are reported as undefined
-      globals.
+      \item \command{R CMD check} now by default checks code usage
+      (\emph{via} \CRANpkg{codetools}) with only the base package
+      attached.  Functions from default packages other than \pkg{base}
+      which are used in the package code but not imported are reported
+      as undefined globals, with a suggested addition to the
+      \code{NAMESPACE} file.
 
-      It now also checks DOIs in package \file{CITATION} and Rd files.
+      \item \command{R CMD check --as-cran} now also checks DOIs in
+      package \file{CITATION} and Rd files.
 
       \item \command{R CMD Rdconv} and \command{R CMD Rd2pdf} each have
       a new option \option{--RdMacros=pkglist} which allows Rd macros
       to be specified before processing.
 
-      \item \code{switch()} now warns when no alternatives are provided,
+      \item \command{R CMD check} will leave a log file
+      \file{build_vignettes.log} from the re-building of vignettes in
+      the \file{.Rcheck} directory if there is a problem, and always if
+      environment variable \env{_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_} is
+      set to a true value.
     }
   }
 
@@ -324,7 +348,7 @@
       S4 object into its own list such that the end result is roughly
       equivalent to using \code{[[<-}. That behavior is deprecated. In
       the future, the S4 value will be coerced to a list with
-      \code{as.list}.
+      \code{as.list()}.
     }
   }
 
@@ -358,6 +382,21 @@
       been 8.32 (released in Nov 2012).  Versions 8.10 to 8.31 are now
       deprecated (with warnings from \command{configure}), but for now
       still accepted.
+
+      \item \command{configure} looks for \code{__cospi}, \code{__sinpi}
+      and \code{__tanpi} and uses these if \code{cospi}\emph{etc} are
+      not found.  (OS X is the main instance.)
+
+      \item (Windows) An experimental build of R based on \command{gcc}
+      4.9.3 is now available on CRAN on the \file{bin/windows/base/rdevel.html}
+      snapshot page.  This build will require recompilation of at least those
+      packages that include C++ code, and possibly others.  The CRAN
+      binary packages still use the older toolchain, so package installs
+      default to \code{type = "source"}.
+
+      During the transition, the environment variable \env{R_COMPILED_BY} will
+      be defined to indicate which toolchain was used to compile R (and hence,
+      which should be used to compile code in packages).
     }
   }
 
@@ -377,6 +416,9 @@
 
       Code using it will need to be reinstalled. (\PR{16470})
 
+      Similarly, entry point \code{log1pexp} also defined in
+      \file{Rmath.h} is remapped there to \code{Rf_log1pexp}
+
       \item \code{R_GE_version} has been increased to \code{11}.
 
       \item New API call \code{R_orderVector1()}, a faster
@@ -394,8 +436,11 @@
       included within an \code{extern "C"} block, and almost all the
       packages affected by this change are doing so.
 
-      \item Including header \file{S.h} from C++ code will fail on some
-      platforms, and so gives a compilation warning on all.
+      \item Including header \file{S.h} from C++ code would fail on some
+      platforms, and so gives a compilation error on all.
+
+      \item The deprecated header \file{Rdefines.h} is now compatible
+      with defining \code{R_NO_REMAP}.
     }
   }
 
@@ -449,6 +494,10 @@
       for multivariate linear models (\code{"mlm"}, \code{\link{manova}})
       thanks to a proposal by Daniel Wollschlaeger.
       % port to r-patched
+
+      \item (X11 only)  \code{getGraphicsEvent()} miscoded buttons and
+      missed mouse motion events.  (\PR{16700})
+      % port to r-patched if it doesn't add too many events to graphics windows
     }
   }
 }
@@ -471,6 +520,13 @@
       \item The \code{data.frame} method of \code{rbind()} gains an
       optional argument \code{stringsAsFactors} (instead of only
       depending on \code{getOption("stringsAsFactors")}).
+
+      \item The \code{as.hclust} method for \code{"dendrogram"}s failed often
+      when there were ties in the heights.
+
+      \item \code{reorder()} and \code{midcache.dendrogram()} now are
+      non-recursive and hence applicable to somewhat deeply nested
+      dendrograms, thanks to a proposal by Suharto Anggono in \PR{16424}.
     }
   }
 
@@ -538,6 +594,13 @@
       could segfault or recycle wrongly.  (\PR{16685})
 
       \item \code{plot.ts(<matrix>, las = 1)} now does use \code{las}.
+
+      \item \code{saveRDS(*, compress = "gzip")} now works as
+      documented.  (\PR{16653})
+
+      \item (Windows only) The \command{Rgui} front end did not
+      always initialize the console properly, and could cause
+      \R to crash.  (\PR{16998})
     }
   }
 }
