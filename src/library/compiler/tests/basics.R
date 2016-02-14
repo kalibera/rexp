@@ -14,18 +14,18 @@ checkCode <- function(expr, code, optimize = 2) {
 x <- 2
 stopifnot(checkCode(quote(x + 1),
                     c(GETVAR.OP, 1L,
-                      LDCONST.OP, 3L,
+                      LDCONST.OP, 2L,
                       ADD.OP, 0L,
                       RETURN.OP)))
 f <- function(x) x
 checkCode(quote({f(1); f(2)}),
           c(GETFUN.OP, 1L,
-            PUSHCONSTARG.OP, 4L,
-            CALL.OP, 2L,
+            PUSHCONSTARG.OP, 3L,
+            CALL.OP, 4L,
             POP.OP,
             GETFUN.OP, 1L,
-            PUSHCONSTARG.OP, 7L,
-            CALL.OP, 5L,
+            PUSHCONSTARG.OP, 6L,
+            CALL.OP, 7L,
             RETURN.OP))
 
 

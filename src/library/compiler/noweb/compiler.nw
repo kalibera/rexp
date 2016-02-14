@@ -842,16 +842,21 @@ putcode <- function(...) {
     newLen <- length(new)
     while (codeCount + newLen > length(codeBuf)) {
         codeBuf <<- c(codeBuf, vector("list", length(codeBuf)))
-        exprBuf <<- c(exprBuf, vector("integer", length(exprBuf)))
-        srcrefBuf <<- c(srcrefBuf, vector("integer", length(srcrefBuf)))
+        if (exprTrackingOn)
+            exprBuf <<- c(exprBuf, vector("integer", length(exprBuf)))
+        if (srcrefTrackingOn)
+            srcrefBuf <<- c(srcrefBuf, vector("integer", length(srcrefBuf)))
     }
     codeBuf[(codeCount + 1) : (codeCount + newLen)] <<- new
 
-    ei <- putconst(curExpr)    ## put current expression
-    si <- putconst(curSrcref)  ##   and srcref into the constant pool
-
-    exprBuf[(codeCount + 1) : (codeCount + newLen)] <<- ei
-    srcrefBuf[(codeCount + 1) : (codeCount + newLen)] <<- si
+    if (exprTrackingOn) {  ## put current expression into the constant pool
+        ei <- putconst(curExpr)
+        exprBuf[(codeCount + 1) : (codeCount + newLen)] <<- ei
+    }
+    if (srcrefTrackingOn) { ## put current srcref into the constant pool
+        si <- putconst(curSrcref)
+        srcrefBuf[(codeCount + 1) : (codeCount + newLen)] <<- si
+    }
 
     codeCount <<- codeCount + newLen
 }
@@ -894,16 +899,16 @@ copied into the constant pool as vectors indexed by code offset (program
 counter).
 <<source location tracking functions>>=
 extractSrcref <- function(sref, idx) {
-  if (is.list(sref) && length(sref) >= idx)
-    sref <- sref[[idx]]
-  else if (is.integer(sref) && length(sref) >= 6)
-    sref
-  else
-    NULL
+    if (is.list(sref) && length(sref) >= idx)
+        sref <- sref[[idx]]
+    else if (is.integer(sref) && length(sref) >= 6)
+        sref
+    else
+        NULL
 }
 getExprSrcref <- function(expr) {
-  sattr <- attr(expr, "srcref")
-  extractSrcref(sattr, 1)
+    sattr <- attr(expr, "srcref")
+    extractSrcref(sattr, 1)
 }
 # if block is a block srcref, get its idx'th entry
 # if block is a single srcref, return this srcref
@@ -913,50 +918,80 @@ getBlockSrcref <- function(block, idx) {
 @ %def
 
 <<source location tracking implementation>>=
+
+  ## expression tracking is not yet used by the byte-code interpreter
+exprTrackingOn <- FALSE
+srcrefTrackingOn <- TRUE
+
 if (is.null(loc)) {
-  curExpr <- expr
-  curSrcref <- getExprSrcref(expr)
+    curExpr <- expr
+    curSrcref <- getExprSrcref(expr)
 } else {
-  curExpr <- loc$expr
-  curSrcref <- loc$srcref
+    curExpr <- loc$expr
+    curSrcref <- loc$srcref
 }
+
+if (is.null(curSrcref))
+    ## when top-level srcref is null, we speculate there will be no
+    ##   source references within the compiled expressions either,
+    ##   disabling the tracking makes the resulting constant pool
+    ##   smaller
+    srcrefTrackingOn <- FALSE
+
 exprBuf <- integer()   ## exprBuf will have the same length as codeBuf
 srcrefBuf <- integer() ## srcrefBuf will have the same length as codeBuf
+
+if (!exprTrackingOn) {
+    curExpr <- NULL
+    exprBuf <- NULL
+}
+if (!srcrefTrackingOn) {
+    curSrcref <- NULL
+    srcrefBuf <- NULL
+}
 
 ## set the current expression
 ## also update the srcref according to expr, if expr has srcref attribute
 ##   (note: never clears current srcref)
 setcurexpr <- function(expr) {
-  curExpr <<- expr
-  sref <- getExprSrcref(expr)
-  if (!is.null(sref))
-    curSrcref <<- sref
+    if (exprTrackingOn) {
+        curExpr <<- expr
+        sref <- getExprSrcref(expr)
+        if (!is.null(sref) && srcrefTrackingOn)
+            curSrcref <<- sref
+     }
 }
 ## unconditionally sets the current expression and srcrefs
 setcurloc <- function(expr, sref) {
-  curExpr <<- expr
-  curSrcref <<- sref
+    if (exprTrackingOn)
+        curExpr <<- expr
+    if (srcrefTrackingOn)
+        curSrcref <<- sref
 }
 ## add location information (current expressions, srcrefs) to the constant pool
 commitlocs <- function() {
-  exprs <- exprBuf[1:codeCount]
-  class(exprs) <- "expressionsIndex"
-  putconst(exprs)
+    if (exprTrackingOn) {
+      exprs <- exprBuf[1:codeCount]
+      class(exprs) <- "expressionsIndex"
+      putconst(exprs)
+    }
 
-  srefs <- srcrefBuf[1:codeCount]
-  class(srefs) <- "srcrefsIndex"
-  putconst(srefs)
+    if (srcrefTrackingOn) {
+      srefs <- srcrefBuf[1:codeCount]
+      class(srefs) <- "srcrefsIndex"
+      putconst(srefs)
+    }
 
-  ## these entries will be at the end of the constant pool, assuming only the compiler
-  ## uses these two classes
-  NULL
+    ## these entries will be at the end of the constant pool, assuming only the compiler
+    ## uses these two classes
+    NULL
 }
 savecurloc <- function() {
-  list(expr = curExpr, srcref = curSrcref)
+    list(expr = curExpr, srcref = curSrcref)
 }
 restorecurloc <- function(saved) {
-  curExpr <<- saved$expr
-  curSrcref <<- saved$srcref
+    if (exprTrackingOn) curExpr <<- saved$expr
+    if (srcrefTrackingOn) curSrcref <<- saved$srcref
 }
 @ %def
 
@@ -4742,7 +4777,7 @@ cmpfun <- function(f, options = NULL) {
     if (type == "closure") {
         cntxt <- make.toplevelContext(makeCenv(environment(f)), options)
         ncntxt <- make.functionContext(cntxt, formals(f), body(f))
-        if (length(body(f) < 2))
+        if (typeof(body(f)) != "language" || body(f)[1] != "{")
             loc <- list(expr = body(f), srcref = getExprSrcref(f))
         else
             loc <- NULL
