@@ -1,5 +1,7 @@
 library(compiler)
 
+options(keep.source=TRUE)
+
 ## very minimal
 x <- 2
 stopifnot(eval(compile(quote(x + 1))) == 3)
