@@ -2,6 +2,7 @@ library(compiler)
 
 # This tests tracking of source file references
 
+options(keep.source=TRUE)
 ln <- function() attr(sys.call(), "srcref")[1]
 
 # NOTE: the block below is sensitive to formatting (newlines)
