@@ -5220,9 +5220,9 @@ SEXP attribute_hidden R_findBCInterpreterScrref(R_bcstack_t *top)
 	R_Suicide("Invalid/missing BC interpreter frame.");
     R_bcstack_t *b;
     for(b = top - 1; b != R_BCNodeStackBase; b--)
-	if (GETSTACK_PTR(b) == R_BCFrameStart)
+	if (GETSTACK_SXPVAL_PTR(b) == R_BCFrameStart)
 	    break;
-    if (GETSTACK_PTR(b) != R_BCFrameStart)
+    if (GETSTACK_SXPVAL_PTR(b) != R_BCFrameStart)
 	R_Suicide("BC interpreter frame header not found.");
 
     SEXP pcvec = GETSTACK_PTR(b + 1);
@@ -5279,7 +5279,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   INITIALIZE_MACHINE();
   codebase = pc = BCCODE(body);
   constants = BCCONSTS(body);
-  R_Srcref = R_InBCInterpreter;
 
   /* allow bytecode to be disabled for testing */
   if (R_disable_bytecode)
@@ -5287,9 +5286,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 
   /* set up a byte-code interpreter execution frame header */
   /* the number of header entries must match BC_FRAME_HEADER_SIZE */
-  BCNPUSH(R_BCFrameStart);
+  BCNPUSH(R_NilValue); /* space for R_InBCInterpreter */
   BCNPUSH(pointerAsIntVector(&pc));
   BCNPUSH(body);
+  SETSTACK(-3, R_BCFrameStart); /* set when frame is ready */
+  R_Srcref = R_InBCInterpreter; /* set when frame is ready */
 
   /* check version */
   {
