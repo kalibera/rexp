@@ -772,7 +772,9 @@ extern SEXP R_cmpfun(SEXP);
 extern void R_init_jit_enabled(void);
 extern void R_initAsignSymbols(void);
 extern SEXP R_findBCInterpreterScrref(R_bcstack_t*);
+extern SEXP R_findBCInterpreterExpression(R_bcstack_t*);
 extern SEXP R_getCurrentSrcref();
+extern SEXP R_getBCInterpreterExpression();
 
 LibExtern SEXP R_CachedScalarReal INI_as(NULL);
 LibExtern SEXP R_CachedScalarInteger INI_as(NULL);

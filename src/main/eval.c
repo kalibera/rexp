@@ -5208,12 +5208,12 @@ static void *intVectorAsPointer(SEXP s)
     return ((void **)INTEGER(s))[0];
 }
 
-/* Return the srcref for the current instruction/operand being executed
-   by the byte-code interpreter, in the instance of the interpreter whose
-   node-stack top is as given (one can pass any address above the
+/* Return the srcref/expression for the current instruction/operand being
+   executed by the byte-code interpreter, in the instance of the interpreter
+   whose node-stack top is as given (one can pass any address above the
    interpreter's frame header). This operation linearly scans the node stack,
    so it is quite expensive. */
-SEXP attribute_hidden R_findBCInterpreterScrref(R_bcstack_t *top)
+static SEXP R_findBCInterpreterLocation(R_bcstack_t *top, const char *iname)
 {
     /* find the beginning of the previous interpreter frame */
     if (top == R_BCNodeStackBase)
@@ -5233,8 +5233,8 @@ SEXP attribute_hidden R_findBCInterpreterScrref(R_bcstack_t *top)
     if (TYPEOF(body) != BCODESXP)
 	R_Suicide("Corrupted BC frame header.");
     SEXP constants = BCCONSTS(body);
-    SEXP ssrefs = findLocTable(constants, "srcrefsIndex");
-    if (ssrefs == R_NilValue)
+    SEXP ltable = findLocTable(constants, iname);
+    if (ltable == R_NilValue)
 	/* location table not available */
 	return R_NilValue;
 
@@ -5244,7 +5244,17 @@ SEXP attribute_hidden R_findBCInterpreterScrref(R_bcstack_t *top)
     int relpc = pc - codebase - 1;
     if (relpc < 0)
 	R_Suicide("Empty byte-code interpreter frame.");
-    return getLocTableElt(relpc, ssrefs, constants);
+    return getLocTableElt(relpc, ltable, constants);
+}
+
+SEXP attribute_hidden R_findBCInterpreterScrref(R_bcstack_t *top)
+{
+    return R_findBCInterpreterLocation(top, "srcrefsIndex");
+}
+
+SEXP attribute_hidden R_findBCInterpreterExpression(R_bcstack_t *top)
+{
+    return R_findBCInterpreterLocation(top, "expressionsIndex");
 }
 
 SEXP attribute_hidden R_getCurrentSrcref()
@@ -5253,6 +5263,21 @@ SEXP attribute_hidden R_getCurrentSrcref()
 	return R_Srcref;
     else
 	return R_findBCInterpreterScrref(R_BCNodeStackTop);
+}
+
+/* Get the current expression being evaluated by the byte-code interpreter. */
+SEXP attribute_hidden R_getBCInterpreterExpression()
+{
+    SEXP exp = R_findBCInterpreterExpression(R_BCNodeStackTop);
+    if (TYPEOF(exp) == PROMSXP) {
+	exp = forcePromise(exp);
+	SET_NAMED(exp, 2);
+    }
+    /* return names of internal functions instead of ".Internal" */
+    SEXP intrsym = install(".Internal");
+    if (CAR(exp) == intrsym && CDR(exp) != R_NilValue && CADR(exp) != R_NilValue)
+	exp = CADR(exp);
+    return exp;
 }
 
 #define BC_FRAME_HEADER_SIZE 3

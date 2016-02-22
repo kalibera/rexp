@@ -337,8 +337,7 @@ SEXP attribute_hidden R_sysframe(int n, RCNTXT *cptr)
 	n = -n;
 
     if(n < 0)
-	errorcall(R_GlobalContext->call,
-		  _("not that many frames on the stack"));
+	error(_("not that many frames on the stack"));
 
     while (cptr->nextcontext != NULL) {
 	if (cptr->callflag & CTXT_FUNCTION ) {
@@ -353,8 +352,7 @@ SEXP attribute_hidden R_sysframe(int n, RCNTXT *cptr)
     if(n == 0 && cptr->nextcontext == NULL)
 	return R_GlobalEnv;
     else
-	errorcall(R_GlobalContext->call,
-		  _("not that many frames on the stack"));
+	error(_("not that many frames on the stack"));
     return R_NilValue;	   /* just for -Wall */
 }
 
@@ -437,8 +435,7 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
     else
 	n = - n;
     if(n < 0)
-	errorcall(R_GlobalContext->call,
-		  _("not that many frames on the stack"));
+	error(_("not that many frames on the stack"));
     while (cptr->nextcontext != NULL) {
 	if (cptr->callflag & CTXT_FUNCTION ) {
 	    if (n == 0)
@@ -450,7 +447,7 @@ SEXP attribute_hidden R_syscall(int n, RCNTXT *cptr)
     }
     if (n == 0 && cptr->nextcontext == NULL)
 	return getCallWithSrcref(cptr);
-    errorcall(R_GlobalContext->call, _("not that many frames on the stack"));
+    error(_("not that many frames on the stack"));
     return R_NilValue;	/* just for -Wall */
 }
 
@@ -461,8 +458,7 @@ SEXP attribute_hidden R_sysfunction(int n, RCNTXT *cptr)
     else
 	n = - n;
     if (n < 0)
-	errorcall(R_GlobalContext->call,
-		  _("not that many frames on the stack"));
+	error(_("not that many frames on the stack"));
     while (cptr->nextcontext != NULL) {
 	if (cptr->callflag & CTXT_FUNCTION ) {
 	    if (n == 0)
@@ -474,7 +470,7 @@ SEXP attribute_hidden R_sysfunction(int n, RCNTXT *cptr)
     }
     if (n == 0 && cptr->nextcontext == NULL)
 	return duplicate(cptr->callfun);  /***** do we need to DUP? */
-    errorcall(R_GlobalContext->call, _("not that many frames on the stack"));
+    error(_("not that many frames on the stack"));
     return R_NilValue;	/* just for -Wall */
 }
 

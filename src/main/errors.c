@@ -272,7 +272,10 @@ void warning(const char *format, ...)
     if(strlen(buf) > 0 && *p == '\n') *p = '\0';
     RprintTrunc(buf);
     if (c && (c->callflag & CTXT_BUILTIN)) c = c->nextcontext;
-    warningcall(c ? c->call : R_NilValue, "%s", buf);
+    if (c == R_GlobalContext && R_Srcref == R_InBCInterpreter)
+        warningcall(R_getBCInterpreterExpression(), "%s", buf);
+    else
+        warningcall(c ? c->call : R_NilValue, "%s", buf);
 }
 
 /* declarations for internal condition handling */
@@ -767,7 +770,10 @@ void error(const char *format, ...)
     /* This can be called before R_GlobalContext is defined, so... */
     /* If profiling is on, this can be a CTXT_BUILTIN */
     if (c && (c->callflag & CTXT_BUILTIN)) c = c->nextcontext;
-    errorcall(c ? c->call : R_NilValue, "%s", buf);
+    if (c == R_GlobalContext && R_Srcref == R_InBCInterpreter)
+        errorcall(R_getBCInterpreterExpression(), "%s", buf);
+    else
+        errorcall(c ? c->call : R_NilValue, "%s", buf);
 }
 
 static void try_jump_to_restart(void)

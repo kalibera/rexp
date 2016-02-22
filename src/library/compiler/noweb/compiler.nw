@@ -214,7 +214,7 @@ Compilation environments are described in Section
 genCode <- function(e, cntxt, gen = NULL, loc = NULL) {
     cb <- make.codeBuf(e, loc)
     if (is.null(gen))
-        cmp(e, cb, cntxt)
+        cmp(e, cb, cntxt, setloc = FALSE)
     else
         gen(cb, cntxt)
     codeBufCode(cb)
@@ -302,13 +302,19 @@ else
 @ 
 The function [[cmp]] is then defined as
 <<[[cmp]] function>>=
-cmp <- function(e, cb, cntxt, missingOK = FALSE) {
+cmp <- function(e, cb, cntxt, missingOK = FALSE, setloc = TRUE) {
+    if (setloc) {
+        sloc <- cb$savecurloc()
+        cb$setcurexpr(e)
+    }
     ce <- constantFold(e, cntxt)
     if (is.null(ce)) {
         <<generate code for expression [[e]]>>
     }
     else
         cmpConst(ce$value, cb, cntxt)
+    if (setloc)
+        cb$restorecurloc(sloc)
 }
 @ %def cmp
 The call code generator [[cmpCall]] will recursively call [[cmp]].
@@ -533,6 +539,8 @@ The actual definition of [[cmpCall]] is a bit more complex than the
 simplified one given above:
 <<[[cmpCall]] function>>=
 cmpCall <- function(call, cb, cntxt) {
+    sloc <- cb$savecurloc()
+    cb$setcurexpr(call)
     cntxt <- make.callContext(cntxt, call)
     fun <- call[[1]]
     args <- call[-1]
@@ -546,6 +554,7 @@ cmpCall <- function(call, cb, cntxt) {
         <<hack for handling [[break()]] and [[next()]] expressions>>
         cmpCallExprFun(fun, args, call, cb, cntxt)
     }
+    cb$restorecurloc(sloc)
 }
 @ %def cmpCall
 The main addition is the use of a [[tryInline]] function which tries
@@ -847,15 +856,16 @@ putcode <- function(...) {
         if (srcrefTrackingOn)
             srcrefBuf <<- c(srcrefBuf, vector("integer", length(srcrefBuf)))
     }
-    codeBuf[(codeCount + 1) : (codeCount + newLen)] <<- new
+    codeRange <- (codeCount + 1) : (codeCount + newLen)
+    codeBuf[codeRange] <<- new
 
-    if (exprTrackingOn) {  ## put current expression into the constant pool
+    if (exprTrackingOn) {   ## put current expression into the constant pool
         ei <- putconst(curExpr)
-        exprBuf[(codeCount + 1) : (codeCount + newLen)] <<- ei
+        exprBuf[codeRange] <<- ei
     }
     if (srcrefTrackingOn) { ## put current srcref into the constant pool
         si <- putconst(curSrcref)
-        srcrefBuf[(codeCount + 1) : (codeCount + newLen)] <<- si
+        srcrefBuf[codeRange] <<- si
     }
 
     codeCount <<- codeCount + newLen
@@ -920,7 +930,7 @@ getBlockSrcref <- function(block, idx) {
 <<source location tracking implementation>>=
 
   ## expression tracking is not yet used by the byte-code interpreter
-exprTrackingOn <- FALSE
+exprTrackingOn <- TRUE
 srcrefTrackingOn <- TRUE
 
 if (is.null(loc)) {
@@ -938,8 +948,8 @@ if (is.null(curSrcref))
     ##   smaller
     srcrefTrackingOn <- FALSE
 
-exprBuf <- integer()   ## exprBuf will have the same length as codeBuf
-srcrefBuf <- integer() ## srcrefBuf will have the same length as codeBuf
+exprBuf <- NA   ## exprBuf will have the same length as codeBuf
+srcrefBuf <- NA ## srcrefBuf will have the same length as codeBuf
 
 if (!exprTrackingOn) {
     curExpr <- NULL
@@ -956,6 +966,8 @@ if (!srcrefTrackingOn) {
 setcurexpr <- function(expr) {
     if (exprTrackingOn) {
         curExpr <<- expr
+    }
+    if (srcrefTrackingOn) {
         sref <- getExprSrcref(expr)
         if (!is.null(sref) && srcrefTrackingOn)
             curSrcref <<- sref
@@ -2199,13 +2211,13 @@ setInlineHandler("{", function(e, cb, cntxt) {
             for (i in 2 : (n - 1)) {
                 subexp <- e[[i]]
                 cb$setcurloc(subexp, getBlockSrcref(bsrefs, i))
-                cmp(subexp, cb, ncntxt)
+                cmp(subexp, cb, ncntxt, setloc = FALSE)
                 cb$putcode(POP.OP)
             }
         }
         subexp <- e[[n]]
         cb$setcurloc(subexp, getBlockSrcref(bsrefs, n))
-        cmp(subexp, cb, cntxt)
+        cmp(subexp, cb, cntxt, setloc = FALSE)
         cb$restorecurloc(sloc)
     }
     TRUE
@@ -4207,9 +4219,12 @@ order. An argument context is used since there are already values on
 the stack.
 <<compile code to compute left hand side values>>=
 ncntxt <- make.argContext(cntxt)
-flatPlace <- flattenPlace(lhs)
-for (p in rev(flatPlace[-1]))
-    cmpGetterCall(p, cb, ncntxt)
+flat <- flattenPlace(lhs)
+flatOrigPlace <- flat$origplaces
+flatPlace <- flat$places
+flatPlaceIdxs <- seq_along(flatPlace)[-1]
+for (i in rev(flatPlaceIdxs))
+    cmpGetterCall(flatPlace[[i]], flatOrigPlace[[i]], cb, ncntxt)
 @ %def
 The compilation of the individual calls carried out by
 [[cmpGetterCall]], which is presented in Section \ref{subsec:getter}.
@@ -4221,9 +4236,11 @@ The function [[flattenPlace]] is defined as
 <<[[flattenPlace]] function>>=
 flattenPlace <- function(place) {
     places <- NULL
+    origplaces <- NULL
     while (typeof(place) == "language") {
         if (length(place) < 2)
             stop("bad assignment 1")
+        origplaces <- c(origplaces, list(place))
         tplace <- place
         tplace[[2]] <- as.name("*tmp*")
         places <- c(places, list(tplace))
@@ -4231,7 +4248,7 @@ flattenPlace <- function(place) {
     }
     if (typeof(place) != "symbol")
         stop("bad assignment 2")
-    places
+    list(places = places, origplaces = origplaces)
 }
 @ %def flattenPlace
 
@@ -4240,9 +4257,9 @@ the original right hand side value followed by the left hand side
 values in the order in which they need to be modified. Code to call
 the sequence of replacement functions is generated by
 <<compile code to compute right hand side values>>=
-cmpSetterCall(flatPlace[[1]], value, cb, ncntxt)
-for (p in flatPlace[-1])
-    cmpSetterCall(p, as.name("*vtmp*"), cb, ncntxt)
+cmpSetterCall(flatPlace[[1]], flatOrigPlace[[1]], value, cb, ncntxt)
+for (i in flatPlaceIdxs)
+    cmpSetterCall(flatPlace[[i]], flatOrigPlace[[i]], as.name("*vtmp*"), cb, ncntxt)
 @ %def
 The first call uses the expression for the original right hand side in
 its call; all others will use [[*vtmp*]].  Each replacement function
@@ -4269,17 +4286,20 @@ the function is specified in the form [[foo::bar]] or [[foo:::bar]]
 differs only compiling the function expression and using [[CHECKFUN]]
 to verify the result and prepare the stack.
 <<[[cmpSetterCall]] function>>=
-cmpSetterCall <- function(place, vexpr, cb, cntxt) {
+cmpSetterCall <- function(place, origplace, vexpr, cb, cntxt) {
     afun <- getAssignFun(place[[1]])
     acall <- as.call(c(afun, as.list(place[-1]), list(value = vexpr)))
     acall[[2]] <- as.name("*tmp*")
     ncntxt <- make.callContext(cntxt, acall)
+    sloc <- cb$savecurloc()
+    cexpr <- as.call(c(afun, as.list(origplace[-1]), list(value = vexpr)))
+    cb$setcurexpr(cexpr)
     if (is.null(afun))
         ## **** warn instead and arrange for cmpSpecial?
         ## **** or generate code to signal runtime error?
         cntxt$stop(gettext("invalid function in complex assignment"))
     else if (typeof(afun) == "symbol") {
-        if (! trySetterInline(afun, place, acall, cb, ncntxt)) {
+        if (! trySetterInline(afun, place, origplace, acall, cb, ncntxt)) {
             ci <- cb$putconst(afun)
             cb$putcode(GETFUN.OP, ci)
             <<compile additional arguments and call to setter function>>
@@ -4290,6 +4310,7 @@ cmpSetterCall <- function(place, vexpr, cb, cntxt) {
         cb$putcode(CHECKFUN.OP)
         <<compile additional arguments and call to setter function>>
     }
+    cb$restorecurloc(sloc)
 }
 @ %def cmpSetterCall
 The common code for compiling additional arguments and issuing the
@@ -4361,7 +4382,7 @@ getSetterInlineHandler <- function(name, package = "base") {
     else NULL
 }
 
-trySetterInline <- function(afun, place, call, cb, cntxt) {
+trySetterInline <- function(afun, place, origplace, call, cb, cntxt) {
     name <- as.character(afun)
     info <- getInlineInfo(name, cntxt)
     if (is.null(info))
@@ -4369,7 +4390,7 @@ trySetterInline <- function(afun, place, call, cb, cntxt) {
     else {
         h <- getSetterInlineHandler(name, info$package)
         if (! is.null(h))
-            h(afun, place, call, cb, cntxt)
+            h(afun, place, origplace, call, cb, cntxt)
         else FALSE
     }
 }
@@ -4381,7 +4402,7 @@ would produce runtime errors; these are compiled by the generic
 mechanism.
 %% **** might be useful to signal a warning at compile time
 <<setter inline handler for [[$<-]]>>=
-setSetterInlineHandler("$<-", function(afun, place, call, cb, cntxt) {
+setSetterInlineHandler("$<-", function(afun, place, origplace, call, cb, cntxt) {
     if (any.dots(place) || length(place) != 3)
         FALSE
     else {
@@ -4425,11 +4446,11 @@ cmpSetterDispatch <- function(start.op, dflt.op, afun, place, call, cb, cntxt) {
 The two inlining handlers are then defined as
 <<setter inline handlers for [[ [<- ]] and [[ [[<- ]]>>=
 # **** this is now handled differently; see "Improved subset ..."
-# setSetterInlineHandler("[<-", function(afun, place, call, cb, cntxt)
+# setSetterInlineHandler("[<-", function(afun, place, origplace, call, cb, cntxt)
 #     cmpSetterDispatch(STARTSUBASSIGN.OP, DFLTSUBASSIGN.OP,
 #                       afun, place, call, cb, cntxt))
 
-# setSetterInlineHandler("[[<-", function(afun, place, call, cb, cntxt)
+# setSetterInlineHandler("[[<-", function(afun, place, origplace, call, cb, cntxt)
 #     cmpSetterDispatch(STARTSUBASSIGN2.OP, DFLTSUBASSIGN2.OP,
 #                       afun, place, call, cb, cntxt))
 @ %def
@@ -4441,12 +4462,12 @@ is then compiled by a recursive call to [[cmpSetterCall]]; the handler
 will decline in this second call and the default compilation strategy
 will be used.
 <<setter inlining handler for [[@<-]]>>=
-setSetterInlineHandler("@<-", function(afun, place, acall, cb, cntxt) {
+setSetterInlineHandler("@<-", function(afun, place, origplace, acall, cb, cntxt) {
     if (! dots.or.missing(place) && length(place) == 3 &&
         typeof(place[[3]]) == "symbol") {
         place[[3]] <- as.character(place[[3]])
         vexpr <- acall[[length(acall)]]
-	cmpSetterCall(place, vexpr, cb, cntxt)
+	cmpSetterCall(place, origplace, vexpr, cb, cntxt)
         TRUE
     }
     else FALSE
@@ -4463,8 +4484,10 @@ for installing the getter function on the stack.  These are then
 followed by common code for handling the additional arguments and the
 call.
 <<[[cmpGetterCall]] function>>=
-cmpGetterCall <- function(place, cb, cntxt) {
+cmpGetterCall <- function(place, origplace, cb, cntxt) {
     ncntxt <- make.callContext(cntxt, place)
+    sloc <- cb$savecurloc()
+    cb$setcurexpr(origplace)
     fun <- place[[1]]
     if (typeof(fun) == "symbol") {
         if (! tryGetterInline(place, cb, ncntxt)) {
@@ -4478,6 +4501,7 @@ cmpGetterCall <- function(place, cb, cntxt) {
         cb$putcode(CHECKFUN.OP)
 	<<compile additional arguments and call to getter function>>
     }
+    cb$restorecurloc(sloc)
 }
 @ %def cmpGetterCall
 In the common code, as in setter calls a [[NULL]] is placed on the
@@ -4805,7 +4829,7 @@ tryCmpfun <- function(f)
 ##    tryCatch(cmpfun(f), error = function(e) f)
 @ %def tryCmpfun
 
-A similar usility for expressions for use in JIT compilation of loops:
+A similar utility for expressions for use in JIT compilation of loops:
 <<[[tryCompile]] function>>=
 tryCompile <- function(e, ...)
     tryCatch(compile(e, ...), error = function(err) { cat("COMPILATION FAILED:", e$message, " at ", deparse(e$call), "\n"); e })
@@ -5197,7 +5221,7 @@ cmpSubassignDispatch <- function(start.op, dflt.op, afun, place, call, cb,
 Again the handlers fall back to [[cmpSetterDispatch]] if there are
 named arguments or other complication.
 <<inline handlers for subassignment>>=
-setSetterInlineHandler("[<-", function(afun, place, call, cb, cntxt) {
+setSetterInlineHandler("[<-", function(afun, place, origplace, call, cb, cntxt) {
     if (dots.or.missing(place) || ! is.null(names(place)) || length(place) < 3)
         cmpSetterDispatch(STARTSUBASSIGN.OP, DFLTSUBASSIGN.OP,
                           afun, place, call, cb, cntxt) ## punt
@@ -5214,7 +5238,7 @@ setSetterInlineHandler("[<-", function(afun, place, call, cb, cntxt) {
     }
 })
 
-setSetterInlineHandler("[[<-", function(afun, place, call, cb, cntxt) {
+setSetterInlineHandler("[[<-", function(afun, place, origplace, call, cb, cntxt) {
     if (dots.or.missing(place) || ! is.null(names(place)) || length(place) < 3)
         cmpSetterDispatch(STARTSUBASSIGN2.OP, DFLTSUBASSIGN2.OP,
                           afun, place, call, cb, cntxt) ## punt
