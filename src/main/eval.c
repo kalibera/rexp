@@ -581,6 +581,9 @@ SEXP eval(SEXP e, SEXP rho)
     default: break;
     }
 
+    int bcintactivesave = R_BCIntActive;
+    R_BCIntActive = 0;
+
     if (!rho)
 	error("'rho' cannot be C NULL: detected in C-level eval");
     if (!isEnvironment(rho))
@@ -747,6 +750,7 @@ SEXP eval(SEXP e, SEXP rho)
     }
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
+    R_BCIntActive = bcintactivesave;
     return (tmp);
 }
 
@@ -5289,6 +5293,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   R_bcstack_t *oldntop = R_BCNodeStackTop;
   static int evalcount = 0;
   SEXP oldsrcref = R_Srcref;
+  int oldbcintactive = R_BCIntActive;
+
 #ifdef BC_INT_STACK
   IStackval *olditop = R_BCIntStackTop;
 #endif
@@ -5316,6 +5322,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   BCNPUSH(body);
   SETSTACK(-3, R_BCFrameStart); /* set when frame is ready */
   R_Srcref = R_InBCInterpreter; /* set when frame is ready */
+  R_BCIntActive = 1; /* set when frame is ready */
 
   /* check version */
   {
@@ -6266,6 +6273,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   }
 
  done:
+  R_BCIntActive = oldbcintactive;
   R_Srcref = oldsrcref;
   R_BCNodeStackTop = oldntop;
 #ifdef BC_INT_STACK
