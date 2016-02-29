@@ -272,7 +272,10 @@ void warning(const char *format, ...)
     if(strlen(buf) > 0 && *p == '\n') *p = '\0';
     RprintTrunc(buf);
     if (c && (c->callflag & CTXT_BUILTIN)) c = c->nextcontext;
-    warningcall(c ? c->call : R_NilValue, "%s", buf);
+    if (c == R_GlobalContext && R_BCIntActive)
+        warningcall(R_getBCInterpreterExpression(), "%s", buf);
+    else
+        warningcall(c ? c->call : R_NilValue, "%s", buf);
 }
 
 /* declarations for internal condition handling */
@@ -405,9 +408,6 @@ static void warningcall_dflt(SEXP call, const char *format,...)
 void warningcall(SEXP call, const char *format, ...)
 {
     va_list(ap);
-
-    if (R_BCIntActive)
-        call = R_getBCInterpreterExpression();
     va_start(ap, format);
     vsignalWarning(call, format, ap);
     va_end(ap);
@@ -728,8 +728,6 @@ void NORET errorcall(SEXP call, const char *format,...)
 {
     va_list(ap);
 
-    if (R_BCIntActive)
-        call = R_getBCInterpreterExpression();
     va_start(ap, format);
     vsignalError(call, format, ap);
     va_end(ap);
@@ -772,7 +770,10 @@ void error(const char *format, ...)
     /* This can be called before R_GlobalContext is defined, so... */
     /* If profiling is on, this can be a CTXT_BUILTIN */
     if (c && (c->callflag & CTXT_BUILTIN)) c = c->nextcontext;
-    errorcall(c ? c->call : R_NilValue, "%s", buf);
+    if (c == R_GlobalContext && R_BCIntActive)
+        errorcall(R_getBCInterpreterExpression(), "%s", buf);
+    else
+        errorcall(c ? c->call : R_NilValue, "%s", buf);
 }
 
 static void try_jump_to_restart(void)

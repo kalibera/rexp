@@ -3,7 +3,6 @@ library(compiler)
 # set to TRUE for debugging
 only.print <- FALSE
 
-
 testError <- function(expr, handler) {
     err <- tryCatch(expr, error = handler)
     stopifnot(identical(err, TRUE))
@@ -56,7 +55,8 @@ f <- function(x = 1:2,
     e(names(z[1:2]) <- c("X", "Y", "Z"),
         quote(`names<-`(z[1:2], value = c("X", "Y", "Z"))))
     e(names(z[c(-1,1)]) <- c("X", "Y", "Z"),
-        quote(z[c(-1, 1)]))
+        # quote(z[c(-1, 1)])) <=== this would be nice, but not possible at the moment
+        quote(`*tmp*`[c(-1, 1)]))
     w(names(u$inner)[2:4] <- v[1:2] <- c("X", "Y", "Z", "U")[1:2],
         quote(`[<-`(names(u$inner), 2:4, value = v[1:2] <- c("X", "Y", "Z", "U")[1:2])))
 }

@@ -3088,6 +3088,14 @@ static SEXP R_OrSym = NULL;
 static SEXP R_NotSym = NULL;
 static SEXP R_CSym = NULL;
 static SEXP R_LogSym = NULL;
+static SEXP R_DotInternalSym = NULL;
+static SEXP R_DotExternalSym = NULL;
+static SEXP R_DotExternal2Sym = NULL;
+static SEXP R_DotExternalgraphicsSym = NULL;
+static SEXP R_DotCallSym = NULL;
+static SEXP R_DotCallgraphicsSym = NULL;
+static SEXP R_DotFortranSym = NULL;
+static SEXP R_DotCSym = NULL;
 
 #if defined(__GNUC__) && ! defined(BC_PROFILING) && (! defined(NO_THREADED_CODE))
 # define THREADED_CODE
@@ -3114,7 +3122,14 @@ void R_initialize_bcode(void)
   R_NotSym = install("!");
   R_CSym = install("c");
   R_LogSym = install("log");
-
+  R_DotInternalSym = install(".Internal");
+  R_DotExternalSym = install(".External");
+  R_DotExternal2Sym = install(".External2");
+  R_DotExternalgraphicsSym = install(".External.graphics");
+  R_DotCallSym = install(".Call");
+  R_DotCallgraphicsSym = install(".Call.graphics");
+  R_DotFortranSym = install(".Fortran");
+  R_DotCSym = install(".C");
 #ifdef THREADED_CODE
   bcEval(NULL, NULL, FALSE);
 #endif
@@ -5269,6 +5284,14 @@ SEXP attribute_hidden R_getCurrentSrcref()
 	return R_findBCInterpreterScrref(R_BCNodeStackTop);
 }
 
+static Rboolean isHiddenCallName(SEXP sym)
+{
+    return sym == R_DotInternalSym || sym == R_DotExternalSym ||
+	sym == R_DotExternal2Sym || sym == R_DotExternalgraphicsSym ||
+	sym == R_DotCallSym || sym == R_DotFortranSym ||
+	sym == R_DotCSym || sym == R_DotCallgraphicsSym;
+}
+
 /* Get the current expression being evaluated by the byte-code interpreter. */
 SEXP attribute_hidden R_getBCInterpreterExpression()
 {
@@ -5277,10 +5300,19 @@ SEXP attribute_hidden R_getBCInterpreterExpression()
 	exp = forcePromise(exp);
 	SET_NAMED(exp, 2);
     }
-    /* return names of internal functions instead of ".Internal" */
-    SEXP intrsym = install(".Internal");
-    if (CAR(exp) == intrsym && CDR(exp) != R_NilValue && CADR(exp) != R_NilValue)
-	exp = CADR(exp);
+    /* hide closure wrappers for .Internal and similar functions */
+    if (isHiddenCallName(CAR(exp)) && CDR(exp) != R_NilValue && 
+	CADR(exp) != R_NilValue) {
+
+	RCNTXT *c = R_GlobalContext;
+        while(c && c->callflag != CTXT_TOPLEVEL) {
+	    if (c->callflag & CTXT_FUNCTION)
+		return c->call;
+	    c = c->nextcontext;
+	}
+	/* This mimicks the functionality of the AST interpreter in the common
+	   case when the internal or other function is wrapped in a closure. */
+    }
     return exp;
 }
 
