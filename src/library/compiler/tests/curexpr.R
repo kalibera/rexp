@@ -47,18 +47,20 @@ f <- function(x = 1:2,
         ...) {
 
 
-    w(x[1:3] <- 11:12,
-        quote(`[<-`(x, 1:3, value = 11:12)))
+    w(x[1:3] <- 11:12)
+        # quote(`[<-`(x, 1:3, value = 11:12))
     w(min(...))
     w(sqrt(y))
 
-    e(names(z[1:2]) <- c("X", "Y", "Z"),
-        quote(`names<-`(z[1:2], value = c("X", "Y", "Z"))))
+    e(names(z[1:2]) <- c("X", "Y", "Z"))
+        # quote(`names<-`(z[1:2], value = c("X", "Y", "Z"))
     e(names(z[c(-1,1)]) <- c("X", "Y", "Z"),
         # quote(z[c(-1, 1)])) <=== this would be nice, but not possible at the moment
         quote(`*tmp*`[c(-1, 1)]))
-    w(names(u$inner)[2:4] <- v[1:2] <- c("X", "Y", "Z", "U")[1:2],
-        quote(`[<-`(names(u$inner), 2:4, value = v[1:2] <- c("X", "Y", "Z", "U")[1:2])))
+    w(names(u$inner)[2:4] <- v[1:2] <- c("X", "Y", "Z", "U")[1:2])
+        # quote(`[<-`(names(u$inner), 2:4, value = v[1:2] <- c("X", "Y", "Z", "U")[1:2]))
+
+    e(stopifnot(is.numeric(dummy)))
 }
 
 old=options()

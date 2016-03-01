@@ -1930,6 +1930,7 @@ static SEXP R_SubassignSym = NULL;
 static SEXP R_Subset2Sym = NULL;
 static SEXP R_Subassign2Sym = NULL;
 static SEXP R_DollarGetsSymbol = NULL;
+static SEXP R_AssignSym = NULL;
 
 void attribute_hidden R_initAsignSymbols(void)
 {
@@ -1945,6 +1946,7 @@ void attribute_hidden R_initAsignSymbols(void)
     R_Subassign2Sym = install("[[<-");
     R_DollarGetsSymbol = install("$<-");
     R_valueSym = install("value");
+    R_AssignSym = install("<-");
 }
 
 static R_INLINE SEXP lookupAssignFcnSymbol(SEXP fun)
@@ -5284,12 +5286,83 @@ SEXP attribute_hidden R_getCurrentSrcref()
 	return R_findBCInterpreterScrref(R_BCNodeStackTop);
 }
 
-static Rboolean isHiddenCallName(SEXP sym)
+static Rboolean maybeClosureWrapper(SEXP expr)
 {
-    return sym == R_DotInternalSym || sym == R_DotExternalSym ||
+    SEXP sym = CAR(expr);
+
+    if (!(sym == R_DotInternalSym || sym == R_DotExternalSym ||
 	sym == R_DotExternal2Sym || sym == R_DotExternalgraphicsSym ||
 	sym == R_DotCallSym || sym == R_DotFortranSym ||
-	sym == R_DotCSym || sym == R_DotCallgraphicsSym;
+	sym == R_DotCSym || sym == R_DotCallgraphicsSym))
+
+	return FALSE;
+
+    return CDR(expr) != R_NilValue && CADR(expr) != R_NilValue;
+}
+
+static Rboolean maybeAssignmentCall(SEXP expr)
+{
+    if (TYPEOF(CAR(expr)) != SYMSXP)
+	return FALSE;
+    const char *name = CHAR(PRINTNAME(CAR(expr)));
+    size_t slen = strlen(name);
+    return slen > 2 && name[slen-2] == '<' && name[slen-1] == '-';
+}
+
+/* Check if the given expression is a call to a name that is also
+   a builtin or special (does not search the environment!). */
+static Rboolean maybePrimitiveCall(SEXP expr)
+{
+    if (TYPEOF(CAR(expr)) == SYMSXP) {
+	SEXP value = SYMVALUE(CAR(expr));
+	if (TYPEOF(value) == PROMSXP)
+	    value = PRVALUE(value);
+	return TYPEOF(value) == BUILTINSXP || TYPEOF(value) == SPECIALSXP;
+    }
+    return FALSE;
+}
+
+/* Inflate a (single-level) compiler-flattenned assignment call.
+   For example,
+           `[<-`(x, c(-1, 1), value = 2)
+   becomes
+            x[c(-1,1)] <- 2 */
+static SEXP inflateAssignmentCall(SEXP expr) {
+    if (CDR(expr) == R_NilValue || CDDR(expr) == R_NilValue)
+	return expr; /* need at least two arguments */
+
+    SEXP assignForm = CAR(expr);
+    if (TYPEOF(assignForm) != SYMSXP)
+	return expr;
+    const char *name = CHAR(PRINTNAME(assignForm));
+    size_t slen = strlen(name);
+    if (slen <= 2 || name[slen - 2] != '<' || name[slen - 1] != '-')
+	return expr;
+
+    char nonAssignName[slen - 1]; /* "names" for "names<-" */
+    strncpy(nonAssignName, name, slen - 2);
+    nonAssignName[slen - 2] = '\0';
+    SEXP nonAssignForm = install(nonAssignName);
+
+    int nargs = length(expr) - 2;
+    SEXP lhs = allocVector(LANGSXP, nargs + 1);
+    SETCAR(lhs, nonAssignForm);
+
+    SEXP porig = CDR(expr);
+    SEXP pnew = CDR(lhs);
+
+    /* copy args except the last - the "value" */
+    while(CDR(porig) != R_NilValue) {
+	SETCAR(pnew, CAR(porig));
+	SET_NAMED(CAR(porig), 2);
+	porig = CDR(porig);
+	pnew = CDR(pnew);
+    }
+    SEXP rhs = CAR(porig);
+    SET_NAMED(rhs, 2);
+    if (TAG(porig) != R_valueSym)
+	return expr;
+    return lang3(R_AssignSym, lhs, rhs);
 }
 
 /* Get the current expression being evaluated by the byte-code interpreter. */
@@ -5300,18 +5373,27 @@ SEXP attribute_hidden R_getBCInterpreterExpression()
 	exp = forcePromise(exp);
 	SET_NAMED(exp, 2);
     }
-    /* hide closure wrappers for .Internal and similar functions */
-    if (isHiddenCallName(CAR(exp)) && CDR(exp) != R_NilValue && 
-	CADR(exp) != R_NilValue) {
+    /* This tries to mimick the behavior of the AST interpreter to a reasonable
+       level. The AST interpreter behavior is rather inconsistent and should be
+       fixed at some point. When this happens, the code below will have to be
+       revisited. Currently it attempts to bypass implementation of closure
+       wrappers for internals and other foreign functions called via a directive,
+       hide away primitives, but show assignment calls. This code now ignores
+       less usual problematic situations such as overriding of builtins or
+       inlining of the wrappers by the compiler. Simple assignment calls are
+       inflated (back) into the usual form like x[1] <- y. */
 
+    if (maybeAssignmentCall(exp)) {
+	exp = inflateAssignmentCall(exp);
+    } else if (maybeClosureWrapper(exp) || maybePrimitiveCall(exp)) {
 	RCNTXT *c = R_GlobalContext;
         while(c && c->callflag != CTXT_TOPLEVEL) {
-	    if (c->callflag & CTXT_FUNCTION)
-		return c->call;
+	    if (c->callflag & CTXT_FUNCTION) {
+		exp = c->call;
+		break;
+	    }
 	    c = c->nextcontext;
 	}
-	/* This mimicks the functionality of the AST interpreter in the common
-	   case when the internal or other function is wrapped in a closure. */
     }
     return exp;
 }
