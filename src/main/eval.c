@@ -5373,19 +5373,27 @@ SEXP attribute_hidden R_getBCInterpreterExpression()
 	exp = forcePromise(exp);
 	SET_NAMED(exp, 2);
     }
+
     /* This tries to mimick the behavior of the AST interpreter to a reasonable
-       level. The AST interpreter behavior is rather inconsistent and should be
-       fixed at some point. When this happens, the code below will have to be
-       revisited. Currently it attempts to bypass implementation of closure
+       level, based on relatively consistent expressions provided by the compiler
+       in the constant pool. The AST interpreter behavior is rather inconsistent
+       and should be fixed at some point. When this happens, the code below will 
+       have to be revisited, but the compiler code should mostly stay the same.
+
+       Currently this code attempts to bypass implementation of closure
        wrappers for internals and other foreign functions called via a directive,
-       hide away primitives, but show assignment calls. This code now ignores
+       hide away primitives, but show assignment calls. This code ignores
        less usual problematic situations such as overriding of builtins or
        inlining of the wrappers by the compiler. Simple assignment calls are
-       inflated (back) into the usual form like x[1] <- y. */
+       inflated (back) into the usual form like x[1] <- y. Expressions made of
+       a single symbol are hidden away (note these are e.g. for missing
+       function arguments). */
 
     if (maybeAssignmentCall(exp)) {
 	exp = inflateAssignmentCall(exp);
-    } else if (maybeClosureWrapper(exp) || maybePrimitiveCall(exp)) {
+    } else if (TYPEOF(exp) == SYMSXP || maybeClosureWrapper(exp)
+	|| maybePrimitiveCall(exp)) {
+
 	RCNTXT *c = R_GlobalContext;
         while(c && c->callflag != CTXT_TOPLEVEL) {
 	    if (c->callflag & CTXT_FUNCTION) {
