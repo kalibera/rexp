@@ -18,7 +18,7 @@ w <- function(expr, call = substitute(expr)) {
        testWarning(expr = expr, handler = function(e) {
            cat("WARNING-MESSAGE: \"", e$message, "\"\nWARNING-CALL: ", deparse(e$call), "\n", sep="")
            TRUE
-       }) 
+       })
     else
        testWarning(expr = expr, handler = function(e) {
            stopifnot(identical(e$call, call))
@@ -31,7 +31,7 @@ e <- function(expr, call = substitute(expr)) {
        testError(expr = expr, handler = function(e) {
            cat("ERROR-MESSAGE: \"", e$message, "\"\nERROR-CALL: ", deparse(e$call), "\n", sep="")
            TRUE
-       }) 
+       })
     else
        testError(expr = expr, handler = function(e) {
            stopifnot(identical(e$call, call))
