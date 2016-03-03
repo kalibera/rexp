@@ -791,9 +791,6 @@ getBlockSrcref <- function(block, idx) {
 }
 
 make.codeBuf <- function(expr, loc = NULL) {
-
-    
-      ## expression tracking is not yet used by the byte-code interpreter
     exprTrackingOn <- TRUE
     srcrefTrackingOn <- TRUE
 

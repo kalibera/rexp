@@ -812,7 +812,6 @@ as the first constant in the constant pool; this can be used to
 retrieve the source code for a compiled expression.
 <<[[make.codeBuf]] function>>=
 make.codeBuf <- function(expr, loc = NULL) {
-
     <<source location tracking implementation>>
     <<instruction stream buffer implementation>>
     <<constant pool buffer implementation>>
@@ -928,8 +927,6 @@ getBlockSrcref <- function(block, idx) {
 @ %def
 
 <<source location tracking implementation>>=
-
-  ## expression tracking is not yet used by the byte-code interpreter
 exprTrackingOn <- TRUE
 srcrefTrackingOn <- TRUE
 
@@ -4199,7 +4196,7 @@ of the expressions that need to be considered, with [[*tmp*]] in place
 of the current left hand side argument. For example, for an assignment
 of the form [[f(g(h(x, k), j), i) <- v]] this produces
 \begin{verbatim}
-> flattenPlace(quote(f(g(h(x, k), j), i)))
+> flattenPlace(quote(f(g(h(x, k), j), i)))$places
 [[1]]
 f(`*tmp*`, i)
 
