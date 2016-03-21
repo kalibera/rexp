@@ -533,6 +533,8 @@ typedef struct RCNTXT {
     SEXP srcref;	        /* The source line in effect */
     int browserfinish;     /* should browser finish this context without stopping */
     SEXP returnValue;			/* only set during on.exit calls */
+    struct RCNTXT *jumptarget;	/* target for a continuing jump */
+    int jumpmask;               /* associated LONGJMP argument */
 } RCNTXT, *context;
 
 /* The Various Context Types.
@@ -673,6 +675,8 @@ extern0 Rboolean R_CBoundsCheck	INI_as(FALSE);	/* options(CBoundsCheck) */
 extern0 int	R_WarnLength	INI_as(1000);	/* Error/warning max length */
 extern0 int	R_nwarnings	INI_as(50);
 extern uintptr_t R_CStackLimit	INI_as((uintptr_t)-1);	/* C stack limit */
+extern uintptr_t R_OldCStackLimit INI_as((uintptr_t)0); /* Old value while 
+							   handling overflow */
 extern uintptr_t R_CStackStart	INI_as((uintptr_t)-1);	/* Initial stack address */
 extern int	R_CStackDir	INI_as(1);	/* C stack direction */
 
@@ -1059,6 +1063,9 @@ SEXP deparse1s(SEXP call);
 int DispatchAnyOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
 int DispatchOrEval(SEXP, SEXP, const char *, SEXP, SEXP, SEXP*, int, int);
 int DispatchGroup(const char *, SEXP,SEXP,SEXP,SEXP,SEXP*);
+R_xlen_t dispatch_xlength(SEXP, SEXP, SEXP);
+R_len_t dispatch_length(SEXP, SEXP, SEXP);
+SEXP dispatch_subset2(SEXP, R_xlen_t, SEXP, SEXP);
 SEXP duplicated(SEXP, Rboolean);
 R_xlen_t any_duplicated(SEXP, Rboolean);
 R_xlen_t any_duplicated3(SEXP, SEXP, Rboolean);
@@ -1190,7 +1197,7 @@ SEXP R_sysframe(int,RCNTXT*);
 SEXP R_sysfunction(int,RCNTXT*);
 
 void R_run_onexits(RCNTXT *);
-void R_restore_globals(RCNTXT *);
+void NORET R_jumpctxt(RCNTXT *, int, SEXP);
 #endif
 
 /* ../main/bind.c */

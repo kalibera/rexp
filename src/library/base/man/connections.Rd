@@ -1,6 +1,6 @@
 % File src/library/base/man/connections.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2015 R Core Team
+% Copyright 1995-2016 R Core Team
 % Distributed under GPL 2 or later
 
 \name{connections}
@@ -134,7 +134,7 @@ isIncomplete(con)
   (such as \samp{http://}, \samp{https://}, \samp{ftp://} or
   \samp{file://}).  Method \code{"internal"} is that available since
   connections were introduced, method \code{"wininet"} is only available
-  on Windows (it uses the WinInet functions of that OS) and method
+  on Windows (it uses the WinINet functions of that OS) and method
   \code{"libcurl"} (using the library of that name:
   \url{http://curl.haxx.se/libcurl/}) is required on a Unix-alike but
   optional on Windows.  Method \code{"default"} uses method
@@ -389,7 +389,11 @@ isIncomplete(con)
   \url{https://en.wikipedia.org/wiki/UTF-16}: the use of characters in
   the \sQuote{Supplementary Planes} which need surrogate pairs is very
   rare so \code{"UCS-2LE"} is an appropriate first choice (as it is more
-  widely implemented).
+  widely implemented).  
+  
+  One caveat:  \R's implementation of \code{"UCS-2LE"} and similar for 
+  output does not currently work on Windows, and on Unix it will default 
+  to Unix-style line endings.  We recommend use of \code{UTF-8} instead.
 
   As from \R 3.0.0 the encoding \code{"UTF-8-BOM"} is accepted for
   reading and will remove a Byte Order Mark if present (which it often

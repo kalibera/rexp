@@ -1,11 +1,19 @@
 % -*- coding: utf-8 -*-
-\newcommand{\Rlogo}{\if{html}{\figure{../../html/logo.jpg}}\if{latex}{\figure{logo.jpg}{options: width=0.5in}}}
+\newcommand{\Rlogo}{\if{html}{\figure{../../html/Rlogo.svg}{options: class="toplogo" alt="[R logo]"}}\if{latex}{\figure{Rlogo.pdf}{options: width=0.5in}}}
 
 \name{NEWS}
 \title{R News}
 \encoding{UTF-8}
 
 \section{\Rlogo CHANGES IN R-devel}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item Placeholder.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.3.0}{
   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
     \itemize{
       \item \code{nchar(x, *)}'s argument \code{keepNA} governing how
@@ -29,6 +37,7 @@
       the same Linux machine.
     }
   }
+
   \subsection{NEW FEATURES}{
     \itemize{
       \item The \code{print} method for \code{methods()} gains a
@@ -39,8 +48,10 @@
       \code{grep()} and friends.
 
       \item Experimental new functionality for S3 method checking, notably
-      \code{isS3method()}.  Also, the \R \sQuote{language element} names
-      are exported as \code{tools::langElts}.
+      \code{isS3method()}.
+
+      Also, the names of the \R \sQuote{language elements} are exported
+      as character vector \code{tools::langElts}.
 
       \item \code{str(x)} now displays \code{"Time-Series"} also for
       matrix (multivariate) time-series, i.e. when \code{is.ts(x)} is true.
@@ -183,14 +194,15 @@
       The choice can easily be overridden \emph{via} environment
       variable \env{R_INTERACTIVE_DEVICE}.
 
-      \item On unixy platforms (with the \command{getline} C library function),
-      \code{system(*,intern=TRUE)} no longer truncates (output) lines
-      longer than 8192 characters, thanks to Karl Millar's \PR{16544}.
+      \item On Unix-like platforms with the \command{getline} C library
+      function, \code{system(*,intern = TRUE)} no longer truncates
+      (output) lines longer than 8192 characters, thanks to Karl
+      Millar's \PR{16544}.
 
       \item \code{rank()} gains a \code{ties.method = "last"} option,
       for convenience (and symmetry).
 
-      %% \item \code{getSource(vignette(..))} is the \R source file name of
+      %% \item \code{getRcode(vignette(..))} is the \R source file name of
       %% a vignette.
 
       \item \code{regmatches(invert = NA)} can now be used to extract
@@ -293,6 +305,25 @@
       start day has been made conditional on \code{right = TRUE} (the
       default).  (\PR{16679})
 
+      \item \R now uses a new version of the logo (donated to the R
+      Foundation by RStudio).  It is defined in \file{.svg} format, so
+      will resize without unnecessary degradation when displayed on
+      HTML pages---there is also vector version for use in PDF files.
+
+      \item New function \code{.traceback()} returns the stack trace
+      which \code{traceback()} prints.
+
+      \item \code{lengths()} dispatches internally.
+
+      %% not the whole truth: it does not check for a suitable [[ method ....
+      \item \code{for()} loops are generalized to iterate over any
+      object with \code{[[} and \code{length()} methods. Thanks to Hervé
+      Pagès for the idea and the patch.
+
+      \item \code{dotchart()} gains a \code{pt.cex} argument to control
+      the size of points separately from the size of plot labels.
+      Thanks to Michael Friendly and Milan Bouchet-Valat for ideas
+      and patches.
     }
   }
 
@@ -315,12 +346,6 @@
       \item \command{R CMD Rdconv} and \command{R CMD Rd2pdf} each have
       a new option \option{--RdMacros=pkglist} which allows Rd macros
       to be specified before processing.
-
-      \item \command{R CMD check} will leave a log file
-      \file{build_vignettes.log} from the re-building of vignettes in
-      the \file{.Rcheck} directory if there is a problem, and always if
-      environment variable \env{_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_} is
-      set to a true value.
     }
   }
 
@@ -346,9 +371,14 @@
 
       \item \code{[<-} with an S4 value into a list currently embeds the
       S4 object into its own list such that the end result is roughly
-      equivalent to using \code{[[<-}. That behavior is deprecated. In
+      equivalent to using \code{[[<-}.  That behavior is deprecated.  In
       the future, the S4 value will be coerced to a list with
       \code{as.list()}.
+
+      \item Package \pkg{tools}' functions
+      \code{package.dependencies()}, \code{pkgDepends()}, etc are
+      deprecated now, mostly in favor of \code{package_dependencies()}
+      which is both more flexible and efficient.
     }
   }
 
@@ -388,15 +418,17 @@
       not found.  (OS X is the main instance.)
 
       \item (Windows) An experimental build of R based on \command{gcc}
-      4.9.3 is now available on CRAN on the \file{bin/windows/base/rdevel.html}
-      snapshot page.  This build will require recompilation of at least those
-      packages that include C++ code, and possibly others.  The CRAN
-      binary packages still use the older toolchain, so package installs
-      default to \code{type = "source"}.
+      4.9.3 is now available on CRAN on the
+      \file{bin/windows/base/rdevel.html} snapshot page.  This build
+      will require recompilation of at least those packages that include
+      C++ code, and possibly others.  The CRAN binary packages still use
+      the older toolchain, so package installs default to \code{type =
+      "source"}.
 
-      During the transition, the environment variable \env{R_COMPILED_BY} will
-      be defined to indicate which toolchain was used to compile R (and hence,
-      which should be used to compile code in packages).
+      During the transition, the environment variable
+      \env{R_COMPILED_BY} will be defined to indicate which toolchain
+      was used to compile R (and hence, which should be used to compile
+      code in packages).
     }
   }
 
@@ -404,7 +436,6 @@
     \itemize{
       \item The \command{make} macro \code{AWK} which used to be made
       available to files such as \file{src/Makefile} is no longer set.
-      [Announced and will be implemented once packages are updated.]
     }
   }
 
@@ -412,17 +443,17 @@
     \itemize{
       \item The API call \code{logspace_sum} introduced in \R 3.2.0 is
       now remapped as an entry point to \code{Rf_logspace_sum}, and its
-      first argument has gained a \code{const} qualifier.
+      first argument has gained a \code{const} qualifier.  (\PR{16470})
 
-      Code using it will need to be reinstalled. (\PR{16470})
+      Code using it will need to be reinstalled.
 
       Similarly, entry point \code{log1pexp} also defined in
       \file{Rmath.h} is remapped there to \code{Rf_log1pexp}
 
       \item \code{R_GE_version} has been increased to \code{11}.
 
-      \item New API call \code{R_orderVector1()}, a faster
-      one-argument version of \code{R_orderVector()}.
+      \item New API call \code{R_orderVector1}, a faster
+      one-argument version of \code{R_orderVector}.
 
       \item When \R{} headers such as \file{R.h} and \file{Rmath.h} are
       called from C++ code in packages they include the C++ versions of
@@ -472,11 +503,6 @@
       \item Data frames with column name \code{"stringsAsFactors"} now
       format and print correctly.  (\PR{16580})
 
-      \item The \code{X11()} device sometimes froze on Red Hat
-      Enterprise Linux 6. It now waits for \code{MapNotify} events
-      instead of \code{Expose} events, thanks to Siteshwar
-      Vashisht. (\PR{16497})
-
       \item \code{cor()} is now guaranteed to return a value with
       absolute value less than or equal to 1. (\PR{16638})
 
@@ -489,20 +515,49 @@
       \code{row.names} works better in borderline integer cases, but
       may change the names assigned.  (\PR{16666})
 
-      \item \code{dummy.coef.lm()} now works in more cases, thanks to a
-      proposal by Werner Stahel (\PR{16665}).  In addition, it now works
-      for multivariate linear models (\code{"mlm"}, \code{\link{manova}})
-      thanks to a proposal by Daniel Wollschlaeger.
-      % port to r-patched
-
       \item (X11 only)  \code{getGraphicsEvent()} miscoded buttons and
       missed mouse motion events.  (\PR{16700})
       % port to r-patched if it doesn't add too many events to graphics windows
+
+      \item \code{methods(round)} now also lists \code{round.POSIXt}.
+
+      \item \code{tar()} now works with the default \code{files = NULL}.
+      (\PR{16716})
+
+      \item Jumps to outer contexts, for example in error recovery, now
+      make intermediate jumps to contexts where \code{on.exit} actions
+      are established instead of trying to run all \code{on.exit}
+      actions before jumping to the final target. This unwinds the stack
+      gradually, releases resources held on the stack, and significantly
+      reduces the chance of a segfault when running out of C stack
+      space. Error handlers established using
+      \code{withCallingHandlers()} and \code{options("error")}
+      specifications are ignored when handling a C stack overflow error
+      as attempting one of these would trigger a cascade of C stack
+      overflow errors.  These changes resolve \PR{16753}.
+
+      \item The spacing could be wrong when printing a complex array.
+      (Report and patch by Lukas Stadler.)
+
+      \item \code{pretty(d, n, min.n, *)} for date-time objects \code{d}
+      works again in border cases with large \code{min.n}, returns a
+      \code{labels} attribute also for small-range dates and in such cases
+      its returned length is closer to the desired \code{n}.  \PR{16761}
     }
   }
 }
 
-\section{\Rlogo CHANGES IN R 3.2.3 patched}{
+\section{\Rlogo CHANGES IN R 3.2.4 patched}{
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{format.POSIXlt()} behaved wrongly, e.g.,
+      \code{format(as.POSIXlt(paste0(1940:2000,"-01-01"), tz="CET"),
+	usetz=TRUE)} ended in two \code{"CEST"} time formats.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.2.4}{
   \subsection{NEW FEATURES}{
     \itemize{
       \item \code{install.packages()} and related functions now give a
@@ -521,12 +576,23 @@
       optional argument \code{stringsAsFactors} (instead of only
       depending on \code{getOption("stringsAsFactors")}).
 
-      \item The \code{as.hclust} method for \code{"dendrogram"}s failed often
-      when there were ties in the heights.
+      \item \code{smooth(x, *)} now also works for long vectors.
 
-      \item \code{reorder()} and \code{midcache.dendrogram()} now are
-      non-recursive and hence applicable to somewhat deeply nested
-      dendrograms, thanks to a proposal by Suharto Anggono in \PR{16424}.
+      \item \code{tools::texi2dvi()} has a workaround for problems with
+      the \command{texi2dvi} script supplied by \pkg{texinfo 6.1}.
+
+      It extracts more error messages from the LaTeX logs when in
+      emulation mode.
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD check} will leave a log file
+      \file{build_vignettes.log} from the re-building of vignettes in
+      the \file{.Rcheck} directory if there is a problem, and always if
+      environment variable \env{_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_} is
+      set to a true value.
     }
   }
 
@@ -541,8 +607,8 @@
       \R itself but recorded in file \file{etc/Makeconf} is deprecated
       and will be removed in \R 3.3.0.
 
-      The C header file \file{S.h} is no longer documented: its use
-      should be replaced by \file{R.h}.
+      \item The C header file \file{S.h} is no longer documented: its
+      use should be replaced by \file{R.h}.
     }
   }
 
@@ -601,6 +667,57 @@
       \item (Windows only) The \command{Rgui} front end did not
       always initialize the console properly, and could cause
       \R to crash.  (\PR{16998})
+
+      \item \code{dummy.coef.lm()} now works in more cases, thanks to a
+      proposal by Werner Stahel (\PR{16665}).  In addition, it now works
+      for multivariate linear models (\code{"mlm"}, \code{\link{manova}})
+      thanks to a proposal by Daniel Wollschlaeger.
+
+      \item The \code{as.hclust()} method for \code{"dendrogram"}s
+      failed often when there were ties in the heights.
+
+      \item \code{reorder()} and \code{midcache.dendrogram()} now are
+      non-recursive and hence applicable to somewhat deeply nested
+      dendrograms, thanks to a proposal by Suharto Anggono in \PR{16424}.
+
+      \item \code{cor.test()} now calculates very small p values
+      more accurately (affecting the result only in extreme not
+      statistically relevant cases).  (\PR{16704})
+
+      \item \code{smooth(*, do.ends=TRUE)} did not always work correctly
+      in \R versions between 3.0.0 and 3.2.3.
+
+      \item \code{pretty(D)} for date-time objects \code{D} now also
+      works well if \code{range(D)} is (much) smaller than a second.  In
+      the case of only one unique value in \code{D}, the pretty range
+      now is more symmetric around that value than previously.
+      \cr
+      Similarly, \code{pretty(dt)} no longer returns a length 5 vector
+      with duplicated entries for \code{Date} objects \code{dt} which
+      span only a few days.
+
+      \item The figures in help pages such as \code{?points} were
+      accidentally damaged, and did not appear in \R 3.2.3.
+      (\PR{16708})
+
+      \item \code{available.packages()} sometimes deleted the wrong
+      file when cleaning up temporary files.  (\PR{16712})
+
+      \item The \code{X11()} device sometimes froze on Red Hat
+      Enterprise Linux 6. It now waits for \code{MapNotify} events
+      instead of \code{Expose} events, thanks to Siteshwar
+      Vashisht. (\PR{16497})
+
+      \item \code{[dpqr]nbinom(*, size=Inf, mu=.)} now works as limit
+      case, for \sQuote{dpq} as the Poisson.  (\PR{16727})\cr
+      \code{pnbinom()} no longer loops infinitely in border cases.
+
+      \item \code{approxfun(*, method="constant")} and hence \code{ecdf()}
+      which calls the former now correctly \dQuote{predict} \code{NaN}
+      values as \code{NaN}.
+
+      \item \code{summary.data.frame()} now displays \code{NA}s in
+      \code{Date} columns in all cases.  (\PR{16709})
     }
   }
 }

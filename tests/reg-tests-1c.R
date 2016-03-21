@@ -1358,10 +1358,112 @@ stopifnot(
 
 
 ## recursive dendrogram methods and deeply nested dendrograms
-op <- options(expressions = 999, verbose = TRUE)
+op <- options(expressions = 999)# , verbose = 2) # -> max. depth= 961
 set.seed(11); d <- mkDend(1500, "A", method="single")
 rd <- reorder(d, nobs(d):1)
 ## Error: evaluation nested too deeply: infinite recursion .. in R <= 3.2.3
 stopifnot(is.leaf(r1 <- rd[[1]]),    is.leaf(r2 <- rd[[2:1]]),
 	  attr(r1, "label") == "A1458", attr(r2, "label") == "A1317")
 options(op)# revert
+
+
+## cor.test() with extremely small p values
+b <- 1:10; set.seed(1)
+for(n in 1:256) {
+    a <- round(jitter(b, f = 1/8), 3)
+    p1 <- cor.test(a, b)$ p.value
+    p2 <- cor.test(a,-b)$ p.value
+    stopifnot(abs(p1 - p2) < 8e-16 * (p1+p2))
+    ## on two different Linuxen, they actually are always equal
+}
+## were slightly off in R <= 3.2.3. PR#16704
+
+
+## smooth(*, do.ends=TRUE)
+y <- c(4,2,2,3,10,5:7,7:6)
+stopifnot(
+    identical(c(smooth(y, "3RSR" , do.ends=TRUE, endrule="copy")),
+              c(4, 2, 2, 3, 5, 6, 6, 7, 7, 6) -> sy.c),
+    identical(c(smooth(y, "3RSS" , do.ends=TRUE, endrule="copy")), sy.c),
+    identical(c(smooth(y, "3RS3R", do.ends=TRUE, endrule="copy")), sy.c),
+    identical(c(smooth(y, "3RSR" , do.ends=FALSE, endrule="copy")),
+              c(4, 4, 4, 4, 5, 6, 6, 6, 6, 6)),
+    identical(c(smooth(y, "3RSS" , do.ends=FALSE, endrule="copy")),
+              c(4, 4, 2, 3, 5, 6, 6, 6, 6, 6)),
+    identical(c(smooth(y, "3RS3R", do.ends=FALSE, endrule="copy")),
+              c(4, 4, 3, 3, 5, 6, 6, 6, 6, 6)))
+## do.ends=TRUE was not obeyed for the "3RS*" kinds, for 3.0.0 <= R <= 3.2.3
+
+
+## prettyDate() for subsecond ranges
+chkPretty <- function(obj, n = 5, ..., max.D = 1) {
+    pr <- pretty(obj, n=n, ...)
+    stopifnot(abs(length(pr) - n) <= max.D,
+	      length(unique(diff(pr))) == 1, # <==> must be equidistant
+	      min(pr) <= min(obj), max(obj) <= max(pr))
+    invisible(pr)
+}
+sTime <- structure(1455056860.75, class = c("POSIXct", "POSIXt"))
+for(n in c(1:16, 30:32, 41, 50, 60)) # (not for much larger n)
+    chkPretty(sTime, n=n)
+set.seed(7)
+for(n in c(1:7, 12)) replicate(32, chkPretty(sTime + .001*rlnorm(1) * 0:9, n = n))
+## failed in R <= 3.2.3
+seqD  <- function(d1,d2) seq.Date(as.Date(d1), as.Date(d2), by = "1 day")
+seqDp <- function(d1,d2) structure(seqD(d1, d2), labels = "%b %d")
+MTbd <- as.Date("1960-02-10")
+(p1   <- chkPretty(MTbd))
+stopifnot(
+    identical(p1, seqDp("1960-02-08", "1960-02-13")) ,
+    identical(chkPretty(MTbd + rep(0,2)), p1) ,
+    identical(chkPretty(MTbd +  0:1), p1) ,
+    identical(chkPretty(MTbd + -1:1), p1) ,
+    identical(chkPretty(MTbd +  0:3), seqDp("1960-02-09", "1960-02-14")) )
+## all pretty() above gave length >= 5 answer (with duplicated values!) in R <= 3.2.3
+## and length 1 or 2 instead of about 5 in R 3.2.4
+(p2 <- chkPretty(as.POSIXct("2002-02-02 02:02"), n = 5, min.n = 5))
+stopifnot(identical(p2, structure(1012611718 + (0:4),
+				  class = c("POSIXct", "POSIXt"), tzone = "",
+				  labels = sprintf("%02d", 58:62 %% 60))))
+## failed in R 3.2.4
+
+
+stopifnot(c("round.Date", "round.POSIXt") %in% as.character(methods(round)))
+## round.POSIXt suppressed in R <= 3.2.x
+
+
+## approxfun(*, method="constant")
+Fn <- ecdf(1:5)
+t <- c(NaN, NA, 1:5)
+stopifnot(all.equal(Fn(t), t/5))
+## In R <= 3.2.3,  NaN values resulted in something like (n-1)/n.
+
+
+## tar() default (i.e. "no files") behaviour:
+dir.create(td <- tempfile("tar-experi"))
+setwd(td)
+dfil <- "base_Desc"
+file.copy(system.file("DESCRIPTION"), dfil)
+## tar w/o specified files
+tar("ex.tar")# all files, i.e. 'dfil'
+unlink(dfil)
+stopifnot(grepl(dfil, untar("ex.tar", list = TRUE)))
+untar("ex.tar")
+myF2 <- c(dfil, "ex.tar")
+stopifnot(identical(list.files(), myF2))
+unlink(myF2)
+## produced an empty tar file in R < 3.3.0, PR#16716
+
+
+## format.POSIXlt() of Jan.1 if  1941 or '42 is involved:
+tJan1 <- function(n1, n2)
+    strptime(paste0(n1:n2,"/01/01"), "%Y/%m/%d", tz="CET")
+wDSTJan1 <- function(n1, n2)
+    which("CEST" == sub(".* ", '', format(tJan1(n1,n2), usetz=TRUE)))
+(w8 <- wDSTJan1(1801, 2300))
+(w9 <- wDSTJan1(1901, 2300))
+stopifnot(identical(w8, 141:142),# exactly 1941:1942 had CEST on Jan.1
+          identical(w9,  41: 42))
+## for R-devel Jan.2016 to Mar.14 -- *AND* for R 3.2.4 -- the above gave
+## integer(0)  and  c(41:42, 99:100, ..., 389:390)  respectively
+
