@@ -1398,6 +1398,7 @@ stopifnot(
 ## prettyDate() for subsecond ranges
 chkPretty <- function(obj, n = 5, ..., max.D = 1) {
     pr <- pretty(obj, n=n, ...)
+    ## if debugging: pr <- grDevices:::prettyDate(obj, n=n, ...)
     stopifnot(abs(length(pr) - n) <= max.D,
 	      length(unique(diff(pr))) == 1, # <==> must be equidistant
 	      min(pr) <= min(obj), max(obj) <= max(pr))
@@ -1410,21 +1411,22 @@ set.seed(7)
 for(n in c(1:7, 12)) replicate(32, chkPretty(sTime + .001*rlnorm(1) * 0:9, n = n))
 ## failed in R <= 3.2.3
 seqD  <- function(d1,d2) seq.Date(as.Date(d1), as.Date(d2), by = "1 day")
-seqDp <- function(d1,d2) structure(seqD(d1, d2), labels = "%b %d")
+seqDp <- function(d1,d2) { s <- seqD(d1,d2); structure(s, labels=format(s,"%b %d")) }
+time2d <- function(i) sprintf("%02d", i %% 60)
 MTbd <- as.Date("1960-02-10")
 (p1   <- chkPretty(MTbd))
 stopifnot(
     identical(p1, seqDp("1960-02-08", "1960-02-13")) ,
+    identical(attr(p1, "labels"), paste("Feb", time2d(8:13))),
     identical(chkPretty(MTbd + rep(0,2)), p1) ,
     identical(chkPretty(MTbd +  0:1), p1) ,
     identical(chkPretty(MTbd + -1:1), p1) ,
     identical(chkPretty(MTbd +  0:3), seqDp("1960-02-09", "1960-02-14")) )
-## all pretty() above gave length >= 5 answer (with duplicated values!) in R <= 3.2.3
+## all pretty() above gave length >= 5 answer (with duplicated values!) in R <= 3.2.3!
 ## and length 1 or 2 instead of about 5 in R 3.2.4
-(p2 <- chkPretty(as.POSIXct("2002-02-02 02:02"), n = 5, min.n = 5))
-stopifnot(identical(p2, structure(1012611718 + (0:4),
-				  class = c("POSIXct", "POSIXt"), tzone = "",
-				  labels = sprintf("%02d", 58:62 %% 60))))
+(p2 <- chkPretty(as.POSIXct("2002-02-02 02:02", tz = "GMT-1"), n = 5, min.n = 5))
+stopifnot(identical(p2, structure(1012611718 + (0:4), class = c("POSIXct", "POSIXt"),
+                                  tzone = "GMT-1", labels = time2d(58:62))))
 ## failed in R 3.2.4
 
 
@@ -1466,4 +1468,11 @@ stopifnot(identical(w8, 141:142),# exactly 1941:1942 had CEST on Jan.1
           identical(w9,  41: 42))
 ## for R-devel Jan.2016 to Mar.14 -- *AND* for R 3.2.4 -- the above gave
 ## integer(0)  and  c(41:42, 99:100, ..., 389:390)  respectively
+
+
+## tsp<- did not remove mts class
+z <- ts(cbind(1:5,1:5))
+tsp(z) <- NULL
+stopifnot(identical(class(z), "matrix"))
+## kept "mts" in 3.2.4, PR#16769
 

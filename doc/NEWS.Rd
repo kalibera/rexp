@@ -315,15 +315,14 @@
 
       \item \code{lengths()} dispatches internally.
 
-      %% not the whole truth: it does not check for a suitable [[ method ....
-      \item \code{for()} loops are generalized to iterate over any
-      object with \code{[[} and \code{length()} methods. Thanks to Hervé
-      Pagès for the idea and the patch.
-
       \item \code{dotchart()} gains a \code{pt.cex} argument to control
       the size of points separately from the size of plot labels.
       Thanks to Michael Friendly and Milan Bouchet-Valat for ideas
       and patches.
+
+      \item \code{as.roman(ch)} now correctly deals with more diverse
+      character vectors \code{ch}; also arithmetic with resulting roman
+      numbers works in more cases.  (\PR{16779})
     }
   }
 
@@ -417,13 +416,15 @@
       and \code{__tanpi} and uses these if \code{cospi}\emph{etc} are
       not found.  (OS X is the main instance.)
 
-      \item (Windows) An experimental build of R based on \command{gcc}
-      4.9.3 is now available on CRAN on the
-      \file{bin/windows/base/rdevel.html} snapshot page.  This build
-      will require recompilation of at least those packages that include
-      C++ code, and possibly others.  The CRAN binary packages still use
-      the older toolchain, so package installs default to \code{type =
-      "source"}.
+      \item (Windows) The build of R based on \command{gcc}
+      4.9.3 is now the default for R-devel on CRAN on the
+      \file{bin/windows/base/rdevel.html} snapshot page, and is expected
+      to be used in \R 3.3.0 (though the switch has not happened yet).
+      This build will require recompilation of at least those packages
+      that include C++ code, and possibly others.  The CRAN binary
+      packages still use the older toolchain, so package installs
+      default to \code{type = "source"}.  A build using the older
+      toolchain will also be temporarily available for comparison purposes.
 
       During the transition, the environment variable
       \env{R_COMPILED_BY} will be defined to indicate which toolchain
@@ -472,6 +473,13 @@
 
       \item The deprecated header \file{Rdefines.h} is now compatible
       with defining \code{R_NO_REMAP}.
+
+      \item Connection API now includes \code{R_GetConnection()} which
+      allows packages implementing connections to convert R
+      \code{connection} objects to \code{Rconnection} handles used in
+      the API. Code which previously used the low-level R-internal
+      \code{getConnection()} entry point should switch to the official
+      API.
     }
   }
 
@@ -543,6 +551,9 @@
       works again in border cases with large \code{min.n}, returns a
       \code{labels} attribute also for small-range dates and in such cases
       its returned length is closer to the desired \code{n}.  \PR{16761}
+
+      \item \code{tsp(x) <- NULL} did not handle objects inheriting from
+      both \code{"ts"} and \code{"mts"} properly.  \PR{16769}
     }
   }
 }
