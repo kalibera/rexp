@@ -220,7 +220,7 @@ SEXP attribute_hidden do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 #else
     // will work also for code byte-compiled *before* 'keepNA' was introduced
     if (nargs < 3 || nargs > 4)
-	errorcall(call,
+	error(
 		  ngettext("%d argument passed to '%s' which requires %d to %d",
 			   "%d arguments passed to '%s' which requires %d to %d",
 			   (unsigned long) nargs),
