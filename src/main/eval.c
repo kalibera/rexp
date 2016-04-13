@@ -5405,7 +5405,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(INVISIBLE,0): R_Visible = FALSE; NEXT();
     OP(LDCONST, 1):
       R_Visible = TRUE;
-      value = VECTOR_ELT(constants, GETOP());
+      value = duplicate(VECTOR_ELT(constants, GETOP()));
       MARK_NOT_MUTABLE(value);
       BCNPUSH(value);
       NEXT();
@@ -5589,7 +5589,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     /**** for now PUSHCONST, PUSHTRUE, and PUSHFALSE duplicate/allocate to
 	  be defensive against bad package C code */
     OP(PUSHCONSTARG, 1):
-      value = VECTOR_ELT(constants, GETOP());
+      value = duplicate(VECTOR_ELT(constants, GETOP()));
       MARK_NOT_MUTABLE(value);
       PUSHCALLARG(value);
       NEXT();
