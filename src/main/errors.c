@@ -582,6 +582,7 @@ static void restore_inError(void *data)
 static void NORET
 verrorcall_dflt(SEXP call, const char *format, va_list ap)
 {
+    R_checkConstants(TRUE);
     RCNTXT cntxt;
     char *p, *tr;
     int oldInError;
