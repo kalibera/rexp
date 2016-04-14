@@ -1230,6 +1230,7 @@ static SEXP NewWeakRef(SEXP key, SEXP val, SEXP fin, Rboolean onexit)
     case NILSXP:
     case ENVSXP:
     case EXTPTRSXP:
+    case BCODESXP:
 	break;
     default: error(_("can only weakly reference/finalize reference objects"));
     }
@@ -1817,6 +1818,9 @@ static void RunGenCollect(R_size_t size_needed)
     if (gens_collected == NUM_OLD_GENERATIONS)
 	SortNodes();
 #endif
+
+    if (gens_collected == NUM_OLD_GENERATIONS || R_check_constants > 2)
+        R_checkConstants(TRUE);
 
     if (gc_reporting) {
 	REprintf("Garbage collection %d = %d", gc_count, gen_gc_counts[0]);
@@ -2972,6 +2976,7 @@ static void R_gc_internal(R_size_t size_needed)
 	LOGICAL(R_LogicalNAValue)[0] = NA_LOGICAL;
 	error("internal logical NA value has been modified");
     }
+    /* compiler constants are checked in RunGenCollect */
 }
 
 SEXP attribute_hidden do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)
