@@ -1879,6 +1879,7 @@ static SEXP ReadBC1(SEXP ref_table, SEXP reps, R_inpstream_t stream)
     SETCAR(s, R_bcEncode(CAR(s)));
     SETCDR(s, ReadBCConsts(ref_table, reps, stream)); /* consts */
     SET_TAG(s, R_NilValue); /* expr */
+    R_registerBC(s);
     UNPROTECT(1);
     return s;
 }

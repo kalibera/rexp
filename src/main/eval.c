@@ -837,6 +837,18 @@ void attribute_hidden R_init_jit_enabled(void)
 		R_disable_bytecode = FALSE;
 	}
     }
+
+    /* -1 ... duplicate constants on LDCONST and PUSHCONSTARG, no checking
+        0 ... no checking (no duplication for >= 0)
+        1 ... check at error, session exit and full GC [DEFAULT]
+        2 ... check also after .Call function that modified its arguments
+        3 ... check also at partial GCs
+    */
+    if (R_check_constants <= 1) {
+	char *check = getenv("R_CHECK_CONSTANTS");
+	if (check != NULL)
+	    R_check_constants = atoi(check);
+    }
 }
 
 SEXP attribute_hidden R_cmpfun(SEXP fun)
@@ -3080,6 +3092,13 @@ static SEXP R_NotSym = NULL;
 static SEXP R_CSym = NULL;
 static SEXP R_LogSym = NULL;
 
+/* R_ConstantsRegistry allows runtime detection of modification of compiler
+   constants. It is a linked list of weak references. Each weak reference
+   refers to a byte-code object (BCODESXPs) as key and to a deep copy of the
+   object's constants as value. The head of the list has a nil payload
+   instead of a weak reference, stays in the list forever, and is a GC root.*/
+static SEXP R_ConstantsRegistry = NULL;
+
 #if defined(__GNUC__) && ! defined(BC_PROFILING) && (! defined(NO_THREADED_CODE))
 # define THREADED_CODE
 #endif
@@ -3109,6 +3128,10 @@ void R_initialize_bcode(void)
 #ifdef THREADED_CODE
   bcEval(NULL, NULL, FALSE);
 #endif
+
+    /* the first element of the list will always have CAR of R_NilValue */
+  R_ConstantsRegistry = CONS(R_NilValue, R_NilValue);
+  R_PreserveObject(R_ConstantsRegistry);
 }
 
 enum {
@@ -5405,7 +5428,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(INVISIBLE,0): R_Visible = FALSE; NEXT();
     OP(LDCONST, 1):
       R_Visible = TRUE;
-      value = duplicate(VECTOR_ELT(constants, GETOP()));
+      value = VECTOR_ELT(constants, GETOP());
+      if (R_check_constants < 0)
+          value = duplicate(value);
       MARK_NOT_MUTABLE(value);
       BCNPUSH(value);
       NEXT();
@@ -5589,7 +5614,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     /**** for now PUSHCONST, PUSHTRUE, and PUSHFALSE duplicate/allocate to
 	  be defensive against bad package C code */
     OP(PUSHCONSTARG, 1):
-      value = duplicate(VECTOR_ELT(constants, GETOP()));
+      value = VECTOR_ELT(constants, GETOP());
+      if (R_check_constants < 0)
+          value = duplicate(value);
       MARK_NOT_MUTABLE(value);
       PUSHCALLARG(value);
       NEXT();
@@ -6233,6 +6260,51 @@ SEXP R_bcEncode(SEXP x) { return x; }
 SEXP R_bcDecode(SEXP x) { return duplicate(x); }
 #endif
 
+
+
+/* Add BCODESXP bc into the constants registry, performing a deep copy of the
+   bc's constants */
+void attribute_hidden R_registerBC(SEXP bc)
+{
+    if (TYPEOF(bc) != BCODESXP)
+	error("registerBC requires BCODESXP object");
+    SEXP wref = R_MakeWeakRef(bc, duplicate(BCCONSTS(bc)), R_NilValue, FALSE);
+    SEXP first = CDR(R_ConstantsRegistry);
+    SETCDR(R_ConstantsRegistry, CONS(wref, first));
+}
+
+/* Checks if constants of any registered BCODESXP have been modified.
+   Returns TRUE if the constants are ok, otherwise returns false or aborts.*/
+Rboolean attribute_hidden R_checkConstants(Rboolean abortOnError)
+{
+    if (R_check_constants <= 0 || R_ConstantsRegistry == NULL)
+	return TRUE;
+    SEXP prev_reg = R_ConstantsRegistry;
+    SEXP reg = CDR(prev_reg);
+    Rboolean constsOK = TRUE;
+    while(reg != R_NilValue) {
+	SEXP wref = CAR(reg);
+	SEXP bc = R_WeakRefKey(wref);
+	if (bc == R_NilValue)
+	    /* remove deleted weak ref from registry */
+	    SETCDR(prev_reg, CDR(reg));
+	else {
+	    SEXP copy = R_WeakRefValue(wref);
+	    /* 7: not numerical comparison, not single NA, not attributes
+	    as set do ignore byte-code, do ignore environments of closures */
+	    if (!R_compute_identical(BCCONSTS(bc), copy, 7)) {
+		if (abortOnError)
+		    R_Suicide("compiler constants were modified!\n");
+		else
+		    constsOK = FALSE;
+	    }
+	    prev_reg = reg;
+	}
+	reg = CDR(reg);
+    }
+    return constsOK;
+}
+
 SEXP attribute_hidden do_mkcode(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP bytes, consts, ans;
@@ -6240,8 +6312,10 @@ SEXP attribute_hidden do_mkcode(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     bytes = CAR(args);
     consts = CADR(args);
-    ans = CONS(R_bcEncode(bytes), consts);
+    ans = PROTECT(CONS(R_bcEncode(bytes), consts));
     SET_TYPEOF(ans, BCODESXP);
+    R_registerBC(ans);
+    UNPROTECT(1); /* ans */
     return ans;
 }
 
