@@ -329,7 +329,6 @@ static void check_session_exit()
 	    R_Suicide(_("error during cleanup\n"));
 	else {
 	    exiting = TRUE;
-	    R_checkConstants(TRUE);
 	    if (GetOption1(install("error")) != R_NilValue) {
 		exiting = FALSE;
 		return;
