@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: R-3.2.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
 "POT-Creation-Date: 2015-06-06 13:51+0100\n"
-"PO-Revision-Date: 2015-03-20 16:21+0100\n"
+"PO-Revision-Date: 2016-04-07 10:58+0200\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-core <r-core@r-project.org>\n"
 "Language: de\n"
@@ -105,7 +105,7 @@ msgstr "Funktion '%s' ist nicht in der Tabelle der Ableitungen"
 
 #: deriv.c:641
 msgid "'expr' must be an expression or call"
-msgstr ""
+msgstr "'expr' muss eine expression oder ein call sein"
 
 #: deriv.c:644
 msgid "variable must be a character string"

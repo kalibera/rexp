@@ -4,10 +4,10 @@
 # Detlef Steuer <steuer@hsu-hh.de>, 2007-2014.
 msgid ""
 msgstr ""
-"Project-Id-Version: R-3.2.0\n"
+"Project-Id-Version: R-3.3.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
 "POT-Creation-Date: 2015-06-06 13:51\n"
-"PO-Revision-Date: 2015-03-26 14:56+0100\n"
+"PO-Revision-Date: 2016-04-08 11:31+0200\n"
 "Last-Translator: Detlef Steuer <detlef.steuer@hsu-hh.de>\n"
 "Language-Team: R-core <R-core@r-project.org>\n"
 "Language: de\n"
@@ -16,9 +16,8 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n == 1 ? 0 : 1;\n"
 
-#, fuzzy
 msgid "OOPS: something wrong with '.OldClassesPrototypes[[%d]]'"
-msgstr "OOPS: irgendetwas falsch mit der Zeile %d in '.OldClassesPrototype'"
+msgstr "OOPS: irgendetwas ist falsch mit '.OldClassesPrototypes[[%d]]'"
 
 msgid ""
 "unnamed argument to initialize() for S3 class must have a class definition; "
@@ -81,9 +80,7 @@ msgstr ""
 
 msgid ""
 "the 'S3Class' argument must be a superclass of %s:  not true of class %s"
-msgstr ""
-"das S3Class Argument muss eine Superklasse von %s sein: gilt nicht für "
-"Klasse %s"
+msgstr "das 'S3Class' Argument muss eine Superklasse von %s sein: gilt nicht für Klasse %s"
 
 msgid "replacement value must extend class %s, got %s"
 msgstr "Ersetzung muss die Klasse %s erweitern, bekam %s"
@@ -508,16 +505,14 @@ msgstr "In %s: Nutzung der \"MethodsList\" Metadatenobjekte ist veraltet"
 msgid "use %s instead."
 msgstr "nutze stattdessen %s."
 
-#, fuzzy
 msgid ""
 "%s, along with other use of the \"MethodsList\" metadata objects, is defunct."
 msgstr ""
-"%s ist, zusammen mit der Nutzung der \"MethodsList\" Metadatenobjekte, "
-"veraltet."
+"%s ist, zusammen mit der Nutzung der \"MethodsList\" Metadatenobjekte,\n"
+" nicht mehr vorhanden."
 
-#, fuzzy
 msgid "in %s: use of \"MethodsList\" metadata objects is defunct."
-msgstr "In %s: Nutzung der \"MethodsList\" Metadatenobjekte ist veraltet"
+msgstr "In %s: Nutzung der \"MethodsList\" Metadatenobjekte ist nicht mehr möglich"
 
 msgid "invalid object for formal method definition: type %s"
 msgstr "unzulässiges Objekt für die formale Methodendefinition: Typ %s"
@@ -903,7 +898,7 @@ msgstr ""
 "unzulässiger Wert aus der generischen Funktion %s, Klasse %s, erwartet war %s"
 
 msgid "\"MethodsList\" is defunct; allMethods now are empty"
-msgstr ""
+msgstr "\"MethodsList\" exisitiert nicht mehr; allMethods sind jetzt leer"
 
 msgid ""
 "the body of the generic function for %s calls 'standardGeneric' to dispatch "
@@ -1314,13 +1309,10 @@ msgid "invalid object in meta table of methods for %s, label %s, had class %s"
 msgstr ""
 "ungültiges Objekt im Metatable der Methoden für %s, Label %s, hatte Klasse %s"
 
-#, fuzzy
 msgid ""
 "invalid mlist element for signature %s at level %d (should be "
 "MethodDefinition or .Primitive, had class %s)"
-msgstr ""
-"ungültiges mlist Element für die Signatur %s auf Stufe %d (sollte "
-"Methodenliste oder Methode sein, hat Klasse %s)"
+msgstr "ungültiges mlist Element für die Signatur %s auf Stufe %d (sollte MethodDefinition oder .Primitive sein, hat Klasse %s)"
 
 msgid "bad method object stored in method table, class %s"
 msgstr "ungültiges Methodenobjekt in der Methodentabelle, Klasse %s"

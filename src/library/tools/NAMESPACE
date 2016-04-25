@@ -2,9 +2,9 @@ useDynLib(tools, .registration = TRUE)
 
 ## Bootstrapping R ==> do _not_ import, rather use  ' :: '
 
-export("Adobe_glyphs", "HTMLheader", "Rd2HTML", "Rd2ex", "Rd2latex",
-       "Rd2txt", "Rd2txt_options", "RdTextFilter", "Rd_db", "Rdiff",
-       "Rdindex", "SweaveTeXFilter", "add_datalist",
+export("Adobe_glyphs", "HTMLheader", "Rcmd", "Rd2HTML", "Rd2ex",
+       "Rd2latex", "Rd2txt", "Rd2txt_options", "RdTextFilter", "Rd_db",
+       "Rdiff", "Rdindex", "SweaveTeXFilter", "add_datalist",
        "assertCondition", "assertError", "assertWarning", "bibstyle",
        "buildVignette", "buildVignettes", "charset_to_Unicode",
        "checkDocFiles", "checkDocStyle", "checkFF", "checkMD5sums",
@@ -17,6 +17,7 @@ export("Adobe_glyphs", "HTMLheader", "Rd2HTML", "Rd2ex", "Rd2latex",
        "find_gs_cmd", "getBibstyle", "getVignetteInfo",
        langElts, "latexToUtf8", "list_files_with_exts",
        "list_files_with_type", "loadRdMacros", "loadPkgRdMacros",
+       "makevars_site", "makevars_user",
        nonS3methods,
        "make_translations_pkg", "md5sum",
        package.dependencies,# R/package.dependencies.R man/package.dependencies.Rd

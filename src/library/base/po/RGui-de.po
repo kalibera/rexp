@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: R-3.1.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
 "POT-Creation-Date: 2015-02-09 08:52+0000\n"
-"PO-Revision-Date: 2013-03-18 10:12+0100\n"
+"PO-Revision-Date: 2016-04-07 11:28+0200\n"
 "Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
 "Language-Team: R-core <R-core@r-project.org>\n"
 "Language: de\n"
@@ -838,7 +838,7 @@ msgstr "Workspace sichern?"
 
 #: src/extra/graphapp/clipboard.c:69 src/extra/graphapp/clipboard.c:73
 msgid "Insufficient memory: cell not copied to the clipboard"
-msgstr "Ungenügender Speicher: Zelle wurde nicht in Zwischenablage kopiert"
+msgstr "Zu wenig Speicher: Zelle wurde nicht in Zwischenablage kopiert"
 
 #: src/extra/graphapp/dialogs.c:148 src/extra/graphapp/dialogs.c:165
 #: src/extra/graphapp/dialogs.c:182

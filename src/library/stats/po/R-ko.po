@@ -1,23 +1,26 @@
 # Korean translation for R stats package
-# src/library/stats/po/R-ko.po
+# ./stats/po/R-ko.po
 #
-# Copyright (C) 1995-2015 The R Core Team
+# Copyright (C) 1995-2016 The R Core Team
 #
 # This file is distributed under the same license as the R stats package.
-# Maintained by Chel Hee Lee <chl948@mail.usask.ca>, 2008-2015.
+# Maintained by Chel Hee Lee <chl948@mail.usask.ca>, 2008-2016.
+# Contact: Chel Hee Lee <gnustats@gmail.com>
 #
 # Notes:
+# Under development (unstable) starting from 11-APR-2016 for R-3.3.1 - QC: in progress
+# Freezed on 10-APR-2016 for R-3.3.0 - QC: PASS
 # Freezed on 30-MAR-2015 for R-3.2.0 - QC: PASS
-# Freezed on 06-FEB-2015 for R-3.1.3 - QC: PASS 
+# Freezed on 06-FEB-2015 for R-3.1.3 - QC: PASS
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: R 3.2.0\n"
+"Project-Id-Version: R-3.3.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2015-06-06 13:51\n"
-"PO-Revision-Date: 2015-03-30 14:01-0600\n"
+"POT-Creation-Date: 2016-04-01 09:50\n"
+"PO-Revision-Date: 2016-04-11 13:08-0600\n"
 "Last-Translator: Chel Hee Lee <chl948@mail.usask.ca>\n"
-"Language-Team: Chel Hee Lee  <chl948@mail.usask.ca>\n"
+"Language-Team: Chel Hee Lee <chl948@mail.usask.ca>\n"
 "Language: ko\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -25,10 +28,10 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 msgid "models are not all fitted to the same number of observations"
-msgstr ""
+msgstr "모델적합에 사용된 관측치의 개수들이 같지 않습니다."
 
 msgid "empty model supplied"
-msgstr ""
+msgstr "주어진 모델이 없습니다."
 
 msgid "'acf' must be of length two or more"
 msgstr "'acf'는 반드시 길이가 2 또는 그 이상이어야 합니다"
@@ -487,6 +490,12 @@ msgstr "카이제곱 approximation은 정확하지 않을수도 있습니다"
 msgid "NA values not allowed in 'd'"
 msgstr "NA값들은 'd'에서 사용할 수 없습니다"
 
+msgid "eig=TRUE is disregarded when list.=FALSE"
+msgstr "list.=FALSE가 주어진 경우에 eig=TRUE는 사용되지 않습니다."
+
+msgid "x.ret=TRUE is disregarded when list.=FALSE"
+msgstr "list.=FALSE가 주어진 경우에 x.ret=TRUE는 사용되지 않습니다."
+
 msgid "distances must be result of 'dist' or a square matrix"
 msgstr "distances는 반드시 'dist'의 결과이거나 정방행렬이어야 합니다"
 
@@ -498,6 +507,9 @@ msgstr "'k'는 반드시 {1, 2, .. n - 1} 내에 있어야 합니다"
 
 msgid "only %d of the first %d eigenvalues are > 0"
 msgstr "처음 %2$d개의 고유치들 중 %1$d개만이 양수입니다"
+
+msgid "package 'MASS' must be installed"
+msgstr "패키지 'MASS'가 반드시 설치되어야 합니다."
 
 msgid "initial value is not in the interior of the feasible region"
 msgstr "초기값이 feasible region의 내부에 있지 않습니다"
@@ -540,6 +552,9 @@ msgstr "하나 이상의 벡터들이 제공되어야 합니다"
 
 msgid "arguments must have the same length"
 msgstr "인자들은 반드시 같은 길이를 가지고 있어야 합니다"
+
+msgid "wrong number of columns in new data:"
+msgstr ""
 
 msgid "contrasts apply only to factors"
 msgstr "contrasts는 요인들에만 적용합니다"
@@ -707,7 +722,7 @@ msgid "'x' and 'weights' have unequal length"
 msgstr "'x'와 'weights'는 서로 다른 길이를 가지고 있습니다"
 
 msgid "'weights' must all be finite"
-msgstr ""
+msgstr "'weights'는 모두 유한한 값을 가지고 있어야 합니다. "
 
 msgid "'weights' must not be negative"
 msgstr "'weights'는 반드시 음수이어야 합니다"
@@ -783,6 +798,9 @@ msgstr "'prob'와 'mu' 모두 지정되어 있습니다"
 
 msgid "some terms will have NAs due to the limits of the method"
 msgstr "메소드의 한계로 인하여 일부 항들이 NA를 가질 것입니다"
+
+msgid "multivariate case with missing coefficients is not yet implemented"
+msgstr ""
 
 msgid "'x' must have 1 or more non-missing values"
 msgstr "'x'는 반드시 한 개 또는 그 이상의 결측되지 않은 값들이 있어야 합니다"
@@ -906,8 +924,10 @@ msgstr ""
 msgid "positive values only are allowed for the 'inverse.gaussian' family"
 msgstr "'inverse.gaussian' 페밀링에서는 양수값들만 사용할 수 있습니다"
 
-msgid "need CRAN package 'SuppDists' for the 'inverse.gaussian' family"
-msgstr "'inverse.gaussian' 페밀리는 CRAN 패키지 'SuppDists'를 필요로 합니다"
+msgid ""
+"need CRAN package 'SuppDists' for simulation from the 'inverse.gaussian' "
+"family"
+msgstr ""
 
 msgid "using weights as inverse variances"
 msgstr "weights를 inverse variances 로 사용합니다"
@@ -1190,11 +1210,11 @@ msgstr "'which'의 모든 구성요소들은 반드시 1과 %d사이에 있어�
 msgid "invalid parameter values"
 msgstr "유효하지 않은 파라미터 값입니다"
 
-msgid "a limit is missing"
-msgstr ""
+msgid "a limit is NA or NaN"
+msgstr "limit은 NA 또는 NaN이어야 합니다."
 
 msgid "missing values not allowed"
-msgstr ""
+msgstr "결측값들은 사용할 수 없습니다."
 
 msgid "'r' is less than 1"
 msgstr "'r'은 1보다 적습니다"
@@ -1377,7 +1397,7 @@ msgid "'object' has no 'effects' component"
 msgstr "'object'는 'effects' 구성요소를 가지고 있지 않습니다"
 
 msgid "the 'se.fit' argument is not yet implemented for \"mlm\" objects"
-msgstr ""
+msgstr "'se.fit' 인자는 아직 \"mlm\" 객체의 경우에 구현되지 않았습니다."
 
 msgid "invalid model QR matrix"
 msgstr ""
@@ -1404,6 +1424,9 @@ msgid "invalid NCOL(X)"
 msgstr "유효하지 않은 NCOL(X)입니다"
 
 msgid "only 1-4 predictors are allowed"
+msgstr "오로지 1-4개의 설명변수만이 허용됩니다."
+
+msgid "invalid NROW(X)"
 msgstr ""
 
 msgid "invalid 'y'"
@@ -1429,6 +1452,12 @@ msgstr "유효하지 않은 인자 'cell'입니다"
 
 msgid "invalid argument 'degree'"
 msgstr "유효하지 않은 인자 'degree'입니다"
+
+msgid "iterTrace ="
+msgstr ""
+
+msgid "not obeyed as iterations ="
+msgstr ""
 
 msgid "first argument must be a \"loess\" object"
 msgstr "첫번째 인자는 반드시 \"loess\" 객체이어야 합니다"
@@ -1950,8 +1979,8 @@ msgstr ""
 msgid "'varying' arguments must be the same length"
 msgstr "'varying' 인자들은 반드시 같은 길이이어야 합니다"
 
-msgid "'times' is wrong length"
-msgstr "'times'의 길이가 잘 못되었습니다"
+msgid "'lengths(varying)' must all match 'length(times)'"
+msgstr ""
 
 msgid "there are records with missing times, which will be dropped."
 msgstr "누락된 times와 함께 있는 레코드는 이용되지 않을 것입니다"
@@ -2526,6 +2555,12 @@ msgstr[0] ""
 msgid "'start.innov' is too short: need %d point"
 msgid_plural "'start.innov' is too short: need %d points"
 msgstr[0] ""
+
+#~ msgid "need CRAN package 'SuppDists' for the 'inverse.gaussian' family"
+#~ msgstr "'inverse.gaussian' 페밀리는 CRAN 패키지 'SuppDists'를 필요로 합니다"
+
+#~ msgid "'times' is wrong length"
+#~ msgstr "'times'의 길이가 잘 못되었습니다"
 
 #~ msgid "extra argument %s will be disregarded"
 #~ msgid_plural "extra arguments %s will be disregarded"

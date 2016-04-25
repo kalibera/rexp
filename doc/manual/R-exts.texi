@@ -1013,6 +1013,12 @@ visible (and if it is, it need not be the one from that namespace:
 give an error if the suggested package is not available, simply use
 e.g.@: @code{rgl::plot3d}.
 
+Note that the recommendation to use suggested packages conditionally in
+tests does also apply to packages used to manage test suites: a
+notorious example was @pkg{testthat} which in version 1.0.0 contained
+illegal C++ code and hence could not be installed on standards-compliant
+platforms.
+
 As noted above, packages in @samp{Enhances} @emph{must} be used
 conditionally and hence objects within them should always be accessed
 @emph{via} @code{::}.
@@ -2034,9 +2040,12 @@ are available for use in @file{src/Makevars} or @file{src/Makevars.win}.
 Include the appropriate macro in @code{PKG_CFLAGS}, @code{PKG_CPPFLAGS}
 and so on, and also in @code{PKG_LIBS}.  C/C++ code that needs to be
 conditioned on the use of OpenMP can be used inside @code{#ifdef
-_OPENMP}: note that some toolchains used for @R{} (including most of
-those using @command{clang}@footnote{Some builds of @command{clang} 3.7
-have support for OpenMP 3.1}) have no OpenMP support at all, not even
+_OPENMP}: note that some toolchains used for @R{} (including many of
+those using @command{clang}@footnote{Some builds of @command{clang}
+3.7.0 have support for OpenMP 3.1 (this is built by default as from
+3.8.0), but even if the compiler has, the @code{libomp} library may not
+be installed.  At the time of writing Apple builds of @command{clang}
+for OS X had no support.})  have no OpenMP support at all, not even
 @file{omp.h}.
 
 For example, a package with C code written for OpenMP should have in
@@ -2147,17 +2156,17 @@ For a tutorial see
 POSIX threads are not normally used on Windows, which has its own native
 concepts of threads.  However, there are two projects implementing
 @code{pthreads} on top of Windows, @code{pthreads-w32} and
-@code{winpthreads} (a recent part of the MinGW-w64 project).
+@code{winpthreads} (part of the MinGW-w64 project).
 
 Whether Windows toolchains implement @code{pthreads} is up to the
-toolchain provider: the currently recommended toolchain does by default
-provide it.  A @command{make} variable @code{SHLIB_PTHREAD_FLAGS} is
-available: this should be included in both @code{PKG_CPPFLAGS} (or the
-Fortran or F9x equivalents) and @code{PKG_LIBS}.
+toolchain provider.  A @command{make} variable
+@code{SHLIB_PTHREAD_FLAGS} is available: this should be included in both
+@code{PKG_CPPFLAGS} (or the Fortran or F9x equivalents) and
+@code{PKG_LIBS}.
 
 The presence of a working @code{pthreads} implementation cannot be
 unambiguously determined without testing for yourself: however, that
-@samp{_REENTRANT} is defined@footnote{some Windows toolchains have the
+@samp{_REENTRANT} is defined@footnote{some Windows toolchains had the
 typo @samp{_REENTRANCE} instead.} in C/C++ code is a good indication.
 
 See also the comments on thread-safety and performance under OpenMP: on
@@ -3478,6 +3487,19 @@ package @pkg{foo} are to be imported.  Using @code{importFrom}
 selectively rather than @code{import} is good practice and recommended
 notably when importing from packages with more than a dozen exports.
 
+To import every symbol from a package but for a few exceptions,
+pass the @code{except} argument to @code{import}. The directive
+
+@example
+import(foo, except=c(bar, baz))
+@end example
+
+@noindent
+imports every symbol from @pkg{foo} except @code{bar} and
+@code{baz}. The value of @code{except} should evaluate to something
+coercible to a character vector, after substituting each symbol for
+its corresponding string.
+
 It is possible to export variables from a namespace which it has
 imported from other namespaces: this has to be done explicitly and not
 @emph{via} @code{exportPattern}.
@@ -4500,14 +4522,18 @@ with versions for types @code{float}, @code{double}, @code{long double}
 and possibly more.  This means that calling @code{sqrt} on an integer
 type may have `overloading ambiguity' as it could be promoted to any of
 the supported floating-point types: this is commonly seen on Solaris,
-but for @code{pow} also seen on OS X.  (C++11 requires additional
-overloads for integer types, and ambiguous overloads are more common in
-C++11/C++14 compiler modes.)
+but for @code{pow} also seen on OS X.  (C++98 has an overload for
+@code{std::pow(<double>, <int>)}, but this may not be visible from the
+main namespace.  C++11 requires additional overloads for integer types,
+and ambiguous overloads are more common in C++11 (and later) compiler
+modes.)
 
 A not-uncommonly-seen problem is to mistakenly call @code{floor(x/y)} or
 @code{ceil(x/y)} for @code{int} arguments @code{x} and @code{y}.  Since
 @code{x/y} does integer division, the result is an @code{int} and
-`overloading ambiguity' may be reported.
+`overloading ambiguity' may be reported.  Some people have (pointlessly)
+called @code{floor} and @code{ceil} on integer arguments, which may have
+an `overloading ambiguity'.
 
 A surprising common misuse is things like @code{pow(10, -3)}: this
 should be the constant @code{1e-3}.

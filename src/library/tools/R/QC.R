@@ -347,8 +347,17 @@ function(package, dir, lib.loc = NULL,
             objects_in_ns <-
                 setdiff(sort(names(ns_env)),
                         c(".__NAMESPACE__.", ".__S3MethodsTable__."))
+            ns_S3_methods_db <- ns_env$".__NAMESPACE__."$S3methods
+            ## Alternatively, use
+            ##   ns_S3_methods_db <- getNamespaceInfo(package, "S3methods")
+            ns_S3_methods <- if(is.null(ns_S3_methods_db))
+                                 character()
+                             else
+                                 paste(ns_S3_methods_db[, 1L],
+                                       ns_S3_methods_db[, 2L],
+                                       sep = ".")
             objects_in_code_or_namespace <-
-                unique(c(objects_in_code, objects_in_ns))
+                unique(c(objects_in_code, objects_in_ns, ns_S3_methods))
             objects_in_ns <- setdiff(objects_in_ns, objects_in_code)
         }
         else
@@ -7386,12 +7395,17 @@ function(x, ...)
                             paste(" ", gsub("\n", "\n    ", format(y)))),
                           collapse = "\n")
             },
-            if(length(y) &&
-               any(nzchar(y$CRAN)) &&
-               any(grepl("https?://cran.r-project.org/web/packages/[.[:alnum:]]+(|/|/index.html)$",
-                         y$CRAN))) {
-                paste(c("  The canonical URL of the CRAN page for a package is ",
-                        "  https://cran.r-project.org/package=pkgname"),
+            if(length(y) && any(nzchar(z <- y$CRAN))) {
+                ind <-
+                    grepl("https?://cran.r-project.org/web/packages/[.[:alnum:]]+(|/|/index.html)$",
+                          z, ignore.case = TRUE)
+                paste(c(if(any(ind)) {
+                            c("  The canonical URL of the CRAN page for a package is ",
+                              "  https://cran.r-project.org/package=pkgname")
+                        },
+                        if(any(nzchar(z) & !ind)) {
+                            "  A canonical CRAN URL starts with https://cran.r-project.org/"
+                        }),
                       collapse = "\n")
             },
             if(length(y) && any(nzchar(y$Spaces))) {

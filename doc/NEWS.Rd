@@ -8,7 +8,62 @@
 \section{\Rlogo CHANGES IN R-devel}{
   \subsection{NEW FEATURES}{
     \itemize{
-      \item Placeholder.
+      \item User errors such as \code{integrate(f, 0:1, 2)} are now caught.
+
+      \item Add \code{signature} argument to \code{debug()},
+      \code{debugonce()}, \code{undebug()} and \code{isdebugged()} for
+      more conveniently debugging S3 and S4 methods. Based on a patch by
+      Gabe Becker.
+
+      \item Add \code{utils::debugcall()} and
+      \code{utils::undebugcall()} for debugging the function that would
+      be called by evaluating the given expression. When the call is to
+      an S4 generic or standard S3 generic, \code{debugcall()} debugs the
+      method that would be dispatched. A number of internal utilities
+      were added to support this, most notably
+      \code{utils::isS3stdGeneric()}. Based on a patch by Gabe Becker.
+
+      \item Add \code{utils::strcapture()}. Given a character vector and
+      a regular expression containing capture expressions,
+      \code{strcapture()} will extract the captured tokens into a
+      tabular data structure, typically a data.frame.
+
+      \item \code{str()} and \code{strOptions()} get a new option
+      \code{drop.deparse.attr} with improved but \emph{changed} default
+      behaviour for expressions.% plan: backport to 3.3.1
+
+      \item \code{isSymmetrix(m)} is much faster for large asymmetric
+      matrices \code{m} via pre-tests and a new option \code{tol1}
+      (with which strict back compatibility is possible but not the
+      default).% plan: backport
+
+      \item The result of \code{eigen()} now is of class \code{"eigen"}
+      in the default case when eigenvectors are computed.
+
+      \item Zero-length date and datetime objects (\code{"POSIX[cl]?t"})
+      now \code{print()} \dQuote{recognizably}.
+
+      \item \code{xy.coords()} and \code{xyz.coords()} get new
+      \code{setLab} option.
+    }
+  }
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item The deprecated support for PCRE versions 8.10 to 8.31 will
+      be removed prior to \R 3.4.0.
+
+      \item (Windows only) Function \code{setInternet2()} is defunct.
+    }
+  }
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item Getting or setting \code{body()} or \code{formals()} on
+      non-functions for now signals a warning and may become an error
+      for setting.
+
+      \item In \code{text.default(x, y, labels)}, the rarely(?) used
+      default for \code{labels} is now correct also for the case of a
+      2-column matrix \code{x} and missing \code{y}.
     }
   }
 }
@@ -87,8 +142,8 @@
       the HTML help system if it is available.  If no news file is found,
       a visible \code{NULL} is returned to the console.
 
-      \item \code{as.raster(x)} now also accepts \code{\link{raw}}
-      arrays \code{x} assuming values in \code{0:255}.
+      \item \code{as.raster(x)} now also accepts \code{raw} arrays
+      \code{x} assuming values in \code{0:255}.
 
       \item Subscripting of matrix/array objects of type
       \code{"expression"} is now supported.
@@ -162,7 +217,7 @@
 
       \item \code{tools::undoc(dir = D)} and \code{codoc(dir = D)} now
       also work when \code{D} is a directory whose \code{normalizePath()}ed
-      version no longer ends in the package name, e.g.\sspace{}from a symlink.
+      version does not end in the package name, e.g.\sspace{}from a symlink.
 
       \item \code{abbreviate()} has more support for multi-byte
       character sets -- it no longer removes bytes within characters and
@@ -173,9 +228,9 @@
       \code{abbreviate(use.classes = FALSE)} is now implemented, and
       that is more suitable for non-European languages.
 
-      \item \code{match(x, table)} is faster, sometimes by an order of
-      magnitude, when \code{x} is of length one and \code{incomparables}
-      is unchanged, thanks to Haverty's \PR{16491}.
+      \item \code{match(x, table)} is faster (sometimes by an order of
+      magnitude) when \code{x} is of length one and \code{incomparables}
+      is unchanged, thanks to Peter Haverty (\PR{16491}).
 
       \item More consistent, partly not back-compatible behavior of
       \code{NA} and \code{NaN} coercion to complex numbers, operations
@@ -194,10 +249,10 @@
       The choice can easily be overridden \emph{via} environment
       variable \env{R_INTERACTIVE_DEVICE}.
 
-      \item On Unix-like platforms with the \command{getline} C library
-      function, \code{system(*,intern = TRUE)} no longer truncates
-      (output) lines longer than 8192 characters, thanks to Karl
-      Millar's \PR{16544}.
+      \item On Unix-like platforms which support the \command{getline} C
+      library function, \code{system(*,intern = TRUE)} no longer
+      truncates (output) lines longer than 8192 characters, thanks to
+      Karl Millar. (\PR{16544})
 
       \item \code{rank()} gains a \code{ties.method = "last"} option,
       for convenience (and symmetry).
@@ -222,8 +277,8 @@
       stored as part of a recorded plot.
 
       \item S4 dispatch works within calls to \code{.Internal()}. This
-      means explicit S4 generics are no longer needed for \code{unlist}
-      and \code{as.vector}.
+      means explicit S4 generics are no longer needed for
+      \code{unlist()} and \code{as.vector()}.
 
       \item Only font family names starting with \samp{"Hershey"} (and
       not \samp{"Her"} as before) are given special treatment by the
@@ -252,7 +307,7 @@
 
       \item The \code{format} method for \code{object_size} objects now
       also accepts \dQuote{binary} units such as \code{"KiB"} and e.g.,
-      \code{"Tb"}.  (Partly from \PR{16649})
+      \code{"Tb"}.  (Partly from \PR{16649}.)
 
       \item Profiling now records calls of the form \code{foo::bar} and
       some similar cases directly rather than as calls to
@@ -260,7 +315,7 @@
 
       \item New string utilities \code{startsWith(x, prefix)} and
       \code{endsWith(x, suffix)}.  Also provide speedups for some
-      \code{grepl("^...",*)} uses, related to proposals in (\PR{16490}).
+      \code{grepl("^...",*)} uses (related to proposals in \PR{16490}).
 
       \item Reference class finalizers run at exit, as well as on
       garbage collection.
@@ -268,22 +323,21 @@
       \item Avoid \pkg{parallel} dependency on \pkg{stats} for port
       choice and random number seeds.  (\PR{16668})
 
-      \item The radix sort algorithm and implementation from data.table
-      (forder) replaces the existing but limited radix (counting) sort
-      and adds a new method for \code{order()}.  Contributed by Matt
-      Dowle and Arun Srinivasan, the new algorithm supports logical,
-      integer (even with large values), real, and character vectors.  It
-      outperforms all other methods, but there are some caveats (see
-      \code{?sort}).
+      \item The radix sort algorithm and implementation from
+      \CRANpkg{data.table} (\code{forder}) replaces the previous radix
+      (counting) sort and adds a new method for \code{order()}.
+      Contributed by Matt Dowle and Arun Srinivasan, the new algorithm
+      supports logical, integer (even with large values), real, and
+      character vectors.  It outperforms all other methods, but there
+      are some caveats (see \code{?sort}).
 
       \item The \code{order()} function gains a \code{method} argument
       for choosing between \code{"shell"} and \code{"radix"}.
 
-      \item New function \code{grouping} returns a permutation that
-      stably rearranges data so that identical values are
-      adjacent.  The return value includes extra partitioning
-      information on the groups.  The implementation came included with
-      the new radix sort.
+      \item New function \code{grouping()} returns a permutation that
+      stably rearranges data so that identical values are adjacent.  The
+      return value includes extra partitioning information on the
+      groups.  The implementation came included with the new radix sort.
 
       \item \code{rhyper(nn, m, n, k)} no longer returns \code{NA} when
       one of the three parameters exceeds the maximal integer.
@@ -291,7 +345,7 @@
       \item \code{switch()} now warns when no alternatives are provided.
 
       \item \code{parallel::detectCores()} now has default \code{logical
-	= TRUE)} on all platforms -- as this was the default on Windows,
+	= TRUE} on all platforms -- as this was the default on Windows,
       this change only affects Sparc Solaris.
 
       Option \code{logical = FALSE} is now supported on Linux and recent
@@ -308,7 +362,8 @@
       \item \R now uses a new version of the logo (donated to the R
       Foundation by RStudio).  It is defined in \file{.svg} format, so
       will resize without unnecessary degradation when displayed on
-      HTML pages---there is also vector version for use in PDF files.
+      HTML pages---there is also a vector PDF version.  Thanks to
+      Dirk Eddelbuettel for producing the corresponding X11 icon.
 
       \item New function \code{.traceback()} returns the stack trace
       which \code{traceback()} prints.
@@ -321,8 +376,31 @@
       and patches.
 
       \item \code{as.roman(ch)} now correctly deals with more diverse
-      character vectors \code{ch}; also arithmetic with resulting roman
-      numbers works in more cases.  (\PR{16779})
+      character vectors \code{ch}; also arithmetic with the resulting
+      roman numbers works in more cases.  (\PR{16779})
+
+      \item \code{prcomp()} gains a new option \code{rank.} allowing to
+      directly aim for less than \code{min(n,p)} PC's.  The
+      \code{summary()} and its \code{print()} method have been amended,
+      notably for this case.
+
+      \item \code{gzcon()} gains a new option \code{text}, which marks
+      the connection as text-oriented (so e.g.\sspace{}\code{pushBack()}
+      works).  It is still always opened in binary mode.
+
+      \item The \code{import()} namespace directive now accepts an
+      argument \code{except} which names symbols to exclude from the
+      imports. The \code{except} expression should evaluate to a
+      character vector (after substituting symbols for strings). See
+      Writing R Extensions.
+
+      \item New convenience function \code{Rcmd()} in package
+      \pkg{tools} for invoking \command{R CMD} tools from within \R.
+
+      \item New functions \code{makevars_user()} and
+      \code{makevars_site()} in package \pkg{tools} to determine the
+      location of the user and site specific \file{Makevars} files for
+      customizing package compilation.
     }
   }
 
@@ -409,27 +487,29 @@
 
       \item The minimum preferred version of PCRE has since \R 3.0.0
       been 8.32 (released in Nov 2012).  Versions 8.10 to 8.31 are now
-      deprecated (with warnings from \command{configure}), but for now
-      still accepted.
+      deprecated (with warnings from \command{configure}), but will
+      still be accepted until \R 3.4.0.
 
-      \item \command{configure} looks for \code{__cospi}, \code{__sinpi}
-      and \code{__tanpi} and uses these if \code{cospi}\emph{etc} are
-      not found.  (OS X is the main instance.)
+      \item \command{configure} looks for C functions \code{__cospi},
+      \code{__sinpi} and \code{__tanpi} and uses these if \code{cospi}
+      \emph{etc} are not found.  (OS X is the main instance.)
 
-      \item (Windows) The build of R based on \command{gcc}
-      4.9.3 is now the default for R-devel on CRAN on the
-      \file{bin/windows/base/rdevel.html} snapshot page, and is expected
-      to be used in \R 3.3.0 (though the switch has not happened yet).
-      This build will require recompilation of at least those packages
-      that include C++ code, and possibly others.  The CRAN binary
-      packages still use the older toolchain, so package installs
-      default to \code{type = "source"}.  A build using the older
-      toolchain will also be temporarily available for comparison purposes.
+      \item (Windows) R is now built using \command{gcc}
+      4.9.3.  This build will require recompilation of at least those packages
+      that include C++ code, and possibly others.  A build of R-devel using
+      the older toolchain will be temporarily available for comparison
+      purposes.
 
       During the transition, the environment variable
-      \env{R_COMPILED_BY} will be defined to indicate which toolchain
+      \env{R_COMPILED_BY} has been defined to indicate which toolchain
       was used to compile R (and hence, which should be used to compile
-      code in packages).
+      code in packages).  The \code{COMPILED_BY} variable described below
+      will be a permanent replacement for this.
+
+      \item (Windows) A \command{make} and \command{R CMD config} variable
+      named \code{COMPILED_BY} has been added.  This indicates
+      which toolchain was used to compile R (and hence, which should be
+      used to compile code in packages).
     }
   }
 
@@ -466,7 +546,7 @@
 
       The manual has long said that \R{} headers should \bold{not} be
       included within an \code{extern "C"} block, and almost all the
-      packages affected by this change are doing so.
+      packages affected by this change were doing so.
 
       \item Including header \file{S.h} from C++ code would fail on some
       platforms, and so gives a compilation error on all.
@@ -474,12 +554,12 @@
       \item The deprecated header \file{Rdefines.h} is now compatible
       with defining \code{R_NO_REMAP}.
 
-      \item Connection API now includes \code{R_GetConnection()} which
-      allows packages implementing connections to convert R
-      \code{connection} objects to \code{Rconnection} handles used in
-      the API. Code which previously used the low-level R-internal
-      \code{getConnection()} entry point should switch to the official
-      API.
+      \item The connections API now includes a function
+      \code{R_GetConnection()} which allows packages implementing
+      connections to convert R \code{connection} objects to
+      \code{Rconnection} handles used in the API. Code which previously
+      used the low-level R-internal \code{getConnection()} entry point
+      should switch to the official API.
     }
   }
 
@@ -508,8 +588,8 @@
       \item \code{tail.matrix()} did not work for zero rows matrices,
       and could produce row \dQuote{labels} such as \code{"[1e+05,]"}.
 
-      \item Data frames with column name \code{"stringsAsFactors"} now
-      format and print correctly.  (\PR{16580})
+      \item Data frames with a column named \code{"stringsAsFactors"}
+      now format and print correctly.  (\PR{16580})
 
       \item \code{cor()} is now guaranteed to return a value with
       absolute value less than or equal to 1. (\PR{16638})
@@ -525,7 +605,6 @@
 
       \item (X11 only)  \code{getGraphicsEvent()} miscoded buttons and
       missed mouse motion events.  (\PR{16700})
-      % port to r-patched if it doesn't add too many events to graphics windows
 
       \item \code{methods(round)} now also lists \code{round.POSIXt}.
 
@@ -533,8 +612,8 @@
       (\PR{16716})
 
       \item Jumps to outer contexts, for example in error recovery, now
-      make intermediate jumps to contexts where \code{on.exit} actions
-      are established instead of trying to run all \code{on.exit}
+      make intermediate jumps to contexts where \code{on.exit()} actions
+      are established instead of trying to run all \code{on.exit()}
       actions before jumping to the final target. This unwinds the stack
       gradually, releases resources held on the stack, and significantly
       reduces the chance of a segfault when running out of C stack
@@ -542,7 +621,7 @@
       \code{withCallingHandlers()} and \code{options("error")}
       specifications are ignored when handling a C stack overflow error
       as attempting one of these would trigger a cascade of C stack
-      overflow errors.  These changes resolve \PR{16753}.
+      overflow errors.  (These changes resolve \PR{16753}.)
 
       \item The spacing could be wrong when printing a complex array.
       (Report and patch by Lukas Stadler.)
@@ -550,10 +629,27 @@
       \item \code{pretty(d, n, min.n, *)} for date-time objects \code{d}
       works again in border cases with large \code{min.n}, returns a
       \code{labels} attribute also for small-range dates and in such cases
-      its returned length is closer to the desired \code{n}.  \PR{16761}
+      its returned length is closer to the desired \code{n}.  (\PR{16761})
+      Additionally, it finally does cover the range of \code{d}, as it
+      always claimed.
 
-      \item \code{tsp(x) <- NULL} did not handle objects inheriting from
-      both \code{"ts"} and \code{"mts"} properly.  \PR{16769}
+      \item \code{tsp(x) <- NULL} did not handle correctly objects
+      inheriting from both \code{"ts"} and \code{"mts"}.  (\PR{16769})
+
+      \item \code{install.packages()} could give false errors when
+      \code{options("pkgType")} was \code{"binary"}.  (Reported by
+      Jose Claudio Faria.)
+
+      \item A bug fix in \R 3.0.2 fixed problems with \code{locator()}
+      in X11, but introduced problems in Windows.  Now both should be
+      fixed.  (\PR{15700})
+
+      \item \code{download.file()} with \code{method = "wininet"}
+      incorrectly warned of download file length difference when
+      reported length was unknown. (\PR{16805})
+      
+      \item \code{diag(NULL, 1)} crashed because of missed type
+      checking.  (\PR{16853})
     }
   }
 }
@@ -561,9 +657,10 @@
 \section{\Rlogo CHANGES IN R 3.2.4 patched}{
   \subsection{BUG FIXES}{
     \itemize{
-      \item \code{format.POSIXlt()} behaved wrongly, e.g.,
-      \code{format(as.POSIXlt(paste0(1940:2000,"-01-01"), tz="CET"),
-	usetz=TRUE)} ended in two \code{"CEST"} time formats.
+      \item \code{format.POSIXlt()} behaved incorrectly in \R 3.2.4.
+      E.g.\sspace{}the output of
+      \code{format(as.POSIXlt(paste0(1940:2000,"-01-01"), tz = "CET"),
+	usetz = TRUE)} ended in two \code{"CEST"} time formats.
     }
   }
 }
@@ -677,7 +774,7 @@
 
       \item (Windows only) The \command{Rgui} front end did not
       always initialize the console properly, and could cause
-      \R to crash.  (\PR{16998})
+      \R to crash.  (\PR{16698})
 
       \item \code{dummy.coef.lm()} now works in more cases, thanks to a
       proposal by Werner Stahel (\PR{16665}).  In addition, it now works

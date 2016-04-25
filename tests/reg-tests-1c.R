@@ -1,6 +1,7 @@
 ## Regression tests for R >= 3.0.0
 
 pdf("reg-tests-1c.pdf", encoding = "ISOLatin1.enc")
+.pt <- proc.time()
 
 ## mapply with classed objects with length method
 ## was not documented to work in 2.x.y
@@ -582,6 +583,7 @@ stopifnot(identical(crossprod(2, v), t(2) %*% v),
 	  identical(5 %*% v, 5 %*% t(v)),
           identical(tcrossprod(m, 1:2), m %*% 1:2) )
 ## gave error "non-conformable arguments" in R <= 3.2.0
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## list <--> environment
@@ -778,6 +780,7 @@ if(.Platform$OS.type == "unix" &&
 				    "[1] 1 2 3")))
 }
 ## (failed for < 1 hr, in R-devel only)
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## Parsing large exponents of floating point numbers, PR#16358
@@ -850,6 +853,7 @@ options(op)# back to sanity
 ## format(*, decimal.mark=".")  when   OutDec != "."  (PR#16411)
 op <- options(OutDec = ",")
 stopifnot(identical(fpi, format(pi, decimal.mark=".")))
+options(op)
 ## failed in R <= 3.2.1
 
 
@@ -962,16 +966,20 @@ df <- data.frame(.id = 1:3 %% 3 == 2, a = 1:3)
 d2 <- within(df, {d = a + 2})
 stopifnot(identical(names(d2), c(".id", "a", "d")))
 ## lost the '.id' column in R <= 3.2.2
+proc.time() - .pt; .pt <- proc.time()
 
 ## system() truncating and splitting long lines of output, PR#16544
 ## only works when platform has getline() in stdio.h, and Solaris does not.
-## op <- options(warn = 2)# no warnings allowed
-## if(.Platform$OS.type == "unix") { # only works when platform has getline() in stdio.h
-##     cn <- paste(1:2222, collapse=" ")
-##     rs <- system(paste("echo", cn), intern=TRUE)
-##     stopifnot(identical(rs, cn))
-## }
-## options(op)
+known.POSIX_2008 <- .Platform$OS.type == "unix" &&
+     (Sys.info()[["sysname"]] != "SunOS")
+## ^^^ explicitly exclude *non*-working platforms above
+if(known.POSIX_2008) {
+    cat("testing system(\"echo\", <large>) : "); op <- options(warn = 2)# no warnings allowed
+    cn <- paste(1:2222, collapse=" ")
+    rs <- system(paste("echo", cn), intern=TRUE)
+    stopifnot(identical(rs, cn))
+    cat("[Ok]\n"); options(op)
+}
 
 
 ## tail.matrix()
@@ -1080,6 +1088,7 @@ tools::assertError(cov(1:6, f <- gl(2,3)))# was ok already
 tools::assertWarning(var(f))
 tools::assertWarning( sd(f))
 ## var() "worked" in R <= 3.2.2  using the underlying integer codes
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## loess(*, .. weights) - PR#16587
@@ -1305,6 +1314,7 @@ stopifnot(all.equal(coef(flm), cf[,"tear"]),
                     cbind(rate = 3:2, additive = 3:4,
                           `rate:additive` = c(3L, 8L))))
 ## dummy.coef() were missing coefficients in R <= 3.2.3
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## format.POSIXlt() with modified 'zone' or length-2 format
@@ -1396,16 +1406,39 @@ stopifnot(
 
 
 ## prettyDate() for subsecond ranges
-chkPretty <- function(obj, n = 5, ..., max.D = 1) {
-    pr <- pretty(obj, n=n, ...)
-    ## if debugging: pr <- grDevices:::prettyDate(obj, n=n, ...)
-    stopifnot(abs(length(pr) - n) <= max.D,
-	      length(unique(diff(pr))) == 1, # <==> must be equidistant
-	      min(pr) <= min(obj), max(obj) <= max(pr))
+##' checking pretty():
+chkPretty <- function(x, n = 5, min.n = NULL, ..., max.D = 1) {
+    if(is.null(min.n)) {
+	## work with both pretty.default() and greDevices::prettyDate()
+	## *AND* these have a different default for 'min.n' we must be "extra smart":
+	min.n <-
+	    if(inherits(x, "Date") || inherits(x, "POSIXt"))
+		n %/% 2 # grDevices:::prettyDate
+	    else
+		n %/% 3 # pretty.default
+    }
+    pr <- pretty(x, n=n, min.n=min.n, ...)
+    ## if debugging:
+    pr <- grDevices:::prettyDate(x, n=n, min.n=min.n, ...)
+    stopifnot(length(pr) >= (min.n+1),
+	      ## pretty(x, *) must cover range of x:
+	      min(pr) <= min(x), max(x) <= max(pr))
+    if((D <- abs(length(pr) - (n+1))) > max.D)
+	stop("| |pretty(.)| - (n+1) | = ", D, " > max.D = ", max.D)
+    ## is it equidistant [may need fuzz, i.e., signif(.) ?]:
+    eqD <- length(pr) == 1 || length(udp <- unique(dp <- diff(pr))) == 1
+    ## may well FALSE (differing number days in months; leap years, leap seconds)
+    if(!eqD) {
+        if(inherits(dp, "difftime") && units(dp) %in% c("days")# <- more ??
+           )
+            attr(pr, "chkPr") <- "not equidistant"
+        else
+            stop("non equidistant: has ", length(udp)," unique differences")
+    }
     invisible(pr)
 }
 sTime <- structure(1455056860.75, class = c("POSIXct", "POSIXt"))
-for(n in c(1:16, 30:32, 41, 50, 60)) # (not for much larger n)
+for(n in c(1:16, 30:32, 41, 50, 60)) # (not for much larger n, (TODO ?))
     chkPretty(sTime, n=n)
 set.seed(7)
 for(n in c(1:7, 12)) replicate(32, chkPretty(sTime + .001*rlnorm(1) * 0:9, n = n))
@@ -1423,11 +1456,71 @@ stopifnot(
     identical(chkPretty(MTbd + -1:1), p1) ,
     identical(chkPretty(MTbd +  0:3), seqDp("1960-02-09", "1960-02-14")) )
 ## all pretty() above gave length >= 5 answer (with duplicated values!) in R <= 3.2.3!
-## and length 1 or 2 instead of about 5 in R 3.2.4
+## and length 1 or 2 instead of about 6 in R 3.2.4
 (p2 <- chkPretty(as.POSIXct("2002-02-02 02:02", tz = "GMT-1"), n = 5, min.n = 5))
-stopifnot(identical(p2, structure(1012611718 + (0:4), class = c("POSIXct", "POSIXt"),
-                                  tzone = "GMT-1", labels = time2d(58:62))))
+stopifnot(length(p2) >= 5+1,
+	  identical(p2, structure(1012611717 + (0:5), class = c("POSIXct", "POSIXt"),
+				  tzone = "GMT-1", labels = time2d(57 + (0:5)))))
 ## failed in R 3.2.4
+(T3 <- structure(1460019857.25, class = c("POSIXct", "POSIXt")))# typical Sys.date()
+chkPretty(T3, 1) # error in svn 70438
+## "Data" from  example(pretty.Date) :
+steps <- setNames(,
+    c("10 secs", "1 min", "5 mins", "30 mins", "6 hours", "12 hours",
+      "1 DSTday", "2 weeks", "1 month", "6 months", "1 year",
+      "10 years", "50 years", "1000 years"))
+t02 <- as.POSIXct("2002-02-02 02:02")
+(at <- chkPretty(t02 + 0:1, n = 5, min.n = 3, max.D=2))
+xU <- as.POSIXct("2002-02-02 02:02", tz = "UTC")
+x5 <- as.POSIXct("2002-02-02 02:02", tz = "EST5EDT")
+atU <- chkPretty(seq(xU, by = "30 mins", length = 2), n = 5)
+at5 <- chkPretty(seq(x5, by = "30 mins", length = 2), n = 5)
+stopifnot(length(at) >= 4,
+	  identical(sort(names(aat <- attributes(at))), c("class", "labels", "tzone")),
+	  identical(aat$labels, time2d(59+ 0:3)),
+          identical(x5 - xU, structure(5, units = "hours", class = "difftime")),
+          identical(attr(at5, "labels"), attr(atU, "labels") -> lat),
+          identical(lat, paste("02", time2d(10* 0:4), sep=":"))
+)
+nns <- c(1:9, 15:17); names(nns) <- paste0("n=",nns)
+prSeq <- function(x, n, st, ...) pretty(seq(x, by = st, length = 2), n = n, ...)
+pps <- lapply(nns, function(n)
+	      lapply(steps, function(st) prSeq(x=t02, n=n, st=st)))
+Ls.ok <- list(
+    `10 secs`  = c("00", "02", "04", "06", "08", "10"),
+    `1 min`    = sprintf("%02d", 10*((0:6) %% 6)),
+    `5 mins`   = sprintf("02:%02d", 2:7),
+    `30 mins`  = sprintf("02:%02d", (0:4)*10),
+    `6 hours`  = sprintf("%02d:00", 2:9),
+    `12 hours` = sprintf("%02d:00", (0:5)*3),
+    `1 DSTday` = c("Feb 02 00:00", "Feb 02 06:00", "Feb 02 12:00",
+		   "Feb 02 18:00", "Feb 03 00:00", "Feb 03 06:00"),
+    `2 weeks`  = c("Jan 28", "Feb 04", "Feb 11", "Feb 18"),
+    `1 month`  = c("Jan 28", "Feb 04", "Feb 11", "Feb 18", "Feb 25", "Mar 04"),
+    `6 months` = c("Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"),
+    `1 year`   = c("Jan", "Apr", "Jul", "Oct", "Jan", "Apr"),
+    `10 years` = as.character(2000 +   2*(1:7)),
+    `50 years` = as.character(2000 +  10*(0:6)),
+    `1000 years`= as.character(2000 + 200*(0:6)))
+stopifnot(identical(Ls.ok,
+		    lapply(pps[["n=5"]], attr, "label")))
+##
+chkSeq <- function(st, x, n, max.D = if(n <= 4) 1 else if(n <= 10) 2 else 3, ...)
+    tryCatch(chkPretty(seq(x, by = st, length = 2), n = n, max.D=max.D, ...),
+             error = conditionMessage)
+c.ps <- lapply(nns, function(n) lapply(steps, chkSeq, x = t02, n = n))
+## ensure that all are ok *but* some which did not match 'n' well enough:
+cc.ps <- unlist(c.ps, recursive=FALSE)
+table(ok <- vapply(cc.ps, inherits, NA, what = "POSIXt"))
+errs <- unlist(cc.ps[!ok])
+stopifnot(startsWith(errs, prefix = "| |pretty(.)| - (n+1) |"))
+Ds <- as.numeric(sub(".*\\| = ([0-9]+) > max.*", "\\1", errs))
+table(Ds)
+## Currently   [may improve]
+##  3  4  5  6  7  8
+##  4 14  6  3  2  1
+## ... and ensure we only improve:
+stopifnot(length(Ds) <= 30, max(Ds) <= 8, sum(Ds) <= 138)
 
 
 stopifnot(c("round.Date", "round.POSIXt") %in% as.character(methods(round)))
@@ -1476,3 +1569,17 @@ tsp(z) <- NULL
 stopifnot(identical(class(z), "matrix"))
 ## kept "mts" in 3.2.4, PR#16769
 
+
+## body() / formals() notably the replacement versions
+x <- NULL; tools::assertWarning(   body(x) <-    body(mean))	# to be error
+x <- NULL; tools::assertWarning(formals(x) <- formals(mean))	# to be error
+x <- NULL; tools::assertWarning(f <-    body(x)); stopifnot(is.null(f))
+x <- NULL; tools::assertWarning(f <- formals(x)); stopifnot(is.null(f))
+## these all silently coerced NULL to a function in R <= 3.2.x
+
+
+
+
+## keep at end
+rbind(last =  proc.time() - .pt,
+      total = proc.time())
