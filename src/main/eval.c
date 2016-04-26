@@ -5677,6 +5677,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP forms = VECTOR_ELT(fb, 0);
 	SEXP body = VECTOR_ELT(fb, 1);
 	value = mkCLOSXP(forms, body, rho);
+	if (LENGTH(fb) > 2) { /* FIXME: bump bc version and don't check? */
+	  SEXP srcref = VECTOR_ELT(fb, 2);
+	  if (!isNull(srcref)) setAttrib(value, R_SrcrefSymbol, srcref);
+	}
 	BCNPUSH(value);
 	NEXT();
       }
