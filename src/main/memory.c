@@ -1819,7 +1819,7 @@ static void RunGenCollect(R_size_t size_needed)
 	SortNodes();
 #endif
 
-    if (gens_collected == NUM_OLD_GENERATIONS || R_check_constants > 2)
+    if (/* gens_collected == NUM_OLD_GENERATIONS || */R_check_constants > 2)
         R_checkConstants(TRUE);
 
     if (gc_reporting) {
