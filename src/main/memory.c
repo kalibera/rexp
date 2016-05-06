@@ -1819,8 +1819,9 @@ static void RunGenCollect(R_size_t size_needed)
 	SortNodes();
 #endif
 
-    if (/* gens_collected == NUM_OLD_GENERATIONS || */R_check_constants > 2)
-        R_checkConstants(TRUE);
+    if (R_check_constants > 2 ||
+	    (R_check_constants > 1 && gens_collected == NUM_OLD_GENERATIONS))
+	R_checkConstants(TRUE);
 
     if (gc_reporting) {
 	REprintf("Garbage collection %d = %d", gc_count, gen_gc_counts[0]);
