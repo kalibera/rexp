@@ -1254,7 +1254,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 	SEXP *cargscp = (SEXP *) R_alloc(nargs, sizeof(SEXP));
 	int i;
 	for(i = 0; i < nargs; i++)
-	    cargscp[i] = duplicate(cargs[i]);
+	    cargscp[i] = PROTECT(duplicate(cargs[i]));
 	retval = R_doDotCall(ofun, nargs, cargs, call);
 	Rboolean constsOK = TRUE;
 	for(i = 0; constsOK && i < nargs; i++)
@@ -1277,6 +1277,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 		    );
 	    R_Suicide("compiler constants were modified (in .Call?)!\n");
 	}
+	UNPROTECT(nargs);
     }
     vmaxset(vmax);
     return retval;
