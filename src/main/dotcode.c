@@ -1248,7 +1248,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 		      nargs, symbol.symbol.call->numArgs, buf);
     }
 
-    if (R_check_constants < 2)
+    if (R_check_constants < 4)
 	retval = R_doDotCall(ofun, nargs, cargs, call);
     else {
 	SEXP *cargscp = (SEXP *) R_alloc(nargs, sizeof(SEXP));
