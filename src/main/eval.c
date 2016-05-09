@@ -6270,6 +6270,8 @@ void attribute_hidden R_registerBC(SEXP bcBytes, SEXP bcode)
 	error("registerBC requires integer vector as bcBytes");
     if (TYPEOF(bcode) != BCODESXP)
 	error("registerBC requires BCODESXP object as bcode");
+    if (R_check_constants <= 0)
+	return;
 
     /* The constants registry is a linked list of constant records. Each
        constant record is a generic vector, its first element is a pointer
