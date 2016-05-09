@@ -1820,8 +1820,8 @@ static void RunGenCollect(R_size_t size_needed)
 	SortNodes();
 #endif
 
-    if (R_check_constants > 2 ||
-	    (R_check_constants > 1 && gens_collected == NUM_OLD_GENERATIONS))
+    if (R_check_constants > 3 ||
+	    (R_check_constants > 2 && gens_collected == NUM_OLD_GENERATIONS))
 	R_checkConstants(TRUE);
 
     if (gc_reporting) {
