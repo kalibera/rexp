@@ -1264,8 +1264,8 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 		    && !R_checkConstants(FALSE))
 		constsOK = FALSE;
 	if (!constsOK) {
-	    REprintf("ERROR: detected modification of compiler constants after .Call"
-		" invocation of function %s.\n", buf);
+	    REprintf("ERROR: detected compiler constant(s) modification after"
+		" .Call invocation of function %s.\n", buf);
 	    for(i = 0; i < nargs; i++)
 		if (!R_compute_identical(cargs[i], cargscp[i], 7))
 		    REprintf("NOTE: .Call function %s modified its argument"
