@@ -840,9 +840,11 @@ void attribute_hidden R_init_jit_enabled(void)
 
     /* -1 ... duplicate constants on LDCONST and PUSHCONSTARG, no checking
         0 ... no checking (no duplication for >= 0)
-        1 ... check at error, session exit and full GC [DEFAULT]
-        2 ... check also after .Call function that modified its arguments
-        3 ... check also at partial GCs
+	1 ... check at error, session exit and reclamation [DEFAULT]
+	2 ... check also at full GC
+	3 ... check also at partial GC
+	4 ... check also at .Call
+	5 ... (very) verbose report on modified constants
     */
     if (R_check_constants <= 1) {
 	char *check = getenv("R_CHECK_CONSTANTS");
@@ -5183,6 +5185,14 @@ static R_INLINE Rboolean GETSTACK_LOGICAL_NO_NA_PTR(R_bcstack_t *s, int callidx,
     }
 }
 
+static SEXP markSpecialArgs(SEXP args)
+{
+    SEXP arg;
+    for(arg = args; arg != R_NilValue; arg = CDR(arg))
+	MARK_NOT_MUTABLE(CAR(arg));
+    return args;
+}
+
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
   SEXP value = R_NilValue, constants;
@@ -5642,7 +5652,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	case SPECIALSXP:
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
-	  value = PRIMFUN(fun) (call, fun, CDR(call), rho);
+	  value = PRIMFUN(fun) (call, fun, markSpecialArgs(CDR(call)), rho);
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
@@ -5694,7 +5704,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
-	value = PRIMFUN(fun) (call, fun, CDR(call), rho);
+	value = PRIMFUN(fun) (call, fun, markSpecialArgs(CDR(call)), rho);
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	BCNPUSH(value);
@@ -6272,31 +6282,77 @@ void attribute_hidden R_registerBC(SEXP bcBytes, SEXP bcode)
        One could simply compare/duplicate the lists of all constants (the whole
        constant pools), but that turned out too expensive */
 
+    SEXP consts = BCCONSTS(bcode); /* all constants, VECSXP */
+
+#define CHECK_ALL_CONSTANTS
+#ifndef CHECK_ALL_CONSTANTS
     int *ipc = INTEGER(bcBytes);
     int n = LENGTH(bcBytes);
     int i;
     int loadableConsts = 0;
-    SEXP consts = BCCONSTS(bcode); /* all constants, VECSXP */
 
-    /* add only constants that could get (be loaded) to user code */
+    /* add only constants loaded by certain instructions  */
     for(i = 0; i < n; i += opinfo[ipc[i]].argc + 1)
-        if (ipc[i] == LDCONST_OP || ipc[i] == PUSHCONSTARG_OP)
+        if (ipc[i] == LDCONST_OP || ipc[i] == PUSHCONSTARG_OP ||
+		ipc[i] == CALLSPECIAL_OP)
             loadableConsts++;
 
     SEXP constsRecord = PROTECT(allocVector(VECSXP, loadableConsts * 2 + 2));
     int crIdx = 2;
     for(i = 0; i < n; i += opinfo[ipc[i]].argc + 1)
-        if (ipc[i] == LDCONST_OP || ipc[i] == PUSHCONSTARG_OP) {
+        if (ipc[i] == LDCONST_OP || ipc[i] == PUSHCONSTARG_OP ||
+		ipc[i] == CALLSPECIAL_OP) {
             SEXP corig = VECTOR_ELT(consts, ipc[i + 1]);
             SET_VECTOR_ELT(constsRecord, crIdx++, corig);
             SET_VECTOR_ELT(constsRecord, crIdx++, duplicate(corig));
         }
+#else
+    /* add the whole constant pool */
+    SEXP constsRecord = PROTECT(allocVector(VECSXP, 2 + 2));
+    SET_VECTOR_ELT(constsRecord, 2, consts);
+    SET_VECTOR_ELT(constsRecord, 3, duplicate(consts));
+#endif
 
     SEXP wref = R_MakeWeakRef(bcode, R_NilValue, R_NilValue, FALSE);
     SET_VECTOR_ELT(constsRecord, 0, VECTOR_ELT(R_ConstantsRegistry, 0));
     SET_VECTOR_ELT(constsRecord, 1, wref);
     SET_VECTOR_ELT(R_ConstantsRegistry, 0, constsRecord);
     UNPROTECT(1); /* constsRecord */
+}
+
+/* A potentially very verbose report for modified compiler constant. */
+static void reportModifiedConstant(SEXP crec, SEXP orig, SEXP copy, int idx)
+{
+    if (R_check_constants < 5)
+	return;
+
+    SEXP bc = R_WeakRefKey(VECTOR_ELT(crec, 1));
+    if (bc == R_NilValue)
+	return;
+
+    SEXP consts = BCCONSTS(bc);
+    int n = LENGTH(consts);
+    int i;
+    if (idx == -1) {
+	for(i = 0; i < n; i++)
+	    if (VECTOR_ELT(consts, i) == orig) {
+		idx = i;
+		break;
+	    }
+    }
+    int oldout = R_OutputCon; /* redirect standard to error output */
+    R_OutputCon = 2;
+    int oldcheck = R_check_constants; /* guard against recursive invocation */
+    R_check_constants = 0;
+    REprintf("ERROR: the modified value of the constant is:\n");
+    PrintValue(orig);
+    REprintf("ERROR: the original value of the constant is:\n");
+    PrintValue(copy);
+    REprintf("ERROR: the modified constant is at index %d\n", idx);
+    REprintf("ERROR: the modified constant is in this function body:\n");
+    PrintValue(VECTOR_ELT(consts, 0));
+    R_check_constants = oldcheck;
+    R_OutputCon = oldout;
 }
 
 /* Checks whether compiler constants linked from the given record
@@ -6314,12 +6370,34 @@ static Rboolean checkConstantsInRecord(SEXP crec, Rboolean abortOnError)
 	/* 7: not numerical comparison, not single NA, not attributes
            as set do ignore byte-code, do ignore environments of closures */
 	if (!R_compute_identical(corig, ccopy, 7)) {
-	    if (abortOnError)
-		R_Suicide("compiler constants were modified!\n");
-	    else
-		constsOK = FALSE;
+
+#ifndef CHECK_ALL_CONSTANTS
+	    REprintf("ERROR: modification of compiler constant of type %s"
+		", length %d\n", CHAR(type2str(TYPEOF(ccopy))), length(ccopy));
+	    reportModifiedConstant(crec, corig, ccopy, -1);
+#else
+	    int nc = LENGTH(corig);
+	    /* some variables are volatile to prevent the compiler from
+	       optimizing them out, for easier debugging */
+	    volatile int ci;
+	    for(ci = 0; ci < nc; ci++) {
+		volatile SEXP orig = VECTOR_ELT(corig, ci);
+		volatile SEXP copy = VECTOR_ELT(ccopy, ci);
+		if (!R_compute_identical(orig, copy, 7)) {
+		    REprintf("ERROR: modification of compiler constant"
+			" of type %s, length %d\n",
+			CHAR(type2str(TYPEOF(copy))), length(copy));
+		    reportModifiedConstant(crec, orig, copy, ci);
+		}
+	    }
+#endif
+	    constsOK = FALSE;
         }
     }
+
+    if (!constsOK && abortOnError)
+	R_Suicide("compiler constants were modified!\n");
+
     return constsOK;
 }
 
