@@ -28,3 +28,8 @@ list2env <- function(x, envir = NULL, parent = parent.frame(),
     if (is.null(envir)) envir <- new.env(hash=hash, parent=parent, size=size)
     .Internal(list2env(x, envir))
 }
+
+unassign <-
+    function (x, pos = -1, envir = as.environment(pos),
+              inherits = FALSE, warn.on.copy = FALSE)
+    .Internal(unassign(x,  envir, inherits, warn.on.copy))

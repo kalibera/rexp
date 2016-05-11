@@ -1761,6 +1761,154 @@ SEXP attribute_hidden do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
     return val;
 }
 
+/*----------------------------------------------------------------------
+
+  unassignVarInFrame
+
+  Look up the value of a symbol in a single environment frame. Change the
+  binding of that symbol to nil and return the original value. If the symbol
+  is not found, return R_UnboundValue.
+*/
+
+static SEXP unassignVarInFrame(SEXP rho, SEXP symbol)
+{
+    if (TYPEOF(rho) == NILSXP)
+	error(_("use of NULL environment is defunct"));
+
+    if (rho == R_BaseNamespace || rho == R_BaseEnv) {
+	SEXP val = SYMBOL_BINDING_VALUE(symbol);
+	if (val != R_UnboundValue) {
+	    PROTECT(val);
+	    SET_SYMBOL_BINDING_VALUE(symbol, R_NilValue);
+	    UNPROTECT(1);
+	}
+	return val;
+    }
+
+    if (rho == R_EmptyEnv)
+	return R_UnboundValue;
+
+    if (rho == R_GlobalEnv)
+	R_DirtyImage = 1;
+
+    if(IS_USER_DATABASE(rho)) {
+	/* Use the objects function pointer for this symbol. */
+	R_ObjectTable *table;
+	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
+	if(table->active) {
+	    SEXP val = table->get(CHAR(PRINTNAME(symbol)), NULL, table);
+	    if (val != R_UnboundValue) {
+		PROTECT(val);
+		if (table->assign == NULL)
+		    error(_("cannot assign variables to this database"));
+		table->assign(CHAR(PRINTNAME(symbol)), R_NilValue, table);
+		UNPROTECT(1);
+		return val;
+	    }
+	}
+    } else if (HASHTAB(rho) == R_NilValue) {
+	SEXP frame = FRAME(rho);
+	while (frame != R_NilValue) {
+	    if (TAG(frame) == symbol) {
+		SEXP val = PROTECT(BINDING_VALUE(frame));
+		SET_BINDING_VALUE(frame, R_NilValue);
+		SET_MISSING(frame, 0);  /* same as defineVar */
+		UNPROTECT(1);
+		return val;
+	    }
+	    frame = CDR(frame);
+	}
+    } else {
+	SEXP c = PRINTNAME(symbol);
+	if(!HASHASH(c)) {
+	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
+	    SET_HASHASH(c, 1);
+	}
+	int hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
+	SEXP frame = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
+	if (frame != R_NilValue) {
+	    SEXP val = BINDING_VALUE(frame);
+	    if (val != R_UnboundValue) {
+		PROTECT(val);
+		SET_BINDING_VALUE(frame, R_NilValue);
+		SET_MISSING(frame, 0); /* same as defineVar */
+		UNPROTECT(1);
+		return val;
+	    }
+	}
+    }
+    return R_UnboundValue;
+}
+
+/*----------------------------------------------------------------------
+
+  unassignVar
+
+  Look up a symbol in an environment. If not found and inherits is nonzero,
+  continue looking into parent environments. When found, change the binding
+  to nil and return the value it had before. If the returned value had only
+  one reference (NAMED=1), reduce NAMED to 0. If it had NAMED=2, return a
+  duplicate of it (and issue a warning if warncp is nonzero).
+*/
+
+static SEXP unassignVar(SEXP symbol, SEXP rho, int inherits, int warncp)
+{
+    SEXP vl;
+    while (rho != R_EmptyEnv) {
+	vl = unassignVarInFrame(rho, symbol);
+	if (vl != R_UnboundValue) {
+	    if (MAYBE_SHARED(vl)) {
+		if (warncp)
+		    warning(_("unassign had to duplicate '%s'"),
+			CHAR(PRINTNAME(symbol)));
+		vl = duplicate(vl);
+	    } else if (MAYBE_REFERENCED(vl)) {
+		SET_NAMED(vl, 0);
+	    }
+	    return vl;
+	}
+	if (inherits)
+	    rho = ENCLOS(rho);
+	else
+	    return R_UnboundValue;
+    }
+    return R_UnboundValue;
+}
+
+
+/*----------------------------------------------------------------------
+
+  do_unassign : .Internal(unassign(x, envir, inherits, warncp))
+
+*/
+SEXP attribute_hidden do_unassign(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    SEXP name=R_NilValue, aenv;
+    int ginherits = 0;
+    int gwarncp = 0;
+    checkArity(op, args);
+
+    if (!isString(CAR(args)) || length(CAR(args)) == 0)
+	error(_("invalid first argument"));
+    else {
+	if (length(CAR(args)) > 1)
+	    warning(_("only the first element is used as variable name"));
+	name = installTrChar(STRING_ELT(CAR(args), 0));
+    }
+    aenv = CADR(args);
+    if (TYPEOF(aenv) == NILSXP)
+	error(_("use of NULL environment is defunct"));
+    if (TYPEOF(aenv) != ENVSXP &&
+	TYPEOF((aenv = simple_as_environment(aenv))) != ENVSXP)
+	error(_("invalid '%s' argument"), "envir");
+    ginherits = asLogical(CADDR(args));
+    if (ginherits == NA_LOGICAL)
+	error(_("invalid '%s' argument"), "inherits");
+    gwarncp = asLogical(CADDDR(args));
+    if (gwarncp == NA_LOGICAL)
+	error(_("invalid '%s' argument"), "warn.copy");
+    return unassignVar(name, aenv, ginherits, gwarncp);
+}
 
 /**
  * do_list2env : .Internal(list2env(x, envir))

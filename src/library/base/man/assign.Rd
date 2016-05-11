@@ -5,6 +5,7 @@
 
 \name{assign}
 \alias{assign}
+\alias{unassign}
 \title{Assign a Value to a Name}
 \description{
   Assign a value to a name in an environment.
@@ -12,6 +13,8 @@
 \usage{
 assign(x, value, pos = -1, envir = as.environment(pos),
        inherits = FALSE, immediate = TRUE)
+unassign(x, pos = -1, envir = as.environment(pos),
+       inherits = FALSE, warn.on.copy = FALSE)
 }
 \arguments{
   \item{x}{a variable name, given as a character string.  No coercion is
@@ -24,27 +27,42 @@ assign(x, value, pos = -1, envir = as.environment(pos),
   \item{inherits}{should the enclosing frames of the environment be
     inspected?}
   \item{immediate}{an ignored compatibility feature.}
+  \item{warn.on.copy}{should \code{unassign} print a warning when returning
+    a freshly created copy of the value?}
 }
 \details{
   There are no restrictions on the name given as \code{x}: it can be a
   non-syntactic name (see \code{\link{make.names}}).
 
-  The \code{pos} argument can specify the  environment in which to assign
-  the object in any of several ways: as \code{-1} (the default),
-  as a positive integer (the position in the \code{\link{search}} list); as
-  the character string name of an element in the search list; or as an
+  The \code{pos} argument can specify the  environment in which to assign or
+  unassign the object in any of several ways: as \code{-1} (the default), as
+  a positive integer (the position in the \code{\link{search}} list); as the
+  character string name of an element in the search list; or as an
   \code{\link{environment}} (including using \code{\link{sys.frame}} to
-  access the currently active function calls).
-  The \code{envir} argument is an alternative way to specify an
-  environment, but is primarily for back compatibility.
+  access the currently active function calls).  The \code{envir} argument is
+  an alternative way to specify an environment, but is primarily for back
+  compatibility.
 
-  \code{assign} does not dispatch assignment methods, so it cannot be
-  used to set elements of vectors, names, attributes, etc.
+  \code{assign} and \code{unassign} do not dispatch assignment methods, so
+  they cannot be used to set elements of vectors, names, attributes, etc.
 
   Note that assignment to an attached list or data frame changes the
   attached copy and not the original object: see \code{\link{attach}}
   and \code{\link{with}}.
+
+  \code{unassign} first looks up the variable \code{x} in the environment
+  specified, following the same algorithm as \code{\link{get}}.  It also
+  returns the value of the variable, but sets the variable to \code{NULL}.
+  The returned value is guaranteed to not be bound to any variable; if
+  \code{unassign} cannot rule out the existence of another binding, it
+  returns a fresh (unbound) copy of the value.  \code{unassign} is useful
+  for avoiding unnecessary object copying (see example below).  It allows
+  in-place modification of R objects by native code without violating the
+  pass-by-value semantics of R.  The function should not be used when the
+  memory/performance savings are unimportant, as it hinders code
+  readability.
 }
+
 \value{
   This function is invoked for its side effect, which is assigning
   \code{value} to the variable \code{x}.  If no \code{envir} is
@@ -96,5 +114,19 @@ assign("a[1]", 2)
 a[1] == 2          # FALSE
 get("a[1]") == 2   # TRUE
 
+x <- c(-1, 0, 1)
+x <- abs(x)             # the object allocated by "c()" is copied by abs
+                        # in current version of R
+
+x <- c(-1, 0, 1)
+x <- abs(unassign("x")) # the object allocated by "c()" is re-used by abs
+
+x <- c(-1, 0, 1)
+z <- x                  # z is bound to the object allocated by "c()"
+x <- abs(unassign("x")) # the object allocated by "c()" has to be copied by abs
+
+x <- 1 + 1
+unassign("x")           # 2
+x                       # NULL
 }
 \keyword{data}
