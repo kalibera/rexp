@@ -6284,7 +6284,7 @@ void attribute_hidden R_registerBC(SEXP bcBytes, SEXP bcode)
 
     SEXP consts = BCCONSTS(bcode); /* all constants, VECSXP */
 
-#define CHECK_ALL_CONSTANTS
+//#define CHECK_ALL_CONSTANTS
 #ifndef CHECK_ALL_CONSTANTS
     int *ipc = INTEGER(bcBytes);
     int n = LENGTH(bcBytes);
