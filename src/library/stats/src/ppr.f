@@ -39,8 +39,8 @@ C                        ^^^ really (ndb) of  smart(.)
       integer i,j,l, lm
       double precision sw,s
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -112,7 +112,7 @@ C REPEAT
 521   continue
       if(lm.le.mu) goto 9999
 c back to integer:
-      l=sc(lm,1)
+      l=int(sc(lm,1))
       asr1=0d0
       do 561 j=1,n
         do 561 i=1,q
@@ -141,7 +141,7 @@ C END REPEAT
       subroutine subfit(m,p,q,n,w,sw,x,r,ww,lm,a,b,f,t,asr,sc,
      &     bt,g,dp,edf)
 c Args
-      integer              m,p,q,n,            lm
+      integer           m,p,q,n,            lm
       double precision w(n),sw, x(p,n),r(q,n),ww(q),a(p,m),b(q,m),
      &     f(n,m), t(n,m), asr(15), sc(n,15), bt(q), g(p,3), edf(m)
       double precision dp(*)
@@ -149,8 +149,8 @@ c Var
       integer i,j,l, iflsv
       double precision asrold
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -187,7 +187,7 @@ c does 'edf' mean 'edf(1)' or 'edf(l)'?
       subroutine fulfit(lm,lbf,p,q,n,w,sw,x,r,ww,a,b,f,t,
      &     asr,sc,bt,g,dp,edf)
 c Args
-      integer              lm,lbf,p,q,n
+      integer           lm,lbf,p,q,n
       double precision w(n),sw,x(p,n),r(q,n),ww(q),a(p,lm),b(q,lm),
      &     f(n,lm),t(n,lm),asr(1+lm), sc(n,15),bt(q),g(p,3), edf(lm)
       double precision dp(*)
@@ -195,8 +195,8 @@ c Var
       double precision asri, fsv, asrold
       integer i,j,iter,lp,isv
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -257,7 +257,7 @@ C Outer loop:
       subroutine onetrm(jfl,p,q,n,w,sw,x,y,ww,a,b,f,t,asr,
      &     sc,g,dp,edf)
 c Args
-      integer              jfl,p,q,n
+      integer           jfl,p,q,n
       double precision w(n),sw, x(p,n),y(q,n),ww(q),a(p),b(q),f(n),t(n),
      &     asr, sc(n,13),g(p,2), edf
       double precision dp(*)
@@ -265,8 +265,8 @@ c Var
       double precision asrold,s
       integer i,j,iter
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -307,15 +307,15 @@ C REPEAT
 
       subroutine oneone(ist,p,n, w,sw,y,x,a,f,t,asr,sc,g,dp,edf)
 c Args
-      integer              ist,p,n
+      integer           ist,p,n
       double precision w(n),sw,y(n),x(p,n),a(p),f(n),t(n),asr,
      &     sc(n,12), g(p,2), edf, dp(*)
 c Var
       integer i,j,k,iter
       double precision sml, s,v,cut,asrold
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
@@ -367,7 +367,7 @@ C REPEAT [inner loop] -----
  90   continue
       call sort(sc(1,11),sc,1,n)
       do 110 j=1,n
-        k=sc(j,1)
+        k=int(sc(j,1))
         sc(j,2)=y(k)
         sc(j,3)=max(w(k),sml)
  110  continue
@@ -393,7 +393,7 @@ C     --------
         a(i)=g(i,2)
  160  continue
       do 170 j=1,n
-        k=sc(j,1)
+        k=int(sc(j,1))
         t(k)=sc(j,11)
         f(k)=sc(j,12)
  170  continue
@@ -401,7 +401,7 @@ C     --------
       if(iter.gt.mitone.or.p.le.1) goto 199
       call pprder(n,sc(1,11),sc(1,12),sc(1,3),fdel,sc(1,4),sc(1,5))
       do 180 j=1,n
-        k=sc(j,1)
+        k=int(sc(j,1))
         sc(j,5)=y(j)-f(j)
         sc(k,6)=sc(j,4)
  180  continue
@@ -728,8 +728,8 @@ C avoid bounds error: this was .and. but order is not guaranteed
       integer i,lm1,l,l1
       double precision s,t,sml
 c Common
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
 
@@ -786,16 +786,16 @@ c Common
       block data bkppr
 
 c Common Vars
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
       double precision conv,            cutmin,fdel,cjeps
       integer              maxit,mitone,                  mitcj
       common /pprz01/ conv,maxit,mitone,cutmin,fdel,cjeps,mitcj
 
-      double precision     df, gcvpen
-      integer                          ismethod
+      double precision  df, gcvpen
+      integer                       ismethod
       common /spsmooth/ df, gcvpen, ismethod
 
       data ifl,maxit, conv, mitone, cutmin, fdel,
@@ -806,16 +806,16 @@ c Common Vars
       end
 
       subroutine setppr(span1, alpha1, optlevel, ism, df1, gcvpen1)
-c Put `parameters' into Common blocks
+c Put 'parameters' into Common blocks
       integer optlevel,ism
       double precision span1,alpha1, df1, gcvpen1
 
-      double precision         span,alpha,big
-      integer           ifl,lf
+      double precision       span,alpha,big
+      integer         ifl,lf
       common /pprpar/ ifl,lf,span,alpha,big
 
-      double precision     df, gcvpen
-      integer                          ismethod
+      double precision  df, gcvpen
+      integer                       ismethod
       common /spsmooth/ df, gcvpen, ismethod
 
       span = span1
@@ -841,7 +841,7 @@ c
  10      continue
          call sort(t(1,l),sp,1,n)
          do 20 j=1,n
-            k=sp(j,1)
+            k=int(sp(j,1))
             f(j,l)=sp(k,2)
  20      continue
  100  continue
@@ -857,11 +857,11 @@ c
      +     inp,ja,jb,jf,jt,jfl,jfh,jtl,jth, mu
       double precision ys, s, t
 
-      m=smod(1)+0.1d0
-      p=smod(2)+0.1d0
-      q=smod(3)+0.1d0
-      n=smod(4)+0.1d0
-      mu=smod(5)+0.1d0
+      m= int(smod(1)+0.1d0)
+      p= int(smod(2)+0.1d0)
+      q= int(smod(3)+0.1d0)
+      n= int(smod(4)+0.1d0)
+      mu=int(smod(5)+0.1d0)
       ys=smod(q+6)
       ja=q+6
       jb=ja+p*m
@@ -930,9 +930,10 @@ C        END
       return
       end
 
+c Called from R's supsmu()
       subroutine setsmu
-      double precision     df, gcvpen
-      integer                          ismethod
+      double precision  df, gcvpen
+      integer                       ismethod
       common /spsmooth/ df, gcvpen, ismethod
 
       ismethod = 0
@@ -993,12 +994,13 @@ c Var
       double precision sy,sw, a,h(n),f, scale,vsmlsq,resmin
       integer i,j, jper
 
-      double precision  spans(3),          big,sml,eps
+      double precision  spans(3),    big,sml,eps
       common /spans/ spans  /consts/ big,sml,eps
 
-      double precision     df, gcvpen
-      integer                          ismethod
+      double precision  df, gcvpen
+      integer                       ismethod
       common /spsmooth/ df, gcvpen, ismethod
+c     Called from R's supsmu(),  ismethod = 0, always (but not when called from ppr)
 
       if (x(n).gt.x(1)) go to 30
       sy=0d0
@@ -1085,7 +1087,7 @@ c Var
       cvar=var
       fbw=cvar
       jper=iabs(iper)
-      ibw=0.5d0*span*n+0.5d0
+      ibw=int(0.5d0*span*n+0.5d0)
       if (ibw.lt.2) ibw=2
       it=2*ibw+1
       if (it .gt. n) it = n
@@ -1178,7 +1180,7 @@ c--
       end
 
       block data bksupsmu
-      double precision spans(3), big,sml,eps
+      double precision spans(3),    big,sml,eps
       common /spans/ spans /consts/ big,sml,eps
 
       data spans, big,sml,eps /0.05,0.2,0.5, 1.0e20,1.0e-7,1.0e-3/
@@ -1226,10 +1228,10 @@ c Var
       double precision knot(29), coef(25), work((17+25)*25)
       double precision dx(2500),dy(2500), dw(2500),dsmo(2500), lev(2500)
       double precision param(4), df1, lambda, crit, p, s
-      integer iparms(3), i, nk, ip, isetup,ier
+      integer iparms(3), i, nk, ip, ier
 
-      double precision     df, gcvpen
-      integer                          ismethod
+      double precision  df, gcvpen
+      integer                       ismethod
       common /spsmooth/ df, gcvpen, ismethod
 
       if (n .gt. 2500) call bdrsplerr()
@@ -1253,7 +1255,7 @@ c Var
         knot(i) = (1-p)*dx(ip+1) + p*dx(ip+2)
  40   continue
 c      call dblepr('knots', 5, knot, nk+4)
-C     iparms(1:2) := (icrit, ispar)  for ./sbart.f
+C     iparms(1:2) := (icrit, ispar)  for ./sbart.c
       if (iabs(ismethod) .eq. 1) then
          iparms(1) = 3
          df1 = df
@@ -1269,7 +1271,7 @@ c     maxit = 500 :
       param(2) = 1.5d0
 c  tol for `spar' estimation:
       param(3) = 1d-2
-c   this was `eps' (=? sqrt(machine eps)) in ./sbart.f :
+c   this was `eps' (=? sqrt(machine eps)) in ./sbart.c :
       param(4) = .000244
 
       ier = 1
@@ -1297,7 +1299,7 @@ C=== This was 'sort()' in  gamfit's  mysort.f  [or sortdi() in sortdi.f ] :
 C
 C===  FIXME:  Translate to C and add to ../../../main/sort.c <<<<<
 C
-C     why on earth is       a() double precision ????
+C     a[] is double precision because the caller reuses a double (sometimes v[] itself!)
       subroutine sort (v,a, ii,jj)
 c
 c     Puts into a the permutation vector which sorts v into
@@ -1320,12 +1322,12 @@ c
  10   if (i.ge.j) go to 80
  20   k=i
       ij=(j+i)/2
-      t=a(ij)
+      t=int(a(ij))
       vt=v(ij)
       if (v(i).le.vt) go to 30
       a(ij)=a(i)
       a(i)=t
-      t=a(ij)
+      t=int(a(ij))
       v(ij)=v(i)
       v(i)=vt
       vt=v(ij)
@@ -1333,14 +1335,14 @@ c
       if (v(j).ge.vt) go to 50
       a(ij)=a(j)
       a(j)=t
-      t=a(ij)
+      t=int(a(ij))
       v(ij)=v(j)
       v(j)=vt
       vt=v(ij)
       if (v(i).le.vt) go to 50
       a(ij)=a(i)
       a(i)=t
-      t=a(ij)
+      t=int(a(ij))
       v(ij)=v(i)
       v(i)=vt
       vt=v(ij)
@@ -1351,7 +1353,7 @@ c
       v(k)=vtt
  50   l=l-1
       if (v(l).gt.vt) go to 50
-      tt=a(l)
+      tt=int(a(l))
       vtt=v(l)
  60   k=k+1
       if (v(k).lt.vt) go to 60
@@ -1376,7 +1378,7 @@ c
       i=i-1
  100  i=i+1
       if (i.eq.j) go to 80
-      t=a(i+1)
+      t=int(a(i+1))
       vt=v(i+1)
       if (v(i).le.vt) go to 100
       k=i

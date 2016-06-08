@@ -400,7 +400,7 @@ stopifnot(identical(ans2, myFormula))
 
 
 ## PR#15753
-0x110p-5L
+0x110p-5L # (+ warning)
 stopifnot(.Last.value == 8.5)
 ## was 272 with a garbled message in R 3.0.0 - 3.1.0.
 
@@ -1403,6 +1403,7 @@ stopifnot(
     identical(c(smooth(y, "3RS3R", do.ends=FALSE, endrule="copy")),
               c(4, 4, 3, 3, 5, 6, 6, 6, 6, 6)))
 ## do.ends=TRUE was not obeyed for the "3RS*" kinds, for 3.0.0 <= R <= 3.2.3
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## prettyDate() for subsecond ranges
@@ -1418,8 +1419,7 @@ chkPretty <- function(x, n = 5, min.n = NULL, ..., max.D = 1) {
 		n %/% 3 # pretty.default
     }
     pr <- pretty(x, n=n, min.n=min.n, ...)
-    ## if debugging:
-    pr <- grDevices:::prettyDate(x, n=n, min.n=min.n, ...)
+    ## if debugging: pr <- grDevices:::prettyDate(x, n=n, min.n=min.n, ...)
     stopifnot(length(pr) >= (min.n+1),
 	      ## pretty(x, *) must cover range of x:
 	      min(pr) <= min(x), max(x) <= max(pr))
@@ -1508,19 +1508,43 @@ stopifnot(identical(Ls.ok,
 chkSeq <- function(st, x, n, max.D = if(n <= 4) 1 else if(n <= 10) 2 else 3, ...)
     tryCatch(chkPretty(seq(x, by = st, length = 2), n = n, max.D=max.D, ...),
              error = conditionMessage)
-c.ps <- lapply(nns, function(n) lapply(steps, chkSeq, x = t02, n = n))
-## ensure that all are ok *but* some which did not match 'n' well enough:
-cc.ps <- unlist(c.ps, recursive=FALSE)
-table(ok <- vapply(cc.ps, inherits, NA, what = "POSIXt"))
-errs <- unlist(cc.ps[!ok])
-stopifnot(startsWith(errs, prefix = "| |pretty(.)| - (n+1) |"))
-Ds <- as.numeric(sub(".*\\| = ([0-9]+) > max.*", "\\1", errs))
-table(Ds)
+prSeq.errs <- function(tt, nset, tSteps) {
+    stopifnot(length(tt) == 1)
+    c.ps <- lapply(nset, function(n) lapply(tSteps, chkSeq, x = tt, n = n))
+    ## ensure that all are ok *but* some which did not match 'n' well enough:
+    cc.ps <- unlist(c.ps, recursive=FALSE)
+    ok <- vapply(cc.ps, inherits, NA, what = "POSIXt")
+    errs <- unlist(cc.ps[!ok])
+    stopifnot(startsWith(errs, prefix = "| |pretty(.)| - (n+1) |"))
+    list(ok = ok,
+	 Ds = as.numeric(sub(".*\\| = ([0-9]+) > max.*", "\\1", errs)))
+}
+r.t02 <- prSeq.errs(t02, nset = nns, tSteps = steps)
+table(r.t02 $ ok)
+table(r.t02 $ Ds -> Ds)
 ## Currently   [may improve]
 ##  3  4  5  6  7  8
 ##  4 14  6  3  2  1
 ## ... and ensure we only improve:
 stopifnot(length(Ds) <= 30, max(Ds) <= 8, sum(Ds) <= 138)
+## A Daylight saving time -- halfmonth combo:
+(tOz <- structure(c(1456837200, 1460728800), class = c("POSIXct", "POSIXt"),
+		tzone = "Australia/Sydney"))
+(pz <- pretty(tOz)) # failed in R 3.3.0, PR#16923
+stopifnot(length(pz) <= 6, # is 5
+          attr(dpz <- diff(pz), "units") == "days", sd(dpz) < 1.6)
+if(FALSE) { # save 0.4 sec
+    print(system.time(
+        r.tOz <- prSeq.errs(tOz[1], nset = nns, tSteps = steps)
+    ))
+    stopifnot(sum(r.tOz $ ok) >= 132,
+              max(r.tOz $ Ds -> DOz) <= 8, mean(DOz) < 4.5)
+}
+nn <- c(1:33,10*(4:9),100*(1+unique(sort(rpois(20,4)))))
+pzn <- lengths(lapply(nn, pretty, x=tOz))
+stopifnot(0.5 <= min(pzn/(nn+1)), max(pzn/(nn+1)) <= 1.5)
+proc.time() - .pt; .pt <- proc.time()
+
 
 
 stopifnot(c("round.Date", "round.POSIXt") %in% as.character(methods(round)))
@@ -1578,6 +1602,110 @@ x <- NULL; tools::assertWarning(f <- formals(x)); stopifnot(is.null(f))
 ## these all silently coerced NULL to a function in R <= 3.2.x
 
 
+## match(x, t): fast algorithm for length-1 'x' -- PR#16885
+## a) string 'x'  when only encoding differs
+tmp <- "年付"
+tmp2 <- "\u5e74\u4ed8" ; Encoding(tmp2) <- "UTF-8"
+for(ex in list(c(tmp, tmp2), c("foo","foo"))) {
+    cat(sprintf("\n|%s|%s| :\n----------\n", ex[1], ex[2]))
+    for(enc in c("latin1", "UTF-8", "unknown")) { # , "MAC", "WINDOWS-1251"
+	cat(sprintf("%9s: ", enc))
+	tt <- ex[1]; Encoding(tt) <- enc; t2 <- ex[2]
+	if(identical(i1 <- (  tt       %in% t2),
+		     i2 <- (c(tt, "a") %in% t2)[1]))
+	    cat(i1,"\n")
+	else
+	    stop("differing: ", i1, ", ", i2)
+    }
+}
+outerID <- function(x,y, ...) outer(x,y, Vectorize(identical,c("x","y")), ...)
+## b) complex 'x' with different kinds of NaN
+x0 <- c(0,1, NA_real_, NaN)
+z <- outer(x0,x0, complex, length.out=1L)
+z <- c(z[is.na(z)], # <- of length 4 * 4 - 2*2 = 12
+       as.complex(NaN), as.complex(0/0), # <- typically these two differ in bits
+       complex(real = NaN), complex(imaginary = NaN),
+       NA_complex_, complex(real = NA), complex(imaginary = NA))
+## 1..12 all differ, then
+symnum(outerID(z,z, FALSE,FALSE,FALSE,FALSE))# [14] differing from all on low level
+symnum(outerID(z,z))                         # [14] matches 2, 13,15
+(mz <- match(z, z)) # (checked with m1z below)
+zRI <- rbind(Re=Re(z), Im=Im(z)) # and see the pattern :
+print(cbind(format = format(z), t(zRI), mz), quote=FALSE)
+stopifnot(apply(zRI, 2, anyNA)) # NA *or* NaN: all TRUE
+is.NA <- function(.) is.na(.) & !is.nan(.)
+(iNaN <- apply(zRI, 2, function(.) any(is.nan(.))))
+(iNA <-  apply(zRI, 2, function(.) any(is.NA (.)))) # has non-NaN NA's
+## use iNA for consistency check once FIXME happened
+m1z <- sapply(z, match, table = z)
+stopifnot(identical(m1z, mz),
+	  identical(m1z == 1L, iNA),
+	  identical(m1z == 2L, !iNA))
+## m1z uses match(x, *) with length(x) == 1 and failed in R 3.3.0
+## PR#16909 - a consequence of the match() bug; check here too:
+dvn <- paste0("var\xe9", 1:2); Encoding(dvn) <- "latin1"
+dv <- data.frame(1:3, 3); names(dv) <- dvn; dv[,"var\u00e92"] <- 2
+stopifnot(ncol(dv) == 2, dv[,2] == 2, identical(names(dv), dvn))
+## in R 3.3.0, got a 3rd column
+
+
+## deparse(<complex>,  "digits17")
+fz <- format(z <- c(outer(-1:2, 1i*(-1:1), `+`)))
+(fz0 <- sub("^ +","",z))
+r <- c(-1:1,100, 1e20); z2 <- c(outer(pi*r, 1i*r, `+`)); z2
+dz2 <- deparse(z2, control="digits17")
+stopifnot(identical(deparse(z, 200, control = "digits17"),
+                    paste0("c(", paste(fz0, collapse=", "), ")")),
+          print((sum(nchar(dz2)) - 2) / length(z2)) < 22, # much larger in <= 3.3.0
+          ## deparse <-> parse equivalence, 17 digits should be perfect:
+	  all.equal(z2, eval(parse(text = dz2)), tolerance = 3e-16)) # seen 2.2e-35 on 32b
+## deparse() for these was "ugly" in R <= 3.3.x
+
+
+## length(environment(.)) == #{objects}
+stopifnot(identical(length(      baseenv()),
+                    length(names(baseenv()))))
+## was 0 in R <= 3.3.0
+
+
+## "srcref"s of closures
+op <- options(keep.source = TRUE)# as in interactive use
+getOption("keep.source")
+stopifnot(identical(function(){}, function(){}),
+          identical(function(x){x+1},
+                    function(x){x+1})); options(op)
+## where all FALSE in 2.14.0 <= R <= 3.3.x because of "srcref"s etc
+
+## PR#16925, radix sorting INT_MAX w/ decreasing=TRUE and na.last=TRUE
+## failed ASAN check and segfaulted on some systems.
+data <- c(2147483645L, 2147483646L, 2147483647L, 2147483644L)
+stopifnot(identical(sort(data, decreasing = TRUE, method = "radix"),
+                    c(2147483647L, 2147483646L, 2147483645L, 2147483644L)))
+
+## as.factor(<named integer>)
+ni <- 1:2; Nni <- names(ni) <- c("A","B")
+stopifnot(identical(Nni, names(as.factor(ni))),
+	  identical(Nni, names(   factor(ni))),
+	  identical(Nni, names(   factor(ni+0))), # +0 : "double"
+	  identical(Nni, names(as.factor(ni+0))))
+## The first one lost names in  3.1.0 <= R <= 3.3.0
+
+
+## strtrim(<empty>, *) should work as substr(<empty>, *) does
+c0 <- character(0)
+stopifnot(identical(c0, strtrim(c0, integer(0))))
+## failed in R <= 3.3.0
+
+
+## Factors with duplicated levels {created via low-level code}:
+f0 <- factor(sample.int(9, 20, replace=TRUE))
+(f <- structure(f0, "levels" = as.character(c(2:7, 2:4))))
+tools::assertWarning(print(f))
+tools::assertError(validObject(f))
+## no warning in print() for R <= 3.3.x
+
+## R <= 3.3.0 returned integer(0L) from unlist() in this case:
+stopifnot(identical(levels(unlist(list(factor(levels="a")))), "a"))
 
 
 ## keep at end

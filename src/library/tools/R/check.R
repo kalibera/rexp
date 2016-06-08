@@ -680,8 +680,9 @@ setRlibs <-
         ## and does not check for persons with no valid roles.
         db <- .read_description(dfile)
         if(!is.na(aar <- db["Authors@R"])) {
+            lev <- if(check_incoming) 2L else 1L
             out <- .check_package_description_authors_at_R_field(aar,
-                                                                 strict = TRUE)
+                                                                 strict = lev)
             if(length(out)) {
                 if(!any) noteLog(Log)
                 any <- TRUE
@@ -690,7 +691,7 @@ setRlibs <-
             }
             ## and there might be stale Authors and Maintainer fields
             yorig <- db[c("Author", "Maintainer")]
-            if(check_incoming &&any(!is.na(yorig))) {
+            if(check_incoming && any(!is.na(yorig))) {
                 enc <- db["Encoding"]
                 aar <- utils:::.read_authors_at_R_field(aar)
                 tmp <- utils:::.format_authors_at_R_field_for_author(aar)
@@ -2631,20 +2632,32 @@ setRlibs <-
                         "cores simultaneously during their checks.")
             }
             any <- any || bad
-            if (!any) resultLog(Log, "OK")
+
+            if (!any && !check_incoming) resultLog(Log, "OK")
 
             if (do_timings) {
+                theta <-
+                    as.numeric(Sys.getenv("_R_CHECK_EXAMPLE_TIMING_THRESHOLD_",
+                                          "5"))
                 tfile <- paste0(pkgname, "-Ex.timings")
 		times <-
                     utils::read.table(tfile, header = TRUE, row.names = 1L,
                                       colClasses = c("character", rep("numeric", 3)))
-                o <- order(times[[1]]+times[[2]], decreasing = TRUE)
+                o <- order(times[[1L]] + times[[2L]], decreasing = TRUE)
                 times <- times[o, ]
-                keep <- (times[[1]] + times[[2]] > 5) | (times[[3]] > 5)
+                keep <- ((times[[1L]] + times[[2L]] > theta) |
+                         (times[[3L]] > theta))
                 if(any(keep)) {
-                    printLog(Log, "Examples with CPU or elapsed time > 5s\n")
+                    if(!any && check_incoming)
+                        noteLog(Log)
+                    printLog(Log,
+                             sprintf("Examples with CPU or elapsed time > %gs\n",
+                                     theta))
                     times <- utils::capture.output(format(times[keep, ]))
                     printLog0(Log, paste(times, collapse = "\n"), "\n")
+                } else {
+                    if(!any && check_incoming)
+                        resultLog(Log, "OK")
                 }
             }
 
@@ -2800,20 +2813,24 @@ setRlibs <-
                 ## (Maybe there was an error without a failing test.)
                 bad_files <- dir(".", pattern="\\.Rout\\.fail")
                 if (length(bad_files)) {
-                    ## Read in output from the (first) failed test
-                    ## and retain at most the last 13 lines
-                    ## (13? why not?).
+                    ## Read in output from the (first) failed test.
                     file <- bad_files[1L]
                     lines <- readLines(file, warn = FALSE)
                     file <- file.path(test_dir, sub("out\\.fail", "", file))
                     ll <- length(lines)
-                    lines <- lines[max(1, ll-12):ll]
+                    keep <- as.integer(Sys.getenv("_R_CHECK_TESTS_NLINES_",
+                                                  "13"))
+                    if (keep > 0L)
+                        lines <- lines[max(1L, ll-keep-1L):ll]
                     if (R_check_suppress_RandR_message)
                         lines <- grep('^Xlib: *extension "RANDR" missing on display',
                                       lines, invert = TRUE, value = TRUE,
                                       useBytes = TRUE)
                     printLog(Log, sprintf("Running the tests in %s failed.\n", sQuote(file)))
-                    printLog(Log, "Last 13 lines of output:\n")
+                    if (keep > 0L)
+                        printLog(Log, sprintf("Last %i lines of output:\n", keep))
+                    else
+                        printLog(Log, "Complete output:\n")
                     printLog0(Log, .format_lines_with_indent(lines), "\n")
                 }
                 return(FALSE)

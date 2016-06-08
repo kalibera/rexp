@@ -6,6 +6,10 @@
 \encoding{UTF-8}
 
 \section{\Rlogo CHANGES IN R-devel}{
+  %% \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
+  %%   \itemize{
+  %%   }
+  %% }
   \subsection{NEW FEATURES}{
     \itemize{
       \item User errors such as \code{integrate(f, 0:1, 2)} are now caught.
@@ -30,12 +34,14 @@
 
       \item \code{str()} and \code{strOptions()} get a new option
       \code{drop.deparse.attr} with improved but \emph{changed} default
-      behaviour for expressions.% plan: backport to 3.3.1
+      behaviour for expressions.  For \code{expression} objects
+      \code{x}, \code{str(x)} now may remove extraneous white space and
+      truncate long lines.
 
-      \item \code{isSymmetrix(m)} is much faster for large asymmetric
+      \item \code{isSymmetric(m)} is much faster for large asymmetric
       matrices \code{m} via pre-tests and a new option \code{tol1}
       (with which strict back compatibility is possible but not the
-      default).% plan: backport
+      default).
 
       \item The result of \code{eigen()} now is of class \code{"eigen"}
       in the default case when eigenvectors are computed.
@@ -45,6 +51,55 @@
 
       \item \code{xy.coords()} and \code{xyz.coords()} get new
       \code{setLab} option.
+
+      \item \code{sort.list()}, \code{order()} and \code{sort.int()}
+      \code{method} argument gains an \code{"auto"} option (the default)
+      which should behave the same as before when \code{method} was left
+      missing.
+
+      \item \code{stopifnot(E, ..)} now reports differences when
+      \code{E} is a call to \code{all.equal()} and that is not true.
+
+      \item \code{boxplot(<formula>, *)} gets optional arguments
+      \code{drop}, \code{sep}, and \code{lex.order} to pass to
+      \code{split.default()} which itself newly gets \code{lex.order} to
+      pass to \code{interaction()} for more flexibility.
+
+      \item The \code{plot} method for \code{ppr} got enhanced default
+      labels (xmin and main).
+
+      \item \code{sample.int()} got an explicit \code{useHash} option
+      (with a back compatible default).
+
+      \item \code{identical()} gets an \code{ignore.srcref} option
+      which drops \code{"srcref"} and similar attributes when true (as
+      by default).
+
+      \item \code{diag(x, nrow = n)} now preserves \code{typeof(x)}, also
+      for logical, integer and raw \code{x} (and as previously for
+      complex and numeric).
+
+      \item \code{smooth.spline()} now allows to specify lambda
+      directly, gets a \code{hatvalues()} method and keeps \code{tol} in
+      result.
+
+      \item \code{addNA()} is faster now, e.g., when applied twice;
+      (part of \PR{16895}).
+
+      \item New option \code{rstandard(<lm>, type = "predicted")}
+      provides the \dQuote{PRESS}-related leave-one-out
+      cross-validation errors for linear models.
+
+      \item After seven years of deprecation, duplicated factor levels
+      now produce an error in \code{levels<-} instead of a warning, and
+      a warning when printed.
+
+      \item \code{str(<looooooooong_string>)} is no longer very slow;
+      inspired by Mikko Korpela's proposal in \PR{16527}.
+
+      \item Illegal factors, e.g., with duplicated levels (illegal but
+      constructable) now give a warning when printed, via new
+      \code{.valid.factor}.
     }
   }
   \subsection{DEPRECATED AND DEFUNCT}{
@@ -61,11 +116,96 @@
       non-functions for now signals a warning and may become an error
       for setting.
 
+      \item When a class name matches multiple classes in the cache,
+      perform a dynamic search in order to obey namespace imports. This
+      should eliminate annoying messages about multiple hits in the
+      class cache. Also, pass along the package from the
+      \code{ClassExtends} object when looking up superclasses in the
+      cache.
+
+      \item \code{match(x, t)}, \code{duplicated(x)} and
+      \code{unique(x)} work as documented for complex numbers with \code{NA}s
+      or \code{NaN}s, namely by treating them as two equivalence
+      \dQuote{classes}, those with \code{NA} and those with
+      non-\code{NA} \code{NaN}s.
+      %% \code{print(x)} remains back compatible, treating all
+      %% \code{NA}s identically, but showing real and imaginary parts
+      %% for the \code{NaN} \dQuote{class}.
+
+      \item The API for readline libraries >= 6.3 had changed such
+      terminal window resizes where no longer properly signalled
+      (\PR{16604}).  Also, \command{Ctrl C} in incremental search
+      behaved confusingly in \R (unix) consoles (\PR{16603}) also for
+      older readline versions.  These have been fixed (for readline >=
+      6.3 only), thanks to patches by Frederick Eaton.
+
+      \item \code{deparse(<complex>, options = "digits17")} prints more
+      nicely now, mostly thanks to a suggestion by Richie Cotton.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.3.0 patched}{
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \command{R CMD INSTALL} and hence \code{install.packages()}
+      gave an internal error installing a package called
+      \pkg{description} from a tarball on a case-insensitive file system.
+
+      \item \code{match(x, t)} (and hence \code{x \%in\% t}) failed
+      when \code{x} was of length one, and either \code{character} and \code{x}
+      and \code{t} only differed in their \code{Encoding} or when
+      \code{x} and \code{t} where \code{complex} with \code{NA}s or \code{NaN}s.
+      (\PR{16885}.)
+
+      \item \code{unloadNamespace(ns)} also works again when \code{ns} is a
+      \sQuote{namespace}, as from \code{getNamespace()}.
+
+      \item \code{rgamma(1,Inf)} or \code{rgamma(1, 0,0)} no longer give
+      \code{NaN} but the correct limit.
+
+      \item \code{length(baseenv())} is correct now.
+
+      \item \code{pretty(d, ..)} for date-time \code{d} rarely failed
+      when \code{"halfmonth"} time steps were tried (\PR{16923}) and
+      on \sQuote{inaccurate} platforms such as 32-bit windows or
+      a configuration with \command{--disable-long-double}; see comment
+      #15 of \PR{16761}.
+
       \item In \code{text.default(x, y, labels)}, the rarely(?) used
       default for \code{labels} is now correct also for the case of a
       2-column matrix \code{x} and missing \code{y}.
+
+      \item \code{as.factor(c(a = 1L))} preserves \code{names()} again
+      as in \R < 3.1.0.
+
+      \item \code{strtrim(""[0], 0[0])} now works.
+
+      \item \code{as<-()} avoids an infinite loop when a virtual class
+      intercedes between a subclass and an actual superclass.
+
+      \item Fix level propagation in \code{unlist()} when the list
+      contains zero-length lists or factors.
+
+      \item Fix S3 dispatch on S4 objects when the methods package is
+      not attached.
+
+      \item Internal S4 dispatch sets .Generic in the method frame for
+      consistency with \code{standardGeneric()} (\PR{16929}).
+
+      \item Fix \code{order(x, decreasing=TRUE)} when \code{x} is an
+      integer vector containing \code{MAX_INT}. Ported from a fix Matt
+      Dowle made to data.table.
     }
   }
+
+  \subsection{INSTALLATION and INCLUDED SOFTWARE}{
+    \itemize{
+      \item (Windows only) Tcl/Tk version 8.6.4 is now included in the
+      binary builds. The \file{tcltk*.chm} help file is no longer 
+      included; please use \url{http://www.tcl.tk/man/} instead.
+    }
+  }  
 }
 
 \section{\Rlogo CHANGES IN R 3.3.0}{
@@ -647,7 +787,7 @@
       \item \code{download.file()} with \code{method = "wininet"}
       incorrectly warned of download file length difference when
       reported length was unknown. (\PR{16805})
-      
+
       \item \code{diag(NULL, 1)} crashed because of missed type
       checking.  (\PR{16853})
     }

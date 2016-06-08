@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2016-04-20 r70521) -- "Unsuffered Consequences"
+R Under development (unstable) (2016-06-04 r70709) -- "Unsuffered Consequences"
 Copyright (C) 2016 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -3792,7 +3792,7 @@ sigma^2 estimated as 0.4566:  log likelihood = -101.2,  aic = 212.4
 > 
 > asOneSidedFormula("age")
 ~age
-<environment: 0x25b26f0>
+<environment: 0x24a2980>
 > asOneSidedFormula(~ age)
 ~age
 > 
@@ -4755,7 +4755,7 @@ function (V)
     r[cbind(1L:p, 1L:p)] <- 1
     r
 }
-<bytecode: 0x3838960>
+<bytecode: 0x35e84e8>
 <environment: namespace:stats>
 > stopifnot(all.equal(Cl, cov2cor(cov(longley))),
 +           all.equal(cor(longley, method = "kendall"),
@@ -6843,7 +6843,7 @@ List of 11
  $ dev.resids:function (y, mu, wt)  
  $ aic       :function (y, n, mu, wt, dev)  
  $ mu.eta    :function (eta)  
- $ initialize:  expression({     n <- rep.int(1, nobs)     if (is.null(etastart) && is.null(start) && is.null(mustart) && ((family$link ==          "inverse" && any(y == 0)) || (family$link == "log" && any(y <=          0))))          stop("cannot find valid starting values: please specify some")     mustart <- y })
+ $ initialize:  expression({  n <- rep.int(1, nobs)  if (is.null(etastart) && is.null(start) && is.null(mustart) && ((family$lin"| __truncated__
  $ validmu   :function (mu)  
  $ valideta  :function (eta)  
  - attr(*, "class")= chr "family"
@@ -6864,7 +6864,7 @@ List of 12
  $ dev.resids:function (y, mu, wt)  
  $ aic       :function (y, n, mu, wt, dev)  
  $ mu.eta    :function (eta)  
- $ initialize:  expression({     if (any(y <= 0))          stop("non-positive values not allowed for the 'gamma' family")     n <- rep.int(1, nobs)     mustart <- y })
+ $ initialize:  expression({  if (any(y <= 0))  stop("non-positive values not allowed for the 'gamma' family")  n <- rep.int(1, "| __truncated__
  $ validmu   :function (mu)  
  $ valideta  :function (eta)  
  $ simulate  :function (object, nsim)  
@@ -7285,7 +7285,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env = new.env()))
-<environment: 0x2334210>
+<environment: 0x34f1a30>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -8018,6 +8018,128 @@ FAMI   -3   87   84   84   96   94   94   94   98   99   99  100
 > ### Keywords: regression
 > 
 > ### ** Examples
+> 
+> require(graphics)
+> 
+> ## Analysis of the life-cycle savings data
+> ## given in Belsley, Kuh and Welsch.
+> lm.SR <- lm(sr ~ pop15 + pop75 + dpi + ddpi, data = LifeCycleSavings)
+> 
+> inflm.SR <- influence.measures(lm.SR)
+> which(apply(inflm.SR$is.inf, 1, any))
+        Chile United States        Zambia         Libya 
+            7            44            46            49 
+> # which observations 'are' influential
+> summary(inflm.SR) # only these
+Potentially influential observations of
+	 lm(formula = sr ~ pop15 + pop75 + dpi + ddpi, data = LifeCycleSavings) :
+
+              dfb.1_ dfb.pp15 dfb.pp75 dfb.dpi dfb.ddpi dffit   cov.r   cook.d
+Chile         -0.20   0.13     0.22    -0.02    0.12    -0.46    0.65_*  0.04 
+United States  0.07  -0.07     0.04    -0.23   -0.03    -0.25    1.66_*  0.01 
+Zambia         0.16  -0.08    -0.34     0.09    0.23     0.75    0.51_*  0.10 
+Libya          0.55  -0.48    -0.38    -0.02   -1.02_*  -1.16_*  2.09_*  0.27 
+              hat    
+Chile          0.04  
+United States  0.33_*
+Zambia         0.06  
+Libya          0.53_*
+> plot(rstudent(lm.SR) ~ hatvalues(lm.SR)) # recommended by some
+> plot(lm.SR, which = 5) # an enhaced version of that via plot(<lm>)
+> 
+> ## The 'infl' argument is not needed, but avoids recomputation:
+> rs <- rstandard(lm.SR)
+> iflSR <- influence(lm.SR)
+> identical(rs, rstandard(lm.SR, infl = iflSR))
+[1] TRUE
+> ## to "see" the larger values:
+> 1000 * round(dfbetas(lm.SR, infl = iflSR), 3)
+               (Intercept) pop15 pop75  dpi  ddpi
+Australia               12   -10   -27   45     0
+Austria                -10     6    41  -37    -8
+Belgium                -64    51   121  -35    -7
+Bolivia                  6   -13   -23   32    41
+Brazil                  90   -62  -179  120    68
+Canada                   5    -7    10  -35    -3
+Chile                 -199   133   220  -20   120
+China                   21    -6   -83   52   111
+Colombia                39   -52   -25    2     9
+Costa Rica            -234   284   142   56   -33
+Denmark                -41    21    47  152    49
+Ecuador                 72   -95   -61   20    48
+Finland               -113   111   117  -44   -17
+France                -166   147   219  -29    24
+Germany                 -8     8     8   -7     0
+Greece                -148   164    29  157   -60
+Guatamala               16   -55     6    6    97
+Honduras                -2    10   -10    8    -2
+Iceland                248  -274  -233 -126   185
+India                   21   -16   -14  -14   -19
+Ireland               -310   296   482 -257   -93
+Italy                   66   -71     3  -70   -29
+Japan                  640  -656  -674  146   389
+Korea                 -169   135   219    5  -169
+Luxembourg             -68    69    44  -28    49
+Malta                   37   -49     8  -87   153
+Norway                   2     0    -6  -16    -1
+Netherlands             14   -17   -12    4    23
+New Zealand            -60    65    94  -26   -65
+Nicaragua              -12    18    10   -5   -10
+Panama                  28   -53    14  -35    -8
+Paraguay              -232   164   158  144   270
+Peru                   -72   147    91  -86  -287
+Philippines           -157   227   157 -111  -171
+Portugal               -21    26    -4   40   -28
+South Africa            22   -20    -7  -20   -16
+South Rhodesia         144  -135   -92  -70   -58
+Spain                  -30    31     4   35     5
+Sweden                 101   -82   -62 -255   -13
+Switzerland             43   -46   -44   91   -19
+Turkey                 -11   -12    26    2    25
+Tunisia                 74  -105   -77   44   103
+United Kingdom          47   -36  -171  126   100
+United States           69   -73    37 -233   -33
+Venezuela              -51   101   -34  114  -124
+Zambia                 164   -79  -339   94   228
+Jamaica                110  -100   -57   -7  -295
+Uruguay               -134   129    30  131   100
+Libya                  551  -483  -380  -19 -1024
+Malaysia                37   -61    32  -50   -72
+> cat("PRESS :"); (PRESS <- sum( rstandard(lm.SR, type = "predictive")^2 ))
+PRESS :[1] 798.939
+> stopifnot(all.equal(PRESS, sum( (residuals(lm.SR) / (1 - iflSR$hat))^2)))
+> 
+> ## Show that "PRE-residuals"  ==  L.O.O. Crossvalidation (CV) errors:
+> X <- model.matrix(lm.SR)
+> y <- model.response(model.frame(lm.SR))
+> ## Leave-one-out CV least-squares prediction errors (relatively fast)
+> rCV <- vapply(seq_len(nrow(X)), function(i)
++               y[i] - X[i,] %*% .lm.fit(X[-i,], y[-i])$coef,
++               numeric(1))
+> ## are the same as the *faster* rstandard(*, "pred") :
+> stopifnot(all.equal(rCV, unname(rstandard(lm.SR, type = "predictive"))))
+> 
+> 
+> ## Huber's data [Atkinson 1985]
+> xh <- c(-4:0, 10)
+> yh <- c(2.48, .73, -.04, -1.44, -1.32, 0)
+> lmH <- lm(yh ~ xh)
+> im <- influence.measures(lmH)
+> plot(xh,yh, main = "Huber's data: L.S. line and influential obs.")
+> abline(lmH); points(xh[im$is.inf], yh[im$is.inf], pch = 20, col = 2)
+> 
+> ## Irwin's data [Williams 1987]
+> xi <- 1:5
+> yi <- c(0,2,14,19,30)    # number of mice responding to dose xi
+> mi <- rep(40, 5)         # number of mice exposed
+> glmI <- glm(cbind(yi, mi -yi) ~ xi, family = binomial)
+> signif(cooks.distance(glmI), 3)   # ~= Ci in Table 3, p.184
+     1      2      3      4      5 
+0.2520 0.2610 1.2900 0.0845 0.3640 
+> imI <- influence.measures(glmI)
+> stopifnot(all.equal(imI$infmat[,"cook.d"],
++           cooks.distance(glmI)))
+> 
 > 
 > 
 > cleanEx()
@@ -9666,7 +9788,7 @@ McNemar's chi-squared = 16.818, df = 1, p-value = 4.115e-05
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: medpolish
-> ### Title: Median Polish of a Matrix
+> ### Title: Median Polish (Robust Twoway Decomposition) of a Matrix
 > ### Aliases: medpolish
 > ### Keywords: robust
 > 
@@ -11459,16 +11581,14 @@ Warning in xy.coords(x, y, xlabel, ylabel, log) :
 > 
 > require(graphics)
 > 
-> with(rock, {
-+ area1 <- area/10000; peri1 <- peri/10000
-+ par(mfrow = c(3,2)) # maybe: , pty = "s")
-+ rock.ppr <- ppr(log(perm) ~ area1 + peri1 + shape,
-+                 data = rock, nterms = 2, max.terms = 5)
-+ plot(rock.ppr, main = "ppr(log(perm)~ ., nterms=2, max.terms=5)")
-+ plot(update(rock.ppr, bass = 5), main = "update(..., bass = 5)")
-+ plot(update(rock.ppr, sm.method = "gcv", gcvpen = 2),
+> rock1 <- within(rock, { area1 <- area/10000; peri1 <- peri/10000 })
+> par(mfrow = c(3,2)) # maybe: , pty = "s")
+> rock.ppr <- ppr(log(perm) ~ area1 + peri1 + shape,
++                 data = rock1, nterms = 2, max.terms = 5)
+> plot(rock.ppr, main = "ppr(log(perm)~ ., nterms=2, max.terms=5)")
+> plot(update(rock.ppr, bass = 5), main = "update(..., bass = 5)")
+> plot(update(rock.ppr, sm.method = "gcv", gcvpen = 2),
 +      main = "update(..., sm.method=\"gcv\", gcvpen=2)")
-+ })
 > 
 > 
 > 
@@ -11775,14 +11895,14 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<bytecode: 0x61cd038>
-<environment: 0x61d56b0>
+<bytecode: 0x1d7d4a0>
+<environment: 0x10ec8e0>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<bytecode: 0x61cceb0>
-<environment: 0x61d56b0>
+<bytecode: 0x1d7d5b8>
+<environment: 0x10ec8e0>
 
 > 
 > 
@@ -12120,13 +12240,13 @@ Goodness of fit:
  2 terms  3 terms  4 terms  5 terms 
 8.737806 5.289517 4.745799 4.490378 
 
-Projection direction vectors:
+Projection direction vectors ('alpha'):
       term 1      term 2     
 area1  0.34357179  0.37071027
 peri1 -0.93781471 -0.61923542
 shape  0.04961846  0.69218595
 
-Coefficients of ridge terms:
+Coefficients of ridge terms ('beta'):
    term 1    term 2 
 1.6079271 0.5460971 
 > # .....  (same as above)
@@ -12827,6 +12947,9 @@ $yin
  [9] 50.50000 33.33333 36.00000 40.66667 64.50000 50.00000 50.40000 66.00000
 [17] 54.00000 93.75000 85.00000
 
+$tol
+[1] 7e-06
+
 $data
 $data$x
  [1]  4  4  7  7  8  9 10 10 10 11 11 12 12 12 12 13 13 13 13 14 14 14 14 15 15
@@ -12866,8 +12989,8 @@ $lambda
 [1] 0.0008526606
 
 $iparms
-icrit ispar  iter 
-    3     0    13 
+icrit ispar  iter       
+    3     0    13     0 
 
 $fit
 $knot
@@ -15313,11 +15436,12 @@ GCV: 244.1044
 > ## Don't show: 
 >   stopifnot(cars.spl $ w == table(speed)) # weights = multiplicities
 >   utils::str(cars.spl, digits = 5, vec.len = 6)
-List of 15
+List of 16
  $ x       : num [1:19] 4 7 8 9 10 11 12 13 14 15 16 17 18 19 20 ...
  $ y       : num [1:19] 1.6578 11.6829 15.0644 18.4823 21.9471 25.4656 29.0505 32.7076 ...
  $ w       : num [1:19] 2 2 1 1 3 2 4 4 4 3 2 3 4 3 5 ...
  $ yin     : num [1:19] 6 13 16 10 26 22.5 21.5 35 ...
+ $ tol     : num 7e-06
  $ data    :List of 3
   ..$ x: num [1:50] 4 4 7 7 8 9 10 10 10 11 11 12 12 12 12 ...
   ..$ y: num [1:50] 2 10 4 22 16 10 18 26 34 17 28 14 20 24 28 ...
@@ -15329,8 +15453,8 @@ List of 15
  $ df      : num 2.6353
  $ spar    : num 0.78013
  $ lambda  : num 0.11122
- $ iparms  : Named int [1:3] 1 0 11
-  ..- attr(*, "names")= chr [1:3] "icrit" "ispar" "iter"
+ $ iparms  : Named int [1:4] 1 0 11 0
+  ..- attr(*, "names")= chr [1:4] "icrit" "ispar" "iter" ""
  $ fit     :List of 5
   ..$ knot : num [1:25] 0 0 0 0 0.14286 0.19048 0.2381 0.28571 ...
   ..$ nk   : int 21
@@ -15369,7 +15493,7 @@ attr(,"class")
 > legend(5,120,c(paste("default [C.V.] => df =",round(cars.spl$df,1)),
 +                "s( * , df = 10)"), col = c("blue","red"), lty = 1:2,
 +        bg = 'bisque')
-> detach()
+> detach() # cars
 > 
 > 
 > ## Residual (Tukey Anscombe) plot:
@@ -15397,7 +15521,7 @@ attr(,"class")
 > ##-- artificial example
 > y18 <- c(1:3, 5, 4, 7:3, 2*(2:5), rep(10, 4))
 > xx  <- seq(1, length(y18), len = 201)
-> (s2  <- smooth.spline(y18)) # GCV
+> (s2   <- smooth.spline(y18)) # GCV
 Call:
 smooth.spline(x = y18)
 
@@ -15424,9 +15548,21 @@ Penalized Criterion: 0.4973656
 > lines(s2, col = "gray"); lines(predict(s2, xx), col = 2)
 > lines(predict(s02, xx), col = 3); mtext(deparse(s02$call), col = 3)
 > 
+> ## Specifying 'lambda' instead of usual spar :
+> (s2. <- smooth.spline(y18, spar = c(lambda = s2$lambda), tol = s2$tol))
+Call:
+smooth.spline(x = y18, spar = c(lambda = s2$lambda), tol = s2$tol)
+
+Smoothing Parameter  spar= NA  lambda= 9.672776e-05
+Equivalent Degrees of Freedom (Df): 8.494168
+Penalized Criterion: 3.59204
+GCV: 0.7155391
+> 
 > ## Don't show: 
-> stopifnot(all.equal(predict(s02 , xx),
-+ 		    predict(s02., xx), tolerance = 1e-15))
+> nD <- c("spar", "iparms", "call"); nn <- setdiff(names(s2), nD)
+> stopifnot(all.equal(s2[nn], s2.[nn], tol = 7e-7), # seen 6.86e-8
++           all.equal(predict(s02 , xx),
++ 		    predict(s02., xx), tol = 1e-15))
 > ## End(Don't show)
 > 
 > 
@@ -15812,8 +15948,8 @@ Step function with continuity 'f'= 0.2 ,  3 knots at
 > unclass(sfun0)
 function (v) 
 .approxfun(x, y, v, method, yleft, yright, f)
-<bytecode: 0x24f2478>
-<environment: 0x63732c8>
+<bytecode: 0x341b590>
+<environment: 0x2a6c510>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
@@ -18090,7 +18226,7 @@ Number of Fisher Scoring iterations: 6
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  4.297 0.114 4.41 0 0 
+Time elapsed:  4.454 0.103 4.557 0 0 
 > grDevices::dev.off()
 null device 
           1 

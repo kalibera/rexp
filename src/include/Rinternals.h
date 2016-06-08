@@ -1097,9 +1097,11 @@ int R_system(const char *);
    4 = !ATTR_AS_SET
    8 = !IGNORE_BYTECODE
   16 = !IGNORE_ENV
-  Default from R's default: 15
+  Default from R's default: 16
 */
 Rboolean R_compute_identical(SEXP, SEXP, int);
+
+SEXP R_body_no_src(SEXP x); // body(x) without "srcref" etc, ../main/utils.c
 
 /* C version of R's  indx <- order(..., na.last, decreasing) :
    e.g.  arglist = Rf_lang2(x,y)  or  Rf_lang3(x,y,z) */
@@ -1226,6 +1228,7 @@ void R_orderVector1(int *indx, int n, SEXP x,       Rboolean nalast, Rboolean de
 #define list3			Rf_list3
 #define list4			Rf_list4
 #define list5			Rf_list5
+#define list6			Rf_list6
 #define listAppend		Rf_listAppend
 #define match			Rf_match
 #define matchE			Rf_matchE
@@ -1332,6 +1335,7 @@ SEXP	 Rf_list2(SEXP, SEXP);
 SEXP	 Rf_list3(SEXP, SEXP, SEXP);
 SEXP	 Rf_list4(SEXP, SEXP, SEXP, SEXP);
 SEXP	 Rf_list5(SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP	 Rf_list6(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP	 Rf_listAppend(SEXP, SEXP);
 SEXP	 Rf_mkNamed(SEXPTYPE, const char **);
 SEXP	 Rf_mkString(const char *);

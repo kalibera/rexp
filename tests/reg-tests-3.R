@@ -184,6 +184,7 @@ if(require("Matrix")) {
  detach("package:Matrix", unload=TRUE)
 }##{Matrix}
 
+
 ## Invalid UTF-8 strings
 x <- c("Jetz", "no", "chli", "z\xc3\xbcrit\xc3\xbc\xc3\xbctsch:",
        "(noch", "ein", "bi\xc3\x9fchen", "Z\xc3\xbc", "deutsch)",
@@ -196,3 +197,25 @@ try(nchar(x, "w"))
 nchar(x, "c", allowNA = TRUE)
 nchar(x, "w", allowNA = TRUE)
 ## Results differed by platform, but some gave incorrect results on string 10.
+
+
+## str() on large strings (in multibyte locales; changing locale may not work everywhere
+oloc <- Sys.getlocale("LC_CTYPE"); Sys.setlocale("LC_CTYPE", "en_GB.UTF-8")
+cc <- "J\xf6reskog" # another invalid multibyte string
+str(cc) # failed in some R-devel versions
+nchar(L <- strrep(paste(LETTERS, collapse="."), 100000), type="b")# 5.1 M
+stopifnot(system.time( str(L) )[[1]] < 0.05)
+Sys.setlocale("LC_CTYPE", oloc)
+## needed 1.6 sec in R <= 3.3.0 in a multibyte locale
+
+if(require("Matrix")) {
+    M = Matrix(diag(1:10),sparse=T)
+    setClass("TestM",representation(M='numeric'))
+    setMethod("+", c("TestM","TestM"), function(e1,e2) {
+        e1@M + e2@M
+    })
+    M+M # works the first time
+    M+M # was an error
+    rm(M)
+    detach("package:Matrix", unload=TRUE)
+}##{Matrix}

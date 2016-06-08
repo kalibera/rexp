@@ -704,7 +704,9 @@ topenv <- function(envir = parent.frame(),
 
 unloadNamespace <- function(ns)
 {
-    if (any(ns == loadedNamespaces())) { # not to load & unload
+    ## check, so we do not load & unload:
+    if ((is.character(ns) && any(ns == loadedNamespaces())) ||
+        (is.environment(ns) && any(getNamespaceName(ns) == loadedNamespaces()))) {
 	## only used to run .onUnload
 	runHook <- function(hookname, env, ...) {
 	    if (!is.null(fun <- env[[hookname]])) {
@@ -799,8 +801,7 @@ namespaceImportFrom <- function(self, ns, vars, generics, packages,
     whichMethodMetaNames <- function(impvars) {
         if(!.isMethodsDispatchOn())
             return(numeric())
-        mm <- ".__T__"
-        seq_along(impvars)[substr(impvars, 1L, nchar(mm, type = "c")) == mm]
+	seq_along(impvars)[startsWith(impvars, ".__T__")]
     }
     genericPackage <- function(f) {
         if(methods::is(f, "genericFunction")) f@package
@@ -1065,10 +1066,9 @@ namespaceExport <- function(ns, vars) {
 
 .mergeExportMethods <- function(new, ns)
 {
-    ## avoid bootstrapping issues
-    ##    mm <- methods:::methodsPackageMetaName("M","")
-    mm <- ".__M__"
-    newMethods <- new[substr(new, 1L, nchar(mm, type = "c")) == mm]
+    ## avoid bootstrapping issues when using methods:::methodsPackageMetaName("M","")
+    ## instead of  ".__M__" :
+    newMethods <- new[startsWith(new, ".__M__")]
     nsimports <- parent.env(ns)
     for(what in newMethods) {
 	if(!is.null(m1 <- nsimports[[what]])) {
@@ -1157,7 +1157,8 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
         evalToChar <- function(cc) {
             vars <- all.vars(cc)
             names(vars) <- vars
-            as.character(eval(eval(call("substitute", cc, as.list(vars)))))
+            as.character(eval(eval(call("substitute", cc, as.list(vars))),
+                              .GlobalEnv))
         }
         switch(as.character(e[[1L]]),
                "if" = if (eval(e[[2L]], .GlobalEnv))
@@ -1283,7 +1284,7 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
                                           keep.source = FALSE,
                                           srcfile = NULL)[[1L]]
                                if(is.call(e))
-                                   val <- eval(e)
+                                   val <- eval(e, .GlobalEnv)
                                else
                                    val <- as.character(e)
                                if(length(val))

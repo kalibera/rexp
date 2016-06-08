@@ -161,18 +161,24 @@ str.default <-
         vec.len <- 0
     }
 
-    maybe_truncate <- function(x, e.x = x, Sep = "\"", ch = "| __truncated__")
+    maybe_truncate <- function(x, nx = nchar(x, type="w"), S = "\"", ch = "| __truncated__")
     {
-	trimmed <- strtrim(e.x, nchar.max)
-	ii <- trimmed != e.x
-	ii[is.na(ii)] <- FALSE
-	if(any(ii)) x[ii] <- paste0(trimmed[ii], Sep, ch)
+	ok <- if(anyNA(nx)) !is.na(nx) else TRUE
+	if(any(lrg <- ok & nx > nchar.max)) {
+	    nc <- nchar(ch <- paste0(S, ch))
+	    if(nchar.max <= nc)
+		stop(gettextf("'nchar.max = %d' is too small", nchar.max), domain=NA)
+	    x.lrg <- x[lrg]
+	    tr.x <- strtrim(x.lrg, nchar.max - nc)
+	    if(any(ii <- tr.x != x.lrg & paste0(tr.x, S) != x.lrg)) {
+		x[lrg][ii] <- paste0(tr.x[ii], ch)
+	    }
+	}
 	x
     }
     pClass <- function(cls)
 	paste0("Class", if(length(cls) > 1) "es",
 	       " '", paste(cls, collapse = "', '"), "' ")
-    `%w/o%` <- function(x,y) x[is.na(match(x,y))]
 
     nfS <- names(fStr <- formals())# names of all formal args to str.default()
     ##' Purpose: using short strSub() calls instead of long str() ones
@@ -181,15 +187,13 @@ str.default <-
     ##' @param ... further arguments to str(), [often str.default()]
     strSub <- function(obj, ...) {
 	## 'give.length', ...etc are *not* automatically passed down:
-	nf <- nfS %w/o% c("object", "give.length", "comp.str", "no.list",
-			  ## drop fn.name & "obj" :
-			  names(match.call())[-(1:2)], "...")
+	nf <- setdiff(nfS, c("object", "give.length", "comp.str", "no.list",
+			     ## drop fn.name & "obj" :
+			     names(match.call())[-(1:2)], "..."))
 	aList <- as.list(fStr)[nf]
 	aList[] <- lapply(nf, function(n) eval(as.name(n)))
-	## do.call(str, c(list(object=obj), aList, list(...)), quote=TRUE)
-	## ensuring 'obj' is *not* copied:
-	strObj <- function(...) str(obj, ...)
-	do.call(strObj, c(aList, list(...)), quote = TRUE)
+	## do.call(str, c(list(object=obj),aList,list(...)), quote=TRUE), *not* copying 'obj'
+	do.call(function(...) str(obj, ...), c(aList, list(...)), quote = TRUE)
     }
 
     ## le.str: not used for arrays:
@@ -373,23 +377,6 @@ str.default <-
 			       paste("		#>#>", mod, NULL)
 			       )
 	    }
-#  These are S-PLUS classes not found in R.
-#	} else if (inherits(object,"rts") || inherits(object,"cts")
-#		   || inherits(object,"its")) {
-#	    tsp.a <- tspar(object)
-#	    t.cl <- cl[b.ts <- substring(cl,2,3) == "ts"] # "rts" "cts" or "its"
-#	    ts.kind <- switch(t.cl,
-#			      rts="Regular", cts="Calendar", its="Irregular")
-#	    ## from  print.summary.ts(.) :
-#	    pars <- unlist(sapply(summary(object)$ pars, format,
-#				  nsmall=0, digits=digits.d, justify = "none"))
-#	    if(length(pars)>=4) pars <- pars[-3]
-#	    pars <- paste(abbreviate(names(pars),min=2), pars,
-#			  sep= "=", collapse=", ")
-#	    str1 <- paste0(ts.kind, " Time-Series ", le.str, " ", pars, ":")
-#	    v.len <- switch(t.cl,rts=.8, cts=.6, its=.9) * v.len
-#	    class(object) <- if(any(!b.ts)) cl[!b.ts]
-#	    std.attr <- c(std.attr, "tspar")
 	} else if(is.ts) {
 	    str1 <- str1.ts(object, le.str)
 	    std.attr <- c("tsp","class") #- "names"
@@ -480,6 +467,7 @@ str.default <-
 	    ##-- has.class superfluous --
 	    mod <- mode(object)
 	    give.mode <- FALSE
+            trimEnds <- function(ch) sub(" +$", '', sub("^ +", ' ', ch))
 	    if (any(mod == c("call", "language", "(", "symbol"))
 		|| is.environment(object)) {
 		##give.mode <- !is.vector(object)# then it has not yet been done
@@ -488,20 +476,19 @@ str.default <-
 		object <- deParse(object)
 
 		le <- length(object) # is > 1 e.g. for {A;B} language
-		format.fun <- function(x)x
+		format.fun <- function(x) x
 		v.len <- round(.5 * v.len)
 		if(le > 1 && typ=="language" && object[1L] == "{" && object[le]=="}") {
 		    v.len <- v.len + 2
 		    if(le >= 3) {
 			object <- c(object[1L],
-				    paste(sub("^ +", " ", object[2:(le-1)]),
-					  collapse = ";"),
+				    paste(trimEnds(object[2:(le-1)]), collapse = ";"),
 				    object[le])
 			le <- length(object)
 		    }
 		}
 	    } else if (mod == "expression") {
-		format.fun <- function(x) deParse(as.expression(x))
+		format.fun <- function(x) trimEnds(deParse(as.expression(x)))
 		v.len <- round(.75 * v.len)
 	    } else if (mod == "name"){
 		object <- paste(object)#-- show `as' char
@@ -544,20 +531,31 @@ str.default <-
 	if(char.like) {
 	    ## if object is very long, drop the rest which won't be used anyway:
 	    max.len <- max(100L, width %/% 3L + 1L, if(!missing(vec.len)) vec.len)
-	    if(le > max.len) object <- object[seq_len(max.len)]
-	    encObj <- encodeString(object, quote= '"', na.encode= FALSE)
-					#O: encodeString(object)
+	    if(le > max.len) le <- length(object <- object[seq_len(max.len)])
+	    ## For very long strings, truncated later anyway,
+	    ## both nchar(*, type="w") and encodeString() are too expensive
+	    nc1 <- nchar(str1, type="w")
+	    rhs <- width - (4 + 5*nest.lev + nc1)
+	    trimWidth <- pmax.int(as.integer(nchar.max) - 1L,
+				  as.integer(rhs) - 5L * seq_len(le))
+	    ## FIXME: need combined  encode.and.trim.string(object, m)  with O(m) !
+	    encObj <- tryCatch(strtrim(object, trimWidth), error=function(e) NULL)
+	    encObj <-
+		if(is.null(encObj)) # must first encodeString() before we can trim
+		    strtrim(encodeString(object, quote= '"', na.encode= FALSE),
+			    trimWidth)
+		else
+		    encodeString(encObj, quote= '"', na.encode= FALSE)
 	    v.len <-
 		if(missing(vec.len)) {
 		    max(1,sum(cumsum(3 + if(le>0) nchar(encObj, type="w") else 0) <
-			      width - (4 + 5*nest.lev + nchar(str1, type="w"))))
+			      width - (4 + 5*nest.lev + nc1)))
 		}		      # '5*ne..' above is fudge factor
 		else round(v.len)
 	    ile <- min(le, v.len)
 	    if(ile >= 1) ## truncate if LONG char:
 		object <- maybe_truncate(encObj[seq_len(ile)])
-					#O: encodeString(object, quote= '"', na.encode= FALSE)
-	    formObj <- function(x) paste(as.character(x), collapse=" ")
+	    formObj <- function(x) paste(as.character(x), collapse = " ")
 	}
 	else { # not char.like
 	    if(!exists("format.fun", inherits=TRUE)) #-- define one --
@@ -565,7 +563,7 @@ str.default <-
 		    if(mod == "num" || mod == "cplx") format else as.character
 	    ## v.len <- max(1,round(v.len))
 	    ile <- min(v.len, le)
-	    formObj <- function(x) paste(format.fun(x), collapse = " ")
+	    formObj <- function(x) maybe_truncate(paste(format.fun(x), collapse = " "))
 	}
 
 	cat(if(give.head) paste0(str1, " "),

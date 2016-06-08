@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
+ *  Copyright (C) 1997--2016  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -174,6 +174,7 @@ SEXP getAttrib(SEXP vec, SEXP name)
 	return getAttrib0(vec, name);
 }
 
+// R's .row_names_info(x, type = 1L) := .Internal(shortRowNames(x, type)) :
 attribute_hidden
 SEXP do_shortRowNames(SEXP call, SEXP op, SEXP args, SEXP env)
 {
@@ -676,9 +677,9 @@ static SEXP S4_extends(SEXP klass, Rboolean use_tab) {
 	R_S4_extends_table = R_NewHashedEnv(R_NilValue, ScalarInteger(0));
 	R_PreserveObject(R_S4_extends_table);
     }
-    /* sanity check for methods package available */
-    if(findVar(s_extends, R_GlobalEnv) == R_UnboundValue)
-	return klass;
+    if(!isMethodsDispatchOn()) {
+        return klass;
+    }
     class = translateChar(STRING_ELT(klass, 0)); /* TODO: include package attr. */
     if(use_tab) {
 	val = findVarInFrame(R_S4_extends_table, install(class));
@@ -1251,8 +1252,8 @@ SEXP attribute_hidden do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	return(ans);
     PROTECT(ans);
     if(!isNull(CADR(args)) && any_duplicated(CADR(args), FALSE))
-	warningcall(call, "duplicated levels in factors are deprecated");
-/* TODO errorcall(call, _("duplicated levels are not allowed in factors anymore")); */
+	errorcall(call, _("factor level [%d] is duplicated"),
+		  any_duplicated(CADR(args), FALSE));
     args = ans;
     if (MAYBE_SHARED(CAR(args))) SETCAR(args, duplicate(CAR(args)));
     setAttrib(CAR(args), R_LevelsSymbol, CADR(args));
@@ -1269,7 +1270,7 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 /* "dim" and "dimnames" are set that the "dim" is attached first. */
 
     SEXP object, attrs, names = R_NilValue /* -Wall */;
-    int i, i0 = -1, nattrs;
+    int i, nattrs;
 
     /* Extract the arguments from the argument list */
 
@@ -1334,6 +1335,7 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     /* "dim" occurs in the attribute list before "dimnames". */
 
     if (nattrs > 0) {
+	int i0 = -1;
 	for (i = 0; i < nattrs; i++) {
 	    if (!strcmp(CHAR(STRING_ELT(names, i)), "dim")) {
 		i0 = i;

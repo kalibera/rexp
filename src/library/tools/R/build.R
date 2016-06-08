@@ -39,7 +39,7 @@ function(filename, desc = file.path(dirname(filename), "DESCRIPTION"))
 		     c("",
 		       "# Import all packages listed as Imports or Depends",
 		       "import(",
-		       paste(" ", pkgs, collapse = ",\n"),
+		       paste0("  ", pkgs, collapse = ",\n"),
 		       ")")),
     	       filename)
 }
@@ -73,7 +73,7 @@ get_exclude_patterns <- function()
 
 ### based on Perl build script
 
-.build_packages <- function(args = NULL)
+.build_packages <- function(args = NULL, no.q = interactive())
 {
     ## this requires on Windows sh make
 
@@ -101,7 +101,11 @@ get_exclude_patterns <- function()
     Ssystem <- function(command, args = character(), ...)
         system2(command, args, stdout = NULL, stderr = NULL, ...)
 
-    do_exit <- function(status = 1L) q("no", status = status, runLast = FALSE)
+    do_exit <-
+	if(no.q)
+	    function(status = 1L) stop(".build_package() exit status ", status)
+	else
+	    function(status = 1L) q("no", status = status, runLast = FALSE)
 
     env_path <- function(...) file.path(..., fsep = .Platform$path.sep)
 
@@ -367,7 +371,7 @@ get_exclude_patterns <- function()
                               gs_cmd = gs_cmd, gs_quality = gs_quality)
             res <- format(res, diff = 1e5)
             if(length(res))
-                printLog0(Log, paste(" ", format(res), collapse = "\n"), "\n")
+                printLog0(Log, paste0("  ", format(res), collapse = "\n"), "\n")
         }
         if (pkgInstalled) {
             unlink(libdir, recursive = TRUE)
@@ -394,7 +398,6 @@ get_exclude_patterns <- function()
                 } else {
                     if (file.exists("Makevars.win")) {
                         if (have_make) {
-                            makefiles <- paste()
                             makefiles <- paste("-f",
                                                shQuote(file.path(R.home("share"), "make", "clean.mk")),
                                            "-f Makevars.win")
@@ -1023,7 +1026,7 @@ get_exclude_patterns <- function()
         ## Finalize
         filename <- paste0(pkgname, "_", desc["Version"], ".tar.gz")
         filepath <- file.path(startdir, filename)
-        ## NB: tests/reg-packages.R relies on this exact format!
+        ## NB: ../../../../tests/reg-packages.R relies on this exact format!
         messageLog(Log, "building ", sQuote(filename))
         res <- utils::tar(filepath, pkgname, compression = "gzip",
                           compression_level = 9L,
