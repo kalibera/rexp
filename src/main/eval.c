@@ -5875,7 +5875,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = GETSTACK(-1);
-	setVar(symbol, value, ENCLOS(rho)); /* NAMED incremented here */
+	INCREMENT_NAMED(value);
+	setVar(symbol, value, ENCLOS(rho));
 	NEXT();
       }
     OP(STARTASSIGN2, 1):
