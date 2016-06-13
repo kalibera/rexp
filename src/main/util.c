@@ -2214,7 +2214,7 @@ SEXP attribute_hidden dc_tabulate(SEXP in, SEXP nbin)
  *                         xt  x    right             inside       leftOp
  * x can be a long vector but xt cannot since the result is integer
 */
-SEXP attribute_hidden dc_findinterval(SEXP xt, SEXP x, SEXP right, SEXP inside)
+SEXP attribute_hidden dc_findinterval(SEXP xt, SEXP x, SEXP right, SEXP inside, SEXP leftOp)
 {
     if(TYPEOF(xt) != REALSXP || TYPEOF(x) != REALSXP) error("invalid input");
 #ifdef LONG_VECTOR_SUPPORT

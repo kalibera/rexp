@@ -302,6 +302,7 @@ static void substr(char *buf, const char *str, int ienc, int sa, int so)
 SEXP attribute_hidden
 dc_substr(SEXP x, SEXP sa, SEXP so)
 {
+    SEXP s;
     if (!isString(x))
 	error(_("extracting substrings from a non-character object"));
     R_xlen_t len = XLENGTH(x);
@@ -344,12 +345,9 @@ dc_substr(SEXP x, SEXP sa, SEXP so)
 
 // .Internal( startsWith(x, prefix) )  and
 // .Internal( endsWith  (x, suffix) )
-SEXP attribute_hidden
-do_startsWith(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP attribute_hidden dc_startsWith(SEXP call, SEXP op, SEXP env, SEXP x, SEXP Xfix)
 {
-    checkArity(op, args);
-
-    SEXP x = CAR(args), Xfix = CADR(args); // 'prefix' or 'suffix'
+    // Xfix means 'prefix' or 'suffix'
     if (!isString(x) || !isString(Xfix))
 	error(_("non-character object(s)"));
     R_xlen_t

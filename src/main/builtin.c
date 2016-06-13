@@ -227,7 +227,7 @@ SEXP attribute_hidden dc_args(SEXP call, SEXP op, SEXP rho, SEXP name)
     return R_NilValue;
 }
 
-SEXP attribute_hidden dc_formals(SEXP fun)
+SEXP attribute_hidden dc_formals(SEXP call, SEXP op, SEXP env, SEXP fun)
 {
     if (TYPEOF(fun) == CLOSXP)
 	return duplicate(FORMALS(fun));
@@ -239,7 +239,7 @@ SEXP attribute_hidden dc_formals(SEXP fun)
     }
 }
 
-SEXP attribute_hidden dc_body(SEXP fun)
+SEXP attribute_hidden dc_body(SEXP call, SEXP op, SEXP env, SEXP fun)
 {
     if (TYPEOF(fun) == CLOSXP)
 	return duplicate(BODY_EXPR(fun));

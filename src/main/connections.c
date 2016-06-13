@@ -5391,7 +5391,7 @@ static int gzcon_fgetc(Rconnection con)
 
 
 /* gzcon(con, level, allowNonCompressed) */
-SEXP attribute_hidden dc_gzcon(SEXP argcon, SEXP arglevel, SEXP argallow)
+SEXP attribute_hidden dc_gzcon(SEXP argcon, SEXP arglevel, SEXP argallow, SEXP argtext)
 {
     SEXP ans, class;
     int icon, level, allow;
@@ -5408,7 +5408,7 @@ SEXP attribute_hidden dc_gzcon(SEXP argcon, SEXP arglevel, SEXP argallow)
     allow = asLogical(argallow);
     if(allow == NA_INTEGER)
 	error(_("'allowNonCompression' must be TRUE or FALSE"));
-    text = asLogical(CADDDR(args));
+    text = asLogical(argtext);
     if(text == NA_INTEGER)
         error(_("'text' must be TRUE or FALSE"));
     

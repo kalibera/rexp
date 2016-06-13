@@ -1851,16 +1851,12 @@ dc_while(SEXP call, SEXP op, SEXP rho, SEXP value, SEXP body)
     volatile int bgn;
     RCNTXT cntxt;
 
-    checkArity(op, args);
-
     dbg = RDEBUG(rho);
     if (R_jit_enabled > 2 && !dbg && isUnmodifiedSpecSym(CAR(call), rho)
 	    && R_compileAndExecute(call, rho))
 	return R_NilValue;
 
-    body = CADR(args);
     bgn = BodyHasBraces(body);
-
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
@@ -1890,14 +1886,11 @@ SEXP attribute_hidden dc_repeat(SEXP call, SEXP op, SEXP rho, SEXP body)
     int dbg;
     RCNTXT cntxt;
 
-    checkArity(op, args);
-
     dbg = RDEBUG(rho);
     if (R_jit_enabled > 2 && !dbg && isUnmodifiedSpecSym(CAR(call), rho)
 	    && R_compileAndExecute(call, rho))
 	return R_NilValue;
 
-    body = CAR(args);
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK) {
@@ -1913,7 +1906,6 @@ SEXP attribute_hidden dc_repeat(SEXP call, SEXP op, SEXP rho, SEXP body)
 
 SEXP attribute_hidden NORET dc_break(SEXP call, SEXP op, SEXP rho)
 {
-    checkArity(op, args);
     findcontext(PRIMVAL(op), rho, R_NilValue);
 }
 

@@ -83,12 +83,8 @@ void NORET R_SignalCStackOverflow(intptr_t usage)
 	R_CStackLimit = (uintptr_t) (R_CStackLimit / 0.95);
     }
 
-<<<<<<< b425c6e8425ec6d53b10bdd87f19c1abbc24f882
     errorcall(R_NilValue, "C stack usage  %ld is too close to the limit",
 	      usage);
-=======
-    errorcall(R_NilValue, "C stack usage  %ld is too close to the limit", usage);
->>>>>>> Naming direct arguments in builtin methods (next part)
     /* Do not translate this, to save stack space */
 }
 
@@ -1170,7 +1166,7 @@ dc_warning(SEXP argcall, SEXP argimmediate, SEXP argnobreak, SEXP argmsg)
     immediateWarning = 0; /* reset to internal calls */
     noBreakWarning = 0;
 
-    return msg;
+    return argmsg;
 }
 
 /* Error recovery for incorrect argument count error. */

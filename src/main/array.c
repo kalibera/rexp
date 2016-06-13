@@ -487,13 +487,13 @@ static SEXP do_lengths_long(SEXP x, SEXP call, SEXP rho)
 }
 #endif
 
-SEXP attribute_hidden
-dc_lengths(SEXP call, SEXP op, SEXP rho, SEXP x, SEXP arguseNames)
+SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans;
+    checkArity(op, args);
+    SEXP x = CAR(args), ans;
     R_xlen_t x_len, i;
     int *ans_elt;
-    int useNames = asLogical(arguseNames);
+    int useNames = asLogical(CADR(args));
     if (useNames == NA_LOGICAL)
 	error(_("invalid '%s' value"), "use.names");
 
