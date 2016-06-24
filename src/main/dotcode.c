@@ -1255,7 +1255,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 	int i;
 	for(i = 0; i < nargs; i++)
 	    cargscp[i] = PROTECT(duplicate(cargs[i]));
-	retval = R_doDotCall(ofun, nargs, cargs, call);
+	retval = PROTECT(R_doDotCall(ofun, nargs, cargs, call));
 	Rboolean constsOK = TRUE;
 	for(i = 0; constsOK && i < nargs; i++)
 	    /* 39: not numerical comparison, not single NA, not attributes as
@@ -1272,7 +1272,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 	    REprintf("ERROR: detected compiler constant(s) modification after"
 		" .Call invocation of function %s.\n", buf);
 	    for(i = 0; i < nargs; i++)
-		if (!R_compute_identical(cargs[i], cargscp[i], 7))
+		if (!R_compute_identical(cargs[i], cargscp[i], 39))
 		    REprintf("NOTE: .Call function %s modified its argument"
 			" (number %d, type %s, length %d)\n",
 			buf,
@@ -1282,7 +1282,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 		    );
 	    R_Suicide("compiler constants were modified (in .Call?)!\n");
 	}
-	UNPROTECT(nargs);
+	UNPROTECT(nargs + 1);
     }
     vmaxset(vmax);
     return retval;
