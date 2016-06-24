@@ -471,7 +471,7 @@ setRlibs <-
         }
 
         ## Next check for name clashes on case-insensitive file systems
-        ## (that is on Windows and (by default) on OS X).
+        ## (that is on Windows and (by default) on macOS).
 
         dups <- unique(allfiles[duplicated(tolower(allfiles))])
         if (nb <- length(dups)) {
@@ -1568,7 +1568,6 @@ setRlibs <-
             out7 <- R_runR(Rcmd, R_opts2, "R_DEFAULT_PACKAGES=")
         }
 
-
         ## Use of deprecated, defunct and platform-specific devices?
         if(!is_base_pkg && R_check_use_codetools && R_check_depr_def) {
             win <- !is.na(OS_type) && OS_type == "windows"
@@ -2633,7 +2632,8 @@ setRlibs <-
             }
             any <- any || bad
 
-            if (!any && !check_incoming) resultLog(Log, "OK")
+            if (!any && !(check_incoming && do_timings))
+                resultLog(Log, "OK")
 
             if (do_timings) {
                 theta <-
@@ -3312,7 +3312,7 @@ setRlibs <-
         ## this is tailored to the FreeBSD/Linux 'file',
         ## see http://www.darwinsys.com/file/
         ## (Solaris has a different 'file' without --version)
-        ## Most systems are now on >= 5.03, but Mac OS 10.5 was 4.17
+        ## Most systems are now on >= 5.03, but macOS 10.5 had 4.17
         ## version 4.21 writes to stdout,
         ## 4.23 to stderr and sets an error status code
         FILE <- "file"

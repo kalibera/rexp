@@ -620,7 +620,9 @@ function(dir, logs = NULL)
         lines <- read_check_log(log)
         ## See analyze_lines() inside analyze_check_log():
         re <- "^\\* (loading checks for arch|checking (examples|tests) \\.\\.\\.$)"
-        lines <- lines[!grepl(re, lines, perl = TRUE, useBytes = TRUE)]
+        pos <- grep(re, lines, perl = TRUE, useBytes = TRUE)
+        if(length(pos <- pos[pos < length(lines)]))
+            lines <- lines[-pos]
         re <- "^\\*\\*? ((checking|creating|running examples for arch|running tests for arch) .*) \\.\\.\\.( (\\[[^ ]*\\]))?( (NOTE|WARNING|ERROR)|)$"
         m <- regexpr(re, lines, perl = TRUE, useBytes = TRUE)
         ind <- (m > 0L)
@@ -808,9 +810,12 @@ function(log, drop_ok = TRUE)
         ##   * loading checks for arch
         ##   * checking examples ...
         ##   * checking tests ...
-        ## headers: drop these.
+        ## headers: drop these (unless in the last line, where they
+        ## indicate failure).
         re <- "^\\* (loading checks for arch|checking (examples|tests) \\.\\.\\.$)"
-        lines <- lines[!grepl(re, lines, perl = TRUE, useBytes = TRUE)]
+        pos <- grep(re, lines, perl = TRUE, useBytes = TRUE)
+        if(length(pos <- pos[pos < length(lines)]))
+            lines <- lines[-pos]
         ## We might still have
         ##   * package encoding:
         ## entries for packages declaring a package encoding.
@@ -965,9 +970,6 @@ function(x, ...)
 check_packages_in_dir_changes <-
 function(dir, old, outputs = FALSE, sources = FALSE)
 {
-    check_packages_in_dir_changes_classes <-
-        c("check_packages_in_dir_changes", "data.frame")
-
     dir <- if(inherits(dir, "check_packages_in_dir"))
         dir <- attr(dir, "dir")
     else
@@ -985,6 +987,20 @@ function(dir, old, outputs = FALSE, sources = FALSE)
     if(!inherits(old, "check_details"))
         old <- check_packages_in_dir_details(old, drop_ok = FALSE)
 
+    check_details_changes(new, old, outputs)
+}
+
+### ** check_details_changes
+
+check_details_changes <-
+function(new, old, outputs = FALSE)
+{
+    check_details_changes_classes <-
+        c("check_details_changes", "data.frame")
+
+    if(!inherits(new, "check_details")) stop("wrong class")
+    if(!inherits(old, "check_details")) stop("wrong class")
+
     ## Simplify matters by considering only "changes" in *available*
     ## results/details.
 
@@ -996,7 +1012,7 @@ function(dir, old, outputs = FALSE, sources = FALSE)
                          Old = character(),
                          New = character(),
                          stringsAsFactors = FALSE)
-        class(db) <- check_packages_in_dir_changes_classes
+        class(db) <- check_details_changes_classes
         return(db)
     }
 
@@ -1035,10 +1051,12 @@ function(dir, old, outputs = FALSE, sources = FALSE)
     sx <- as.character(db$Status.x)
     sy <- as.character(db$Status.y)
     if(outputs) {
-        sx <- sprintf("%s\n  %s", sx,
-                      gsub("\n", "\n  ", db$Output.x, fixed = TRUE))
-        sy <- sprintf("%s\n  %s", sy,
-                      gsub("\n", "\n  ", db$Output.y, fixed = TRUE))
+        ind <- nzchar(ox <- db$Output.x)
+        sx[ind] <- sprintf("%s\n  %s", sx[ind],
+                           gsub("\n", "\n  ", ox[ind], fixed = TRUE))
+        ind <- nzchar(oy <- db$Output.y)
+        sy[ind] <- sprintf("%s\n  %s", sy[ind],
+                           gsub("\n", "\n  ", oy[ind], fixed = TRUE))
     }
     sx[is.na(db$Status.x)] <- ""
     sy[is.na(db$Status.y)] <- ""
@@ -1061,12 +1079,12 @@ function(dir, old, outputs = FALSE, sources = FALSE)
 
     db <- db[c("Package", "Check", "Old", "New")]
 
-    class(db) <- check_packages_in_dir_changes_classes
+    class(db) <- check_details_changes_classes
 
     db
 }
 
-format.check_packages_in_dir_changes <-
+format.check_details_changes <-
 function(x, ...)
 {
     if(!nrow(x)) return(character())
@@ -1081,7 +1099,7 @@ function(x, ...)
                    ""))
 }
 
-print.check_packages_in_dir_changes <-
+print.check_details_changes <-
 function(x, ...)
 {
     if(length(y <- format(x)))

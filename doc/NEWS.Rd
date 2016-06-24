@@ -100,6 +100,23 @@
       \item Illegal factors, e.g., with duplicated levels (illegal but
       constructable) now give a warning when printed, via new
       \code{.valid.factor}.
+
+      \item \code{sessionInfo()} has been updated for Apple's change in
+      OS naming as from \sQuote{10.12} (\sQuote{macOS Sierra}).
+
+      Its \code{toLatex()} method now includes the \code{running}
+      component.
+    }
+  }
+  \subsection{INSTALLATION and INCLUDED SOFTWARE}{
+    \itemize{
+      \item \code{readline} headers (and not just the library) are
+      required unless configuring with \option{--with-readline=no}.
+
+      \item (Windows only) Tcl/Tk version 8.6.4 is now included in the
+      binary builds.  The \file{tcltk*.chm} help file is no longer
+      included; please consult the online help at
+      \url{http://www.tcl.tk/man/} instead.
     }
   }
   \subsection{DEPRECATED AND DEFUNCT}{
@@ -108,6 +125,9 @@
       be removed prior to \R 3.4.0.
 
       \item (Windows only) Function \code{setInternet2()} is defunct.
+      
+      \item Installation support for \code{readline} emulations based on
+      \code{editline} (aka \code{libedit}) is deprecated.
     }
   }
   \subsection{BUG FIXES}{
@@ -132,20 +152,59 @@
       %% \code{NA}s identically, but showing real and imaginary parts
       %% for the \code{NaN} \dQuote{class}.
 
-      \item The API for readline libraries >= 6.3 had changed such
-      terminal window resizes where no longer properly signalled
-      (\PR{16604}).  Also, \command{Ctrl C} in incremental search
-      behaved confusingly in \R (unix) consoles (\PR{16603}) also for
-      older readline versions.  These have been fixed (for readline >=
-      6.3 only), thanks to patches by Frederick Eaton.
-
       \item \code{deparse(<complex>, options = "digits17")} prints more
       nicely now, mostly thanks to a suggestion by Richie Cotton.
+
+      \item Rotated symbols in plotmath expressions are now positioned
+      correctly on \code{x11(type = "Xlib")}. (\PR{16948})
+      
+      \item \code{as<-()} avoids an infinite loop when a virtual class
+      is interposed between a subclass and an actual superclass.
+
+      \item Fix level propagation in \code{unlist()} when the list
+      contains zero-length lists or factors.
+
+      \item Fix S3 dispatch on S4 objects when the \pkg{methods} package is
+      not attached.
+
+      \item Internal S4 dispatch sets \code{.Generic} in the method frame for
+      consistency with \code{standardGeneric()} (\PR{16929}).
+
+      \item Fix \code{order(x, decreasing=TRUE)} when \code{x} is an
+      integer vector containing \code{MAX_INT}. Ported from a fix Matt
+      Dowle made to \CRANpkg{data.table}.
     }
   }
 }
 
-\section{\Rlogo CHANGES IN R 3.3.0 patched}{
+\section{\Rlogo CHANGES IN R 3.3.1 patched}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{extSoftVersion()} now reports the version (if any) of
+      the \code{readline} library in use.
+    }
+  }
+
+  \subsection{INSTALLATION and INCLUDED SOFTWARE}{
+    \itemize{
+      \item Versions of the \code{readline} library >= 6.3 had been
+      changed so that terminal window resizes were not signalled to
+      \code{readline}: code has been added using a explicit signal
+      handler to work around that (when \R is compiled against readline
+      >= 6.3).  (\PR{16604})
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item The check for non-portable flags in \command{R CMD check}
+      could be stymied by \file{src/Makevars} files which contained
+      targets.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.3.1}{
   \subsection{BUG FIXES}{
     \itemize{
       \item \command{R CMD INSTALL} and hence \code{install.packages()}
@@ -168,7 +227,7 @@
 
       \item \code{pretty(d, ..)} for date-time \code{d} rarely failed
       when \code{"halfmonth"} time steps were tried (\PR{16923}) and
-      on \sQuote{inaccurate} platforms such as 32-bit windows or
+      on \sQuote{inaccurate} platforms such as 32-bit Windows or
       a configuration with \command{--disable-long-double}; see comment
       #15 of \PR{16761}.
 
@@ -181,31 +240,16 @@
 
       \item \code{strtrim(""[0], 0[0])} now works.
 
-      \item \code{as<-()} avoids an infinite loop when a virtual class
-      intercedes between a subclass and an actual superclass.
+      \item Use of \code{Ctrl-C} to terminate a reverse incremental
+      search started by \code{Ctrl-R} in the \code{readline}-based Unix
+      terminal interface is now supported when \R{} was compiled against
+      \code{readline} >= 6.0 (\code{Ctrl-G} always worked).
+      (\PR{16603})
 
-      \item Fix level propagation in \code{unlist()} when the list
-      contains zero-length lists or factors.
-
-      \item Fix S3 dispatch on S4 objects when the methods package is
-      not attached.
-
-      \item Internal S4 dispatch sets .Generic in the method frame for
-      consistency with \code{standardGeneric()} (\PR{16929}).
-
-      \item Fix \code{order(x, decreasing=TRUE)} when \code{x} is an
-      integer vector containing \code{MAX_INT}. Ported from a fix Matt
-      Dowle made to data.table.
+      \item \code{diff(<difftime>)} now keeps the \code{"units"}
+      attribute, as subtraction already did, \PR{16940}.
     }
   }
-
-  \subsection{INSTALLATION and INCLUDED SOFTWARE}{
-    \itemize{
-      \item (Windows only) Tcl/Tk version 8.6.4 is now included in the
-      binary builds. The \file{tcltk*.chm} help file is no longer 
-      included; please use \url{http://www.tcl.tk/man/} instead.
-    }
-  }  
 }
 
 \section{\Rlogo CHANGES IN R 3.3.0}{

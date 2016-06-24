@@ -591,9 +591,20 @@ static void restore_inError(void *data)
     R_Expressions = R_Expressions_keep;
 }
 
+/* Do not check constants on error more than this number of times per one
+   R process lifetime; if so many errors are generated, the performance
+   overhead due to the checks would be too high, and the program is doing
+   something strange anyway (i.e. running no-segfault tests). The constant
+   checks in GC and session exit (or .Call) do not have such limit. */
+static int allowedConstsChecks = 1000;
+
 static void NORET
 verrorcall_dflt(SEXP call, const char *format, va_list ap)
 {
+    if (allowedConstsChecks > 0) {
+	allowedConstsChecks--;
+	R_checkConstants(TRUE);
+    }
     RCNTXT cntxt;
     char *p, *tr;
     int oldInError;
@@ -1245,6 +1256,10 @@ void WarningMessage(SEXP call, R_WARNING which_warn, ...)
 	i++;
     }
 
+/* clang pre-3.9.0 says
+      warning: passing an object that undergoes default argument promotion to 
+      'va_start' has undefined behavior [-Wvarargs]
+*/
     va_start(ap, which_warn);
     Rvsnprintf(buf, BUFSIZE, _(WarningDB[i].format), ap);
     va_end(ap);

@@ -1917,7 +1917,7 @@ stopifnot(is.na(z[1]))
 ## gave (randomly) 1 or 3 in 1.6.1
 
 
-## PR#2469: read.table on MacOS CR-terminated files.
+## PR#2469: read.table on Mac OS CR-terminated files.
 tmp <- tempfile()
 x <- c("aaa", "bbb", "ccc")
 cat(x, sep="\r", file=tmp)
@@ -3620,7 +3620,7 @@ load("x.Rda")
 x
 stopifnot(identical(x, y))
 unlink("x.Rda")
-## 00 00 00 00 00 in 2.1.0 on MacOS X
+## 00 00 00 00 00 in 2.1.0 on OS X (now macOS)
 ## fixed for 2.1.1, but test added only in 2.2.x
 
 

@@ -1763,8 +1763,8 @@ Optional Features:
                           attempt to compile support for Rprofmem(),
                           tracemem() [no]
   --enable-R-framework[=DIR]
-                          OS X only: build R framework (if possible), and
-                          specify its installation prefix [yes,
+                          macOS only: build R framework (if possible), and
+                          specify its installation prefix [no,
                           /Library/Frameworks]
   --enable-R-shlib        build the shared/dynamic library 'libR' [no]
   --enable-R-static-lib   build the static library 'libR.a' [no]
@@ -1800,7 +1800,7 @@ Optional Packages:
   --with-lapack           use system LAPACK library (if available), or specify
                           it [no]
   --with-readline         use readline library [yes]
-  --with-aqua             OS X only: use Aqua (if available) [yes]
+  --with-aqua             macOS only: use Aqua (if available) [yes]
   --with-tcltk            use Tcl/Tk (if available), or specify its library
                           dir [yes]
   --with-tcl-config=TCL_CONFIG
@@ -3661,14 +3661,14 @@ _ACEOF
 
 ## exclude some unsupported OSes
 case "${host_os}" in
-   ## Darwin 1.3.1 was OS X 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
+   ## Darwin 1.3.1 was macOS 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
    ## with 13 being 10.9.  We no longer support < 10.6 (Snow Leopard)
    ## https://en.wikipedia.org/wiki/Darwin_OS
    darwin1.*)
-     as_fn_error $? "The earliest supported OS X is 10.6.
+     as_fn_error $? "The earliest supported macOS is 10.6.
      ;;
   darwin56789*" "$LINENO" 5
-     as_fn_error $? "The earliest supported OS X is 10.6.
+     as_fn_error $? "The earliest supported macOS is 10.6.
      ;;
   aix123*|aix4.01*" "$LINENO" 5
     ## These need a form of linking we no longer support
@@ -3851,7 +3851,7 @@ fi
 
 
 ## Allow the user to specify building R as a shared library.
-## (but a 'dynamic library' in the terminology of OS X).
+## (but a 'dynamic library' in the terminology of macOS).
 ## <NOTE>
 ## Building a framework implies building R shared libraries, hence the
 ## strange default.
@@ -4019,7 +4019,7 @@ else
   use_blas=unset
 fi
 
-# default is "no" except on OS X
+# default is "no" except on macOS
 
 ## LAPACK.
 
@@ -4035,7 +4035,7 @@ else
   use_lapack=unset
 fi
 
-# default is "no" except on OS X
+# default is "no" except on macOS
 
 ## Readline.
 
@@ -22408,7 +22408,7 @@ esac
 
 ## Record name of environment variable which tells the dynamic linker
 ## where to find shlibs (typically, 'LD_LIBRARY_PATH').
-## Used in etc/ldpaths: As from R 3.0.0 override what libtool thinks on OS X
+## Used in etc/ldpaths: As from R 3.0.0 override what libtool thinks on macOS
 ## http://hublog.hubmed.org/archives/001192.html suggests this was in 10.4
 ## However, as from 10.11 this variable is not passed down to shells.
 case "${host_os}" in
@@ -22619,7 +22619,7 @@ fi
 
 case "${host_os}" in
   darwin*)
-    ## OS X >= 10.3 include dlcompat in libSystem
+    ## macOS >= 10.3 include dlcompat in libSystem
     ## This is ancient history
     ## SI says we want '-lcc_dynamic' on Darwin, although currently
     ## https://developer.apple.com/documentation/MacOSX/ has nothing
@@ -22914,9 +22914,15 @@ _ACEOF
 fi
 
     use_readline="${ac_cv_lib_readline_rl_callback_read_char}"
+    if test "${use_readline}" = yes; then
+      use_readline="${ac_cv_header_readline_readline_h}"
+    fi
   fi
-  ## the NetBSD version as used in OS X does not have this
-  for ac_func in history_truncate_file
+  if test "${use_readline}" = no; then
+    as_fn_error $? "--with-readline=yes (default) and headers/libs are not available" "$LINENO" 5
+  else
+    ## the NetBSD emulation supplied by macOS does not have this
+    for ac_func in history_truncate_file
 do :
   ac_fn_c_check_func "$LINENO" "history_truncate_file" "ac_cv_func_history_truncate_file"
 if test "x$ac_cv_func_history_truncate_file" = xyes; then :
@@ -22927,10 +22933,10 @@ _ACEOF
 fi
 done
 
-  if test "${use_readline}" = no; then
-    as_fn_error $? "--with-readline=yes (default) and headers/libs are not available" "$LINENO" 5
-  else
-    for ac_func in rl_completion_matches rl_resize_terminal
+    ## rl_completion_matches is >= 4.2.
+    ## rl_resize_terminal is >= 4.0 ane we use it only for >= 6.3.
+    ## rl_callback_sigcleanup is in pre-releases for 7.0, not yet used.
+    for ac_func in rl_callback_sigcleanup rl_completion_matches rl_resize_terminal rl_sort_completion_matches
 do
 as_ac_Symbol=`$as_echo "ac_cv_have_decl_$ac_func" | $as_tr_sh`
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $ac_func exists and is declared" >&5
@@ -25069,7 +25075,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_verb"
-(eval echo $as_me:25072: \"$ac_link\") >&5
+(eval echo $as_me:25078: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -25144,7 +25150,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_cv_prog_c_v"
-(eval echo $as_me:25147: \"$ac_link\") >&5
+(eval echo $as_me:25153: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -28183,7 +28189,7 @@ $as_echo "$as_me: WARNING: Use of flat namespace is requested by user." >&2;}
     ## * libRblas must be 2-level, dyn lookup because of xerbla which is undefined
     cpicflags="${darwin_pic}"
     cxxpicflags="${darwin_pic}"
-    ## OS X does not have a Fortran compiler, so this is speculative
+    ## macOS does not have a Fortran compiler, so this is speculative
     fpicflags="${darwin_pic}"
     shlib_cxxldflags="${shlib_ldflags}"
     ;;
@@ -29303,7 +29309,7 @@ fi
 ## Functions from ISO/IEC TS 18661-4:2015 C11 extensions.
 ## For now, do not define _GNU_SOURCE here.
 ## All but pown have long been in Solaris' libsunmath
-## OS X has __cospi __sinpi __tanpi
+## macOS has __cospi __sinpi __tanpi
 for ac_func in atanpi atan2pi cospi exp10 pown sinpi tanpi __cospi __sinpi __tanpi
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
@@ -30148,7 +30154,7 @@ _ACEOF
 fi
 done
 
-## clock_gettime is POSIX 1993, but not on OS X
+## clock_gettime is POSIX 1993, but not on macOS
 ## Some OSes need -lrt: Linux (for glibc versions before 2.17), Solaris,
 ## not FreeBSD.
 ## Unsurprising, as POSIX 2008 moved it from its timers section to base.
@@ -32061,7 +32067,7 @@ fi
 fi
 
 ## Now check if zdotu works (fails on AMD64 with the wrong compiler;
-## also fails on OS X with Accelerate/vecLib and gfortran;
+## also fails on macOS with Accelerate/vecLib and gfortran;
 ## but in that case we have a work-around using USE_VECLIB_G95FIX)
 
 if test "${acx_blas_ok}" = yes; then
@@ -32444,7 +32450,7 @@ fi
 
 
 ## LAPACK.
-## The default has already been set on OS X: otherwise it is "no"
+## The default has already been set on macOS: otherwise it is "no"
 ## and so this test fails.
 if test "${use_lapack}" = "yes"; then
 
@@ -34475,7 +34481,7 @@ $as_echo "$r_cv_has_cairo" >&6; }
       CAIROX11_CPPFLAGS=`"${PKGCONF}" --cflags ${xmodlist}`
       case "${host_os}" in
         darwin*)
-          ## This is for static OS X build
+          ## This is for static macOS build
 	  ## FIXME: doing that unconditionally is really not a good idea
           CAIRO_LIBS=`"${PKGCONF}" --static --libs ${modlist}`
           CAIROX11_LIBS=`"${PKGCONF}" --static --libs ${xmodlist}`
@@ -35046,7 +35052,7 @@ $as_echo "$r_cv_header_tk_h" >&6; }
 fi
 ## TK_XINCLUDES should be empty for Aqua Tk, so earlier test was wrong
 ## Our code does not include any X headers, but tk.h may ....
-## That is true even on OS X, but Aqua Tk has a private version of
+## That is true even on macOS, but Aqua Tk has a private version of
 ## X11 headers, and we want that one and not the XQuartz one.
 if test "${have_tcltk}" = yes; then
   if test "${found_tk_by_config}" = yes; then
@@ -41445,7 +41451,7 @@ if test "${ac_cv_fc_compiler_gnu}" = yes; then
 fi
 case "${host_os}" in
   darwin*)
-     ## OS X does not have a Fortran compiler, so this is speculative
+     ## macOS does not have a Fortran compiler, so this is speculative
     fcpicflags="${darwin_pic}"
     ;;
   hpux*)
@@ -41521,8 +41527,8 @@ LIBS="${LIBS1} ${LIBS2}"
 ## '/usr/lib', so that the entries from '/etc/ld.so.conf' are not
 ## shadowed (otherwise, e.g. optimized ATLAS libs would not be used).
 
-## On OS X (Darwin) this used to have /usr/X11R6/lib
-## which shadows the OpenGL framework but we add nothing on OS X ....
+## On macOS (Darwin) this used to have /usr/X11R6/lib
+## which shadows the OpenGL framework but we add nothing on macOS ....
 case "${host_os}" in
   linux*)
     r_ld_library_defaults="/usr/lib64:/lib64:/usr/lib:/lib"
