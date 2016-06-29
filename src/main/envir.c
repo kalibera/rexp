@@ -4017,3 +4017,42 @@ Rboolean attribute_hidden isUnmodifiedSpecSym(SEXP sym, SEXP env) {
     return TRUE;
 }
 
+
+void findFunctionForBodyInNamespace(SEXP body, SEXP nsenv, SEXP nsname) {
+    if (R_IsNamespaceEnv(nsenv) != TRUE)
+	error("argument 'nsenv' is not a namespace");
+    SEXP args = PROTECT(list3(nsenv /* x */,
+	R_TrueValue /* all.names */,
+	R_FalseValue /* sorted */));
+    SEXP elist = PROTECT(do_env2list(R_NilValue,
+	INTERNAL(install("env2list")), args, R_NilValue));
+    R_xlen_t n = xlength(elist);
+    R_xlen_t i;
+    SEXP names = PROTECT(getAttrib(elist, R_NamesSymbol));
+    for(i = 0; i < n; i++) {
+	SEXP value = VECTOR_ELT(elist, i);
+	if (TYPEOF(value) == CLOSXP && R_ClosureExpr(value) == body) {
+	    REprintf("Function %s in namespace %s has this body.\n",
+		translateChar(STRING_ELT(names, i)),
+		translateChar(PRINTNAME(nsname)));
+	}
+    }
+    UNPROTECT(3); /* names, elist, args */
+}
+
+/*  findFunctionForBody - for a given function body, try to find a closure and
+    the name of its binding (and the name of the package). For debugging. */
+void attribute_hidden findFunctionForBody(SEXP body) {
+    SEXP nstable = HASHTAB(R_NamespaceRegistry);
+    CHECK_HASH_TABLE(nstable);
+    int n = length(nstable);
+    int i;
+    for(i = 0; i < n; i++) {
+	SEXP frame = VECTOR_ELT(nstable, i);
+	while (frame != R_NilValue) {
+	    findFunctionForBodyInNamespace(body, CAR(frame), TAG(frame));
+	    frame = CDR(frame);
+	}
+    }
+}
+
