@@ -4031,17 +4031,19 @@ void findFunctionForBodyInNamespace(SEXP body, SEXP nsenv, SEXP nsname) {
     SEXP names = PROTECT(getAttrib(elist, R_NamesSymbol));
     for(i = 0; i < n; i++) {
 	SEXP value = VECTOR_ELT(elist, i);
+	/* the constants checking requires shallow comparison */
 	if (TYPEOF(value) == CLOSXP && R_ClosureExpr(value) == body) {
 	    REprintf("Function %s in namespace %s has this body.\n",
-		translateChar(STRING_ELT(names, i)),
-		translateChar(PRINTNAME(nsname)));
+		CHAR(STRING_ELT(names, i)),
+		CHAR(PRINTNAME(nsname)));
 	}
     }
     UNPROTECT(3); /* names, elist, args */
 }
 
 /*  findFunctionForBody - for a given function body, try to find a closure and
-    the name of its binding (and the name of the package). For debugging. */
+    the name of its binding (and the name of the package). Function bodies are
+    compared via pointer comparison only (shallow). For debugging. */
 void attribute_hidden findFunctionForBody(SEXP body) {
     SEXP nstable = HASHTAB(R_NamespaceRegistry);
     CHECK_HASH_TABLE(nstable);
