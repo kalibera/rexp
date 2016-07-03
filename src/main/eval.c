@@ -6379,8 +6379,6 @@ static void reportModifiedConstant(SEXP crec, SEXP orig, SEXP copy, int idx)
 	REprintf("ERROR: the body was originally:\n");
 	PrintValue(orig);
     }
-    /* the search compares pointers to function bodies, so this works even
-       when the body has been modified */
     findFunctionForBody(VECTOR_ELT(consts, 0));
     R_check_constants = oldcheck;
     R_OutputCon = oldout;
