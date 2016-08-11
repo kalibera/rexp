@@ -333,7 +333,6 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 
 /* Vector Access Macros */
 #ifdef LONG_VECTOR_SUPPORT
-    R_len_t NORET R_BadLongVector(SEXP, const char *, int);
 # define IS_LONG_VEC(x) (SHORT_VEC_LENGTH(x) == R_LONG_VEC_TOKEN)
 # define SHORT_VEC_LENGTH(x) (((VECSEXP) (x))->vecsxp.length)
 # define SHORT_VEC_TRUELENGTH(x) (((VECSEXP) (x))->vecsxp.truelength)
@@ -564,6 +563,10 @@ void SET_STRING_ELT(SEXP x, R_xlen_t i, SEXP v);
 SEXP SET_VECTOR_ELT(SEXP x, R_xlen_t i, SEXP v);
 SEXP *(STRING_PTR)(SEXP x);
 SEXP * NORET (VECTOR_PTR)(SEXP x);
+
+#ifdef LONG_VECTOR_SUPPORT
+    R_len_t NORET R_BadLongVector(SEXP, const char *, int);
+#endif
 
 /* List Access Functions */
 /* These also work for ... objects */
@@ -801,6 +804,7 @@ SEXP Rf_duplicated(SEXP, Rboolean);
 Rboolean R_envHasNoSpecialSymbols(SEXP);
 SEXP Rf_eval(SEXP, SEXP);
 SEXP Rf_findFun(SEXP, SEXP);
+void Rf_findFunctionForBody(SEXP);
 SEXP Rf_findVar(SEXP, SEXP);
 SEXP Rf_findVarInFrame(SEXP, SEXP);
 SEXP Rf_findVarInFrame3(SEXP, SEXP, Rboolean);
@@ -1158,6 +1162,7 @@ void R_orderVector1(int *indx, int n, SEXP x,       Rboolean nalast, Rboolean de
 #define errorcall		Rf_errorcall
 #define eval			Rf_eval
 #define findFun			Rf_findFun
+#define findFunctionForBody	Rf_findFunctionForBody
 #define findVar			Rf_findVar
 #define findVarInFrame		Rf_findVarInFrame
 #define findVarInFrame3		Rf_findVarInFrame3

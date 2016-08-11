@@ -76,8 +76,6 @@
 ## g77 f77 xlf frt pgf77 cf77 fort77 fl32 af77
 ## On HPUX fort77 is the POSIX compliant FORTRAN compiler, and replaces
 ## f77 in the search list.
-## If CC is gcc, first preference is given to the matching FORTRAN
-## compiler (g77 or gfortran).
 ## If none of these is found, R cannot be compiled.
 ## F77=
 
@@ -155,13 +153,15 @@
 ## LDFLAGS=
 
 
-## The command which runs the C++ compiler.  It not specified, configure
+## The command which runs the C++ compiler.
+## This is optional, for use in packages.
+##  It not specified, configure
 ## uses the values of the environment variables 'CXX' or 'CCC' if set,
-## and then looks under the names 'c++', 'g++', 'gcc', 'CC', 'cxx', and
-## 'cc++' (in that order).
+## and then looks under the names 'c++', 'g++', 'CC' and more OS-specific
+## names (from autoconf).
 ## CXX=
 
-## Options for the C++ compiler.
+## Options for the C++ compiler .
 ## CXXFLAGS=
 
 ## Any special flags which must be used when compiling C++ code to be
@@ -169,10 +169,14 @@
 ## an attempt is made to automatically detect the correct value.
 ## CXXPICFLAGS=
 
+## Option to specify the default C++ standard, 
+## e.g. -std=c++98 or -std=gnu++98
+## CXXSTD=
+
 ## The command to be used to load shared objects which contain object
 ## files from the C++ compiler.  This is usually the C++ compiler/linker,
 ## but the automatic choice can be overridden by means of this
-## variable.
+## variable.  (Include $(CXXSTD) if set.)
 ## SHLIB_CXXLD=
 
 ## Any special flags which are required when creating shared objects
@@ -249,21 +253,39 @@
 ## $(CXX1X) $(CXX1XSTD) for both compiling and linking DSOs/DLLs.  
 ## '-std=c++11' and '-std=c++0x' are tried in turn by configure.
 ## '-std=gnu++11' is another possibility.
-## Experimental support such as '-std=c++1y' could be used.
 ## CXX1XSTD=
 
 ## Analogues for the C++11 compiler: default to the settings for C++
 ## CXX1XFLAGS=
 ## CXX1XPICFLAGS=
-## SHLIB_CXXIXLD=
-## SHLIB_CXXiXLDFLAGS=
+## SHLIB_CXX1XLD=
+## SHLIB_CXX1XLDFLAGS=
+
+## C++14 compiler, optional for use in packages.
+## Introduced in R 3.4.0
+## The command which runs the C++14 compiler: defaults to $(CXX), but
+## empty if that (plus standard) cannot compile the tested C++14 code.
+## CXX14=
+
+## The 'standard' for the C++14 compilier, which is invoked as
+## $(CXX1Y) $(CXX1YSTD) for both compiling and linking DSOs/DLLs.  
+## '-std=c++14' is tried by configure;
+## '-std=gnu++14' is another possibility.
+## CXX1YSTD=
+
+## Analogues for the C++14 compiler: default to the settings for C++
+## CXX1YFLAGS=
+## CXX1YPICFLAGS=
+## SHLIB_CXX1YLD=
+## SHLIB_CXX1YLDFLAGS=
 
 ## Additional libraries to link the internet module against.
 ## Some claim Solaris needs -lsocket -lnsl
 ## INTERNET_LIBS=
 
 ## Script from texinfo 5.1 or later.
-## Can be texi2any (the default) or makeinfo or a full path to either.
+## Usually the full path to texi2any.
+## (The name is historical: this was 'makeinfo' in texinfo 4.x)
 ## MAKEINFO=
 
 ## Full path to version of curl-config to be used
@@ -281,11 +303,14 @@
 ## PKGCONF=
 ## search path for pkg-config
 ## PKG_CONFIG_PATH=
+## path overriding pkg-config's default search path
+## PKG_CONFIG_LIBDIR=
 
 ## OpenMP settings.
 ## The configure code is conservative about enabling OpenMP 
 ## so use can be forced here (or non-use if set but empty).
-## For packages
+## For packages (note that SHLIB_OPENMP_CXXFLAGS is for CXX, not
+## necessarily for CXX1X nor CXX1Y).
 ## SHLIB_OPENMP_CFLAGS=
 ## SHLIB_OPENMP_CXXFLAGS=
 ## SHLIB_OPENMP_FCFLAGS=

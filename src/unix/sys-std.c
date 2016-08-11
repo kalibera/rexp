@@ -28,6 +28,8 @@
 
 /* See system.txt for a description of functions */
 
+/* select() is essential here, but configure has required it */
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -47,16 +49,13 @@
 #include <R_ext/Riconv.h>
 #include <R_ext/Print.h> // for REprintf
 
+#define __SYSTEM__
+/* includes <sys/select.h> and <sys/time.h> */
+#include <R_ext/eventloop.h>
+#undef __SYSTEM__
+
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>		/* for unlink */
-#endif
-
-#ifdef HAVE_SYS_TIME_H
-# include <sys/time.h>		/* for struct timeval */
-#endif
-
-#ifdef HAVE_SYS_SELECT_H
-# include <sys/select.h>	/* for select, according to recent POSIX */
 #endif
 
 extern SA_TYPE SaveAction;
@@ -89,10 +88,6 @@ void attribute_hidden Rstd_Suicide(const char *s)
 	 * considerably more complex.
 	 */
 
-#define __SYSTEM__
-#include <R_ext/eventloop.h>
-#undef __SYSTEM__
-
 /*
   The following provides a version of select() that catches interrupts
   and handles them using the supplied interrupt handler or the default
@@ -123,7 +118,8 @@ int R_SelectEx(int  n,  fd_set  *readfds,  fd_set  *writefds,
 	   non-interruptable? LT */
 	return select(n, readfds, writefds, exceptfds, timeout);
     else {
-	volatile sel_intr_handler_t myintr = intr != NULL ? intr : onintr;
+	volatile sel_intr_handler_t myintr = intr != NULL ?
+	    intr : onintrNoResume;
 	volatile int old_interrupts_suspended = R_interrupts_suspended;
 	if (SIGSETJMP(seljmpbuf, 1)) {
 	    myintr();
@@ -678,7 +674,7 @@ static void
 handleInterrupt(void)
 {
     popReadline();
-    onintr();
+    onintrNoResume();
 }
 
 #ifdef HAVE_RL_COMPLETION_MATCHES
@@ -907,7 +903,7 @@ void set_rl_word_breaks(const char *str)
 static void
 handleInterrupt(void)
 {
-    onintr();
+    onintrNoResume();
 }
 #endif /* HAVE_LIBREADLINE */
 

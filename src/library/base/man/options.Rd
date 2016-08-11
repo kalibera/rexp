@@ -167,7 +167,7 @@ getOption(x, default = NULL)
 
     \item{\code{interrupt}:}{a function taking no arguments to be called
       on a user interrupt if the interrupt condition is not otherwise
-      handled.
+      handled.}
 
     \item{\code{keep.source}:}{When \code{TRUE}, the source code for
       functions (newly defined or loaded) is stored internally
@@ -365,7 +365,10 @@ getOption(x, default = NULL)
 
     \item{\code{nwarnings}:}{the limit for the number of warnings kept
       when \code{warn = 0}, default 50.  This will discard messages if
-      called whilst they are being collected.}
+      called whilst they are being collected.  If you increase this
+      limit, be aware that the current implementation pre-allocates
+      the equivalent of a named list for them, i.e., do not increase it to
+      more than say a million.}
 
     \item{\code{width}:}{controls the maximum number of columns on a
       line used in printing vectors, matrices and arrays, and when

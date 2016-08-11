@@ -38,7 +38,8 @@ sort.int <-
     method <- match.arg(method)
     useRadix <- method == "radix" ||
         (method == "auto" && is.null(partial) &&
-             (is.integer(x) || is.factor(x) || is.logical(x)))
+         (is.numeric(x) || is.factor(x) || is.logical(x)) &&
+         is.integer(length(x)))
     if (useRadix) {
         if (!is.null(partial)) {
             stop("'partial' sorting not supported by radix method")
@@ -46,12 +47,11 @@ sort.int <-
         o <- order(x, na.last = na.last, decreasing = decreasing,
                    method = "radix")
         y <- x[o]
-        if (index.return)
-            return(list(x = y, ix = o))
-        else return(y)
-    } else if (method == "auto" || !is.numeric(x))
+        return(if (index.return) list(x = y, ix = o) else y)
+    }
+    else if (method == "auto" || !is.numeric(x))
           method <- "shell" # explicitly prevent 'quick' for non-numeric data
-    
+
     if(isfact <- is.factor(x)) {
         if(index.return) stop("'index.return' only for non-factors")
 	lev <- levels(x)
@@ -117,15 +117,13 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
 
     method <- match.arg(method)
     if (method == "auto") {
-        ints <- all(vapply(z, function(x) { 
-                               is.integer(x) || is.factor(x) || is.logical(x)
-                           },
-                           logical(1L)))
-        method <- if (ints) "radix" else "shell"
-    } else {
-        method <- "shell"
+        useRadix <- all(vapply(z, function(x) {
+            (is.numeric(x) || is.factor(x) || is.logical(x)) &&
+                is.integer(length(x))
+        }, logical(1L)))
+        method <- if (useRadix) "radix" else "shell"
     }
-    
+
     if(any(unlist(lapply(z, is.object)))) {
         z <- lapply(z, function(x) if(is.object(x)) as.vector(xtfrm(x)) else x)
         if(method == "radix" || !is.na(na.last))
@@ -135,12 +133,12 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
     } else if(method != "radix" && !is.na(na.last)) {
         return(.Internal(order(na.last, decreasing, ...)))
     }
-    
+
     if (method == "radix") {
         decreasing <- rep_len(as.logical(decreasing), length(z))
         return(.Internal(radixsort(na.last, decreasing, FALSE, TRUE, ...)))
     }
-    
+
     ## na.last = NA case: remove nas
     if(any(diff((l.z <- lengths(z)) != 0L)))
         stop("argument lengths differ")
@@ -156,7 +154,8 @@ sort.list <- function(x, partial = NULL, na.last = TRUE, decreasing = FALSE,
                       method = c("auto", "shell", "quick", "radix"))
 {
     method <- match.arg(method)
-    if (method == "auto" && (is.integer(x) || is.factor(x) || is.logical(x)))
+    if (method == "auto" && (is.numeric(x) || is.factor(x) || is.logical(x)) &&
+        is.integer(length(x)))
         method <- "radix"
     if(!is.atomic(x))
         stop("'x' must be atomic for 'sort.list'\nHave you called 'sort' on a list?")
@@ -215,7 +214,7 @@ grouping <- function(...) {
         z <- lapply(z, function(x) if(is.object(x)) as.vector(xtfrm(x)) else x)
         return(do.call("grouping", z))
     }
-    nalast <- FALSE
+    nalast <- TRUE
     decreasing <- rep_len(FALSE, length(z))
     group <- TRUE
     sortStr <- FALSE

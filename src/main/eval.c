@@ -3949,7 +3949,8 @@ static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
 	if (typex == REALSXP && typey == REALSXP) {			\
 	    double rn1 = vx.dval;					\
 	    double rn2 = vy.dval;					\
-	    if (INT_MIN <= rn1 && INT_MAX >= rn1 &&			\
+	    if (R_FINITE(rn1) && R_FINITE(rn2) &&			\
+		INT_MIN <= rn1 && INT_MAX >= rn1 &&			\
 		INT_MIN <= rn2 && INT_MAX >- rn2 &&			\
 		rn1 == (int) rn1 && rn2 == (int) rn2) {			\
 		SKIP_OP(); /* skip 'call' index */			\
@@ -6365,13 +6366,21 @@ static void reportModifiedConstant(SEXP crec, SEXP orig, SEXP copy, int idx)
     R_OutputCon = 2;
     int oldcheck = R_check_constants; /* guard against recursive invocation */
     R_check_constants = 0;
-    REprintf("ERROR: the modified value of the constant is:\n");
-    PrintValue(orig);
-    REprintf("ERROR: the original value of the constant is:\n");
-    PrintValue(copy);
-    REprintf("ERROR: the modified constant is at index %d\n", idx);
-    REprintf("ERROR: the modified constant is in this function body:\n");
-    PrintValue(VECTOR_ELT(consts, 0));
+    if (idx != 0) {
+	REprintf("ERROR: the modified value of the constant is:\n");
+	PrintValue(orig);
+	REprintf("ERROR: the original value of the constant is:\n");
+	PrintValue(copy);
+	REprintf("ERROR: the modified constant is at index %d\n", idx);
+	REprintf("ERROR: the modified constant is in this function body:\n");
+	PrintValue(VECTOR_ELT(consts, 0));
+    } else {
+	REprintf("ERROR: the modified constant is function body:\n");
+	PrintValue(VECTOR_ELT(consts, 0));
+	REprintf("ERROR: the body was originally:\n");
+	PrintValue(orig);
+    }
+    findFunctionForBody(VECTOR_ELT(consts, 0));
     R_check_constants = oldcheck;
     R_OutputCon = oldout;
 }
