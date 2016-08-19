@@ -226,7 +226,7 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 	strcat(buf, "\"<GC>\" ");
 
     if (R_Line_Profiling)
-	lineprof(buf, R_Srcref);
+	lineprof(buf, R_getCurrentSrcref());
 
     for (cptr = R_GlobalContext; cptr; cptr = cptr->nextcontext) {
 	if ((cptr->callflag & (CTXT_FUNCTION | CTXT_BUILTIN))
@@ -295,8 +295,12 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 
 		strcat(buf, itembuf);
 		strcat(buf, "\" ");
-		if (R_Line_Profiling)
-		    lineprof(buf, cptr->srcref);
+		if (R_Line_Profiling) {
+		    if (cptr->srcref == R_InBCInterpreter)
+			lineprof(buf, R_findBCInterpreterScrref(cptr->nodestack));
+		    else
+			lineprof(buf, cptr->srcref);
+		}
 	    }
 	}
     }
@@ -577,6 +581,9 @@ SEXP eval(SEXP e, SEXP rho)
     default: break;
     }
 
+    int bcintactivesave = R_BCIntActive;
+    R_BCIntActive = 0;
+
     if (!rho)
 	error("'rho' cannot be C NULL: detected in C-level eval");
     if (!isEnvironment(rho))
@@ -743,6 +750,7 @@ SEXP eval(SEXP e, SEXP rho)
     }
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
+    R_BCIntActive = bcintactivesave;
     return (tmp);
 }
 
@@ -881,7 +889,8 @@ static SEXP R_compileExpr(SEXP expr, SEXP rho)
 
     PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
     PROTECT(qexpr = lang2(quotesym, expr));
-    PROTECT(call = lang3(fcall, qexpr, rho));
+    /* compile(e, env, options, srcref) */
+    PROTECT(call = lang5(fcall, qexpr, rho, R_NilValue, R_getCurrentSrcref()));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(3);
     R_Visible = old_visible;
@@ -1939,6 +1948,7 @@ static SEXP R_SubassignSym = NULL;
 static SEXP R_Subset2Sym = NULL;
 static SEXP R_Subassign2Sym = NULL;
 static SEXP R_DollarGetsSymbol = NULL;
+static SEXP R_AssignSym = NULL;
 
 void attribute_hidden R_initAsignSymbols(void)
 {
@@ -1954,6 +1964,7 @@ void attribute_hidden R_initAsignSymbols(void)
     R_Subassign2Sym = install("[[<-");
     R_DollarGetsSymbol = install("$<-");
     R_valueSym = install("value");
+    R_AssignSym = install("<-");
 }
 
 static R_INLINE SEXP lookupAssignFcnSymbol(SEXP fun)
@@ -3099,6 +3110,14 @@ static SEXP R_OrSym = NULL;
 static SEXP R_NotSym = NULL;
 static SEXP R_CSym = NULL;
 static SEXP R_LogSym = NULL;
+static SEXP R_DotInternalSym = NULL;
+static SEXP R_DotExternalSym = NULL;
+static SEXP R_DotExternal2Sym = NULL;
+static SEXP R_DotExternalgraphicsSym = NULL;
+static SEXP R_DotCallSym = NULL;
+static SEXP R_DotCallgraphicsSym = NULL;
+static SEXP R_DotFortranSym = NULL;
+static SEXP R_DotCSym = NULL;
 
 /* R_ConstantsRegistry allows runtime detection of modification of compiler
    constants. It is a linked list of weak references. Each weak reference
@@ -3132,7 +3151,14 @@ void R_initialize_bcode(void)
   R_NotSym = install("!");
   R_CSym = install("c");
   R_LogSym = install("log");
-
+  R_DotInternalSym = install(".Internal");
+  R_DotExternalSym = install(".External");
+  R_DotExternal2Sym = install(".External2");
+  R_DotExternalgraphicsSym = install(".External.graphics");
+  R_DotCallSym = install(".Call");
+  R_DotCallgraphicsSym = install(".Call.graphics");
+  R_DotFortranSym = install(".Fortran");
+  R_DotCSym = install(".C");
 #ifdef THREADED_CODE
   bcEval(NULL, NULL, FALSE);
 #endif
@@ -4111,11 +4137,12 @@ SEXP R_ClosureExpr(SEXP p)
 #ifdef THREADED_CODE
 typedef union { void *v; int i; } BCODE;
 
-static struct { void *addr; int argc; } opinfo[OPCOUNT];
+static struct { void *addr; int argc; char *instname; } opinfo[OPCOUNT];
 
 #define OP(name,n) \
   case name##_OP: opinfo[name##_OP].addr = (__extension__ &&op_##name); \
     opinfo[name##_OP].argc = (n); \
+    opinfo[name##_OP].instname = #name; \
     goto loop; \
     op_##name
 
@@ -5205,12 +5232,238 @@ static SEXP markSpecialArgs(SEXP args)
     return args;
 }
 
+/* Find locations table in the constant pool */
+static SEXP findLocTable(SEXP constants, const char *tclass)
+{
+    int i;
+    /* location tables are at the end of the constant pool */
+    for(i = LENGTH(constants) - 1; i >= 0 ; i--) {
+	SEXP s = VECTOR_ELT(constants, i);
+	/* could use exact check instead of inherits */
+	if (TYPEOF(s) == INTSXP && inherits(s, tclass))
+	    return s;
+    }
+    return R_NilValue;
+}
+
+/* Get a constant pool entry through locations table element */
+static SEXP getLocTableElt(int relpc, SEXP table, SEXP constants)
+{
+    if (table == R_NilValue || relpc >= LENGTH(table))
+	return R_NilValue;
+
+    int cidx = INTEGER(table)[relpc];
+    if (cidx < 0 || cidx >= LENGTH(constants))
+	return R_NilValue;
+    return VECTOR_ELT(constants, cidx);
+}
+
+#define INTS_TO_HOLD_PTR ((sizeof(void *) + sizeof(int) - 1) / sizeof(int))
+
+/* Represent the given pointer as R integer vector */
+static SEXP pointerAsIntVector(void *ptr)
+{
+    SEXP ans = allocVector(INTSXP, INTS_TO_HOLD_PTR * 1);
+    ((void **)INTEGER(ans))[0] = ptr;
+    return ans;
+}
+
+/* Extract a pointer from an R integer vector */
+static void *intVectorAsPointer(SEXP s)
+{
+    if (TYPEOF(s) != INTSXP || LENGTH(s) != INTS_TO_HOLD_PTR)
+	R_Suicide("Memory corruption detected in intVectorAsPointer.");
+    return ((void **)INTEGER(s))[0];
+}
+
+/* Return the srcref/expression for the current instruction/operand being
+   executed by the byte-code interpreter, in the instance of the interpreter
+   whose node-stack top is as given (one can pass any address above the
+   interpreter's frame header). This operation linearly scans the node stack,
+   so it is quite expensive. */
+static SEXP R_findBCInterpreterLocation(R_bcstack_t *top, const char *iname)
+{
+    /* find the beginning of the previous interpreter frame */
+    if (top == R_BCNodeStackBase)
+	R_Suicide("Invalid/missing BC interpreter frame.");
+    R_bcstack_t *b;
+    for(b = top - 1; b != R_BCNodeStackBase; b--)
+	if (GETSTACK_SXPVAL_PTR(b) == R_BCFrameStart)
+	    break;
+    if (GETSTACK_SXPVAL_PTR(b) != R_BCFrameStart)
+	R_Suicide("BC interpreter frame header not found.");
+
+    SEXP pcvec = GETSTACK_PTR(b + 1);
+    /* reads the pc from the bcEval's local variable, pointer to which is stored
+       in the BC interpreter frame in an integer vector (pcvec) */
+    BCODE *pc = *((BCODE **)intVectorAsPointer(pcvec));
+    SEXP body = GETSTACK_PTR(b + 2);
+    if (TYPEOF(body) != BCODESXP)
+	R_Suicide("Corrupted BC frame header.");
+    SEXP constants = BCCONSTS(body);
+    SEXP ltable = findLocTable(constants, iname);
+    if (ltable == R_NilValue)
+	/* location table not available */
+	return R_NilValue;
+
+    /* the -1 is because the pc points to the instruction that will execute next,
+       but we need the instruction that is executing now */
+    BCODE *codebase = BCCODE(body);
+    int relpc = pc - codebase - 1;
+    if (relpc < 0)
+	R_Suicide("Empty byte-code interpreter frame.");
+    return getLocTableElt(relpc, ltable, constants);
+}
+
+SEXP attribute_hidden R_findBCInterpreterScrref(R_bcstack_t *top)
+{
+    return R_findBCInterpreterLocation(top, "srcrefsIndex");
+}
+
+SEXP attribute_hidden R_findBCInterpreterExpression(R_bcstack_t *top)
+{
+    return R_findBCInterpreterLocation(top, "expressionsIndex");
+}
+
+SEXP attribute_hidden R_getCurrentSrcref()
+{
+    if (R_Srcref != R_InBCInterpreter)
+	return R_Srcref;
+    else
+	return R_findBCInterpreterScrref(R_BCNodeStackTop);
+}
+
+static Rboolean maybeClosureWrapper(SEXP expr)
+{
+    SEXP sym = CAR(expr);
+
+    if (!(sym == R_DotInternalSym || sym == R_DotExternalSym ||
+	sym == R_DotExternal2Sym || sym == R_DotExternalgraphicsSym ||
+	sym == R_DotCallSym || sym == R_DotFortranSym ||
+	sym == R_DotCSym || sym == R_DotCallgraphicsSym))
+
+	return FALSE;
+
+    return CDR(expr) != R_NilValue && CADR(expr) != R_NilValue;
+}
+
+static Rboolean maybeAssignmentCall(SEXP expr)
+{
+    if (TYPEOF(CAR(expr)) != SYMSXP)
+	return FALSE;
+    const char *name = CHAR(PRINTNAME(CAR(expr)));
+    size_t slen = strlen(name);
+    return slen > 2 && name[slen-2] == '<' && name[slen-1] == '-';
+}
+
+/* Check if the given expression is a call to a name that is also
+   a builtin or special (does not search the environment!). */
+static Rboolean maybePrimitiveCall(SEXP expr)
+{
+    if (TYPEOF(CAR(expr)) == SYMSXP) {
+	SEXP value = SYMVALUE(CAR(expr));
+	if (TYPEOF(value) == PROMSXP)
+	    value = PRVALUE(value);
+	return TYPEOF(value) == BUILTINSXP || TYPEOF(value) == SPECIALSXP;
+    }
+    return FALSE;
+}
+
+/* Inflate a (single-level) compiler-flattenned assignment call.
+   For example,
+           `[<-`(x, c(-1, 1), value = 2)
+   becomes
+            x[c(-1,1)] <- 2 */
+static SEXP inflateAssignmentCall(SEXP expr) {
+    if (CDR(expr) == R_NilValue || CDDR(expr) == R_NilValue)
+	return expr; /* need at least two arguments */
+
+    SEXP assignForm = CAR(expr);
+    if (TYPEOF(assignForm) != SYMSXP)
+	return expr;
+    const char *name = CHAR(PRINTNAME(assignForm));
+    size_t slen = strlen(name);
+    if (slen <= 2 || name[slen - 2] != '<' || name[slen - 1] != '-')
+	return expr;
+
+    char nonAssignName[slen - 1]; /* "names" for "names<-" */
+    strncpy(nonAssignName, name, slen - 2);
+    nonAssignName[slen - 2] = '\0';
+    SEXP nonAssignForm = install(nonAssignName);
+
+    int nargs = length(expr) - 2;
+    SEXP lhs = allocVector(LANGSXP, nargs + 1);
+    SETCAR(lhs, nonAssignForm);
+
+    SEXP porig = CDR(expr);
+    SEXP pnew = CDR(lhs);
+
+    /* copy args except the last - the "value" */
+    while(CDR(porig) != R_NilValue) {
+	SETCAR(pnew, CAR(porig));
+	SET_NAMED(CAR(porig), 2);
+	porig = CDR(porig);
+	pnew = CDR(pnew);
+    }
+    SEXP rhs = CAR(porig);
+    SET_NAMED(rhs, 2);
+    if (TAG(porig) != R_valueSym)
+	return expr;
+    return lang3(R_AssignSym, lhs, rhs);
+}
+
+/* Get the current expression being evaluated by the byte-code interpreter. */
+SEXP attribute_hidden R_getBCInterpreterExpression()
+{
+    SEXP exp = R_findBCInterpreterExpression(R_BCNodeStackTop);
+    if (TYPEOF(exp) == PROMSXP) {
+	exp = forcePromise(exp);
+	SET_NAMED(exp, 2);
+    }
+
+    /* This tries to mimick the behavior of the AST interpreter to a reasonable
+       level, based on relatively consistent expressions provided by the compiler
+       in the constant pool. The AST interpreter behavior is rather inconsistent
+       and should be fixed at some point. When this happens, the code below will 
+       have to be revisited, but the compiler code should mostly stay the same.
+
+       Currently this code attempts to bypass implementation of closure
+       wrappers for internals and other foreign functions called via a directive,
+       hide away primitives, but show assignment calls. This code ignores
+       less usual problematic situations such as overriding of builtins or
+       inlining of the wrappers by the compiler. Simple assignment calls are
+       inflated (back) into the usual form like x[1] <- y. Expressions made of
+       a single symbol are hidden away (note these are e.g. for missing
+       function arguments). */
+
+    if (maybeAssignmentCall(exp)) {
+	exp = inflateAssignmentCall(exp);
+    } else if (TYPEOF(exp) == SYMSXP || maybeClosureWrapper(exp)
+	|| maybePrimitiveCall(exp)) {
+
+	RCNTXT *c = R_GlobalContext;
+        while(c && c->callflag != CTXT_TOPLEVEL) {
+	    if (c->callflag & CTXT_FUNCTION) {
+		exp = c->call;
+		break;
+	    }
+	    c = c->nextcontext;
+	}
+    }
+    return exp;
+}
+
+#define BC_FRAME_HEADER_SIZE 3
+
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
   SEXP value = R_NilValue, constants;
   BCODE *pc, *codebase;
   R_bcstack_t *oldntop = R_BCNodeStackTop;
   static int evalcount = 0;
+  SEXP oldsrcref = R_Srcref;
+  int oldbcintactive = R_BCIntActive;
+
 #ifdef BC_INT_STACK
   IStackval *olditop = R_BCIntStackTop;
 #endif
@@ -5230,6 +5483,15 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   /* allow bytecode to be disabled for testing */
   if (R_disable_bytecode)
       return eval(bytecodeExpr(body), rho);
+
+  /* set up a byte-code interpreter execution frame header */
+  /* the number of header entries must match BC_FRAME_HEADER_SIZE */
+  BCNPUSH(R_NilValue); /* space for R_InBCInterpreter */
+  BCNPUSH(pointerAsIntVector(&pc));
+  BCNPUSH(body);
+  SETSTACK(-3, R_BCFrameStart); /* set when frame is ready */
+  R_Srcref = R_InBCInterpreter; /* set when frame is ready */
+  R_BCIntActive = 1; /* set when frame is ready */
 
   /* check version */
   {
@@ -5373,21 +5635,27 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
     OP(STEPFOR, 1):
       {
+	int sskip;
+	if (R_BCNodeStackTop - oldntop == BC_FRAME_HEADER_SIZE)
+	    /* accessing node stack of an outer bcEval instance */
+	    sskip = BC_FRAME_HEADER_SIZE;
+	else
+	    sskip = 0;
 	int label = GETOP();
-	int *loopinfo = INTEGER(GETSTACK_SXPVAL(-2));
+	int *loopinfo = INTEGER(GETSTACK_SXPVAL(-2-sskip));
 	int i = ++loopinfo[0];
 	int n = loopinfo[1];
 	if (i < n) {
 	  Rboolean iscompact = FALSE;
-	  SEXP seq = getForLoopSeq(-4, &iscompact);
-	  SEXP cell = GETSTACK(-3);
+	  SEXP seq = getForLoopSeq(-4-sskip, &iscompact);
+	  SEXP cell = GETSTACK(-3-sskip);
 	  switch (TYPEOF(seq)) {
 	  case LGLSXP:
-	    GET_VEC_LOOP_VALUE(value, -1);
+	    GET_VEC_LOOP_VALUE(value, -1-sskip);
 	    LOGICAL(value)[0] = LOGICAL(seq)[i];
 	    break;
 	  case INTSXP:
-	    GET_VEC_LOOP_VALUE(value, -1);
+	    GET_VEC_LOOP_VALUE(value, -1-sskip);
 #ifdef COMPACT_INTSEQ
 	    if (iscompact) {
 		int *info = INTEGER(seq);
@@ -5401,19 +5669,19 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    INTEGER(value)[0] = INTEGER(seq)[i];
 	    break;
 	  case REALSXP:
-	    GET_VEC_LOOP_VALUE(value, -1);
+	    GET_VEC_LOOP_VALUE(value, -1-sskip);
 	    REAL(value)[0] = REAL(seq)[i];
 	    break;
 	  case CPLXSXP:
-	    GET_VEC_LOOP_VALUE(value, -1);
+	    GET_VEC_LOOP_VALUE(value, -1-sskip);
 	    COMPLEX(value)[0] = COMPLEX(seq)[i];
 	    break;
 	  case STRSXP:
-	    GET_VEC_LOOP_VALUE(value, -1);
+	    GET_VEC_LOOP_VALUE(value, -1-sskip);
 	    SET_STRING_ELT(value, 0, STRING_ELT(seq, i));
 	    break;
 	  case RAWSXP:
-	    GET_VEC_LOOP_VALUE(value, -1);
+	    GET_VEC_LOOP_VALUE(value, -1-sskip);
 	    RAW(value)[0] = RAW(seq)[i];
 	    break;
 	  case EXPRSXP:
@@ -5423,7 +5691,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    break;
 	  case LISTSXP:
 	    value = CAR(seq);
-	    SETSTACK(-4, CDR(seq));
+	    SETSTACK(-4-sskip, CDR(seq));
 	    SET_NAMED(value, 2);
 	    break;
 	  default:
@@ -5729,7 +5997,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP body = VECTOR_ELT(fb, 1);
 	value = mkCLOSXP(forms, body, rho);
 	/* The LENGTH check below allows for byte code object created
-	   by oder versions of the compiler that did not record a
+	   by older versions of the compiler that did not record a
 	   source attribute. */
 	/* FIXME: bump bc version and don't check LENGTH? */
 	if (LENGTH(fb) > 2) {
@@ -6183,6 +6451,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   }
 
  done:
+  R_BCIntActive = oldbcintactive;
+  R_Srcref = oldsrcref;
   R_BCNodeStackTop = oldntop;
 #ifdef BC_INT_STACK
   R_BCIntStackTop = olditop;
