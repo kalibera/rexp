@@ -35,7 +35,7 @@
 
 #define ARGUSED(x) LEVELS(x)
 
-static SEXP bcEval(SEXP, SEXP);
+static R_INLINE SEXP bcEval(SEXP, SEXP);
 
 /* BC_PROILFING needs to be enabled at build time. It is not enabled
    by default as enabling it disabled the more efficient threaded code
@@ -5157,7 +5157,7 @@ static SEXP markSpecialArgs(SEXP args)
     return args;
 }
 
-static SEXP bcEval(SEXP body, SEXP rho)
+static R_INLINE SEXP bcEval(SEXP body, SEXP rho)
 {
   SEXP constants = BCCONSTS(body);
   BCODE* pc = BCCODE(body);
