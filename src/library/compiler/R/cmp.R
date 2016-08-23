@@ -1725,13 +1725,11 @@ setInlineHandler("repeat", function(e, cb, cntxt) {
         cmpRepeatBody(body, cb, cntxt)
     else {
         cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-        code <- genCode(body, cntxt,
-                        function(cb, cntxt) {
-                            cmpRepeatBody(body, cb, cntxt)
-                            cb$putcode(ENDLOOPCNTXT.OP)
-                        })
-        bi <- cb$putconst(code)
-        cb$putcode(STARTLOOPCNTXT.OP, bi)
+        ljmpend.label <- cb$makelabel()
+        cb$putcode(STARTLOOPCNTXT.OP, ljmpend.label)
+        cmpRepeatBody(body, cb, cntxt)
+        cb$putcode(ENDLOOPCNTXT.OP)
+        cb$putlabel(ljmpend.label)
     }
     cb$putcode(LDNULL.OP)
     if (cntxt$tailcall) {
@@ -1759,13 +1757,11 @@ setInlineHandler("while", function(e, cb, cntxt) {
         cmpWhileBody(e, cond, body, cb, cntxt)
     else {
         cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-        code <- genCode(body, cntxt, ## **** expr isn't quite right
-                        function(cb, cntxt) {
-                            cmpWhileBody(e, cond, body, cb, cntxt)
-                            cb$putcode(ENDLOOPCNTXT.OP)
-                        })
-        bi <- cb$putconst(code)
-        cb$putcode(STARTLOOPCNTXT.OP, bi)
+        ljmpend.label <- cb$makelabel()
+        cb$putcode(STARTLOOPCNTXT.OP, ljmpend.label)
+        cmpWhileBody(e, cond, body, cb, cntxt)
+        cb$putcode(ENDLOOPCNTXT.OP)
+        cb$putlabel(ljmpend.label)
     }
     cb$putcode(LDNULL.OP)
     if (cntxt$tailcall) {
@@ -1808,13 +1804,11 @@ setInlineHandler("for", function(e, cb, cntxt) {
         ctxt.label <- cb$makelabel()
         cb$putcode(STARTFOR.OP, callidx, ci, ctxt.label)
         cb$putlabel(ctxt.label)
-        code <- genCode(body, cntxt, ## **** expr isn't quite right
-                        function(cb, cntxt) {
-                            cmpForBody(NULL, body, NULL, cb, cntxt)
-                            cb$putcode(ENDLOOPCNTXT.OP)
-                        })
-        bi <- cb$putconst(code)
-        cb$putcode(STARTLOOPCNTXT.OP, bi)
+        ljmpend.label <- cb$makelabel()
+        cb$putcode(STARTLOOPCNTXT.OP, ljmpend.label)
+        cmpForBody(NULL, body, NULL, cb, cntxt)
+        cb$putcode(ENDLOOPCNTXT.OP)
+        cb$putlabel(ljmpend.label)
     }
     cb$putcode(ENDFOR.OP)
     if (cntxt$tailcall) {

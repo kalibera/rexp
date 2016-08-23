@@ -2453,9 +2453,13 @@ context for each loop, and [[break]] and [[next]] use [[longjmp]] to
 transfer control.  In general, compiled loops need to use a similar
 approach.  For now, this is implemented by the [[STARTLOOPCNTXT]] and
 [[ENDLOOPCNTXT]] instructions.  The [[STARTLOOPCNTXT]] instructions
-takes one argument, the constant pool index for a code object
-implementing the loop body.  The loop body should end with a call to
-[[ENDLOOPCNTXT]].
+takes one argument, a label which points after the loop. The interpreter
+jumps to this label in case of a non-local jump implementing [[break]].
+The loop body should end with a call to [[ENDLOOPCNTXT]], which causes
+the nested invocation of the interpreter to return and the set-jump context
+is left without a non-local jump. The nested invocation of the interpreter
+uses the same code and constant pool (and binding cache), but starts at
+the first instruction of the loop body.
 
 At least with some assumptions it is often possible to implement
 [[break]] and [[next]] calls as simple [[GOTO]]s.  If all [[break]]
@@ -2488,8 +2492,7 @@ just written to the original code buffer.  The [[else]] clause in the
 code chunk below generates the code for the general case.  [[genCode]]
 is used to produce a new code object containing code for the loop body
 followed by the [[ENDLOOPCNTXT]] instruction, The code object is then
-installed in the context pool.  The [[STARTLOOPCNTXT]] instruction is
-emitted to the main code buffer.  When a separate code object is
+installed in the context pool. When a separate code object is
 written the need for using [[RETURNJMP]] for [[return]] calls is
 indicated by setting the [[needRETURNJMP]] flag in the compiler
 context to [[TRUE]].
@@ -2498,13 +2501,11 @@ if (checkSkipLoopCntxt(body, cntxt))
     cmpRepeatBody(body, cb, cntxt)
 else {
     cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-    code <- genCode(body, cntxt,
-                    function(cb, cntxt) {
-                        cmpRepeatBody(body, cb, cntxt)
-                        cb$putcode(ENDLOOPCNTXT.OP)
-                    })
-    bi <- cb$putconst(code)
-    cb$putcode(STARTLOOPCNTXT.OP, bi)
+    ljmpend.label <- cb$makelabel()
+    cb$putcode(STARTLOOPCNTXT.OP, ljmpend.label)
+    cmpRepeatBody(body, cb, cntxt)
+    cb$putcode(ENDLOOPCNTXT.OP)
+    cb$putlabel(ljmpend.label)
 }
 @ %def
 
@@ -2595,13 +2596,11 @@ if (checkSkipLoopCntxt(cond, cntxt) && checkSkipLoopCntxt(body, cntxt))
     cmpWhileBody(e, cond, body, cb, cntxt)
 else {
     cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-    code <- genCode(body, cntxt, ## **** expr isn't quite right
-                    function(cb, cntxt) {
-                        cmpWhileBody(e, cond, body, cb, cntxt)
-                        cb$putcode(ENDLOOPCNTXT.OP)
-                    })
-    bi <- cb$putconst(code)
-    cb$putcode(STARTLOOPCNTXT.OP, bi)
+    ljmpend.label <- cb$makelabel()
+    cb$putcode(STARTLOOPCNTXT.OP, ljmpend.label)
+    cmpWhileBody(e, cond, body, cb, cntxt)
+    cb$putcode(ENDLOOPCNTXT.OP)
+    cb$putlabel(ljmpend.label)
 }
 @ %def
 
@@ -2694,13 +2693,11 @@ else {
     ctxt.label <- cb$makelabel()
     cb$putcode(STARTFOR.OP, callidx, ci, ctxt.label)
     cb$putlabel(ctxt.label)
-    code <- genCode(body, cntxt, ## **** expr isn't quite right
-                    function(cb, cntxt) {
-                        cmpForBody(NULL, body, NULL, cb, cntxt)
-                        cb$putcode(ENDLOOPCNTXT.OP)
-                    })
-    bi <- cb$putconst(code)
-    cb$putcode(STARTLOOPCNTXT.OP, bi)
+    ljmpend.label <- cb$makelabel()
+    cb$putcode(STARTLOOPCNTXT.OP, ljmpend.label)
+    cmpForBody(NULL, body, NULL, cb, cntxt)
+    cb$putcode(ENDLOOPCNTXT.OP)
+    cb$putlabel(ljmpend.label)
 }
 @ %def
 

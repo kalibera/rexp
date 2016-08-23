@@ -35,7 +35,7 @@
 
 #define ARGUSED(x) LEVELS(x)
 
-static SEXP bcEval(SEXP, SEXP, Rboolean);
+static SEXP bcEval(SEXP, SEXP);
 
 /* BC_PROILFING needs to be enabled at build time. It is not enabled
    by default as enabling it disabled the more efficient threaded code
@@ -613,7 +613,7 @@ SEXP eval(SEXP e, SEXP rho)
 
     switch (TYPEOF(e)) {
     case BCODESXP:
-	tmp = bcEval(e, rho, TRUE);
+	tmp = bcEval(e, rho);
 	    break;
     case SYMSXP:
 	if (e == R_DotsSymbol)
@@ -901,7 +901,7 @@ static Rboolean R_compileAndExecute(SEXP call, SEXP rho)
     R_jit_enabled = old_enabled;
 
     if (TYPEOF(code) == BCODESXP) {
-	bcEval(code, rho, TRUE);
+	bcEval(code, rho);
 	ans = TRUE;
     }
 
@@ -3108,38 +3108,6 @@ static SEXP R_ConstantsRegistry = NULL;
 # define THREADED_CODE
 #endif
 
-attribute_hidden
-void R_initialize_bcode(void)
-{
-  R_AddSym = install("+");
-  R_SubSym = install("-");
-  R_MulSym = install("*");
-  R_DivSym = install("/");
-  R_ExptSym = install("^");
-  R_SqrtSym = install("sqrt");
-  R_ExpSym = install("exp");
-  R_EqSym = install("==");
-  R_NeSym = install("!=");
-  R_LtSym = install("<");
-  R_LeSym = install("<=");
-  R_GeSym = install(">=");
-  R_GtSym = install(">");
-  R_AndSym = install("&");
-  R_OrSym = install("|");
-  R_NotSym = install("!");
-  R_CSym = install("c");
-  R_LogSym = install("log");
-
-#ifdef THREADED_CODE
-  bcEval(NULL, NULL, FALSE);
-#endif
-
-  /* the first constants record always stays in place for protection */
-  R_ConstantsRegistry = allocVector(VECSXP, 2);
-  R_PreserveObject(R_ConstantsRegistry);
-  SET_VECTOR_ELT(R_ConstantsRegistry, 0, R_NilValue);
-  SET_VECTOR_ELT(R_ConstantsRegistry, 1, R_NilValue);
-}
 
 enum {
   BCMISMATCH_OP,
@@ -4189,19 +4157,6 @@ static R_INLINE SEXP BINDING_VALUE(SEXP loc)
    invalidating the cache would be needed. This is certainly possible,
    but finding an efficient mechanism does not seem to be easy.   LT */
 
-/* Both mechanisms implemented here make use of the stack to hold
-   cache information.  This is not a problem except for "safe" for()
-   loops using the STARTLOOPCNTXT instruction to run the body in a
-   separate bcEval call.  Since this approach expects loop setup
-   information to be passed on the stack from the outer bcEval call to
-   an inner one the inner one cannot put things on the stack. For now,
-   bcEval takes an additional argument that disables the cache in
-   calls via STARTLOOPCNTXT for all "safe" loops. It would be better
-   to deal with this in some other way, for example by having a
-   specific STARTFORLOOPCNTXT instruction that deals with transferring
-   the information in some other way. For now disabling the cache is
-   an expedient solution. LT */
-
 #define USE_BINDING_CACHE
 # ifdef USE_BINDING_CACHE
 /* CACHE_MAX must be a power of 2 for modulus using & CACHE_MASK to work*/
@@ -4241,6 +4196,9 @@ typedef void *R_binding_cache_t;
 
 # define SET_CACHED_BINDING(vcache, sidx, cell)
 #endif
+
+static SEXP bcEvalInner(SEXP body, SEXP rho,
+      R_binding_cache_t vcache, Rboolean smallcache, int codeoffset);
 
 static R_INLINE SEXP GET_BINDING_CELL_CACHE(SEXP symbol, SEXP rho,
 					    R_binding_cache_t vcache, int idx)
@@ -4642,13 +4600,15 @@ static int opcode_counts[OPCOUNT];
 } while (0)
 #endif
 
-static void loopWithContext(volatile SEXP code, volatile SEXP rho)
+static void loopWithContext(volatile SEXP code, volatile SEXP rho,
+    volatile R_binding_cache_t vcache, volatile Rboolean smallcache,
+    volatile int label)
 {
     RCNTXT cntxt;
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK)
-	bcEval(code, rho, FALSE);
+	bcEvalInner(code, rho, vcache, smallcache, label);
     endcontext(&cntxt);
 }
 
@@ -5197,27 +5157,10 @@ static SEXP markSpecialArgs(SEXP args)
     return args;
 }
 
-static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
+static SEXP bcEval(SEXP body, SEXP rho)
 {
-  SEXP value = R_NilValue, constants;
-  BCODE *pc, *codebase;
-  R_bcstack_t *oldntop = R_BCNodeStackTop;
-  static int evalcount = 0;
-#ifdef BC_INT_STACK
-  IStackval *olditop = R_BCIntStackTop;
-#endif
-#ifdef BC_PROFILING
-  int old_current_opcode = current_opcode;
-#endif
-#ifdef THREADED_CODE
-  int which = 0;
-#endif
-
-  BC_CHECK_SIGINT();
-
-  INITIALIZE_MACHINE();
-  codebase = pc = BCCODE(body);
-  constants = BCCONSTS(body);
+  SEXP constants = BCCONSTS(body);
+  BCODE* pc = BCCODE(body);
 
   /* allow bytecode to be disabled for testing */
   if (R_disable_bytecode)
@@ -5240,11 +5183,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  else error(_("bytecode version is too new"));
       }
   }
-
   R_binding_cache_t vcache = NULL;
   Rboolean smallcache = TRUE;
+  R_bcstack_t *oldntop = R_BCNodeStackTop;
+
 #ifdef USE_BINDING_CACHE
-  if (useCache) {
+  {
       R_len_t n = LENGTH(constants);
 # ifdef CACHE_MAX
       if (n > CACHE_MAX) {
@@ -5270,6 +5214,36 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   }
 #endif
 
+  SEXP value = bcEvalInner(body, rho, vcache, smallcache, 0);
+  R_BCNodeStackTop = oldntop;
+  return value;
+}
+
+
+static SEXP bcEvalInner(SEXP body, SEXP rho,
+      R_binding_cache_t vcache, Rboolean smallcache, int codeoffset)
+{
+  SEXP value = R_NilValue, constants;
+  BCODE *pc, *codebase;
+  R_bcstack_t *oldntop = R_BCNodeStackTop;
+  static int evalcount = 0;
+#ifdef BC_INT_STACK
+  IStackval *olditop = R_BCIntStackTop;
+#endif
+#ifdef BC_PROFILING
+  int old_current_opcode = current_opcode;
+#endif
+#ifdef THREADED_CODE
+  int which = 0;
+#endif
+
+  BC_CHECK_SIGINT();
+
+  INITIALIZE_MACHINE();
+  codebase = pc = BCCODE(body);
+  constants = BCCONSTS(body);
+
+  pc += codeoffset + 1;
   BEGIN_MACHINE {
     OP(BCMISMATCH, 0): error(_("byte code version mismatch"));
     OP(RETURN, 0): value = GETSTACK(-1); goto done;
@@ -5297,11 +5271,12 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(DUP, 0): BCNDUP(); NEXT();
     OP(PRINTVALUE, 0): PrintValue(BCNPOP()); NEXT();
     OP(STARTLOOPCNTXT, 1):
-	{
-	    SEXP code = VECTOR_ELT(constants, GETOP());
-	    loopWithContext(code, rho);
-	    NEXT();
-	}
+      {
+	int endlabel = GETOP();
+	loopWithContext(body, rho, vcache, smallcache, pc - codebase - 1);
+	pc = codebase + endlabel;
+	NEXT();
+      }
     OP(ENDLOOPCNTXT, 0): value = R_NilValue; goto done;
     OP(DOLOOPNEXT, 0): findcontext(CTXT_NEXT, rho, R_NilValue);
     OP(DOLOOPBREAK, 0): findcontext(CTXT_BREAK, rho, R_NilValue);
@@ -5581,7 +5556,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXPTYPE ftype = CALL_FRAME_FTYPE();
 	if (ftype != SPECIALSXP) {
 	  if (ftype == BUILTINSXP)
-	      value = bcEval(code, rho, TRUE);
+	      value = bcEval(code, rho);
 	  else
 	    value = mkPROMISE(code, rho);
 	  PUSHCALLARG(value);
@@ -6869,4 +6844,37 @@ SEXP attribute_hidden do_returnValue(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return val;
     }
     return CAR(args); /* default */
+}
+
+attribute_hidden
+void R_initialize_bcode(void)
+{
+  R_AddSym = install("+");
+  R_SubSym = install("-");
+  R_MulSym = install("*");
+  R_DivSym = install("/");
+  R_ExptSym = install("^");
+  R_SqrtSym = install("sqrt");
+  R_ExpSym = install("exp");
+  R_EqSym = install("==");
+  R_NeSym = install("!=");
+  R_LtSym = install("<");
+  R_LeSym = install("<=");
+  R_GeSym = install(">=");
+  R_GtSym = install(">");
+  R_AndSym = install("&");
+  R_OrSym = install("|");
+  R_NotSym = install("!");
+  R_CSym = install("c");
+  R_LogSym = install("log");
+
+#ifdef THREADED_CODE
+  bcEvalInner(NULL, NULL, NULL, FALSE, 0);
+#endif
+
+  /* the first constants record always stays in place for protection */
+  R_ConstantsRegistry = allocVector(VECSXP, 2);
+  R_PreserveObject(R_ConstantsRegistry);
+  SET_VECTOR_ELT(R_ConstantsRegistry, 0, R_NilValue);
+  SET_VECTOR_ELT(R_ConstantsRegistry, 1, R_NilValue);
 }
