@@ -1870,11 +1870,13 @@ setInlineHandler("repeat", function(e, cb, cntxt) {
         cmpRepeatBody(body, cb, cntxt)
     else {
         cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-        ljmpend.label <- cb$makelabel()
-        cb$putcode(STARTLOOPCNTXT.OP, ljmpend.label)
-        cmpRepeatBody(body, cb, cntxt)
-        cb$putcode(ENDLOOPCNTXT.OP)
-        cb$putlabel(ljmpend.label)
+        code <- genCode(body, cntxt,
+                        function(cb, cntxt) {
+                            cmpRepeatBody(body, cb, cntxt)
+                            cb$putcode(ENDLOOPCNTXT.OP)
+                        }, loc = cb$savecurloc())
+        bi <- cb$putconst(code)
+        cb$putcode(STARTLOOPCNTXT.OP, bi)
     }
     cb$putcode(LDNULL.OP)
     if (cntxt$tailcall) {
@@ -1902,11 +1904,13 @@ setInlineHandler("while", function(e, cb, cntxt) {
         cmpWhileBody(e, cond, body, cb, cntxt)
     else {
         cntxt$needRETURNJMP <- TRUE ## **** do this a better way
-        ljmpend.label <- cb$makelabel()
-        cb$putcode(STARTLOOPCNTXT.OP, ljmpend.label)
-        cmpWhileBody(e, cond, body, cb, cntxt)
-        cb$putcode(ENDLOOPCNTXT.OP)
-        cb$putlabel(ljmpend.label)
+        code <- genCode(body, cntxt, ## **** expr isn't quite right
+                        function(cb, cntxt) {
+                            cmpWhileBody(e, cond, body, cb, cntxt)
+                            cb$putcode(ENDLOOPCNTXT.OP)
+                        }, loc = cb$savecurloc())
+        bi <- cb$putconst(code)
+        cb$putcode(STARTLOOPCNTXT.OP, bi)
     }
     cb$putcode(LDNULL.OP)
     if (cntxt$tailcall) {
@@ -1949,11 +1953,13 @@ setInlineHandler("for", function(e, cb, cntxt) {
         ctxt.label <- cb$makelabel()
         cb$putcode(STARTFOR.OP, callidx, ci, ctxt.label)
         cb$putlabel(ctxt.label)
-        ljmpend.label <- cb$makelabel()
-        cb$putcode(STARTLOOPCNTXT.OP, ljmpend.label)
-        cmpForBody(NULL, body, NULL, cb, cntxt)
-        cb$putcode(ENDLOOPCNTXT.OP)
-        cb$putlabel(ljmpend.label)
+        code <- genCode(body, cntxt, ## **** expr isn't quite right
+                        function(cb, cntxt) {
+                            cmpForBody(NULL, body, NULL, cb, cntxt)
+                            cb$putcode(ENDLOOPCNTXT.OP)
+                        }, loc = cb$savecurloc())
+        bi <- cb$putconst(code)
+        cb$putcode(STARTLOOPCNTXT.OP, bi)
     }
     cb$putcode(ENDFOR.OP)
     if (cntxt$tailcall) {
@@ -2315,9 +2321,8 @@ setInlineHandler("$", function(e, cb, cntxt) {
 
 setInlineHandler("local", function(e, cb, cntxt) {
     if (length(e) == 2) {
-        ee <- as.call(list(as.call(
-            ## could pass NULL as last argument to be closer to AST behavior
-            list(as.name("function"), NULL, e[[2]], cb$curSrcref))))
+        ee <- as.call(list(as.call(list(
+            as.name("function"), NULL, e[[2]], NULL))))
         cmp(ee, cb, cntxt)
         TRUE
     }
@@ -2854,10 +2859,12 @@ cmpfun <- function(f, options = NULL) {
 }
 
 tryCmpfun <- function(f)
-    tryCatch(cmpfun(f), error = function(e) f)
+    tryCatch(cmpfun(f), error = function(e) { cat("COMPILATION FAILED:", e$message, " at ", deparse(e$call), "\n"); f })
+##    tryCatch(cmpfun(f), error = function(e) f)
 
 tryCompile <- function(e, ...)
-    tryCatch(compile(e, ...), error = function(err) e)
+    tryCatch(compile(e, ...), error = function(err) { cat("COMPILATION FAILED:", e$message, " at ", deparse(e$call), "\n"); e })
+##    tryCatch(compile(e, ...), error = function(err) e)
 
 cmpframe <- function(inpos, file) {
     expr.needed <- 1000
