@@ -167,6 +167,8 @@ static void R_restore_globals(RCNTXT *cptr)
     R_PPStackTop = cptr->cstacktop;
     R_GCEnabled = cptr->gcenabled;
     R_BCIntActive = cptr->bcintactive;
+    R_BCpc = cptr->bcpc;
+    R_BCbody = cptr->bcbody;
     R_EvalDepth = cptr->evaldepth;
     vmaxset(cptr->vmax);
     R_interrupts_suspended = cptr->intsusp;
@@ -245,6 +247,8 @@ void begincontext(RCNTXT * cptr, int flags,
 {
     cptr->cstacktop = R_PPStackTop;
     cptr->gcenabled = R_GCEnabled;
+    cptr->bcpc = R_BCpc;
+    cptr->bcbody = R_BCbody;
     cptr->bcintactive = R_BCIntActive;
     cptr->evaldepth = R_EvalDepth;
     cptr->callflag = flags;
@@ -441,7 +445,7 @@ static SEXP getCallWithSrcref(RCNTXT *cptr)
 	if (cptr->srcref == R_InBCInterpreter)
 	    /* FIXME: this is expensive, it might be worth changing sys.call */
 	    /* to return srcrefs only on request (add `with.source` option) */
-	    sref = R_findBCInterpreterScrref(cptr->nodestack);
+	    sref = R_findBCInterpreterSrcref(cptr);
 	else
 	    sref = cptr->srcref;
 	setAttrib(result, R_SrcrefSymbol, duplicate(sref));
@@ -584,7 +588,8 @@ SEXP attribute_hidden do_sysbrowser(SEXP call, SEXP op, SEXP args, SEXP rho)
 		    TYPEOF(BODY(cptr->callfun)) == BCODESXP )
 		warning(_("debug flag in compiled function has no effect"));
 	    else
-		warning(_("debug will apply when function leaves compiled code"));
+		warning(_("debug will apply when function leaves "
+			  "compiled code"));
 	}
 	SET_RDEBUG(cptr->cloenv, 1);
 	break;

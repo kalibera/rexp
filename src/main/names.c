@@ -1156,7 +1156,6 @@ void attribute_hidden InitNames()
     /* Create marker values */
     R_UnboundValue = mkSymMarker(R_NilValue);
     R_MissingArg = mkSymMarker(mkChar(""));
-    R_BCFrameStart = mkSymMarker(mkChar("<bc-interp-frame-start>"));
     R_InBCInterpreter = mkSymMarker(mkChar("<in-bc-interp>"));
     R_RestartToken = mkSymMarker(mkChar(""));
 

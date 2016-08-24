@@ -1381,7 +1381,7 @@ SEXP R_GetTraceback(int skip)
 		if (c->srcref && !isNull(c->srcref)) {
 		    SEXP sref;
 		    if (c->srcref == R_InBCInterpreter)
-			sref = R_findBCInterpreterScrref(c->nodestack);
+			sref = R_findBCInterpreterSrcref(c);
 		    else
 			sref = c->srcref;
 		    setAttrib(CAR(t), R_SrcrefSymbol, duplicate(sref));
