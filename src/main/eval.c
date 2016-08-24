@@ -3075,8 +3075,8 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 /* start of bytecode section */
-static int R_bcVersion = 8;
-static int R_bcMinVersion = 6;
+static int R_bcVersion = 9;
+static int R_bcMinVersion = 9;
 
 static SEXP R_AddSym = NULL;
 static SEXP R_SubSym = NULL;
@@ -5695,14 +5695,8 @@ static SEXP bcEvalInner(SEXP body, SEXP rho,
 	SEXP forms = VECTOR_ELT(fb, 0);
 	SEXP body = VECTOR_ELT(fb, 1);
 	value = mkCLOSXP(forms, body, rho);
-	/* The LENGTH check below allows for byte code object created
-	   by oder versions of the compiler that did not record a
-	   source attribute. */
-	/* FIXME: bump bc version and don't check LENGTH? */
-	if (LENGTH(fb) > 2) {
-	  SEXP srcref = VECTOR_ELT(fb, 2);
-	  if (!isNull(srcref)) setAttrib(value, R_SrcrefSymbol, srcref);
-	}
+	SEXP srcref = VECTOR_ELT(fb, 2);
+	if (!isNull(srcref)) setAttrib(value, R_SrcrefSymbol, srcref);
 	BCNPUSH(value);
 	NEXT();
       }
