@@ -4150,7 +4150,11 @@ static struct { void *addr; int argc; char *instname; } opinfo[OPCOUNT];
 #define LASTOP } value = R_NilValue; goto done
 #define INITIALIZE_MACHINE() if (body == NULL) goto init
 
+<<<<<<< f734abd95007e1f07555067a2a0295c832a05a50
 #define NEXT() (__extension__ ({goto *(*pc++).v;}))
+=======
+#define NEXT() (__extension__ ({currentpc = pc; goto *(*pc++).v;}))
+>>>>>>> Store pc location in R_BCpc.
 #define GETOP() (*pc++).i
 #define SKIP_OP() (pc++)
 
@@ -4161,9 +4165,15 @@ typedef int BCODE;
 #define OP(name,argc) case name##_OP
 
 #ifdef BC_PROFILING
+<<<<<<< f734abd95007e1f07555067a2a0295c832a05a50
 #define BEGIN_MACHINE  loop: current_opcode = *pc; switch(*pc++)
 #else
 #define BEGIN_MACHINE  loop: switch(*pc++)
+=======
+#define BEGIN_MACHINE  loop: currentpc = pc; current_opcode = *pc; switch(*pc++)
+#else
+#define BEGIN_MACHINE  loop: currentpc = pc; switch(*pc++)
+>>>>>>> Store pc location in R_BCpc.
 #endif
 #define LASTOP  default: error(_("bad opcode"))
 #define INITIALIZE_MACHINE()
@@ -5309,9 +5319,14 @@ static SEXP R_findBCInterpreterLocation(R_bcstack_t *top, const char *iname)
     /* the -1 is because the pc points to the instruction that will execute next,
        but we need the instruction that is executing now */
     BCODE *codebase = BCCODE(body);
+<<<<<<< f734abd95007e1f07555067a2a0295c832a05a50
     int relpc = pc - codebase - 1;
     if (relpc < 0)
 	R_Suicide("Empty byte-code interpreter frame.");
+=======
+    ptrdiff_t relpc = (*((BCODE **)(cptr ? cptr->bcpc : R_BCpc))) - codebase;
+
+>>>>>>> Store pc location in R_BCpc.
     return getLocTableElt(relpc, ltable, constants);
 }
 
@@ -5415,7 +5430,11 @@ static SEXP inflateAssignmentCall(SEXP expr) {
 /* Get the current expression being evaluated by the byte-code interpreter. */
 SEXP attribute_hidden R_getBCInterpreterExpression()
 {
+<<<<<<< f734abd95007e1f07555067a2a0295c832a05a50
     SEXP exp = R_findBCInterpreterExpression(R_BCNodeStackTop);
+=======
+    SEXP exp = R_findBCInterpreterExpression();
+>>>>>>> Store pc location in R_BCpc.
     if (TYPEOF(exp) == PROMSXP) {
 	exp = forcePromise(exp);
 	SET_NAMED(exp, 2);
@@ -5463,6 +5482,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   static int evalcount = 0;
   SEXP oldsrcref = R_Srcref;
   int oldbcintactive = R_BCIntActive;
+  SEXP oldbcbody = R_BCbody;
+  void *oldbcpc = R_BCpc;
+  BCODE *currentpc = NULL;
 
 #ifdef BC_INT_STACK
   IStackval *olditop = R_BCIntStackTop;
@@ -5484,14 +5506,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   if (R_disable_bytecode)
       return eval(bytecodeExpr(body), rho);
 
-  /* set up a byte-code interpreter execution frame header */
-  /* the number of header entries must match BC_FRAME_HEADER_SIZE */
-  BCNPUSH(R_NilValue); /* space for R_InBCInterpreter */
-  BCNPUSH(pointerAsIntVector(&pc));
-  BCNPUSH(body);
-  SETSTACK(-3, R_BCFrameStart); /* set when frame is ready */
-  R_Srcref = R_InBCInterpreter; /* set when frame is ready */
-  R_BCIntActive = 1; /* set when frame is ready */
+  R_Srcref = R_InBCInterpreter;
+  R_BCIntActive = 1;
+  R_BCbody = body;
+  R_BCpc = &currentpc;
 
   /* check version */
   {
