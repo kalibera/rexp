@@ -4149,7 +4149,7 @@ static struct { void *addr; int argc; char *instname; } opinfo[OPCOUNT];
 #define LASTOP } value = R_NilValue; goto done
 #define INITIALIZE_MACHINE() if (body == NULL) goto init
 
-#define NEXT() (__extension__ ({R_BCpc = pc; goto *(*pc++).v;}))
+#define NEXT() (__extension__ ({currentpc = pc; goto *(*pc++).v;}))
 #define GETOP() (*pc++).i
 #define SKIP_OP() (pc++)
 
@@ -4160,9 +4160,9 @@ typedef int BCODE;
 #define OP(name,argc) case name##_OP
 
 #ifdef BC_PROFILING
-#define BEGIN_MACHINE  loop: R_BCpc = pc; current_opcode = *pc; switch(*pc++)
+#define BEGIN_MACHINE  loop: currentpc = pc; current_opcode = *pc; switch(*pc++)
 #else
-#define BEGIN_MACHINE  loop: R_BCpc = pc; switch(*pc++)
+#define BEGIN_MACHINE  loop: currentpc = pc; switch(*pc++)
 #endif
 #define LASTOP  default: error(_("bad opcode"))
 #define INITIALIZE_MACHINE()
@@ -5262,7 +5262,7 @@ static SEXP R_findBCInterpreterLocation(RCNTXT *cptr, const char *iname)
 	return R_NilValue;
 
     BCODE *codebase = BCCODE(body);
-    ptrdiff_t relpc = ((BCODE *)(cptr ? cptr->bcpc : R_BCpc)) - codebase;
+    ptrdiff_t relpc = (*((BCODE **)(cptr ? cptr->bcpc : R_BCpc))) - codebase;
 
     return getLocTableElt(relpc, ltable, constants);
 }
@@ -5367,7 +5367,7 @@ static SEXP inflateAssignmentCall(SEXP expr) {
 /* Get the current expression being evaluated by the byte-code interpreter. */
 SEXP attribute_hidden R_getBCInterpreterExpression()
 {
-    SEXP exp = R_findBCInterpreterExpression(NULL);
+    SEXP exp = R_findBCInterpreterExpression();
     if (TYPEOF(exp) == PROMSXP) {
 	exp = forcePromise(exp);
 	SET_NAMED(exp, 2);
@@ -5426,6 +5426,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   int oldbcintactive = R_BCIntActive;
   SEXP oldbcbody = R_BCbody;
   void *oldbcpc = R_BCpc;
+  BCODE *currentpc = NULL;
 
 #ifdef BC_INT_STACK
   IStackval *olditop = R_BCIntStackTop;
@@ -5450,6 +5451,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   R_Srcref = R_InBCInterpreter;
   R_BCIntActive = 1;
   R_BCbody = body;
+  R_BCpc = &currentpc;
 
   /* check version */
   {
