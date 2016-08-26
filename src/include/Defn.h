@@ -648,7 +648,24 @@ extern0 R_size_t R_VSize  INI_as(R_VSIZE);/* Size of the vector heap */
 extern0 int	R_GCEnabled INI_as(1);
 extern0 int	R_BCIntActive INI_as(0); /* bcEval called more recently than
 					    eval */
-extern0 void*   R_BCpc INI_as(NULL);/* current byte code instruction */
+
+#ifdef R_BCPC_IN_REGISTER
+#undef R_BCPC_IN_REGISTER
+#endif
+
+#if defined(__GNUC__)
+/* it may be that even an earlier version of GCC is safe */
+#if __GNUC_PREREQ(3,4) && defined(__x86_64__)
+#define R_BCPC_IN_REGISTER
+#endif
+#endif
+
+#ifdef R_BCPC_IN_REGISTER
+register void * R_BCpc asm("r15"); /* current byte code instruction */
+#else
+extern0 void*   R_BCpc INI_as(NULL); /* current byte code instruction */
+#endif
+
 extern0 SEXP    R_BCbody INI_as(NULL); /* current byte code object */
 extern0 SEXP	R_NHeap;	    /* Start of the cons cell heap */
 extern0 SEXP	R_FreeSEXP;	    /* Cons cell free list */

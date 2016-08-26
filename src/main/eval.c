@@ -3162,6 +3162,8 @@ void R_initialize_bcode(void)
   bcEval(NULL, NULL, FALSE);
 #endif
 
+  R_BCpc = NULL; /* for bcpc in register */
+
   /* the first constants record always stays in place for protection */
   R_ConstantsRegistry = allocVector(VECSXP, 2);
   R_PreserveObject(R_ConstantsRegistry);
@@ -5249,6 +5251,23 @@ static SEXP getLocTableElt(ptrdiff_t relpc, SEXP table, SEXP constants)
     return VECTOR_ELT(constants, cidx);
 }
 
+static Rboolean checkRelPC(ptrdiff_t relpc, SEXP body)
+{
+    if (relpc < 0)
+	return FALSE;
+    int n;
+    SEXP code = BCODE_CODE(body);
+
+#ifdef THREADED_CODE
+    int m = (sizeof(BCODE) + sizeof(int) - 1) / sizeof(int);
+    n = LENGTH(code) / m;
+#else
+    n = LENGTH(code);
+#endif
+
+    return relpc < n ? TRUE : FALSE;
+}
+
 /* Return the srcref/expression for the current instruction/operand
    being executed by the byte-code interpreter, or the one that was
    current when the supplied context was created. */
@@ -5263,6 +5282,13 @@ static SEXP R_findBCInterpreterLocation(RCNTXT *cptr, const char *iname)
 
     BCODE *codebase = BCCODE(body);
     ptrdiff_t relpc = ((BCODE *)(cptr ? cptr->bcpc : R_BCpc)) - codebase;
+    if (!checkRelPC(relpc, body))
+	/* PC value clobbered */
+#ifdef R_BCPC_IN_REGISTER
+	return R_NilValue;
+#else
+	error("Corrupted PC in R_BCpc.");
+#endif
 
     return getLocTableElt(relpc, ltable, constants);
 }
