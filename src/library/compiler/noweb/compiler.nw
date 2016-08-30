@@ -4841,15 +4841,13 @@ have a variant that returns the uncompiled function if there is an
 error during compilation.
 <<[[tryCmpfun]] function>>=
 tryCmpfun <- function(f)
-    tryCatch(cmpfun(f), error = function(e) { cat("COMPILATION FAILED:", e$message, " at ", deparse(e$call), "\n"); f })
-##    tryCatch(cmpfun(f), error = function(e) f)
+    tryCatch(cmpfun(f), error = function(e) f)
 @ %def tryCmpfun
 
 A similar utility for expressions for use in JIT compilation of loops:
 <<[[tryCompile]] function>>=
 tryCompile <- function(e, ...)
-    tryCatch(compile(e, ...), error = function(err) { cat("COMPILATION FAILED:", e$message, " at ", deparse(e$call), "\n"); e })
-##    tryCatch(compile(e, ...), error = function(err) e)
+    tryCatch(compile(e, ...), error = function(err) e)
 @ %def tryCompile
 
 
