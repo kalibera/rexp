@@ -2859,10 +2859,12 @@ cmpfun <- function(f, options = NULL) {
 }
 
 tryCmpfun <- function(f)
-    tryCatch(cmpfun(f), error = function(e) f)
+    tryCatch(cmpfun(f), error = function(e) { cat("COMPILATION FAILED:", e$message, " at ", deparse(e$call), "\n"); f })
+##    tryCatch(cmpfun(f), error = function(e) f)
 
 tryCompile <- function(e, ...)
-    tryCatch(compile(e, ...), error = function(err) e)
+    tryCatch(compile(e, ...), error = function(err) { cat("COMPILATION FAILED:", e$message, " at ", deparse(e$call), "\n"); e })
+##    tryCatch(compile(e, ...), error = function(err) e)
 
 cmpframe <- function(inpos, file) {
     expr.needed <- 1000
