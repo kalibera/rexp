@@ -203,7 +203,7 @@ static SEXP VectorSubset(SEXP x, SEXP s, SEXP call)
 	if (
 	    ((attrib = getAttrib(x, R_NamesSymbol)) != R_NilValue) ||
 	    ( /* here we might have an array.  Use row names if 1D */
-		isArray(x) && LENGTH(getAttrib(x, R_DimNamesSymbol)) == 1 &&
+		isArray(x) && length(getAttrib(x, R_DimNamesSymbol)) == 1 &&
 		(attrib = getAttrib(x, R_DimNamesSymbol)) != R_NilValue &&
 		(attrib = GetRowNames(attrib)) != R_NilValue
 		)
@@ -1108,6 +1108,7 @@ SEXP attribute_hidden dispatch_subset2(SEXP x, R_xlen_t i, SEXP call, SEXP rho)
         x_elt = do_subset2(call, bracket_op, args, rho);
         UNPROTECT(1);
     } else {
+      // FIXME: throw error if not a list
         x_elt = VECTOR_ELT(x, i);
     }
     return(x_elt);

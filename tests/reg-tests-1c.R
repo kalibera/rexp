@@ -1749,24 +1749,94 @@ for(nm in nf)  {
 
 
 ## PR#16936: table() dropping "NaN" level & 'exclude' sometimes failing
+op <- options(warn = 2)# no warnings allowed
 (fN1 <- factor(c("NA", NA, "NbN", "NaN")))
 (tN1 <- table(fN1)) ##--> was missing 'NaN'
 (fN <- factor(c(rep(c("A","B"), 2), NA), exclude = NULL))
-(tN <- table(fN, exclude = "B")) ## had extraneous "B"
-stopifnot(identical(c(tN1), c(`NA`=1L, `NaN`=1L, NbN=1L)),
-	  identical(c(tN),  structure(2:1, .Names = c("A", NA))))
+(tN  <- table(fN, exclude = "B"))       ## had extraneous "B"
+(tN. <- table(fN, exclude = c("B",NA))) ## had extraneous "B" and NA
+stopifnot(identical(c(tN1), c(`NA`=1L, `NaN`=1L, NbN=1L))
+        , identical(c(tN),  structure(2:1, .Names = c("A", NA)))
+        , identical(c(tN.), structure(2L,  .Names = "A"))
+)
 ## both failed in R <= 3.3.1
-## Part II:
-x <- factor(c(1, 2, NA), exclude = NULL) ; is.na(x)[2] <- TRUE
-x
-stopifnot(identical(x, structure(as.integer(c(1, NA, 3)),
-				 .Label = c("1", "2", NA), class = "factor")))
-(txx <- table(x, exclude = NULL))
-stopifnot(identical(txx, table(x, useNA = "always")),
-	  identical(as.vector(txx), c(1:0, 2L)))
-## wrongly gave  1 0 1  for R versions  2.8.0 <= Rver <= 3.3.1
 stopifnot(identical(names(dimnames(table(data.frame(Titanic[2,2,,])))),
 		    c("Age", "Survived", "Freq"))) # was wrong for ~ 32 hours
+##
+## Part II:
+x <- factor(c(1, 2, NA, NA), exclude = NULL) ; is.na(x)[2] <- TRUE
+x # << two "different" NA's (in codes | w/ level) looking the same in print()
+stopifnot(identical(x, structure(as.integer(c(1, NA, 3, 3)),
+				 .Label = c("1", "2", NA), class = "factor")))
+(txx <- table(x, exclude = NULL))
+stopifnot(identical(txx, table(x, useNA = "ifany")),
+	  identical(as.vector(txx), c(1:0, 3L)))
+## wrongly gave  1 0 2  for R versions  2.8.0 <= Rver <= 3.3.1
+u.opt <- list(no="no", ifa = "ifany", alw = "always")
+l0 <- c(list(`_` = table(x)),
+           lapply(u.opt, function(use) table(x, useNA=use)))
+xcl <- list(NULL=NULL, none=""[0], "NA"=NA, NANaN = c(NA,NaN))
+options(op) # warnings ok:
+lt <- lapply(xcl, function(X)
+    c(list(`_` = table(x, exclude=X)), #--> 4 warnings from (exclude, useNA):
+      lapply(u.opt, function(use) table(x, exclude=X, useNA=use))))
+(y <- factor(c(4,5,6:5)))
+ly <-  lapply(xcl, function(X)
+    c(list(`_` = table(y, exclude=X)), #--> 4 warnings ...
+      lapply(u.opt, function(use) table(y, exclude=X, useNA=use))))
+lxy <-  lapply(xcl, function(X)
+    c(list(`_` = table(x, y, exclude=X)), #--> 4 warnings ...
+      lapply(u.opt, function(use) table(x, y, exclude=X, useNA=use))))
+op <- options(warn = 2)# no warnings allowed
+
+stopifnot(
+    vapply(lt, function(i) all(vapply(i, class, "") == "table"), NA),
+    vapply(ly, function(i) all(vapply(i, class, "") == "table"), NA),
+    vapply(lxy,function(i) all(vapply(i, class, "") == "table"), NA)
+    , identical((ltNA  <- lt [["NA"  ]]), lt [["NANaN"]])
+    , identical((ltNl  <- lt [["NULL"]]), lt [["none" ]])
+    , identical((lyNA  <- ly [["NA"  ]]), ly [["NANaN"]])
+    , identical((lyNl  <- ly [["NULL"]]), ly [["none" ]])
+    , identical((lxyNA <- lxy[["NA"  ]]), lxy[["NANaN"]])
+    , identical((lxyNl <- lxy[["NULL"]]), lxy[["none" ]])
+)
+## 'NULL' behaved special (2.8.0 <= R <= 3.3.1)  and
+##  *all* tables in l0 and lt were == (1 0 2) !
+ltN1 <- ltNA[[1]]; lyN1 <- lyNA[[1]]; lxyN1 <- lxyNA[[1]]
+lNl1 <- ltNl[[1]]; lyl1 <- lyNl[[1]]; lxyl1 <- lxyNl[[1]]
+
+stopifnot(
+    vapply(names(ltNA) [-1], function(n) identical(ltNA [[n]], ltN1 ), NA),
+    vapply(names(lyNA) [-1], function(n) identical(lyNA [[n]], lyN1 ), NA),
+    vapply(names(lxyNA)[-1], function(n) identical(lxyNA[[n]], lxyN1), NA),
+    identical(lyN1, lyl1),
+    identical(2L, dim(ltN1)), identical(3L, dim(lyN1)),
+    identical(3L, dim(lNl1)),
+    identical(dimnames(ltN1), list(x = c("1","2"))),
+    identical(dimnames(lNl1), list(x = c("1","2", NA))),
+    identical(dimnames(lyN1), list(y = paste(4:6))),
+    identical(  1:0    , as.vector(ltN1)),
+    identical(c(1:0,3L), as.vector(lNl1)),
+    identical(c(1:2,1L), as.vector(lyN1))
+    , identical(c(1L, rep(0L, 5)), as.vector(lxyN1))
+    , identical(dimnames(lxyN1), c(dimnames(ltN1), dimnames(lyN1)))
+)
+
+x3N <- c(1:3,NA)
+(tt <- table(x3N, exclude=NaN))
+stopifnot(tt == 1, length(nt <- names(tt)) == 4, is.na(nt[4])
+	, identical(tt, table(x3N, useNA = "ifany"))
+	, identical(tt, table(x3N, exclude = integer(0)))
+	, identical(t3N <- table(x3N), table(x3N, useNA="no"))
+	, identical(c(t3N), setNames(rep(1L, 3), as.character(1:3)))
+	##
+	, identical(c("2" = 1L), c(table(1:2, exclude=1) -> t12.1))
+	, identical(t12.1, table(1:2, exclude=1, useNA= "no"))
+	, identical(t12.1, table(1:2, exclude=1, useNA= "ifany"))
+	, identical(structure(1:0, .Names = c("2", NA)),
+		    c(     table(1:2, exclude=1, useNA= "always")))
+)
+options(op) # (revert to default)
 
 
 ## contour() did not check args sufficiently
@@ -1781,12 +1851,103 @@ stopifnot(length(uw <- unique(warnings())) == 2)
 ## unique() gave only one warning in  R <= 3.3.1
 
 
+op <- options(warn = 2)# no warnings allowed
+
 ## findInterval(x, vec)  when 'vec' is of length zero
 n0 <- numeric(); TF <- c(TRUE, FALSE)
 stopifnot(0 == unlist(lapply(TF, function(L1)
     lapply(TF, function(L2) lapply(TF, function(L3)
         findInterval(x=8:9, vec=n0, L1, L2, L3))))))
 ## did return -1's for all.inside=TRUE  in R <= 3.3.1
+
+
+## droplevels(<factor with NA-level>)
+L3 <- c("A","B","C")
+f <- d <- factor(rep(L3, 2), levels = c(L3, "XX")); is.na(d) <- 3:4
+(dn <- addNA(d)) ## levels: A B C XX <NA>
+stopifnot(identical(levels(print(droplevels(dn))), c(L3, NA))
+	  ## only XX must be dropped; R <= 3.3.1 also dropped <NA>
+	  , identical(levels(droplevels(f)), L3)
+	  , identical(levels(droplevels(d)), L3) # do *not* add <NA> here
+	  , identical(droplevels(d ), d [, drop=TRUE])
+	  , identical(droplevels(f ), f [, drop=TRUE])
+	  , identical(droplevels(dn), dn[, drop=TRUE])
+	  )
+
+
+## summary.default() no longer rounds (just its print() method does):
+set.seed(0)
+replicate(256, { x <- rnorm(1); stopifnot(summary(x) == x)}) -> .t
+replicate(256, { x <- rnorm(2+rpois(1,pi))
+    stopifnot(min(x) <= (sx <- summary(x)), sx <= max(x))}) -> .t
+## was almost always wrong in R <= 3.3.x
+
+
+## NULL in integer arithmetic
+i0 <- integer(0)
+stopifnot(identical(1L + NULL, 1L + integer()),
+	  identical(2L * NULL, i0),
+	  identical(3L - NULL, i0))
+## gave double() in R <= 3.3.x
+
+
+##  factor(x, exclude)  when  'x' or 'exclude' are  character:
+stopifnot(identical(factor(c(1:2, NA), exclude = ""),
+		    factor(c(1:2, NA), exclude = NULL) -> f12N))
+fab <- factor(factor(c("a","b","c")), exclude = "c")
+stopifnot(identical(levels(fab), c("a","b")))
+faN <- factor(c("a", NA), exclude=NULL)
+stopifnot(identical(faN, factor(faN, exclude="c")))
+## differently with NA coercion warnings in R <= 3.3.x
+
+
+## arithmetic, logic, and comparison (relop) for 0-extent arrays
+(m <- cbind(a=1[0], b=2[0]))
+Lm <- m; storage.mode(Lm) <- "logical"
+Im <- m; storage.mode(Im) <- "integer"
+stopifnot(
+    identical( m, m + 1 ), identical( m,  m + 1 [0]), identical( m,  m + NULL),
+    identical(Im, Im+ 1L), identical(Im, Im + 1L[0]), identical(Im, Im + NULL),
+    identical(m, m + 2:3), identical(Im, Im + 2:3),
+    identical(Lm, m & 1),  identical(Lm,  m | 2:3),
+    identical(Lm, m & TRUE[0]), identical(Lm, Lm | FALSE[0]),
+    identical(Lm, m & NULL), # gave Error (*only* place where NULL was not allowed)
+    identical(Lm, m > 1), identical(Lm, m > .1[0]), identical(Lm, m > NULL),
+    identical(Lm, m <= 2:3)
+)
+mm <- m[,c(1:2,2:1,2)]
+tools::assertError(m + mm) # ... non-conformable arrays
+tools::assertError(m | mm) # ... non-conformable arrays
+tools::assertError(m == mm)# ... non-conformable arrays
+## in R <= 3.3.x, relop returned logical(0) and  m + 2:3  returned numeric(0)
+
+## arithmetic, logic, and comparison (relop) -- inconsistency for 1x1 array o <vector >= 2>:
+(m1 <- matrix(1,1,1, dimnames=list("Ro","col")))
+(m2 <- matrix(1,2,1, dimnames=list(c("A","B"),"col")))
+if(FALSE) { # in the future (~ 2018):
+tools::assertError(m1  + 1:2) ## was [1] 2 3  even w/o warning in R <= 3.3.x
+} else tools::assertWarning(m1v <- m1 + 1:2); stopifnot(identical(m1v, 1+1:2))
+tools::assertError(m1  & 1:2) # ERR: dims [product 1] do not match the length of object [2]
+tools::assertError(m1 <= 1:2) # ERR:                  (ditto)
+##
+## non-0-length arrays combined with {NULL or double() or ...} *fail*
+n0 <- numeric(0)
+l0 <- logical(0)
+stopifnot(identical(m1 + NULL, n0), # as "always"
+	  identical(m1 +  n0 , n0), # as "always"
+	  identical(m1 & NULL, l0), # ERROR in R <= 3.3.x
+	  identical(m1 &  l0,  l0), # ERROR in R <= 3.3.x
+	  identical(m1 > NULL, l0), # as "always"
+	  identical(m1 >  n0 , l0)) # as "always"
+## m2 was slightly different:
+stopifnot(identical(m2 + NULL, n0), # ERROR in R <= 3.3.x
+	  identical(m2 +  n0 , n0), # ERROR in R <= 3.3.x
+	  identical(m2 & NULL, l0), # ERROR in R <= 3.3.x
+	  identical(m2 &  l0 , l0), # ERROR in R <= 3.3.x
+	  identical(m2 == NULL, l0), # as "always"
+	  identical(m2 ==  n0 , l0)) # as "always"
+
+
 
 
 

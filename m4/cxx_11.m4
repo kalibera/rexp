@@ -10,8 +10,8 @@
 #
 #   Check for baseline language coverage in the compiler for the specified
 #   version of the C++ standard.  If necessary, add switches to CXX and
-#   CXXCPP to enable support.  VERSION may be '11' (for the C++11 standard)
-#   or '14' (for the C++14 standard).
+#   CXXCPP to enable support.  VERSION may be '11' (for the C++11 standard),
+#   '14' (for the C++14 standard), or '98' (for the C++98 standard).
 #
 #   The second argument, if specified, indicates whether you insist on an
 #   extended mode (e.g. -std=gnu++11) or a strict conformance mode (e.g.
@@ -42,12 +42,27 @@
 # cxx_compile_stdcxx serial 4
 
 dnl  This macro is based on the code from the AX_CXX_COMPILE_STDCXX_11 macro
-dnl  (serial version number 13). It has been modified to remove the check
-dnl  to see if the given standard is supported by default.
+dnl  (serial version number 13). It has been extended to include a search for
+dnl  flag to support C++98 code.
 
 AC_DEFUN([AX_CXX_COMPILE_STDCXX], [dnl
-  m4_if([$1], [11], [],
-        [$1], [14], [],
+  m4_if([$1], [98], [
+  	      dnl gnu+98 is g++, clang++, Intel.
+	      dnl c++03 and sun03 are Oracle Studio
+       	      ax_cxx_ext_switches="-std=gnu++98"
+	      ax_cxx_noext_switches="-std=c++98 -std=c++03 -std=sun03"
+  	],
+  	[$1], [11], [
+	      dnl HP's aCC needs +std=c++11
+	      dnl Cray's crayCC needs "-h std=c++11"
+	      dnl Both omitted here
+       	      ax_cxx_ext_switches="-std=gnu++11 -std=gnu++0x"
+	      ax_cxx_noext_switches="-std=c++11 -std=c++0x"
+	],
+        [$1], [14], [
+       	      ax_cxx_ext_switches="-std=gnu++14 -std=gnu++0y"
+	      ax_cxx_noext_switches="-std=c++14 -std=c++0y"
+	],
         [$1], [17], [m4_fatal([support for C++17 not yet implemented in AX_CXX_COMPILE_STDCXX])],
         [m4_fatal([invalid first argument `$1' to AX_CXX_COMPILE_STDCXX])])dnl
   m4_if([$2], [], [],
@@ -61,9 +76,19 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX], [dnl
   AC_LANG_PUSH([C++])dnl
   ac_success=no
 
+  switch=""
+  AC_CACHE_CHECK(whether $CXX supports C++$1 features by default,
+  ax_cv_cxx_compile_cxx$1,
+  [AC_COMPILE_IFELSE([AC_LANG_SOURCE([_AX_CXX_COMPILE_STDCXX_testbody_$1])],
+    [ax_cv_cxx_compile_cxx$1=yes],
+    [ax_cv_cxx_compile_cxx$1=no])])
+  if test x$ax_cv_cxx_compile_cxx$1 = xyes; then
+    ac_success=yes
+  fi
+
   m4_if([$2], [noext], [], [dnl
   if test x$ac_success = xno; then
-    for switch in -std=gnu++$1 -std=gnu++0x; do
+    for switch in $ax_cxx_ext_switches; do
       cachevar=AS_TR_SH([ax_cv_cxx_compile_cxx$1_$switch])
       AC_CACHE_CHECK(whether $CXX supports C++$1 features with $switch,
                      $cachevar,
@@ -86,10 +111,7 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX], [dnl
 
   m4_if([$2], [ext], [], [dnl
   if test x$ac_success = xno; then
-    dnl HP's aCC needs +std=c++11 according to:
-    dnl http://h21007.www2.hp.com/portal/download/files/unprot/aCxx/PDF_Release_Notes/769149-001.pdf
-    dnl Cray's crayCC needs "-h std=c++11"
-    for switch in -std=c++$1 -std=c++0x +std=c++$1 "-h std=c++$1"; do
+    for switch in $ax_cxx_noext_switches; do
       cachevar=AS_TR_SH([ax_cv_cxx_compile_cxx$1_$switch])
       AC_CACHE_CHECK(whether $CXX supports C++$1 features with $switch,
                      $cachevar,
@@ -115,49 +137,61 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX], [dnl
       AC_MSG_ERROR([*** A compiler with support for C++$1 language features is required.])
     fi
   fi
+dnl HAVE_CXX$1 is currently unused.
   if test x$ac_success = xno; then
     HAVE_CXX$1=0
     AC_MSG_NOTICE([No compiler with C++$1 support was found])
   else
     HAVE_CXX$1=1
-    AC_DEFINE(HAVE_CXX$1,1,
-              [define if the compiler supports basic C++$1 syntax])
+dnl    AC_DEFINE(HAVE_CXX$1,1,
+dnl              [define if the compiler supports basic C++$1 syntax])
   fi
   AC_SUBST(HAVE_CXX$1)
 ])
 
+dnl  Test body for checking C++98 support
+
+m4_define([_AX_CXX_COMPILE_STDCXX_testbody_98],[
+#ifndef __cplusplus
+# error "This is not a C++ compiler"
+#endif
+// or we could test for later than C++03 
+#if __cplusplus >= 201103L
+# error "This is a C++11 or C++14 compiler"
+#endif
+])
 
 dnl  Test body for checking C++11 support
 
 m4_define([_AX_CXX_COMPILE_STDCXX_testbody_11],
+#ifndef __cplusplus
+# error "This is not a C++ compiler"
+#elif __cplusplus < 201103L
+# error "This is not a C++11 compiler"
+#elif __cplusplus >= 201402L
+# error "This is a C++14 compiler"
+#else
   _AX_CXX_COMPILE_STDCXX_testbody_new_in_11
+#endif
 )
 
 
 dnl  Test body for checking C++14 support
 
 m4_define([_AX_CXX_COMPILE_STDCXX_testbody_14],
+#ifndef __cplusplus
+# error "This is not a C++ compiler"
+#elif __cplusplus < 201402L
+# error "This is not a C++14 compiler"
+#else
   _AX_CXX_COMPILE_STDCXX_testbody_new_in_11
   _AX_CXX_COMPILE_STDCXX_testbody_new_in_14
+#endif
 )
-
 
 dnl  Tests for new features in C++11
 
 m4_define([_AX_CXX_COMPILE_STDCXX_testbody_new_in_11], [[
-
-// If the compiler admits that it is not ready for C++11, why torture it?
-// Hopefully, this will speed up the test.
-
-#ifndef __cplusplus
-
-#error "This is not a C++ compiler"
-
-#elif __cplusplus < 201103L
-
-#error "This is not a C++11 compiler"
-
-#else
 
 namespace cxx11
 {
@@ -380,10 +414,17 @@ namespace cxx11
     template <int...>
     struct sum;
 
+    /*
+       Original test code used the auto keyword instead of declaring
+       the type of "value" to be int. This causes Oracle Solaris Studio
+       12.4 to fail. This is possibly a compiler bug but in any case
+       current test code works around it by an explicit declaration.
+    */
+       
     template <int N0, int... N1toN>
     struct sum<N0, N1toN...>
     {
-      static constexpr auto value = N0 + sum<N1toN...>::value;
+      static constexpr int value = N0 + sum<N1toN...>::value;
     };
 
     template <>
@@ -426,8 +467,6 @@ namespace cxx11
 
 }  // namespace cxx11
 
-#endif  // __cplusplus >= 201103L
-
 ]])
 
 
@@ -438,15 +477,6 @@ m4_define([_AX_CXX_COMPILE_STDCXX_testbody_new_in_14], [[
 // If the compiler admits that it is not ready for C++14, why torture it?
 // Hopefully, this will speed up the test.
 
-#ifndef __cplusplus
-
-#error "This is not a C++ compiler"
-
-#elif __cplusplus < 201402L
-
-#error "This is not a C++14 compiler"
-
-#else
 
 namespace cxx14
 {
@@ -549,7 +579,5 @@ namespace cxx14
   }
 
 }  // namespace cxx14
-
-#endif  // __cplusplus >= 201402L
 
 ]])

@@ -3803,7 +3803,7 @@ function(dir, makevars = c("Makevars.in", "Makevars"))
     if(!length(lines) || inherits(lines, "error"))
         return(bad_flags)
 
-    prefixes <- c("CPP", "C", "CXX", "CXX1X", "CXX1Y", "F", "FC", "OBJC", "OBJCXX")
+    prefixes <- c("CPP", "C", "CXX", "CXX98", "CXX1X", "CXX1Y", "F", "FC", "OBJC", "OBJCXX")
 
     uflags_re <- sprintf("^(%s)FLAGS: *(.*)$",
                          paste(prefixes, collapse = "|"))
@@ -3831,12 +3831,15 @@ function(dir, makevars = c("Makevars.in", "Makevars"))
     bad_flags_regexp <-
         sprintf("^-(%s)$",
                 paste(c("O.*",
-                        "W",
+                        "W", # same as -Wextra in GCC.
+                        "w", # GCC, Solaris inhibit all warnings
                         "W[^l].*", # -Wl, might just be portable
                         "ansi", "pedantic", "traditional",
-                        "f.*", "m.*", "std.*",
+                        "f.*", "m.*", "std.*", # includes -fopenmp
                         "isystem", # gcc and clones
                         "x",
+                        "cpp", # gfortran
+                        "g",  # not portable, waste of space
                         "q"),
                       collapse = "|"))
     for(i in seq_along(lines)) {
@@ -6626,7 +6629,7 @@ function(dir, localOnly)
     nms <- names(meta)
     stdNms <- .get_standard_DESCRIPTION_fields()
     nms <- nms[is.na(match(nms, stdNms)) &
-               !grepl("^(X-CRAN|Repository/R-Forge)", nms)]
+               !grepl("^(X-CRAN|Repository/R-Forge|VCS/|Config/)", nms)]
     if(length(nms) && ## Allow maintainer notes  <stdName>Note :
        length(nms <- nms[is.na(match(nms, paste0(stdNms,"Note")))]))
         out$fields <- nms
@@ -7153,8 +7156,26 @@ function(dir, localOnly)
         ## Be defensive about building the package URL db.
         bad <- tryCatch(check_url_db(url_db_from_package_sources(dir)),
                         error = identity)
-        if(inherits(bad, "error") || NROW(bad))
+        if(inherits(bad, "error")) {
             out$bad_urls <- bad
+        } else if(NROW(bad)) {
+            ## When checking a new submission, take the canonical CRAN
+            ## package URL as ok, and signal variants using http instead
+            ## of https as non-canonical instead of showing "not found".
+            url <- sprintf("https://cran.r-project.org/package=%s",
+                           package)
+            if(any(ind <- (tolower(bad$URL) == url)))
+                bad <- bad[!ind, ]
+            url <- sprintf("http://cran.r-project.org/package=%s",
+                           package)
+            if(any(ind <- (tolower(bad$URL) == url)))
+                bad[ind, c("URL", "Status", "Message", "CRAN")] <-
+                    do.call(rbind,
+                            rep.int(list(c(url, "", "", url)),
+                                    sum(ind)))
+            if(NROW(bad))
+                out$bad_urls <- bad
+        }
     } else out$no_url_checks <- TRUE
 
     ## Check DOIs.

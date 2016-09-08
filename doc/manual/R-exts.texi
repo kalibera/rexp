@@ -4178,13 +4178,15 @@ should not use @option{-n} (as the first argument) nor escape sequences.
 
 @item
 Make use of the abilities of your compilers to check the
-standards-conformance of your code.  For example, @command{gcc} can be
-used with options @option{-Wall -pedantic} to alert you to potential
-problems.  This is particularly important for C++, where @code{g++ -Wall
--pedantic} will alert you to the use of GNU extensions which fail to
-compile on most other C++ compilers. If @R{} was not configured
-accordingly, one can achieve this @emph{via} personal @file{Makevars}
-files.
+standards-conformance of your code.  For example, @command{gcc} and
+@command{gfortran}@footnote{@uref{http://fortranwiki.org/@/fortran/@/show/Modernizing+Old+Fortran}
+may help explain some of the warnings from @command{gfortran -Wall
+-pedantic}.}  can be used with options @option{-Wall -pedantic} to
+alert you to potential problems.  This is particularly important for
+C++, where @code{g++ -Wall -pedantic} will alert you to the use of GNU
+extensions which fail to compile on most other C++ compilers. If @R{}
+was not configured accordingly, one can achieve this @emph{via} personal
+@file{Makevars} files.
 @ifset UseExternalXrefs
 @xref{Customizing package compilation, , Customizing package compilation,
 R-admin, R Installation and Administration},
@@ -4199,9 +4201,16 @@ If you use FORTRAN 77, @code{ftnchek}
 (@uref{http://www.dsm.fordham.edu/@/~ftnchek/}) provides thorough testing
 of conformance to the standard.
 
-If using Fortran 95 with the GNU compiler, use the flag
-@option{-std=f95} which rejects most GNU extensions and features from
-later standards.
+If using Fortran 9x with the GNU compiler, use the flags
+@option{-std=f95 -Wall -pedantic} which reject most GNU extensions and
+features from later standards.
+
+@R{} has tested that @code{DOUBLE COMPLEX} works (although an extension
+to the Fortran standards) and so is preferred to @code{COMPLEX*16}.
+(Fortran 9x code can use something like
+@code{COMPLEX(KIND=KIND(0.0D0)}@footnote{See
+@uref{http://people.ds.cam.ac.uk/nmm1/fortran/paper_07.pdf}.}.)
+
 
 Not all common @R{} platforms conform to the expected standards, e.g.@:
 C99 for C code.  One common area of problems is the @code{*printf}
@@ -4214,15 +4223,20 @@ integers can usually be converted to doubles for output.
 @command{R CMD check} performs some checks for non-portable
 compiler/linker flags in @file{src/Makevars}.  However, it cannot check
 the meaning of such flags, and some are commonly accepted but with
-compiler-specific meanings.  There are other non-portable flags such as
-@option{-isystem} which are not checked and @file{src/Makefile} files
-and makefiles is sub-directories are also not checked.  As a comment in
-the code says
+compiler-specific meanings.  There are other non-portable flags which
+are not checked, nor are @file{src/Makefile} files and makefiles in
+sub-directories.  As a comment in the code says
 
 @quotation
 It is hard to think of anything apart from @option{-I*} and @option{-D*}
 that is safe for general use @dots{}
 @end quotation
+
+@noindent
+although @option{-pthread} is pretty close to portable.  (Option
+@option{-U} is portable but little use on the command line as it will
+only cancel built-in defines (not portable) and those defined earlier on
+the command line (@R{} does not use any).)
 
 @item
 Do be very careful with passing arguments between @R{}, C and
@@ -4610,16 +4624,40 @@ so it is strongly recommended to check in a UTF-8 locale.
 
 Writing portable C and C++ code is mainly a matter of observing the
 standards (C99, C++98 or where declared C++11/14) and testing that
-extensions (such as POSIX functions) are supported.  However, some
-common errors are worth pointing out here.  It can be helpful to look up
-functions at @uref{http://www.cplusplus.com/reference/} or
+extensions (such as POSIX functions) are supported.  Note that the POSIX
+standards only require recently-defined functions to be declared if
+certain macros are defined with large enough values, and on some
+compiler/OS combinations@footnote{This is seen on Linux and Solaris,
+although each has other ways to turn on all extensions, e.g.@: defining
+@code{_GNU_SOURCE} or @code{__EXTENSIONS__}: the GCC compilers by
+default define @code{_GNU_SOURCE} unless a strict standard such as
+@option{-std=c99} is used.  On OS X extensions are declared unless one
+of these macros is given too small a value.} they are not declared
+otherwise.  So you may need to include something like one of
+@footnote{Solaris 10 does not recognize this value of
+@code{_POSIX_C_SOURCE}, nor values of @code{_XOPEN_SOURCE} beyond 600.}
+@example
+#define _XOPEN_SOURCE 500
+@end example
+or
+@example
+#ifdef __GLIBC__
+# define _POSIX_C_SOURCE 200809L
+#endif
+@end example
+before @emph{any} headers.  (@code{strdup} and @code{strncasecmp} are
+two such functions.)
+
+However, some common errors are worth pointing out here.  It can be
+helpful to look up functions at
+@uref{http://www.cplusplus.com/reference/} or
 @uref{http://en.cppreference.com/w/} and compare what is defined in the
 various standards.
 
-Both the compiler and OS (@emph{via} system header files, which differ
-by architecture even for nominally the same OS) affect the compilability
-of C/C++ code.  Compilers from the GCC, @command{clang}, Intel and
-Oracle Studio suites are routinely used with @R{}, and both
+Both the compiler and OS (@emph{via} system header files, which may
+differ by architecture even for nominally the same OS) affect the
+compilability of C/C++ code.  Compilers from the GCC, @command{clang},
+Intel and Oracle Studio suites are routinely used with @R{}, and both
 @command{clang} and Oracle have more than one implementation of C++
 headers and library.  The range of possibilities makes comprehensive
 empirical checking impossible, and regrettably compilers are patchy at
@@ -4698,10 +4736,14 @@ The GNU Fortran compiler also supports a large number of non-portable
 extensions, the most commonly encountered one being
 @code{ISNAN}@footnote{There is a portable way to do this in Fortran 2003
 (@code{ieee_is_nan()} in module @code{ieee_arithmetic}), but ironically
-that is not supported in the commonly-used versions 4.x of GNU
-Fortran.  A pretty robust alternative is to test @code{if(my_var /=
-my_var)}.}.  Some are listed at
-@uref{https://gcc.gnu.org/@/onlinedocs/@/gfortran/@/Extensions-implemented-in-GNU-Fortran.html}
+that is not supported in the commonly-used versions 4.x of GNU Fortran.
+A pretty robust alternative is to test @code{if(my_var /= my_var)}.}.
+Some are listed at
+@uref{https://gcc.gnu.org/@/onlinedocs/@/gfortran/@/Extensions-implemented-in-GNU-Fortran.html}.
+One that frequently catches package writers is that it allows
+out-of-order declarations: in standard-conformant Fortran variables must
+be declared (explicitly or implicitly) before use in other declarations
+such as dimensions.
 
 @item
 Including C-style headers in C++ code is not portable.  Including the
@@ -4761,9 +4803,12 @@ The most common issue involves the names of the Intel CPU registers such
 as @code{CS}, @code{DS}, @code{ES}, @code{FS}, @code{GS} and @code{SS}
 (and more with longer abbreviations) defined on i586/x64 Solaris in
 @file{<sys/regset.h>} and often included indirectly by @file{<stdlib.h>}
-and other core headers.  Further examples are @code{ERR}, @code{zero}
-and @code{I} (which is defined in Solaris' @file{<complex.h>} as a
-compiler intrinsic for the imaginary unit).
+and other core headers.  Further examples are @code{ERR},
+@code{LITTLE_ENDIAN}, @code{zero} and @code{I} (which is defined in
+Solaris' @file{<complex.h>} as a compiler intrinsic for the imaginary
+unit).  Some of these can be avoided by defining @code{_POSIX_C_SOURCE}
+before including any system headers, but it is better to only use
+all-upper-case names which have a unique prefix such as the package name.
 
 @item
 @code{typedef}s in OS headers can conflict with those in the package: an
@@ -4791,7 +4836,7 @@ Package authors commonly assume things are part of C99 when they are
 not: the most common example is POSIX function @code{strdup}.  The most
 common C library on Linux, @code{glibc}, will hide the declarations of
 such extensions unless a `feature-test macro' is defined @strong{before}
-(almost) any header is included.  So for @code{strdup} you need
+(almost) any system header is included.  So for @code{strdup} you need
 @example
 #define _POSIX_C_SOURCE 200809L
 ...
@@ -11390,10 +11435,20 @@ the external pointer represents, if that memory is allocated from the
 @R{} heap.  Both @code{tag} and @code{prot} can be @code{R_NilValue},
 and often are.
 
+An alternative way as from @R{} 3.4.0 to create an external pointer from
+a function pointer is
+
+@example
+typedef void * (*R_DL_FUNC)();
+SEXP R_MakeExternalPtrFn(R_DL_FUNC p, SEXP tag, SEXP prot);
+@end example
+
+
 The elements of an external pointer can be accessed and set @emph{via}
 
 @example
 void *R_ExternalPtrAddr(SEXP s);
+DL_FUNC R_ExternalPtrAddrFn(SEXP s);
 SEXP R_ExternalPtrTag(SEXP s);
 SEXP R_ExternalPtrProtected(SEXP s);
 void R_ClearExternalPtr(SEXP s);

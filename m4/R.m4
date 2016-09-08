@@ -560,52 +560,6 @@ if test "${r_cv_prog_cxx}" = no; then
 fi
 ])# R_PROG_CXX
 
-## R_PROG_CXX98FLAG
-## ----------
-## Find a flag for CXX which specifies C++98
-AC_DEFUN([R_PROG_CXX98FLAG],
-[AC_CACHE_CHECK([for a flag so ${CXX} ${CXXFLAGS} compiles in C++98 mode],
-[r_cv_prog_cxx98],
-[AC_LANG_PUSH([C++])dnl
-ac_success=
-R_save_CXX="$CXX"
-## gnu+98 is g++, clang++, Intel.  c++03 is Oracle Studio (and default)
-for switch in "${CXXSTD}" "" -std=gnu++98 -std=c++98 -std=c++03; do
-   CXX="$CXX $switch"
-AC_COMPILE_IFELSE([AC_LANG_SOURCE(
-[#ifndef __cplusplus
-# error "not a C++ compiler"
-#endif
-// or we could test for later than C++03 
-#if __cplusplus >= 201103L
-# error "C++11 compiler"
-#endif
-])], [ac_success=yes], [ac_success=no])
-if test "$ac_success" = "yes"; then 
-  break
-fi
-done
-CXX="${R_save_CXX}"
-if test "$ac_success" = "yes"; then 
-  if test -n "$switch"; then
-    r_cv_prog_cxx98="$switch"
-  else
-    r_cv_prog_cxx98="none needed"
-  fi
-else
- r_cv_prog_cxx98="unknown"
-fi
-AC_LANG_POP([C++])dnl
-])
-if test "$r_cv_prog_cxx98" != "unknown"; then
-  CXX98STD="$r_cv_prog_cxx98"
-fi
-if test "$r_cv_prog_cxx98" = "none needed"; then
-  CXX98STD=
-fi
-AC_SUBST(CXX98STD)
-])# R_PROG_CXX98FLAG
-
 ## R_PROG_CXX_M
 ## ------------
 ## Check whether the C++ compiler accepts '-M' for generating
@@ -4139,11 +4093,11 @@ if test "x${r_cv_working_mktime}" = xyes; then
 fi
 ])# R_FUNC_MKTIME
 
-## R_CXX1X
-## -------
-## Support for C++11 or later, for use in packages.
-## R_CXX1X(VERSION, PREFIX, DEFAULT)
-AC_DEFUN([R_CXX1X],
+## R_STDCXX
+## --------
+## Support for C++ standards (C++98, C++11, C++14), for use in packages.
+## R_STDCXX(VERSION, PREFIX, DEFAULT)
+AC_DEFUN([R_STDCXX],
 [r_save_CXX="${CXX}"
 r_save_CXXFLAGS="${CXXFLAGS}"
 
@@ -4154,7 +4108,7 @@ r_save_CXXFLAGS="${CXXFLAGS}"
 CXX="${$2} ${$2STD}"
 CXXFLAGS="${$2FLAGS} ${$2PICFLAGS}"
 AC_LANG_PUSH([C++])dnl
-AX_CXX_COMPILE_STDCXX([$1], [noext], [optional])
+AX_CXX_COMPILE_STDCXX([$1], [], [optional])
 AC_LANG_POP([C++])dnl Seems the macro does not always get this right
 CXX="${r_save_CXX}"
 CXXFLAGS="${r_save_CXXFLAGS}"
@@ -4194,7 +4148,7 @@ AC_ARG_VAR([SHLIB_$2LD],
            [command for linking shared objects which contain object
             files from the C++$1 compiler])
 AC_ARG_VAR([SHLIB_$2LDFLAGS], [special flags used by SHLIB_$2LD])
-])# R_CXX1X
+])# R_STDCXX
 
 ## R_LIBCURL
 ## ----------------

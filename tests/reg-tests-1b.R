@@ -147,7 +147,7 @@ stopifnot(p > 0.001)
 Dates <- seq(as.Date("2005/01/01"), as.Date("2009/01/01"), "day")
 months <- format(Dates, format = "%m")
 years <- format(Dates, format = "%Y")
-mn <- as.vector(unlist(sapply(split(months, years), table)))
+mn <- unlist(lapply(unname(split(months, years)), table), use.names=FALSE)
 ty <- as.vector(table(years))
 # Test hist.Date() for months
 stopifnot(identical(hist(Dates, "month", plot = FALSE)$counts, mn))
@@ -321,7 +321,7 @@ stopifnot(identical(unclass(z), c('z', 'y', 'x', 'w')))
 ## repeated third and later args in R < 2.7.1.
 
 ## PD found that f==f contains NA when f has NA levels (but no missing value)
-f1 <- factor(c(1, 2, NA), exclude = "")
+f1 <- factor(c(1, 2, NA), levels = 1:2)
 f2 <- factor(c(1, 2, NA), exclude = NULL)
 stopifnot(identical(f1, factor(c(1,2,NA))),
           nlevels(f1) == 2, nlevels(f2) == 3,

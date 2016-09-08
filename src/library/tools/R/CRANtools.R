@@ -206,7 +206,7 @@ function()
 ## more-freqently-updated mirror.
 CRAN_baseurl_for_web_area <-
 function()
-    Sys.getenv("R_CRAN_WEB", getOption("repos")["CRAN"])
+    Sys.getenv("R_CRAN_WEB", .get_standard_repository_URLs()[1L])
 
 read_CRAN_object <-
 function(cran, path)
@@ -368,7 +368,7 @@ function(mirrors = NULL, verbose = FALSE)
 }
 
 CRAN_mirror_maintainers_info <-
-function(mirrors, db = NULL)
+function(mirrors, db = NULL, collapse = TRUE)
 {
     if(is.null(db))
         db <- utils::getCRANmirrors(all = TRUE)
@@ -376,13 +376,16 @@ function(mirrors, db = NULL)
     ind <- match(mirrors, as.character(db$URL))
     addresses <- db[ind, "Maintainer"]
     addresses <- gsub("[[:space:]]*#[[:space:]]*", "@", addresses)
-    to <- paste(unique(unlist(strsplit(addresses,
-                                       "[[:space:]]*,[[:space:]]*"))),
-                collapse = ",\n    ")
-    head <- c(paste("To:", to),
-              "CC: CRAN@R-project.org",
-              "Subject: CRAN mirrors maintained by you",
-              "Reply-To: CRAN@R-project.org")
+    to <- unique(unlist(strsplit(addresses,
+                                 "[[:space:]]*,[[:space:]]*")))
+    head <- list("To" = to,
+                 "CC" = "CRAN@R-project.org",
+                 "Subject" = "CRAN mirrors maintained by you",
+                 "Reply-To" = "CRAN@R-project.org")
+    if(collapse) {
+        head$To <- paste(head$To, collapse = ",\n    ")
+        head <- sprintf("%s: %s", names(head), unlist(head))
+    }
     len <- length(addresses)
     body <- c(if(len > 1L) {
                   "Dear maintainers,"
@@ -548,17 +551,21 @@ function()
 }
 
 CRAN_package_maintainers_info <-
-function(packages, db = NULL)
+function(packages, db = NULL, collapse = TRUE)
 {
     if(is.null(db))
         db <- CRAN_package_maintainers_db()
     ind <- match(packages, db[, "Package"])
     addresses <- db[ind, "Address"]
-    to <- paste(sort(unique(addresses)), collapse = ",\n    ")
-    head <- c(paste("To:", to),
-              "CC: CRAN@R-project.org",
-              "Subject: CRAN packages maintained by you",
-              "Reply-To: CRAN@R-project.org")
+    to <- sort(unique(addresses))
+    head <- list("To" = to,
+                 "CC" = "CRAN@R-project.org",
+                 "Subject" = "CRAN packages maintained by you",
+                 "Reply-To" = "CRAN@R-project.org")
+    if(collapse) {
+        head$To <- paste(head$To, collapse = ",\n    ")
+        head <- sprintf("%s: %s", names(head), unlist(head))
+    }
     lst <- split(db[ind, "Package"], db[ind, "Maintainer"])
     len <- length(addresses)
     body <- c(if(len > 1L) {

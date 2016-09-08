@@ -28,8 +28,12 @@ factor <- function(x = character(), levels, labels = levels,
 	levels <- unique(y[ind])
     }
     force(ordered) # check if original x is an ordered factor
-    exclude <- as.vector(exclude, typeof(x)) # may result in NA
-    x <- as.character(x)
+    if(!is.character(x)) {
+	if(!is.character(exclude))
+	    exclude <- as.vector(exclude, typeof(x)) # may result in NA
+	x <- as.character(x)
+    } else
+	exclude <- as.vector(exclude, typeof(x)) # may result in NA
     ## levels could be a long vectors, but match will not handle that.
     levels <- levels[is.na(match(levels, exclude))]
     f <- match(x, levels)
@@ -103,12 +107,17 @@ nlevels <- function(x) length(levels(x))
 }
 
 droplevels <- function(x, ...) UseMethod("droplevels")
-droplevels.factor <- function(x, ...) factor(x)
-droplevels.data.frame <- function(x, except = NULL, ...)
+## default 'exclude' matches `[.factor` (drop=TRUE)
+droplevels.factor <- function(x, exclude = if(anyNA(levels(x))) NULL else NA, ...)
+    factor(x, exclude = exclude)
+
+droplevels.data.frame <- function(x, except = NULL, exclude, ...)
   {
     ix <- vapply(x, is.factor, NA)
     if (!is.null(except)) ix[except] <- FALSE
-    x[ix] <- lapply(x[ix], factor)
+    x[ix] <- if(missing(exclude))
+		  lapply(x[ix], droplevels)
+	     else lapply(x[ix], droplevels, exclude=exclude)
     x
   }
 
