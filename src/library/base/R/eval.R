@@ -44,9 +44,15 @@ parent.env <- function(env)
 `parent.env<-` <- function(env, value)
     .Internal("parent.env<-"(env, value))
 
-local <-
-    function (expr, envir = new.env())
-    eval.parent(substitute(eval(quote(expr), envir)))
+local <- function (expr, envir)
+{
+    if (missing(envir))
+        .Internal(eval(substitute((function() expr)()), parent.frame(), NULL))
+    else
+        .Internal(eval(substitute(expr), envir,
+            if (is.list(envir) || is.pairlist(envir)) enclos <- parent.frame()
+            else enclos <- baseenv()))
+}
 
 Recall <- function(...) .Internal(Recall(...))
 
