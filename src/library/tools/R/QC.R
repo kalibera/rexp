@@ -5938,7 +5938,7 @@ function(dir, testdir, lib.loc = NULL)
     od <- setwd(testsrcdir)
     on.exit(setwd(od))
     Rinfiles <- dir(".", pattern="\\.Rin$") # only trackOjs has *.Rin
-    Rfiles <- dir(".", pattern="\\.R$")
+    Rfiles <- dir(".", pattern="\\.[rR]$")
     .check_packages_used_helper(db, c(Rinfiles, Rfiles))
 }
 
@@ -6539,10 +6539,11 @@ function(x, ...)
 
 ### * .check_package_CRAN_incoming
 
-## localOnly means to skip tests requiring Internet access. These are all done first.
+## localOnly means to skip tests requiring Internet access.
+## These are all done first.
 
 .check_package_CRAN_incoming <-
-function(dir, localOnly)
+function(dir, localOnly = FALSE)
 {
     out <- list()
     class(out) <- "check_package_CRAN_incoming"

@@ -1281,7 +1281,7 @@ is too complex to put in the @file{DESCRIPTION} file.
 
 Subdirectory @file{tests} is for additional package-specific test code,
 similar to the specific tests that come with the @R{} distribution.
-Test code can either be provided directly in a @file{.R} file, or
+Test code can either be provided directly in a @file{.R} (or @file{.r}) file, or
 @emph{via} a @file{.Rin} file containing code which in turn creates the
 corresponding @file{.R} file (e.g., by collecting all function objects
 in the package and then calling them with the strangest arguments).  The
@@ -3220,7 +3220,10 @@ placing them in the @file{inst/doc} hierarchy of the source package or
 by using calls to @code{system.file()}.  All other files needed to
 re-make the vignettes (such as @LaTeX{} style files, Bib@TeX{} input
 files and files for any figures not created by running the code in the
-vignette) must be in the vignette source directory.
+vignette) must be in the vignette source directory.  @code{R CMD check} 
+will check that vignette production has succeeded by comparing
+modification times of output files in @file{inst/doc} with
+the source in @file{vignettes}.
 
 @code{R CMD build} will automatically@footnote{unless inhibited by using
 @samp{BuildVignettes: no} in the @file{DESCRIPTION} file.} create the
@@ -4790,6 +4793,14 @@ namespace.  One way to do so is to use declarations such as
 @example
 using std::floor;
 @end example
+but it is usually preferable to use explicit namespace prefixes in the code.
+
+Examples seen in @acronym{CRAN} packages include
+@example
+abs acos atan calloc ceil div exp fabs floor fmod free log malloc memcpy
+memset pow printf qsort round sin sprintf sqrt strcmp strcpy strerror
+strlen strncmp strtol tan trunc
+@end example
 
 @item
 Macros defined by the compiler/OS can cause problems.  Identifiers
@@ -4854,6 +4865,16 @@ enough macros to ensure that missing declarations are rarely seen.
 This applies also to constants such as @code{M_PI}, which are part of
 the X/Open standard: to use these define @code{_XOPEN_SOURCE} before
 including any headers.
+
+@item
+Similarly, package authors commonly assume things are part of C++ when
+they were introduced in C++11 if at all.  Recent examples from
+@acronym{CRAN} packages include the C99/C++11 functions
+@example
+erf expm1 fmin fmax lgamma lround loglp round snprintf strcasecmp trunc
+@end example
+and the POSIX function @code{strdup}.
+
 @end itemize
 
 Some additional information for C++ is available at
@@ -9561,7 +9582,19 @@ appropriate headers yourself before the @R{} headers, then try defining
 @samp{NO_C_HEADERS} before including the @R{} headers.  (Headers
 @file{R.h}, @file{Rinternals.h} and @file{Rmath.h} support
 @samp{NO_C_HEADERS}: @file{cstddef} needs to be included before
-@file{R.h} if @samp{NO_C_HEADERS} is defined.)
+@file{R.h} if @samp{NO_C_HEADERS} is defined.  The requirements for
+@file{Rinternals.h} depend on the version of @R{} (it is only supported
+as from @R{} 3.3.0) and the platform, but
+@example
+#include <cstdio>
+#include <climits>
+#include <cstddef>
+using std::FILE;
+@end example
+is likely to suffice.)  As from @R{} 3.3.0, @R{} headers do not include
+legacy headers when used with C++, so @samp{NO_C_HEADERS} will only be
+needed if the package C++ code includes legacy headers or for earlier
+versions of @R{}: it is deprecated and likely to be removed in future.
 
 Legacy header @file{S.h} cannot be used with C++.
 
@@ -11848,10 +11881,10 @@ This is only recommended for experts.
 Note that this memory will be freed on error or user interrupt
 (if allowed: @pxref{Allowing interrupts}).
 
-Note that although @var{n} is @code{size_t}, there may be limits imposed
-by @R{}'s internal allocation mechanism.  These will only come into play
-on 64-bit systems, where the limit for @var{n} prior to @R{} 3.0.0 was
-just under 16Gb.
+@c Note that although @var{n} is @code{size_t}, there may be limits imposed
+@c by @R{}'s internal allocation mechanism.  These will only come into play
+@c on 64-bit systems, where the limit for @var{n} prior to @R{} 3.0.0 was
+@c just under 16Gb.
 
 The memory returned is only guaranteed to be aligned as required for
 @code{double} pointers: take precautions if casting to a pointer which
@@ -12439,9 +12472,10 @@ missing or infinite or @code{NaN}.
 Computes @code{log(1 + @var{x})} (@emph{log 1 @b{p}lus x}), accurately
 even for small @var{x}, i.e., @eqn{|x| \ll 1, |x| << 1}.
 
-This should be provided by your platform, in which case it is not included
-in @file{Rmath.h}, but is (probably) in @file{math.h} which
-@file{Rmath.h} includes.
+This should be provided by your platform, in which case it is not
+included in @file{Rmath.h}, but is (probably) in @file{math.h} which
+@file{Rmath.h} includes (except under C++, so it may not be declared for
+C++98).
 @end deftypefun
 
 @deftypefun double log1pmx (double @var{x})
@@ -12460,9 +12494,10 @@ accurately, notably for large @var{x}, e.g., @eqn{x > 720, x > 720}.
 Computes @code{exp(@var{x}) - 1} (@emph{exp x @b{m}inus 1}), accurately
 even for small @var{x}, i.e., @eqn{|x| \ll 1, |x| << 1}.
 
-This should be provided by your platform, in which case it is not included
-in @file{Rmath.h}, but is (probably) in @file{math.h} which
-@file{Rmath.h} includes.
+This should be provided by your platform, in which case it is not
+included in @file{Rmath.h}, but is (probably) in @file{math.h} which
+@file{Rmath.h} includes (except under C++, so it may not be declared for
+C++98).
 @end deftypefun
 
 @deftypefun double lgamma1p (double @var{x})
@@ -12544,15 +12579,16 @@ This is the function used by @R{}'s @code{signif()}.
 Returns the value of @var{x} rounded to @var{digits} @emph{significant}
 decimal digits.
 
-This is the function used by @R{}'s @code{round()}.
+This is the function used by @R{}'s @code{round()}.  (Note that C99/C++11
+provide a @code{round} function but C++98 need not.)
 @end deftypefun
 
 @deftypefun double ftrunc (double @var{x})
 Returns the value of @var{x} truncated (to an integer value) towards
 zero.
 
-Note that this is no longer needed in C code, as C99 provide a
-@code{trunc} function.  It is needed for portable C++98 code.
+(Note that C99/C++11 provide a @code{round} function but C++98 need
+not.)
 @end deftypefun
 
 @node Mathematical constants,  , Numerical Utilities, Numerical analysis subroutines

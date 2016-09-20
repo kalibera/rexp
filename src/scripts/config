@@ -20,7 +20,7 @@
 ## A copy of the GNU General Public License is available at
 ## https://www.R-project.org/Licenses/
 
-revision='$Revision: 71209 $'
+revision='$Revision: 71275 $'
 version=`set - ${revision}; echo ${2}`
 version="R configuration information retrieval script: ${R_VERSION} (r${version})
 
@@ -172,6 +172,7 @@ LIBR=`eval $query VAR=LIBR`
 STATIC_LIBR=`eval $query VAR=STATIC_LIBR`
 MAIN_LDFLAGS=`eval $query VAR=MAIN_LDFLAGS`
 LIBS=`eval $query VAR=LIBS`
+LDFLAGS=`eval $query VAR=LDFLAGS`
 
 
 if test -n "${R_ARCH}"; then

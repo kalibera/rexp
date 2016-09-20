@@ -1944,3 +1944,124 @@ R_GetSrcFilename(SEXP srcref)
 	return ScalarString(mkChar(""));
     return srcfile;
 }
+
+
+/*
+ * C level tryCatch support
+ */
+
+/* There are two functions:
+
+       R_TryCatchError    handles error conditions;
+
+       R_TryCatch         can handle any condition type and allows a
+                          finalize action.
+*/
+
+SEXP R_tryCatchError(SEXP (*body)(void *), void *bdata,
+		     SEXP (*handler)(SEXP, void *), void *hdata)
+{
+    SEXP val;
+    SEXP cond = Rf_mkString("error");
+
+    PROTECT(cond);
+    val = R_tryCatch(body, bdata, cond, handler, hdata, NULL, NULL);
+    UNPROTECT(1);
+    return val;
+}
+
+/* This implementation uses R's tryCatch via calls from C to R to
+   invoke R's tryCatch, and then back to C to infoke the C
+   body/handler functions via a .Internal helper. This makes the
+   implementation fairly simple but not fast. If performance becomes
+   an issue we can look into a pure C implementation. LT */
+
+typedef struct {
+    SEXP (*body)(void *);
+    void *bdata;
+    SEXP (*handler)(SEXP, void *);
+    void *hdata;
+    void (*finally)(void *);
+    void *fdata;
+} tryCatchData_t;
+
+static SEXP default_tryCatch_handler(SEXP cond, void *data)
+{
+    return R_NilValue;
+}
+
+static void default_tryCatch_finally(void *data) { }
+
+static SEXP trycatch_callback = NULL;
+static const char* trycatch_callback_source =
+    "function(code, conds, fin) {\n"
+    "    handler <- function(cond)\n"
+    "        if (inherits(cond, conds))\n"
+    "            .Internal(C_tryCatchHelper(code, 1L, cond))\n"
+    "        else\n"
+    "            signalCondition(cond)\n"
+    "    if (fin)\n"
+    "        tryCatch(.Internal(C_tryCatchHelper(code, 0L)),\n"
+    "                 condition = handler,\n"
+    "                 finally = .Internal(C_tryCatchHelper(code, 2L)))\n"
+    "    else\n"
+    "        tryCatch(.Internal(C_tryCatchHelper(code, 0L)),\n"
+    "                 condition = handler)\n"
+    "}";
+
+SEXP R_tryCatch(SEXP (*body)(void *), void *bdata,
+		SEXP conds,
+		SEXP (*handler)(SEXP, void *), void *hdata,
+		void (*finally)(void *), void *fdata)
+{
+    if (body == NULL) error("must supply a body function");
+
+    if (trycatch_callback == NULL) {
+	trycatch_callback = R_ParseEvalString(trycatch_callback_source,
+					      R_BaseNamespace);
+	R_PreserveObject(trycatch_callback);
+    }
+    
+    tryCatchData_t tcd = {
+	.body = body,
+	.bdata = bdata,
+	.handler = handler != NULL ? handler : default_tryCatch_handler,
+	.hdata = hdata,
+	.finally = finally != NULL ? finally : default_tryCatch_finally,
+	.fdata = fdata
+    };
+
+    SEXP fin = finally != NULL ? R_TrueValue : R_FalseValue;
+    SEXP tcdptr = R_MakeExternalPtr(&tcd, R_NilValue, R_NilValue);
+    SEXP expr = lang4(trycatch_callback, tcdptr, conds, fin);
+    PROTECT(expr);
+    SEXP val = eval(expr, R_GlobalEnv);
+    UNPROTECT(1); /* expr */
+    return val;
+}
+
+SEXP do_tryCatchHelper(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP eptr = CAR(args);
+    SEXP sw = CADR(args);
+    SEXP cond = CADDR(args);
+    
+    if (TYPEOF(eptr) != EXTPTRSXP)
+	error("not an external pointer");
+
+    tryCatchData_t *ptcd = R_ExternalPtrAddr(CAR(args));
+
+    switch (asInteger(sw)) {
+    case 0:
+	return ptcd->body(ptcd->bdata);
+    case 1:
+	if (ptcd->handler != NULL)
+	    return ptcd->handler(cond, ptcd->hdata);
+	else return R_NilValue;
+    case 2:
+	if (ptcd->finally != NULL)
+	    ptcd->finally(ptcd->fdata);
+	return R_NilValue;
+    default: return R_NilValue; /* should not happen */
+    }
+}

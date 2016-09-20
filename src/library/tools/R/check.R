@@ -377,7 +377,7 @@ setRlibs <-
 	    printLog(Log, "directory ", sQuote(test_dir), " not found\n")
 	}
         if (dir.exists(tests_dir) && # trackObjs has only *.Rin
-            length(dir(tests_dir, pattern = "\\.(R|Rin)$")))
+            length(dir(tests_dir, pattern = "\\.(R|r|Rin)$")))
             run_tests()
 
         ## Check package vignettes.
@@ -2079,12 +2079,58 @@ setRlibs <-
             printLog0(Log, paste(msg, collapse = "\n"))
         }
 
+	## Did the vignettes get updated in inst/doc?
+	inst_doc_files <- list.files(file.path(pkgdir, "inst", "doc"),
+				     recursive = TRUE)
+	vignette_files <- list.files(vign_dir, recursive = TRUE)
+	if (!is_base_pkg && length(vignette_files)) {
+	    if (!length(inst_doc_files)) {
+		if (!any) warningLog(Log)
+		any <- TRUE
+		msg <- c("Files in the 'vignettes' directory but no files in 'inst/doc':",
+			 strwrap(paste(sQuote(vignette_files), collapse = ", "),
+				 indent = 2L, exdent = 4L),
+			 "")
+		printLog0(Log, paste(msg, collapse = "\n"))
+	    } else {
+		vignette_times <- file.mtime(file.path(vign_dir, vignette_files))
+		inst_doc_times <- file.mtime(file.path(pkgdir, "inst", "doc", inst_doc_files))
+		if (sum(!is.na(vignette_times)) && sum(!is.na(inst_doc_times)) &&
+                    max(vignette_times, na.rm = TRUE) > max(inst_doc_times, na.rm = TRUE)) {
+		    if (!any) warningLog(Log)
+		    any <- TRUE
+		    msg <- c("Files in the 'vignettes' directory newer than all files in 'inst/doc':",
+			     strwrap(paste(sQuote(vignette_files[!is.na(vignette_times) & vignette_times > max(inst_doc_times, na.rm = TRUE)]),
+					   collapse = ", "),
+				     indent = 2L, exdent = 4L),
+			     "")
+		    keep <- is.na(vignette_times) | vignette_times <= max(inst_doc_times)
+		    vignette_files <- vignette_files[keep]
+		    vignette_times <- vignette_times[keep]
+		    printLog0(Log, paste(msg, collapse = "\n"))
+		}
+		matches <- match(vignette_files, inst_doc_files)
+		newer <- vignette_times > inst_doc_times[matches]
+		newer <- !is.na(matches) & !is.na(newer) & newer
+		if (any(newer)) {
+		    if (!any) warningLog(Log)
+		    any <- TRUE
+		    msg <- c("Files in the 'vignettes' directory newer than same file in 'inst/doc':",
+			     strwrap(paste(sQuote(vignette_files[newer]),
+					   collapse = ", "),
+				     indent = 2L, exdent = 4L),
+			     "")
+		    printLog0(Log, paste(msg, collapse = "\n"))
+		}
+	    }
+	}
+
         files <- dir(file.path(pkgdir, "vignettes"))
         if(length(files) &&
            !length(dir(file.path(pkgdir, "vignettes"),
                        pattern = pattern)) &&
            is.na(desc["VignetteBuilder"])) {
-            noteLog(Log)
+            if(!any) noteLog(Log)
             any <- TRUE
             printLog0(Log,
                       "Package has only non-Sweave vignette sources but no VignetteBuilder field.\n")
@@ -2092,7 +2138,7 @@ setRlibs <-
         already <- c("jss.cls", "jss.bst", "Rd.sty", "Sweave.sty")
         bad <- files[files %in% already]
         if (length(bad)) {
-            noteLog(Log)
+            if(!any) noteLog(Log)
             any <- TRUE
             printLog0(Log,
                       "The following files are already in R: ",
@@ -2820,12 +2866,18 @@ setRlibs <-
                 ## Don't just fail: try to log where the problem occurred.
                 ## First, find the test which failed.
                 ## (Maybe there was an error without a failing test.)
-                bad_files <- dir(".", pattern="\\.Rout\\.fail")
+                bad_files <- dir(".", pattern="\\.Rout\\.fail$")
                 if (length(bad_files)) {
                     ## Read in output from the (first) failed test.
                     file <- bad_files[1L]
                     lines <- readLines(file, warn = FALSE)
-                    file <- file.path(test_dir, sub("out\\.fail", "", file))
+                    file <- file.path(test_dir, sub("out\\.fail$", "", file))
+                    src_files <- dir(".", pattern = "\\.[rR]$")
+                    if (!(basename(file) %in% src_files)) {
+                    	file <- sub("R$", "r", file)  # This assumes only one of foo.r and foo.R exists.
+                    	if (!(basename(file) %in% src_files))
+                    	    file <- sub("r$", "[rR]", file)  # Just in case the test script got deleted somehow, show the pattern.
+                    }
                     ll <- length(lines)
                     keep <- as.integer(Sys.getenv("_R_CHECK_TESTS_NLINES_",
                                                   "13"))
@@ -3564,7 +3616,12 @@ setRlibs <-
                              "warning: void function",
                              "warning: control reaches end of non-void function",
                              "warning: no return statement in function returning non-void",
-                             ": #warning",
+                             ## gcc-only form
+                             ## ": #warning",
+                             ## gcc indents these, igraph has space after #
+                             "^ *# *warning",
+                             ## Solaris cc has
+                             "Warning: # *warning",
                              # these are from era of static HTML
                              "missing links?:")
                 ## Warnings spotted by gcc with
@@ -4927,7 +4984,7 @@ setRlibs <-
             dir.exists(file.path(pkgdir, "R"))) {
             tests_dir <- file.path(pkgdir, test_dir)
             if (dir.exists(tests_dir) &&
-                length(dir(tests_dir, pattern = "\\.(R|Rin)$")))
+                length(dir(tests_dir, pattern = "\\.(r|R|Rin)$")))
                 no_examples <- FALSE
             vigns <- pkgVignettes(dir = pkgdir)
             if (!is.null(vigns) && length(vigns$docs)) no_examples <- FALSE

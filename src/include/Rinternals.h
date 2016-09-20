@@ -30,11 +30,10 @@
 #ifdef __cplusplus
 # ifndef NO_C_HEADERS
 #  include <cstdio>
-#  ifdef __SUNPRO_CC
-using std::FILE;
-#  endif
 #  include <climits>
 #  include <cstddef>
+# else
+#warning "use of NO_C_HEADERS is deprecated"
 # endif
 extern "C" {
 #else
@@ -42,6 +41,8 @@ extern "C" {
 #  include <stdio.h>
 #  include <limits.h> /* for INT_MAX */
 #  include <stddef.h> /* for ptrdiff_t */
+# else
+#warning "use of NO_C_HEADERS is deprecated"
 # endif
 #endif
 
@@ -52,6 +53,7 @@ extern "C" {
 #include <R_ext/Memory.h>
 #include <R_ext/Utils.h>
 #include <R_ext/Print.h>
+#include <R_ext/Rdynload.h> // for DL_FUNC
 
 #include <R_ext/libextern.h>
 
@@ -852,6 +854,7 @@ int R_nchar(SEXP string, nchar_type type_,
 
 Rboolean Rf_pmatch(SEXP, SEXP, Rboolean);
 Rboolean Rf_psmatch(const char *, const char *, Rboolean);
+SEXP R_ParseEvalString(const char *, SEXP);
 void Rf_PrintValue(SEXP);
 #ifndef INLINE_PROTECT
 SEXP Rf_protect(SEXP);
@@ -909,7 +912,7 @@ SEXP Rf_mkCharCE(const char *, cetype_t);
 SEXP Rf_mkCharLenCE(const char *, int, cetype_t);
 const char *Rf_reEnc(const char *x, cetype_t ce_in, cetype_t ce_out, int subst);
 
-				/* return(.) NOT reached : for -Wall */
+				/* match(.) NOT reached : for -Wall */
 #define error_return(msg)	{ Rf_error(msg);	   return R_NilValue; }
 #define errorcall_return(cl,msg){ Rf_errorcall(cl, msg);   return R_NilValue; }
 
@@ -931,7 +934,6 @@ void R_SetExternalPtrAddr(SEXP s, void *p);
 void R_SetExternalPtrTag(SEXP s, SEXP tag);
 void R_SetExternalPtrProtected(SEXP s, SEXP p);
 // Added in R 3.4.0
-typedef void * (*DL_FUNC)();
 SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot);
 DL_FUNC R_ExternalPtrAddrFn(SEXP s);
 
@@ -964,6 +966,12 @@ Rboolean R_checkConstants(Rboolean);
 Rboolean R_ToplevelExec(void (*fun)(void *), void *data);
 SEXP R_ExecWithCleanup(SEXP (*fun)(void *), void *data,
 		       void (*cleanfun)(void *), void *cleandata);
+SEXP R_tryCatch(SEXP (*)(void *), void *,       /* body closure*/
+		SEXP,                           /* condition classes (STRSXP) */
+		SEXP (*)(SEXP, void *), void *, /* handler closure */
+		void (*)(void *), void *);      /* finally closure */
+SEXP R_tryCatchError(SEXP (*)(void *), void *,        /* body closure*/
+		     SEXP (*)(SEXP, void *), void *); /* handler closure */
 
 /* Environment and Binding Features */
 void R_RestoreHashCount(SEXP rho);
@@ -1044,12 +1052,21 @@ void R_InitOutPStream(R_outpstream_t stream, R_pstream_data_t data,
 		      void (*outbytes)(R_outpstream_t, void *, int),
 		      SEXP (*phook)(SEXP, SEXP), SEXP pdata);
 
+#ifdef __cplusplus
+void R_InitFileInPStream(R_inpstream_t stream, std::FILE *fp,
+			 R_pstream_format_t type,
+			 SEXP (*phook)(SEXP, SEXP), SEXP pdata);
+void R_InitFileOutPStream(R_outpstream_t stream, std::FILE *fp,
+			  R_pstream_format_t type, int version,
+			  SEXP (*phook)(SEXP, SEXP), SEXP pdata);
+#else
 void R_InitFileInPStream(R_inpstream_t stream, FILE *fp,
 			 R_pstream_format_t type,
 			 SEXP (*phook)(SEXP, SEXP), SEXP pdata);
 void R_InitFileOutPStream(R_outpstream_t stream, FILE *fp,
 			  R_pstream_format_t type, int version,
 			  SEXP (*phook)(SEXP, SEXP), SEXP pdata);
+#endif
 
 #ifdef NEED_CONNECTION_PSTREAMS
 /* The connection interface is not available to packages.  To
@@ -1099,7 +1116,11 @@ void R_RunExitFinalizers(void);	/* in memory.c */
 
 /* Replacements for popen and system */
 #ifdef HAVE_POPEN
+# ifdef __cplusplus
+std::FILE *R_popen(const char *, const char *);
+# else
 FILE *R_popen(const char *, const char *);
+# endif
 #endif
 int R_system(const char *);
 
