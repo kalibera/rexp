@@ -1228,9 +1228,8 @@ discipline on frame types in the evaluation environment, as checked in
 
 <<[[notifyCompilerError]] function>>=
 notifyCompilerError <- function(msg)
-    ## better do not completely hide compiler errors
-    if (TRUE || !compilerOptions$suppressAll)
-        cat(paste(gettext("Error - compilation failed:"), msg, "\n"))
+    if (!compilerOptions$suppressAll)
+        cat(paste(gettext("Error: compilation failed - "), msg, "\n"))
 @ %def notifyCompilerError
 
 \section{Compilation environments}
