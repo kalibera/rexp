@@ -35,7 +35,20 @@
 
 #define ARGUSED(x) LEVELS(x)
 
-static SEXP bcEval(SEXP, SEXP, Rboolean);
+#define USE_BINDING_CACHE
+#define CACHE_ON_STACK
+
+#ifdef USE_BINDING_CACHE
+# ifdef CACHE_ON_STACK
+typedef R_bcstack_t * R_binding_cache_t;
+# else
+typedef SEXP R_binding_cache_t;
+# endif
+#else
+typedef void *R_binding_cache_t;
+#endif
+
+static SEXP bcEval(SEXP, SEXP, R_binding_cache_t, int);
 
 /* BC_PROILFING needs to be enabled at build time. It is not enabled
    by default as enabling it disabled the more efficient threaded code
@@ -613,7 +626,7 @@ SEXP eval(SEXP e, SEXP rho)
 
     switch (TYPEOF(e)) {
     case BCODESXP:
-	tmp = bcEval(e, rho, TRUE);
+	tmp = bcEval(e, rho, NULL, 0);
 	    break;
     case SYMSXP:
 	if (e == R_DotsSymbol)
@@ -901,7 +914,7 @@ static Rboolean R_compileAndExecute(SEXP call, SEXP rho)
     R_jit_enabled = old_enabled;
 
     if (TYPEOF(code) == BCODESXP) {
-	bcEval(code, rho, TRUE);
+	bcEval(code, rho, NULL, 0);
 	ans = TRUE;
     }
 
@@ -3078,8 +3091,8 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 /* start of bytecode section */
-static int R_bcVersion = 8;
-static int R_bcMinVersion = 6;
+static int R_bcVersion = 9;
+static int R_bcMinVersion = 9;
 
 static SEXP R_AddSym = NULL;
 static SEXP R_SubSym = NULL;
@@ -3134,7 +3147,7 @@ void R_initialize_bcode(void)
   R_LogSym = install("log");
 
 #ifdef THREADED_CODE
-  bcEval(NULL, NULL, FALSE);
+  bcEval(NULL, NULL, NULL, 0);
 #endif
 
   /* the first constants record always stays in place for protection */
@@ -4193,19 +4206,15 @@ static R_INLINE SEXP BINDING_VALUE(SEXP loc)
    but finding an efficient mechanism does not seem to be easy.   LT */
 
 /* Both mechanisms implemented here make use of the stack to hold
-   cache information.  This is not a problem except for "safe" for()
-   loops using the STARTLOOPCNTXT instruction to run the body in a
-   separate bcEval call.  Since this approach expects loop setup
-   information to be passed on the stack from the outer bcEval call to
-   an inner one the inner one cannot put things on the stack. For now,
-   bcEval takes an additional argument that disables the cache in
-   calls via STARTLOOPCNTXT for all "safe" loops. It would be better
-   to deal with this in some other way, for example by having a
-   specific STARTFORLOOPCNTXT instruction that deals with transferring
-   the information in some other way. For now disabling the cache is
-   an expedient solution. LT */
+   cache information. This is not a problem unless bcEval is invoked with
+   some information passed on the stack. Curently this is only the case with
+   "safe" for() loops using the STARTLOOPCNTXT instruction to run the body
+   in a separate bcEval call. This approach expects loop setup information
+   to be passed on the stack from the outer bcEval call to an inner one. In
+   this case, the inner bcEval call will use the cache from the outer call,
+   which is good for performance and also avoids the problem of findining
+   the loop setup info on the stack (not knowing how large the cache is). */
 
-#define USE_BINDING_CACHE
 # ifdef USE_BINDING_CACHE
 /* CACHE_MAX must be a power of 2 for modulus using & CACHE_MASK to work*/
 # define CACHE_MAX 256
@@ -4216,7 +4225,6 @@ static R_INLINE SEXP BINDING_VALUE(SEXP loc)
 #  define CACHEIDX(i) (i)
 # endif
 
-# define CACHE_ON_STACK
 # ifdef CACHE_ON_STACK
 typedef R_bcstack_t * R_binding_cache_t;
 #  define VCACHE(i) GETSTACK_SXPVAL_PTR(vcache + (i))
@@ -4647,13 +4655,14 @@ static int opcode_counts[OPCOUNT];
 } while (0)
 #endif
 
-static void loopWithContext(volatile SEXP code, volatile SEXP rho)
+static void loopWithContext(volatile SEXP code, volatile SEXP rho,
+    volatile R_binding_cache_t vcache, volatile int label)
 {
     RCNTXT cntxt;
     begincontext(&cntxt, CTXT_LOOP, R_NilValue, rho, R_BaseEnv, R_NilValue,
 		 R_NilValue);
     if (SETJMP(cntxt.cjmpbuf) != CTXT_BREAK)
-	bcEval(code, rho, FALSE);
+	bcEval(code, rho, vcache, label);
     endcontext(&cntxt);
 }
 
@@ -5207,7 +5216,7 @@ static SEXP markSpecialArgs(SEXP args)
     return args;
 }
 
-static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
+static SEXP bcEval(SEXP body, SEXP rho, R_binding_cache_t vcache, int startlabel)
 {
   SEXP retvalue = R_NilValue, constants;
   BCODE *pc, *codebase;
@@ -5234,7 +5243,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       return eval(bytecodeExpr(body), rho);
 
   /* check version */
-  {
+  if (!startlabel) {
       int version = GETOP();
       if (version < R_bcMinVersion || version > R_bcVersion) {
 	  if (version >= 2) {
@@ -5249,34 +5258,37 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	      error(_("bytecode version is too old"));
 	  else error(_("bytecode version is too new"));
       }
-  }
-
-  R_binding_cache_t vcache = NULL;
-  Rboolean smallcache = TRUE;
+  } else
+      pc += startlabel;  
+  
+  Rboolean smallcache = TRUE;  
 #ifdef USE_BINDING_CACHE
-  if (useCache) {
+  {
       R_len_t n = LENGTH(constants);
 # ifdef CACHE_MAX
       if (n > CACHE_MAX) {
-	  n = CACHE_MAX;
-	  smallcache = FALSE;
+          n = CACHE_MAX;
+          smallcache = FALSE;
       }
 # endif
+
+      if (!vcache) {
 # ifdef CACHE_ON_STACK
-      /* initialize binding cache on the stack */
-      vcache = R_BCNodeStackTop;
-      if (R_BCNodeStackTop + n > R_BCNodeStackEnd)
-	  nodeStackOverflow();
-      while (n > 0) {
-	  SETSTACK(0, R_NilValue);
-	  R_BCNodeStackTop++;
-	  n--;
-      }
+	  /* initialize binding cache on the stack */
+	  vcache = R_BCNodeStackTop;
+	  if (R_BCNodeStackTop + n > R_BCNodeStackEnd)
+	      nodeStackOverflow();
+	  while (n > 0) {
+	      SETSTACK(0, R_NilValue);
+	      R_BCNodeStackTop++;
+	      n--;
+	  }
 # else
       /* allocate binding cache and protect on stack */
-      vcache = allocVector(VECSXP, n);
-      BCNPUSH(vcache);
+	  vcache = allocVector(VECSXP, n);
+	  BCNPUSH(vcache);
 # endif
+      }
   }
 #endif
 
@@ -5308,8 +5320,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(PRINTVALUE, 0): PrintValue(BCNPOP()); NEXT();
     OP(STARTLOOPCNTXT, 1):
 	{
-	    SEXP code = VECTOR_ELT(constants, GETOP());
-	    loopWithContext(code, rho);
+	    int endlabel = GETOP();
+	    loopWithContext(body, rho, vcache, pc - codebase);
+	    pc = codebase + endlabel;
 	    NEXT();
 	}
     OP(ENDLOOPCNTXT, 0): retvalue = R_NilValue; goto done;
@@ -5595,7 +5608,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (ftype != SPECIALSXP) {
 	  SEXP value;
 	  if (ftype == BUILTINSXP)
-	      value = bcEval(code, rho, TRUE);
+	      value = bcEval(code, rho, NULL, 0);
 	  else
 	      value = mkPROMISE(code, rho);
 	  PUSHCALLARG(value);
@@ -5737,15 +5750,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP fb = VECTOR_ELT(constants, GETOP());
 	SEXP forms = VECTOR_ELT(fb, 0);
 	SEXP body = VECTOR_ELT(fb, 1);
-	SEXP value = mkCLOSXP(forms, body, rho);
-	/* The LENGTH check below allows for byte code object created
-	   by oder versions of the compiler that did not record a
-	   source attribute. */
-	/* FIXME: bump bc version and don't check LENGTH? */
-	if (LENGTH(fb) > 2) {
-	  SEXP srcref = VECTOR_ELT(fb, 2);
-	  if (!isNull(srcref)) setAttrib(value, R_SrcrefSymbol, srcref);
-	}
+	value = mkCLOSXP(forms, body, rho);
+	SEXP srcref = VECTOR_ELT(fb, 2);
+	if (!isNull(srcref)) setAttrib(value, R_SrcrefSymbol, srcref);
 	BCNPUSH(value);
 	NEXT();
       }
