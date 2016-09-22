@@ -5259,9 +5259,9 @@ static SEXP bcEval(SEXP body, SEXP rho, R_binding_cache_t vcache, int startlabel
 	  else error(_("bytecode version is too new"));
       }
   } else
-      pc += startlabel;  
-  
-  Rboolean smallcache = TRUE;  
+      pc += startlabel;
+
+  Rboolean smallcache = TRUE;
 #ifdef USE_BINDING_CACHE
   {
       R_len_t n = LENGTH(constants);
