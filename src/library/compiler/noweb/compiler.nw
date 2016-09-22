@@ -2493,7 +2493,7 @@ defined as
 <<inlining handler for [[repeat]] loops>>=
 setInlineHandler("repeat", function(e, cb, cntxt) {
     body <- e[[2]]
-    <<generate context and body code for [[repeat]] loop>>
+    <<generate context and body for [[repeat]] loop>>
     <<generate [[repeat]] and [[while]] loop wrap-up code>>
     TRUE
 })
@@ -2501,14 +2501,10 @@ setInlineHandler("repeat", function(e, cb, cntxt) {
 
 If a loop context is not needed then the code for the loop body is
 just written to the original code buffer.  The [[else]] clause in the
-code chunk below generates the code for the general case.  [[genCode]]
-is used to produce a new code object containing code for the loop body
-followed by the [[ENDLOOPCNTXT]] instruction, The code object is then
-installed in the context pool. When a separate code object is
-written the need for using [[RETURNJMP]] for [[return]] calls is
-indicated by setting the [[needRETURNJMP]] flag in the compiler
-context to [[TRUE]].
-<<generate context and body code for [[repeat]] loop>>=
+code chunk below generates the code for the general case. The need for
+using [[RETURNJMP]] for [[return]] calls is indicated by setting the
+[[needRETURNJMP]] flag in the compiler context to [[TRUE]].
+<<generate context and body for [[repeat]] loop>>=
 if (checkSkipLoopCntxt(body, cntxt))
     cmpRepeatBody(body, cb, cntxt)
 else {
@@ -2594,7 +2590,7 @@ structure of the [[repeat]] code generator:
 setInlineHandler("while", function(e, cb, cntxt) {
     cond <- e[[2]]
     body <- e[[3]]
-    <<generate context and body code for [[while]] loop>>
+    <<generate context and body for [[while]] loop>>
     <<generate [[repeat]] and [[while]] loop wrap-up code>>
     TRUE
 })
@@ -2603,7 +2599,7 @@ The context and body generation chunk is similar as well. The
 expression stored in the code object isn't quite right as what is
 compiled includes both the test and the body, but this code object
 should not be externally visible.
-<<generate context and body code for [[while]] loop>>=
+<<generate context and body for [[while]] loop>>=
 if (checkSkipLoopCntxt(cond, cntxt) && checkSkipLoopCntxt(body, cntxt))
     cmpWhileBody(e, cond, body, cb, cntxt)
 else {
@@ -2682,7 +2678,7 @@ setInlineHandler("for", function(e, cb, cntxt) {
     cmp(seq, cb, ncntxt)
     ci <- cb$putconst(sym)
     callidx <- cb$putconst(e)
-    <<generate context and body code for [[for]] loop>>
+    <<generate context and body for [[for]] loop>>
     <<generate [[for]] loop wrap-up code>>
     TRUE
 })
@@ -2697,7 +2693,7 @@ for the body will be a [[GOTO]] instruction that jumps to the
 [[STEPFOR]] instruction.  This design means the stepping and the jump
 can be handled by one instruction instead of two, a step instruction
 and a [[GOTO]].
-<<generate context and body code for [[for]] loop>>=
+<<generate context and body for [[for]] loop>>=
 if (checkSkipLoopCntxt(body, cntxt))
     cmpForBody(callidx, body, ci, cb, cntxt)
 else {
