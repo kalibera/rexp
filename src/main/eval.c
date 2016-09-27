@@ -5750,7 +5750,7 @@ static SEXP bcEval(SEXP body, SEXP rho, R_binding_cache_t vcache, int startlabel
 	SEXP fb = VECTOR_ELT(constants, GETOP());
 	SEXP forms = VECTOR_ELT(fb, 0);
 	SEXP body = VECTOR_ELT(fb, 1);
-	value = mkCLOSXP(forms, body, rho);
+	SEXP value = mkCLOSXP(forms, body, rho);
 	SEXP srcref = VECTOR_ELT(fb, 2);
 	if (!isNull(srcref)) setAttrib(value, R_SrcrefSymbol, srcref);
 	BCNPUSH(value);
