@@ -216,6 +216,13 @@
       \item \code{source()} gets new optional arguments, notably
       \code{exprs}; this is made use of in the new utility function
       \code{withAutoprint()}.
+
+      \item \code{sys.source()} gets a new \code{toplevel.env} argument.
+      This argument is useful for frameworks running package tests;
+      contributed by Tomas Kalibera.
+      
+      \item \code{Sys.setFileTime()} will set fractions of seconds
+      on platforms which support it (not currently Windows nor macOS).
     }
   }
 
@@ -231,10 +238,14 @@
       to the dropping (in \R 3.3.0) of legacy C++ headers from headers
       such as \file{R.h} and \file{Rmath.h} --- this has now been
       removed.  That compiler has strict C++98 compliance hence does not
-      include extensions in its (non-legacy) C++ headers, so some
+      include extensions in its (non-legacy) C++ headers: some
       packages will need to request C++11 or replace non-C++98 calls
       such as \code{lgamma}: see §1.6.4 of \sQuote{Writing R
 	Extensions}.
+    
+      \item When included from C++, the \R headers now use forms such as
+      \code{std::FILE} directly rather than including the line \preformatted{using std::FILE;}
+      C++ code including these headers might be relying on the latter.
     }
   }
 
