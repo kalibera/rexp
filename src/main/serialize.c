@@ -1641,6 +1641,12 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	/* For reading closures and promises stored in earlier versions, convert NULL env to baseenv() */
 	if      (type == CLOSXP && CLOENV(s) == R_NilValue) SET_CLOENV(s, R_BaseEnv);
 	else if (type == PROMSXP && PRENV(s) == R_NilValue) SET_PRENV(s, R_BaseEnv);
+	if (type == CLOSXP && R_isBcHandledByEval(BODY(s))) {
+	    /* Deserialized closure has incompatible byte-code, replacing by AST */
+	    /* An R warning here leads to promise already under evaluation error */
+	    SET_BODY(s, R_ClosureExpr(s));
+	    //REprintf("Warning: deserialized closure has incompatible bytecode\n");
+	}
 	UNPROTECT(1); /* s */
 	return s;
     default:

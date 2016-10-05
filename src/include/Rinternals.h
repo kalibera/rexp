@@ -952,6 +952,7 @@ SEXP R_bcEncode(SEXP);
 SEXP R_bcDecode(SEXP);
 void R_registerBC(SEXP, SEXP);
 Rboolean R_checkConstants(Rboolean);
+Rboolean R_isBcHandledByEval(SEXP);
 #define PREXPR(e) R_PromiseExpr(e)
 #define BODY_EXPR(e) R_ClosureExpr(e)
 

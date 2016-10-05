@@ -5454,6 +5454,19 @@ static SEXP markSpecialArgs(SEXP args)
     return args;
 }
 
+Rboolean attribute_hidden R_isBcHandledByEval(SEXP s)
+{
+    if (TYPEOF(s) != BCODESXP)
+	return FALSE;
+
+    BCODE *pc = BCCODE(s);
+    int version = GETOP();
+
+    /* must be kept in sync with bcEval version check */
+    return version >= 2 &&
+		(version < R_bcMinVersion || version > R_bcVersion);
+}
+
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
   SEXP retvalue = R_NilValue, constants;
@@ -5492,6 +5505,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   R_BCpc = &currentpc;
 
   /* check version */
+  /* must be kept in sync with isBcHandledByEval */
   {
       int version = GETOP();
       if (version < R_bcMinVersion || version > R_bcVersion) {
@@ -5499,7 +5513,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	      static Rboolean warned = FALSE;
 	      if (! warned) {
 		  warned = TRUE;
-		  warning(_("bytecode version mismatch; using eval"));
+		  //REprintf("Warning: bytecode version mismatch; using eval\n");
 	      }
 	      return eval(bytecodeExpr(body), rho);
 	  }
