@@ -137,7 +137,7 @@ generic function.
 The \dQuote{signature} of an S3 method is identified  by the name to
 which the method is assigned, composed of the name of the
 generic function, followed by \code{"."}, followed by the name of the class.
-For details, see \link{UseMethod}.
+For details, see \code{\link{UseMethod}}.
 
 To implement a method for one of these functions corresponding to S4
 classes, there are two possibilities: either an S4 method or an S3 method with the
@@ -190,8 +190,8 @@ replacement function for \code{S3Part} may be useful.}
 }
 
 \seealso{
-\link{Methods_S3_Generics} for suggested implementation of methods
-that work for both S3 and S4 dispatch.
+  \link{Methods_for_S3} for suggested implementation of methods
+  that work for both S3 and S4 dispatch.
 }
 
 \examples{
@@ -199,18 +199,17 @@ that work for both S3 and S4 dispatch.
 ## methods.
 
 setClass("myFrame", contains = "data.frame",
-    representation(timestamps = "POSIXt"))
-
+         slots = c(timestamps = "POSIXt"))
 df1 <- data.frame(x = 1:10, y = rnorm(10), z = sample(letters,10))
-
 mydf1 <- new("myFrame", df1, timestamps = Sys.time())
 
 ## "myFrame" objects inherit "data.frame" S3 methods; e.g., for `[`
 
+\donttest{% random
 mydf1[1:2, ] # a data frame object (with extra attributes)
+}
 
 ## a method explicitly for "myFrame" class
-
 
 setMethod("[",
     signature(x = "myFrame"),
@@ -223,7 +222,6 @@ setMethod("[",
 )
 
 \donttest{mydf1[1:2, ]}
-
 
 setClass("myDateTime", contains = "POSIXt")
 
@@ -249,11 +247,10 @@ stopifnot(identical(f3(mLt), f3.POSIXt(mLt)))
 
 ## An S4 object selects S3 methods according to its S4 "inheritance"
 
-
 setClass("classA", contains = "numeric",
-         representation(realData = "numeric"))
+         slots = c(realData = "numeric"))
 
-Math.classA <- function(x) {(getFunction(.Generic))(x@realData)}
+Math.classA <- function(x) { (getFunction(.Generic))(x@realData) }
 setMethod("Math", "classA", Math.classA)
 
 

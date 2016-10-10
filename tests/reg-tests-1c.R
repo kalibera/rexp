@@ -1893,7 +1893,7 @@ stopifnot(identical(1L + NULL, 1L + integer()),
 ## gave double() in R <= 3.3.x
 
 
-##  factor(x, exclude)  when  'x' or 'exclude' are  character:
+## factor(x, exclude)  when  'x' or 'exclude' are  character -------
 stopifnot(identical(factor(c(1:2, NA), exclude = ""),
 		    factor(c(1:2, NA), exclude = NULL) -> f12N))
 fab <- factor(factor(c("a","b","c")), exclude = "c")
@@ -1901,6 +1901,18 @@ stopifnot(identical(levels(fab), c("a","b")))
 faN <- factor(c("a", NA), exclude=NULL)
 stopifnot(identical(faN, factor(faN, exclude="c")))
 ## differently with NA coercion warnings in R <= 3.3.x
+
+## factor(x, exclude = X) - coercing 'exclude' or not
+## From r-help/2005-April/069053.html :
+fNA <- factor(as.integer(c(1,2,3,3,NA)), exclude = NaN)
+stopifnot(identical(levels(fNA), c("1", "2", "3", NA)))
+## did exclude NA wrongly in R <= 3.3.x
+## Now when 'exclude' is a factor,
+cc <- c("x", "y", "NA")
+ff <- factor(cc)
+f2 <- factor(ff, exclude = ff[3]) # it *is* used
+stopifnot(identical(levels(f2), cc[1:2]))
+## levels(f2) still contained NA in R <= 3.3.x
 
 
 ## arithmetic, logic, and comparison (relop) for 0-extent arrays
@@ -1949,12 +1961,25 @@ stopifnot(identical(m2 + NULL, n0), # ERROR in R <= 3.3.x
 	  identical(m2 == NULL, l0), # as "always"
 	  identical(m2 ==  n0 , l0)) # as "always"
 
+
 ## strcapture()
 stopifnot(identical(strcapture("(.+) (.+)",
                                c("One 1", "noSpaceInLine", "Three 3"),
                                proto=data.frame(Name="", Number=0)),
                     data.frame(Name=c("One", NA, "Three"),
                                Number=c(1, NA, 3))))
+
+
+## PR#17160: min() / max()  arg.list starting with empty character
+TFT <- 1:3 %% 2 == 1
+stopifnot(
+    identical(min(character(), TFT), "0"),
+    identical(max(character(), TFT), "1"),
+    identical(max(character(), 3:2, 5:7, 3:0), "7"),
+    identical(min(character(), 3:2, 5:7), "2"),
+    identical(min(character(), 3.3, -1:2), "-1"),
+    identical(max(character(), 3.3, 4:0), "4"))
+## all gave NA in R <= 3.3.0
 
 
 ## keep at end

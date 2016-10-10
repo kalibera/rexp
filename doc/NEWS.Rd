@@ -19,7 +19,8 @@
       numbers in the ten thousands.
 
       \item \code{factor(x, exclude = L)} behaves more rationally when
-      \code{x} or \code{L} are character vectors.
+      \code{x} or \code{L} are character vectors.  Further,
+      \code{exclude = <factor>} now behaves as documented for long.
 
       \item Arithmetic, logic (\code{&}, \code{|}) and comparison (aka
       \sQuote{relational}, e.g., \code{<}, \code{==}) operations with
@@ -32,6 +33,7 @@
       compare \code{matrix(1,1) + 2:3} and \code{matrix(1,1) < 2:3}).
     }
   }
+
   \subsection{NEW FEATURES}{
     \itemize{
       \item User errors such as \code{integrate(f, 0:1, 2)} are now caught.
@@ -104,7 +106,7 @@
 
       \item \code{smooth.spline()} now allows direct specification of
       lambda, gets a \code{hatvalues()} method and keeps \code{tol} in
-      the result.
+      the result, and optionally parts of the internal matrix computations.
 
       \item \code{addNA()} is faster now, e.g.{} when applied twice.
       (Part of \PR{16895}.)
@@ -181,9 +183,9 @@
       \code{cat()} when terminated early, such that
       \code{suppressMessages()} has an effect; suggested by Ben Bolker.
 
-      \item \code{citation()} supports inst/CITATION files from package
-      source trees, with \code{lib.loc} pointing to the directory
-      containing the package.
+      \item \code{citation()} supports \file{inst/CITATION} files from
+      package source trees, with \code{lib.loc} pointing to the
+      directory containing the package.
 
       %% Would need more work (notably in  ../src/main/sort.c )
       %% \item New \code{orderL(lst, ....)} for use in \code{do.call()} to
@@ -207,6 +209,10 @@
       longer match object names starting with \samp{.} which are known
       to be internal objects (such as \code{.__S3MethodsTable__.}).
 
+      \item Convenience function \code{hasName()} has been added; it
+      is intended to replace the common idiom \code{!is.null(x$name)}
+      without the usually unintended partial name matching.
+
       \item \code{strcapture()} no longer fixes column names nor coerces
       strings to factors (suggested by Bill Dunlap).
 
@@ -220,9 +226,24 @@
       \item \code{sys.source()} gets a new \code{toplevel.env} argument.
       This argument is useful for frameworks running package tests;
       contributed by Tomas Kalibera.
-      
-      \item \code{Sys.setFileTime()} will set fractions of seconds
-      on platforms which support it (not currently Windows nor macOS).
+
+      \item \code{Sys.setFileTime()} and
+      \code{file.copy(copy.date = TRUE)} will set timestamps with
+      fractions of seconds on platforms/filesystems which support this.
+
+      \item (Windows only.) \code{file.info()} now returns file
+      timestamps including fractions of seconds; it has done so on other
+      platforms since \R 2.14.0.  (NB: some filesystems do not
+      record modification and access timestamps to sub-second
+      resolution.)
+
+      \item The license check enabled by
+      \code{options(checkPackageLicense = TRUE)} is now done when the
+      package's namespace is first loaded.
+
+      \item \code{ppr()} and \code{supsmu()} get an optional
+      \code{trace} argument, and \code{ppr(.., sm.method = ..spline)} is
+      no longer limited to sample size \eqn{n \le 2500}{n <= 2500}.
     }
   }
 
@@ -240,12 +261,17 @@
       removed.  That compiler has strict C++98 compliance hence does not
       include extensions in its (non-legacy) C++ headers: some
       packages will need to request C++11 or replace non-C++98 calls
-      such as \code{lgamma}: see §1.6.4 of \sQuote{Writing R
-	Extensions}.
-    
+      such as \code{lgamma}: see §1.6.4 of \sQuote{Writing R Extensions}.
+
       \item When included from C++, the \R headers now use forms such as
       \code{std::FILE} directly rather than including the line \preformatted{using std::FILE;}
       C++ code including these headers might be relying on the latter.
+
+      \item Headers \file{R_ext/BLAS.h} and \file{R_ext/Lapack.h} have
+      many improved declarations including \code{const} for
+      double-precision complex routines. \emph{Inter alia} this avoids
+      warnings when passing \sQuote{string literal} arguments from C++11
+      code.
     }
   }
 
@@ -284,6 +310,10 @@
       \item \command{configure} checks for the required header
       \file{sys/select.h} (or \file{sys/time.h} on legacy systems) and
       system call \code{select} and aborts if they are not found.
+
+      \item If available, the POSIX 2008 system call \code{utimensat}
+      will be used by \code{setFileTime()} and \code{file.copy(copy.date
+	= TRUE)}.  This may result in slightly more accurate file times.
     }
   }
 
@@ -293,13 +323,6 @@
       binary builds.  The \file{tcltk*.chm} help file is no longer
       included; please consult the online help at
       \url{http://www.tcl.tk/man/} instead.
-    }
-  }
-
-  \subsection{DEPRECATED AND DEFUNCT}{
-    \itemize{
-      \item Use of the C/C++ macro \samp{NO_C_HEADERS} is defunct and
-      silently ignored.
     }
   }
 
@@ -336,6 +359,11 @@
       \item \command{R CMD build} and \command{R CMD check} now use the
       \emph{union} of \env{R_LIBS} \code{.libPaths()}.  They may not be
       equivalent, e.g., when the latter is determined by \env{R_PROFILE}.
+
+      \item \command{R CMD build} now preserves dates when it copies files
+      in preparing the tarball.  (Previously on Windows it changed the
+      dates on all files; on Unix, it changed some dates when installing
+      vignettes.)
     }
   }
 
@@ -345,6 +373,9 @@
 
       \item Installation support for \code{readline} emulations based on
       \code{editline} (aka \code{libedit}) is deprecated.
+
+      \item Use of the C/C++ macro \samp{NO_C_HEADERS} is defunct and
+      silently ignored.
     }
   }
 
@@ -438,6 +469,9 @@
       \item \code{print.factor()} no longer sets the class of the factor
       to \code{NULL}, which would violate a basic constraint of an S4
       object.
+
+      \item \code{formatC(x, flag=f)} allows two new flags, and signals an
+      error for invalid flags also in the case of character formatting.
     }
   }
 }
@@ -448,21 +482,27 @@
       \item \code{extSoftVersion()} now reports the version (if any) of
       the \code{readline} library in use.
 
-      \item Convenience function \code{hasName()} has been added; it
-      is intended to replace the common idiom \code{!is.null(x$name)}
-      without the usually unintended partial name matching.
-
       \item The version of LAPACK included in the sources has been
       updated to 3.6.1, a bug-fix release including a speedup for the
       non-symmetric case of \code{eigen()}.
 
-      \item Use \code{options(deparse.max.lines)} to limit the number of
-      lines recorded in .Traceback and other deparsing activities.
+      \item Use \code{options(deparse.max.lines=)} to limit the number
+      of lines recorded in \code{.Traceback} and other deparsing
+      activities.
 
       \item \code{format(<AsIs>)} looks more regular, also for
       non-character atomic matrices.
 
-      \item \code{abbreviate()} gets option \code{named = TRUE}.
+      \item \code{abbreviate()} gains an option \code{named = TRUE}.
+
+      \item The online documentation for package \pkg{methods} is
+      extensively rewritten.  The goals are to simplify
+      documentation for basic use, to note old features not
+      recommended and to correct out-of-date information.
+
+      \item Calls to \code{setMethod()} no longer print a message when
+      creating a generic function in those cases where that is
+      natural: S3 generics and primitives.
     }
   }
 
@@ -515,10 +555,10 @@
       \item \code{pretty(d, ..)} behaves better for date-time \code{d}
       (\PR{16923}).
 
-      \item When a class name matches multiple classes in the cache,
-      perform a dynamic search in order to obey namespace imports.  This
-      should eliminate annoying messages about multiple hits in the
-      class cache.  Also, pass along the package from the
+      \item When an S4 class name matches multiple classes in the S4
+      cache, perform a dynamic search in order to obey namespace
+      imports.  This should eliminate annoying messages about multiple
+      hits in the class cache.  Also, pass along the package from the
       \code{ClassExtends} object when looking up superclasses in the
       cache.
 
@@ -563,7 +603,29 @@
       documented) when called with \code{wait = FALSE}.  (Reported by
       Michel Lang.)
 
-      \item \code{c()}'s argument \code{use.names} is documented now.
+      \item If a package added a class to a class union in another
+      package, loading the first package gave erroneous warnings
+      about \dQuote{undefined subclass}.
+
+      \item \code{c()}'s argument \code{use.names} is documented now, as
+      belonging to the (C internal) default method.   In
+      \dQuote{parallel}, argument \code{recursive} is also moved from
+      the generic to the default method, such that the formal argument list
+      of \pkg{base} generic \code{c()} is just \code{(...)}.
+
+      \item \code{rbeta(4, NA)} and similarly \code{rgamma()} and
+      \code{rnbinom()} now return \code{NaN}'s with a warning, as other
+      r<dist>(), and as documented.  (\PR{17155})
+
+      \item Using \code{options(checkPackageLicense = TRUE)} no longer
+      requires acceptance of the licence for non-default standard
+      packages such as \pkg{compiler}.  (Reported by Mikko Korpela.)
+
+      \item \code{split(<very_long>, *)} now works even when the split
+      off parts are long. (\PR{17139})
+
+      \item \code{min()} and \code{max()} now also work correctly when
+      the argument list starts with \code{character(0)}.  (\PR{17160})
     }
   }
 }
