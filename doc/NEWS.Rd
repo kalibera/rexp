@@ -626,6 +626,18 @@
 
       \item \code{min()} and \code{max()} now also work correctly when
       the argument list starts with \code{character(0)}.  (\PR{17160})
+
+      \item Subsetting very large matrices (\code{prod(dim(.)) >= 2^31})
+      now works thanks to Michael Schubmehl's \PR{17158}.
+
+      \item \code{bartlett.test()} used residual sums of squares
+      instead of variances, when the argument was a list of \code{lm} objects.
+      (Reported by Jens Ledet Jensen).
+
+      \item \code{plot(<lm>, which = *)} now correctly labels the
+      contour lines for the standardized residuals for \code{which = 6}.
+      It also takes the correct \eqn{p} in case of singularities (also
+      for \code{which = 5}).  (\PR{17161})
     }
   }
 }
