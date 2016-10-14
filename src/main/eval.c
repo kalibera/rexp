@@ -506,8 +506,12 @@ static SEXP forcePromise(SEXP e)
 	    if (PRSEEN(e) == 1)
 		errorcall(R_GlobalContext->call,
 			  _("promise already under evaluation: recursive default argument reference or earlier problems?"));
-	    else warningcall(R_GlobalContext->call,
+	    else {
+		/* set PRSEEN to 1 to avoid infinite recursion */
+		SET_PRSEEN(e, 1);
+		warningcall(R_GlobalContext->call,
 			     _("restarting interrupted promise evaluation"));
+	    }
 	}
 	/* Mark the promise as under evaluation and push it on a stack
 	   that can be used to unmark pending promises if a jump out
@@ -5298,6 +5302,10 @@ static SEXP getLocTableElt(ptrdiff_t relpc, SEXP table, SEXP constants)
 static SEXP R_findBCInterpreterLocation(RCNTXT *cptr, const char *iname)
 {
     SEXP body = cptr ? cptr->bcbody : R_BCbody;
+    if (body == NULL)
+	/* This has happened, but it is not clear how. */
+	/* (R_Srcref == R_InBCInterpreter && R_BCbody == NULL) */
+	return R_NilValue;
     SEXP constants = BCCONSTS(body);
     SEXP ltable = findLocTable(constants, iname);
     if (ltable == R_NilValue)
@@ -5504,11 +5512,6 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   if (R_disable_bytecode)
       return eval(bytecodeExpr(body), rho);
 
-  R_Srcref = R_InBCInterpreter;
-  R_BCIntActive = 1;
-  R_BCbody = body;
-  R_BCpc = &currentpc;
-
   /* check version */
   /* must be kept in sync with R_BCVersionOK */
   {
@@ -5530,6 +5533,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
   }
 
+  R_Srcref = R_InBCInterpreter;
+  R_BCIntActive = 1;
+  R_BCbody = body;
+  R_BCpc = &currentpc;
   R_binding_cache_t vcache = NULL;
   Rboolean smallcache = TRUE;
 #ifdef USE_BINDING_CACHE
@@ -5591,7 +5598,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    R_bcstack_t *oldtop = R_BCNodeStackTop;
 	    RCNTXT *cntxt = BCNALLOC_CNTXT();
 	    BCNPUSH_INTEGER(GETOP());       /* pc offset for 'break' */
-	    BCNPUSH_INTEGER(pc - codebase); /* pc offset for 'next' */
+	    BCNPUSH_INTEGER((int)(pc - codebase)); /* pc offset for 'next' */
 	    if (is_for_loop) {
 		/* duplicate the for loop state data on the top of the stack */
 		R_bcstack_t *loopdata = oldtop - FOR_LOOP_STATE_SIZE;
