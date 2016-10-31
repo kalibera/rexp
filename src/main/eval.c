@@ -818,16 +818,18 @@ void attribute_hidden R_init_jit_enabled(void)
        this in baseloader.R. */
     eval(install(".ArgsEnv"), R_BaseEnv);
 
-    if (R_jit_enabled <= 0) {
-	char *enable = getenv("R_ENABLE_JIT");
-	if (enable != NULL) {
-	    int val = atoi(enable);
-	    if (val > 0)
-		loadCompilerNamespace();
+    char *enable = getenv("R_ENABLE_JIT");
+    if (enable != NULL) {
+	int val = atoi(enable);
+	if (val) {
+	    /* NOTE: disabling JIT should work without the compiler
+	       package being loadable */
+	    loadCompilerNamespace(); /* FIXME: still needed? */
 	    checkCompilerOptions(val);
-	    R_jit_enabled = val;
 	}
-    }
+	R_jit_enabled = val;
+    } else
+	R_jit_enabled = 3; /* turn JIT on by default */
 
     if (R_compile_pkgs <= 0) {
 	char *compile = getenv("R_COMPILE_PKGS");
