@@ -818,18 +818,15 @@ void attribute_hidden R_init_jit_enabled(void)
        this in baseloader.R. */
     eval(install(".ArgsEnv"), R_BaseEnv);
 
+    int val = 3; /* turn JIT on by default */
     char *enable = getenv("R_ENABLE_JIT");
-    if (enable != NULL) {
-	int val = atoi(enable);
-	if (val) {
-	    loadCompilerNamespace();
-	    checkCompilerOptions(val);
-	}
-	R_jit_enabled = val;
-    } else {
+    if (enable != NULL)
+	val = atoi(enable);
+    if (val) {
 	loadCompilerNamespace();
-	R_jit_enabled = 3; /* Turn JIT on by default */
+	checkCompilerOptions(val);
     }
+    R_jit_enabled = val;
 
     if (R_compile_pkgs <= 0) {
 	char *compile = getenv("R_COMPILE_PKGS");
