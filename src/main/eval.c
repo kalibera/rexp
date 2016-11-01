@@ -822,14 +822,14 @@ void attribute_hidden R_init_jit_enabled(void)
     if (enable != NULL) {
 	int val = atoi(enable);
 	if (val) {
-	    /* NOTE: disabling JIT should work without the compiler
-	       package being loadable */
-	    loadCompilerNamespace(); /* FIXME: still needed? */
+	    loadCompilerNamespace();
 	    checkCompilerOptions(val);
 	}
 	R_jit_enabled = val;
-    } else
-	R_jit_enabled = 3; /* turn JIT on by default */
+    } else {
+	loadCompilerNamespace();
+	R_jit_enabled = 3; /* Turn JIT on by default */
+    }
 
     if (R_compile_pkgs <= 0) {
 	char *compile = getenv("R_COMPILE_PKGS");
