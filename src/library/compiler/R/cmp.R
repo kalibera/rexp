@@ -2843,8 +2843,10 @@ notifyNoSwitchcases <- function(cntxt)
         cntxt$warn(gettext("'switch' with no alternatives"), cntxt)
 
 notifyCompilerError <- function(msg)
-    if (!compilerOptions$suppressAll)
+    if (TRUE || !compilerOptions$suppressAll) {
         cat(paste(gettext("Error: compilation failed - "), msg, "\n"))
+        traceback(0)
+    }
 
 
 ##
