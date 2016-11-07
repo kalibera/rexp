@@ -1384,8 +1384,10 @@ via [[notifyCompilerError]].
 
 <<[[notifyCompilerError]] function>>=
 notifyCompilerError <- function(msg)
-    if (!compilerOptions$suppressAll)
+    if (TRUE || !compilerOptions$suppressAll) {
         cat(paste(gettext("Error: compilation failed - "), msg, "\n"))
+        traceback(0)
+    }
 @ %def notifyCompilerError
 
 
