@@ -372,6 +372,9 @@
       in preparing the tarball.  (Previously on Windows it changed the
       dates on all files; on Unix, it changed some dates when installing
       vignettes.)
+
+      \item \command{R CMD check --no-stop-on-error} now continues running
+      tests even if they give (normal) errors.
     }
   }
 
@@ -384,6 +387,9 @@
 
       \item Use of the C/C++ macro \samp{NO_C_HEADERS} is defunct and
       silently ignored.
+
+      \item \code{unix.time()}, a traditional synonym for
+      \code{system.time()}, has been deprecated.
     }
   }
 
@@ -480,6 +486,25 @@
 
       \item \code{formatC(x, flag=f)} allows two new flags, and signals an
       error for invalid flags also in the case of character formatting.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.3.2 patched}{
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{rep(x, times)} and \code{rep.int(x, times)} now both
+      work also when \code{times} is larger than the maximal integer.
+      (\PR{16932})
+
+      \item \code{vapply(x, *)} now works with long vectors \code{x}.
+      (\PR{17174})
+
+      \item \code{isS3method("is.na.data.frame")} and similar are
+      correct now.  (\PR{17171})
+
+      \item \code{grepRaw(<long>, <short>, fixed = TRUE)} now works,
+      thanks to a patch by Mikko Korpela.  (\PR{17132})
     }
   }
 }
