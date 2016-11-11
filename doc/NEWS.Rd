@@ -33,7 +33,7 @@
       compare \code{matrix(1,1) + 2:3} and \code{matrix(1,1) < 2:3}).
 
       \item The JIT byte code compiler is now enabled by default at
-      level 3. This means functions will be compiled on first sue and
+      level 3. This means functions will be compiled on first use and
       top level loops will be compiled and then run.  Thanks to Tomas
       Kalibera for extensive work to make this possible. For now, the
       compiler will not compile code containing explicit calls to
@@ -382,8 +382,8 @@
       dates on all files; on Unix, it changed some dates when installing
       vignettes.)
 
-      \item \command{R CMD check --no-stop-on-error} now continues running
-      tests even if they give (normal) errors.
+      \item \command{R CMD check --no-stop-on-test-error} now continues
+      running tests (in \file{tests/}) even if they give errors.
     }
   }
 
