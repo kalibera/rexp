@@ -305,9 +305,9 @@ SEXP attribute_hidden do_envirgets(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(MAYBE_SHARED(s))
 	    /* this copies but does not duplicate args or code */
 	    s = duplicate(s);
-	if (TYPEOF(BODY(s)) == BCODESXP)
+//	if (TYPEOF(BODY(s)) == BCODESXP)
 	    /* switch to interpreted version if compiled */
-	    SET_BODY(s, R_ClosureExpr(CAR(args)));
+	    //SET_BODY(s, R_ClosureExpr(CAR(args)));
 	SET_CLOENV(s, env);
     }
     else if (isNull(env) || isEnvironment(env) ||
