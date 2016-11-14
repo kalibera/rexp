@@ -272,13 +272,8 @@ findLocalsList <- function(elist, cntxt) {
         ## **** need to fix the termination condition used in codetools!!!
         if (last.nsf == nsf) {
             rdsf <- vals %in% specialSyntaxFuns
-            if (any(rdsf)) {
-                msg <- ngettext(sum(rdsf),
-                                "local assignment to syntactic function: ",
-                                "local assignments to syntactic functions: ")
-                cntxt$warn(paste(msg, paste(vals[rdsf], collapse = ", ")),
-                           cntxt)
-            }
+            if (any(rdsf))
+                notifyAssignSyntacticFun(vals[rdsf], cntxt)
             return(vals)
         }
     }
@@ -2842,6 +2837,15 @@ notifyNoSwitchcases <- function(cntxt)
     if (! suppressAll(cntxt))
         cntxt$warn(gettext("'switch' with no alternatives"), cntxt)
 
+notifyAssignSyntacticFun <- function(funs, cntxt) {
+    if (! suppressAll(cntxt)) {
+        msg <- ngettext(length(funs),
+            "local assignment to syntactic function: ",
+            "local assignments to syntactic functions: ")
+        cntxt$warn(paste(msg, paste(funs, collapse = ", ")), cntxt)
+    }
+}
+
 notifyCompilerError <- function(msg)
     if (!compilerOptions$suppressAll)
         cat(paste(gettext("Error: compilation failed - "), msg, "\n"))
@@ -3051,10 +3055,23 @@ setCompilerOptions <- function(...) {
 }
 
 .onLoad <- function(libname, pkgname) {
-    if (Sys.getenv("R_COMPILER_SUPPRESS_ALL") != "")
-        setCompilerOptions(suppressAll = TRUE)
-    if (Sys.getenv("R_COMPILER_SUPPRESS_UNDEFINED") != "")
-        setCompilerOptions(suppressUndefined = TRUE)
+    envAsLogical <- function(varName) {
+        value = Sys.getenv(varName)
+        if (value == "")
+            NA
+        else
+            switch(value,
+                "1"=, "TRUE"=, "true"=, "True"=, "yes"=, "Yes"= TRUE,
+                "0"=, "FALSE"=,"false"=,"False"=, "no"=, "No" = FALSE,
+                stop(gettextf("invalid environment variable value: %s==%s",
+                    varName, value)))
+    }
+    val <- envAsLogical("R_COMPILER_SUPPRESS_ALL")
+    if (!is.na(val))
+        setCompilerOptions(suppressAll = val)
+    val <- envAsLogical("R_COMPILER_SUPPRESS_UNDEFINED")
+    if (!is.na(val))
+        setCompilerOptions(suppressUndefined = val)
     if (Sys.getenv("R_COMPILER_OPTIMIZE") != "")
         tryCatch({
             lev <- as.integer(Sys.getenv("R_COMPILER_OPTIMIZE"))
