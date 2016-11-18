@@ -1130,6 +1130,11 @@ static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
        also present in cmpenv the code for cmpenc can be reused,
        though it might be less efficient if a binding in cmpenv
        prevents an optimization that would be possible in env. */
+
+    if (cmpenv == env) /* this applies e.g. when the same R script
+                          is sourced twice in interactive session */
+	return TRUE;
+
     if (ENCLOS(cmpenv) == ENCLOS(env)) {
 	/* A common setting (from S4 maybe?) leads to a cached
 	   compilation for cmpenv and a new target environment env
