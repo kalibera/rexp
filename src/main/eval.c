@@ -778,7 +778,76 @@ void SrcrefPrompt(const char * prefix, SEXP srcref)
     Rprintf("%s: ", prefix);
 }
 
-/* Apply SEXP op of type CLOSXP to actuals */
+/* JIT support */
+typedef unsigned long R_exprhash_t;
+
+static R_exprhash_t hash(unsigned char *str, int n, R_exprhash_t hash)
+{
+    // djb2 from http://www.cse.yorku.ca/~oz/hash.html
+    int c;
+
+    while ((c = *str++))
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+    return hash;
+}
+
+
+static R_exprhash_t hashexpr1(SEXP e, R_exprhash_t h)
+{
+#define HASH(x, h) hash((unsigned char *) &x, sizeof(x), h)
+#define SKIP_NONSCALAR 	if (len != 1) break /* non-scalars hashed by address */
+    int len = length(e);
+    int type = TYPEOF(e);
+    h = HASH(type, h);
+    h = HASH(len, h);
+    
+    switch(type) {
+    case LANGSXP:
+    case LISTSXP:
+	/**** safer to only follow while CDR is LANGSXP/LISTSXP */
+	for (; e != R_NilValue; e = CDR(e))
+	    h = hashexpr1(CAR(e), h);
+	return h;
+    case LGLSXP:
+	SKIP_NONSCALAR;
+	for (int i = 0; i < len; i++) {
+	    int ival = LOGICAL(e)[i];
+	    h = HASH(ival, h);
+	}
+	return h;	
+    case INTSXP:
+	SKIP_NONSCALAR;
+	for (int i = 0; i < len; i++) {
+	    int ival = INTEGER(e)[i];
+	    h = HASH(ival, h);
+	}
+	return h;	
+    case REALSXP:
+	SKIP_NONSCALAR;
+	for (int i = 0; i < len; i++) {
+	    double dval = REAL(e)[i];
+	    h = HASH(dval, h);
+	}
+	return h;	
+    case STRSXP:
+	SKIP_NONSCALAR;
+	for (int i = 0; i < len; i++) {
+	    SEXP cval = STRING_ELT(e, i);
+	    h = hash((unsigned char *) CHAR(cval), LENGTH(cval), h);
+	}
+	return h;
+    }
+
+    return HASH(e, h);
+#undef HASH
+#undef SKIP_NONSCALAR
+}
+
+static R_exprhash_t hashexpr(SEXP e)
+{
+    return hashexpr1(e, 5381);
+}
 
 static void loadCompilerNamespace(void)
 {
@@ -807,7 +876,22 @@ static void checkCompilerOptions(int jitEnabled)
     R_Visible = old_visible;
 }
 
+static SEXP R_IfSymbol = NULL;
+static SEXP R_ForSymbol = NULL;
+static SEXP R_WhileSymbol = NULL;
+static SEXP R_RepeatSymbol = NULL;
+
+#define JIT_CACHE_SIZE 1024
+static SEXP JIT_cache = NULL;
+static R_exprhash_t JIT_cache_hashes[JIT_CACHE_SIZE];
+
 static int R_disable_bytecode = 0;
+
+/**** allow MIN_JIT_SCORE, or both, to be changed by environment variables? */
+static int MIN_JIT_SCORE = 50;
+#define LOOP_JIT_SCORE MIN_JIT_SCORE
+
+static struct { unsigned long count, envcount, bdcount; } jit_info = {0, 0, 0};
 
 void attribute_hidden R_init_jit_enabled(void)
 {
@@ -861,10 +945,230 @@ void attribute_hidden R_init_jit_enabled(void)
 	if (check != NULL)
 	    R_check_constants = atoi(check);
     }
+
+    /* initialize JIT variables */
+    R_IfSymbol = install("if");
+    R_ForSymbol = install("for");
+    R_WhileSymbol = install("while");
+    R_RepeatSymbol = install("repeat");
+
+    R_PreserveObject(JIT_cache = allocVector(VECSXP, JIT_CACHE_SIZE));
+}
+
+static int JIT_score(SEXP e)
+{
+    if (TYPEOF(e) == LANGSXP) {
+	SEXP fun = CAR(e);
+	if (fun == R_IfSymbol) {
+	    int cons = JIT_score(CADR(e));
+	    int alt =  JIT_score(CADDR(e));
+	    return cons > alt ? cons : alt;
+	}
+	else if (fun == R_ForSymbol ||
+		 fun == R_WhileSymbol ||
+		 fun == R_RepeatSymbol)
+	    return LOOP_JIT_SCORE;
+	else {
+	    int score = 1;
+	    for (SEXP args = CDR(e); args != R_NilValue; args = CDR(args))
+		score += JIT_score(CAR(args));
+	    return score;
+	}
+    }
+    else return 1;
+}
+
+#define STRATEGY_NO_SMALL 0
+#define STRATEGY_TOP_SMALL_MAYBE 1
+#define STRATEGY_ALL_SMALL_MAYBE 2
+#define STRATEGY_NO_SCORE 3
+static int jit_strategy = -1;
+
+static R_INLINE Rboolean R_CheckJIT(SEXP fun)
+{
+    /* to help with testing */
+    if (jit_strategy < 0) {
+	int dflt = STRATEGY_TOP_SMALL_MAYBE;
+	int val = dflt;
+	char *valstr = getenv("R_JIT_STRATEGY");
+	if (valstr != NULL) 
+	    val = atoi(valstr);
+	if (val < 0 || val > 3)
+	    jit_strategy = dflt;
+	else
+	    jit_strategy = val;
+
+	valstr = getenv("R_MIN_JIT_SCORE");
+	if (valstr != NULL) 
+	    MIN_JIT_SCORE = atoi(valstr);
+    }
+
+    SEXP body = BODY(fun);
+
+    if (R_jit_enabled > 0 && TYPEOF(body) != BCODESXP &&
+	! R_disable_bytecode && ! NOJIT(fun)) {
+
+	if (MAYBEJIT(fun)) {
+	    /* function marked as MAYBEJIT the first time now seen
+	       twice, so go ahead and compile */
+	    UNSET_MAYBEJIT(fun);
+	    return TRUE;
+	}
+
+	if (jit_strategy == STRATEGY_NO_SCORE)
+	    return TRUE;
+
+	int score = JIT_score(body);
+	if (jit_strategy == STRATEGY_ALL_SMALL_MAYBE)
+	    if (score < MIN_JIT_SCORE) { SET_MAYBEJIT(fun); return FALSE; }
+
+	if (CLOENV(fun) == R_GlobalEnv) {
+	    /* top level functions are only compiled if score is high enough */
+	    if (score < MIN_JIT_SCORE) {
+		if (jit_strategy == STRATEGY_TOP_SMALL_MAYBE)
+		    SET_MAYBEJIT(fun);
+		else
+		    SET_NOJIT(fun);
+		return FALSE;
+	    }
+	    else return TRUE;
+	}
+	else {
+	    /* only compile non-top-level function if score is high
+	       enough and seen twice */
+	    if (score < MIN_JIT_SCORE) {
+		SET_NOJIT(fun);
+		return FALSE;
+	    }
+	    else {
+		SET_MAYBEJIT(fun);
+		return FALSE;
+	    }
+	}
+    }
+    return FALSE;
+}
+
+#ifdef DEBUG_JIT
+# define PRINT_JIT_INFO					      \
+    	REprintf("JIT cache hits: %ld; env: %ld; body %ld\n", \
+		 jit_info.count, jit_info.envcount, jit_info.bdcount)
+#else
+# define PRINT_JIT_INFO	do { } while(0)
+#endif
+
+/**** For now, the compiled function is stored directly in the
+      JIT_cache array.  It would be better to store environments and
+      code in separate weak references to prevent capture of large
+      envoronments in particular. */
+static R_INLINE void set_jit_cache_entry(R_exprhash_t hash, SEXP val)
+{
+    int hashidx = hash % JIT_CACHE_SIZE;
+    SET_VECTOR_ELT(JIT_cache, hashidx, val);
+    JIT_cache_hashes[hashidx] = hash;
+}
+
+static R_INLINE SEXP jit_chache_expr(SEXP entry)
+{
+    return R_ClosureExpr(entry);
+}
+
+static R_INLINE SEXP jit_cache_code(SEXP entry)
+{
+    return BODY(entry);
+}
+
+static R_INLINE SEXP jit_cache_env(SEXP entry)
+{
+    return CLOENV(entry);
+}
+
+static R_INLINE SEXP get_jit_cache_entry(R_exprhash_t hash)
+{
+    int hashidx = hash % JIT_CACHE_SIZE;
+    if (JIT_cache_hashes[hashidx] == hash) {
+	SEXP entry = VECTOR_ELT(JIT_cache, hashidx);
+	if (TYPEOF(jit_cache_code(entry)) == BCODESXP)
+	    return entry;
+	else
+	    /* function has been de-compiled; clear the cache entry */
+	    SET_VECTOR_ELT(JIT_cache, hashidx, R_NilValue);
+    }
+    return R_NilValue;
+}
+
+static R_INLINE Rboolean jit_expr_match(SEXP expr, SEXP body)
+{
+    /*** is 16 right here??? does this need to be faster??? */
+    return R_compute_identical(expr, body, 16);
+}
+
+static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
+{
+    /* Can code compiled for environment cmpenv be used as compiled
+       code for environment env?  These tests rely on the assumption
+       that compilation is only affected by what variables are bound,
+       not their values. So as long as all bindings present in env are
+       also present in cmpenv the code for cmpenc can be reused,
+       though it might be less fficient if a binding in cmpenv
+       prevents an optimization that would be possible in env. */
+    if (ENCLOS(cmpenv) == ENCLOS(env)) {
+	/* A common setting (from S4 maybe?) leads to a chached
+	   compilation for cmpenv and a new target environment env
+	   with (a) the same parent environments, (b) standard
+	   unhashed top frames, and (c) the same variables in the same
+	   order in the top frames.  This test will also pass if the
+	   top frame of cmpenv contains additional variables at the
+	   end, though that is rarely the case. Allowing bindings to
+	   appear in arbitrary order would recognize more cases, but
+	   seem not to arise often enough to warrant the more
+	   expensive check. */
+	if (HASHTAB(cmpenv) == R_NilValue && HASHTAB(env) == R_NilValue) {
+	    SEXP frame = FRAME(env);
+	    SEXP cframe = FRAME(cmpenv);
+	    for (; frame != R_NilValue;
+		 frame = CDR(frame), cframe = CDR(cframe))
+		if (TAG(frame) != TAG(cframe))
+		    return FALSE;
+	    return TRUE;
+	}
+	else return FALSE;
+    }
+    else {
+	/* Another common ideom is to set the ennvironment on a
+	   function to a top level environment to avoid capture of
+	   large objects in local environments. As long as cmpenv has
+	   the targen enforonment env in its parent chain a
+	   compilation under cmpenv can be rued for env. */
+ 	while (env != cmpenv && cmpenv != R_GlobalEnv && cmpenv != R_EmptyEnv)
+	    cmpenv = CDR(cmpenv);
+	return env == cmpenv;
+    }
 }
 
 SEXP attribute_hidden R_cmpfun(SEXP fun)
 {
+    R_exprhash_t hash = hashexpr(BODY(fun));
+    SEXP entry = get_jit_cache_entry(hash);
+    if (entry != R_NilValue) {
+	jit_info.count++;
+	if (jit_expr_match(jit_chache_expr(entry), BODY(fun))) {
+	    jit_info.bdcount++;
+	    if (jit_env_match(jit_cache_env(entry), CLOENV(fun))) {
+		jit_info.envcount++;
+		PRINT_JIT_INFO;
+		SET_BODY(fun, jit_cache_code(entry));
+		/**** reset the cache here?*/
+		return fun;
+	    }
+	}
+	SET_NOJIT(fun);
+	/**** also mark the cache entry as NOJIT, or as need to see
+	      many times? */
+	return fun;
+    }
+    PRINT_JIT_INFO;
+
     int old_visible = R_Visible;
     SEXP packsym, funsym, call, fcall, val;
 
@@ -875,6 +1179,12 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
     PROTECT(call = lang2(fcall, fun));
     val = eval(call, R_GlobalEnv);
     UNPROTECT(2);
+
+    if (TYPEOF(BODY(val)) != BCODESXP)
+	SET_NOJIT(fun);
+    else
+	set_jit_cache_entry(hash, val);
+
     R_Visible = old_visible;
     return val;
 }
@@ -986,6 +1296,7 @@ static void PrintCall(SEXP call, SEXP rho)
     R_BrowseLines = old_bl;
 }
 
+/* Apply SEXP op of type CLOSXP to actuals */
 SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 {
     SEXP formals, actuals, savedrho;
@@ -1010,7 +1321,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     body = BODY(op);
     savedrho = CLOENV(op);
 
-    if (R_jit_enabled > 0 && TYPEOF(body) != BCODESXP && !R_disable_bytecode) {
+    if (R_CheckJIT(op)) {
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
 	R_jit_enabled = 0;
@@ -1183,7 +1494,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     body = BODY(op);
 
-    if (R_jit_enabled > 0 && TYPEOF(body) != BCODESXP && !R_disable_bytecode) {
+    if (R_CheckJIT(op)) {
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
 	R_jit_enabled = 0;
@@ -1623,6 +1934,7 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     dbg = RDEBUG(rho);
     if (R_jit_enabled > 2 && !dbg && !R_disable_bytecode
+	    && rho == R_GlobalEnv
 	    && isUnmodifiedSpecSym(CAR(call), rho)
 	    && R_compileAndExecute(call, rho))
 	return R_NilValue;
@@ -1746,6 +2058,7 @@ SEXP attribute_hidden do_while(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     dbg = RDEBUG(rho);
     if (R_jit_enabled > 2 && !dbg && !R_disable_bytecode
+	    && rho == R_GlobalEnv
 	    && isUnmodifiedSpecSym(CAR(call), rho)
 	    && R_compileAndExecute(call, rho))
 	return R_NilValue;
@@ -1787,6 +2100,7 @@ SEXP attribute_hidden do_repeat(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     dbg = RDEBUG(rho);
     if (R_jit_enabled > 2 && !dbg && !R_disable_bytecode
+	    && rho == R_GlobalEnv
 	    && isUnmodifiedSpecSym(CAR(call), rho)
 	    && R_compileAndExecute(call, rho))
 	return R_NilValue;
