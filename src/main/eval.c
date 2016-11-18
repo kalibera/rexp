@@ -801,7 +801,7 @@ static R_exprhash_t hashexpr1(SEXP e, R_exprhash_t h)
     int type = TYPEOF(e);
     h = HASH(type, h);
     h = HASH(len, h);
-    
+
     switch(type) {
     case LANGSXP:
     case LISTSXP:
@@ -815,21 +815,21 @@ static R_exprhash_t hashexpr1(SEXP e, R_exprhash_t h)
 	    int ival = LOGICAL(e)[i];
 	    h = HASH(ival, h);
 	}
-	return h;	
+	return h;
     case INTSXP:
 	SKIP_NONSCALAR;
 	for (int i = 0; i < len; i++) {
 	    int ival = INTEGER(e)[i];
 	    h = HASH(ival, h);
 	}
-	return h;	
+	return h;
     case REALSXP:
 	SKIP_NONSCALAR;
 	for (int i = 0; i < len; i++) {
 	    double dval = REAL(e)[i];
 	    h = HASH(dval, h);
 	}
-	return h;	
+	return h;
     case STRSXP:
 	SKIP_NONSCALAR;
 	for (int i = 0; i < len; i++) {
@@ -979,9 +979,27 @@ static int JIT_score(SEXP e)
 }
 
 #define STRATEGY_NO_SMALL 0
+
 #define STRATEGY_TOP_SMALL_MAYBE 1
 #define STRATEGY_ALL_SMALL_MAYBE 2
 #define STRATEGY_NO_SCORE 3
+
+/*
+  NO_SCORE
+      functions are compiled 1st time seen
+
+  ALL_SMALL_MAYBE
+      functions with small score are compiled 2nd time seen
+      function with high score are compiled
+          1st time seen if top-level, 2nd time seen otherwise
+
+  TOP_SMALL_MAYBE
+      functions with small score compiled
+          2nd time seen if top-level, never otherwise
+      functions with high score compiled
+          1st time seen if top-level, 2nd time seen otherwise
+*/
+
 static int jit_strategy = -1;
 
 static R_INLINE Rboolean R_CheckJIT(SEXP fun)
@@ -991,7 +1009,7 @@ static R_INLINE Rboolean R_CheckJIT(SEXP fun)
 	int dflt = STRATEGY_TOP_SMALL_MAYBE;
 	int val = dflt;
 	char *valstr = getenv("R_JIT_STRATEGY");
-	if (valstr != NULL) 
+	if (valstr != NULL)
 	    val = atoi(valstr);
 	if (val < 0 || val > 3)
 	    jit_strategy = dflt;
@@ -999,7 +1017,7 @@ static R_INLINE Rboolean R_CheckJIT(SEXP fun)
 	    jit_strategy = val;
 
 	valstr = getenv("R_MIN_JIT_SCORE");
-	if (valstr != NULL) 
+	if (valstr != NULL)
 	    MIN_JIT_SCORE = atoi(valstr);
     }
 
@@ -1050,9 +1068,9 @@ static R_INLINE Rboolean R_CheckJIT(SEXP fun)
 }
 
 #ifdef DEBUG_JIT
-# define PRINT_JIT_INFO					      \
-    	REprintf("JIT cache hits: %ld; env: %ld; body %ld\n", \
-		 jit_info.count, jit_info.envcount, jit_info.bdcount)
+# define PRINT_JIT_INFO                                     \
+    REprintf("JIT cache hits: %ld; env: %ld; body %ld\n",   \
+        jit_info.count, jit_info.envcount, jit_info.bdcount)
 #else
 # define PRINT_JIT_INFO	do { } while(0)
 #endif
@@ -1060,7 +1078,7 @@ static R_INLINE Rboolean R_CheckJIT(SEXP fun)
 /**** For now, the compiled function is stored directly in the
       JIT_cache array.  It would be better to store environments and
       code in separate weak references to prevent capture of large
-      envoronments in particular. */
+      environments in particular. */
 static R_INLINE void set_jit_cache_entry(R_exprhash_t hash, SEXP val)
 {
     int hashidx = hash % JIT_CACHE_SIZE;
@@ -1068,7 +1086,7 @@ static R_INLINE void set_jit_cache_entry(R_exprhash_t hash, SEXP val)
     JIT_cache_hashes[hashidx] = hash;
 }
 
-static R_INLINE SEXP jit_chache_expr(SEXP entry)
+static R_INLINE SEXP jit_cache_expr(SEXP entry)
 {
     return R_ClosureExpr(entry);
 }
@@ -1110,10 +1128,10 @@ static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
        that compilation is only affected by what variables are bound,
        not their values. So as long as all bindings present in env are
        also present in cmpenv the code for cmpenc can be reused,
-       though it might be less fficient if a binding in cmpenv
+       though it might be less efficient if a binding in cmpenv
        prevents an optimization that would be possible in env. */
     if (ENCLOS(cmpenv) == ENCLOS(env)) {
-	/* A common setting (from S4 maybe?) leads to a chached
+	/* A common setting (from S4 maybe?) leads to a cached
 	   compilation for cmpenv and a new target environment env
 	   with (a) the same parent environments, (b) standard
 	   unhashed top frames, and (c) the same variables in the same
@@ -1121,7 +1139,7 @@ static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
 	   top frame of cmpenv contains additional variables at the
 	   end, though that is rarely the case. Allowing bindings to
 	   appear in arbitrary order would recognize more cases, but
-	   seem not to arise often enough to warrant the more
+	   seems not to arise often enough to warrant the more
 	   expensive check. */
 	if (HASHTAB(cmpenv) == R_NilValue && HASHTAB(env) == R_NilValue) {
 	    SEXP frame = FRAME(env);
@@ -1135,12 +1153,12 @@ static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
 	else return FALSE;
     }
     else {
-	/* Another common ideom is to set the ennvironment on a
+	/* Another common idiom is to set the environment on a
 	   function to a top level environment to avoid capture of
 	   large objects in local environments. As long as cmpenv has
-	   the targen enforonment env in its parent chain a
-	   compilation under cmpenv can be rued for env. */
- 	while (env != cmpenv && cmpenv != R_GlobalEnv && cmpenv != R_EmptyEnv)
+	   the target environment env in its parent chain a
+	   compilation under cmpenv can be used for env. */
+	while (env != cmpenv && cmpenv != R_GlobalEnv && cmpenv != R_EmptyEnv)
 	    cmpenv = CDR(cmpenv);
 	return env == cmpenv;
     }
@@ -1152,7 +1170,7 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
     SEXP entry = get_jit_cache_entry(hash);
     if (entry != R_NilValue) {
 	jit_info.count++;
-	if (jit_expr_match(jit_chache_expr(entry), BODY(fun))) {
+	if (jit_expr_match(jit_cache_expr(entry), BODY(fun))) {
 	    jit_info.bdcount++;
 	    if (jit_env_match(jit_cache_env(entry), CLOENV(fun))) {
 		jit_info.envcount++;
