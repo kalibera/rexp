@@ -792,10 +792,10 @@ static R_exprhash_t hash(unsigned char *str, int n, R_exprhash_t hash)
     return hash;
 }
 
+#define HASH(x, h) hash((unsigned char *) &x, sizeof(x), h)
 
 static R_exprhash_t hashexpr1(SEXP e, R_exprhash_t h)
 {
-#define HASH(x, h) hash((unsigned char *) &x, sizeof(x), h)
 #define SKIP_NONSCALAR 	if (len != 1) break /* non-scalars hashed by address */
     int len = length(e);
     int type = TYPEOF(e);
@@ -840,13 +840,29 @@ static R_exprhash_t hashexpr1(SEXP e, R_exprhash_t h)
     }
 
     return HASH(e, h);
-#undef HASH
 #undef SKIP_NONSCALAR
 }
+
+static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind);
+static R_exprhash_t hashsrcref(SEXP e, R_exprhash_t h)
+{
+    if (TYPEOF(e) == INTSXP && LENGTH(e) >=6)
+	for(int i = 0; i < 6; i++) {
+	    int ival = INTEGER(e)[i];
+	    h = HASH(ival, h);
+	}
+    return h;
+}
+#undef HASH
 
 static R_exprhash_t hashexpr(SEXP e)
 {
     return hashexpr1(e, 5381);
+}
+
+static R_exprhash_t hashfun(SEXP f)
+{
+    return hashsrcref(getAttrib(f, R_SrcrefSymbol), hashexpr(BODY(f)));
 }
 
 static void loadCompilerNamespace(void)
@@ -1101,6 +1117,11 @@ static R_INLINE SEXP jit_cache_env(SEXP entry)
     return CLOENV(entry);
 }
 
+static R_INLINE SEXP jit_cache_srcref(SEXP entry)
+{
+    return getAttrib(entry, R_SrcrefSymbol);
+}
+
 static R_INLINE SEXP get_jit_cache_entry(R_exprhash_t hash)
 {
     int hashidx = hash % JIT_CACHE_SIZE;
@@ -1169,9 +1190,14 @@ static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
     }
 }
 
+static R_INLINE Rboolean jit_srcref_match(SEXP cmpsrcref, SEXP srcref)
+{
+    return R_compute_identical(cmpsrcref, srcref, 0);
+}
+
 SEXP attribute_hidden R_cmpfun(SEXP fun)
 {
-    R_exprhash_t hash = hashexpr(BODY(fun));
+    R_exprhash_t hash = hashfun(fun);
     SEXP entry = get_jit_cache_entry(hash);
     if (entry != R_NilValue) {
 	jit_info.count++;
@@ -1179,10 +1205,17 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 	    jit_info.bdcount++;
 	    if (jit_env_match(jit_cache_env(entry), CLOENV(fun))) {
 		jit_info.envcount++;
-		PRINT_JIT_INFO;
-		SET_BODY(fun, jit_cache_code(entry));
-		/**** reset the cache here?*/
-		return fun;
+		/* if function body has a srcref, all srcrefs compiled in that function
+		   only depend on the body srcref; but, otherwise the srcrefs compiled in
+                   are take from the function (op) */
+		if (getAttrib(BODY(fun), R_SrcrefSymbol) != R_NilValue ||
+		    jit_srcref_match(jit_cache_srcref(entry),
+		                     getAttrib(fun, R_SrcrefSymbol))) {
+		    PRINT_JIT_INFO;
+		    SET_BODY(fun, jit_cache_code(entry));
+		    /**** reset the cache here?*/
+		    return fun;
+		}
 	    }
 	}
 	SET_NOJIT(fun);
