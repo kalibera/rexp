@@ -1104,13 +1104,17 @@ SEXP topenv(SEXP, SEXP); /**** should be in a header file */
    potential problem. Since we compute the local variables at compile
    time we should record them in the byte code object and use the
    recorded value. */
-static R_INLINE SEXP make_cached_cmpenv(SEXP cmpenv)
+static R_INLINE SEXP make_cached_cmpenv(SEXP fun)
 {
+    SEXP frmls = FORMALS(fun);
+    SEXP cmpenv = CLOENV(fun);
     SEXP top = topenv(R_NilValue, cmpenv);
-    if (cmpenv == top)
+    if (cmpenv == top && frmls == R_NilValue)
 	return cmpenv;
     else {
 	SEXP newenv = NewEnvironment(R_NilValue, R_NilValue, top);
+	for (; frmls != R_NilValue; frmls = CDR(frmls))
+	    defineVar(TAG(frmls), R_NilValue, newenv);
 	for (SEXP env = cmpenv; env != top; env = CDR(env)) {
 	    if (IS_STANDARD_UNHASHED_FRAME(env)) {
 		for (SEXP frame = FRAME(env);
@@ -1131,7 +1135,7 @@ static R_INLINE void set_jit_cache_entry(R_exprhash_t hash, SEXP val)
     int hashidx = hash % JIT_CACHE_SIZE;
 
     PROTECT(val);
-    SEXP entry = CONS(BODY(val), make_cached_cmpenv(CLOENV(val)));
+    SEXP entry = CONS(BODY(val), make_cached_cmpenv(val));
     SET_TAG(entry, getAttrib(val, R_SrcrefSymbol));
     SET_VECTOR_ELT(JIT_cache, hashidx, entry);
     UNPROTECT(1); /* val */
@@ -1202,20 +1206,25 @@ static R_INLINE Rboolean cmpenv_exists_local(SEXP sym, SEXP env, SEXP top)
     return FALSE;
 }
 
-static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
+static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP fun)
 {
     /* Can code compiled for environment cmpenv be used as compiled
        code for environment env?  These tests rely on the assumption
        that compilation is only affected by what variables are bound,
-       not their values. So as long as both cmpenv and env have the same
-       top level environment and all local bindings present in env are
-       also present in cmpenv the code for cmpenv can be reused,
-       though it might be less efficient if a binding in cmpenv
-       prevents an optimization that would be possible in env. */
+       not their values. So as long as both cmpenv and env have the
+       same top level environment and all local bindings present in
+       the formals and environment of fun are also present in cmpenv
+       the code for cmpenv can be reused, though it might be less
+       efficient if a binding in cmpenv prevents an optimization that
+       would be possible in env. */
 
+    SEXP env = CLOENV(fun);
     SEXP top = topenv(R_NilValue, env);
 
     if (top == cmpenv_topenv(cmpenv)) {
+	for (SEXP frmls = FORMALS(fun); frmls != R_NilValue; frmls = CDR(frmls))
+	    if (! cmpenv_exists_local(TAG(frmls), cmpenv, top))
+		return FALSE;
 	for (; env != top; env = ENCLOS(env)) {
 	    if (IS_STANDARD_UNHASHED_FRAME(env)) {
 		/* To keep things simple, for a match this code
@@ -1247,7 +1256,7 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 	jit_info.count++;
 	if (jit_expr_match(jit_cache_expr(entry), BODY(fun))) {
 	    jit_info.bdcount++;
-	    if (jit_env_match(jit_cache_env(entry), CLOENV(fun))) {
+	    if (jit_env_match(jit_cache_env(entry), fun)) {
 		jit_info.envcount++;
 		/* if function body has a srcref, all srcrefs compiled
 		   in that function only depend on the body srcref;
