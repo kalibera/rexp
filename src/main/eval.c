@@ -995,7 +995,6 @@ static int JIT_score(SEXP e)
 }
 
 #define STRATEGY_NO_SMALL 0
-
 #define STRATEGY_TOP_SMALL_MAYBE 1
 #define STRATEGY_ALL_SMALL_MAYBE 2
 #define STRATEGY_NO_SCORE 3
@@ -1084,42 +1083,83 @@ static R_INLINE Rboolean R_CheckJIT(SEXP fun)
 }
 
 #ifdef DEBUG_JIT
-# define PRINT_JIT_INFO                                     \
-    REprintf("JIT cache hits: %ld; env: %ld; body %ld\n",   \
-        jit_info.count, jit_info.envcount, jit_info.bdcount)
+# define PRINT_JIT_INFO							\
+    REprintf("JIT cache hits: %ld; env: %ld; body %ld\n",		\
+	     jit_info.count, jit_info.envcount, jit_info.bdcount)
 #else
 # define PRINT_JIT_INFO	do { } while(0)
 #endif
 
-/**** For now, the compiled function is stored directly in the
-      JIT_cache array.  It would be better to store environments and
-      code in separate weak references to prevent capture of large
-      environments in particular. */
+SEXP topenv(SEXP, SEXP); /**** should be in a header file */
+
+#define IS_STANDARD_UNHASHED_FRAME(e) (! OBJECT(e) && HASHTAB(e) == R_NilValue)
+
+/* This makes a snapshot of the local variables in cmpenv and creates
+   a new environment with the same top level envoronment and bindings
+   with calue R_NilValue for the local variables. This guards against
+   the cmpenv changing after being entered in the cache, and also
+   allows large values that might be bound to local variables in
+   cmpenv to be reclaimed. If any local frames are not standard frames
+   then cmpenv is returned. This breaks the snapshot idea and is a
+   potential problem. Since we compute the local variables at compile
+   time we should record them in the byte code object and use the
+   recorded calue. */
+static R_INLINE SEXP make_cached_cmpenv(SEXP cmpenv)
+{
+    SEXP top = topenv(R_NilValue, cmpenv);
+    if (cmpenv == top)
+	return cmpenv;
+    else {
+	SEXP newenv = NewEnvironment(R_NilValue, R_NilValue, top);
+	for (SEXP env = cmpenv; env != top; env = CDR(env)) {
+	    if (IS_STANDARD_UNHASHED_FRAME(env)) {
+		for (SEXP frame = FRAME(env);
+		     frame != R_NilValue;
+		     frame = CDR(frame))
+		    defineVar(TAG(frame), R_NilValue, newenv);
+	    }
+	    else return cmpenv;
+	}
+	return newenv;
+    }
+}
+
+/* Cache entries are CONS cells with the body in CAR, the envoronment
+   in CDR, and the Srcref in the TAG. */
 static R_INLINE void set_jit_cache_entry(R_exprhash_t hash, SEXP val)
 {
     int hashidx = hash % JIT_CACHE_SIZE;
-    SET_VECTOR_ELT(JIT_cache, hashidx, val);
-    JIT_cache_hashes[hashidx] = hash;
-}
 
-static R_INLINE SEXP jit_cache_expr(SEXP entry)
-{
-    return R_ClosureExpr(entry);
+    PROTECT(val);
+    SEXP entry = CONS(BODY(val), make_cached_cmpenv(CLOENV(val)));
+    SET_TAG(entry, getAttrib(val, R_SrcrefSymbol));
+    SET_VECTOR_ELT(JIT_cache, hashidx, entry);
+    UNPROTECT(1); /* val */
+
+    JIT_cache_hashes[hashidx] = hash;
 }
 
 static R_INLINE SEXP jit_cache_code(SEXP entry)
 {
-    return BODY(entry);
+    return CAR(entry);
 }
 
 static R_INLINE SEXP jit_cache_env(SEXP entry)
 {
-    return CLOENV(entry);
+    return CDR(entry);
 }
 
 static R_INLINE SEXP jit_cache_srcref(SEXP entry)
 {
-    return getAttrib(entry, R_SrcrefSymbol);
+    return TAG(entry);
+}
+
+/* forward declaration */
+static SEXP bytecodeExpr(SEXP);
+
+static R_INLINE SEXP jit_cache_expr(SEXP entry)
+{
+    return bytecodeExpr(jit_cache_code(entry));
 }
 
 static R_INLINE SEXP get_jit_cache_entry(R_exprhash_t hash)
@@ -1142,52 +1182,56 @@ static R_INLINE Rboolean jit_expr_match(SEXP expr, SEXP body)
     return R_compute_identical(expr, body, 16);
 }
 
+static R_INLINE SEXP cmpenv_topenv(SEXP cmpenv)
+{
+    return topenv(R_NilValue, cmpenv);
+}
+
+static R_INLINE Rboolean cmpenv_exists_local(SEXP sym, SEXP env, SEXP top)
+{
+    for (; env != top; env = ENCLOS(env)) {
+	if (IS_STANDARD_UNHASHED_FRAME(env)) {
+	    for (SEXP frame = FRAME(env);
+		 frame != R_NilValue;
+		 frame = CDR(frame))
+		if (TAG(frame) == sym)
+		    return TRUE;
+	}
+	else return FALSE;
+    }
+    return FALSE;    
+}
+
 static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
 {
     /* Can code compiled for environment cmpenv be used as compiled
        code for environment env?  These tests rely on the assumption
        that compilation is only affected by what variables are bound,
-       not their values. So as long as all bindings present in env are
-       also present in cmpenv the code for cmpenc can be reused,
+       not their values. So as long both cmpenv and env have the same
+       top level environment and all local bindings present in env are
+       also present in cmpenv the code for cmpenv can be reused,
        though it might be less efficient if a binding in cmpenv
        prevents an optimization that would be possible in env. */
 
-    if (cmpenv == env) /* this applies e.g. when the same R script
-                          is sourced twice in interactive session */
-	return TRUE;
+    SEXP top = topenv(R_NilValue, env);
 
-    if (ENCLOS(cmpenv) == ENCLOS(env)) {
-	/* A common setting (from S4 maybe?) leads to a cached
-	   compilation for cmpenv and a new target environment env
-	   with (a) the same parent environments, (b) standard
-	   unhashed top frames, and (c) the same variables in the same
-	   order in the top frames.  This test will also pass if the
-	   top frame of cmpenv contains additional variables at the
-	   end, though that is rarely the case. Allowing bindings to
-	   appear in arbitrary order would recognize more cases, but
-	   seems not to arise often enough to warrant the more
-	   expensive check. */
-	if (HASHTAB(cmpenv) == R_NilValue && HASHTAB(env) == R_NilValue) {
-	    SEXP frame = FRAME(env);
-	    SEXP cframe = FRAME(cmpenv);
-	    for (; frame != R_NilValue;
-		 frame = CDR(frame), cframe = CDR(cframe))
-		if (TAG(frame) != TAG(cframe))
-		    return FALSE;
-	    return TRUE;
+    if (top == cmpenv_topenv(cmpenv)) {
+	for (; env != top; env = ENCLOS(env)) {
+	    if (IS_STANDARD_UNHASHED_FRAME(env)) {
+		/* To keep things timple, for a match this code
+		   requires that the local frames be standard unhashed
+		   frames. */
+		for (SEXP frame = FRAME(env);
+		     frame != R_NilValue;
+		     frame = CDR(frame))
+		    if (! cmpenv_exists_local(TAG(frame), cmpenv, top))
+			return FALSE;
+	    }
+	    else return FALSE;	    
 	}
-	else return FALSE;
+	return TRUE;
     }
-    else {
-	/* Another common idiom is to set the environment on a
-	   function to a top level environment to avoid capture of
-	   large objects in local environments. As long as cmpenv has
-	   the target environment env in its parent chain a
-	   compilation under cmpenv can be used for env. */
-	while (env != cmpenv && cmpenv != R_GlobalEnv && cmpenv != R_EmptyEnv)
-	    cmpenv = CDR(cmpenv);
-	return env == cmpenv;
-    }
+    else return FALSE;
 }
 
 static R_INLINE Rboolean jit_srcref_match(SEXP cmpsrcref, SEXP srcref)
@@ -1205,9 +1249,10 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 	    jit_info.bdcount++;
 	    if (jit_env_match(jit_cache_env(entry), CLOENV(fun))) {
 		jit_info.envcount++;
-		/* if function body has a srcref, all srcrefs compiled in that function
-		   only depend on the body srcref; but, otherwise the srcrefs compiled in
-                   are take from the function (op) */
+		/* if function body has a srcref, all srcrefs compiled
+		   in that function only depend on the body srcref;
+		   but, otherwise the srcrefs compiled in are take
+		   from the function (op) */
 		if (getAttrib(BODY(fun), R_SrcrefSymbol) != R_NilValue ||
 		    jit_srcref_match(jit_cache_srcref(entry),
 		                     getAttrib(fun, R_SrcrefSymbol))) {
@@ -1311,9 +1356,6 @@ SEXP attribute_hidden do_compilepkgs(SEXP call, SEXP op, SEXP args, SEXP rho)
     R_compile_pkgs = new;
     return ScalarLogical(old);
 }
-
-/* forward declaration */
-static SEXP bytecodeExpr(SEXP);
 
 /* this function gets the srcref attribute from a statement block,
    and confirms it's in the expected format */
