@@ -1095,15 +1095,15 @@ SEXP topenv(SEXP, SEXP); /**** should be in a header file */
 #define IS_STANDARD_UNHASHED_FRAME(e) (! OBJECT(e) && HASHTAB(e) == R_NilValue)
 
 /* This makes a snapshot of the local variables in cmpenv and creates
-   a new environment with the same top level envoronment and bindings
-   with calue R_NilValue for the local variables. This guards against
+   a new environment with the same top level environment and bindings
+   with value R_NilValue for the local variables. This guards against
    the cmpenv changing after being entered in the cache, and also
    allows large values that might be bound to local variables in
    cmpenv to be reclaimed. If any local frames are not standard frames
    then cmpenv is returned. This breaks the snapshot idea and is a
    potential problem. Since we compute the local variables at compile
    time we should record them in the byte code object and use the
-   recorded calue. */
+   recorded value. */
 static R_INLINE SEXP make_cached_cmpenv(SEXP cmpenv)
 {
     SEXP top = topenv(R_NilValue, cmpenv);
@@ -1124,7 +1124,7 @@ static R_INLINE SEXP make_cached_cmpenv(SEXP cmpenv)
     }
 }
 
-/* Cache entries are CONS cells with the body in CAR, the envoronment
+/* Cache entries are CONS cells with the body in CAR, the environment
    in CDR, and the Srcref in the TAG. */
 static R_INLINE void set_jit_cache_entry(R_exprhash_t hash, SEXP val)
 {
@@ -1199,7 +1199,7 @@ static R_INLINE Rboolean cmpenv_exists_local(SEXP sym, SEXP env, SEXP top)
 	}
 	else return FALSE;
     }
-    return FALSE;    
+    return FALSE;
 }
 
 static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
@@ -1207,7 +1207,7 @@ static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
     /* Can code compiled for environment cmpenv be used as compiled
        code for environment env?  These tests rely on the assumption
        that compilation is only affected by what variables are bound,
-       not their values. So as long both cmpenv and env have the same
+       not their values. So as long as both cmpenv and env have the same
        top level environment and all local bindings present in env are
        also present in cmpenv the code for cmpenv can be reused,
        though it might be less efficient if a binding in cmpenv
@@ -1218,7 +1218,7 @@ static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
     if (top == cmpenv_topenv(cmpenv)) {
 	for (; env != top; env = ENCLOS(env)) {
 	    if (IS_STANDARD_UNHASHED_FRAME(env)) {
-		/* To keep things timple, for a match this code
+		/* To keep things simple, for a match this code
 		   requires that the local frames be standard unhashed
 		   frames. */
 		for (SEXP frame = FRAME(env);
@@ -1227,7 +1227,7 @@ static R_INLINE Rboolean jit_env_match(SEXP cmpenv, SEXP env)
 		    if (! cmpenv_exists_local(TAG(frame), cmpenv, top))
 			return FALSE;
 	    }
-	    else return FALSE;	    
+	    else return FALSE;
 	}
 	return TRUE;
     }
@@ -1251,7 +1251,7 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 		jit_info.envcount++;
 		/* if function body has a srcref, all srcrefs compiled
 		   in that function only depend on the body srcref;
-		   but, otherwise the srcrefs compiled in are take
+		   but, otherwise the srcrefs compiled in are taken
 		   from the function (op) */
 		if (getAttrib(BODY(fun), R_SrcrefSymbol) != R_NilValue ||
 		    jit_srcref_match(jit_cache_srcref(entry),
