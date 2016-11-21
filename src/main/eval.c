@@ -1005,10 +1005,18 @@ static int JIT_score(SEXP e)
 #define STRATEGY_TOP_SMALL_MAYBE 1
 #define STRATEGY_ALL_SMALL_MAYBE 2
 #define STRATEGY_NO_SCORE 3
+#define STRATEGY_NO_CACHE 4
+/* max strategy index is hardcoded in R_CheckJIT */
 
 /*
+  NO_CACHE
+      functions are compiled 1st time seen
+        code is never cached
+
   NO_SCORE
       functions are compiled 1st time seen
+        code is cached
+	in case of conflict function may be marked NOJIT
 
   ALL_SMALL_MAYBE
       functions with small score are compiled 2nd time seen
@@ -1033,7 +1041,7 @@ static R_INLINE Rboolean R_CheckJIT(SEXP fun)
 	char *valstr = getenv("R_JIT_STRATEGY");
 	if (valstr != NULL)
 	    val = atoi(valstr);
-	if (val < 0 || val > 3)
+	if (val < 0 || val > 4)
 	    jit_strategy = dflt;
 	else
 	    jit_strategy = val;
@@ -1055,7 +1063,7 @@ static R_INLINE Rboolean R_CheckJIT(SEXP fun)
 	    return TRUE;
 	}
 
-	if (jit_strategy == STRATEGY_NO_SCORE)
+	if (jit_strategy == STRATEGY_NO_SCORE || jit_strategy == STRATEGY_NO_CACHE)
 	    return TRUE;
 
 	int score = JIT_score(body);
@@ -1257,47 +1265,51 @@ static R_INLINE Rboolean jit_srcref_match(SEXP cmpsrcref, SEXP srcref)
 
 SEXP attribute_hidden R_cmpfun(SEXP fun)
 {
-    R_exprhash_t hash = hashfun(fun);
-    SEXP entry = get_jit_cache_entry(hash);
-    if (entry != R_NilValue) {
-	jit_info.count++;
-	if (jit_env_match(jit_cache_env(entry), fun)) {
-	    jit_info.envcount++;
-	    if (jit_expr_match(jit_cache_expr(entry), BODY(fun))) {
-		jit_info.bdcount++;
-		/* if function body has a srcref, all srcrefs compiled
-		   in that function only depend on the body srcref;
-		   but, otherwise the srcrefs compiled in are taken
-		   from the function (op) */
-		if (getAttrib(BODY(fun), R_SrcrefSymbol) != R_NilValue ||
-		    jit_srcref_match(jit_cache_srcref(entry),
-		                     getAttrib(fun, R_SrcrefSymbol))) {
-		    PRINT_JIT_INFO;
-		    SET_BODY(fun, jit_cache_code(entry));
-		    /**** reset the cache here?*/
-		    return fun;
+    R_exprhash_t hash = 0;
+    if (jit_strategy != STRATEGY_NO_CACHE) {
+	hash = hashfun(fun);
+	SEXP entry = get_jit_cache_entry(hash);
+
+	if (entry != R_NilValue) {
+	    jit_info.count++;
+	    if (jit_env_match(jit_cache_env(entry), fun)) {
+		jit_info.envcount++;
+		if (jit_expr_match(jit_cache_expr(entry), BODY(fun))) {
+		    jit_info.bdcount++;
+		    /* if function body has a srcref, all srcrefs compiled
+		       in that function only depend on the body srcref;
+		       but, otherwise the srcrefs compiled in are taken
+		       from the function (op) */
+		    if (getAttrib(BODY(fun), R_SrcrefSymbol) != R_NilValue ||
+			jit_srcref_match(jit_cache_srcref(entry),
+					 getAttrib(fun, R_SrcrefSymbol))) {
+			PRINT_JIT_INFO;
+			SET_BODY(fun, jit_cache_code(entry));
+			/**** reset the cache here?*/
+			return fun;
+		    }
 		}
+		/* The functions probably differ only in source references
+		   (for functions with bodies that have no source references
+		   we know for sure, for other functions we speculate).
+		   Therefore, we allow re-compilation and re-caching. This
+		   situation may be caused e.g. by re-sourcing the same source
+		   file or re-pasting the same definitions for a function in
+		   interactive R session. Note srcref information includes
+		   environments (srcfile), which are now compared by address,
+		   so it may be we actually have logically identical source
+		   references, anyway. */
+		/* FIXME: revisit this when deep comparison of environments
+			  (and srcrefs) is available */
+	    } else {
+		SET_NOJIT(fun);
+		/**** also mark the cache entry as NOJIT, or as need to see
+		      many times? */
+		return fun;
 	    }
-	    /* The functions probably differ only in source references
-	       (for functions with bodies that have no source references
-	       we know for sure, for other functions we speculate).
-	       Therefore, we allow re-compilation and re-caching. This
-	       situation may be caused e.g. by re-sourcing the same source
-	       file or re-pasting the same definitions for a function in
-	       interactive R session. Note srcref information includes
-	       environments (srcfile), which are currently compared by address,
-	       so it may be we actually have logically identical source
-	       references, anyway. */
-	    /* FIXME: revisit this when deep comparison of environments
-	              (and srcrefs) is available */
-	} else {
-	    SET_NOJIT(fun);
-	    /**** also mark the cache entry as NOJIT, or as need to see
-	          many times? */
-	    return fun;
 	}
+	PRINT_JIT_INFO;
     }
-    PRINT_JIT_INFO;
 
     int old_visible = R_Visible;
     SEXP packsym, funsym, call, fcall, val;
@@ -1312,7 +1324,7 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 
     if (TYPEOF(BODY(val)) != BCODESXP)
 	SET_NOJIT(fun);
-    else
+    else if (jit_strategy != STRATEGY_NO_CACHE)
 	set_jit_cache_entry(hash, val);
 
     R_Visible = old_visible;
