@@ -846,11 +846,15 @@ static R_exprhash_t hashexpr1(SEXP e, R_exprhash_t h)
 static R_INLINE SEXP getSrcref(SEXP srcrefs, int ind);
 static R_exprhash_t hashsrcref(SEXP e, R_exprhash_t h)
 {
-    if (TYPEOF(e) == INTSXP && LENGTH(e) >=6)
+    if (TYPEOF(e) == INTSXP && LENGTH(e) >= 6) {
 	for(int i = 0; i < 6; i++) {
 	    int ival = INTEGER(e)[i];
 	    h = HASH(ival, h);
 	}
+	/* FIXME: update this when deep-comparison of srcref is available */
+	SEXP srcfile = getAttrib(e, R_SrcfileSymbol);
+	h = HASH(srcfile, h);
+    }
     return h;
 }
 #undef HASH
@@ -862,7 +866,10 @@ static R_exprhash_t hashexpr(SEXP e)
 
 static R_exprhash_t hashfun(SEXP f)
 {
-    return hashsrcref(getAttrib(f, R_SrcrefSymbol), hashexpr(BODY(f)));
+    R_exprhash_t h = hashexpr(BODY(f));
+    if (getAttrib(BODY(f), R_SrcrefSymbol) == R_NilValue)
+	h = hashsrcref(getAttrib(f, R_SrcrefSymbol), h);
+    return h;
 }
 
 static void loadCompilerNamespace(void)
@@ -1254,10 +1261,10 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
     SEXP entry = get_jit_cache_entry(hash);
     if (entry != R_NilValue) {
 	jit_info.count++;
-	if (jit_expr_match(jit_cache_expr(entry), BODY(fun))) {
-	    jit_info.bdcount++;
-	    if (jit_env_match(jit_cache_env(entry), fun)) {
-		jit_info.envcount++;
+	if (jit_env_match(jit_cache_env(entry), fun)) {
+	    jit_info.envcount++;
+	    if (jit_expr_match(jit_cache_expr(entry), BODY(fun))) {
+		jit_info.bdcount++;
 		/* if function body has a srcref, all srcrefs compiled
 		   in that function only depend on the body srcref;
 		   but, otherwise the srcrefs compiled in are taken
@@ -1271,11 +1278,24 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 		    return fun;
 		}
 	    }
+	    /* The functions probably differ only in source references
+	       (for functions with bodies that have no source references
+	       we know for sure, for other functions we speculate).
+	       Therefore, we allow re-compilation and re-caching. This
+	       situation may be caused e.g. by re-sourcing the same source
+	       file or re-pasting the same definitions for a function in
+	       interactive R session. Note srcref information includes
+	       environments (srcfile), which are currently compared by address,
+	       so it may be we actually have logically identical source
+	       references, anyway. */
+	    /* FIXME: revisit this when deep comparison of environments
+	              (and srcrefs) is available */
+	} else {
+	    SET_NOJIT(fun);
+	    /**** also mark the cache entry as NOJIT, or as need to see
+	          many times? */
+	    return fun;
 	}
-	SET_NOJIT(fun);
-	/**** also mark the cache entry as NOJIT, or as need to see
-	      many times? */
-	return fun;
     }
     PRINT_JIT_INFO;
 
