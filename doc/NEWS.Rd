@@ -289,6 +289,10 @@
       \item Headers for Unix-only facilities \file{R_ext/GetX11Image.h},
       \file{R_ext/QuartzDevice.h} and \file{R_ext/eventloop.h} are no
       longer installed on Windows.
+      
+      \item No-longer installed headers \file{GraphicsBase.h},
+      \file{RGraphics.h}, \file{Rmodules/RX11.h} and
+      \file{Rmodules/Rlapack.h} which had a LGPL license no longer do so.
     }
   }
 
@@ -496,10 +500,6 @@
       hence no longer leaks memory when reading from a full pipe, thanks
       to Gábor Csárdi, see thread starting at
       \url{https://stat.ethz.ch/pipermail/r-devel/2016-November/073360.html}.
-
-      \item Fix buffer overflow vulnerability in \code{pdf()} when
-      loading an encoding file.  Reported by Talos Security Advisory for
-      R Project (TALOS-2016-0227).
     }
   }
 }
@@ -526,6 +526,9 @@
 
       \item \code{"Cincinnati"} was missing an \code{"n"} in the
       \code{precip} dataset.
+
+      \item Fix buffer overflow vulnerability in \code{pdf()} when
+      loading an encoding file.  Reported by Talos (TALOS-2016-0227).
     }
   }
 }
