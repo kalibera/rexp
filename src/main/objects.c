@@ -555,6 +555,7 @@ static R_INLINE SEXP getPrimitive(SEXP symbol)
 /* the second the object and any remaining are matched with the */
 /* formals of the chosen method. */
 
+#define ARGUSED(x) LEVELS(x)
 
 /* This is a special .Internal */
 SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
