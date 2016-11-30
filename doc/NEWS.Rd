@@ -289,6 +289,10 @@
       \item Headers for Unix-only facilities \file{R_ext/GetX11Image.h},
       \file{R_ext/QuartzDevice.h} and \file{R_ext/eventloop.h} are no
       longer installed on Windows.
+
+      \item No-longer installed headers \file{GraphicsBase.h},
+      \file{RGraphics.h}, \file{Rmodules/RX11.h} and
+      \file{Rmodules/Rlapack.h} which had a LGPL license no longer do so.
     }
   }
 
@@ -491,6 +495,11 @@
 
       \item \code{formatC(x, flag=f)} allows two new flags, and signals an
       error for invalid flags also in the case of character formatting.
+
+      \item Reading from stdin now also closes the connection and
+      hence no longer leaks memory when reading from a full pipe, thanks
+      to Gábor Csárdi, see thread starting at
+      \url{https://stat.ethz.ch/pipermail/r-devel/2016-November/073360.html}.
     }
   }
 }
@@ -514,6 +523,15 @@
       \item Package installation into a library where the package exists
       via symbolic link now should work wherever \code{\link{Sys.readlink}()}
       works, resolving \PR{16725}.
+
+      \item \code{"Cincinnati"} was missing an \code{"n"} in the
+      \code{precip} dataset.
+
+      \item Fix buffer overflow vulnerability in \code{pdf()} when
+      loading an encoding file.  Reported by Talos (TALOS-2016-0227).
+
+      \item \code{getDLLRegisteredRoutines()} now produces its warning
+      correctly when multiple DLLs match, thanks to Matt Dowle's \PR{17184}.
     }
   }
 }

@@ -4134,6 +4134,16 @@ _R_CHECK_FORCE_SUGGESTS_=FALSE
 since some packages do suggest other packages not available on CRAN or
 other commonly-used repositories.
 
+Another variable which enables stricter checks is to set
+@env{R_CHECK_CONSTANTS} to @code{5}.  This checks that
+nothing@footnote{The usual culprits are calls to compiled code
+@emph{via} @code{.Call} or @code{.External} which alter their
+arguments.} changes the values of `constants'@footnote{things which the
+byte compiler assumes do not change, e.g.@: function bodies.} in @R{}
+code.  Unfortunately these checks can slow down checking of examples,
+tests and vignettes, typically two-fold but in the worst case at least a
+hundred-fold.  For even more comprehensive (but slower) checks, also set
+@env{R_JIT_STRATEGY} to @code{3}.
 
 @node R coding standards, Testing R code, Tools, Top
 @chapter R coding standards
@@ -4285,7 +4295,7 @@ if you change internal structures.]
 @node Use of TeX dialects, Current and future directions, Testing R code, Top
 @chapter Use of TeX dialects
 
-Various dialects of TeX and used for different purposes in @R{}.  The
+Various dialects of TeX are used for different purposes in @R{}.  The
 policy is that manuals be written in @samp{texinfo}, and for convenience
 the main and Windows FAQs are also.  This has the advantage that is is
 easy to produce @HTML{} and plain text versions as well as typeset manuals.
