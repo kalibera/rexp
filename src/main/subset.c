@@ -1152,6 +1152,31 @@ pstrmatch(SEXP target, SEXP input, size_t slen)
     }
 }
 
+SEXP extractSubset3Input(SEXP call, SEXP args, SEXP env, SEXP* sym)
+{
+    SEXP input, nlist;
+
+    /* first translate CADR of args into a string so that we can
+       pass it down to DispatchorEval and have it behave correctly */
+
+    PROTECT(input = allocVector(STRSXP, 1));
+    nlist = CADR(args);
+    if (TYPEOF(nlist) == PROMSXP)
+	nlist = eval(nlist, env);
+    if(isSymbol(nlist)) {
+	if (sym != NULL)
+	    *sym = nlist;
+	SET_STRING_ELT(input, 0, PRINTNAME(nlist));
+    } else if(isString(nlist) )
+	SET_STRING_ELT(input, 0, STRING_ELT(nlist, 0));
+    else {
+	errorcall(call,_("invalid subscript type '%s'"),
+		  type2char(TYPEOF(nlist)));
+	return R_NilValue; /*-Wall*/
+    }
+    UNPROTECT(1); /* input */
+    return input;
+}
 
 /* The $ subset operator.
    We need to be sure to only evaluate the first argument.
@@ -1159,32 +1184,17 @@ pstrmatch(SEXP target, SEXP input, size_t slen)
 */
 SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP input, nlist, ans;
+    SEXP input, ans;
 
     checkArity(op, args);
-
-    /* first translate CADR of args into a string so that we can
-       pass it down to DispatchorEval and have it behave correctly */
-    input = PROTECT(allocVector(STRSXP, 1));
-
-    nlist = CADR(args);
-    if (TYPEOF(nlist) == PROMSXP)
-	nlist = eval(nlist, env);
-    if(isSymbol(nlist) )
-	SET_STRING_ELT(input, 0, PRINTNAME(nlist));
-    else if(isString(nlist) )
-	SET_STRING_ELT(input, 0, STRING_ELT(nlist, 0));
-    else {
-	errorcall(call,_("invalid subscript type '%s'"),
-		  type2char(TYPEOF(nlist)));
-    }
+    PROTECT(input = extractSubset3Input(call, args, env, NULL));
 
     /* replace the second argument with a string */
 
     /* Previously this was SETCADR(args, input); */
     /* which could cause problems when nlist was */
     /* ..., as in PR#8718 */
-    PROTECT(args = CONS(CAR(args), CONS(input, R_NilValue)));
+    PROTECT(args = list2(CAR(args), input));
 
     /* If the first argument is an object and there is */
     /* an approriate method, we dispatch to that method, */
@@ -1198,7 +1208,6 @@ SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
 	    SET_NAMED(ans, 2);
 	return(ans);
     }
-
     UNPROTECT(2); /* input, args */
     return R_subset3_dflt(CAR(ans), STRING_ELT(input, 0), call);
 }
