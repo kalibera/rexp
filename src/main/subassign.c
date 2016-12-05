@@ -1967,19 +1967,18 @@ SEXP attribute_hidden do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
 
     /* Note the RHS has already been evaluated at this point */
-    PROTECT(input = extractSubset3Input(call, args, env, &nlist));
-
-    /* replace the second argument with a string */
-    PROTECT(args = list3(CAR(args), input, CADDR(args)));
+    PROTECT(args = fixSubset3Args(call, args, env, &nlist));
 
     if(R_DispatchOrEvalSP(call, op, "$<-", args, env, &ans)) {
-	UNPROTECT(2); /* input, args */
+	UNPROTECT(1); /* args */
 	return(ans);
     }
+    PROTECT(ans);
     if (nlist == R_NilValue)
-	nlist = installTrChar(STRING_ELT(input, 0));
-    UNPROTECT(2); /* input, args */
-    return R_subassign3_dflt(call, CAR(ans), nlist, CADDR(ans));
+	nlist = installTrChar(STRING_ELT(CADR(args), 0));
+    ans = R_subassign3_dflt(call, CAR(ans), nlist, CADDR(ans));
+    UNPROTECT(2); /* args, ans */
+    return ans;
 }
 
 /* used in "$<-" (above) and methods_list_dispatch.c */

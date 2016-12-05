@@ -805,7 +805,7 @@ SEXP Rf_arraySubscript(int, SEXP, SEXP, SEXP (*)(SEXP,SEXP),
                        SEXP (*)(SEXP, int), SEXP);
 SEXP Rf_classgets(SEXP, SEXP);
 SEXP Rf_cons(SEXP, SEXP);
-SEXP Rf_extractSubset3Input(SEXP, SEXP, SEXP, SEXP*);
+SEXP Rf_fixSubset3Args(SEXP, SEXP, SEXP, SEXP*);
 void Rf_copyMatrix(SEXP, SEXP, Rboolean);
 void Rf_copyListMatrix(SEXP, SEXP, Rboolean);
 void Rf_copyMostAttrib(SEXP, SEXP);
@@ -1191,7 +1191,7 @@ void R_orderVector1(int *indx, int n, SEXP x,       Rboolean nalast, Rboolean de
 #define coerceVector		Rf_coerceVector
 #define conformable		Rf_conformable
 #define cons			Rf_cons
-#define extractSubset3Input	Rf_extractSubset3Input
+#define fixSubset3Args		Rf_fixSubset3Args
 #define copyListMatrix		Rf_copyListMatrix
 #define copyMatrix		Rf_copyMatrix
 #define copyMostAttrib		Rf_copyMostAttrib

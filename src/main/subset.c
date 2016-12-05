@@ -1152,7 +1152,7 @@ pstrmatch(SEXP target, SEXP input, size_t slen)
     }
 }
 
-SEXP extractSubset3Input(SEXP call, SEXP args, SEXP env, SEXP* sym)
+SEXP fixSubset3Args(SEXP call, SEXP args, SEXP env, SEXP* syminp)
 {
     SEXP input, nlist;
 
@@ -1164,8 +1164,8 @@ SEXP extractSubset3Input(SEXP call, SEXP args, SEXP env, SEXP* sym)
     if (TYPEOF(nlist) == PROMSXP)
 	nlist = eval(nlist, env);
     if(isSymbol(nlist)) {
-	if (sym != NULL)
-	    *sym = nlist;
+	if (syminp != NULL)
+	    *syminp = nlist;
 	SET_STRING_ELT(input, 0, PRINTNAME(nlist));
     } else if(isString(nlist) )
 	SET_STRING_ELT(input, 0, STRING_ELT(nlist, 0));
@@ -1174,8 +1174,17 @@ SEXP extractSubset3Input(SEXP call, SEXP args, SEXP env, SEXP* sym)
 		  type2char(TYPEOF(nlist)));
 	return R_NilValue; /*-Wall*/
     }
+
+    /* replace the second argument with a string */
+
+    /* Previously this was SETCADR(args, input); */
+    /* which could cause problems when nlist was */
+    /* ..., as in PR#8718 */
+
+    args = shallow_duplicate(args);
+    SETCADR(args, input);
     UNPROTECT(1); /* input */
-    return input;
+    return args;
 }
 
 /* The $ subset operator.
@@ -1187,14 +1196,7 @@ SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP input, ans;
 
     checkArity(op, args);
-    PROTECT(input = extractSubset3Input(call, args, env, NULL));
-
-    /* replace the second argument with a string */
-
-    /* Previously this was SETCADR(args, input); */
-    /* which could cause problems when nlist was */
-    /* ..., as in PR#8718 */
-    PROTECT(args = list2(CAR(args), input));
+    PROTECT(args = fixSubset3Args(call, args, env, NULL));
 
     /* If the first argument is an object and there is */
     /* an approriate method, we dispatch to that method, */
@@ -1203,13 +1205,15 @@ SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
     /* evaluation retains any missing argument indicators. */
 
     if(R_DispatchOrEvalSP(call, op, "$", args, env, &ans)) {
-	UNPROTECT(2); /* input, args */
+	UNPROTECT(1); /* args */
 	if (NAMED(ans))
 	    SET_NAMED(ans, 2);
 	return(ans);
     }
-    UNPROTECT(2); /* input, args */
-    return R_subset3_dflt(CAR(ans), STRING_ELT(input, 0), call);
+    PROTECT(ans);
+    ans = R_subset3_dflt(CAR(ans), STRING_ELT(CADR(args), 0), call);
+    UNPROTECT(2); /* args, ans */
+    return ans;
 }
 
 /* used in eval.c */
