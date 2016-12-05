@@ -1962,7 +1962,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 */
 SEXP attribute_hidden do_subassign3(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP input, ans, nlist = R_NilValue;
+    SEXP ans, nlist = R_NilValue;
 
     checkArity(op, args);
 
