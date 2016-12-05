@@ -1174,6 +1174,20 @@ SEXP fixSubset3Args(SEXP call, SEXP args, SEXP env, SEXP* syminp)
 		  type2char(TYPEOF(nlist)));
 	return R_NilValue; /*-Wall*/
     }
+    UNPROTECT(1); /* input */
+    return input;
+}
+
+/* The $ subset operator.
+   We need to be sure to only evaluate the first argument.
+   The second will be a symbol that needs to be matched, not evaluated.
+*/
+SEXP attribute_hidden do_subset3(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    SEXP input, ans;
+
+    checkArity(op, args);
+    PROTECT(input = extractSubset3Input(call, args, env, NULL));
 
     /* replace the second argument with a string */
 
