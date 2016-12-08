@@ -42,7 +42,7 @@
       calls to \code{browser()}: this is to support single stepping from
       the \code{browser()} call.
 
-      JIT compilation can be disabled using \code{compiler::enableJIT()}
+      JIT compilation can be disabled using \code{compiler::enableJIT(0)}
       or by setting environment variable \env{R_ENABLE_JIT} to \code{0}.
     }
   }
@@ -382,16 +382,18 @@
       as tests by \command{R CMD check}. (Wish of \PR{17143})
 
       \item \command{R CMD build} and \command{R CMD check} now use the
-      \emph{union} of \env{R_LIBS} \code{.libPaths()}.  They may not be
-      equivalent, e.g., when the latter is determined by \env{R_PROFILE}.
+      \emph{union} of \env{R_LIBS} and \code{.libPaths()}.  They may not
+      be equivalent, e.g., when the latter is determined by
+      \env{R_PROFILE}.
 
       \item \command{R CMD build} now preserves dates when it copies files
       in preparing the tarball.  (Previously on Windows it changed the
       dates on all files; on Unix, it changed some dates when installing
       vignettes.)
 
-      \item \command{R CMD check --no-stop-on-test-error} now continues
-      running tests (in \file{tests/}) even if they give errors.
+      \item The new option \command{R CMD check --no-stop-on-test-error}
+      allows running the remaining tests (under \file{tests/}) even if
+      one gave an error.
 
       \item Check customization via environment variables to detect side
       effects of \code{.Call()} and \code{.External()} calls which alter
@@ -508,6 +510,12 @@
       hence no longer leaks memory when reading from a full pipe, thanks
       to Gábor Csárdi, see thread starting at
       \url{https://stat.ethz.ch/pipermail/r-devel/2016-November/073360.html}.
+
+      \item Failure to create file in \code{tempdir()} for compressed
+      \code{pdf()} graphics device no longer errors (then later
+      segfaults).  There is now a warning instead of error and
+      compression is turned off for the device.  Thanks to Alec
+      Wysoker (\PR{17191}).
     }
   }
 }
@@ -540,6 +548,13 @@
 
       \item \code{getDLLRegisteredRoutines()} now produces its warning
       correctly when multiple DLLs match, thanks to Matt Dowle's \PR{17184}.
+
+      \item \code{Sys.timezone()} now returns non-NA also on platforms
+      such as \samp{Ubuntu 14.04.5 LTS}, thanks to Mikko Korpela's
+      \PR{17186}.
+
+      \item \code{format(x)} for an illegal \code{"POSIXlt"} object
+      \code{x} no longer segfaults.
     }
   }
 }
