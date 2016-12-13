@@ -316,7 +316,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
                                       shQuote(file)),
                                     env = env0)
 
-        log <- paste(file_path_sans_ext(file), "log", sep = ".")
+        log <- paste0(file_path_sans_ext(file), ".log")
 
         ## With Texinfo 6.1 (precisely, c6637), texi2dvi may not rerun
         ## often enough and give a non-zero status value when it should
@@ -338,7 +338,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
         ## analyze the log files in any case.
         errors <- character()
         ## (La)TeX errors.
-        log <- paste(file_path_sans_ext(file), "log", sep = ".")
+        log <- paste0(file_path_sans_ext(file), ".log")
         if(file_test("-f", log)) {
             lines <- .get_LaTeX_errors_from_log_file(log)
             if(length(lines))
@@ -347,7 +347,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
                                 sep = "\n")
         }
         ## BibTeX errors.
-        log <- paste(file_path_sans_ext(file), "blg", sep = ".")
+        log <- paste0(file_path_sans_ext(file), ".blg")
         if(file_test("-f", log)) {
             lines <- .get_BibTeX_errors_from_blg_file(log)
             if(length(lines))
@@ -413,7 +413,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
                intern=TRUE, ignore.stderr=TRUE)
         msg <- ""
         ## (La)TeX errors.
-        logfile <- paste(base, "log", sep = ".")
+        logfile <- paste0(base, ".log")
         if(file_test("-f", logfile)) {
             lines <- .get_LaTeX_errors_from_log_file(logfile)
             if(length(lines))
@@ -422,7 +422,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
                              sep = "\n")
         }
         ## BibTeX errors.
-        logfile <- paste(base, "blg", sep = ".")
+        logfile <- paste0(base, ".blg")
         if(file_test("-f", logfile)) {
             lines <- .get_BibTeX_errors_from_blg_file(logfile)
             if(length(lines))
@@ -1390,7 +1390,7 @@ function(package, lib.loc)
     ## check interprets all output as indicating a problem.
     if(package != "base")
         .try_quietly({
-            pos <- match(paste("package", package, sep = ":"), search())
+            pos <- match(paste0("package:", package), search())
             if(!is.na(pos)) {
                 detach(pos = pos,
                        unload = ! package %in% c("tcltk", "tools"))
@@ -1425,7 +1425,8 @@ function(type = c("code", "data", "demo", "docs", "vignette"))
            demo = c("R", "r"),
            docs = c("Rd", "rd", "Rd.gz", "rd.gz"),
            vignette = c(outer(c("R", "r", "S", "s"), c("nw", "tex"),
-                              paste, sep = ""), "Rmd"))
+                              paste0),
+                        "Rmd"))
 }
 
 ### ** .make_S3_group_generic_env
@@ -1492,11 +1493,12 @@ nonS3methods <- function(package)
         list(base = c("all.equal", "all.names", "all.vars", "expand.grid",
              "format.char", "format.info", "format.pval",
              "max.col",
+             "pmax.int", "pmin.int",
              ## the next two only exist in *-defunct.Rd.
              "print.atomic", "print.coefmat",
              "qr.Q", "qr.R", "qr.X", "qr.coef", "qr.fitted", "qr.qty",
              "qr.qy", "qr.resid", "qr.solve",
-             "rep.int", "seq.int", "sort.int", "sort.list"),
+             "rep.int", "sample.int", "seq.int", "sort.int", "sort.list"),
              AMORE = "sim.MLPnet",
              BSDA = "sign.test",
              ChemometricsWithR = "lda.loofun",
@@ -1557,6 +1559,7 @@ nonS3methods <- function(package)
              reposTools = "update.packages2",
              rgeos = "scale.poly",
              sac = "cumsum.test",
+             sfsmisc = "cumsum.test",
              sm = "print.graph",
              splusTimeDate = "sort.list",
              splusTimeSeries = "sort.list",
@@ -1817,20 +1820,25 @@ function(file, envir, enc = NA)
     ## as @code{sys.source(file, envir, keep.source = FALSE)}.
     oop <- options(keep.source = FALSE)
     on.exit(options(oop))
-    assignmentSymbolLM <- as.symbol("<-")
-    assignmentSymbolEq <- as.symbol("=")
-    if(!is.na(enc) &&
-       !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
-        con <- file(file, encoding = enc)
-        on.exit(close(con))
-    } else con <- file
+
+### <FIXME> for S4, setClass() .. are assignments, but must be called
+    ##         with correct 'where = envir'!
+    ## Possible solution: modified versions of these functions with changed
+    ##                    'where = ...' (default arg) in formals(.)
+    ## stopifnot(require(methods, quietly=TRUE))
+    ## assignmentSymbols <- c(c("<-", "="),
+    ##                        ls(pattern = "^set[A-Z]", pos = "package:methods"))
+    assignmentSymbols <- c("<-", "=")
+### </FIXME>
+    con <-
+	if(!is.na(enc) && !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
+	    on.exit(close(con), add = TRUE)
+	    file(file, encoding = enc)
+	} else file
     exprs <- parse(n = -1L, file = con)
-    if(!length(exprs))
-        return(invisible())
-    for(e in Filter(length, exprs)) {
-        if(is.call(e) &&
-           (e[[1L]] == assignmentSymbolLM ||
-            e[[1L]] == assignmentSymbolEq))
+    exprs <- exprs[lengths(exprs) > 0L]
+    for(e in exprs) {
+	if(is.call(e) && as.character(e[[1L]]) %in% assignmentSymbols)
             eval(e, envir)
     }
     invisible()
@@ -1849,7 +1857,7 @@ function(dir, envir, meta = character())
         stop("unable to create ", con)
     ## If the (DESCRIPTION) metadata contain a Collate specification,
     ## use this for determining the code files and their order.
-    txt <- meta[c(paste("Collate", .OStype(), sep = "."), "Collate")]
+    txt <- meta[c(paste0("Collate.", .OStype()), "Collate")]
     ind <- which(!is.na(txt))
     files <- if(any(ind))
         Filter(function(x) file_test("-f", x),
@@ -1859,11 +1867,9 @@ function(dir, envir, meta = character())
     if(!all(.file_append_ensuring_LFs(con, files)))
         stop("unable to write code files")
     tryCatch(.source_assignments(con, envir, enc = meta["Encoding"]),
-             error =
-             function(e)
-             stop("cannot source package code\n",
-                  conditionMessage(e),
-                  call. = FALSE))
+             error = function(e)
+                 stop("cannot source package code:\n", conditionMessage(e),
+                      call. = FALSE))
 }
 
 ### * .split_dependencies

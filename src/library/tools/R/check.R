@@ -164,7 +164,7 @@ setRlibs <-
     if (nzchar(lib0)) rlibs <- c(lib0, rlibs)
     rlibs <- paste(rlibs, collapse = .Platform$path.sep)
     if(quote) rlibs <- shQuote(rlibs)
-    c(paste("R_LIBS", rlibs, sep = "="),
+    c(paste0("R_LIBS=", rlibs),
       if(WINDOWS) " R_ENVIRON_USER='no_such_file'" else "R_ENVIRON_USER=''",
       if(WINDOWS) " R_LIBS_USER='no_such_dir'" else "R_LIBS_USER=''",
       " R_LIBS_SITE='no_such_dir'")
@@ -2699,20 +2699,45 @@ setRlibs <-
                                       colClasses = c("character", rep("numeric", 3)))
                 o <- order(times[[1L]] + times[[2L]], decreasing = TRUE)
                 times <- times[o, ]
+                
                 keep <- ((times[[1L]] + times[[2L]] > theta) |
                          (times[[3L]] > theta))
                 if(any(keep)) {
-                    if(!any && check_incoming)
+                    if(!any && check_incoming) {
                         noteLog(Log)
+                        any <- TRUE
+                    }
                     printLog(Log,
                              sprintf("Examples with CPU or elapsed time > %gs\n",
                                      theta))
-                    times <- utils::capture.output(format(times[keep, ]))
-                    printLog0(Log, paste(times, collapse = "\n"), "\n")
-                } else {
-                    if(!any && check_incoming)
-                        resultLog(Log, "OK")
+                    out <- utils::capture.output(format(times[keep, ]))
+                    printLog0(Log, paste(out, collapse = "\n"), "\n")
                 }
+
+                theta <-
+                    as.numeric(Sys.getenv("_R_CHECK_EXAMPLE_TIMING_USER_TO_ELAPSED_THRESHOLD_",
+                                          NA_character_))
+                if(!is.na(theta)) {
+                    keep <- (times[[1L]] >= pmax(theta * times[[3L]], 1))
+                    if(any(keep)) {
+                        if(!any && check_incoming) {
+                            noteLog(Log)
+                            any <- TRUE
+                        }
+                        printLog(Log,
+                                 sprintf("Examples with user time > %g times elapsed time\n",
+                                         theta))
+                        bad <- times[keep, ]
+                        bad <- cbind(bad,
+                                     ratio = round(bad[[1L]] / bad[[3L]], 3L))
+                        bad <- bad[order(bad$ratio, decreasing = TRUE), ]
+                        out <- utils::capture.output(format(bad))
+                        printLog0(Log, paste(out, collapse = "\n"), "\n")
+                    }
+                }
+
+                if(!any && check_incoming)
+                    resultLog(Log, "OK")
             }
 
             ## Try to compare results from running the examples to
@@ -2759,7 +2784,7 @@ setRlibs <-
             ## It ran, but did it create any examples?
             if (file.exists(exfile)) {
                 enc <- if (!is.na(e <- desc["Encoding"])) {
-                    paste("--encoding", e, sep="=")
+                    paste0("--encoding=", e)
                 } else ""
                 if (!this_multiarch) {
                     exout <- paste0(pkgname, "-Ex.Rout")
@@ -4333,7 +4358,7 @@ setRlibs <-
         ## Read in ~/.R/check.Renviron[.rarch] (if it exists).
         rarch <- .Platform$r_arch
         if (nzchar(rarch) &&
-            file.exists(Renv <- paste("~/.R/check.Renviron", rarch, sep = ".")))
+            file.exists(Renv <- paste0("~/.R/check.Renviron.", rarch)))
             readRenviron(Renv)
         else if (file.exists(Renv <- "~/.R/check.Renviron"))
             readRenviron(Renv)
@@ -4740,7 +4765,7 @@ setRlibs <-
                     domain = NA, call. = FALSE, immediate. = TRUE)
             next
         }
-        pkgoutdir <- file.path(outdir, paste(pkgname0, "Rcheck", sep = "."))
+        pkgoutdir <- file.path(outdir, paste0(pkgname0, ".Rcheck"))
         if (clean && dir.exists(pkgoutdir)) {
             unlink(pkgoutdir, recursive = TRUE)
             if(WINDOWS) Sys.sleep(0.5) # allow for antivirus interference
