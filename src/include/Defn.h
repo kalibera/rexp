@@ -787,7 +787,7 @@ extern0 int R_disable_bytecode INI_as(0);
 extern SEXP R_cmpfun(SEXP);
 extern SEXP R_cmpfun1(SEXP); /* unconditional fresh compilation */
 extern void R_init_jit_enabled(void);
-extern void R_initAsignSymbols(void);
+extern void R_initAssignSymbols(void);
 #ifdef R_USE_SIGNALS
 extern SEXP R_findBCInterpreterSrcref(RCNTXT*);
 #endif

@@ -525,6 +525,15 @@
 }
 
 \section{\Rlogo CHANGES IN R 3.3.2 patched}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item The internal methods of \code{download.file()} and
+      \code{url()} now report if they are unable to follow the
+      redirection of a \samp{http://} URL to a \samp{https://} URL
+      (rather than failing silently).
+    }
+  }
+
   \subsection{BUG FIXES}{
     \itemize{
       \item \code{rep(x, times)} and \code{rep.int(x, times)} now both
@@ -738,6 +747,10 @@
 
       \item \code{findInterval(x, vec, left.open = TRUE)} misbehaved in some
       cases. (Reported by Dmitriy Chernykh.)
+
+      \item \code{dev.capture()} using Quartz Cocoa device (macOS) returned
+      invalid components if the back-end chose to use ARGB instead of RGBA
+      image format. (Reported by Noam Ross.)
     }
   }
 }
