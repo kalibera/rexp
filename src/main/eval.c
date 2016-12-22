@@ -1038,7 +1038,8 @@ static R_INLINE Rboolean R_CheckJIT(SEXP fun)
 {
     /* to help with testing */
     if (jit_strategy < 0) {
-	int dflt = STRATEGY_TOP_SMALL_MAYBE;
+//	int dflt = STRATEGY_TOP_SMALL_MAYBE;
+	int dflt = STRATEGY_NO_CACHE;
 	int val = dflt;
 	char *valstr = getenv("R_JIT_STRATEGY");
 	if (valstr != NULL)
@@ -5958,6 +5959,72 @@ Rboolean attribute_hidden R_BCVersionOK(SEXP s)
 	(version >= R_bcMinVersion && version <= R_bcVersion);
 }
 
+/* Check whether a call is to a base function; if not use AST interpeter */
+/***** need a faster guard check */
+static R_INLINE SEXP SymbolValue(SEXP sym)
+{
+    if (IS_ACTIVE_BINDING(sym))
+	return eval(sym, R_BaseEnv);
+    else {
+	SEXP value = SYMVALUE(sym);
+	if (TYPEOF(value) == PROMSXP) {
+	    value = PRVALUE(value);
+	    if (value == R_UnboundValue)
+		value = eval(sym, R_BaseEnv);
+	}
+	return value;
+    }
+}
+
+/*
+static void printBody(SEXP f, char *str) {
+
+  if (TYPEOF(f) == CLOSXP) {
+    REprintf(str);
+    SEXP b = BODY(f);
+    b = bytecodeExpr(b);
+    PrintValue(b);
+  }
+}
+*/
+
+SEXP R_inspect(SEXP x);
+static R_INLINE void reportOverriding(SEXP val, SEXP rho) {
+  if (TYPEOF(val) == SYMSXP) {
+    SEXP sval = SymbolValue(val);
+    if (!isFunction(sval)) return;
+    SEXP fval = findFun(val, rho);
+    if (fval != sval && !NOJIT(val)) {
+      REprintf("\nOverridden symbol %s\n", CHAR(PRINTNAME(val)));
+      SET_NOJIT(val); /* already reported */
+/*      int oldout = R_OutputCon;
+      R_OutputCon = 2;
+      REprintf(" --- SymbolValue ---\n");
+      R_inspect(sval);
+      printBody(sval, " --- SymbolValue body  ---\n");
+      REprintf(" --- findFun ---\n");
+      R_inspect(fval);
+      printBody(fval, " --- SymbolValue body  ---\n");
+      REprintf("\n");
+      R_OutputCon = oldout; */
+    }  
+  }
+}
+
+#define REPOVER(x) do { reportOverriding(x, rho); } while(0)
+
+#define DO_BASEGUARD() do {				\
+	SEXP expr = VECTOR_ELT(constants, GETOP());	\
+	int label = GETOP();				\
+	SEXP sym = CAR(expr);				\
+	if (findFun(sym, rho) != SymbolValue(sym)) {	\
+	    BCNPUSH(eval(expr, rho));			\
+	    pc = codebase + label;			\
+	}						\
+    } while (0)
+
+
+
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
   SEXP retvalue = R_NilValue, constants;
@@ -6322,6 +6389,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	REPOVER(symbol);
 	SEXP value = findFun(symbol, rho);
 	INIT_CALL_FRAME(value);
 	if(RTRACE(value)) {
@@ -6334,6 +6402,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	REPOVER(symbol);
 	SEXP value = findFun(symbol, R_GlobalEnv);
 	INIT_CALL_FRAME(value);
 	if(RTRACE(value)) {
@@ -6346,6 +6415,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	REPOVER(symbol);
 	SEXP value = SYMVALUE(symbol);
 	if (TYPEOF(value) == PROMSXP) {
 	    value = forcePromise(value);
@@ -6362,6 +6432,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	REPOVER(symbol);
 	SEXP value = getPrimitive(symbol, BUILTINSXP);
 //#define REPORT_OVERRIDEN_BUILTINS
 #ifdef REPORT_OVERRIDEN_BUILTINS
@@ -6380,6 +6451,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
+	REPOVER(symbol);
 	SEXP value = INTERNAL(symbol);
 	if (TYPEOF(value) != BUILTINSXP)
 	  error(_("there is no .Internal function '%s'"),
