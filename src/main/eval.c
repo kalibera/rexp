@@ -32,6 +32,8 @@
 #include <Fileio.h>
 #include <R_ext/Print.h>
 
+#include <sys/stat.h>
+
 
 static SEXP bcEval(SEXP, SEXP, Rboolean);
 
@@ -5995,7 +5997,13 @@ static R_INLINE void reportOverriding(SEXP val, SEXP rho) {
     if (!isFunction(sval)) return;
     SEXP fval = findFun(val, rho);
     if (fval != sval && !NOJIT(val)) {
-      REprintf("\nOverridden symbol %s\n", CHAR(PRINTNAME(val)));
+//      REprintf("\nOverridden symbol %s\n", CHAR(PRINTNAME(val)));
+
+      // creating dirs should work fine in parallel
+      char buf[1024];
+      snprintf(buf, 1024, "/tmp/hiddensym/%s", CHAR(PRINTNAME(val)));
+      mkdir(buf, 0777); // must create "/tmp/hiddensym"!!!! 
+
       SET_NOJIT(val); /* already reported */
 /*      int oldout = R_OutputCon;
       R_OutputCon = 2;
