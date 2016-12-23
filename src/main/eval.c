@@ -910,8 +910,6 @@ static SEXP R_RepeatSymbol = NULL;
 static SEXP JIT_cache = NULL;
 static R_exprhash_t JIT_cache_hashes[JIT_CACHE_SIZE];
 
-static int R_disable_bytecode = 0;
-
 /**** allow MIN_JIT_SCORE, or both, to be changed by environment variables? */
 static int MIN_JIT_SCORE = 50;
 #define LOOP_JIT_SCORE MIN_JIT_SCORE
@@ -1145,7 +1143,7 @@ static R_INLINE SEXP make_cached_cmpenv(SEXP fun)
     if (cmpenv == top && frmls == R_NilValue)
 	return cmpenv;
     else {
-	SEXP newenv = NewEnvironment(R_NilValue, R_NilValue, top);
+	SEXP newenv = PROTECT(NewEnvironment(R_NilValue, R_NilValue, top));
 	for (; frmls != R_NilValue; frmls = CDR(frmls))
 	    defineVar(TAG(frmls), R_NilValue, newenv);
 	for (SEXP env = cmpenv; env != top; env = CDR(env)) {
@@ -1156,14 +1154,17 @@ static R_INLINE SEXP make_cached_cmpenv(SEXP fun)
 		int n = length(h);
 		for (int i = 0; i < n; i++)
 		    cmpenv_enter_frame(VECTOR_ELT(h, i), newenv);
+	    } else {
+		UNPROTECT(1); /* newenv */
+		return top;
 	    }
-	    else return top;
 		/* topenv is a safe conservative answer; if a closure
 		   defines anything, its environment will not match, and
 		   it will never be compiled */
 		/* FIXME: would it be safe to simply ignore elements of
 		   of these environments? */
 	}
+	UNPROTECT(1); /* newenv */
 	return newenv;
     }
 }
@@ -1176,8 +1177,8 @@ static R_INLINE void set_jit_cache_entry(R_exprhash_t hash, SEXP val)
 
     PROTECT(val);
     SEXP entry = CONS(BODY(val), make_cached_cmpenv(val));
-    SET_TAG(entry, getAttrib(val, R_SrcrefSymbol));
     SET_VECTOR_ELT(JIT_cache, hashidx, entry);
+    SET_TAG(entry, getAttrib(val, R_SrcrefSymbol));
     UNPROTECT(1); /* val */
 
     JIT_cache_hashes[hashidx] = hash;
@@ -1284,6 +1285,23 @@ static R_INLINE Rboolean jit_srcref_match(SEXP cmpsrcref, SEXP srcref)
     return R_compute_identical(cmpsrcref, srcref, 0);
 }
 
+SEXP attribute_hidden R_cmpfun1(SEXP fun)
+{
+    int old_visible = R_Visible;
+    SEXP packsym, funsym, call, fcall, val;
+
+    packsym = install("compiler");
+    funsym = install("tryCmpfun");
+
+    PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
+    PROTECT(call = lang2(fcall, fun));
+    val = eval(call, R_GlobalEnv);
+    UNPROTECT(2);
+
+    R_Visible = old_visible;
+    return val;
+}
+
 SEXP attribute_hidden R_cmpfun(SEXP fun)
 {
     R_exprhash_t hash = 0;
@@ -1332,23 +1350,13 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 	PRINT_JIT_INFO;
     }
 
-    int old_visible = R_Visible;
-    SEXP packsym, funsym, call, fcall, val;
-
-    packsym = install("compiler");
-    funsym = install("tryCmpfun");
-
-    PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
-    PROTECT(call = lang2(fcall, fun));
-    val = eval(call, R_GlobalEnv);
-    UNPROTECT(2);
+    SEXP val = R_cmpfun1(fun);
 
     if (TYPEOF(BODY(val)) != BCODESXP)
 	SET_NOJIT(fun);
     else if (jit_strategy != STRATEGY_NO_CACHE)
-	set_jit_cache_entry(hash, val);
+	set_jit_cache_entry(hash, val); /* val is protected by callee */
 
-    R_Visible = old_visible;
     return val;
 }
 
@@ -1577,15 +1585,6 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	    body = bytecodeExpr(body);
 	Rprintf("debugging in: ");
 	PrintCall(call, rho);
-
-	/* Is the body a bare symbol (PR#6804) */
-	if (!isSymbol(body) & !isVectorAtomic(body)){
-		/* Find out if the body is function with only one statement. */
-		if (isSymbol(CAR(body)))
-			tmp = findFun(CAR(body), rho);
-		else
-			tmp = eval(CAR(body), rho);
-	}
 	savesrcref = R_Srcref;
 	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
 	SrcrefPrompt("debug", R_Srcref);
@@ -1686,15 +1685,6 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	    body = bytecodeExpr(body);
 	Rprintf("debugging in: ");
 	PrintCall(call,rho);
-
-	/* Is the body a bare symbol (PR#6804) */
-	if (!isSymbol(body) & !isVectorAtomic(body)){
-	/* Find out if the body is function with only one statement. */
-	if (isSymbol(CAR(body)))
-	    tmp = findFun(CAR(body), rho);
-	else
-	    tmp = eval(CAR(body), rho);
-	}
 	savesrcref = R_Srcref;
 	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
 	SrcrefPrompt("debug", R_Srcref);
@@ -3569,7 +3559,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 /* start of bytecode section */
-static int R_bcVersion = 9;
+static int R_bcVersion = 10;
 static int R_bcMinVersion = 9;
 
 static SEXP R_AddSym = NULL;
@@ -3775,6 +3765,7 @@ enum {
   COLON_OP,
   SEQALONG_OP,
   SEQLEN_OP,
+  BASEGUARD_OP,
   OPCOUNT
 };
 
@@ -5725,6 +5716,32 @@ static R_INLINE int LOOP_NEXT_OFFSET(int loop_state_size)
     return GETSTACK_IVAL_PTR(R_BCNodeStackTop - 1 - loop_state_size);
 }
 
+/* Check whether a call is to a base function; if not use AST interpeter */
+/***** need a faster guard check */
+static R_INLINE SEXP SymbolValue(SEXP sym)
+{
+    if (IS_ACTIVE_BINDING(sym))
+	return eval(sym, R_BaseEnv);
+    else {
+	SEXP value = SYMVALUE(sym);
+	if (TYPEOF(value) == PROMSXP) {
+	    value = PRVALUE(value);
+	    if (value == R_UnboundValue)
+		value = eval(sym, R_BaseEnv);
+	}
+	return value;
+    }
+}
+
+#define DO_BASEGUARD() do {				\
+	SEXP expr = VECTOR_ELT(constants, GETOP());	\
+	int label = GETOP();				\
+	SEXP sym = CAR(expr);				\
+	if (findFun(sym, rho) != SymbolValue(sym)) {	\
+	    BCNPUSH(eval(expr, rho));			\
+	    pc = codebase + label;			\
+	}						\
+    } while (0)
 
 /* The CALLBUILTIN instruction handles calls to both true BUILTINs and
    to .Internals of type BUILTIN. To handle profiling in a way that is
@@ -7002,6 +7019,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(COLON, 1): DO_COLON(); NEXT();
     OP(SEQALONG, 1): DO_SEQ_ALONG(); NEXT();
     OP(SEQLEN, 1): DO_SEQ_LEN(); NEXT();
+    OP(BASEGUARD, 2): DO_BASEGUARD(); NEXT();
     LASTOP;
   }
 
