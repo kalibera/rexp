@@ -1469,9 +1469,16 @@ SEXP findFun3(SEXP symbol, SEXP rho, SEXP call)
 	}
 	rho = ENCLOS(rho);
     }
-    errorcall(call,
-              _("could not find function \"%s\""),
-              EncodeChar(PRINTNAME(symbol)));
+
+	/* the result of EncodeChar cannot be passed directly to errorcall,
+	   because it is stored in a static buffer of EncodeChar, which is
+	   overwritten internally by errorcall */
+    const char* esym = EncodeChar(PRINTNAME(symbol));
+    size_t elen = strlen(esym) + 1;
+    char buf[elen];
+    strncpy(buf, esym, elen);
+    errorcall(call, _("could not find function \"%s\""), buf);
+
     /* NOT REACHED */
     return R_UnboundValue;
 }
