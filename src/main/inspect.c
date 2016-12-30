@@ -110,6 +110,7 @@ static void inspect_tree(int pre, SEXP v, int deep, int pvec) {
     }
     if (LEVELS(v)) { if (a) Rprintf(","); Rprintf("gp=0x%x", LEVELS(v)); a = 1; }
     if (ATTRIB(v) && ATTRIB(v) != R_NilValue) { if (a) Rprintf(","); Rprintf("ATT"); a = 1; }
+    if (NOJIT(v)) { if (a) Rprintf(","); Rprintf("NOJIT"); a = 1; }
     Rprintf("] ");
     switch (TYPEOF(v)) {
     case VECSXP: case STRSXP: case LGLSXP: case INTSXP: case RAWSXP:

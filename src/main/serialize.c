@@ -965,7 +965,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
     SEXP t;
 
     if (R_compile_pkgs && TYPEOF(s) == CLOSXP && TYPEOF(BODY(s)) != BCODESXP &&
-        !R_disable_bytecode) {
+        !R_disable_bytecode && !NOJIT(s)) {
 
 	SEXP new_s;
 	R_compile_pkgs = FALSE;
