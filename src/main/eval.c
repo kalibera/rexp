@@ -1305,10 +1305,8 @@ SEXP attribute_hidden R_aotcmpfun(SEXP fun)
 {
     SEXP body = BODY(fun);
     int score = JIT_score(body);
-    if (score < MIN_JIT_SCORE) {
-	SET_NOJIT(fun);
+    if (score < MIN_JIT_SCORE)
 	return fun;
-    }
     return R_cmpfun(fun);
 }
 
