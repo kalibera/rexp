@@ -969,7 +969,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 
 	SEXP new_s;
 	R_compile_pkgs = FALSE;
-	PROTECT(new_s = R_cmpfun1(s));
+	PROTECT(new_s = R_aotcmpfun(s));
 	WriteItem (new_s, ref_table, stream);
 	UNPROTECT(1);
 	R_compile_pkgs = TRUE;

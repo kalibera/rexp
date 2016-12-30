@@ -1282,7 +1282,8 @@ static R_INLINE Rboolean jit_srcref_match(SEXP cmpsrcref, SEXP srcref)
     return R_compute_identical(cmpsrcref, srcref, 0);
 }
 
-SEXP attribute_hidden R_cmpfun1(SEXP fun)
+/* Unconditional compilation */
+SEXP attribute_hidden R_cmpfun(SEXP fun)
 {
     int old_visible = R_Visible;
     SEXP packsym, funsym, call, fcall, val;
@@ -1299,7 +1300,20 @@ SEXP attribute_hidden R_cmpfun1(SEXP fun)
     return val;
 }
 
-SEXP attribute_hidden R_cmpfun(SEXP fun)
+/* Ahead of time compilation (now used from serialization) */
+SEXP attribute_hidden R_aotcmpfun(SEXP fun)
+{
+    SEXP body = BODY(fun);
+    int score = JIT_score(body);
+    if (score < MIN_JIT_SCORE) {
+	SET_NOJIT(fun);
+	return fun;
+    }
+    return R_cmpfun(fun);
+}
+
+/* Just-in-time compilation */
+SEXP attribute_hidden R_jitcmpfun(SEXP fun)
 {
     R_exprhash_t hash = 0;
     if (jit_strategy != STRATEGY_NO_CACHE) {
@@ -1347,7 +1361,7 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 	PRINT_JIT_INFO;
     }
 
-    SEXP val = R_cmpfun1(fun);
+    SEXP val = R_cmpfun(fun);
 
     if (TYPEOF(BODY(val)) != BCODESXP)
 	SET_NOJIT(fun);
@@ -1490,7 +1504,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
 	R_jit_enabled = 0;
-	newop = R_cmpfun(op);
+	newop = R_jitcmpfun(op);
 	body = BODY(newop);
 	SET_BODY(op, body);
 	R_jit_enabled = old_enabled;
@@ -1663,7 +1677,7 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
 	R_jit_enabled = 0;
-	newop = R_cmpfun(op);
+	newop = R_jitcmpfun(op);
 	body = BODY(newop);
 	SET_BODY(op, body);
 	R_jit_enabled = old_enabled;
