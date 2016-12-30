@@ -19,8 +19,6 @@
  */
 
 
-#undef HASHING
-
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -1567,11 +1565,6 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 
     R_Srcref = getAttrib(op, R_SrcrefSymbol);
 
-    /* The default return value is NULL.  FIXME: Is this really needed
-       or do we always get a sensible value returned?  */
-
-    tmp = R_NilValue;
-
     /* Debugging */
 
     SET_RDEBUG(newrho, (RDEBUG(op) && R_current_debug_state()) || RSTEP(op)
@@ -1593,25 +1586,6 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	R_Srcref = savesrcref;
 	UNPROTECT(1);
     }
-
-    /*  It isn't completely clear that this is the right place to do
-	this, but maybe (if the matchArgs above reverses the
-	arguments) it might just be perfect.
-
-	This will not currently work as the entry points in envir.c
-	are static.
-    */
-
-#ifdef  HASHING
-    {
-	SEXP R_NewHashTable(int);
-	SEXP R_HashFrame(SEXP);
-	int nargs = length(arglist);
-	HASHTAB(newrho) = R_NewHashTable(nargs);
-	newrho = R_HashFrame(newrho);
-    }
-#endif
-#undef  HASHING
 
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
@@ -1666,18 +1640,12 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
 /* *** from here on : "Copy-Paste from applyClosure" (~ l.965) above ***/
 
-    /* The default return value is NULL.  FIXME: Is this really needed
-       or do we always get a sensible value returned?  */
-
-    tmp = R_NilValue;
-
     /* Debugging */
 
     SET_RDEBUG(newrho, (RDEBUG(op) && R_current_debug_state()) || RSTEP(op)
 		     || (RDEBUG(rho) && R_BrowserLastCommand == 's')) ;
     if( RSTEP(op) ) SET_RSTEP(op, 0);
-    //  RDEBUG(op) .. FIXME? applyClosure has RDEBUG(newrho) which has just been set
-    if (RDEBUG(op) && R_current_debug_state()) {
+    if (RDEBUG(newrho)) {
 	SEXP savesrcref;
 	cntxt.browserfinish = 0; /* Don't want to inherit the "f" */
 	/* switch to interpreted version when debugging compiled code */
@@ -1694,26 +1662,12 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	UNPROTECT(1);
     }
 
-    /*  It isn't completely clear that this is the right place to do
-	this, but maybe (if the matchArgs above reverses the
-	arguments) it might just be perfect.  */
-
-#ifdef  HASHING
-    {
-	SEXP R_NewHashTable(int);
-	SEXP R_HashFrame(SEXP);
-	int nargs = length(arglist);
-	HASHTAB(newrho) = R_NewHashTable(nargs);
-	newrho = R_HashFrame(newrho);
-    }
-#endif
-#undef  HASHING
-
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
 
     if ((SETJMP(cntxt.cjmpbuf))) {
-	if (R_ReturnedValue == R_RestartToken) {
+	if (! cntxt.jumptarget && /* ignores intermediate jumps for on.exits */
+	    R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
 	    PROTECT(tmp = eval(body, newrho));
