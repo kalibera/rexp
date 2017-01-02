@@ -1489,10 +1489,6 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     formals = FORMALS(op);
     savedrho = CLOENV(op);
 
-    /*  Set up a context with the call in it so error has access to it */
-
-    begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
-
     /*  Build a list which matches the actual (unevaluated) arguments
 	to the formal paramters.  Build a new environment which
 	contains the matched pairs.  Ideally this environment sould be
@@ -1537,10 +1533,6 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     if (R_envHasNoSpecialSymbols(newrho))
 	SET_NO_SPECIAL_SYMBOLS(newrho);
 
-    /*  Terminate the previous context and start a new one with the
-	correct environment. */
-
-    endcontext(&cntxt);
     UNPROTECT(1); /* newrho - below protected via context */
 
     /*  If we have a generic function we need to use the sysparent of
