@@ -1462,6 +1462,7 @@ static void PrintCall(SEXP call, SEXP rho)
     R_BrowseLines = old_bl;
 }
 
+/* Note: R_execClosure is not inlineable by GCC because it calls setjmp. */
 static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 			  SEXP newrho, RCNTXT *cptr);
 
