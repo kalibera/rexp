@@ -1463,8 +1463,7 @@ static void PrintCall(SEXP call, SEXP rho)
 }
 
 /* Note: R_execClosure is not inlineable by GCC because it calls setjmp. */
-static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP rho,
-			  SEXP newrho, RCNTXT *cptr);
+static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP rho, RCNTXT *cptr);
 
 /* Apply SEXP op of type CLOSXP to actuals */
 SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
@@ -1545,15 +1544,16 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     else
 	begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
 
-    return R_execClosure(call, op, rho, newrho, &cntxt);
+    return R_execClosure(call, op, rho, &cntxt);
 }
 
-static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP rho,
-			  SEXP newrho, RCNTXT *cptr)
+static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP rho, RCNTXT *cptr)
 {
     volatile SEXP body;
+    SEXP newrho;
 
     body = BODY(op);
+    newrho = cptr->cloenv;
 
     if (R_CheckJIT(op)) {
 	int old_enabled = R_jit_enabled;
@@ -1768,7 +1768,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
     {
 	RCNTXT cntxt;
 	begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
-	val = R_execClosure(call, op, callerenv, newrho, &cntxt);
+	val = R_execClosure(call, op, callerenv, &cntxt);
     }
     UNPROTECT(1);
     return val;
