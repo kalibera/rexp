@@ -1462,15 +1462,14 @@ static void PrintCall(SEXP call, SEXP rho)
     R_BrowseLines = old_bl;
 }
 
-/* Note: R_execClosure is not inlineable by GCC because it calls setjmp. */
-static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP rho, RCNTXT *cptr);
+static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
+                                   SEXP rho, SEXP arglist, SEXP op);
 
 /* Apply SEXP op of type CLOSXP to actuals */
 SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 {
     SEXP formals, actuals, savedrho, newrho;
     SEXP f, a;
-    RCNTXT cntxt;
 
     /* formals = list of formal parameters */
     /* actuals = values to be bound to formals */
@@ -1538,23 +1537,21 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	the generic as the sysparent of the method because the method
 	is a straight substitution of the generic.  */
 
-    if( R_GlobalContext->callflag == CTXT_GENERIC )
-	begincontext(&cntxt, CTXT_RETURN, call,
-		     newrho, R_GlobalContext->sysparent, arglist, op);
-    else
-	begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
-
-    return R_execClosure(call, op, rho, &cntxt);
+    return R_execClosure(call, newrho,
+	                 (R_GlobalContext->callflag == CTXT_GENERIC) ?
+	                     R_GlobalContext->sysparent : rho,
+	                 rho, arglist, op);
 }
 
-static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP rho, RCNTXT *cptr)
+static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
+                                   SEXP rho, SEXP arglist, SEXP op)
 {
     volatile SEXP body;
-    SEXP newrho;
+    RCNTXT cntxt;
+
+    begincontext(&cntxt, CTXT_RETURN, call, newrho, sysparent, arglist, op);
 
     body = BODY(op);
-    newrho = cptr->cloenv;
-
     if (R_CheckJIT(op)) {
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
@@ -1566,7 +1563,7 @@ static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP rho, RCNTXT *cptr)
     }
 
     /* Get the srcref record from the closure object. The old srcref was
-       saved in cptr. */
+       saved in cntxt. */
 
     R_Srcref = getAttrib(op, R_SrcrefSymbol);
 
@@ -1576,7 +1573,7 @@ static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP rho, RCNTXT *cptr)
 		     || (RDEBUG(rho) && R_BrowserLastCommand == 's')) ;
     if( RSTEP(op) ) SET_RSTEP(op, 0);
     if (RDEBUG(newrho)) {
-	cptr->browserfinish = 0; /* Don't want to inherit the "f" */
+	cntxt.browserfinish = 0; /* Don't want to inherit the "f" */
 	/* switch to interpreted version when debugging compiled code */
 	if (TYPEOF(body) == BCODESXP)
 	    body = bytecodeExpr(body);
@@ -1590,29 +1587,29 @@ static R_INLINE SEXP R_execClosure(SEXP call, SEXP op, SEXP rho, RCNTXT *cptr)
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
 
-    if ((SETJMP(cptr->cjmpbuf))) {
-	if (! cptr->jumptarget /* ignores intermediate jumps for on.exits */
+    if ((SETJMP(cntxt.cjmpbuf))) {
+	if (! cntxt.jumptarget /* ignores intermediate jumps for on.exits */
 	    && R_ReturnedValue == R_RestartToken) {
-	    cptr->callflag = CTXT_RETURN;  /* turn restart off */
+	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    cptr->returnValue = eval(body, newrho);
+	    cntxt.returnValue = eval(body, newrho);
 	}
 	else
-	    cptr->returnValue = R_ReturnedValue;
+	    cntxt.returnValue = R_ReturnedValue;
     }
     else
 	/* make it available to on.exit and implicitly protect */
-	cptr->returnValue = eval(body, newrho);
+	cntxt.returnValue = eval(body, newrho);
 
-    R_Srcref = cptr->srcref;
-    endcontext(cptr);
+    R_Srcref = cntxt.srcref;
+    endcontext(&cntxt);
 
     if (RDEBUG(op) && R_current_debug_state()) {
 	Rprintf("exiting from: ");
 	PrintCall(call, rho);
     }
 
-    return cptr->returnValue;
+    return cntxt.returnValue;
 }
 
 SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
@@ -1765,11 +1762,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
        execute the method, and return the result */
     call = cptr->call;
     arglist = cptr->promargs;
-    {
-	RCNTXT cntxt;
-	begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
-	val = R_execClosure(call, op, callerenv, &cntxt);
-    }
+    val = R_execClosure(call, newrho, callerenv, rho, arglist, op);
     UNPROTECT(1);
     return val;
 }
