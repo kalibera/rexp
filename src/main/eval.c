@@ -1506,7 +1506,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	contains the matched pairs.  Ideally this environment sould be
 	hashed.  */
 
-    PROTECT(actuals = matchArgs(formals, arglist, call));
+    actuals = matchArgs(formals, arglist, call);
     PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
 
     /* Turn on reference counting for the binding cells so local
@@ -1606,7 +1606,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	Rprintf("exiting from: ");
 	PrintCall(call, rho);
     }
-    UNPROTECT(2);
+    UNPROTECT(1);
     return cntxt.returnValue;
 }
 
