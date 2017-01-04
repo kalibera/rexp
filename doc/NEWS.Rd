@@ -277,6 +277,9 @@
       \item The (default) Stangle driver \code{Rtangle} allows
       \code{annotate} to be a function and gets a new
       \code{drop.evalFALSE} option.
+
+      \item The default method for \code{quantile(x, prob)} should now
+      be monotone in \code{prob}, even in border cases, see \PR{16672}.
     }
   }
 
@@ -310,9 +313,16 @@
       \file{R_ext/QuartzDevice.h} and \file{R_ext/eventloop.h} are no
       longer installed on Windows.
 
-      \item No-longer installed headers \file{GraphicsBase.h},
+      \item No-longer-installed headers \file{GraphicsBase.h},
       \file{RGraphics.h}, \file{Rmodules/RX11.h} and
       \file{Rmodules/Rlapack.h} which had a LGPL license no longer do so.
+        
+      \item \code{HAVE_UINTPTR_T} is now defined where appropriate by
+      \code{Rconfig.h} so that it can be included before
+      \code{Rinterface.h} when \code{CSTACK_DEFNS} is defined and a C
+      compiler (not C++) is in use.  \code{Rinterface.h} now includes C
+      header \file{stdint.h} or C++11 header \file{cstdint} where
+      needed.
     }
   }
 
@@ -432,6 +442,9 @@
 
       \item \code{structure(NULL, ..)} is now deprecated as you cannot
       set attributes on \code{\link{NULL}}.
+
+      \item Header \file{Rconfig.h} no longer defines
+      \samp{SUPPORT_OPENMP}; use \samp{_OPENMP} as long documented.
     }
   }
 
@@ -552,7 +565,15 @@
       (rather than failing silently).
     }
   }
-
+  
+  \subsection{UTILITIES}{
+    \itemize{        
+      \item Enviromental variable \env{_R_CHECK_TESTS_NLINES_} controls
+      how \command{R CMD check} reports failing tests (see §8 of the
+      \sQuote{R Internals} manual).
+    }
+  }
+  
   \subsection{BUG FIXES}{
     \itemize{
       \item \code{rep(x, times)} and \code{rep.int(x, times)} now both
@@ -590,6 +611,11 @@
 
       \item \code{methods(f)} now also works for \code{f} \code{"("}
       or \code{"{"}.
+
+      %% Not yet ported from trunk
+      \item \code{pmin()} and \code{pmax()} now work again for
+      \code{ordered} factors and 0-length S3 classed objects, thanks to
+      Suharto Anggono's \PR{17195} and \PR{17200}.
     }
   }
 }

@@ -472,6 +472,78 @@ f <- eval(parse(text = "function() { x <- 1 ; for(i in 1:10) { i <- i }}",
 g <- removeSource(f)
 stopifnot(is.null(attributes(body(g)[[3L]][[4L]])))
 
+## pmin/pmax of ordered factors -- broken in R 3.3.2  [PR #17195]
+of <- ordered(c(1,5,6))
+set.seed(7); rof <- sample(of, 12, replace=TRUE)
+stopifnot(identical(pmax(rof, of), ordered(pmax(c(rof), c(of)), labels=levels(rof)) -> pmar),
+	  identical(pmax(of, rof), pmar),
+	  identical(pmin(rof, of), ordered(pmin(c(rof), c(of)), labels=levels(rof)) -> pmir),
+	  identical(pmin(of, rof), pmir),
+	  identical(pmin(rof, 5), ordered(pmin(c(rof), 2), levels=1:3, labels=levels(rof))),
+	  identical(pmax(rof, 6), ordered(pmax(c(rof), 3), levels=1:3, labels=levels(rof))),
+	  identical(pmax(rof, 1), rof),
+	  identical(pmin(rof, 6), rof),
+	  identical(pmax(of, 5, rof), ordered(pmax(c(of),2L,c(rof)), levels=1:3,
+                                              labels=levels(of)))
+	  )
+## these were "always" true .. but may change (FIXME ?)
+stopifnot(
+    identical(of,   pmin(of, 3)) # what? error? at least warning?
+    ,
+    identical(pmar, pmax(of, 3, rof))
+)
+## pmin/pmax() of 0-length S3 classed  [PR #17200]
+for(ob0 in list(I(character()), I(0[0]), I(0L[0]),
+                structure(logical(), class="L"),
+                structure(character(), class="CH"))) {
+    stopifnot(identical(ob0, pmax(ob0, ob0)),
+              identical(ob0, pmin(ob0, ob0)),
+              identical(ob0, pmin(ob0, "")),
+              identical(ob0, pmax(ob0, "")))
+}
+## pmin()/pmax() of matching numeric data frames
+mUSJ <- data.matrix(dUSJ <- USJudgeRatings)
+stopifnot(
+    identical(              pmin(dUSJ, 10 - dUSJ),
+              as.data.frame(pmin(mUSJ, 10 - mUSJ))),
+    identical(              pmax(dUSJ, 10 - dUSJ),
+              as.data.frame(pmax(mUSJ, 10 - mUSJ))))
+## had failed for a while.   Note however :
+d1 <- data.frame(y0 = 0:3 +1/2) ; (d1.2 <- d1[1:2, , drop=FALSE])
+stopifnot(## FIXME: The 'NA's really are wrong
+    identical(pmax(d1,2),     data.frame(y0 = c(2, NA, 2.5, 3.5)))
+   ,
+    identical(pmax(d1, 3-d1), data.frame(y0 = .5+c(2, 1:3)))
+   ,
+    identical(pmax(d1.2, 2),  data.frame(y0 = c(2, NA)))
+   ,
+    identical(pmax(d1.2, 2-d1.2),data.frame(y0=c(1.5,1.5)))
+   ,
+    identical(pmin(d1, 2),    data.frame(y0 = c(.5+0:1, NA,NA)))
+   ,
+    identical(pmin(d1, 3-d1), data.frame(y0 = .5+c(0, 1:-1)))
+   ,
+    identical(pmin(d1.2, 2),  data.frame(y0 = c(.5, 1.5)))
+   ,
+    identical(pmin(d1.2, 2-d1.2),data.frame(y0 = c(.5,.5)))
+)
+## some CRAN pkgs have been relying that these at least "worked somehow"
+
+
+## quantile(x, prob) monotonicity in prob[] - PR#16672
+sortedQ <- function(x, prob, ...)
+    vapply(1:9, function(type)
+        !is.unsorted(quantile(x, prob, type=type, names=FALSE, ...)), NA)
+xN <- c(NA, 10.5999999999999996, NA, NA, NA, 10.5999999999999996,
+        NA, NA, NA, NA, NA, 11.3000000000000007, NA, NA,
+        NA, NA, NA, NA, NA, 5.2000000000000002)
+sQ.xN <- sortedQ(xN, probs = seq(0,1,1/10), na.rm = TRUE)
+x2 <- rep(-0.00090419678460984, 602)
+stopifnot(sQ.xN, sortedQ(x2, (0:5)/5))
+## both not fulfilled in R < 3.4.0
+
+
+
 
 ## keep at end
 rbind(last =  proc.time() - .pt,

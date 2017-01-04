@@ -106,15 +106,17 @@ static R_INLINE void SET_VECTOR_ELT_NR(SEXP x, R_xlen_t i, SEXP v)
 
 static R_INLINE SEXP getNames(SEXP x)
 {
-#ifdef SWITCH_TO_REFCNT
-    return getAttrib(x, R_NamesSymbol);
-#else
-    /* don't use getAttrib since that would bump NAMED on the names attribute */
+    /* defer to getAttrib if a 'dim' attribute is present */
+    for (SEXP attr = ATTRIB(x); attr != R_NilValue; attr = CDR(attr))
+	if (TAG(attr) == R_DimSymbol)
+	    return getAttrib(x, R_NamesSymbol);
+
+    /* don't use getAttrib since that would mark as immutable */
     for (SEXP attr = ATTRIB(x); attr != R_NilValue; attr = CDR(attr))
 	if (TAG(attr) == R_NamesSymbol)
 	    return CAR(attr);
+
     return R_NilValue;
-#endif
 }
 
 /* EnlargeVector() takes a vector "x" and changes its length to "newlen".
@@ -125,7 +127,7 @@ static SEXP EnlargeNames(SEXP, R_xlen_t, R_xlen_t);
 
 static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
 {
-    R_xlen_t i, len;
+    R_xlen_t len, newtruelen;
     SEXP newx, names;
     static SEXP R_CheckBoundsSymbol = NULL;
 
@@ -173,7 +175,12 @@ static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
 	}
     }
 
-    R_xlen_t newtruelen = newlen * expand;
+    if (newlen > len)
+	newtruelen = (R_xlen_t) (newlen * expand);
+    else
+	/* sometimes this is called when no expansion is needed */
+	newtruelen = newlen;
+
     /**** for now, don't cross the long vector boundary; drop when
 	  ALTREP is merged */
 #ifdef ALTREP
@@ -190,42 +197,42 @@ static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
     switch(TYPEOF(x)) {
     case LGLSXP:
     case INTSXP:
-	for (i = 0; i < len; i++)
+	for (R_xlen_t i = 0; i < len; i++)
 	    INTEGER(newx)[i] = INTEGER(x)[i];
-	for (i = len; i < newtruelen; i++)
+	for (R_xlen_t i = len; i < newtruelen; i++)
 	    INTEGER(newx)[i] = NA_INTEGER;
 	break;
     case REALSXP:
-	for (i = 0; i < len; i++)
+	for (R_xlen_t i = 0; i < len; i++)
 	    REAL(newx)[i] = REAL(x)[i];
-	for (i = len; i < newtruelen; i++)
+	for (R_xlen_t i = len; i < newtruelen; i++)
 	    REAL(newx)[i] = NA_REAL;
 	break;
     case CPLXSXP:
-	for (i = 0; i < len; i++)
+	for (R_xlen_t i = 0; i < len; i++)
 	    COMPLEX(newx)[i] = COMPLEX(x)[i];
-	for (i = len; i < newtruelen; i++) {
+	for (R_xlen_t i = len; i < newtruelen; i++) {
 	    COMPLEX(newx)[i].r = NA_REAL;
 	    COMPLEX(newx)[i].i = NA_REAL;
 	}
 	break;
     case STRSXP:
-	for (i = 0; i < len; i++)
+	for (R_xlen_t i = 0; i < len; i++)
 	    SET_STRING_ELT(newx, i, STRING_ELT(x, i));
-	for (i = len; i < newtruelen; i++)
+	for (R_xlen_t i = len; i < newtruelen; i++)
 	    SET_STRING_ELT(newx, i, NA_STRING); /* was R_BlankString  < 1.6.0 */
 	break;
     case EXPRSXP:
     case VECSXP:
-	for (i = 0; i < len; i++)
+	for (R_xlen_t i = 0; i < len; i++)
 	    SET_VECTOR_ELT_NR(newx, i, VECTOR_ELT(x, i));
-	for (i = len; i < newtruelen; i++)
+	for (R_xlen_t i = len; i < newtruelen; i++)
 	    SET_VECTOR_ELT(newx, i, R_NilValue);
 	break;
     case RAWSXP:
-	for (i = 0; i < len; i++)
+	for (R_xlen_t i = 0; i < len; i++)
 	    RAW(newx)[i] = RAW(x)[i];
-	for (i = len; i < newtruelen; i++)
+	for (R_xlen_t i = len; i < newtruelen; i++)
 	    RAW(newx)[i] = (Rbyte) 0;
 	break;
     default:

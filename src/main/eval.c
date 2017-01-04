@@ -675,10 +675,17 @@ SEXP eval(SEXP e, SEXP rho)
 	   end up getting duplicated if NAMED = 2.) LT */
 	break;
     case LANGSXP:
-	if (TYPEOF(CAR(e)) == SYMSXP)
+	if (TYPEOF(CAR(e)) == SYMSXP) {
 	    /* This will throw an error if the function is not found */
-	    PROTECT(op = findFun3(CAR(e), rho, e));
-	else
+	    SEXP ecall = e;
+
+	    /* This picks the correct/better error expression for 
+	       replacement calls running in the AST interpreter. */
+	    if (R_GlobalContext != NULL &&
+		    (R_GlobalContext->callflag & CTXT_CCODE))
+		ecall = R_GlobalContext->call;
+	    PROTECT(op = findFun3(CAR(e), rho, ecall));
+	} else
 	    PROTECT(op = eval(CAR(e), rho));
 
 	if(RTRACE(op) && R_current_trace_state()) {
@@ -1462,13 +1469,15 @@ static void PrintCall(SEXP call, SEXP rho)
     R_BrowseLines = old_bl;
 }
 
+/* Note: GCC will not inline execClosure because it calls setjmp */
+static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
+                                   SEXP rho, SEXP arglist, SEXP op);
+
 /* Apply SEXP op of type CLOSXP to actuals */
 SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 {
-    SEXP formals, actuals, savedrho;
-    volatile SEXP body, newrho;
-    SEXP f, a, tmp, savesrc;
-    RCNTXT cntxt;
+    SEXP formals, actuals, savedrho, newrho;
+    SEXP f, a;
 
     /* formals = list of formal parameters */
     /* actuals = values to be bound to formals */
@@ -1484,29 +1493,14 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 		  type2char(TYPEOF(rho)));
 
     formals = FORMALS(op);
-    body = BODY(op);
     savedrho = CLOENV(op);
-
-    if (R_CheckJIT(op)) {
-	int old_enabled = R_jit_enabled;
-	SEXP newop;
-	R_jit_enabled = 0;
-	newop = R_cmpfun(op);
-	body = BODY(newop);
-	SET_BODY(op, body);
-	R_jit_enabled = old_enabled;
-    }
-
-    /*  Set up a context with the call in it so error has access to it */
-
-    begincontext(&cntxt, CTXT_RETURN, call, savedrho, rho, arglist, op);
 
     /*  Build a list which matches the actual (unevaluated) arguments
 	to the formal paramters.  Build a new environment which
 	contains the matched pairs.  Ideally this environment sould be
 	hashed.  */
 
-    PROTECT(actuals = matchArgs(formals, arglist, call));
+    actuals = matchArgs(formals, arglist, call);
     PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
 
     /* Turn on reference counting for the binding cells so local
@@ -1545,93 +1539,28 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     if (R_envHasNoSpecialSymbols(newrho))
 	SET_NO_SPECIAL_SYMBOLS(newrho);
 
-    /*  Terminate the previous context and start a new one with the
-	correct environment. */
-
-    endcontext(&cntxt);
+    UNPROTECT(1); /* newrho - below protected via context */
 
     /*  If we have a generic function we need to use the sysparent of
 	the generic as the sysparent of the method because the method
 	is a straight substitution of the generic.  */
 
-    PROTECT(savesrc = R_Srcref);
-    if( R_GlobalContext->callflag == CTXT_GENERIC )
-	begincontext(&cntxt, CTXT_RETURN, call,
-		     newrho, R_GlobalContext->sysparent, arglist, op);
-    else
-	begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
-
-    /* Get the srcref record from the closure object */
-
-    R_Srcref = getAttrib(op, R_SrcrefSymbol);
-
-    /* The default return value is NULL.  FIXME: Is this really needed
-       or do we always get a sensible value returned?  */
-
-    tmp = R_NilValue;
-
-    /* Debugging */
-
-    SET_RDEBUG(newrho, (RDEBUG(op) && R_current_debug_state()) || RSTEP(op)
-		     || (RDEBUG(rho) && R_BrowserLastCommand == 's')) ;
-    if( RSTEP(op) ) SET_RSTEP(op, 0);
-    if (RDEBUG(newrho)) {
-	SEXP savesrcref;
-	cntxt.browserfinish = 0; /* Don't want to inherit the "f" */
-	/* switch to interpreted version when debugging compiled code */
-	if (TYPEOF(body) == BCODESXP)
-	    body = bytecodeExpr(body);
-	Rprintf("debugging in: ");
-	PrintCall(call, rho);
-	savesrcref = R_Srcref;
-	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
-	SrcrefPrompt("debug", R_Srcref);
-	PrintValue(body);
-	do_browser(call, op, R_NilValue, newrho);
-	R_Srcref = savesrcref;
-	UNPROTECT(1);
-    }
-
-    /*  Set a longjmp target which will catch any explicit returns
-	from the function body.  */
-
-    if ((SETJMP(cntxt.cjmpbuf))) {
-	if (! cntxt.jumptarget && /* ignores intermediate jumps for on.exits */
-	    R_ReturnedValue == R_RestartToken) {
-	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
-	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(tmp = eval(body, newrho));
-	}
-	else
-	    PROTECT(tmp = R_ReturnedValue);
-    }
-    else {
-	PROTECT(tmp = eval(body, newrho));
-    }
-    cntxt.returnValue = tmp; /* make it available to on.exit */
-    R_Srcref = savesrc;
-    endcontext(&cntxt);
-
-    if (RDEBUG(op) && R_current_debug_state()) {
-	Rprintf("exiting from: ");
-	PrintCall(call, rho);
-    }
-    UNPROTECT(4);
-    return (tmp);
+    return R_execClosure(call, newrho,
+	                 (R_GlobalContext->callflag == CTXT_GENERIC) ?
+	                     R_GlobalContext->sysparent : rho,
+	                 rho, arglist, op);
 }
 
-/* **** FIXME: This code is factored out of applyClosure.  If we keep
-   **** it we should change applyClosure to run through this routine
-   **** to avoid code drift. */
-static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
-			  SEXP newrho)
+static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
+                                   SEXP rho, SEXP arglist, SEXP op)
 {
     volatile SEXP body;
-    SEXP tmp;
     RCNTXT cntxt;
+    Rboolean dbg = FALSE;
+
+    begincontext(&cntxt, CTXT_RETURN, call, newrho, sysparent, arglist, op);
 
     body = BODY(op);
-
     if (R_CheckJIT(op)) {
 	int old_enabled = R_jit_enabled;
 	SEXP newop;
@@ -1642,61 +1571,55 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 	R_jit_enabled = old_enabled;
     }
 
-    begincontext(&cntxt, CTXT_RETURN, call, newrho, rho, arglist, op);
-/* *** from here on : "Copy-Paste from applyClosure" (~ l.965) above ***/
+    /* Get the srcref record from the closure object. The old srcref was
+       saved in cntxt. */
 
-    /* The default return value is NULL.  FIXME: Is this really needed
-       or do we always get a sensible value returned?  */
-
-    tmp = R_NilValue;
+    R_Srcref = getAttrib(op, R_SrcrefSymbol);
 
     /* Debugging */
 
-    SET_RDEBUG(newrho, (RDEBUG(op) && R_current_debug_state()) || RSTEP(op)
-		     || (RDEBUG(rho) && R_BrowserLastCommand == 's')) ;
-    if( RSTEP(op) ) SET_RSTEP(op, 0);
-    //  RDEBUG(op) .. FIXME? applyClosure has RDEBUG(newrho) which has just been set
-    if (RDEBUG(op) && R_current_debug_state()) {
-	SEXP savesrcref;
+    if ((RDEBUG(op) && R_current_debug_state()) || RSTEP(op)
+         || (RDEBUG(rho) && R_BrowserLastCommand == 's')) {
+
+	dbg = TRUE;
+	SET_RSTEP(op, 0);
+	SET_RDEBUG(newrho, 1);
 	cntxt.browserfinish = 0; /* Don't want to inherit the "f" */
 	/* switch to interpreted version when debugging compiled code */
 	if (TYPEOF(body) == BCODESXP)
 	    body = bytecodeExpr(body);
 	Rprintf("debugging in: ");
-	PrintCall(call,rho);
-	savesrcref = R_Srcref;
-	PROTECT(R_Srcref = getSrcref(getBlockSrcrefs(body), 0));
+	PrintCall(call, rho);
 	SrcrefPrompt("debug", R_Srcref);
 	PrintValue(body);
 	do_browser(call, op, R_NilValue, newrho);
-	R_Srcref = savesrcref;
-	UNPROTECT(1);
     }
 
     /*  Set a longjmp target which will catch any explicit returns
 	from the function body.  */
 
     if ((SETJMP(cntxt.cjmpbuf))) {
-	if (R_ReturnedValue == R_RestartToken) {
+	if (! cntxt.jumptarget /* ignores intermediate jumps for on.exits */
+	    && R_ReturnedValue == R_RestartToken) {
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
-	    PROTECT(tmp = eval(body, newrho));
+	    cntxt.returnValue = eval(body, newrho);
 	}
 	else
-	    PROTECT(tmp = R_ReturnedValue);
+	    cntxt.returnValue = R_ReturnedValue;
     }
-    else {
-	PROTECT(tmp = eval(body, newrho));
-    }
-    cntxt.returnValue = tmp; /* make it available to on.exit */
+    else
+	/* make it available to on.exit and implicitly protect */
+	cntxt.returnValue = eval(body, newrho);
+
+    R_Srcref = cntxt.srcref;
     endcontext(&cntxt);
 
-    if (RDEBUG(op) && R_current_debug_state()) {
+    if (dbg) {
 	Rprintf("exiting from: ");
 	PrintCall(call, rho);
     }
-    UNPROTECT(1);
-    return (tmp);
+    return cntxt.returnValue;
 }
 
 SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
@@ -1849,7 +1772,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
        execute the method, and return the result */
     call = cptr->call;
     arglist = cptr->promargs;
-    val = R_execClosure(call, op, arglist, callerenv, newrho);
+    val = R_execClosure(call, newrho, callerenv, callerenv, arglist, op);
     UNPROTECT(1);
     return val;
 }
@@ -2743,7 +2666,9 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	       cod emore consistent. */
 	} else if (isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)) {
 	    /* It was missing */
-	    errorcall(call, _("'%s' is missing"), EncodeChar(PRINTNAME(CAR(el))));
+	    errorcall_cpy(call,
+	                  _("'%s' is missing"),
+	                  EncodeChar(PRINTNAME(CAR(el))));
 #endif
 	} else {
 	    ev = CONS_NR(eval(CAR(el), rho), R_NilValue);

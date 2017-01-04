@@ -564,7 +564,6 @@ Windows build would zip up the data directory or not prior to @R{}
 @c DESCRIPTION field Biarch
 The @samp{Biarch} logical field is used on Windows to select the
 @command{INSTALL} option @option{--force-biarch} for this package.
-(Introduced in @R{} 3.0.0.)
 
 @c DESCRIPTION field BuildVignettes
 The @samp{BuildVignettes} logical field can be set to a false value to
@@ -960,9 +959,8 @@ LinkingTo: link1, link2
 @end example
 
 @noindent
-As from @R{} 3.0.2 the @samp{LinkingTo} field can have a version
-requirement which is checked at installation.  (In earlier versions of
-@R{} it would cause the specification to be ignored.)
+The @samp{LinkingTo} field can have a version requirement which is
+checked at installation.
 
 Specifying a package in @samp{LinkingTo} suffices if these are C++
 headers containing source code or static linking is done at
@@ -1231,12 +1229,12 @@ if testing is desired use code in the @file{tests} directory to achieve
 this.  The script files must start with a (lower or upper case) letter
 and have one of the extensions @file{.R} or @file{.r}.  If present, the
 @file{demo} subdirectory should also have a @file{00Index} file with one
-line for each demo, giving its name and a description separated by a
-tab or at least three spaces. (This index file is not generated
+line for each demo, giving its name and a description separated by a tab
+or at least three spaces. (This index file is not generated
 automatically.)  Note that a demo does not have a specified encoding and
-so should be an @acronym{ASCII} file (@pxref{Encoding issues}).  As from
-@R{} 3.0.0 @code{demo()} will use the package encoding if there is one,
-but this is mainly useful for non-@acronym{ASCII} comments.
+so should be an @acronym{ASCII} file (@pxref{Encoding issues}). Function
+@code{demo()} will use the package encoding if there is one, but this is
+mainly useful for non-@acronym{ASCII} comments.
 
 @cindex .Rinstignore file
 The contents of the @file{inst} subdirectory will be copied recursively
@@ -1250,9 +1248,9 @@ exclude files from being installed, one can specify a list of exclude
 patterns in file @file{.Rinstignore} in the top-level source directory.
 These patterns should be Perl-like regular expressions (see the help for
 @code{regexp} in @R{} for the precise details), one per line, to be
-matched case-insensitively@footnote{on all platforms from @R{} 3.1.0}
-against the file and directory paths, e.g.@: @file{doc/.*[.]png$} will
-exclude all PNG files in @file{inst/doc} based on the extension.
+matched case-insensitively against the file and directory paths, e.g.@:
+@file{doc/.*[.]png$} will exclude all PNG files in @file{inst/doc} based
+on the extension.
 
 Note that with the exceptions of @file{INDEX},
 @file{LICENSE}/@file{LICENCE} and @file{NEWS}, information files at the
@@ -1398,13 +1396,12 @@ is best is to try them all and look at the size of the
 @file{@var{pkgname}/data/Rdata.rdb} file.
 
 Lazy-loading is not supported for very large datasets (those which when
-serialized exceed 2GB, the limit for the format on 32-bit platforms and
-all platforms prior to @R{} 3.0.0).
+serialized exceed 2GB, the limit for the format on 32-bit platforms).
 
 @c DESCRIPTION field SysDataCompression
 The analogue for @file{sysdata.rda} is field @samp{SysDataCompression}:
-the default (since @R{} 2.12.2) is @code{xz} for files bigger than 1MB
-otherwise @code{gzip}.
+the default is @code{xz} for files bigger than 1MB otherwise
+@code{gzip}.
 
 @node Non-R scripts in packages, Specifying URLs, Data in packages, Package structure
 @subsection Non-R scripts in packages
@@ -2044,8 +2041,8 @@ conditioned on the use of OpenMP can be used inside @code{#ifdef
 _OPENMP}: note that some toolchains used for @R{} (including that of
 macOS and some others using @command{clang}@footnote{Default builds of
 @command{clang} 3.8.0 and later have support for OpenMP, but the
-@code{libomp} library may not be installed.}) have no OpenMP support at
-all, not even @file{omp.h}.
+@code{libomp} run-time library may not be installed.}) have no OpenMP
+support at all, not even @file{omp.h}.
 
 For example, a package with C code written for OpenMP should have in
 @file{src/Makevars} the lines
@@ -2075,6 +2072,11 @@ PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
 as the C compiler will be used to link the package code (and there is no
 guarantee that this will work everywhere).
 
+For portability, any C/C++ code using the @code{omp_*} functions should
+include the @file{omp.h} header: some compilers (but not all) include it
+when OpenMP mode is switched on (e.g.@: @emph{via} flag
+@option{-fopenmp}).
+
 @c http://openmp.org/wp/openmp-compilers/
 @c clang 3.8.x reports 201307 but has full suport only for 3.1 (201111)
 There is nothing@footnote{In most implementations the
@@ -2091,8 +2093,8 @@ including the flag @option{-fopenmp} for that command).
 
 The performance of OpenMP varies substantially between platforms.  The
 Windows implementation has substantial overheads@footnote{as did the
-GCC-based Apple implementation, but not if the Intel OpenMP runtime was
-used.}, so is only beneficial if quite substantial tasks are run in
+GCC-based Apple implementation, but not the Intel/LLVM OpenMP runtime
+on macOS.}, so is only beneficial if quite substantial tasks are run in
 parallel.  Also, on Windows new threads are started with the
 default@footnote{Windows default, not MinGW-w64 default.} FPU control
 word, so computations done on OpenMP threads will not make use of
@@ -2446,7 +2448,7 @@ C99 features which are not otherwise implemented in C++, and C++
 compilers commonly accept C99 extensions to C++98.  A minor
 update@footnote{The changes are linked from
 @uref{https://isocpp.org/@/std/@/standing-documents/@/sd-6-sg10-feature-test-recommendations}.}
-to C++11 (C++14) was approved in August 2014.
+to C++11 (C++14) was published in December 2014.
 
 What standard a C++ compiler aims to support can be hard to determine:
 the value@footnote{Values @code{199711}, @code{201103L} and
@@ -3003,20 +3005,20 @@ To exclude files from being put into the package, one can specify a list
 of exclude patterns in file @file{.Rbuildignore} in the top-level source
 directory.  These patterns should be Perl-like regular expressions (see
 the help for @code{regexp} in @R{} for the precise details), one per
-line, to be matched case-insensitively@footnote{on all platforms from
-@R{} 3.1.0.} against the file and directory names relative to the
-top-level package source directory.  In addition, directories from
-source control systems@footnote{called @file{CVS} or @file{.svn} or
-@file{.arch-ids} or @file{.bzr} or @file{.git} (but not files called
-@file{.git}) or @file{.hg}.} or from @command{eclipse}@footnote{called
-@file{.metadata}.}, directories with names ending @file{.Rcheck} or
-@file{Old} or @file{old} and files @file{GNUMakefile}@footnote{which is
-an error: GNU make uses @file{GNUmakefile}.}, @file{Read-and-delete-me}
-or with base names starting with @samp{.#}, or starting and ending with
-@samp{#}, or ending in @samp{~}, @samp{.bak} or @samp{.swp}, are
-excluded by default.  In addition, those files in the @file{R},
-@file{demo} and @file{man} directories which are flagged by @command{R
-CMD check} as having invalid names will be excluded.
+line, to be matched case-insensitively against the file and directory
+names relative to the top-level package source directory.  In addition,
+directories from source control systems@footnote{called @file{CVS} or
+@file{.svn} or @file{.arch-ids} or @file{.bzr} or @file{.git} (but not
+files called @file{.git}) or @file{.hg}.} or from
+@command{eclipse}@footnote{called @file{.metadata}.}, directories with
+names ending @file{.Rcheck} or @file{Old} or @file{old} and files
+@file{GNUMakefile}@footnote{which is an error: GNU make uses
+@file{GNUmakefile}.}, @file{Read-and-delete-me} or with base names
+starting with @samp{.#}, or starting and ending with @samp{#}, or ending
+in @samp{~}, @samp{.bak} or @samp{.swp}, are excluded by default.  In
+addition, those files in the @file{R}, @file{demo} and @file{man}
+directories which are flagged by @command{R CMD check} as having invalid
+names will be excluded.
 
 Use @kbd{R CMD build --help} to obtain more information about the usage
 of the @R{} package builder.
@@ -3399,10 +3401,10 @@ would have been in the locale's encoding.
 @node Non-Sweave vignettes,  , Encodings and vignettes, Writing package vignettes
 @subsection Non-Sweave vignettes
 
-@R{} 3.0.0 and later allow vignettes in formats other than Sweave by
-means of ``vignette engines''.  For example @CRANpkg{knitr} version 1.1
-or later can create @file{.tex} files from a variation on Sweave format,
-and @file{.html} files from a variation on ``markdown'' format. These
+Vignettes in formats other than Sweave are supported @emph{via}
+``vignette engines''.  For example @CRANpkg{knitr} version 1.1 or later
+can create @file{.tex} files from a variation on Sweave format, and
+@file{.html} files from a variation on ``markdown'' format. These
 engines replace the @code{Sweave()} function with other functions to
 convert vignette source files into @LaTeX{} files for processing into
 @file{.pdf}, or directly into @file{.pdf} or @file{.html} files. The
@@ -3496,10 +3498,6 @@ The namespace controls the search strategy for variables used by
 functions in the package.  If not found locally, @R{} searches the
 package namespace first, then the imports, then the base namespace and
 then the normal search path.
-
-Prior to @R{} 2.14.0, namespaces were optional in packages: a default
-namespace was generated on installation in 2.14.x and 2.15.x.  As from
-3.0.0 a namespace is mandatory.
 
 
 @menu
@@ -3643,9 +3641,6 @@ S3method(print, check_so_symbols, .print.via.format)
 @noindent
 when @code{print.check_so_symbols} is not needed.
 
-There used to be a limit on the number of @code{S3method} directives: it
-was @code{500} prior to @R{} 3.0.2.
-
 @node Load hooks, useDynLib, Registering S3 methods, Package namespaces
 @subsection Load hooks
 
@@ -3664,16 +3659,15 @@ exported.
 @findex .onUnload
 @findex .onDetach
 @findex .Last.lib
-Packages can use a @code{.onDetach} (as from @R{} 3.0.0) or @code{.Last.lib}
-function (provided the latter is exported from the namespace) when
-@code{detach} is called on the package.  It is called with a single
-argument, the full path to the installed package.  There is also a hook
-@code{.onUnload} which is called when the namespace is unloaded
-(@emph{via} a call to @code{unloadNamespace}, perhaps called by
-@code{detach(unload = TRUE)}) with argument the full path to the installed
-package's directory.  @code{.onUnload} and @code{.onDetach} should be
-defined in the namespace and not exported, but @code{.Last.lib} does
-need to be exported.
+Packages can use a @code{.onDetach} or @code{.Last.lib} function
+(provided the latter is exported from the namespace) when @code{detach}
+is called on the package.  It is called with a single argument, the full
+path to the installed package.  There is also a hook @code{.onUnload}
+which is called when the namespace is unloaded (@emph{via} a call to
+@code{unloadNamespace}, perhaps called by @code{detach(unload = TRUE)})
+with argument the full path to the installed package's directory.
+@code{.onUnload} and @code{.onDetach} should be defined in the namespace
+and not exported, but @code{.Last.lib} does need to be exported.
 
 Packages are not likely to need @code{.onAttach} (except perhaps for a
 start-up banner); code to set options and load shared objects should be
@@ -4184,21 +4178,20 @@ Make use of the abilities of your compilers to check the
 standards-conformance of your code.  For example, @command{gcc} and
 @command{gfortran}@footnote{@uref{http://fortranwiki.org/@/fortran/@/show/Modernizing+Old+Fortran}
 may help explain some of the warnings from @command{gfortran -Wall
--pedantic}.}  can be used with options @option{-Wall -pedantic} to
-alert you to potential problems.  This is particularly important for
-C++, where @code{g++ -Wall -pedantic} will alert you to the use of GNU
-extensions which fail to compile on most other C++ compilers. If @R{}
-was not configured accordingly, one can achieve this @emph{via} personal
-@file{Makevars} files.
+-pedantic}.}  can be used with options @option{-Wall -pedantic} to alert
+you to potential problems.  This is particularly important for C++,
+where @code{g++ -Wall -pedantic} will alert you to the use of some of
+the GNU extensions which fail to compile on most other C++ compilers. If
+@R{} was not configured accordingly, one can achieve this @emph{via}
+personal @file{Makevars} files.
 @ifset UseExternalXrefs
 @xref{Customizing package compilation, , Customizing package compilation,
 R-admin, R Installation and Administration},
 @end ifset
 
-Although there is a 2011 version of the C++ standard, implementations
-are not universally available.  Portable C++ code needs to follow the
-1998 standard (and not use features from C99).  See also @ref{Using
-C++11 code} to specify a C++11 compiler where available.
+Portable C++ code needs to follow the 1998 standard (and not use
+features from C99), or to specify a C++11 compiler (see @ref{Using C++11
+code}) where available (which is not the case on all @R{} platforms).
 
 If you use FORTRAN 77, @code{ftnchek}
 (@uref{http://www.dsm.fordham.edu/@/~ftnchek/}) provides thorough testing
@@ -4247,18 +4240,19 @@ Do be very careful with passing arguments between @R{}, C and
 on some @R{} platforms (including 64-bit Windows), but 64-bit on most
 modern Unix and Linux platforms.  It is rather unlikely that the use of
 @code{long} in C code has been thought through: if you need a longer
-type than @code{int} you should use a configure test for a C99 type such
-as @code{int_fast64_t} (and failing that, @code{long long} @footnote{but
-note that @code{long long} is not a standard C++ type, and C++ compilers
-set up for strict checking will reject it.}) and typedef your own type
-to be @code{long} or @code{long long}, or use another suitable type
-(such as @code{size_t}).
+type than @code{int} you should use a configure test for a C99/C++11
+type such as @code{int_fast64_t} (and failing that, @code{long long}
+@footnote{but note that @code{long long} is not a standard C++98 type,
+and C++ compilers set up for strict checking will reject it.}) and
+typedef your own type to be @code{long} or @code{long long}, or use
+another suitable type (such as @code{size_t}).
 
 It is not safe to assume that @code{long} and pointer types are the same
 size, and they are not on 64-bit Windows.  If you need to convert
-pointers to and from integers use the C99 integer types @code{intptr_t}
-and @code{uintptr_t} (which are defined in the header @code{<stdint.h>}
-and are not required to be implemented by the C99 standard).
+pointers to and from integers use the C99/C++11 integer types
+@code{intptr_t} and @code{uintptr_t} (which are defined in the header
+@code{<stdint.h>} and are not required to be implemented by the C99
+standard but are used in C code by @R{} itself).
 
 Note that @code{integer} in @acronym{FORTRAN} corresponds to @code{int}
 in C on all @R{} platforms.
@@ -4435,7 +4429,7 @@ portable, annoyingly so if this is not declared in the
 @command{pandoc}, which is only available for a very limited range of
 platforms (and has onerous requirements to install from source) and has
 capabilities@footnote{For example, the ability to handle @samp{https://}
-URLs, which even the build in some major Linux distributions in 2016 did
+URLs, which even the build in some major Linux distributions in 2017 did
 not possess.} that vary by build but are not documented.
 
 An external command can be an optional requirement for an imported
@@ -4796,9 +4790,9 @@ may be included by other headers.  This is particularly problematic with
 C++11 compilers, as functions like @code{sqrt} and @code{isnan} are
 defined for @code{double} arguments in @file{math.h} and for a range of
 types including @code{double} in @file{cmath}.  Similar issues have been
-seen for @file{stdlib.h} and @file{cstdlib}.  Historically, including
-the C++ version first was a sufficient workaround but for some 2016
-compilers only one can be included.
+seen for @file{stdlib.h} and @file{cstdlib}.  Including the C++ version
+first used to be a sufficient workaround but for some 2016 compilers
+only one could be included.
 
 @item
 Variable-length arrays are C99, not supported by C++98 nor by the C++
@@ -5286,13 +5280,10 @@ bibentry(bibtype = "Manual",
 @end example
 
 Note the way that information that may need to be updated is picked up
-from object @code{meta}, a parsed version of the @file{DESCRIPTION}
-file@footnote{this object is available since @R{} 2.8.0, so the
-@samp{Depends} field in the @file{DESCRIPTION} file should contain
-something at least as restrictive as @samp{R (>= 2.8}.} -- it is
-tempting to hardcode such information, but it normally then gets
-outdated.  See @code{?bibentry} for further details of the information
-which can be provided.
+from object @code{meta}, a parsed version of the @file{DESCRIPTION} file
+-- it is tempting to hardcode such information, but it normally then
+gets outdated.  See @code{?bibentry} for further details of the
+information which can be provided.
 
 In case a bibentry contains @LaTeX{} markup (e.g., for accented
 characters or mathematical symbols), it may be necessary to provide a
@@ -6156,9 +6147,9 @@ a hyperlink in @HTML{} and PDF conversion.  Displayed using
 Indicate a uniform resource locator (@acronym{URL}) for the World Wide
 Web.  The argument is handled as `verbatim' text (with percent and
 braces escaped by backslash), and rendered as a hyperlink in @HTML{} and
-PDF conversion.  Linefeeds are removed, and as from @R{} 3.2.0 leading
-and trailing whitespace@footnote{as defined by the @R{} function
-@code{trimws}.} is removed. @xref{Specifying URLs}.
+PDF conversion.  Linefeeds are removed, and leading and trailing
+whitespace@footnote{as defined by the @R{} function @code{trimws}.} is
+removed. @xref{Specifying URLs}.
 
 Displayed using @code{typewriter} font where possible.
 
@@ -6168,8 +6159,8 @@ Indicate a hyperlink to the World Wide Web. The first argument is
 handled as `verbatim' text (with percent and braces escaped by
 backslash) and is used as the @acronym{URL} in the hyperlink, with the
 second argument of @LaTeX{}-like text displayed to the user.  Linefeeds
-are removed from the first argument, and as from @R{} 3.2.0 leading and
-trailing whitespace is removed.
+are removed from the first argument, and leading and trailing whitespace
+is removed.
 
 Note that RFC3986-encoded URLs (e.g.@: using @samp{\%28VS.85\%29} in
 place of @samp{(VS.85)}) may not work correctly in versions of @R{}
@@ -8506,11 +8497,11 @@ disabling it.)
 
 A fairly common cause of such crashes is a package which uses @code{.C}
 or @code{.Fortran} and writes beyond (at either end) one of the
-arguments it is passed.  As from @R{} 3.0.0 there is a good way to
-detect this: using @code{options(CBoundsCheck = TRUE)} (which can be
-selected @emph{via} the environment variable @env{R_C_BOUNDS_CHECK=yes)}
-changes the way @code{.C} and @code{.Fortran} work to check if the
-compiled code writes in the 64 bytes at either end of an argument.
+arguments it is passed.  There is a good way to detect this: using
+@code{options(CBoundsCheck = TRUE)} (which can be selected @emph{via}
+the environment variable @env{R_C_BOUNDS_CHECK=yes)} changes the way
+@code{.C} and @code{.Fortran} work to check if the compiled code writes
+in the 64 bytes at either end of an argument.
 
 Another cause of a `crash' is to overrun the C stack.  @R{} tries to
 track that in its own code, but it may happen in third-party compiled
@@ -8897,10 +8888,10 @@ package writers using the same symbol name, and such name clashes are
 normally sufficient to cause @R{} to crash.  (If it is not present and
 the call is from the body of a function defined in a package namespace,
 the shared object loaded by the first (if any) @code{useDynLib}
-directive will be used.  However, prior to @R{} 2.15.2 the detection of
-the correct namespace is unreliable and you are strongly recommended to
-use the @code{PACKAGE} argument for packages to be used with earlier
-versions of @R{}.
+directive will be used.  
+@c However, prior to @R{} 2.15.2 the detection of the correct namespace is
+@c unreliable and you are strongly recommended to use the @code{PACKAGE}
+@c argument for packages to be used with earlier versions of @R{}.
 
 Note that the compiled code should not return anything except through
 its arguments: C functions should be of type @code{void} and FORTRAN
@@ -9171,9 +9162,7 @@ static R_CallMethodDef callMethods[]  = @{
 along with any other routines for the @code{.Call} interface. For
 routines with a variable number of arguments invoked @emph{via} the
 @code{.External} interface, one specifies @code{-1} for the number of
-arguments which tells @R{} not to check the actual number passed.  Note
-that the number of arguments passed to @code{.External} were not
-checked prior to @R{} 3.0.0.
+arguments which tells @R{} not to check the actual number passed.
 
 Routines for use with the @code{.C} and @code{.Fortran} interfaces are
 described with similar data structures, but which have two additional
@@ -11566,9 +11555,9 @@ set to the C @code{NULL} pointer.
 
 Finalizers can be run at many places in the code base and much of it,
 including the @R{} interpreter, is not re-entrant.  So great care is
-needed in choosing the code to be run in a finalizer. As from @R{} 3.0.3
-finalizers are marked to be run at garbage collection but only run at a
-somewhat safe point thereafter.
+needed in choosing the code to be run in a finalizer.  Finalizers are
+marked to be run at garbage collection but only run at a somewhat safe
+point thereafter.
 
 @cindex weak reference
 Weak references are used to allow the programmer to maintain information
@@ -11925,14 +11914,9 @@ This is only recommended for experts.
 Note that this memory will be freed on error or user interrupt
 (if allowed: @pxref{Allowing interrupts}).
 
-@c Note that although @var{n} is @code{size_t}, there may be limits imposed
-@c by @R{}'s internal allocation mechanism.  These will only come into play
-@c on 64-bit systems, where the limit for @var{n} prior to @R{} 3.0.0 was
-@c just under 16Gb.
-
 The memory returned is only guaranteed to be aligned as required for
 @code{double} pointers: take precautions if casting to a pointer which
-needs more.  As from @R{} 3.2.0 there is also
+needs more.  There is also
 
 @example
 long double *R_allocLD(size_t @var{n})
@@ -13093,7 +13077,9 @@ The macro @code{WORDS_BIGENDIAN} is defined on
 big-endian@footnote{@uref{https://en.wikipedia.org/@/wiki/@/Endianness}.}
 systems (e.g.@: most OSes on Sparc and PowerPC hardware) and not on
 little-endian systems (nowadays all the commoner @R{} platforms).  It
-can be useful when manipulating binary files.
+can be useful when manipulating binary files.  NB: these macros apply
+only to the C compiler used to build @R{}, not necessarily to another C
+or C++ compiler.
 
 Header file @file{Rversion.h} (@strong{not} included by @file{R.h})
 defines a macro @code{R_VERSION} giving the version number encoded as an
@@ -13116,8 +13102,8 @@ header file @file{Rversion.h} for their format.  Note that the minor
 version includes the patchlevel (as in @samp{2.2}).
 
 Packages which use @code{alloca} need to ensure it is defined: as it is
-part of neither C nor POSIX there is no standard way to do so.  As
-from @R{} 3.2.2 one can use
+part of neither C nor POSIX there is no standard way to do so.  One can
+use
 
 @example
 #include <Rconfig.h> // for HAVE_ALLOCA_H
@@ -13351,7 +13337,7 @@ Let us re-iterate the advice to include system headers before the @R{}
 header files, especially @file{Rinternals.h} (included by
 @file{Rdefines.h}) and @file{Rmath.h}, which redefine names which may be
 used in system headers (fewer if @samp{R_NO_REMAP} is defined, or
-@samp{R_NO_REMAP_RMATH} for @file{Rmath.h}, as from @R{} 3.1.0).
+@samp{R_NO_REMAP_RMATH} for @file{Rmath.h}).
 
 @node Generic functions and methods, Linking GUIs and other front-ends to R, The R API, Top
 @chapter Generic functions and methods
@@ -14098,9 +14084,14 @@ extern uintptr_t R_CStackStart; /* Initial stack address */
 @end example
 
 @noindent
-Note that @code{uintptr_t} is a C99 type for which a substitute is
-defined in @R{}, so your code needs to define @code{HAVE_UINTPTR_T}
-appropriately.
+Note that @code{uintptr_t} is an optional C99 type for which a
+substitute is defined in @R{}, so your code needs to define
+@code{HAVE_UINTPTR_T} appropriately.  To do so, test if the type is
+defined in C header @file{stdint.h} or C++ header @file{cstdint} and if
+so include the header and define @code{HAVE_UINTPTR_T} before including
+@file{Rinterface.h}.  (As from @R{} 3.4.0 for C code one can simply
+include @file{Rconfig.h}, possibly @emph{via} @file{R.h}, and for C++11
+code @file{Rinterface.h} will include the header @file{cstdint}.)
 
 These will be set@footnote{at least on platforms where the values are
 available, that is having @code{getrlimit} and on Linux or having
@@ -14432,11 +14423,6 @@ using backslashes).  If it does not, look for version-specific keys like
 algorithm as @code{2.11.0 patched > 2.11.0 > 2.11.0 alpha > 2.8.1}) and
 use its value for @code{InstallPath}.
 @end itemize
-
-Prior to @R{} 2.12.0 @file{R.dll} and the various front-end executables
-were in @file{R_HOME\bin}, but they are now in @file{R_HOME\bin\i386} or
-@file{R_HOME\bin\x64}.  So you may need to arrange to look first in the
-architecture-specific subdirectory and then in @file{R_HOME\bin}.
 
 @node Function and variable index, Concept index, Linking GUIs and other front-ends to R, Top
 @unnumbered Function and variable index
