@@ -597,10 +597,10 @@ VECSUBSET.OP = 1,
 MATSUBSET.OP = 1,
 VECSUBASSIGN.OP = 1,
 MATSUBASSIGN.OP = 1,
-AND1ST.OP = 2,
-AND2ND.OP = 1,
-OR1ST.OP = 2,
-OR2ND.OP = 1,
+AND1ST.OP = 1,
+AND2ND.OP = 0,
+OR1ST.OP = 1,
+OR2ND.OP = 0,
 GETVAR_MISSOK.OP = 1,
 DDVAL_MISSOK.OP = 1,
 VISIBLE.OP = 0,
@@ -1454,12 +1454,11 @@ setInlineHandler("if", function(e, cb, cntxt) {
 setInlineHandler("&&", function(e, cb, cntxt) {
     ## **** arity check??
     ncntxt <- make.argContext(cntxt)
-    callidx <- cb$putconst(e)
     label <- cb$makelabel()
     cmp(e[[2]], cb, ncntxt)
-    cb$putcode(AND1ST.OP, callidx, label)
+    cb$putcode(AND1ST.OP, label)
     cmp(e[[3]], cb, ncntxt)
-    cb$putcode(AND2ND.OP, callidx)
+    cb$putcode(AND2ND.OP)
     cb$putlabel(label)
     if (cntxt$tailcall)
         cb$putcode(RETURN.OP)
@@ -1469,12 +1468,11 @@ setInlineHandler("&&", function(e, cb, cntxt) {
 setInlineHandler("||", function(e, cb, cntxt) {
     ## **** arity check??
     ncntxt <- make.argContext(cntxt)
-    callidx <- cb$putconst(e)
     label <- cb$makelabel()
     cmp(e[[2]], cb, ncntxt)
-    cb$putcode(OR1ST.OP, callidx, label)
+    cb$putcode(OR1ST.OP, label)
     cmp(e[[3]], cb, ncntxt)
-    cb$putcode(OR2ND.OP, callidx)
+    cb$putcode(OR2ND.OP)
     cb$putlabel(label)
     if (cntxt$tailcall)
         cb$putcode(RETURN.OP)

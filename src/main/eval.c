@@ -5525,12 +5525,11 @@ static R_INLINE void SUBASSIGN_N_PTR(R_bcstack_t *sx, int rank,
 	R_BCNodeStackTop -= rank + 1;					\
     } while (0)
 
-#define FIXUP_SCALAR_LOGICAL(callidx, arg, op) do { \
+#define FIXUP_SCALAR_LOGICAL(arg, op) do { \
 	SEXP val = GETSTACK(-1); \
 	if (TYPEOF(val) != LGLSXP || XLENGTH(val) != 1) { \
 	    if (!isNumber(val))	\
-		errorcall(VECTOR_ELT(constants, callidx), \
-			  _("invalid %s type in 'x %s y'"), arg, op);	\
+		error( _("invalid %s type in 'x %s y'"), arg, op);	\
 	    SETSTACK(-1, ScalarLogical(asLogical(val))); \
 	} \
     } while(0)
@@ -6603,18 +6602,16 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(MATSUBSET, 1): DO_MATSUBSET(rho, FALSE); NEXT();
     OP(VECSUBASSIGN, 1): DO_VECSUBASSIGN(rho, FALSE); NEXT();
     OP(MATSUBASSIGN, 1): DO_MATSUBASSIGN(rho, FALSE); NEXT();
-    OP(AND1ST, 2): {
-	int callidx = GETOP();
+    OP(AND1ST, 1): {
 	int label = GETOP();
-	FIXUP_SCALAR_LOGICAL(callidx, "'x'", "&&");
+	FIXUP_SCALAR_LOGICAL("'x'", "&&");
 	SEXP value = GETSTACK(-1);
 	if (LOGICAL(value)[0] == FALSE)
 	    pc = codebase + label;
 	NEXT();
     }
-    OP(AND2ND, 1): {
-	int callidx = GETOP();
-	FIXUP_SCALAR_LOGICAL(callidx, "'y'", "&&");
+    OP(AND2ND, 0): {
+	FIXUP_SCALAR_LOGICAL("'y'", "&&");
 	SEXP value = GETSTACK(-1);
 	/* The first argument is TRUE or NA. If the second argument is
 	   not TRUE then its value is the result. If the second
@@ -6625,18 +6622,16 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	R_BCNodeStackTop -= 1;
 	NEXT();
     }
-    OP(OR1ST, 2):  {
-	int callidx = GETOP();
+    OP(OR1ST, 1):  {
 	int label = GETOP();
-	FIXUP_SCALAR_LOGICAL(callidx, "'x'", "||");
+	FIXUP_SCALAR_LOGICAL("'x'", "||");
 	SEXP value = GETSTACK(-1);
 	if (LOGICAL(value)[0] != NA_LOGICAL && LOGICAL(value)[0]) /* is true */
 	    pc = codebase + label;
 	NEXT();
     }
-    OP(OR2ND, 1):  {
-	int callidx = GETOP();
-	FIXUP_SCALAR_LOGICAL(callidx, "'y'", "||");
+    OP(OR2ND, 0):  {
+	FIXUP_SCALAR_LOGICAL("'y'", "||");
 	SEXP value = GETSTACK(-1);
 	/* The first argument is FALSE or NA. If the second argument is
 	   not FALSE then its value is the result. If the second
