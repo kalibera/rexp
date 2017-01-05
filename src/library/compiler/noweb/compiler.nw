@@ -2858,22 +2858,21 @@ cmpWhileBody <- function(call, cond, body, cb, cntxt) {
 
 \subsection{[[for]] loops}
 %% could compile repeat { if (stepfor) body else break } and peephole a bit ??
-Code generation for [[for]] loops is a little more complex because of
-the need to manage the loop variable value and stepping through the
-sequence.  Code for [[for]] loops uses three additional instructions.
-[[STARTFOR]] takes the constant pool index of the call, the constant
-pool index of the loop variable symbol, and the label of the start
-instruction as operands. It finds the sequence to iterate over on the
-stack and places information for accessing the loop variable binding
-and stepping the sequence on the stack before jumping to the label.
-The call is used if an error for an improper for loop sequence needs
-to be signaled.  The [[STEPFOR]] instruction takes a label for the top
-of the loop as its operand.  If there are more elements in the
-sequence then [[STEPFOR]] advances the position within the sequence,
-sets the loop variable, and jumps to the top of the loop.  Otherwise
-it drops through to the next instruction.  Finally [[ENDFOR]] cleans
-up the loop information stored on the stack by [[STARTFOR]] and leaves
-the [[NULL]] loop value on the stack.
+
+Code generation for [[for]] loops is a little more complex because of the
+need to manage the loop variable value and stepping through the sequence.
+Code for [[for]] loops uses three additional instructions.  [[STARTFOR]]
+takes the constant pool index of the loop variable symbol and the label of
+the start instruction as operands.  It finds the sequence to iterate over on
+the stack and places information for accessing the loop variable binding and
+stepping the sequence on the stack before jumping to the label.  The call is
+used if an error for an improper for loop sequence needs to be signaled.
+The [[STEPFOR]] instruction takes a label for the top of the loop as its
+operand.  If there are more elements in the sequence then [[STEPFOR]]
+advances the position within the sequence, sets the loop variable, and jumps
+to the top of the loop.  Otherwise it drops through to the next instruction.
+Finally [[ENDFOR]] cleans up the loop information stored on the stack by
+[[STARTFOR]] and leaves the [[NULL]] loop value on the stack.
 
 The inlining handler for a [[for]] loop starts out by checking the
 loop variable and issuing a warning if it is not a symbol.  The code
@@ -2897,7 +2896,6 @@ setInlineHandler("for", function(e, cb, cntxt) {
     ncntxt <- make.nonTailCallContext(cntxt)
     cmp(seq, cb, ncntxt)
     ci <- cb$putconst(sym)
-    callidx <- cb$putconst(e)
     <<generate context and body for [[for]] loop>>
     <<generate [[for]] loop wrap-up code>>
     TRUE
@@ -2915,15 +2913,15 @@ can be handled by one instruction instead of two, a step instruction
 and a [[GOTO]].
 <<generate context and body for [[for]] loop>>=
 if (checkSkipLoopCntxt(body, cntxt))
-    cmpForBody(callidx, body, ci, cb, cntxt)
+    cmpForBody(body, ci, cb, cntxt)
 else {
     cntxt$needRETURNJMP <- TRUE ## **** do this a better way
     ctxt.label <- cb$makelabel()
-    cb$putcode(STARTFOR.OP, callidx, ci, ctxt.label)
+    cb$putcode(STARTFOR.OP, ci, ctxt.label)
     cb$putlabel(ctxt.label)
     ljmpend.label <- cb$makelabel()
     cb$putcode(STARTLOOPCNTXT.OP, 1, ljmpend.label)
-    cmpForBody(NULL, body, NULL, cb, cntxt)
+    cmpForBody(body, NULL, cb, cntxt)
     cb$putlabel(ljmpend.label)
     cb$putcode(ENDLOOPCNTXT.OP, 1)
 }
@@ -2942,14 +2940,14 @@ the first instruction is the [[STARTFOR]] instruction which
 initializes the loop and jumps to [[loop.label]] at the [[STEPLOOP]]
 instruction.
 <<[[cmpForBody]] function>>=
-cmpForBody <- function(callidx, body, ci, cb, cntxt) {
+cmpForBody <- function(body, ci, cb, cntxt) {
     body.label <- cb$makelabel()
     loop.label <- cb$makelabel()
     end.label <- cb$makelabel()
     if (is.null(ci))
         cb$putcode(GOTO.OP, loop.label)
     else
-        cb$putcode(STARTFOR.OP, callidx, ci, loop.label)
+        cb$putcode(STARTFOR.OP, ci, loop.label)
     cb$putlabel(body.label)
     lcntxt <- make.loopContext(cntxt, loop.label, end.label)
     cmp(body, cb, lcntxt)
@@ -5976,7 +5974,7 @@ STARTLOOPCNTXT.OP = 2,
 ENDLOOPCNTXT.OP = 1,
 DOLOOPNEXT.OP = 0,
 DOLOOPBREAK.OP = 0,
-STARTFOR.OP = 3,
+STARTFOR.OP = 2,
 STEPFOR.OP = 1,
 ENDFOR.OP = 0,
 SETLOOPVAL.OP = 0,

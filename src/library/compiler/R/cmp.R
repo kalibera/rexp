@@ -520,7 +520,7 @@ STARTLOOPCNTXT.OP = 2,
 ENDLOOPCNTXT.OP = 1,
 DOLOOPNEXT.OP = 0,
 DOLOOPBREAK.OP = 0,
-STARTFOR.OP = 3,
+STARTFOR.OP = 2,
 STEPFOR.OP = 1,
 ENDFOR.OP = 0,
 SETLOOPVAL.OP = 0,
@@ -1983,17 +1983,16 @@ setInlineHandler("for", function(e, cb, cntxt) {
     ncntxt <- make.nonTailCallContext(cntxt)
     cmp(seq, cb, ncntxt)
     ci <- cb$putconst(sym)
-    callidx <- cb$putconst(e)
     if (checkSkipLoopCntxt(body, cntxt))
-        cmpForBody(callidx, body, ci, cb, cntxt)
+        cmpForBody(body, ci, cb, cntxt)
     else {
         cntxt$needRETURNJMP <- TRUE ## **** do this a better way
         ctxt.label <- cb$makelabel()
-        cb$putcode(STARTFOR.OP, callidx, ci, ctxt.label)
+        cb$putcode(STARTFOR.OP, ci, ctxt.label)
         cb$putlabel(ctxt.label)
         ljmpend.label <- cb$makelabel()
         cb$putcode(STARTLOOPCNTXT.OP, 1, ljmpend.label)
-        cmpForBody(NULL, body, NULL, cb, cntxt)
+        cmpForBody(body, NULL, cb, cntxt)
         cb$putlabel(ljmpend.label)
         cb$putcode(ENDLOOPCNTXT.OP, 1)
     }
@@ -2005,14 +2004,14 @@ setInlineHandler("for", function(e, cb, cntxt) {
     TRUE
 })
 
-cmpForBody <- function(callidx, body, ci, cb, cntxt) {
+cmpForBody <- function(body, ci, cb, cntxt) {
     body.label <- cb$makelabel()
     loop.label <- cb$makelabel()
     end.label <- cb$makelabel()
     if (is.null(ci))
         cb$putcode(GOTO.OP, loop.label)
     else
-        cb$putcode(STARTFOR.OP, callidx, ci, loop.label)
+        cb$putcode(STARTFOR.OP, ci, loop.label)
     cb$putlabel(body.label)
     lcntxt <- make.loopContext(cntxt, loop.label, end.label)
     cmp(body, cb, lcntxt)

@@ -6025,11 +6025,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
     OP(DOLOOPNEXT, 0): findcontext(CTXT_NEXT, rho, R_NilValue);
     OP(DOLOOPBREAK, 0): findcontext(CTXT_BREAK, rho, R_NilValue);
-    OP(STARTFOR, 3):
+    OP(STARTFOR, 2):
       {
 	Rboolean iscompact = FALSE;
 	SEXP seq = getForLoopSeq(-1, &iscompact);
-	int callidx = GETOP();
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	int label = GETOP();
 
@@ -6056,8 +6055,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  INTEGER(value)[1] = LENGTH(seq);
 	else if (isList(seq) || isNull(seq))
 	  INTEGER(value)[1] = length(seq);
-	else errorcall(VECTOR_ELT(constants, callidx),
-		       _("invalid for() loop sequence"));
+	else error(_("invalid for() loop sequence"));
 	BCNPUSH(value);
 
 	/* bump up NAMED count of seq to avoid modification by loop code */
