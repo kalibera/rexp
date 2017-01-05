@@ -611,7 +611,7 @@ SETTER_CALL.OP = 2,
 GETTER_CALL.OP = 1,
 SWAP.OP = 0,
 DUP2ND.OP = 0,
-SWITCH.OP = 4,
+SWITCH.OP = 3,
 RETURNJMP.OP = 0,
 STARTSUBSET_N.OP = 2,
 STARTSUBASSIGN_N.OP = 2,
@@ -2634,14 +2634,13 @@ setInlineHandler("switch", function(e, cb, cntxt) {
         cmp(expr, cb, ncntxt)
 
         ## emit the SWITCH instruction
-        cei <- cb$putconst(e)
         if (haveNames) {
             cni <- cb$putconst(unm)
-            cb$putcode(SWITCH.OP, cei, cni, nlabels, labels)
+            cb$putcode(SWITCH.OP, cni, nlabels, labels)
         }
         else {
             cni <- cb$putconst(NULL)
-            cb$putcode(SWITCH.OP, cei, cni, cni, labels)
+            cb$putcode(SWITCH.OP, cni, cni, labels)
         }
 
         ## emit code to signal an error if a numeric switch hist an

@@ -3917,23 +3917,22 @@ ncntxt <- make.nonTailCallContext(cntxt)
 cmp(expr, cb, ncntxt)
 @ %def
 
-The switch instruction takes the selector off the stack and four
-operands from the instruction stream: the call index, an index for the
-names, or [[NULL]] if there are none, and indices for the labels for a
-character selector and for a numeric selector.  At this point lists of
-labels are placed in the instruction buffer.  At code extraction time
-these will be replaced by indices for numeric offset vectors by the
-[[patchlables]] function of the code buffer.
+The switch instruction takes the selector off the stack and three operands
+from the instruction stream: an index for the names, or [[NULL]] if there
+are none, and indices for the labels for a character selector and for a
+numeric selector.  At this point lists of labels are placed in the
+instruction buffer.  At code extraction time these will be replaced by
+indices for numeric offset vectors by the [[patchlables]] function of the
+code buffer.
 <<emit the switch instruction>>=
 ## emit the SWITCH instruction
-cei <- cb$putconst(e)
 if (haveNames) {
     cni <- cb$putconst(unm)
-    cb$putcode(SWITCH.OP, cei, cni, nlabels, labels)
+    cb$putcode(SWITCH.OP, cni, nlabels, labels)
 }
 else {
     cni <- cb$putconst(NULL)
-    cb$putcode(SWITCH.OP, cei, cni, cni, labels)
+    cb$putcode(SWITCH.OP, cni, cni, labels)
 }
 @ %def
 
@@ -6065,7 +6064,7 @@ SETTER_CALL.OP = 2,
 GETTER_CALL.OP = 1,
 SWAP.OP = 0,
 DUP2ND.OP = 0,
-SWITCH.OP = 4,
+SWITCH.OP = 3,
 RETURNJMP.OP = 0,
 STARTSUBSET_N.OP = 2,
 STARTSUBASSIGN_N.OP = 2,

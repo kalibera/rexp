@@ -6824,36 +6824,34 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	NEXT();
     }
     OP(DUP2ND, 0): BCNDUP2ND(); NEXT();
-    OP(SWITCH, 4): {
-       SEXP call = VECTOR_ELT(constants, GETOP());
+    OP(SWITCH, 3): {
        SEXP names = VECTOR_ELT(constants, GETOP());
        SEXP coffsets = VECTOR_ELT(constants, GETOP());
        SEXP ioffsets = VECTOR_ELT(constants, GETOP());
        SEXP value = BCNPOP();
        if (!isVector(value) || length(value) != 1)
-	   errorcall(call, _("EXPR must be a length 1 vector"));
+	   error(_("EXPR must be a length 1 vector"));
        if (isFactor(value))
-	   warningcall(call,
-		       _("EXPR is a \"factor\", treated as integer.\n"
-			 " Consider using '%s' instead."),
-		       "switch(as.character( * ), ...)");
+	   warning(_("EXPR is a \"factor\", treated as integer.\n"
+                     "Consider using '%s' instead."),
+                     "switch(as.character( * ), ...)");
        if (TYPEOF(value) == STRSXP) {
 	   int i, n, which;
 	   if (names == R_NilValue) {
 	       if (TYPEOF(ioffsets) != INTSXP)
-		   errorcall(call, _("bad numeric 'switch' offsets"));
+		   error(_("bad numeric 'switch' offsets"));
 	       if (LENGTH(ioffsets) == 1) {
 		   pc = codebase + INTEGER(ioffsets)[0]; /* returns NULL */
-		   warningcall(call, _("'switch' with no alternatives"));
+		   warning(_("'switch' with no alternatives"));
 	       }
 	       else
-		   errorcall(call, _("numeric EXPR required for 'switch' "
-				     "without named alternatives"));
+		   error(_("numeric EXPR required for 'switch' "
+                           "without named alternatives"));
 	   } else {
 	       if (TYPEOF(coffsets) != INTSXP)
-		   errorcall(call, _("bad character 'switch' offsets"));
+		   error(_("bad character 'switch' offsets"));
 	       if (TYPEOF(names) != STRSXP || LENGTH(names) != LENGTH(coffsets))
-		   errorcall(call, "bad 'switch' names");
+		   error("bad 'switch' names");
 	       n = LENGTH(names);
 	       which = n - 1;
 	       for (i = 0; i < n - 1; i++)
@@ -6867,13 +6865,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
        }
        else {
 	   if (TYPEOF(ioffsets) != INTSXP)
-	       errorcall(call, "bad numeric 'switch' offsets");
+	       error("bad numeric 'switch' offsets");
 	   int which = asInteger(value);
 	   if (which != NA_INTEGER) which--;
 	   if (which < 0 || which >= LENGTH(ioffsets))
 	       which = LENGTH(ioffsets) - 1;
 	   if (LENGTH(ioffsets) == 1)
-	       warningcall(call, _("'switch' with no alternatives"));
+	       warning(_("'switch' with no alternatives"));
 	   pc = codebase + INTEGER(ioffsets)[which];
        }
        NEXT();
