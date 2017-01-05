@@ -2526,16 +2526,13 @@ Next, the test code is compiled, a label for the start of code for the
 [[else]] clause is generated, and a conditional branch instruction
 that branches to the [[else]] label if the test fails is emitted.
 This is followed by code for the consequent (test is [[TRUE]])
-expression.  The [[BRIFNOT]] takes two operand, the constant pool
-index for the call and the label to branch to if the value on the
-stack is [[FALSE]].  The call is used if an error needs to be signaled
-for an improper test result on the stack.
+expression.  The [[BRIFNOT]] takes one operand, the label to branch to
+if the value on the stack is [[FALSE]].
 <<[[if]] inline handler body>>=
 ncntxt <- make.nonTailCallContext(cntxt)
 cmp(test, cb, ncntxt)
-callidx <- cb$putconst(e)
 else.label <- cb$makelabel()
-cb$putcode(BRIFNOT.OP, callidx, else.label)
+cb$putcode(BRIFNOT.OP, else.label)
 cmp(then.expr, cb, cntxt)
 @ 
 
@@ -2850,8 +2847,7 @@ cmpWhileBody <- function(call, cond, body, cb, cntxt) {
     cb$putlabel(loop.label)
     lcntxt <- make.loopContext(cntxt, loop.label, end.label)
     cmp(cond, cb, lcntxt)
-    callidx <- cb$putconst(call)
-    cb$putcode(BRIFNOT.OP, callidx, end.label)
+    cb$putcode(BRIFNOT.OP, end.label)
     cmp(body, cb, lcntxt)
     cb$putcode(POP.OP)
     cb$putcode(GOTO.OP, loop.label)
@@ -5972,7 +5968,7 @@ Opcodes.argc <- list(
 BCMISMATCH.OP = 0,
 RETURN.OP = 0,
 GOTO.OP = 1,
-BRIFNOT.OP = 2,
+BRIFNOT.OP = 1,
 POP.OP = 0,
 DUP.OP = 0,
 PRINTVALUE.OP = 0,

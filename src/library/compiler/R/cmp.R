@@ -512,7 +512,7 @@ Opcodes.argc <- list(
 BCMISMATCH.OP = 0,
 RETURN.OP = 0,
 GOTO.OP = 1,
-BRIFNOT.OP = 2,
+BRIFNOT.OP = 1,
 POP.OP = 0,
 DUP.OP = 0,
 PRINTVALUE.OP = 0,
@@ -1425,9 +1425,8 @@ setInlineHandler("if", function(e, cb, cntxt) {
     }
     ncntxt <- make.nonTailCallContext(cntxt)
     cmp(test, cb, ncntxt)
-    callidx <- cb$putconst(e)
     else.label <- cb$makelabel()
-    cb$putcode(BRIFNOT.OP, callidx, else.label)
+    cb$putcode(BRIFNOT.OP, else.label)
     cmp(then.expr, cb, cntxt)
     if (cntxt$tailcall) {
         cb$putlabel(else.label)
@@ -1966,8 +1965,7 @@ cmpWhileBody <- function(call, cond, body, cb, cntxt) {
     cb$putlabel(loop.label)
     lcntxt <- make.loopContext(cntxt, loop.label, end.label)
     cmp(cond, cb, lcntxt)
-    callidx <- cb$putconst(call)
-    cb$putcode(BRIFNOT.OP, callidx, end.label)
+    cb$putcode(BRIFNOT.OP, end.label)
     cmp(body, cb, lcntxt)
     cb$putcode(POP.OP)
     cb$putcode(GOTO.OP, loop.label)

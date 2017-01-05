@@ -3448,8 +3448,8 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 }
 
 /* start of bytecode section */
-static int R_bcVersion = 10;
-static int R_bcMinVersion = 9;
+static int R_bcVersion = 11;
+static int R_bcMinVersion = 11;
 
 static SEXP R_AddSym = NULL;
 static SEXP R_SubSym = NULL;
@@ -5638,8 +5638,7 @@ static R_INLINE SEXP SymbolValue(SEXP sym)
    true BUILTIN from a .Internal. LT */
 #define IS_TRUE_BUILTIN(x) ((R_FunTab[PRIMOFFSET(x)].eval % 100 )/10 == 0)
 
-static R_INLINE Rboolean GETSTACK_LOGICAL_NO_NA_PTR(R_bcstack_t *s, int callidx,
-						    SEXP constants)
+static R_INLINE Rboolean GETSTACK_LOGICAL_NO_NA_PTR(R_bcstack_t *s)
 {
 #ifdef TYPED_STACK
     if (s->tag == LGLSXP && s->u.ival != NA_LOGICAL)
@@ -5648,10 +5647,8 @@ static R_INLINE Rboolean GETSTACK_LOGICAL_NO_NA_PTR(R_bcstack_t *s, int callidx,
     SEXP value = GETSTACK_PTR(s);
     if (IS_SCALAR(value, LGLSXP) && LOGICAL(value)[0] != NA_LOGICAL)
 	return LOGICAL(value)[0];
-    else {
-	SEXP call = VECTOR_ELT(constants, callidx);
-	return asLogicalNoNA(value, call);
-    }
+    else
+	return asLogicalNoNA(value, R_CurrentExpression);
 }
 
 /* Find locations table in the constant pool */
@@ -5960,12 +5957,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	pc = codebase + label;
 	NEXT();
       }
-    OP(BRIFNOT, 2):
+    OP(BRIFNOT, 1):
       {
-	int callidx = GETOP();
 	int label = GETOP();
-	Rboolean cond = GETSTACK_LOGICAL_NO_NA_PTR(R_BCNodeStackTop - 1,
-						   callidx, constants);
+	Rboolean cond = GETSTACK_LOGICAL_NO_NA_PTR(R_BCNodeStackTop - 1);
 	BCNPOP_IGNORE_VALUE();
 	if (! cond) {
 	    BC_CHECK_SIGINT(); /**** only on back branch?*/
