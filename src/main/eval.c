@@ -5529,7 +5529,8 @@ static R_INLINE void SUBASSIGN_N_PTR(R_bcstack_t *sx, int rank,
 	SEXP val = GETSTACK(-1); \
 	if (TYPEOF(val) != LGLSXP || XLENGTH(val) != 1) { \
 	    if (!isNumber(val))	\
-		error( _("invalid %s type in 'x %s y'"), arg, op);	\
+		errorcall(R_CurrentBCExpression, \
+			  _("invalid %s type in 'x %s y'"), arg, op);	\
 	    SETSTACK(-1, ScalarLogical(asLogical(val))); \
 	} \
     } while(0)
@@ -5647,7 +5648,7 @@ static R_INLINE Rboolean GETSTACK_LOGICAL_NO_NA_PTR(R_bcstack_t *s)
     if (IS_SCALAR(value, LGLSXP) && LOGICAL(value)[0] != NA_LOGICAL)
 	return LOGICAL(value)[0];
     else
-	return asLogicalNoNA(value, R_CurrentExpression);
+	return asLogicalNoNA(value, R_CurrentBCExpression);
 }
 
 /* Find locations table in the constant pool */
@@ -5796,44 +5797,45 @@ static SEXP inflateAssignmentCall(SEXP expr) {
 }
 
 /* Get the current expression being evaluated by the byte-code interpreter. */
-SEXP attribute_hidden R_getBCInterpreterExpression()
+SEXP attribute_hidden R_getBCInterpreterExpression(Rboolean mimickAST)
 {
     SEXP exp = R_findBCInterpreterExpression();
     if (TYPEOF(exp) == PROMSXP) {
 	exp = forcePromise(exp);
 	SET_NAMED(exp, 2);
     }
+    if (mimickAST) {
+	/* This tries to mimick the behavior of the AST interpreter to a
+	   reasonable level, based on relatively consistent expressions
+	   provided by the compiler in the constant pool. The AST
+	   interpreter behavior is rather inconsistent and should be fixed
+	   at some point. When this happens, the code below will have to
+	   be revisited, but the compiler code should mostly stay the
+	   same.
 
-    /* This tries to mimick the behavior of the AST interpreter to a
-       reasonable level, based on relatively consistent expressions
-       provided by the compiler in the constant pool. The AST
-       interpreter behavior is rather inconsistent and should be fixed
-       at some point. When this happens, the code below will have to
-       be revisited, but the compiler code should mostly stay the
-       same.
+	   Currently this code attempts to bypass implementation of
+	   closure wrappers for internals and other foreign functions
+	   called via a directive, hide away primitives, but show
+	   assignment calls. This code ignores less usual problematic
+	   situations such as overriding of builtins or inlining of the
+	   wrappers by the compiler. Simple assignment calls are inflated
+	   (back) into the usual form like x[1] <- y. Expressions made of
+	   a single symbol are hidden away (note these are e.g. for
+	   missing function arguments). */
 
-       Currently this code attempts to bypass implementation of
-       closure wrappers for internals and other foreign functions
-       called via a directive, hide away primitives, but show
-       assignment calls. This code ignores less usual problematic
-       situations such as overriding of builtins or inlining of the
-       wrappers by the compiler. Simple assignment calls are inflated
-       (back) into the usual form like x[1] <- y. Expressions made of
-       a single symbol are hidden away (note these are e.g. for
-       missing function arguments). */
+	if (maybeAssignmentCall(exp)) {
+	    exp = inflateAssignmentCall(exp);
+	} else if (TYPEOF(exp) == SYMSXP || maybeClosureWrapper(exp)
+	    || maybePrimitiveCall(exp)) {
 
-    if (maybeAssignmentCall(exp)) {
-	exp = inflateAssignmentCall(exp);
-    } else if (TYPEOF(exp) == SYMSXP || maybeClosureWrapper(exp)
-	|| maybePrimitiveCall(exp)) {
-
-	RCNTXT *c = R_GlobalContext;
-        while(c && c->callflag != CTXT_TOPLEVEL) {
-	    if (c->callflag & CTXT_FUNCTION) {
-		exp = c->call;
-		break;
+	    RCNTXT *c = R_GlobalContext;
+	    while(c && c->callflag != CTXT_TOPLEVEL) {
+		if (c->callflag & CTXT_FUNCTION) {
+		    exp = c->call;
+		    break;
+		}
+		c = c->nextcontext;
 	    }
-	    c = c->nextcontext;
 	}
     }
     return exp;
@@ -6054,7 +6056,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  INTEGER(value)[1] = LENGTH(seq);
 	else if (isList(seq) || isNull(seq))
 	  INTEGER(value)[1] = length(seq);
-	else error(_("invalid for() loop sequence"));
+	else errorcall(R_CurrentBCExpression,
+		       _("invalid for() loop sequence"));
 	BCNPUSH(value);
 
 	/* bump up NAMED count of seq to avoid modification by loop code */
@@ -6825,28 +6828,34 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
        SEXP ioffsets = VECTOR_ELT(constants, GETOP());
        SEXP value = BCNPOP();
        if (!isVector(value) || length(value) != 1)
-	   error(_("EXPR must be a length 1 vector"));
+	   errorcall(R_CurrentBCExpression,
+                     _("EXPR must be a length 1 vector"));
        if (isFactor(value))
-	   warning(_("EXPR is a \"factor\", treated as integer.\n"
-                     "Consider using '%s' instead."),
-                     "switch(as.character( * ), ...)");
+	   warningcall(R_CurrentBCExpression,
+		       _("EXPR is a \"factor\", treated as integer.\n"
+			 " Consider using '%s' instead."),
+		       "switch(as.character( * ), ...)");
        if (TYPEOF(value) == STRSXP) {
 	   int i, n, which;
 	   if (names == R_NilValue) {
 	       if (TYPEOF(ioffsets) != INTSXP)
-		   error(_("bad numeric 'switch' offsets"));
+		   errorcall(R_CurrentBCExpression,
+			     _("bad numeric 'switch' offsets"));
 	       if (LENGTH(ioffsets) == 1) {
 		   pc = codebase + INTEGER(ioffsets)[0]; /* returns NULL */
-		   warning(_("'switch' with no alternatives"));
+		   warningcall(R_CurrentBCExpression,
+			       _("'switch' with no alternatives"));
 	       }
 	       else
-		   error(_("numeric EXPR required for 'switch' "
-                           "without named alternatives"));
+		   errorcall(R_CurrentBCExpression,
+			     _("numeric EXPR required for 'switch' "
+			     "without named alternatives"));
 	   } else {
 	       if (TYPEOF(coffsets) != INTSXP)
-		   error(_("bad character 'switch' offsets"));
+		   errorcall(R_CurrentBCExpression,
+			     _("bad character 'switch' offsets"));
 	       if (TYPEOF(names) != STRSXP || LENGTH(names) != LENGTH(coffsets))
-		   error("bad 'switch' names");
+		   errorcall(R_CurrentBCExpression, "bad 'switch' names");
 	       n = LENGTH(names);
 	       which = n - 1;
 	       for (i = 0; i < n - 1; i++)
@@ -6860,13 +6869,15 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
        }
        else {
 	   if (TYPEOF(ioffsets) != INTSXP)
-	       error("bad numeric 'switch' offsets");
+	       errorcall(R_CurrentBCExpression,
+			 "bad numeric 'switch' offsets");
 	   int which = asInteger(value);
 	   if (which != NA_INTEGER) which--;
 	   if (which < 0 || which >= LENGTH(ioffsets))
 	       which = LENGTH(ioffsets) - 1;
 	   if (LENGTH(ioffsets) == 1)
-	       warning(_("'switch' with no alternatives"));
+	       warningcall(R_CurrentBCExpression,
+			   _("'switch' with no alternatives"));
 	   pc = codebase + INTEGER(ioffsets)[which];
        }
        NEXT();

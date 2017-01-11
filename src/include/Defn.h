@@ -806,7 +806,7 @@ extern void R_initAssignSymbols(void);
 extern SEXP R_findBCInterpreterSrcref(RCNTXT*);
 #endif
 extern SEXP R_getCurrentSrcref();
-extern SEXP R_getBCInterpreterExpression();
+extern SEXP R_getBCInterpreterExpression(Rboolean);
 
 LibExtern SEXP R_CachedScalarReal INI_as(NULL);
 LibExtern SEXP R_CachedScalarInteger INI_as(NULL);

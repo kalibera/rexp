@@ -288,9 +288,21 @@ static SEXP getCurrentCall()
 
     if (c && (c->callflag & CTXT_BUILTIN)) c = c->nextcontext;
     if (c == R_GlobalContext && R_BCIntActive)
-	return R_getBCInterpreterExpression();
+	return R_getBCInterpreterExpression(TRUE);
     else
 	return c ? c->call : R_NilValue;
+}
+
+/* if call is a marker, translate it to the actual expression; markers allow
+   moving the discovery of the current expression out of the fast-path */
+static SEXP translateCallMarker(SEXP call)
+{
+    if (call == R_CurrentExpression) /* behave like error() */
+	return getCurrentCall(TRUE);
+    if (call == R_CurrentBCExpression) /* get unfiltered BC expression */
+	return R_getBCInterpreterExpression(FALSE);
+
+    return call;
 }
 
 void warning(const char *format, ...)
@@ -437,6 +449,8 @@ static void warningcall_dflt(SEXP call, const char *format,...)
 void warningcall(SEXP call, const char *format, ...)
 {
     va_list(ap);
+
+    call = translateCallMarker(call);
     va_start(ap, format);
     vsignalWarning(call, format, ap);
     va_end(ap);
@@ -768,10 +782,7 @@ void NORET errorcall(SEXP call, const char *format,...)
 {
     va_list(ap);
 
-    if (call == R_CurrentExpression)
-	/* behave like error( */
-	call = getCurrentCall();
-
+    call = translateCallMarker(call);
     va_start(ap, format);
     vsignalError(call, format, ap);
     va_end(ap);
