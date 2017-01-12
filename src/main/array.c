@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998-2015   The R Core Team
+ *  Copyright (C) 1998-2017   The R Core Team
  *  Copyright (C) 2002-2015   The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -541,9 +541,15 @@ SEXP attribute_hidden do_lengths(SEXP call, SEXP op, SEXP args, SEXP rho)
 	for (i = 0, ans_elt = INTEGER(ans); i < x_len; i++, ans_elt++)
 	    *ans_elt = 1;
     }
+    SEXP dim = getAttrib(x, R_DimSymbol);
+    if(!isNull(dim)) {
+        setAttrib(ans, R_DimSymbol, dim);
+    }
     if(useNames) {
 	SEXP names = getAttrib(x, R_NamesSymbol);
 	if(!isNull(names)) setAttrib(ans, R_NamesSymbol, names);
+        SEXP dimnames = getAttrib(x, R_DimNamesSymbol);
+        if(!isNull(dimnames)) setAttrib(ans, R_DimNamesSymbol, dimnames);
     }
     UNPROTECT(1);
     return ans;

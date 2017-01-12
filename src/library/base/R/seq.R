@@ -1,7 +1,7 @@
 #  File src/library/base/R/seq.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ seq.default <-
     if((One <- nargs() == 1L) && !missing(from)) {
 	lf <- length(from)
 	return(if(mode(from) == "numeric" && lf == 1L) {
-            if(!is.finite(from)) stop("'from' cannot be NA, NaN or infinite")
+	    if(!is.finite(from)) stop("'from' must be a finite number")
             1L:from
         } else if(lf) 1L:lf else integer())
     }
@@ -45,21 +45,24 @@ seq.default <-
     chkDots(...)
     if (!missing(from) && length(from) != 1L) stop("'from' must be of length 1")
     if (!missing(to) && length(to) != 1L) stop("'to' must be of length 1")
-    if (!missing(from) && !is.finite(from))
-        stop("'from' cannot be NA, NaN or infinite")
-    if (!missing(to) && !is.finite(to))
-        stop("'to' cannot be NA, NaN or infinite")
+    if (!missing(from) && !is.finite(if(is.numeric(from) || is.complex(from)) from
+				     else from <- as.numeric(from)))
+	stop("'from' must be a finite number")
+    if (!missing(to) && !is.finite(if(is.numeric(to) || is.complex(to)) to
+				     else to <- as.numeric(to)))
+	stop("'to' must be a finite number")
     if(is.null(length.out))
 	if(missing(by))
 	    from:to
 	else { # dealing with 'by'
 	    del <- to - from
 	    if(del == 0 && to == 0) return(to)
-	    n <- del/by
-	    if(!(length(n) && is.finite(n))) {
-		if(length(by) && by == 0 && length(del) && del == 0)
+            if (length(by) != 1L) stop("'by' must be of length 1")
+	    n <- del/by # of length 1, as {from, to, by} are
+	    if(!is.finite(n)) {
+		if(by == 0 && del == 0)
 		    return(from)
-		stop("invalid (to - from)/by in seq(.)")
+		stop("invalid '(to - from)/by'")
 	    }
 	    if(n < 0L)
 		stop("wrong sign in 'by' argument")
@@ -79,7 +82,7 @@ seq.default <-
             }
 	}
     else if(!is.finite(length.out) || length.out < 0L)
-	stop("length must be non-negative number")
+	stop("'length.out' must be a non-negative number")
     else if(length.out == 0L) integer()
     else if (One) seq_len(length.out)
     else if(missing(by)) {

@@ -1,7 +1,7 @@
 #  File src/library/tools/R/check.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -735,6 +735,47 @@ setRlibs <-
                 printLog(Log, "NeedsCompilation field should likely be 'yes'", "\n")
             }
         }
+
+        ## check for BugReports field added at R 3.4.0
+        if(!is.na(BR0 <- db["BugReports"])) {
+            if (nzchar(BR0)) {
+                BR <- trimws(BR0)
+                msg <- ""
+                ## prior to 3.4.0 this was said to be
+                ## 'a URL to which bug reports about the package
+                ## should be submitted'
+                ## We will take that to mean a http[s]:// URL,
+                isURL <- grepl("^https?://[^ ]*$", BR)
+                ## As from 3.4.0 bug,report() is able to extract
+                ## an email addr.
+                if(!isURL) {
+                    findEmail <- function(x) {
+                        x <- paste(x, collapse = " ")
+                        if (grepl("mailto:", x))
+                            sub(".*mailto:([^ ]+).*", "\\1", x)
+                        else if (grepl("[^<]*<([^>]+)", x))
+                            sub("[^<]*<([^>]+)>.*", "\\1", x)
+                        else NA_character_
+                    }
+                    msg <- if (is.na(findEmail(BR))) {
+                        if (grepl("(^|.* )[^ ]+@[[:alnum:]._]+", BR))
+                            "BugReports field is not a suitable URL but appears to contain an email address\n  not specified by mailto: nor contained in < >"
+                        else
+                            "BugReports field should be the URL of a single webpage"
+                    } else
+                        "BugReports field is not a suitable URL but contains an email address\n  which will be used as from R 3.4.0"
+                } else if (grepl("^\n *http", BR0))
+                    msg <- "BugReports field has an empty first line and will not work in R <= 3.3.2"
+            } else {
+                msg <- "BugReports field should not be empty"
+            }
+            if (nzchar(msg)) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                printLog(Log, msg, "\n")
+           }
+        }
+
 
         out <- format(.check_package_description2(dfile))
         if (length(out)) {
@@ -3182,18 +3223,33 @@ setRlibs <-
                     if(length(grep("^  When (running|tangling|sourcing)", out,
                                    useBytes = TRUE))) {
                         cat(" failed\n")
-                        res <- c(res,
-                                 paste("when running code in", sQuote(basename(file))),
-                                 "  ...",
-                                 utils::tail(out, as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_", "10"))))
+                        keep <- as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_",
+                                                      "10"))
+                        res <- if (keep > 0)
+                            c(res,
+                              paste("when running code in", sQuote(basename(file))),
+                              "  ...",
+                              utils::tail(out, keep))
+                        else
+                            c(res,
+                              paste("when running code in", sQuote(basename(file))),
+                              out)
+
                     } else if(status || ! " *** Run successfully completed ***" %in% out) {
                         ## (Need not be the final line if running under valgrind)
+                        keep <- as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_",
+                                                      "10"))
                         cat(" failed to complete the test\n")
                         out <- c(out, "", "... incomplete output.  Crash?")
-                        res <- c(res,
+                        res <- if (keep > 0)
+                            c(res,
                                  paste("when running code in", sQuote(basename(file))),
                                  "  ...",
-                                 utils::tail(out, as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_", "10"))))
+                                 utils::tail(out, keep))
+                        else
+                            c(res,
+                                 paste("when running code in", sQuote(basename(file))),
+                                 out)
                     } else if (file.exists(savefile)) {
                         cmd <- paste0("invisible(tools::Rdiff('",
                                       outfile, "', '", savefile, "',TRUE,TRUE))")
@@ -3255,7 +3311,7 @@ setRlibs <-
                 Sys.setenv(PATH = paste(R.home("bin"), oPATH,
                                         sep = .Platform$path.sep))
                 on.exit(Sys.setenv(PATH = oPATH))
-                ## And too many inst/doc/Makefile are not safe for
+                ## And too many 'vignettes/Makefile's are not safe for
                 ## parallel makes
                 Sys.setenv(MAKEFLAGS="")
                 ## we could use clean = FALSE, but that would not be
@@ -3276,9 +3332,12 @@ setRlibs <-
                                 useBytes = TRUE)
                 warns <- grep("^Warning: file .* is not portable",
                               out, value = TRUE, useBytes = TRUE)
+                print_time(t1, t2, Log)
                 if (status) {
+                    keep <- as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_",
+                                                  "25"))
                     if(skip_run_maybe || !ran) warningLog(Log) else noteLog(Log)
-                    out <- utils::tail(out, as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_", "25")))
+                    if(keep > 0) out <- utils::tail(out, keep)
                     printLog0(Log,
                               paste(c("Error in re-building vignettes:",
                                       "  ...", out, "", ""), collapse = "\n"))
@@ -3296,7 +3355,6 @@ setRlibs <-
                         unlink(vd2, recursive = TRUE)
                     if (!config_val_to_logical(Sys.getenv("_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_", "false")))
                             unlink(outfile)
-                    print_time(t1, t2, Log)
                     resultLog(Log, "OK")
                 }
             } else {

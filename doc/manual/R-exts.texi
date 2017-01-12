@@ -506,10 +506,13 @@ be found.  These @acronym{URL}s are converted to active hyperlinks in
 @acronym{CRAN} package listings.  @xref{Specifying URLs}.
 
 @c DESCRIPTION field BugReports
-The @samp{BugReports} field may contain a single
-@acronym{URL} to which bug reports about the package should be
-submitted.  This @acronym{URL} will be used by @code{bug.report}
-instead of sending an email to the maintainer.
+The @samp{BugReports} field may contain a single @acronym{URL} to which
+bug reports about the package should be submitted.  This @acronym{URL}
+will be used by @code{bug.report} instead of sending an email to the
+maintainer.  A browser is opened for a @samp{http://} or @samp{https://}
+@acronym{URL}.  As from @R{} 3.4.0, @code{bug.report} will try to
+extract an email address (preferably from a @samp{mailto:} URL or
+enclosed in angle brackets).
 
 @c DESCRIPTION field Priority
 Base and recommended packages (i.e., packages contained in the @R{}
@@ -675,7 +678,9 @@ added by the package management tools.
 There is no restriction on the use of other fields not mentioned here
 (but using other capitalizations of these field names would cause
 confusion).  Fields @code{Note}, @code{Contact} (for contacting the
-authors/developers) and @code{MailingList} are in common use. Some
+authors/developers@footnote{As from @R{} 3.4.0, @code{bug.report} will
+try to extract an email address from a @code{Contact} field if there is
+no @code{BugReports} field.}) and @code{MailingList} are in common use. Some
 repositories (including @acronym{CRAN} and R-forge) add their own
 fields.
 
@@ -4370,6 +4375,19 @@ are processed first, the Solaris one does not.} the libraries (typically
 specified by @option{-l} options) to be found from those directories,
 and libraries are searched once in the order they are specified.  Not
 all linkers allow a space after @option{-L} .
+
+@item
+Care is needed with the use of @code{LinkingTo}.  This puts one or more
+directories on the include search path ahead of system headers but
+(prior to @R{} 3.4.0) after those specified in the @code{CPPFLAGS} macro
+of the @R{} build (which normally includes @code{-I/usr/local/include},
+but most platforms ignore that and include it with the system headers).
+
+Any confusion would be avoided by having @code{LinkingTo} headers in a
+directory named after the package.  In any case, name conflicts of
+headers and directories under package @file{include} directories should
+be avoided, both between packages and between a package and system and
+third-party software.
 
 @item
 The @command{ar} utility is often used in makefiles to make static
