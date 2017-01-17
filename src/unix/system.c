@@ -481,7 +481,7 @@ int R_GetFDLimit() {
 	lim1 = (unsigned long) rlim.rlim_cur;
         lim2 = (unsigned long) rlim.rlim_max; /* Usually unlimited */
 	lim = lim1 < lim2 ? lim1 : lim2;
-       	return (lim > INT_MAX) ? INT_MAX : lim;
+	return (lim > INT_MAX) ? INT_MAX : lim;
     }
 #endif
     return -1;

@@ -128,12 +128,12 @@ R_CPFun CPFun[MAX_CACHE];
 int nCPFun = 0;
 #endif
 
-static DllInfo* LoadedDLL = NULL;
+static int MaxNumDLLs = 0; /* initialized in addDLL, free'd in DeleteDLL */
 static int CountDLL = 0;
 
 #include <R_ext/Rdynload.h>
 
-static DllInfo LoadedDLL[MAX_NUM_DLLS];
+static DllInfo* LoadedDLL = NULL;
 
 static int addDLL(char *dpath, char *name, HINSTANCE handle);
 static SEXP Rf_MakeDLLInfo(DllInfo *info);
@@ -610,7 +610,7 @@ static DllInfo *R_RegisterDLL(HINSTANCE handle, const char *path)
 	*/
 	info->useDynamicLookup = TRUE;
 	info->forceSymbols = FALSE;
-	return info;	
+	return info;
     } else
 	return NULL;
 
