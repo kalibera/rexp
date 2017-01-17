@@ -133,6 +133,7 @@ SEXP do_dotcallgr(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotCode(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dput(SEXP, SEXP, SEXP, SEXP);
 SEXP do_drop(SEXP, SEXP, SEXP, SEXP);
+SEXP do_nancheck(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dump(SEXP, SEXP, SEXP, SEXP);
 SEXP do_duplicated(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dynload(SEXP, SEXP, SEXP, SEXP);

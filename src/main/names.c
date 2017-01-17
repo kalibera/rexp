@@ -233,6 +233,7 @@ FUNTAB R_FunTab[] =
 {"cbind",	do_bind,	1,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rbind",	do_bind,	2,	10,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"drop",	do_drop,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"nancheck",	do_nancheck,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"all.names",	do_allnames,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment",	do_comment,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"comment<-",	do_commentgets,	0,	11,	2,	{PP_FUNCALL, PREC_LEFT,	1}},

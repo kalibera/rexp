@@ -420,6 +420,93 @@ SEXP attribute_hidden do_drop(SEXP call, SEXP op, SEXP args, SEXP rho)
     return x;
 }
 
+#define CHECKDECL static __attribute__ ((noinline))
+CHECKDECL Rboolean hasNaN_break(double *x, R_xlen_t n)
+{
+    for (R_xlen_t i = 0; i < n; i++)
+	if (ISNAN(x[i])) return TRUE;
+    return FALSE;
+}
+
+CHECKDECL Rboolean hasNaN_nobreak(double *x, R_xlen_t n)
+{
+    Rboolean has = FALSE;
+    for (R_xlen_t i = 0; i < n; i++)
+	if (ISNAN(x[i])) has=TRUE;
+    return has;
+}
+
+CHECKDECL Rboolean hasNaN_pqr(double *x, R_xlen_t n)
+{
+    if ((n&1) != 0 && ISNAN(x[0]))
+	return TRUE;
+    for (int i = n&1; i < n; i += 2)
+	if (ISNAN(x[i]+x[i+1]) && (ISNAN(x[i]) || ISNAN(x[i+1])))
+	    return TRUE;
+    return FALSE;
+}
+
+CHECKDECL Rboolean hasNaN_pairsum(double *x, R_xlen_t n)
+{
+    if ((n&1) != 0 && ISNAN(x[0]))
+	return TRUE;
+    for (int i = n&1; i < n; i += 2)
+	if (ISNAN(x[i]+x[i+1])) /* may also return TRUE for +-Inf */
+	    return TRUE;
+    return FALSE;
+}
+
+CHECKDECL Rboolean hasNaN_pair(double *x, R_xlen_t n)
+{
+    if ((n&1) != 0 && ISNAN(x[0]))
+	return TRUE;
+    for (int i = n&1; i < n; i += 2)
+	if (ISNAN(x[i]) || ISNAN(x[i+1]))
+	    return TRUE;
+    return FALSE;
+}
+
+CHECKDECL Rboolean hasNaN_sum(double *x, R_xlen_t n)
+{
+    double s = 0;
+    for (int i = 0; i < n; i++)
+	s += x[i];
+    return ISNAN(s); /* may also return TRUE for +-Inf */
+}
+
+SEXP attribute_hidden do_nancheck(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    checkArity(op, args);
+
+    SEXP xarg = CAR(args);
+    if (!isReal(xarg))
+	error("x must be real");
+    double *x = REAL(xarg);
+    R_xlen_t n = xlength(xarg);
+
+    int algo = asInteger(CADR(args));
+    int iter = asInteger(CADDR(args));
+
+    volatile Rboolean ans = NA_LOGICAL;
+
+#define NANCHECK(name) \
+    REprintf("ALGO: %s ITER: %d\n", #name, iter); \
+    for(int i = 0; i < iter; i++) ans = hasNaN_##name(x, n); \
+    break;
+
+    switch(algo) {
+	case 1: NANCHECK(break);
+	case 2: NANCHECK(nobreak);
+	case 3: NANCHECK(pqr);
+	case 4: NANCHECK(pairsum);
+	case 5: NANCHECK(pair);
+	case 6: NANCHECK(sum);
+	default: error("unsupported nancheck algorithm");
+    }
+
+    return ScalarLogical(ans);
+}
+
 /* Length of Primitive Objects */
 
 SEXP attribute_hidden do_length(SEXP call, SEXP op, SEXP args, SEXP rho)
