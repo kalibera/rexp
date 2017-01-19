@@ -582,25 +582,38 @@ SEXP attribute_hidden do_rowscols(SEXP call, SEXP op, SEXP args, SEXP rho)
     return ans;
 }
 
+static Rboolean hasNaNOrInf(double *x, R_xlen_t n)
+{
+    /* This is functionally equivalent to
+
+       for (R_xlen_t i = 0; i < n; i++)
+           if (!R_FINITE(x[i])) return TRUE;
+       return FALSE;
+
+       but faster.
+     */
+
+    if ((n&1) != 0 && !R_FINITE(x[0]))
+	return TRUE;
+    for (int i = n&1; i < n; i += 2)
+	if (!R_FINITE(x[i]+x[i+1]))
+	    return TRUE;
+    return FALSE;
+}
+
 static void matprod(double *x, int nrx, int ncx,
 		    double *y, int nry, int ncy, double *z)
 {
     char *transa = "N", *transb = "N";
     double one = 1.0, zero = 0.0;
     LDOUBLE sum;
-    Rboolean have_na = FALSE;
     R_xlen_t NRX = nrx, NRY = nry;
 
     if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
 	/* Don't trust the BLAS to handle NA/NaNs correctly: PR#4582
 	 * The test is only O(n) here.
 	 */
-	for (R_xlen_t i = 0; i < NRX*ncx; i++)
-	    if (ISNAN(x[i])) {have_na = TRUE; break;}
-	if (!have_na)
-	    for (R_xlen_t i = 0; i < NRY*ncy; i++)
-		if (ISNAN(y[i])) {have_na = TRUE; break;}
-	if (have_na) {
+	if (hasNaNOrInf(x, NRX*ncx) || hasNaNOrInf(y, NRY*ncy)) {
 	    for (int i = 0; i < nrx; i++)
 		for (int k = 0; k < ncy; k++) {
 		    sum = 0.0;
