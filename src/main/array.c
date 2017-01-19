@@ -474,6 +474,24 @@ CHECKDECL Rboolean hasNaN_sum(double *x, R_xlen_t n)
     return ISNAN(s); /* may also return TRUE for +-Inf */
 }
 
+CHECKDECL Rboolean hasNaN_pairsuminf(double *x, R_xlen_t n)
+{
+    if ((n&1) != 0 && !R_FINITE(x[0]))
+	return TRUE;
+    for (int i = n&1; i < n; i += 2)
+	if (!R_FINITE(x[i]+x[i+1]))
+	    return TRUE;
+    return FALSE;
+}
+
+/*
+#include "lapacke_utils.h"
+CHECKDECL Rboolean hasNaN_lapacke(double *x, R_xlen_t n)
+{
+    return LAPACKE_d_nancheck(n, x, 1) ? TRUE : FALSE;
+}
+*/
+
 SEXP attribute_hidden do_nancheck(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
@@ -501,6 +519,8 @@ SEXP attribute_hidden do_nancheck(SEXP call, SEXP op, SEXP args, SEXP rho)
 	case 4: NANCHECK(pairsum);
 	case 5: NANCHECK(pair);
 	case 6: NANCHECK(sum);
+	case 7: NANCHECK(pairsuminf);
+//	case 8: NANCHECK(lapacke);
 	default: error("unsupported nancheck algorithm");
     }
 
