@@ -128,6 +128,10 @@ R_CPFun CPFun[MAX_CACHE];
 int nCPFun = 0;
 #endif
 
+/* Note that it is likely that dlopen will use up at least one file
+   descriptor for each DLL loaded (it may load further dynamically
+   linked libraries), so we do not want to get close to the fd limit
+   (which may be as low as 256). */
 #define MAX_NUM_DLLS	100
 
 static int CountDLL = 0;
@@ -149,8 +153,6 @@ attribute_hidden OSDynSymbol Rf_osDynSymbol;
 attribute_hidden OSDynSymbol *R_osDynSymbol = &Rf_osDynSymbol;
 
 void R_init_base(DllInfo *); /* In Registration.c */
-DL_FUNC R_dlsym(DllInfo *dll, char const *name,
-		R_RegisteredNativeSymbol *symbol);
 
 void attribute_hidden
 InitDynload()
@@ -212,7 +214,7 @@ R_addExternalRoutine(DllInfo *info,
 /*
  Returns a reference to the DllInfo object associated with the shared object
  with the path name `path'. This ensures uniqueness rather than having the
- undesirable situation of two object with the same name but in different
+ undesirable situation of two objects with the same name but in different
  directories.
  This is available so that it can be called from arbitrary C routines
  that need to call R_registerRoutines(). The initialization routine
