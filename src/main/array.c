@@ -604,7 +604,7 @@ static Rboolean mayHaveNaNOrInf(double *x, R_xlen_t n)
 {
     if ((n&1) != 0 && !R_FINITE(x[0]))
 	return TRUE;
-    for (int i = n&1; i < n; i += 2)
+    for (R_xlen_t i = n&1; i < n; i += 2)
 	/* A precise version could use this condition:
 	 *
 	 * !R_FINITE(x[i]+x[i+1]) && (!R_FINITE(x[i]) || !R_FINITE(x[i+1]))
@@ -621,13 +621,57 @@ static Rboolean mayHaveNaNOrInf(double *x, R_xlen_t n)
     return FALSE;
 }
 
+static R_INLINE void simple_matprod(double *x, int nrx, int ncx,
+                                    double *y, int nry, int ncy, double *z)
+{
+    LDOUBLE sum;
+    R_xlen_t NRX = nrx, NRY = nry;
+
+    for (int i = 0; i < nrx; i++)
+	for (int k = 0; k < ncy; k++) {
+	    sum = 0.0;
+	    for (int j = 0; j < ncx; j++)
+		sum += x[i + j * NRX] * y[j + k * NRY];
+	    z[i + k * NRX] = (double) sum;
+	}
+}
+
+static R_INLINE void simple_crossprod(double *x, int nrx, int ncx,
+                                      double *y, int nry, int ncy, double *z)
+{
+    LDOUBLE sum;
+    R_xlen_t NCX = ncx, NRY = nry;
+
+    for (int i = 0; i < ncx; i++)
+	for (int k = 0; k < ncy; k++) {
+	    sum = 0.0;
+	    for (int j = 0; j < nrx; j++)
+		sum += x[i + j * NCX] * y[j + k * NRY];
+	    z[i + k * NCX] = (double) sum;
+	}
+}
+
+static R_INLINE void simple_tcrossprod(double *x, int nrx, int ncx,
+                                       double *y, int nry, int ncy, double *z)
+{
+    LDOUBLE sum;
+    R_xlen_t NRX = nrx, NCY = ncy;
+
+    for (int i = 0; i < nrx; i++)
+	for (int k = 0; k < nry; k++) {
+	    sum = 0.0;
+	    for (int j = 0; j < ncx; j++)
+		sum += x[i + j * NRX] * y[j + k * NCY];
+	    z[i + k * NRX] = (double) sum;
+	}
+}
+
 static void matprod(double *x, int nrx, int ncx,
 		    double *y, int nry, int ncy, double *z)
 {
     char *transN = "N", *transT = "T";
     double one = 1.0, zero = 0.0;
     int ione = 1;
-    LDOUBLE sum;
     R_xlen_t NRX = nrx, NRY = nry;
 
     if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
@@ -639,15 +683,8 @@ static void matprod(double *x, int nrx, int ncx,
 	 * Using these special values may cause LAPACK to return unexpected
 	 * results or become unstable."
 	 */
-	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy)) {
-	    for (int i = 0; i < nrx; i++)
-		for (int k = 0; k < ncy; k++) {
-		    sum = 0.0;
-		    for (int j = 0; j < ncx; j++)
-			sum += x[i + j * NRX] * y[j + k * NRY];
-		    z[i + k * NRX] = (double) sum;
-		}
-	}
+	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
+	    simple_matprod(x, nrx, ncx, y, nry, ncy, z);
 	else if (ncy == 1) /* matrix-vector or dot product */
 	    F77_CALL(dgemv)(transN, &nrx, &ncx, &one, x,
 	                    &nrx, y, &ione, &zero, z, &ione);
@@ -730,7 +767,11 @@ static void crossprod(double *x, int nrx, int ncx,
     char *transT = "T", *transN = "N";
     double one = 1.0, zero = 0.0;
     int ione = 1;
+    R_xlen_t NRX = nrx, NRY = nry;
     if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
+	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
+	    /* see matprod for more details */
+	    simple_crossprod(x, nrx, ncx, y, nry, ncy, z);
 	if (ncy == 1) /* matrix-vector or dot product */
 	    F77_CALL(dgemv)(transT, &nrx, &ncx, &one, x,
 	                    &nrx, y, &ione, &zero, z, &ione);
@@ -785,7 +826,11 @@ static void tcrossprod(double *x, int nrx, int ncx,
     char *transN = "N", *transT = "T";
     double one = 1.0, zero = 0.0;
     int ione = 1;
+    R_xlen_t NRX = nrx, NRY = nry;
     if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
+	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
+	    /* see matprod for more details */
+	    simple_tcrossprod(x, nrx, ncx, y, nry, ncy, z);
 	if (nry == 1) /* matrix-vector or dot product */
 	    F77_CALL(dgemv)(transN, &nrx, &ncx, &one, x,
 	                    &nrx, y, &ione, &zero, z, &ione);
