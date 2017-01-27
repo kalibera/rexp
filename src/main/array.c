@@ -682,7 +682,7 @@ static void matprod(double *x, int nrx, int ncx,
 	 * Using these special values may cause LAPACK to return unexpected
 	 * results or become unstable."
 	 */
-	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
+	if (1 || mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
 	    simple_matprod(x, nrx, ncx, y, nry, ncy, z);
 	else if (ncy == 1) /* matrix-vector or dot product */
 	    F77_CALL(dgemv)(transN, &nrx, &ncx, &one, x,
@@ -768,7 +768,7 @@ static void crossprod(double *x, int nrx, int ncx,
     int ione = 1;
     R_xlen_t NRX = nrx, NRY = nry;
     if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
+	if (1 || mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
 	    /* see matprod for more details */
 	    simple_crossprod(x, nrx, ncx, y, nry, ncy, z);
 	else if (ncy == 1) /* matrix-vector or dot product */
@@ -827,7 +827,7 @@ static void tcrossprod(double *x, int nrx, int ncx,
     int ione = 1;
     R_xlen_t NRX = nrx, NRY = nry;
     if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
+	if (1 || mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
 	    /* see matprod for more details */
 	    simple_tcrossprod(x, nrx, ncx, y, nry, ncy, z);
 	else if (nry == 1) /* matrix-vector or dot product */
