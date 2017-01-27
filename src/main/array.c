@@ -640,13 +640,12 @@ static R_INLINE void simple_crossprod(double *x, int nrx, int ncx,
                                       double *y, int nry, int ncy, double *z)
 {
     LDOUBLE sum;
-    R_xlen_t NCX = ncx, NRY = nry;
-
+    R_xlen_t NRX = nrx, NRY = nry, NCX = ncx;
     for (int i = 0; i < ncx; i++)
 	for (int k = 0; k < ncy; k++) {
 	    sum = 0.0;
 	    for (int j = 0; j < nrx; j++)
-		sum += x[i + j * NCX] * y[j + k * NRY];
+		sum += x[j + i * NRX] * y[j + k * NRY];
 	    z[i + k * NCX] = (double) sum;
 	}
 }
@@ -655,13 +654,13 @@ static R_INLINE void simple_tcrossprod(double *x, int nrx, int ncx,
                                        double *y, int nry, int ncy, double *z)
 {
     LDOUBLE sum;
-    R_xlen_t NRX = nrx, NCY = ncy;
+    R_xlen_t NRX = nrx, NRY = nry;
 
     for (int i = 0; i < nrx; i++)
 	for (int k = 0; k < nry; k++) {
 	    sum = 0.0;
 	    for (int j = 0; j < ncx; j++)
-		sum += x[i + j * NRX] * y[j + k * NCY];
+		sum += x[i + j * NRX] * y[k + j * NRY];
 	    z[i + k * NRX] = (double) sum;
 	}
 }
@@ -772,7 +771,7 @@ static void crossprod(double *x, int nrx, int ncx,
 	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
 	    /* see matprod for more details */
 	    simple_crossprod(x, nrx, ncx, y, nry, ncy, z);
-	if (ncy == 1) /* matrix-vector or dot product */
+	else if (ncy == 1) /* matrix-vector or dot product */
 	    F77_CALL(dgemv)(transT, &nrx, &ncx, &one, x,
 	                    &nrx, y, &ione, &zero, z, &ione);
 	else if (ncx == 1) /* vector-matrix */
@@ -831,7 +830,7 @@ static void tcrossprod(double *x, int nrx, int ncx,
 	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
 	    /* see matprod for more details */
 	    simple_tcrossprod(x, nrx, ncx, y, nry, ncy, z);
-	if (nry == 1) /* matrix-vector or dot product */
+	else if (nry == 1) /* matrix-vector or dot product */
 	    F77_CALL(dgemv)(transN, &nrx, &ncx, &one, x,
 	                    &nrx, y, &ione, &zero, z, &ione);
 	else if (nrx == 1) /* vector-matrix */
