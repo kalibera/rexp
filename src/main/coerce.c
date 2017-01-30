@@ -714,7 +714,7 @@ static SEXP coerceToRaw(SEXP v)
     return ans;
 }
 
-static SEXP coerceToString(SEXP v)
+/*static*/ SEXP coerceToString(SEXP v)
 {
     SEXP ans;
     int savedigits, warn = 0;
@@ -1152,6 +1152,12 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 
     if (TYPEOF(v) == type)
 	return v;
+
+    if (ALTREP(v)) {
+	ans = ALTREP_COERCE(v, type);
+	if (ans) return ans;
+    }
+
     /* code to allow classes to extend ENVSXP, SYMSXP, etc */
     if(IS_S4_OBJECT(v) && TYPEOF(v) == S4SXP) {
 	SEXP vv = R_getS4DataSlot(v, ANYSXP);
@@ -1247,6 +1253,12 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 	case RAWSXP:
 	    ans = coerceToRaw(v);	    break;
 	case STRSXP:
+	    if (ATTRIB(v) == R_NilValue)
+		switch(TYPEOF(v)) {
+		case INTSXP:
+		case REALSXP:
+		    return R_deferred_coerceToString(v, NULL);
+		}
 	    ans = coerceToString(v);	    break;
 	case EXPRSXP:
 	    ans = coerceToExpression(v);    break;
@@ -1992,7 +2004,7 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     x = CAR(args);
     n = xlength(x);
-    PROTECT(ans = allocVector(LGLSXP, n));
+    
     if (isVector(x)) {
 	PROTECT(dims = getAttrib(x, R_DimSymbol));
 	if (isArray(x))
@@ -2001,9 +2013,10 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    PROTECT(names = getAttrib(x, R_NamesSymbol));
     }
     else dims = names = R_NilValue;
+    PROTECT(ans = allocVector(LGLSXP, n));
     switch (TYPEOF(x)) {
     case LGLSXP:
-       for (i = 0; i < n; i++)
+	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = (LOGICAL(x)[i] == NA_LOGICAL);
 	break;
     case INTSXP:
@@ -2013,7 +2026,7 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
     case REALSXP:
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = ISNAN(REAL(x)[i]);
-	break;
+	    break;
     case CPLXSXP:
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = (ISNAN(COMPLEX(x)[i].r) ||
@@ -2023,32 +2036,32 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
 	for (i = 0; i < n; i++)
 	    LOGICAL(ans)[i] = (STRING_ELT(x, i) == NA_STRING);
 	break;
-
+	
 /* Same code for LISTSXP and VECSXP : */
 #define LIST_VEC_NA(s)							\
 	if (!isVector(s) || length(s) != 1)				\
-		LOGICAL(ans)[i] = 0;					\
+	    LOGICAL(ans)[i] = 0;					\
 	else {								\
-		switch (TYPEOF(s)) {					\
-		case LGLSXP:						\
-		case INTSXP:						\
-		    LOGICAL(ans)[i] = (INTEGER(s)[0] == NA_INTEGER);	\
-		    break;						\
-		case REALSXP:						\
-		    LOGICAL(ans)[i] = ISNAN(REAL(s)[0]);		\
-		    break;						\
-		case STRSXP:						\
-		    LOGICAL(ans)[i] = (STRING_ELT(s, 0) == NA_STRING);	\
-		    break;						\
-		case CPLXSXP:						\
-		    LOGICAL(ans)[i] = (ISNAN(COMPLEX(s)[0].r) || 	\
-				       ISNAN(COMPLEX(s)[0].i));		\
-		    break;						\
-		default:						\
-		    LOGICAL(ans)[i] = 0;				\
-		}							\
+	    switch (TYPEOF(s)) {					\
+	    case LGLSXP:						\
+	    case INTSXP:						\
+		LOGICAL(ans)[i] = (INTEGER(s)[0] == NA_INTEGER);	\
+		break;							\
+	    case REALSXP:						\
+		LOGICAL(ans)[i] = ISNAN(REAL(s)[0]);			\
+		break;							\
+	    case STRSXP:						\
+		LOGICAL(ans)[i] = (STRING_ELT(s, 0) == NA_STRING);	\
+		break;							\
+	    case CPLXSXP:						\
+		LOGICAL(ans)[i] = (ISNAN(COMPLEX(s)[0].r) ||		\
+				   ISNAN(COMPLEX(s)[0].i));		\
+		break;							\
+	    default:							\
+		LOGICAL(ans)[i] = 0;					\
+	    }								\
 	}
-
+	
     case LISTSXP:
 	for (i = 0; i < n; i++) {
 	    LIST_VEC_NA(CAR(x));

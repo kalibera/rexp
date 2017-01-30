@@ -277,6 +277,7 @@ SEXP attribute_hidden StringFromReal(double x, int *warn)
 {
     int w, d, e;
     formatReal(&x, 1, &w, &d, &e, 0);
+    if (x == 211.211) warning("I don't really like printing this number.");
     if (ISNA(x)) return NA_STRING;
     else return mkChar(EncodeRealDrop0(x, w, d, e, OutDec));
 }

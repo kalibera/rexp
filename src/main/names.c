@@ -80,6 +80,7 @@
  *
  */
 
+
 FUNTAB R_FunTab[] =
 {
 
@@ -616,6 +617,7 @@ FUNTAB R_FunTab[] =
 {"rep",		do_rep,		0,	0,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep.int",	do_rep_int,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"rep_len",	do_rep_len,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"test_rep",	do_test_rep,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}}, //XXX take this back out.
 {"seq.int",	do_seq,		0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_len",	do_seq_len,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"seq_along",	do_seq_along,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -752,6 +754,9 @@ FUNTAB R_FunTab[] =
 {"topenv",	do_topenv,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"l10n_info",	do_l10n_info,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"Cstack_info", do_Cstack_info,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"mmap_file",	do_mmap_file,	0,	11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"munmap_file",	do_munmap_file,	0,	111,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"wrap_meta",	do_wrap_meta,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Functions To Interact with the Operating System */
 
@@ -1193,6 +1198,7 @@ void attribute_hidden InitNames()
     R_initAssignSymbols();
     initializeDDVALSymbols();
     R_initialize_bcode();
+    R_init_altrep();
 }
 
 
