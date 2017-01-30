@@ -44,6 +44,12 @@
 
       JIT compilation can be disabled using \code{compiler::enableJIT(0)}
       or by setting environment variable \env{R_ENABLE_JIT} to \code{0}.
+
+      \item \code{xtabs()} works more consistently with \code{NA}s, also
+      in its result no longer setting them to \code{0}.  Further, a new
+      logical option \code{addNA} allows to count \code{NA}s where
+      appropriate.  Additionally, for the case \code{sparse=TRUE}, the
+      result's \code{dimnames} are identical to the default case's.
     }
   }
 
@@ -291,6 +297,15 @@
       \code{standard = "SI"} allow more standard abbreviations than the
       default ones, e.g., for kilo bytes.  From contributions by Henrik
       Bengtsson.
+
+      \item Improved performance and robustness of matrix multiplication
+      using BLAS: DGEMV is now used instead of DGEMM for matrix/vector and
+      vector/matrix multiplication, DGEMM/DGEMV is bypassed when the input
+      has NaN or Inf values, and performance for these input checks has been
+      improved.
+
+      \item \code{tapply()} gets new option \code{default = NA}
+      allowing to change the previously hardcoded value.
     }
   }
 
@@ -470,7 +485,8 @@
       set attributes on \code{\link{NULL}}.
 
       \item Header \file{Rconfig.h} no longer defines
-      \samp{SUPPORT_OPENMP}; use \samp{_OPENMP} as long documented.
+      \samp{SUPPORT_OPENMP}; instead use \samp{_OPENMP} (as documented
+      for a long time).
     }
   }
 
@@ -579,6 +595,10 @@
       methods. See
       \url{https://stat.ethz.ch/pipermail/r-devel/2016-December/073476.html}.
 
+      \item \code{dev.capture()} using Quartz Cocoa device (macOS) returned
+      invalid components if the back-end chose to use ARGB instead of RGBA
+      image format. (Reported by Noam Ross.)
+
       \item \code{seq("2", "5")} now works too, equivalently to
       \code{"2":"5"} and \code{seq.int()}.
 
@@ -592,7 +612,7 @@
       URL existence before attempting downloads; this is more robust to
       servers that do not support HEAD or range-based retrieval, but may
       create empty or incomplete files for aborted download requests.
-      
+
       \item Bandwidth selectors \code{bw.ucv()}, \code{bw.bcv()} and
       \code{bw.SJ()} now avoid integer overflow for large sample sizes.
     }
@@ -669,7 +689,6 @@
       \item On some systems, very small hexadecimal numbers in hex notation
       would underflow to zero.  (\PR{17199})
 
-      %% Not yet ported from trunk
       \item \code{pmin()} and \code{pmax()} now work again for
       \code{ordered} factors and 0-length S3 classed objects, thanks to
       Suharto Anggono's \PR{17195} and \PR{17200}.
@@ -679,20 +698,23 @@
       removes leading whitespace and only attempts to open
       \samp{http://} and \samp{https://} URLs, falling back to emailing
       the maintainer.
-      
+
       \item Bandwidth selectors \code{bw.ucv()} and
       \code{bw.SJ()} gave incorrect answers or incorrectly reported an
       error (because of integer overflow) for inputs longer than
-      46341.  Similarly for \code{b2.bcv()} at length 5793.
+      46341.  Similarly for \code{bw.bcv()} at length 5793.
 
-      Another possible integer overflow is checked and may result in a
-      reported error (rather than an incorrect result) for much longer
+      Another possible integer overflow is checked and may result in an
+      error report (rather than an incorrect result) for much longer
       inputs (millions for a smooth distribution).
 
       \item \code{findMethod} failed if the active signature had
       expanded beyond what a particular package used. (Example with
       packages \CRANpkg{XR} and \CRANpkg{XRJulia} on \acronym{CRAN}).
-   }
+
+      \item \code{qbeta()} underflowed too early in some very asymmetric
+      cases.  (\PR{17178})
+    }
   }
 }
 
@@ -868,10 +890,6 @@
 
       \item \code{findInterval(x, vec, left.open = TRUE)} misbehaved in some
       cases. (Reported by Dmitriy Chernykh.)
-
-      \item \code{dev.capture()} using Quartz Cocoa device (macOS) returned
-      invalid components if the back-end chose to use ARGB instead of RGBA
-      image format. (Reported by Noam Ross.)
     }
   }
 }

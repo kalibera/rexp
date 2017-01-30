@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2017-01-18 r72008) -- "Unsuffered Consequences"
+R Under development (unstable) (2017-01-29 r72045) -- "Unsuffered Consequences"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -708,13 +708,15 @@ Loading required package: survival
 4 . . . 1
 5 . . . .
 2 x 2 sparse Matrix of class "dgCMatrix"
-  a b
-a 2 .
-b . 2
+   x2
+x1  a b
+  a 2 .
+  b . 2
 2 x 2 sparse Matrix of class "dgCMatrix"
-  a b
-a 2 .
-b . 1
+   x3
+x1  a b
+  a 2 .
+  b . 1
 > 
 > ## regression tests for dimnames (broken on 2009-07-31)
 > contr.sum(4)

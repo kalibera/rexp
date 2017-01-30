@@ -596,6 +596,60 @@ if(Sys.t %in% someCET)
 ## had failed for almost a month in R-devel & R-patched
 
 
+## xtabs() , notably with NA's :
+asArr <- function(x) {
+    attributes(x) <- list(dim=dim(x), dimnames=dimnames(x)); x }
+as_A <- function(x, A) array(x, dim=dim(A), dimnames=dimnames(A))
+eq_A <- function(a,b) ## equality of arrays, notably sparseMatrix vs dense
+    identical(dim(a),dim(b)) && identical(dimnames(a),dimnames(b)) &&
+        identical(as.vector(a), as.vector(b))
+esoph2 <- droplevels(subset(esoph, subset = tobgp > "10-19" & alcgp >= "40-79"))
+(xt <- xtabs(~ agegp + alcgp + tobgp, esoph2))
+stopifnot(identical(dim(xt), c(6L, 3L, 2L)), # of the 6 x 3 x 2 = 36 entries,
+          identical(which(xt == 0), c(7L, 12L, 18L, 23L, 30L, 32L, 36L)),
+          ## the above 8 are zeros and the rest is 1 :
+          all(xt[xt != 0] == 1))
+xtC <- xtabs(ncontrols ~ agegp + alcgp + tobgp, data = esoph2)
+stopifnot(# no NA's in data, hence result should have none, just 0's:
+    identical(asArr(unname(xtC)),
+	      array(c(4, 14, 15, 17, 9, 3,   0, 2, 5, 6, 3, 0,	 1, 4, 3, 3, 1, 0,
+		      7,  8,  7,  6, 0, 1,   2, 1, 4, 4, 1, 0,	 2, 0, 4, 6, 1, 0),
+		    dim = dim(xt))))
+
+DF <- as.data.frame(UCBAdmissions)
+xt <- xtabs(Freq ~ Gender + Admit, DF)
+stopifnot(identical(asArr(xt),
+		    array(c(1198, 557, 1493, 1278), dim = c(2L, 2L),
+			  dimnames = list(Gender = c("Male", "Female"),
+					  Admit = c("Admitted", "Rejected")))))
+options(na.action = "na.omit")
+DN <- DF; DN[cbind(6:9, c(1:2,4,1))] <- NA; DN
+
+tools::assertError(# 'na.fail' should fail :
+	   xtabs(Freq ~ Gender + Admit, DN, na.action=na.fail))
+xt. <- xtabs(Freq ~ Gender + Admit, DN)
+xtp <- xtabs(Freq ~ Gender + Admit, DN, na.action=na.pass)
+xtS <- xtabs(Freq ~ Gender + Admit, DN, na.action=na.pass, sparse=TRUE)# error in R <= 3.3.2
+xtN <- xtabs(Freq ~ Gender + Admit, DN, addNA=TRUE)
+xtNS<- xtabs(Freq ~ Gender + Admit, DN, addNA=TRUE, sparse=TRUE)
+stopifnot(
+    identical(asArr(xt - xt.), as_A(c(120,17, 207, 8 ), xt)),
+    identical(asArr(xt - xtp), as_A(c(120,17, 207, NA), xt)), # not ok in R <= 3.3.2
+    eq_A(xt., xtabs(Freq ~ Gender + Admit, DN, sparse = TRUE)),
+    eq_A(xtp, xtS),
+    eq_A(xtN, xtNS),
+    identical(asArr(-xtN + rbind(cbind(xt, 0), 0)),
+              as_A(c(120, 17, -17, 207, NA, 0, -327, 0, 0), xtN))
+)
+## NA treatment partly wrong in R < 3.4.0; new option 'addNA'
+
+
+## tapply() with FUN returning raw
+identical(tapply(1:3, 1:3, as.raw),
+	  array(as.raw(1:3), 3L, dimnames=list(1:3)))
+## failed in R < 3.4.0
+
+
 
 ## keep at end
 rbind(last =  proc.time() - .pt,
