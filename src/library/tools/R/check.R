@@ -738,7 +738,7 @@ setRlibs <-
 
         ## check for BugReports field added at R 3.4.0
         ## but read.dcf was altered to skip whitespace, so need to re-read it
-        BR0 <- read.dcf(dfile, keep.white = "BugReports")[,"BugReports"]
+        BR0 <- drop(read.dcf(dfile, keep.white = "BugReports"))["BugReports"]
         if(!is.na(BR0)) {
             if (nzchar(BR0)) {
                 BR <- db["BugReports"]
@@ -4489,7 +4489,7 @@ setRlibs <-
                 R.version[["major"]], ".",  R.version[["minor"]],
                 " (r", R.version[["svn rev"]], ")\n", sep = "")
             cat("",
-                "Copyright (C) 1997-2013 The R Core Team.",
+                "Copyright (C) 1997-2017 The R Core Team.",
                 "This is free software; see the GNU General Public License version 2",
                 "or later for copying conditions.  There is NO warranty.",
                 sep="\n")
