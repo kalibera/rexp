@@ -57,15 +57,6 @@ cprod(tcrossprod(rv, rv), tcrossprod(Crv, Crv), matrix(265,1,1) )
 cprod(tcrossprod(cv, cv), tcrossprod(Ccv, Ccv), matrix(c(121,132,132,144), 2, 2) )
 cprod(tcrossprod(v, v), tcrossprod(Cv, Cv), matrix(c(121,132,132,144), 2, 2) )
 
-## complex
-
-m1 <- matrix(c(1+1i,2+2i,3+3i,4+4i,5+5i,6+6i), ncol=2)
-m2 <- matrix(c(1+1i,2+2i,3+3i,4+4i), ncol=2)
-
-stopifnot(identical(m1 %*% m2, matrix(c(18i,24i,30i,38i,52i,66i), 3, 2) ))
-stopifnot(identical(crossprod(m1, m1), t(m1) %*% m1))
-stopifnot(identical(tcrossprod(m1, m1), m1 %*% t(m1)))
-
 ## non-square matrix, with Inf
 
 m1 <- matrix(c(1,2,Inf,4,5,6), ncol=2)
@@ -100,3 +91,12 @@ cprod(tcrossprod(m1, m1), tcrossprod(Cm1, Cm1), matrix(c(17,22,Inf,22,29,Inf,Inf
 cprod(tcrossprod(m2, m1), tcrossprod(Cm2, Cm1), matrix(c(13,18,17,24,Inf,Inf), 2, 3) )
 cprod(tcrossprod(rv, m1), tcrossprod(Crv, Cm1), matrix(c(59,82,Inf), 1, 3) )
 cprod(tcrossprod(m1, rv), tcrossprod(Cm1, Crv), matrix(c(59,82,Inf), 3, 1) )
+
+## complex
+
+m1 <- matrix(c(1+1i,2+2i,3+3i,4+4i,5+5i,6+6i), ncol=2)
+m2 <- matrix(c(1+1i,2+2i,3+3i,4+4i), ncol=2)
+
+stopifnot(identical(m1 %*% m2, matrix(c(18i,24i,30i,38i,52i,66i), 3, 2) ))
+stopifnot(identical(crossprod(m1, m1), t(m1) %*% m1))
+stopifnot(identical(tcrossprod(m1, m1), m1 %*% t(m1)))
