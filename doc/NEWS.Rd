@@ -306,6 +306,9 @@
 
       \item \code{tapply()} gets new option \code{default = NA}
       allowing to change the previously hardcoded value.
+      
+      \item \code{read.dcf()} now consistently interprets any
+      \sQuote{whitespace} to be stripped to include newlines.
     }
   }
 
@@ -714,6 +717,9 @@
 
       \item \code{qbeta()} underflowed too early in some very asymmetric
       cases.  (\PR{17178})
+      
+      \item \command{R CMD build} no longer wraps a \samp{BugReports}
+      field containing a long URL, which made it unusable in \R <= 3.3.2.
     }
   }
 }
