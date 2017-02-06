@@ -634,48 +634,73 @@ static Rboolean cmayHaveNaNOrInf(Rcomplex *x, R_xlen_t n)
     return FALSE;
 }
 
+static R_INLINE void internal_matprod(double *x, int nrx, int ncx,
+                                      double *y, int nry, int ncy, double *z)
+{
+    LDOUBLE sum;
+#define MATPROD_BODY					\
+    R_xlen_t NRX = nrx, NRY = nry;			\
+    for (int i = 0; i < nrx; i++)			\
+	for (int k = 0; k < ncy; k++) {			\
+	    sum = 0.0;					\
+	    for (int j = 0; j < ncx; j++)		\
+		sum += x[i + j * NRX] * y[j + k * NRY];	\
+	    z[i + k * NRX] = sum;			\
+	}
+    MATPROD_BODY;
+}
+
 static R_INLINE void simple_matprod(double *x, int nrx, int ncx,
                                     double *y, int nry, int ncy, double *z)
 {
-    LDOUBLE sum;
-    R_xlen_t NRX = nrx, NRY = nry;
+    double sum;
+    MATPROD_BODY;
+}
 
-    for (int i = 0; i < nrx; i++)
-	for (int k = 0; k < ncy; k++) {
-	    sum = 0.0;
-	    for (int j = 0; j < ncx; j++)
-		sum += x[i + j * NRX] * y[j + k * NRY];
-	    z[i + k * NRX] = sum;
+static R_INLINE void internal_crossprod(double *x, int nrx, int ncx,
+                                        double *y, int nry, int ncy, double *z)
+{
+    LDOUBLE sum;
+#define CROSSPROD_BODY					\
+    R_xlen_t NRX = nrx, NRY = nry, NCX = ncx;		\
+    for (int i = 0; i < ncx; i++)			\
+	for (int k = 0; k < ncy; k++) {			\
+	    sum = 0.0;					\
+	    for (int j = 0; j < nrx; j++)		\
+		sum += x[j + i * NRX] * y[j + k * NRY];	\
+	    z[i + k * NCX] = sum;			\
 	}
+    CROSSPROD_BODY;
 }
 
 static R_INLINE void simple_crossprod(double *x, int nrx, int ncx,
                                       double *y, int nry, int ncy, double *z)
 {
+    double sum;
+    CROSSPROD_BODY;
+}
+
+static R_INLINE void internal_tcrossprod(double *x, int nrx, int ncx,
+                                         double *y, int nry, int ncy, double *z)
+{
     LDOUBLE sum;
-    R_xlen_t NRX = nrx, NRY = nry, NCX = ncx;
-    for (int i = 0; i < ncx; i++)
-	for (int k = 0; k < ncy; k++) {
-	    sum = 0.0;
-	    for (int j = 0; j < nrx; j++)
-		sum += x[j + i * NRX] * y[j + k * NRY];
-	    z[i + k * NCX] = sum;
+#define TCROSSPROD_BODY					\
+    R_xlen_t NRX = nrx, NRY = nry;			\
+    for (int i = 0; i < nrx; i++)			\
+	for (int k = 0; k < nry; k++) {			\
+	    sum = 0.0;					\
+	    for (int j = 0; j < ncx; j++)		\
+		sum += x[i + j * NRX] * y[k + j * NRY];	\
+	    z[i + k * NRX] = sum;			\
 	}
+    TCROSSPROD_BODY;
 }
 
 static R_INLINE void simple_tcrossprod(double *x, int nrx, int ncx,
                                        double *y, int nry, int ncy, double *z)
 {
-    LDOUBLE sum;
-    R_xlen_t NRX = nrx, NRY = nry;
-
-    for (int i = 0; i < nrx; i++)
-	for (int k = 0; k < nry; k++) {
-	    sum = 0.0;
-	    for (int j = 0; j < ncx; j++)
-		sum += x[i + j * NRX] * y[k + j * NRY];
-	    z[i + k * NRX] = sum;
-	}
+    double sum;
+    TCROSSPROD_BODY;
 }
 
 static void matprod(double *x, int nrx, int ncx,
@@ -713,81 +738,108 @@ static void matprod(double *x, int nrx, int ncx,
 }
 
 static R_INLINE
+void internal_cmatprod(Rcomplex *x, int nrx, int ncx,
+		       Rcomplex *y, int nry, int ncy, Rcomplex *z)
+{
+    LDOUBLE sum_i, sum_r;
+#define CMATPROD_BODY					    \
+    int i, j, k;					    \
+    double xij_r, xij_i, yjk_r, yjk_i;			    \
+    R_xlen_t NRX = nrx, NRY = nry;			    \
+    for (i = 0; i < nrx; i++)				    \
+	for (k = 0; k < ncy; k++) {			    \
+	    sum_r = 0.0;				    \
+	    sum_i = 0.0;				    \
+	    for (j = 0; j < ncx; j++) {			    \
+		xij_r = x[i + j * NRX].r;		    \
+		xij_i = x[i + j * NRX].i;		    \
+		yjk_r = y[j + k * NRY].r;		    \
+		yjk_i = y[j + k * NRY].i;		    \
+		sum_r += (xij_r * yjk_r - xij_i * yjk_i);   \
+		sum_i += (xij_r * yjk_i + xij_i * yjk_r);   \
+	    }						    \
+	    z[i + k * NRX].r = sum_r;			    \
+	    z[i + k * NRX].i = sum_i;			    \
+	}
+    CMATPROD_BODY;
+}
+
+static R_INLINE
 void simple_cmatprod(Rcomplex *x, int nrx, int ncx,
 		     Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
-    int i, j, k;
-    double xij_r, xij_i, yjk_r, yjk_i;
-    LDOUBLE sum_i, sum_r;
+    double sum_i, sum_r;
+    CMATPROD_BODY;
+}
 
-    R_xlen_t NRX = nrx, NRY = nry;
-    for (i = 0; i < nrx; i++)
-	for (k = 0; k < ncy; k++) {
-	    sum_r = 0.0;
-	    sum_i = 0.0;
-	    for (j = 0; j < ncx; j++) {
-		xij_r = x[i + j * NRX].r;
-		xij_i = x[i + j * NRX].i;
-		yjk_r = y[j + k * NRY].r;
-		yjk_i = y[j + k * NRY].i;
-		sum_r += (xij_r * yjk_r - xij_i * yjk_i);
-		sum_i += (xij_r * yjk_i + xij_i * yjk_r);
-	    }
-	    z[i + k * NRX].r = sum_r;
-	    z[i + k * NRX].i = sum_i;
+static R_INLINE
+void internal_ccrossprod(Rcomplex *x, int nrx, int ncx,
+		         Rcomplex *y, int nry, int ncy, Rcomplex *z)
+{
+    LDOUBLE sum_i, sum_r;
+#define CCROSSPROD_BODY					    \
+    int i, j, k;					    \
+    double xji_r, xji_i, yjk_r, yjk_i;			    \
+    R_xlen_t NRX = nrx, NRY = nry, NCX = ncx;		    \
+    for (i = 0; i < ncx; i++)				    \
+	for (k = 0; k < ncy; k++) {			    \
+	    sum_r = 0.0;				    \
+	    sum_i = 0.0;				    \
+	    for (j = 0; j < nrx; j++) {			    \
+		xji_r = x[j + i * NRX].r;		    \
+		xji_i = x[j + i * NRX].i;		    \
+		yjk_r = y[j + k * NRY].r;		    \
+		yjk_i = y[j + k * NRY].i;		    \
+		sum_r += (xji_r * yjk_r - xji_i * yjk_i);   \
+		sum_i += (xji_r * yjk_i + xji_i * yjk_r);   \
+	    }						    \
+	    z[i + k * NCX].r = sum_r;			    \
+	    z[i + k * NCX].i = sum_i;			    \
 	}
+    CCROSSPROD_BODY;
 }
 
 static R_INLINE
 void simple_ccrossprod(Rcomplex *x, int nrx, int ncx,
 		       Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
-    int i, j, k;
-    double xji_r, xji_i, yjk_r, yjk_i;
-    LDOUBLE sum_i, sum_r;
+    double sum_i, sum_r;
+    CCROSSPROD_BODY;
+}
 
-    R_xlen_t NRX = nrx, NRY = nry, NCX = ncx;
-    for (i = 0; i < ncx; i++)
-	for (k = 0; k < ncy; k++) {
-	    sum_r = 0.0;
-	    sum_i = 0.0;
-	    for (j = 0; j < nrx; j++) {
-		xji_r = x[j + i * NRX].r;
-		xji_i = x[j + i * NRX].i;
-		yjk_r = y[j + k * NRY].r;
-		yjk_i = y[j + k * NRY].i;
-		sum_r += (xji_r * yjk_r - xji_i * yjk_i);
-		sum_i += (xji_r * yjk_i + xji_i * yjk_r);
-	    }
-	    z[i + k * NCX].r = sum_r;
-	    z[i + k * NCX].i = sum_i;
+static R_INLINE
+void internal_tccrossprod(Rcomplex *x, int nrx, int ncx,
+		          Rcomplex *y, int nry, int ncy, Rcomplex *z)
+{
+    LDOUBLE sum_i, sum_r;
+#define TCCROSSPROD_BODY				    \
+    int i, j, k;					    \
+    double xij_r, xij_i, ykj_r, ykj_i;			    \
+    R_xlen_t NRX = nrx, NRY = nry;			    \
+    for (i = 0; i < nrx; i++)				    \
+	for (k = 0; k < nry; k++) {			    \
+	    sum_r = 0.0;				    \
+	    sum_i = 0.0;				    \
+	    for (j = 0; j < ncx; j++) {			    \
+		xij_r = x[i + j * NRX].r;		    \
+		xij_i = x[i + j * NRX].i;		    \
+		ykj_r = y[k + j * NRY].r;		    \
+		ykj_i = y[k + j * NRY].i;		    \
+		sum_r += (xij_r * ykj_r - xij_i * ykj_i);   \
+		sum_i += (xij_r * ykj_i + xij_i * ykj_r);   \
+	    }						    \
+	    z[i + k * NRX].r = sum_r;			    \
+	    z[i + k * NRX].i = sum_i;			    \
 	}
+    TCCROSSPROD_BODY;
 }
 
 static R_INLINE
 void simple_tccrossprod(Rcomplex *x, int nrx, int ncx,
 		        Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
-    int i, j, k;
-    double xij_r, xij_i, ykj_r, ykj_i;
-    LDOUBLE sum_i, sum_r;
-
-    R_xlen_t NRX = nrx, NRY = nry;
-    for (i = 0; i < nrx; i++)
-	for (k = 0; k < nry; k++) {
-	    sum_r = 0.0;
-	    sum_i = 0.0;
-	    for (j = 0; j < ncx; j++) {
-		xij_r = x[i + j * NRX].r;
-		xij_i = x[i + j * NRX].i;
-		ykj_r = y[k + j * NRY].r;
-		ykj_i = y[k + j * NRY].i;
-		sum_r += (xij_r * ykj_r - xij_i * ykj_i);
-		sum_i += (xij_r * ykj_i + xij_i * ykj_r);
-	    }
-	    z[i + k * NRX].r = sum_r;
-	    z[i + k * NRX].i = sum_i;
-	}
+    double sum_i, sum_r;
+    TCCROSSPROD_BODY;
 }
 
 static void cmatprod(Rcomplex *x, int nrx, int ncx,
