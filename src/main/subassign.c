@@ -162,9 +162,7 @@ static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
     /* over-committing by 5% seems to be reasonable, but for
        experimenting the environment variable R_EXPAND_Frac can be
        used to adjust this */
-    /**** for now, the default 1.00 preserves the current no
-	  over-commit behavior */
-    static double expand_dflt = 1.00;
+    static double expand_dflt = 1.05;
     static double expand = 0;
     if (expand == 0) {
 	char *envval = getenv("R_EXPAND_FRAC");
@@ -190,8 +188,6 @@ static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
 
     PROTECT(x);
     PROTECT(newx = allocVector(TYPEOF(x), newtruelen));
-    if (newlen < newtruelen)
-	SET_GROWABLE_BIT(newx);
 
     /* Copy the elements into place. */
     switch(TYPEOF(x)) {
@@ -238,9 +234,11 @@ static SEXP EnlargeVector(SEXP x, R_xlen_t newlen)
     default:
 	UNIMPLEMENTED_TYPE("EnlargeVector", x);
     }
-    if (newtruelen > newlen)
+    if (newlen < newtruelen) {
+	SET_GROWABLE_BIT(newx);
 	SET_TRUELENGTH(newx, newtruelen);
-    SETLENGTH(newx, newlen);
+	SETLENGTH(newx, newlen);
+    }
 
     /* Adjust the attribute list. */
     names = getNames(x);

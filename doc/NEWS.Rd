@@ -48,7 +48,7 @@
       \item \code{xtabs()} works more consistently with \code{NA}s, also
       in its result no longer setting them to \code{0}.  Further, a new
       logical option \code{addNA} allows to count \code{NA}s where
-      appropriate.  Additionally, for the case \code{sparse=TRUE}, the
+      appropriate.  Additionally, for the case \code{sparse = TRUE}, the
       result's \code{dimnames} are identical to the default case's.
     }
   }
@@ -298,17 +298,34 @@
       default ones, e.g., for kilo bytes.  From contributions by Henrik
       Bengtsson.
 
+      \item If a reference class has a validity method,
+      \code{validObject} will be called automatically from the
+      default initialization method for reference classes.
+
       \item Improved performance and robustness of matrix multiplication
       using BLAS: DGEMV is now used instead of DGEMM for matrix/vector and
-      vector/matrix multiplication, DGEMM/DGEMV is bypassed when the input
-      has NaN or Inf values, and performance for these input checks has been
-      improved.
+      vector/matrix multiplication, ZGEMM/DGEMM/DGEMV is bypassed when the
+      input has NaN or Inf values, and performance for these input checks has
+      been improved.
 
       \item \code{tapply()} gets new option \code{default = NA}
       allowing to change the previously hardcoded value.
-      
+
       \item \code{read.dcf()} now consistently interprets any
       \sQuote{whitespace} to be stripped to include newlines.
+
+      \item The maximum number of DLLs that can be loaded into R e.g. via
+      dyn.load can now be increased by setting the environment variable
+      \code{R_MAX_NUM_DLLS} before starting R.
+
+      \item Assigning to an element of a vector beyond the current
+      length now over-allocates by a small fraction. The new vector is
+      marked internally as growable, and the true length of the new
+      vector is stored in the \code{truelength} field. This makes
+      building up a vector result by assigning to the next element
+      beyond the current length more efficient, though pre-allocating is
+      still preferred.  The implementation is subject to change and not
+      intended to be used in packages at this time.
     }
   }
 
@@ -352,6 +369,11 @@
       compiler (not C++) is in use.  \code{Rinterface.h} now includes C
       header \file{stdint.h} or C++11 header \file{cstdint} where
       needed.
+      
+      \item Package \pkg{tools} has a new function
+      \code{package_native_routine_registration_skeleton()} to asssist
+      adding native-symbol registration to a package.  See its help and
+      §5.4.1 of \sQuote{Writing R Extensions} for how to use it.
     }
   }
 
@@ -618,6 +640,10 @@
 
       \item Bandwidth selectors \code{bw.ucv()}, \code{bw.bcv()} and
       \code{bw.SJ()} now avoid integer overflow for large sample sizes.
+
+      \item \code{str()} no longer shows \code{"list output truncated"},
+      in cases that list was not shown at all.  Thanks to Neal Fultz
+      (\PR{17219})
     }
   }
 }
@@ -717,9 +743,6 @@
 
       \item \code{qbeta()} underflowed too early in some very asymmetric
       cases.  (\PR{17178})
-      
-      \item \command{R CMD build} no longer wraps a \samp{BugReports}
-      field containing a long URL, which made it unusable in \R <= 3.3.2.
     }
   }
 }
@@ -1281,10 +1304,6 @@
       \code{makevars_site()} in package \pkg{tools} to determine the
       location of the user and site specific \file{Makevars} files for
       customizing package compilation.
-
-      \item If a reference class has a validity method,
-       \code{validObject} will be called automatically from the
-       default initialization method for reference classes.
     }
   }
 
