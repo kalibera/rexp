@@ -17,8 +17,8 @@ stopifnot(is.nan(log(0) %*% 0))
 ## matrix products
 for(mopt in c("default","internal","default.simd")) {
 
-  # BLAS is for now excluded on purpose (some tests fails due to issues
-  # in NaN/Inf propagation in at least one commonly used BLAS implementation)
+  # matprod="blas" is excluded because some tests fails due to issues
+  # in NaN/Inf propagation even in Rblas
   options(matprod=mopt)
 
   m <- matrix(c(1,2,3,4), ncol=2)
@@ -88,6 +88,8 @@ for(mopt in c("default","internal","default.simd")) {
 
   cprod(m1 %*% m2, Cm1 %*% Cm2, matrix(c(9,12,Inf,19,26,Inf), 3, 2) )
   cprod(m1 %*% cv, Cm1 %*% Ccv, matrix(c(59,82,Inf), 3, 1) )
+
+    # the following 7 lines fail with Rblas and matprod = "blas"
   cprod(rv1 %*% m1, Crv1 %*% Cm1, matrix(c(Inf,182), 1, 2) )
 
   cprod(crossprod(m1, m1), crossprod(Cm1, Cm1), matrix(c(Inf,Inf,Inf,77), 2, 2) )
@@ -97,6 +99,8 @@ for(mopt in c("default","internal","default.simd")) {
   cprod(tcrossprod(m1, m1), tcrossprod(Cm1, Cm1), matrix(c(17,22,Inf,22,29,Inf,Inf,Inf,Inf), 3,3) )
   cprod(tcrossprod(m2, m1), tcrossprod(Cm2, Cm1), matrix(c(13,18,17,24,Inf,Inf), 2, 3) )
   cprod(tcrossprod(rv, m1), tcrossprod(Crv, Cm1), matrix(c(59,82,Inf), 1, 3) )
+    # the previous 7 lines fail with Rblas and matprod = "blas"
+
   cprod(tcrossprod(m1, rv), tcrossprod(Cm1, Crv), matrix(c(59,82,Inf), 3, 1) )
 
   ## complex
