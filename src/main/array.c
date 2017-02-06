@@ -645,7 +645,7 @@ static R_INLINE void simple_matprod(double *x, int nrx, int ncx,
 	    sum = 0.0;
 	    for (int j = 0; j < ncx; j++)
 		sum += x[i + j * NRX] * y[j + k * NRY];
-	    z[i + k * NRX] = (double) sum;
+	    z[i + k * NRX] = sum;
 	}
 }
 
@@ -659,7 +659,7 @@ static R_INLINE void simple_crossprod(double *x, int nrx, int ncx,
 	    sum = 0.0;
 	    for (int j = 0; j < nrx; j++)
 		sum += x[j + i * NRX] * y[j + k * NRY];
-	    z[i + k * NCX] = (double) sum;
+	    z[i + k * NCX] = sum;
 	}
 }
 
@@ -674,7 +674,7 @@ static R_INLINE void simple_tcrossprod(double *x, int nrx, int ncx,
 	    sum = 0.0;
 	    for (int j = 0; j < ncx; j++)
 		sum += x[i + j * NRX] * y[k + j * NRY];
-	    z[i + k * NRX] = (double) sum;
+	    z[i + k * NRX] = sum;
 	}
 }
 
@@ -733,8 +733,8 @@ void simple_cmatprod(Rcomplex *x, int nrx, int ncx,
 		sum_r += (xij_r * yjk_r - xij_i * yjk_i);
 		sum_i += (xij_r * yjk_i + xij_i * yjk_r);
 	    }
-	    z[i + k * NRX].r = (double) sum_r;
-	    z[i + k * NRX].i = (double) sum_i;
+	    z[i + k * NRX].r = sum_r;
+	    z[i + k * NRX].i = sum_i;
 	}
 }
 
@@ -759,8 +759,8 @@ void simple_ccrossprod(Rcomplex *x, int nrx, int ncx,
 		sum_r += (xji_r * yjk_r - xji_i * yjk_i);
 		sum_i += (xji_r * yjk_i + xji_i * yjk_r);
 	    }
-	    z[i + k * NCX].r = (double) sum_r;
-	    z[i + k * NCX].i = (double) sum_i;
+	    z[i + k * NCX].r = sum_r;
+	    z[i + k * NCX].i = sum_i;
 	}
 }
 
@@ -785,8 +785,8 @@ void simple_tccrossprod(Rcomplex *x, int nrx, int ncx,
 		sum_r += (xij_r * ykj_r - xij_i * ykj_i);
 		sum_i += (xij_r * ykj_i + xij_i * ykj_r);
 	    }
-	    z[i + k * NRX].r = (double) sum_r;
-	    z[i + k * NRX].i = (double) sum_i;
+	    z[i + k * NRX].r = sum_r;
+	    z[i + k * NRX].i = sum_i;
 	}
 }
 
