@@ -27,6 +27,7 @@
 #include <Internal.h>
 #include <Rmath.h>
 #include <R_ext/RS.h>  /* for Calloc/Free */
+#include <R_ext/Altrep.h> /* for sortedness  stuff */
 
 			/*--- Part I: Comparison Utilities ---*/
 
@@ -166,6 +167,27 @@ SEXP attribute_hidden do_isunsorted(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
 
     SEXP ans, x = CAR(args);
+    int sorted = UNKNOWN_SORTEDNESS;
+    switch(TYPEOF(x)) {
+    case INTSXP:
+	sorted = INTEGER_IS_SORTED(x);
+	break;
+    case REALSXP:
+	sorted = REAL_IS_SORTED(x);
+	break;
+    default:
+	break;
+    }
+    /* right now is.unsorted only tells you if something is sorted ascending
+      hopefully someday it will work for descending too */
+    
+    if(!asLogical(CADR(args))) { /*not strict since we don't memoize that */
+	if(sorted == KNOWN_INCR)
+	    return ScalarLogical(FALSE);
+	else if( sorted == KNOWN_DECR || sorted == KNOWN_UNSORTED)
+	    return ScalarLogical(TRUE);
+    }
+		
     if(DispatchOrEval(call, op, "is.unsorted", args, rho, &ans, 0, 1))
 	return ans;
     PROTECT(args = ans); // args evaluated now
@@ -312,7 +334,6 @@ void revsort(double *a, int *ib, int n)
     }
 }
 
-
 SEXP attribute_hidden do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans;
@@ -328,14 +349,39 @@ SEXP attribute_hidden do_sort(SEXP call, SEXP op, SEXP args, SEXP rho)
 	error(_("only atomic vectors can be sorted"));
     if(TYPEOF(CAR(args)) == RAWSXP)
 	error(_("raw vectors cannot be sorted"));
+    
     /* we need consistent behaviour here, including dropping attibutes,
        so as from 2.3.0 we always duplicate. */
-    PROTECT(ans = duplicate(CAR(args)));
+    int nprot = 0;
+    SEXP x = PROTECT(CAR(args)); nprot++;   
+    if(ALTREP(x)) {
+	int sorted = UNKNOWN_SORTEDNESS;
+	switch(TYPEOF(x)) {
+	case INTSXP:
+	    sorted = INTEGER_IS_SORTED(x);
+	    break;
+	case REALSXP:
+	    sorted = REAL_IS_SORTED(x);
+	    break;
+	default:
+	    break;
+	}
+	if((decreasing && sorted == KNOWN_DECR) ||
+	   (!decreasing && sorted == KNOWN_INCR)) {
+	    
+	    PROTECT(ans = ALTREP_DUPLICATE_EX(x, FALSE));nprot++;
+	    SET_ATTRIB(ans, R_NilValue);
+	    SET_OBJECT(ans, 0);
+	    UNPROTECT(nprot);
+	    return ans;
+	}
+    }
+    PROTECT(ans = duplicate(CAR(args))); nprot++;
     SET_ATTRIB(ans, R_NilValue);  /* this is never called with names */
     SET_OBJECT(ans, 0);		  /* we may have just stripped off the class */
     sortVector(ans, decreasing);
-    UNPROTECT(1);
-    return(ans);
+    UNPROTECT(nprot);
+    return(ans); /* wrapping with metadata happens at end of sort.int */
 }
 
 /* faster versions of shellsort, following Sedgewick (1986) */

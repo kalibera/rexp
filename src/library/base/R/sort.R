@@ -16,6 +16,14 @@
 #  A copy of the GNU General Public License is available at
 #  https://www.R-project.org/Licenses/
 
+## this matches the enum in R_ext/Altrep.h
+KNOWN_INCR = 1
+KNOWN_DECR = -1
+KNOWN_UNSORTED = 0
+UNKNOWN_SORTEDNESS = NA_integer_
+
+isWrappable = function(x) is.atomic(x) && mode(x) %in% c("integer", "numeric", "character")
+
 sort <- function(x, decreasing = FALSE, ...)
 {
     if(!is.logical(decreasing) || length(decreasing) != 1L)
@@ -26,8 +34,13 @@ sort <- function(x, decreasing = FALSE, ...)
 sort.default <- function(x, decreasing = FALSE, na.last = NA, ...)
 {
     ## The first case includes factors.
-    if(is.object(x)) x[order(x, na.last = na.last, decreasing = decreasing)]
-    else sort.int(x, na.last = na.last, decreasing = decreasing, ...)
+    if(is.object(x)) {
+        sorted = if(decreasing) KNOWN_DECR else KNOWN_INCR
+        ans = x[order(x, na.last = na.last, decreasing = decreasing)]
+        noNA = (length(ans) == 0 || !is.na(ans[length(ans)]))
+        .Internal(wrap_meta(ans, sorted, noNA))
+    } else
+        sort.int(x, na.last = na.last, decreasing = decreasing, ...)
 }
 
 sort.int <-
@@ -51,6 +64,18 @@ sort.int <-
         o <- order(x, na.last = na.last, decreasing = decreasing,
                    method = "radix")
         y <- x[o]
+
+        ## this code is duplicated at end of function, but the return call requires it...
+        if((is.integer(y) || is.numeric(y)) && 
+           (is.na(na.last) || na.last)) {
+            if(decreasing)
+                sorted = KNOWN_DECR
+            else
+                sorted = KNOWN_INCR
+            has.na = length(y) > 0 && is.na(y[length(y)])
+            y = .Internal(wrap_meta(y, sorted, !has.na))
+        }         
+        
         return(if (index.return) list(x = y, ix = o) else y)
     }
     else if (method == "auto" || !is.numeric(x))
@@ -110,7 +135,15 @@ sort.int <-
 	y <- if(!na.last) c(nas, y) else c(y, nas)
     if(isfact)
         y <- (if (isord) ordered else factor)(y, levels = seq_len(nlev),
-                                              labels = lev)
+            labels = lev)
+    if((is.integer(y) || is.numeric(y)) && is.null(partial) &&
+       (is.na(na.last) || na.last)) {
+        if(decreasing)
+            sorted = KNOWN_DECR
+        else
+            sorted = KNOWN_INCR
+        y = .Internal(wrap_meta(y, sorted, !has.na))
+    }
     y
 }
 
