@@ -621,6 +621,22 @@ static Rboolean mayHaveNaNOrInf(double *x, R_xlen_t n)
     return FALSE;
 }
 
+/*
+ This is an experimental version that has been observed to run fast on some
+ SIMD hardware with GCC and ICC.
+ Note that the OpenMP reduction assumes associativity of addition, which is
+ safe here, because the result is only used for an imprecise test for
+ the presence of NaN and Inf values.
+*/
+static Rboolean mayHaveNaNOrInf_simd(double *x, R_xlen_t n)
+{
+    double s = 0;
+    #pragma omp simd reduction(+:s)
+    for (R_xlen_t i = 0; i < n; i++)
+	s += x[i];
+    return !R_FINITE(s);
+}
+
 static Rboolean cmayHaveNaNOrInf(Rcomplex *x, R_xlen_t n)
 {
     /* With HAVE_FORTRAN_DOUBLE_COMPLEX set, it should be clear that
@@ -634,8 +650,20 @@ static Rboolean cmayHaveNaNOrInf(Rcomplex *x, R_xlen_t n)
     return FALSE;
 }
 
-static R_INLINE void internal_matprod(double *x, int nrx, int ncx,
-                                      double *y, int nry, int ncy, double *z)
+/* experimental version for SIMD hardware (see also mayHaveNaNOrInf_simd) */
+static Rboolean cmayHaveNaNOrInf_simd(Rcomplex *x, R_xlen_t n)
+{
+    double s = 0;
+    #pragma omp simd reduction(+:s)
+    for (R_xlen_t i = 0; i < n; i++) {
+	s += x[i].r;
+	s += x[i].i;
+    }
+    return !R_FINITE(s);
+}
+
+static void internal_matprod(double *x, int nrx, int ncx,
+                             double *y, int nry, int ncy, double *z)
 {
     LDOUBLE sum;
 #define MATPROD_BODY					\
@@ -650,15 +678,15 @@ static R_INLINE void internal_matprod(double *x, int nrx, int ncx,
     MATPROD_BODY;
 }
 
-static R_INLINE void simple_matprod(double *x, int nrx, int ncx,
-                                    double *y, int nry, int ncy, double *z)
+static void simple_matprod(double *x, int nrx, int ncx,
+                           double *y, int nry, int ncy, double *z)
 {
     double sum;
     MATPROD_BODY;
 }
 
-static R_INLINE void internal_crossprod(double *x, int nrx, int ncx,
-                                        double *y, int nry, int ncy, double *z)
+static void internal_crossprod(double *x, int nrx, int ncx,
+                               double *y, int nry, int ncy, double *z)
 {
     LDOUBLE sum;
 #define CROSSPROD_BODY					\
@@ -673,15 +701,15 @@ static R_INLINE void internal_crossprod(double *x, int nrx, int ncx,
     CROSSPROD_BODY;
 }
 
-static R_INLINE void simple_crossprod(double *x, int nrx, int ncx,
-                                      double *y, int nry, int ncy, double *z)
+static void simple_crossprod(double *x, int nrx, int ncx,
+                             double *y, int nry, int ncy, double *z)
 {
     double sum;
     CROSSPROD_BODY;
 }
 
-static R_INLINE void internal_tcrossprod(double *x, int nrx, int ncx,
-                                         double *y, int nry, int ncy, double *z)
+static void internal_tcrossprod(double *x, int nrx, int ncx,
+                                double *y, int nry, int ncy, double *z)
 {
     LDOUBLE sum;
 #define TCROSSPROD_BODY					\
@@ -696,22 +724,26 @@ static R_INLINE void internal_tcrossprod(double *x, int nrx, int ncx,
     TCROSSPROD_BODY;
 }
 
-static R_INLINE void simple_tcrossprod(double *x, int nrx, int ncx,
-                                       double *y, int nry, int ncy, double *z)
+static void simple_tcrossprod(double *x, int nrx, int ncx,
+                              double *y, int nry, int ncy, double *z)
 {
     double sum;
     TCROSSPROD_BODY;
 }
 
+
 static void matprod(double *x, int nrx, int ncx,
 		    double *y, int nry, int ncy, double *z)
 {
-    char *transN = "N", *transT = "T";
-    double one = 1.0, zero = 0.0;
-    int ione = 1;
     R_xlen_t NRX = nrx, NRY = nry;
+    if (nrx == 0 || ncx == 0 || nry == 0 || ncy == 0) {
+	/* zero-extent operations should return zeroes */
+	for(R_xlen_t i = 0; i < NRX*ncy; i++) z[i] = 0;
+	return;
+    }
 
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
+    switch(R_Matprod) {
+	case MATPROD_DEFAULT:
 	/* Don't trust the BLAS to handle NA/NaNs correctly: PR#4582
 	 * The test is only O(n) here.
 	 *
@@ -720,26 +752,44 @@ static void matprod(double *x, int nrx, int ncx,
 	 * Using these special values may cause LAPACK to return unexpected
 	 * results or become unstable."
 	 */
-	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
-	    simple_matprod(x, nrx, ncx, y, nry, ncy, z);
-	else if (ncy == 1) /* matrix-vector or dot product */
-	    F77_CALL(dgemv)(transN, &nrx, &ncx, &one, x,
-	                    &nrx, y, &ione, &zero, z, &ione);
-	else if (nrx == 1) /* vector-matrix */
-	    /* Instead of xY, compute (xY)^T == (Y^T)(x^T)
-	       The result is a vector, so transposing its content is no-op */
-	    F77_CALL(dgemv)(transT, &nry, &ncy, &one, y,
-	                    &nry, x, &ione, &zero, z, &ione);
-	else /* matrix-matrix or outer product */
-	    F77_CALL(dgemm)(transN, transN, &nrx, &ncy, &ncx, &one,
-			    x, &nrx, y, &nry, &zero, z, &nrx);
-    } else /* zero-extent operations should return zeroes */
-	for(R_xlen_t i = 0; i < NRX*ncy; i++) z[i] = 0;
+	    if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy)) {
+		simple_matprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+	case MATPROD_INTERNAL:
+	    internal_matprod(x, nrx, ncx, y, nry, ncy, z);
+	    return;
+	case MATPROD_BLAS:
+	    break;
+	case MATPROD_DEFAULT_SIMD:
+	    if (mayHaveNaNOrInf_simd(x, NRX*ncx) ||
+		    mayHaveNaNOrInf_simd(y, NRY*ncy)) {
+		simple_matprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+    }
+
+    char *transN = "N", *transT = "T";
+    double one = 1.0, zero = 0.0;
+    int ione = 1;
+
+    if (ncy == 1) /* matrix-vector or dot product */
+	F77_CALL(dgemv)(transN, &nrx, &ncx, &one, x,
+			&nrx, y, &ione, &zero, z, &ione);
+    else if (nrx == 1) /* vector-matrix */
+	/* Instead of xY, compute (xY)^T == (Y^T)(x^T)
+	   The result is a vector, so transposing its content is no-op */
+	F77_CALL(dgemv)(transT, &nry, &ncy, &one, y,
+			&nry, x, &ione, &zero, z, &ione);
+    else /* matrix-matrix or outer product */
+	F77_CALL(dgemm)(transN, transN, &nrx, &ncy, &ncx, &one,
+			x, &nrx, y, &nry, &zero, z, &nrx);
 }
 
-static R_INLINE
-void internal_cmatprod(Rcomplex *x, int nrx, int ncx,
-		       Rcomplex *y, int nry, int ncy, Rcomplex *z)
+static void internal_cmatprod(Rcomplex *x, int nrx, int ncx,
+                              Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
     LDOUBLE sum_i, sum_r;
 #define CMATPROD_BODY					    \
@@ -764,17 +814,15 @@ void internal_cmatprod(Rcomplex *x, int nrx, int ncx,
     CMATPROD_BODY;
 }
 
-static R_INLINE
-void simple_cmatprod(Rcomplex *x, int nrx, int ncx,
-		     Rcomplex *y, int nry, int ncy, Rcomplex *z)
+static void simple_cmatprod(Rcomplex *x, int nrx, int ncx,
+                            Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
     double sum_i, sum_r;
     CMATPROD_BODY;
 }
 
-static R_INLINE
-void internal_ccrossprod(Rcomplex *x, int nrx, int ncx,
-		         Rcomplex *y, int nry, int ncy, Rcomplex *z)
+static void internal_ccrossprod(Rcomplex *x, int nrx, int ncx,
+                                Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
     LDOUBLE sum_i, sum_r;
 #define CCROSSPROD_BODY					    \
@@ -799,17 +847,15 @@ void internal_ccrossprod(Rcomplex *x, int nrx, int ncx,
     CCROSSPROD_BODY;
 }
 
-static R_INLINE
-void simple_ccrossprod(Rcomplex *x, int nrx, int ncx,
-		       Rcomplex *y, int nry, int ncy, Rcomplex *z)
+static void simple_ccrossprod(Rcomplex *x, int nrx, int ncx,
+                              Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
     double sum_i, sum_r;
     CCROSSPROD_BODY;
 }
 
-static R_INLINE
-void internal_tccrossprod(Rcomplex *x, int nrx, int ncx,
-		          Rcomplex *y, int nry, int ncy, Rcomplex *z)
+static void internal_tccrossprod(Rcomplex *x, int nrx, int ncx,
+                                 Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
     LDOUBLE sum_i, sum_r;
 #define TCCROSSPROD_BODY				    \
@@ -834,9 +880,8 @@ void internal_tccrossprod(Rcomplex *x, int nrx, int ncx,
     TCCROSSPROD_BODY;
 }
 
-static R_INLINE
-void simple_tccrossprod(Rcomplex *x, int nrx, int ncx,
-		        Rcomplex *y, int nry, int ncy, Rcomplex *z)
+static void simple_tccrossprod(Rcomplex *x, int nrx, int ncx,
+                               Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
     double sum_i, sum_r;
     TCCROSSPROD_BODY;
@@ -845,23 +890,47 @@ void simple_tccrossprod(Rcomplex *x, int nrx, int ncx,
 static void cmatprod(Rcomplex *x, int nrx, int ncx,
 		     Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
-    char *transa = "N", *transb = "N";
-    Rcomplex one, zero;
     R_xlen_t NRX = nrx, NRY = nry;
+    if (nrx == 0 || ncx == 0 || nry == 0 || ncy == 0) {
+	/* zero-extent operations should return zeroes */
+	for(R_xlen_t i = 0; i < NRX*ncy; i++) z[i].r = z[i].i = 0;
+	return;
+    }
 
-    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
 #ifndef HAVE_FORTRAN_DOUBLE_COMPLEX
+    if (R_Matprod == MATPROD_INTERNAL)
+	internal_cmatprod(x, nrx, ncx, y, nry, ncy, z);
+    else
 	simple_cmatprod(x, nrx, ncx, y, nry, ncy, z);
 #else
-	if (cmayHaveNaNOrInf(x, NRX*ncx) || cmayHaveNaNOrInf(y, NRY*ncy))
-	    simple_cmatprod(x, nrx, ncx, y, nry, ncy, z);
-	else
-	    F77_CALL(zgemm)(transa, transb, &nrx, &ncy, &ncx, &one,
-	                    x, &nrx, y, &nry, &zero, z, &nrx);
+    switch(R_Matprod) {
+	case MATPROD_DEFAULT:
+	    if (cmayHaveNaNOrInf(x, NRX*ncx) || cmayHaveNaNOrInf(y, NRY*ncy)) {
+		simple_cmatprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+	case MATPROD_INTERNAL:
+	    internal_cmatprod(x, nrx, ncx, y, nry, ncy, z);
+	    return;
+	case MATPROD_BLAS:
+	    break;
+	case MATPROD_DEFAULT_SIMD:
+	    if (cmayHaveNaNOrInf_simd(x, NRX*ncx) ||
+		    cmayHaveNaNOrInf_simd(y, NRY*ncy)) {
+		simple_cmatprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+    }
+
+    char *transa = "N", *transb = "N";
+    Rcomplex one, zero;
+    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
+
+    F77_CALL(zgemm)(transa, transb, &nrx, &ncy, &ncx, &one,
+                    x, &nrx, y, &nry, &zero, z, &nrx);
 #endif
-    } else /* zero-extent operations should return zeroes */
-	for(R_xlen_t i = 0; i < NRX*ncy; i++) z[i].r = z[i].i = 0;
 }
 
 static void symcrossprod(double *x, int nr, int nc, double *z)
@@ -882,53 +951,98 @@ static void symcrossprod(double *x, int nr, int nc, double *z)
 static void crossprod(double *x, int nrx, int ncx,
 		      double *y, int nry, int ncy, double *z)
 {
+    R_xlen_t NRX = nrx, NRY = nry;
+    if (nrx == 0 || ncx == 0 || nry == 0 || ncy == 0) {
+	/* zero-extent operations should return zeroes */
+	R_xlen_t NCX = ncx;
+	for(R_xlen_t i = 0; i < NCX*ncy; i++) z[i] = 0;
+	return;
+    }
+
+    switch(R_Matprod) {
+	case MATPROD_DEFAULT:
+	    /* see matprod for more details */
+	    if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy)) {
+		simple_crossprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+	case MATPROD_INTERNAL:
+	    internal_crossprod(x, nrx, ncx, y, nry, ncy, z);
+	    return;
+	case MATPROD_BLAS:
+	    break;
+	case MATPROD_DEFAULT_SIMD:
+	    if (mayHaveNaNOrInf_simd(x, NRX*ncx) ||
+		    mayHaveNaNOrInf_simd(y, NRY*ncy)) {
+		simple_crossprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+    }
+
     char *transT = "T", *transN = "N";
     double one = 1.0, zero = 0.0;
     int ione = 1;
-    R_xlen_t NRX = nrx, NRY = nry;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
-	    /* see matprod for more details */
-	    simple_crossprod(x, nrx, ncx, y, nry, ncy, z);
-	else if (ncy == 1) /* matrix-vector or dot product */
-	    F77_CALL(dgemv)(transT, &nrx, &ncx, &one, x,
-	                    &nrx, y, &ione, &zero, z, &ione);
-	else if (ncx == 1) /* vector-matrix */
-	    /* Instead of (x^T)Y, compute ((x^T)Y)^T == (Y^T)x
-	       The result is a vector, so transposing its content is no-op */
-	    F77_CALL(dgemv)(transT, &nry, &ncy, &one, y,
-	                    &nry, x, &ione, &zero, z, &ione);
-	else /* matrix-matrix  or outer product */
-	    F77_CALL(dgemm)(transT, transN, &ncx, &ncy, &nrx, &one,
-			x, &nrx, y, &nry, &zero, z, &ncx);
-    } else { /* zero-extent operations should return zeroes */
-	R_xlen_t NCX = ncx;
-	for(R_xlen_t i = 0; i < NCX*ncy; i++) z[i] = 0;
-    }
+
+    if (ncy == 1) /* matrix-vector or dot product */
+	F77_CALL(dgemv)(transT, &nrx, &ncx, &one, x,
+			&nrx, y, &ione, &zero, z, &ione);
+    else if (ncx == 1) /* vector-matrix */
+	/* Instead of (x^T)Y, compute ((x^T)Y)^T == (Y^T)x
+	   The result is a vector, so transposing its content is no-op */
+	F77_CALL(dgemv)(transT, &nry, &ncy, &one, y,
+			&nry, x, &ione, &zero, z, &ione);
+    else /* matrix-matrix  or outer product */
+	F77_CALL(dgemm)(transT, transN, &ncx, &ncy, &nrx, &one,
+		        x, &nrx, y, &nry, &zero, z, &ncx);
 }
 
 static void ccrossprod(Rcomplex *x, int nrx, int ncx,
 		       Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
-    char *transa = "T", *transb = "N";
-    Rcomplex one, zero;
     R_xlen_t NRX = nrx, NRY = nry;
-
-    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-#ifndef HAVE_FORTRAN_DOUBLE_COMPLEX
-	simple_ccrossprod(x, nrx, ncx, y, nry, ncy, z);
-#else
-	if (cmayHaveNaNOrInf(x, NRX*ncx) || cmayHaveNaNOrInf(y, NRY*ncy))
-	    simple_ccrossprod(x, nrx, ncx, y, nry, ncy, z);
-	else
-	    F77_CALL(zgemm)(transa, transb, &ncx, &ncy, &nrx, &one,
-	                    x, &nrx, y, &nry, &zero, z, &ncx);
-#endif
-    } else { /* zero-extent operations should return zeroes */
+    if (nrx == 0 || ncx == 0 || nry == 0 || ncy == 0) {
+	/* zero-extent operations should return zeroes */
 	R_xlen_t NCX = ncx;
 	for(R_xlen_t i = 0; i < NCX*ncy; i++) z[i].r = z[i].i = 0;
+	return;
     }
+
+#ifndef HAVE_FORTRAN_DOUBLE_COMPLEX
+    if (R_Matprod == MATPROD_INTERNAL)
+	internal_ccrossprod(x, nrx, ncx, y, nry, ncy, z);
+    else
+	simple_ccrossprod(x, nrx, ncx, y, nry, ncy, z);
+#else
+    switch(R_Matprod) {
+	case MATPROD_DEFAULT:
+	    if (cmayHaveNaNOrInf(x, NRX*ncx) || cmayHaveNaNOrInf(y, NRY*ncy)) {
+		simple_ccrossprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+	case MATPROD_INTERNAL:
+	    internal_ccrossprod(x, nrx, ncx, y, nry, ncy, z);
+	    return;
+	case MATPROD_BLAS:
+	    break;
+	case MATPROD_DEFAULT_SIMD:
+	    if (cmayHaveNaNOrInf_simd(x, NRX*ncx) ||
+		    cmayHaveNaNOrInf_simd(y, NRY*ncy)) {
+		simple_ccrossprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+    }
+
+    char *transa = "T", *transb = "N";
+    Rcomplex one, zero;
+    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
+
+    F77_CALL(zgemm)(transa, transb, &ncx, &ncy, &nrx, &one,
+                    x, &nrx, y, &nry, &zero, z, &ncx);
+#endif
 }
 
 static void symtcrossprod(double *x, int nr, int nc, double *z)
@@ -949,53 +1063,95 @@ static void symtcrossprod(double *x, int nr, int nc, double *z)
 static void tcrossprod(double *x, int nrx, int ncx,
 		      double *y, int nry, int ncy, double *z)
 {
+    R_xlen_t NRX = nrx, NRY = nry;
+    if (nrx == 0 || ncx == 0 || nry == 0 || ncy == 0) {
+	/* zero-extent operations should return zeroes */
+	for(R_xlen_t i = 0; i < NRX*nry; i++) z[i] = 0;
+	return;
+    }
+
+    switch(R_Matprod) {
+	case MATPROD_DEFAULT:
+	    if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy)) {
+		simple_tcrossprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+	case MATPROD_INTERNAL:
+	    internal_tcrossprod(x, nrx, ncx, y, nry, ncy, z);
+	    return;
+	case MATPROD_BLAS:
+	    break;
+	case MATPROD_DEFAULT_SIMD:
+	    if (mayHaveNaNOrInf_simd(x, NRX*ncx) ||
+		    mayHaveNaNOrInf_simd(y, NRY*ncy)) {
+		simple_tcrossprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+    }
+
     char *transN = "N", *transT = "T";
     double one = 1.0, zero = 0.0;
     int ione = 1;
-    R_xlen_t NRX = nrx, NRY = nry;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
-	if (mayHaveNaNOrInf(x, NRX*ncx) || mayHaveNaNOrInf(y, NRY*ncy))
-	    /* see matprod for more details */
-	    simple_tcrossprod(x, nrx, ncx, y, nry, ncy, z);
-	else if (nry == 1) /* matrix-vector or dot product */
-	    F77_CALL(dgemv)(transN, &nrx, &ncx, &one, x,
-	                    &nrx, y, &ione, &zero, z, &ione);
-	else if (nrx == 1) /* vector-matrix */
-	    /* Instead of x(Y^T), compute (x(Y^T))^T == Y(x^T)
-	       The result is a vector, so transposing its content is no-op */
-	    F77_CALL(dgemv)(transN, &nry, &ncy, &one, y,
-	                    &nry, x, &ione, &zero, z, &ione);
-	else /* matrix-matrix or outer product */
-	    F77_CALL(dgemm)(transN, transT, &nrx, &nry, &ncx, &one,
-			x, &nrx, y, &nry, &zero, z, &nrx);
-    } else { /* zero-extent operations should return zeroes */
-	R_xlen_t NRX = nrx;
-	for(R_xlen_t i = 0; i < NRX*nry; i++) z[i] = 0;
-    }
+
+    if (nry == 1) /* matrix-vector or dot product */
+	F77_CALL(dgemv)(transN, &nrx, &ncx, &one, x,
+			&nrx, y, &ione, &zero, z, &ione);
+    else if (nrx == 1) /* vector-matrix */
+	/* Instead of x(Y^T), compute (x(Y^T))^T == Y(x^T)
+	   The result is a vector, so transposing its content is no-op */
+	F77_CALL(dgemv)(transN, &nry, &ncy, &one, y,
+			&nry, x, &ione, &zero, z, &ione);
+    else /* matrix-matrix or outer product */
+	F77_CALL(dgemm)(transN, transT, &nrx, &nry, &ncx, &one,
+		    x, &nrx, y, &nry, &zero, z, &nrx);
 }
 
 static void tccrossprod(Rcomplex *x, int nrx, int ncx,
 			Rcomplex *y, int nry, int ncy, Rcomplex *z)
 {
-    char *transa = "N", *transb = "T";
-    Rcomplex one, zero;
     R_xlen_t NRX = nrx, NRY = nry;
+    if (nrx == 0 || ncx == 0 || nry == 0 || ncy == 0) {
+	/* zero-extent operations should return zeroes */
+	for(R_xlen_t i = 0; i < NRX*nry; i++) z[i].r = z[i].i = 0;
+	return;
+    }
 
-    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
-    if (nrx > 0 && ncx > 0 && nry > 0 && ncy > 0) {
 #ifndef HAVE_FORTRAN_DOUBLE_COMPLEX
+    if (R_Matprod == MATPROD_INTERNAL)
+	internal_tccrossprod(x, nrx, ncx, y, nry, ncy, z);
+    else
 	simple_tccrossprod(x, nrx, ncx, y, nry, ncy, z);
 #else
-	if (cmayHaveNaNOrInf(x, NRX*ncx) || cmayHaveNaNOrInf(y, NRY*ncy))
-	    simple_tccrossprod(x, nrx, ncx, y, nry, ncy, z);
-	else
-	    F77_CALL(zgemm)(transa, transb, &nrx, &nry, &ncx, &one,
-	                    x, &nrx, y, &nry, &zero, z, &nrx);
-#endif
-    } else { /* zero-extent operations should return zeroes */
-	R_xlen_t NRX = nrx;
-	for(R_xlen_t i = 0; i < NRX*nry; i++) z[i].r = z[i].i = 0;
+    switch(R_Matprod) {
+	case MATPROD_DEFAULT:
+	    if (cmayHaveNaNOrInf(x, NRX*ncx) || cmayHaveNaNOrInf(y, NRY*ncy)) {
+		simple_tccrossprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
+	case MATPROD_INTERNAL:
+	    internal_tccrossprod(x, nrx, ncx, y, nry, ncy, z);
+	    return;
+	case MATPROD_BLAS:
+	    break;
+	case MATPROD_DEFAULT_SIMD:
+	    if (cmayHaveNaNOrInf_simd(x, NRX*ncx) ||
+		    cmayHaveNaNOrInf_simd(y, NRY*ncy)) {
+		simple_tccrossprod(x, nrx, ncx, y, nry, ncy, z);
+		return;
+	    }
+	    break; /* use blas */
     }
+
+    char *transa = "N", *transb = "T";
+    Rcomplex one, zero;
+    one.r = 1.0; one.i = zero.r = zero.i = 0.0;
+
+    F77_CALL(zgemm)(transa, transb, &nrx, &nry, &ncx, &one,
+                    x, &nrx, y, &nry, &zero, z, &nrx);
+#endif
 }
 
 
