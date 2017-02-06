@@ -935,17 +935,40 @@ static void cmatprod(Rcomplex *x, int nrx, int ncx,
 
 static void symcrossprod(double *x, int nr, int nc, double *z)
 {
-    char *trans = "T", *uplo = "U";
-    double one = 1.0, zero = 0.0;
-    R_xlen_t NC = nc;
-    if (nr > 0 && nc > 0) {
-	F77_CALL(dsyrk)(uplo, trans, &nc, &nr, &one, x, &nr, &zero, z, &nc);
-	for (int i = 1; i < nc; i++)
-	    for (int j = 0; j < i; j++) z[i + NC *j] = z[j + NC * i];
-    } else { /* zero-extent operations should return zeroes */
+    R_xlen_t NR = nr, NC = nc;
+    if (nr == 0 || nc == 0) {
+	/* zero-extent operations should return zeroes */
 	for(R_xlen_t i = 0; i < NC*NC; i++) z[i] = 0;
+	return;
     }
 
+    switch(R_Matprod) {
+	case MATPROD_DEFAULT:
+	    /* see matprod for more details */
+	    if (mayHaveNaNOrInf(x, NR*nc)) {
+		simple_crossprod(x, nr, nc, x, nr, nc, z);
+		return;
+	    }
+	    break; /* use blas */
+	case MATPROD_INTERNAL:
+	    internal_crossprod(x, nr, nc, x, nr, nc, z);
+	    return;
+	case MATPROD_BLAS:
+	    break;
+	case MATPROD_DEFAULT_SIMD:
+	    if (mayHaveNaNOrInf_simd(x, NR*nc))  {
+		simple_crossprod(x, nr, nc, x, nr, nc, z);
+		return;
+	    }
+	    break; /* use blas */
+    }
+
+    char *trans = "T", *uplo = "U";
+    double one = 1.0, zero = 0.0;
+
+    F77_CALL(dsyrk)(uplo, trans, &nc, &nr, &one, x, &nr, &zero, z, &nc);
+    for (int i = 1; i < nc; i++)
+	for (int j = 0; j < i; j++) z[i + NC *j] = z[j + NC * i];
 }
 
 static void crossprod(double *x, int nrx, int ncx,
@@ -1047,17 +1070,40 @@ static void ccrossprod(Rcomplex *x, int nrx, int ncx,
 
 static void symtcrossprod(double *x, int nr, int nc, double *z)
 {
-    char *trans = "N", *uplo = "U";
-    double one = 1.0, zero = 0.0;
-    if (nr > 0 && nc > 0) {
-	F77_CALL(dsyrk)(uplo, trans, &nr, &nc, &one, x, &nr, &zero, z, &nr);
-	for (int i = 1; i < nr; i++)
-	    for (int j = 0; j < i; j++) z[i + nr *j] = z[j + nr * i];
-    } else { /* zero-extent operations should return zeroes */
-	R_xlen_t NR = nr;
+    R_xlen_t NR = nr;
+    if (nr == 0 || nc == 0) {
+	/* zero-extent operations should return zeroes */
 	for(R_xlen_t i = 0; i < NR*NR; i++) z[i] = 0;
+	return;
     }
 
+    switch(R_Matprod) {
+	case MATPROD_DEFAULT:
+	    /* see matprod for more details */
+	    if (mayHaveNaNOrInf(x, NR*nc)) {
+		simple_tcrossprod(x, nr, nc, x, nr, nc, z);
+		return;
+	    }
+	    break; /* use blas */
+	case MATPROD_INTERNAL:
+	    internal_tcrossprod(x, nr, nc, x, nr, nc, z);
+	    return;
+	case MATPROD_BLAS:
+	    break;
+	case MATPROD_DEFAULT_SIMD:
+	    if (mayHaveNaNOrInf_simd(x, NR*nc))  {
+		simple_tcrossprod(x, nr, nc, x, nr, nc, z);
+		return;
+	    }
+	    break; /* use blas */
+    }
+
+    char *trans = "N", *uplo = "U";
+    double one = 1.0, zero = 0.0;
+
+    F77_CALL(dsyrk)(uplo, trans, &nr, &nc, &one, x, &nr, &zero, z, &nr);
+    for (int i = 1; i < nr; i++)
+	for (int j = 0; j < i; j++) z[i + nr *j] = z[j + nr * i];
 }
 
 static void tcrossprod(double *x, int nrx, int ncx,
