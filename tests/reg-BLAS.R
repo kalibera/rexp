@@ -14,6 +14,12 @@ stopifnot(is.nan(log(0) %*% 0))
 ## depended on the BLAS in use: some (including the reference BLAS)
 ## had z[1,3] == 0 and log(0) %*% 0 as as.matrix(0).
 
+# BLAS is for now excluded on purpose (some tests fails due to issues
+# in NaN/Inf propagation in at least one commonly used BLAS implementation)
+
+for(mopt in c("default","internal","default.simd")) {
+  options(matprod=mopt)
+
 ## matrix products
 
 m <- matrix(c(1,2,3,4), ncol=2)
@@ -100,3 +106,5 @@ m2 <- matrix(c(1+1i,2+2i,3+3i,4+4i), ncol=2)
 stopifnot(identical(m1 %*% m2, matrix(c(18i,24i,30i,38i,52i,66i), 3, 2) ))
 stopifnot(identical(crossprod(m1, m1), t(m1) %*% m1))
 stopifnot(identical(tcrossprod(m1, m1), m1 %*% t(m1)))
+
+}
