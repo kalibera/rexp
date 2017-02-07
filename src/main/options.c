@@ -322,7 +322,13 @@ void attribute_hidden InitOptions(void)
     v = CDR(v);
 
     SET_TAG(v, install("matprod"));
-    SETCAR(v, mkString("default"));
+    switch(R_Matprod) {
+	case MATPROD_DEFAULT: p = "default"; break;
+	case MATPROD_INTERNAL: p = "internal"; break;
+	case MATPROD_BLAS: p = "blas"; break;
+	case MATPROD_DEFAULT_SIMD: p = "default.simd"; break;
+    }
+    SETCAR(v, mkString(p));
     v = CDR(v);
 
 #ifdef HAVE_RL_COMPLETION_MATCHES
