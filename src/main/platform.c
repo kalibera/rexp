@@ -43,7 +43,11 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 #include <ctype.h>			/* toupper */
+#include <limits.h>
 #include <time.h>			/* for ctime */
+
+#include <R_ext/BLAS.h>
+#include <R_ext/Lapack.h>
 
 # include <errno.h>
 
@@ -2985,12 +2989,24 @@ void u_getVersion(UVersionInfo versionArray);
 # include <readline/readline.h>
 #endif
 
+#if defined(HAVE_REALPATH) && !defined(HAVE_DECL_REALPATH)
+extern char *realpath(const char *path, char *resolved_path);
+#endif
+
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h> /* for dladdr */
+#endif
+
+#if defined(HAVE_DLADDR) && !defined(HAVE_DECL_DLADDR)
+int dladdr(void *addr, Dl_info *info);
+#endif
+
 SEXP attribute_hidden
 do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    SEXP ans = PROTECT(allocVector(STRSXP, 8));
-    SEXP nms = PROTECT(allocVector(STRSXP, 8));
+    SEXP ans = PROTECT(allocVector(STRSXP, 10));
+    SEXP nms = PROTECT(allocVector(STRSXP, 10));
     setAttrib(ans, R_NamesSymbol, nms);
     unsigned int i = 0;
     char p[256];
@@ -3039,6 +3055,29 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     SET_STRING_ELT(ans, i, mkChar(""));
 #endif
     SET_STRING_ELT(nms, i++, mkChar("readline"));
+
+    SET_STRING_ELT(ans, i, mkChar(""));
+    SET_STRING_ELT(ans, i+1, mkChar(""));
+
+#if defined(HAVE_DLADDR) && defined(HAVE_REALPATH)
+    Dl_info dl_info;
+    char buf[PATH_MAX+1];
+    /* arbitrary blas function */
+    if (dladdr((void *)F77_CALL(dgemm), &dl_info)) {
+	char *res = realpath(dl_info.dli_fname, buf);
+	if (res)
+	    SET_STRING_ELT(ans, i, mkChar(res));
+    }
+    /* arbitrary lapack function */
+    if (dladdr((void *)F77_CALL(dsyev), &dl_info)) {
+	char *res = realpath(dl_info.dli_fname, buf);
+	if (res)
+	    SET_STRING_ELT(ans, i+1, mkChar(res));
+    }
+#endif
+    SET_STRING_ELT(nms, i++, mkChar("blas"));
+    SET_STRING_ELT(nms, i++, mkChar("lapack"));
+
     UNPROTECT(2);
     return ans;
 }
