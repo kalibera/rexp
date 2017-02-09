@@ -50,6 +50,18 @@
       logical option \code{addNA} allows to count \code{NA}s where
       appropriate.  Additionally, for the case \code{sparse = TRUE}, the
       result's \code{dimnames} are identical to the default case's.
+
+      \item Matrix products now consistently bypass BLAS when the inputs
+      have NaN/Inf values. Performance of the check of inputs has been
+      improved. Performance when BLAS is used is improved for matrix/vector
+      and vector/matrix multiplication (DGEMV is now used instead of DGEMM).
+
+      One can now choose from alternative matrix product implementations via
+      \code{options(matprod = )}.  The \code{"internal"} implementation is
+      unoptimized but consistent in precision with other summation in R
+      (uses \code{long double} accumulators).  \code{"blas"} calls BLAS
+      directly for best performance, yet usually with undefined behavior for
+      inputs with NaN/Inf.
     }
   }
 
@@ -302,12 +314,6 @@
       \code{validObject} will be called automatically from the
       default initialization method for reference classes.
 
-      \item Improved performance and robustness of matrix multiplication
-      using BLAS: DGEMV is now used instead of DGEMM for matrix/vector and
-      vector/matrix multiplication, ZGEMM/DGEMM/DGEMV is bypassed when the
-      input has NaN or Inf values, and performance for these input checks has
-      been improved.
-
       \item \code{tapply()} gets new option \code{default = NA}
       allowing to change the previously hardcoded value.
 
@@ -326,6 +332,10 @@
       beyond the current length more efficient, though pre-allocating is
       still preferred.  The implementation is subject to change and not
       intended to be used in packages at this time.
+
+      \item Loading the \pkg{parallel} package namespace no longer sets
+      or changes the \code{.Random.seed}, even if \env{R_PARALLEL_PORT}
+      is unset.
     }
   }
 
@@ -369,11 +379,19 @@
       compiler (not C++) is in use.  \code{Rinterface.h} now includes C
       header \file{stdint.h} or C++11 header \file{cstdint} where
       needed.
-      
+
       \item Package \pkg{tools} has a new function
-      \code{package_native_routine_registration_skeleton()} to asssist
+      \code{package_native_routine_registration_skeleton()} to assist
       adding native-symbol registration to a package.  See its help and
-      §5.4.1 of \sQuote{Writing R Extensions} for how to use it.
+      §5.4.1 of \sQuote{Writing R Extensions} for how to use it.  (At
+      the time it was added it successfully automated adding
+      registration to over 90\% of \acronym{CRAN} packages which lacked
+      it.  Many of the failures were newly-detected bugs in the
+      packages, e.g.\sspace50 packages called entry points with varying
+      numbers of arguments and 65 packages called entry points not in
+      the package.)
+      %% 235 fail out of 2460, with 15 others working with
+      %% character_only = FALSE.
     }
   }
 
@@ -414,11 +432,10 @@
       system call \code{select} and aborts if they are not found.
 
       \item If available, the POSIX 2008 system call \code{utimensat}
-      will be used by \code{setFileTime()} and \code{file.copy(copy.date
-	= TRUE)}.  This may result in slightly more accurate file times.
-
-      \item The check for the zlib version is now robust to versions
-      longer than 5 characters, including 1.2.10.
+      will be used by \code{Sys.setFileTime()} and
+      \code{file.copy(copy.date = TRUE)}.  This may result in slightly
+      more accurate file times.  (It is available on Linux and FreeBSD
+      but not macOS nor Solaris.)
     }
   }
 
@@ -492,7 +509,7 @@
       to be non-empty and a suitable single URL.
     }
   }
-
+      
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item (Windows only) Function \code{setInternet2()} is defunct.
@@ -658,10 +675,11 @@
     }
   }
 
-  \subsection{INSTALLATION and INCLUDED SOFTWARE}{
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
-      \item The check for the zlib version is now robust to versions
-      longer than 5 characters, including 1.2.10.
+      \item The \command{configure} check for the \code{zlib} version is
+      now robust to versions longer than 5 characters, including
+      \code{1.2.10}.
     }
   }
 

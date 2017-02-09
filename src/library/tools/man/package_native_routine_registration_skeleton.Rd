@@ -29,11 +29,11 @@ package_native_routine_registration_skeleton(dir, con = stdout(),
   }
   \item{character_only}{
     Logical: should only \code{.NAME} arguments specified by character
-    strings (and not as names) be extracted?
+    strings (and not as names of \R objects nor expressions) be extracted?
   }
   \item{include_declarations}{
-    Logical: should the output include declarations for the registered
-    routines?
+    Logical: should the output include declarations (also known as
+    \sQuote{prototypes}) for the registered routines?
   }
 }
 \details{
@@ -42,35 +42,45 @@ package_native_routine_registration_skeleton(dir, con = stdout(),
   needs to be added to enable registration, conventionally as file
   \file{src/init.c} or appended to the sole C file of the package.
 
-  If the number of arguments cannot be determined by the code it will
-  be recorded as \code{-1}: such values should be corrected.
+  This function examines the code in the \file{R} directory of the
+  package for calls to \code{.C}, \code{.Fortran}, \code{.Call} and
+  \code{.External} and creates registration information for those it can
+  make sense of.  If the number of arguments used cannot be determined
+  it will be recorded as \code{-1}: such values should be corrected.
 
   Optionally the skeleton will include declarations for the registered
   routines: they should be checked against the C/Fortran source code,
   not least as the number of arguments is taken from the \R code.  For
   \code{.Call} and \code{.External} calls they will often suffice, but
   for \code{.C} and \code{.Fortran} calls the \code{void *} arguments
-  should be replaced by the actual types.  Otherwise declarations need
-  to be included (they may exist earlier in that file if appending to a
-  file, or in a header file which can be included in \file{init.c}).
+  would ideally be replaced by the actual types.  Otherwise declarations
+  need to be included (they may exist earlier in that file if appending
+  to a file, or in a header file which can be included in
+  \file{init.c}).
   
   The default value of \code{character_only} is appropriate when working
   on a package without any existing registration: \code{character_only =
   FALSE} can be used to suggest updates for a package which has been
   extended since registration.  For the default value, if \code{.NAME}
-  values are found which are not character strings this is noted via a
-  comment in the output.
+  values are found which are not character strings (e.g.\sspace{}names
+  or expressiions) this is noted via a comment in the output.
+
+  Packages which used the earlier form of creating \R objects for native
+  symbols \emph{via} additional arguments in a \code{useDynLib}
+  directive will probably most easily be updated to use registration
+  with \code{character_only = FALSE}.
 
   If an entry point is used with different numbers of arguments in the
   package's \R code, an entry in the table (and optionally, a
   declaration) is made for each number, and a comment placed in the
-  output.  Obviously this needs to be resolved: only \code{.External}
-  calls can have a variable number of arguments, which should be
-  declared as \code{-1}.
+  output.  This needs to be resolved: only \code{.External} calls can
+  have a variable number of arguments, which should be declared as
+  \code{-1}.
 
-  A surprisingly large number of \acronym{CRAN} packages had calls in \R
-  code to native routines not included in the packages, which will lead
-  to a compilation error when registration C code is added.
+  A surprising number of \acronym{CRAN} packages had calls in \R code to
+  native routines not included in the package, which will lead to a
+  \sQuote{loading failed} error during package installation when the
+  registration C code is added.
 }
 
 \value{
@@ -78,10 +88,12 @@ package_native_routine_registration_skeleton(dir, con = stdout(),
 }
 
 \note{
-  This uses static code analysis to find the \code{.C} etc calls: it
-  \emph{will} find those in parts of the \R code \sQuote{commented out} by
-  inclusion in \code{if(FALSE) \{ \dots \}}.
-
+  This only examines the \file{R} directory: it will not find
+  e.g.\sspace\code{.Call} calls used directly in examples, tests \emph{etc}.
+  
+  Static code analysis is used to find the \code{.C} etc calls: it
+  \emph{will} find those in parts of the \R code \sQuote{commented out}
+  by inclusion in \code{if(FALSE) \{ \dots \}}.
   On the other hand, it will fail to find the entry points in
   constructs like \preformatted{
     .Call(if(int) "rle_i" else "rle_d", i, force)
@@ -90,11 +102,29 @@ package_native_routine_registration_skeleton(dir, con = stdout(),
     .Call (cfunction, ...)
     .Call(..., PACKAGE="sparseLTSEigen")
   } (but if \code{character_only} is false, will extract the first as
-  \code{"cfunction"}).
+  \code{"cfunction"}).  Calls which have not been fully resolved will be
+  noted \emph{via} comments in the output file.
 
-  Call to entry points in other packages will be skipped if they have an
-  explicit (character) \code{PACKAGE} argument, but not if they use a
-  symbol imported from another package.
+  Call to entry points in other packages will be ignored if they have an
+  explicit (character string) \code{PACKAGE} argument.
+}
+
+\section{Extracting C/C++ protoypes}{
+  There are several tools available to extract function declarations
+  from C or C++ code.  For example,
+
+  For C code one can use \command{cproto}
+  (\url{http://invisible-island.net/cproto/cproto.html}; Windows
+  executables are available), for
+  example\preformatted{
+    cproto -I/path/to/R/include -e *.c
+  }
+  
+  \command{ctags} (commonly distributed with the OS)
+  covers C and C++., listing all function usages by something
+  like\preformatted{
+    ctags -x *.c
+  }.  (The GNU version allows a lot more control.)
 }
 
 \seealso{

@@ -464,7 +464,7 @@ if(.Platform$OS.type == "windows") {
 
         r_arch <- .Platform$r_arch
         useST <- config_val_to_logical(Sys.getenv("_R_SHLIB_BUILD_OBJECTS_SYMBOL_TABLES_", "FALSE"))
-        useSR <- config_val_to_logical(Sys.getenv("_R_CHECK_SYMBOL_REGISTRATION_", "FALSE"))
+        useSR <- config_val_to_logical(Sys.getenv("_R_CHECK_NATIVE_ROUTINE_REGISTRATION_", "FALSE"))
 
         compare <- function(x, strip_ = FALSE) {
             ## Compare symbols in the DLL and in objects:
@@ -577,7 +577,7 @@ if(.Platform$OS.type == "windows") {
 
         r_arch <- .Platform$r_arch
         useST <- config_val_to_logical(Sys.getenv("_R_SHLIB_BUILD_OBJECTS_SYMBOL_TABLES_", "FALSE"))
-        useSR <- config_val_to_logical(Sys.getenv("_R_CHECK_SYMBOL_REGISTRATION_", "FALSE"))
+        useSR <- config_val_to_logical(Sys.getenv("_R_CHECK_NATIVE_ROUTINE_REGISTRATION_", "FALSE"))
 
         compare <- function(x) {
             ## Compare symbols in the so and in objects:
@@ -695,11 +695,14 @@ function(file = "symbols.rds")
 package_ff_call_db <-
 function(dir)
 {
-    ff_call_names <- c(".C", ".Call", ".Fortran", ".External")
+    ## A few packages such as CDM use base::.Call
+    ff_call_names <- c(".C", ".Call", ".Fortran", ".External",
+                       "base::.C", "base::.Call",
+                       "base::.Fortran", "base::.External")
 
     predicate <- function(e) {
         (length(e) > 1L) &&
-            !is.na(match(as.character(e[[1L]]), ff_call_names))
+            !is.na(match(deparse(e[[1L]]), ff_call_names))
     }
 
     calls <- .find_calls_in_package_code(dir,
@@ -737,6 +740,8 @@ function(calls, dir = NULL, character_only = TRUE)
     nrdb <-
         lapply(calls,
                function(e) {
+                   if (startsWith(deparse(e[[1L]]), "base::"))
+                       e[[1L]] <- e[[1L]][3L]
                    ## First figure out whether ff calls had '...'.
                    pos <- which(unlist(Map(identical,
                                            lapply(e, as.character),
@@ -747,6 +752,13 @@ function(calls, dir = NULL, character_only = TRUE)
                    ## arguments come after '...').
                    if(length(pos)) e <- e[-pos]
                    cname <- as.character(e[[1L]])
+                   ## The help says
+                   ##
+                   ## '.NAME' is always matched to the first argument
+                   ## supplied (which should not be named).
+                   ##
+                   ## But some people do (Geneland ...).
+                   nm <- names(e); nm[2L] <- ""; names(e) <- nm
                    e <- match.call(ff_call_args[[cname]], e)
                    ## Only keep ff calls where .NAME is character
                    ## or (optionally) a name.
@@ -757,10 +769,12 @@ function(calls, dir = NULL, character_only = TRUE)
                            symbols <<- c(symbols, s)
                            return(NULL)
                        }
-                   } else if(is.character(s))
+                   } else if(is.character(s)) {
                        s <- s[1L]
-                   else
+                   } else { ## expressions
+                       symbols <<- c(symbols, deparse(s))
                        return(NULL)
+                   }
                    ## Drop the ones where PACKAGE gives a different
                    ## package. Ignore those which are not char strings.
                    if(!is.null(p <- e[["PACKAGE"]]) &&
@@ -797,9 +811,8 @@ function(calls, dir = NULL, character_only = TRUE)
     imports <- unlist(lapply(imports, `[[`, 2L))
 
     info <- info$nativeRoutines[[package]]
-    ## First adjust native routine names for explicit remapping or
-    ## namespace .fixes.  However, a package without registration
-    ## has no way to use the fixes.
+    ## Adjust native routine names for explicit remapping or
+    ## namespace .fixes.
     if(length(symnames <- info$symbolNames)) {
         ind <- match(nrdb[, 2L], names(symnames), nomatch = 0L)
         nrdb[ind > 0L, 2L] <- symnames[ind]
@@ -923,7 +936,7 @@ function(nrdb, align = TRUE, include_declarations = FALSE)
       "",
       if(length(symbols)) {
           c("/*",
-            "  The following symbol(s) for .NAME have been omiited",
+            "  The following symbols/expresssions for .NAME have been omitted",
             "", strwrap(symbols, indent = 4, exdent = 4), "",
             "  Most likely possible values need to be added below.",
             "*/", "")
