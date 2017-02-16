@@ -44,12 +44,13 @@
 #include <Fileio.h>
 #include <ctype.h>			/* toupper */
 #include <limits.h>
+#include <string.h>
 #include <time.h>			/* for ctime */
+
+# include <errno.h>
 
 #include <R_ext/BLAS.h>
 #include <R_ext/Lapack.h>
-
-# include <errno.h>
 
 /* Machine Constants */
 
@@ -3063,16 +3064,27 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     Dl_info dl_info;
     char buf[PATH_MAX+1];
     /* arbitrary blas function */
-    if (dladdr((void *)F77_CALL(dgemm), &dl_info)) {
+    if (dladdr(F77_NAME(dgemm), &dl_info)) { /* can use F77_CALL directly */
 	char *res = realpath(dl_info.dli_fname, buf);
 	if (res)
 	    SET_STRING_ELT(ans, i, mkChar(res));
     }
     /* arbitrary lapack function */
-    if (dladdr((void *)F77_CALL(dsyev), &dl_info)) {
-	char *res = realpath(dl_info.dli_fname, buf);
-	if (res)
-	    SET_STRING_ELT(ans, i+1, mkChar(res));
+    SEXP laver = do_lapack(R_NilValue, INTERNAL(install("La_version")), R_NilValue, R_NilValue);
+    if (isString(laver) && length(laver) == 1) {
+	    const char *laverstr = CHAR(STRING_ELT(laver, 0));
+#ifdef HAVE_F77_UNDERSCORE
+	    void *ilaversym = dlsym(RTLD_DEFAULT, "ilaver_");
+#else
+	    void *ilaversym = dlsym(RTLD_DEFAULT, "ilaver");
+#endif    
+	    if (ilaversym != NULL && dladdr(ilaversym, &dl_info)) {
+		    char *res = realpath(dl_info.dli_fname, buf);
+		    char bufv[strlen(res) + strlen(laverstr) + 2];
+		    sprintf(bufv, "%s %s", laverstr, res);
+		    if (res)
+		    	SET_STRING_ELT(ans, i+1, mkChar(bufv));
+	    }
     }
 #endif
     SET_STRING_ELT(nms, i++, mkChar("blas"));
