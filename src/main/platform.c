@@ -3061,25 +3061,61 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     SET_STRING_ELT(ans, i+1, mkChar(""));
 
 #if defined(HAVE_DLADDR) && defined(HAVE_REALPATH)
-    Dl_info dl_info;
+
+    /* arbitrary blas function: dgemm */
+    /* arbitrary lapack function: ilaver */
+    
+#ifdef HAVE_F77_UNDERSCORE
+    char *dgemm_name = "dgemm_";
+    char *ilaver_name = "ilaver_";
+#else
+    char *dgemm_name = "dgemm";
+    char *ilaver_name = "ilaver";
+#endif
+
+    Rboolean ok = TRUE;
+    
+    /* blas */
+    void *dgemm_addr = dlsym(RTLD_DEFAULT, dgemm_name);    
+
+    Dl_info dl_info1, dl_info2;
+
+    if (!dladdr(do_eSoftVersion, &dl_info1)) ok = FALSE;
+    if (!dladdr(dladdr, &dl_info2)) ok = FALSE;
+    
+    if (!strcmp(dl_info1.dli_fname, dl_info2.dli_fname)) {
+    	/* the dladdr function is not implemented inside R, hence
+    	   we have the PLT for dynamically linked symbols, and 
+    	   hence we have to use dlsym(RTLD_NEXT) */
+    	if (dlsym(RTLD_DEFAULT, "do_eSoftVersion") == NULL
+    	    && dlsym(RTLD_DEFAULT, "dladdr") != NULL) {
+
+	    /* static symbols can be recognized by that dlsym
+	       returns NULL for RTLD_DEFAULT */
+	    
+	    if (dgemm_addr != NULL)
+	    	dgemm_addr = dlsym(RTLD_NEXT, dgemm_name);
+    	
+    	} else 
+	    ok = FALSE;
+    }
+    
     char buf[PATH_MAX+1];
-    /* arbitrary blas function */
-    if (dladdr(F77_NAME(dgemm), &dl_info)) { /* can use F77_CALL directly */
-	char *res = realpath(dl_info.dli_fname, buf);
+    if (ok && dladdr(dgemm_addr, &dl_info1)) {
+	char *res = realpath(dl_info1.dli_fname, buf);
 	if (res)
 	    SET_STRING_ELT(ans, i, mkChar(res));
     }
-    /* arbitrary lapack function */
-    SEXP laver = do_lapack(R_NilValue, INTERNAL(install("La_version")), R_NilValue, R_NilValue);
+    
+    /* lapack */
+    SEXP laver = do_lapack(R_NilValue, INTERNAL(install("La_version")),
+                           R_NilValue, R_NilValue);
     if (isString(laver) && length(laver) == 1) {
 	    const char *laverstr = CHAR(STRING_ELT(laver, 0));
-#ifdef HAVE_F77_UNDERSCORE
-	    void *ilaversym = dlsym(RTLD_DEFAULT, "ilaver_");
-#else
-	    void *ilaversym = dlsym(RTLD_DEFAULT, "ilaver");
-#endif    
-	    if (ilaversym != NULL && dladdr(ilaversym, &dl_info)) {
-		    char *res = realpath(dl_info.dli_fname, buf);
+	    void *ilaver_addr = dlsym(RTLD_DEFAULT, ilaver_name);
+
+	    if (ilaver_addr != NULL && dladdr(ilaver_addr, &dl_info2)) {
+		    char *res = realpath(dl_info2.dli_fname, buf);
 		    char bufv[strlen(res) + strlen(laverstr) + 2];
 		    sprintf(bufv, "%s %s", laverstr, res);
 		    if (res)
