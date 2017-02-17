@@ -3090,11 +3090,17 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     	if (dlsym(RTLD_DEFAULT, "do_eSoftVersion") == NULL
     	    && dlsym(RTLD_DEFAULT, "dladdr") != NULL) {
 
-	    /* static symbols can be recognized by that dlsym
+	    /* (some) static symbols can be recognized by that dlsym
 	       returns NULL for RTLD_DEFAULT */
 	    
-	    if (dgemm_addr != NULL)
-	    	dgemm_addr = dlsym(RTLD_NEXT, dgemm_name);
+	    if (dgemm_addr != NULL) {
+	    	void *dgemm_next_addr = dlsym(RTLD_NEXT, dgemm_name);
+	    	if (dgemm_next_addr != NULL)
+		    /* dgemm_next_addr will be NULL when dgemm is static,
+		       but export-dynamic, while eSoftVersion is static and
+		       not export-dynamic */
+	    	    dgemm_addr = dgemm_next_addr;
+	    }
     	
     	} else 
 	    ok = FALSE;
