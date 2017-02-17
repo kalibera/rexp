@@ -165,6 +165,10 @@
    */
 #undef HAVE_DECL_DLADDR
 
+/* Define to 1 if you have the declaration of `dlsym', and to 0 if you don't.
+   */
+#undef HAVE_DECL_DLSYM
+
 /* Define to 1 if you have the declaration of `feof_unlocked', and to 0 if you
    don't. (For intl) */
 #undef HAVE_DECL_FEOF_UNLOCKED
@@ -196,6 +200,14 @@
 /* Define to 1 if you have the declaration of `realpath', and to 0 if you
    don't. */
 #undef HAVE_DECL_REALPATH
+
+/* Define to 1 if you have the declaration of `RTLD_DEFAULT', and to 0 if you
+   don't. */
+#undef HAVE_DECL_RTLD_DEFAULT
+
+/* Define to 1 if you have the declaration of `RTLD_NEXT', and to 0 if you
+   don't. */
+#undef HAVE_DECL_RTLD_NEXT
 
 /* Define to 1 if you have the declaration of `siglongjmp', and to 0 if you
    don't. */
@@ -238,6 +250,9 @@
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
+
+/* Define to 1 if you have the `dlsym' function. */
+#undef HAVE_DLSYM
 
 /* Define to 1 if you have the <dl.h> header file. */
 #undef HAVE_DL_H

@@ -32493,12 +32493,13 @@ _ACEOF
 fi
 done
 
-for ac_func in dladdr
+for ac_func in dladdr dlsym
 do :
-  ac_fn_c_check_func "$LINENO" "dladdr" "ac_cv_func_dladdr"
-if test "x$ac_cv_func_dladdr" = xyes; then :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_DLADDR 1
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
 _ACEOF
 
 fi
@@ -32514,6 +32515,40 @@ fi
 
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_DLADDR $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "dlsym" "ac_cv_have_decl_dlsym" "#include<dlfcn.h>
+"
+if test "x$ac_cv_have_decl_dlsym" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_DLSYM $ac_have_decl
+_ACEOF
+
+ac_fn_c_check_decl "$LINENO" "RTLD_DEFAULT" "ac_cv_have_decl_RTLD_DEFAULT" "#include<dlfcn.h>
+"
+if test "x$ac_cv_have_decl_RTLD_DEFAULT" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_RTLD_DEFAULT $ac_have_decl
+_ACEOF
+ac_fn_c_check_decl "$LINENO" "RTLD_NEXT" "ac_cv_have_decl_RTLD_NEXT" "#include<dlfcn.h>
+"
+if test "x$ac_cv_have_decl_RTLD_NEXT" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_RTLD_NEXT $ac_have_decl
 _ACEOF
 
 
