@@ -3108,11 +3108,13 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
     
     /* lapack */
+      /* this call forces the lapack module to be loaded */
     SEXP laver = do_lapack(R_NilValue, INTERNAL(install("La_version")),
                            R_NilValue, R_NilValue);
     if (isString(laver) && length(laver) == 1) {
 	    const char *laverstr = CHAR(STRING_ELT(laver, 0));
-	    void *ilaver_addr = dlsym(RTLD_DEFAULT, ilaver_name);
+//	    void *ilaver_addr = dlsym(RTLD_DEFAULT, ilaver_name);
+	    void *ilaver_addr = (void *)R_FindSymbol(ilaver_name, "lapack", 0);	    
 
 	    if (ilaver_addr != NULL && dladdr(ilaver_addr, &dl_info2)) {
 		    char *res = realpath(dl_info2.dli_fname, buf);
@@ -3120,6 +3122,8 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 		    sprintf(bufv, "%s %s", laverstr, res);
 		    if (res)
 		    	SET_STRING_ELT(ans, i+1, mkChar(bufv));
+	    } else {
+	    	SET_STRING_ELT(ans, i+1, mkChar(laverstr));
 	    }
     }
 #endif
