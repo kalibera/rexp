@@ -1,6 +1,6 @@
 % File src/library/base/man/extSoftVersion.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 2014-2016 R Core Team
+% Copyright 2014-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{extSoftVersion}
