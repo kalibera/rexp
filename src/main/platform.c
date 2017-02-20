@@ -49,8 +49,6 @@
 
 # include <errno.h>
 
-#include <R_ext/BLAS.h>			/* dgemm */
-
 /* Machine Constants */
 
 static void
