@@ -365,6 +365,16 @@
       \item Encoding name \code{"utf8"} is mapped to \code{"UTF-8"}.
       Many implementations of \code{iconv} accept \code{"utf8"}, but not
       GNU \pkg{libiconv} (including the current version 1.15).
+
+      \item \code{sessionInfo()} shows the full paths to the library or
+      executable files providing the BLAS/LAPACK implementations
+      currently in use (not available on Windows).
+
+      \item The binning algorithm used by bandwidth selectors
+      \code{bw.ucv()}, \code{bw.bcv()} and \code{bw.SJ()} switches to a
+      version linear in the input size \code{n} for \code{n > nb/2}.
+      (The calculations are the same, but for large \code{n/nb} it is
+      worth doing the binning in advance.)
     }
   }
 
@@ -575,6 +585,11 @@
       \item Header \file{Rconfig.h} no longer defines
       \samp{SUPPORT_OPENMP}; instead use \samp{_OPENMP} (as documented
       for a long time).
+      
+      \item (C-level Native routine registration.)  The deprecated
+      \code{styles} component of \code{R_CMethodDef} and
+      \code{RFortranMethodDef} no longer does anything.
+      %% used by packages RandomFieldUtils SOD aster aster2 polyapost potts
     }
   }
 
@@ -748,6 +763,14 @@
     }
   }
 
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item (C-level Native routine registration.)  The undocumented
+      \code{styles} component of \code{R_CMethodDef} and
+      \code{RFortranMethodDef} is deprecated.
+    }
+  }
+
   \subsection{BUG FIXES}{
     \itemize{
       \item \code{rep(x, times)} and \code{rep.int(x, times)} now both
@@ -818,6 +841,10 @@
 
       \item \code{qbeta()} underflowed too early in some very asymmetric
       cases.  (\PR{17178})
+              
+      \item \command{R CMD Rd2pdf} had problems with packages with
+      non-ASCII titles in \file{.Rd} files (usually the titles were
+      omitted).
     }
   }
 }

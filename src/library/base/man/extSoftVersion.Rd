@@ -34,9 +34,9 @@ extSoftVersion()
   library in use (if known).}
   \item{readline}{The version of \code{readline} in use (if any,
   otherwise \code{""}).}
-  \item{blas}{Name of the binary/executable file with the implementation of
+  \item{BLAS}{Name of the binary/executable file with the implementation of
   \code{BLAS} in use (if known, otherwise \code{""}).}
-  \item{lapack}{The API version of LAPACK in use (the result of calling
+  \item{LAPACK}{The API version of LAPACK in use (the result of calling
   \code{\link{La_version}()}). If known, the name of the binary/executable
   file with the implementation of \code{LAPACK} in use is appended, using
   \code{" "} as separator.}
@@ -51,19 +51,18 @@ extSoftVersion()
   2.18"} or \code{"win_iconv"} (which has no version number).
 
   The name of the binary/executable file for \code{BLAS} and \code{LAPACK}
-  can be used as an indication of which implementation is in use.
+  can be used as an indication of which implementation is in use. 
   Typically, the R version of BLAS will appear as \code{libR.so}
   (\code{libR.dylib}), \code{R} or \code{libRblas.so}
   (\code{libRblas.dylib}), depending on how R was built.  Note that
-  particularly \code{libRblas.so} (\code{libRblas.dylib}) may also appear
-  for an external BLAS implementation that had been symlinked/renamed by the
-  system administrator when installing R.  For an external BLAS, a shared
-  object file will be given and its path/name may indicate the
-  vendor/version.  Typically, the R version of LAPACK will appear as
-  \code{libRlapack.so} (\code{libRlapack.dylib}), but again this name may
-  also be shown for an external implementation of LAPACK that had been
-  symlinked/renamed at installation time.  The detection only works on Linux
-  and macOS, not on Windows.
+  \code{libRblas.so} (\code{libRblas.dylib}) may also be shown for an
+  external BLAS implementation that had been copied, hard-linked or renamed
+  by the system administrator.  For an external BLAS, a shared object file
+  will be given and its path/name may indicate the vendor/version. 
+  Typically, the \R version of LAPACK will appear as \code{libRlapack.so}
+  (\code{libRlapack.dylib}), but again this name may also be shown for an
+  external implementation of LAPACK that had been given this name.  The
+  detection does not work on Windows.
 }
 \seealso{
   \code{\link{libcurlVersion}} for the version of \code{libCurl}.
