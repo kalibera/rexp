@@ -3095,8 +3095,8 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 	   get real symbol addresses.
 	*/
 
-	if (dlsym(RTLD_DEFAULT, "do_eSoftVersion") == NULL
-	    && dlsym(RTLD_DEFAULT, "dladdr") != NULL) {
+/*	if (dlsym(RTLD_DEFAULT, "do_eSoftVersion") == NULL
+	    && dlsym(RTLD_DEFAULT, "dladdr") != NULL) { */
 
 	    /* (some) static symbols can be recognized by that dlsym
 	       returns NULL for RTLD_DEFAULT */
@@ -3109,8 +3109,8 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 		       is statically linked but not export-dynamic  */
 		    dgemm_addr = dgemm_next_addr;
 	    }
-	} else
-	    ok = FALSE;
+/*	} else
+	    ok = FALSE; */
     }
 
     char buf[PATH_MAX+1];
