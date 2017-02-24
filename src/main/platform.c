@@ -3003,6 +3003,12 @@ extern int dladdr(void *addr, Dl_info *info);
 extern void *dlsym(void *handle, const char *symbol);
 #endif
 
+#ifdef Win32
+#include <tchar.h>
+#include <psapi.h> /* EnumProcessModules */
+void R_UTF8fixslash(char *s); /* from main/util.c */
+#endif
+
 SEXP attribute_hidden
 do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -3060,6 +3066,14 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SET_STRING_ELT(ans, i, mkChar(""));
     SET_STRING_ELT(ans, i+1, mkChar(""));
+
+    /* this call forces the lapack module to be loaded */
+    SEXP laver = do_lapack(R_NilValue, INTERNAL(install("La_version")),
+                           R_NilValue, R_NilValue);
+    PROTECT(laver);
+    const char *laverstr = NULL;
+    if (isString(laver) && length(laver) == 1)
+	laverstr = CHAR(STRING_ELT(laver, 0));
 
 #if defined(HAVE_DLADDR) && defined(HAVE_REALPATH) && defined(HAVE_DLSYM) \
     && defined(HAVE_DECL_RTLD_DEFAULT) && HAVE_DECL_RTLD_DEFAULT \
@@ -3124,13 +3138,7 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     }
 
     /* LAPACK */
-
-    /* this call forces the lapack module to be loaded */
-    SEXP laver = do_lapack(R_NilValue, INTERNAL(install("La_version")),
-                           R_NilValue, R_NilValue);
-    PROTECT(laver);
-    if (isString(laver) && length(laver) == 1) {
-	const char *laverstr = CHAR(STRING_ELT(laver, 0));
+    if (laverstr) {
 	void *ilaver_addr = (void *)R_FindSymbol(ilaver_name, "lapack", 0);
 
 	if (ilaver_addr != NULL && dladdr(ilaver_addr, &dl_info2)) {
@@ -3140,12 +3148,73 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 		sprintf(bufv, "%s %s", laverstr, res);
 		SET_STRING_ELT(ans, i+1, mkChar(bufv));
 	    } else
-		/* only give Lapack API version */
+		/* only give LAPACK API version */
 		SET_STRING_ELT(ans, i+1, mkChar(laverstr));
 	}
     }
-    UNPROTECT(1); /* laver */
+#elif defined(Win32)
+    /* On Windows, we just look for dgemm and ilaver in dynamically linked
+       libraries. This currently suffices as static linking of BLAS into R
+       is not supported on Windows.
+    */
+#ifdef HAVE_F77_UNDERSCORE
+    TCHAR dgemm_name[] = _TEXT("dgemm_");
+    TCHAR ilaver_name[] = _TEXT("ilaver_");
+#else
+    TCHAR dgemm_name[] = _TEXT("dgemm");
+    TCHAR ilaver_name[] = _TEXT("ilaver");
 #endif
+
+    Rboolean foundDgemm = FALSE;
+    Rboolean foundIlaver = FALSE;
+
+    /* determine the number of modules first */
+    HMODULE hModsTry[1];
+    DWORD cbNeeded;
+    if (EnumProcessModules(GetCurrentProcess(), hModsTry, sizeof(hModsTry),
+	&cbNeeded)) {
+
+	unsigned nmodules = (unsigned) (cbNeeded / sizeof(HMODULE));
+	HMODULE hMods[nmodules];
+
+	wchar_t name[MAX_PATH + 1];
+	DWORD nSize = (DWORD) (sizeof(name) / sizeof(wchar_t));
+	char utfname[4*MAX_PATH + 1];
+
+	/* enumerate all modules in resolution order */
+	if (EnumProcessModules(GetCurrentProcess(), hMods, sizeof(hMods),
+	    &cbNeeded) && cbNeeded == sizeof(hMods))
+
+	    /* look for the first occurence of dgemm and ilaver */
+	    for(unsigned m = 0; m < nmodules; m++) {
+		if (!foundDgemm && GetProcAddress(hMods[m], dgemm_name)) {
+		    foundDgemm = TRUE;
+		    if (GetModuleFileNameW(hMods[m], name, nSize)) {
+			wcstoutf8(utfname, name, sizeof(utfname));
+			R_UTF8fixslash(utfname);
+			SET_STRING_ELT(ans, i, mkCharCE(utfname, CE_UTF8));
+		    }
+		}
+		if (!foundIlaver && laverstr &&
+		    GetProcAddress(hMods[m], ilaver_name)) {
+
+		    foundIlaver = TRUE;
+		    if (GetModuleFileNameW(hMods[m], name, nSize)) {
+			wcstoutf8(utfname, name, sizeof(utfname));
+			R_UTF8fixslash(utfname);
+			char bufv[strlen(utfname) + strlen(laverstr) + 2];
+			sprintf(bufv, "%s %s", laverstr, utfname);
+			SET_STRING_ELT(ans, i+1, mkCharCE(bufv, CE_UTF8));
+		    }
+		}
+	    }
+    }
+    if (!foundIlaver && laverstr)
+	/* only give LAPACK API version */
+	SET_STRING_ELT(ans, i+1, mkChar(laverstr));
+#endif
+    UNPROTECT(1); /* laver */
+
     SET_STRING_ELT(nms, i++, mkChar("BLAS"));
     SET_STRING_ELT(nms, i++, mkChar("LAPACK"));
 
