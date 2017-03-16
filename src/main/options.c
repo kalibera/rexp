@@ -248,9 +248,9 @@ void attribute_hidden InitOptions(void)
     char *p;
 
 #ifdef HAVE_RL_COMPLETION_MATCHES
-    PROTECT(v = val = allocList(20));
+    PROTECT(v = val = allocList(21));
 #else
-    PROTECT(v = val = allocList(19));
+    PROTECT(v = val = allocList(20));
 #endif
 
     SET_TAG(v, install("prompt"));
@@ -346,6 +346,11 @@ void attribute_hidden InitOptions(void)
     SETCAR(v, ScalarLogical(R_PCRE_use_JIT));
     v = CDR(v);
 
+    SET_TAG(v, install("PCRE_limit_recursion"));
+    R_PCRE_limit_recursion = NA_LOGICAL;
+    SETCAR(v, ScalarLogical(R_PCRE_limit_recursion));
+    v = CDR(v);
+
 #ifdef HAVE_RL_COMPLETION_MATCHES
     /* value from Rf_initialize_R */
     SET_TAG(v, install("rl_word_breaks"));
@@ -364,7 +369,7 @@ SEXP attribute_hidden do_getOption(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP x = CAR(args);
     if (!isString(x) || LENGTH(x) != 1)
 	error(_("'%s' must be a character string"), "x");
-    return duplicate(GetOption1(install(CHAR(STRING_ELT(x, 0)))));
+    return duplicate(GetOption1(installTrChar(STRING_ELT(x, 0))));
 }
 
 
@@ -717,6 +722,11 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		SET_VECTOR_ELT(value, i, 
 			       SetOption(tag, ScalarLogical(R_PCRE_use_JIT)));
 	    }
+	    else if (streql(CHAR(namei), "PCRE_limit_recursion")) {
+		R_PCRE_limit_recursion = asLogical(argi);
+		SET_VECTOR_ELT(value, i, 
+			       SetOption(tag, ScalarLogical(R_PCRE_limit_recursion)));
+	    }
 	    else {
 		SET_VECTOR_ELT(value, i, SetOption(tag, duplicate(argi)));
 	    }
@@ -726,7 +736,7 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    const char *tag;
 	    if (!isString(argi) || LENGTH(argi) <= 0)
 		error(_("invalid argument"));
-	    tag = CHAR(STRING_ELT(argi, 0));
+	    tag = translateChar(STRING_ELT(argi, 0));
 	    if (streql(tag, "par.ask.default")) {
 		error(_("\"par.ask.default\" has been replaced by \"device.ask.default\""));
 	    }

@@ -204,6 +204,10 @@ static long R_pcre_max_recursions()
     /* Approximate size of stack frame in PCRE match(), actually
        platform / compiler dependent.  Estimate found at
        https://bugs.r-project.org/bugzilla3/show_bug.cgi?id=16757
+       However, it seems that on Solaris compiled with cc, the size is
+       much larger (not too surprising as that happens with R's
+       parser). OTOH, OpenCSW's builds of PCRE are built to use the
+       heap for recursion.
     */
     const uintptr_t recursion_size = 600;
 
@@ -234,8 +238,8 @@ static long R_pcre_max_recursions()
 static void 
 set_pcre_recursion_limit(pcre_extra **re_pe_ptr, const long limit)
 {
-    pcre_extra *re_pe = *re_pe_ptr;
     if (limit >= 0) {
+	pcre_extra *re_pe = *re_pe_ptr;
 	if (!re_pe) {
 	    // this will be freed by pcre_free_study so cannot use Calloc
 	    re_pe = (pcre_extra *) calloc(1, sizeof(pcre_extra));
@@ -539,7 +543,18 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 #if PCRE_STUDY_JIT_COMPILE
 	    else if(R_PCRE_use_JIT) setup_jit(re_pe);
 #endif
-	    set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
+	    if(R_PCRE_limit_recursion == NA_LOGICAL) {
+		// use recursion limit only on long strings
+		Rboolean use = FALSE;
+		for (i = 0 ; i < len ; i++)
+		    if(strlen(CHAR(STRING_ELT(x, i))) >= 1000) {
+			use = TRUE;
+			break;
+		    }
+		if (use)
+		    set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
+	    } else if (R_PCRE_limit_recursion)
+		set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
 
 	    vmax2 = vmaxget();
 	    for (i = itok; i < len; i += tlen) {
@@ -1028,7 +1043,18 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 	    else if(R_PCRE_use_JIT) setup_jit(re_pe);
 #endif
 	}
-	set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
+	if(R_PCRE_limit_recursion == NA_LOGICAL) {
+	    // use recursion limit only on long strings
+	    Rboolean use = FALSE;
+	    for (i = 0 ; i < n ; i++)
+		if(strlen(CHAR(STRING_ELT(text, i))) >= 1000) {
+		    use = TRUE;
+		    break;
+		}
+	    if (use)
+		set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
+	} else if (R_PCRE_limit_recursion)
+	    set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
     } else {
 	int cflags = REG_NOSUB | REG_EXTENDED;
 	if (igcase_opt) cflags |= REG_ICASE;
@@ -1806,7 +1832,18 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	    else if(R_PCRE_use_JIT) setup_jit(re_pe);
 #endif
 	}
-	set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
+	if(R_PCRE_limit_recursion == NA_LOGICAL) {
+	    // use recursion limit only on long strings
+	    Rboolean use = FALSE;
+	    for (i = 0 ; i < n ; i++)
+		if(strlen(CHAR(STRING_ELT(text, i))) >= 1000) {
+		    use = TRUE;
+		    break;
+		}
+	    if (use)
+		set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
+	} else if (R_PCRE_limit_recursion)
+	    set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
 	replen = strlen(srep);
     } else {
 	int cflags = REG_EXTENDED;
@@ -2628,7 +2665,18 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 	    else if(R_PCRE_use_JIT) setup_jit(re_pe);
 #endif
 	}
-	set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
+	if(R_PCRE_limit_recursion == NA_LOGICAL) {
+	    // use recursion limit only on long strings
+	    Rboolean use = FALSE;
+	    for (i = 0 ; i < n ; i++)
+		if(strlen(CHAR(STRING_ELT(text, i))) >= 1000) {
+		    use = TRUE;
+		    break;
+		}
+	    if (use)
+		set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
+	} else if (R_PCRE_limit_recursion)
+	    set_pcre_recursion_limit(&re_pe, R_pcre_max_recursions());
 	/* also extract info for named groups */
 	pcre_fullinfo(re_pcre, re_pe, PCRE_INFO_NAMECOUNT, &name_count);
 	pcre_fullinfo(re_pcre, re_pe, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
@@ -3012,9 +3060,9 @@ SEXP attribute_hidden do_pcre_config(SEXP call, SEXP op, SEXP args, SEXP env)
     int res;
 
     checkArity(op, args);
-    SEXP ans = PROTECT(allocVector(LGLSXP, 3));
+    SEXP ans = PROTECT(allocVector(LGLSXP, 4));
     int *lans = LOGICAL(ans);
-    SEXP nm = allocVector(STRSXP, 3);
+    SEXP nm = allocVector(STRSXP, 4);
     setAttrib(ans, R_NamesSymbol, nm);
     SET_STRING_ELT(nm, 0, mkChar("UTF-8"));
     pcre_config(PCRE_CONFIG_UTF8, &res); lans[0] = res;
@@ -3028,6 +3076,8 @@ SEXP attribute_hidden do_pcre_config(SEXP call, SEXP op, SEXP args, SEXP env)
     res = FALSE;
 #endif
     lans[2] = res;
+    pcre_config(PCRE_CONFIG_STACKRECURSE, &res); lans[3] = res;
+    SET_STRING_ELT(nm, 3, mkChar("stack"));
     UNPROTECT(1);
     return ans;
 }

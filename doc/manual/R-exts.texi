@@ -1748,7 +1748,8 @@ pkg-config --list-all | sort
 * Configure example::           
 * Using F95 code::              
 * Using C++11 code::            
-* Using C++14 code::            
+* Using C++14 code::
+* Using C++17 code::
 @end menu
 
 @node Using Makevars, Configure example, Configure and cleanup, Configure and cleanup
@@ -2061,7 +2062,7 @@ PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
 @end example
 
 Note that the macro @code{SHLIB_OPENMP_CXXFLAGS} applies to the default
-C++ compiler and not necessarily to the C++11 or C++14 compiler: users of the
+C++ compiler and not necessarily to the C++11/14/17 compiler: users of the
 latter should do their own @command{configure} checks (an example is
 available in CRAN package @CRANpkg{ARTP2}).
 
@@ -2194,6 +2195,11 @@ The presence of a working @code{pthreads} implementation cannot be
 unambiguously determined without testing for yourself: however, that
 @samp{_REENTRANT} is defined@footnote{some Windows toolchains had the
 typo @samp{_REENTRANCE} instead.} in C/C++ code is a good indication.
+
+Note that not all @code{pthreads} implementations are equivalent as parts
+are optional (see
+@uref{http://pubs.opengroup.org/@/onlinepubs/@/009695399/@/basedefs/@/pthread.h.html}):
+for example, macOS lacks the `Barriers' option.
 
 See also the comments on thread-safety and performance under OpenMP: on
 all known @R{} platforms OpenMP is implemented @emph{via}
@@ -2464,7 +2470,9 @@ C99 features which are not otherwise implemented in C++, and C++
 compilers commonly accept C99 extensions to C++98.  A minor
 update@footnote{The changes are linked from
 @uref{https://isocpp.org/@/std/@/standing-documents/@/sd-6-sg10-feature-test-recommendations}.}
-to C++11 (C++14) was published in December 2014.
+to C++11 (C++14) was published in December 2014.  The next standard has
+been sent to ISO and is likely to be approved in 2017: it is informally
+known as C++17.
 
 What standard a C++ compiler aims to support can be hard to determine:
 the value@footnote{Values @code{199711}, @code{201103L} and
@@ -2499,10 +2507,7 @@ file (or @file{Makevars.win} on Windows) should include the line
 CXX_STD = CXX11
 @end example
 @noindent
-Compilation and linking will then be done with the C++11 compiler.  If
-any other value is given to the @samp{CXX_STD} macro it will be ignored.
-(Further options may become available in the future as the C++ standard
-evolves.)
+Compilation and linking will then be done with the C++11 compiler.
 
 Packages without a @file{Makevars} file may specify that they require
 C++11 by including @samp{C++11} in the @samp{SystemRequirements} field
@@ -2515,6 +2520,18 @@ SystemRequirements: C++11
 If a package does have a @file{Makevars[.win]} file then setting the
 make variable @samp{CXX_STD} is preferred, as it allows @command{R CMD
 SHLIB} to work correctly in the package's @file{src} directory.
+
+Conversely, to ensure that the C++98 standard is assumed even when this
+is not the compiler default, use
+
+@example
+SystemRequirements: C++98
+@end example
+@noindent
+or
+@example
+CXX_STD = CXX98
+@end example
 
 The C++11 compiler will be used systematically by R for all C++ code
 if the environment variable @env{USE_CXX1X} is defined (with any
@@ -2574,7 +2591,7 @@ sublibs:
             CXX="$(CXX1X) $(CXX1XSTD)" CXXFLAGS="$(CXX1XFLAGS) $(CXX1XPICFLAGS)")
 @end example
 
-@node Using C++14 code,  , Using C++11 code, Configure and cleanup
+@node Using C++14 code, Using C++17 code, Using C++11 code, Configure and cleanup
 @subsection Using C++14 code
 
 Support for a C++14 has been explicitly added to @R{} from version
@@ -2631,10 +2648,40 @@ using std::make_unique;
 #endif
 @end example
 
-The webpage @uref{http://en.cppreference.com/@/w/@/cpp/@/compiler_support}
-gives some information on which compilers are known to support recent C++
-features.
+The webpage
+@uref{http://en.cppreference.com/@/w/@/cpp/@/compiler_support} gives
+some information on which compilers are known to support recent C++
+features, including those in the C++17 drafts (for which feature tests
+should be used).
 
+@node Using C++17 code,  , Using C++14 code, Configure and cleanup
+@subsection Using C++17 code
+
+Experimental support for C++17 has been added to @R{} version
+3.4.0. The @file{configure} script tests a subset of C++17 features.
+At the time of writing (March 2017) both @code{clang 4.0.0} and
+@code{gcc 7.0.1 (20170314)} pass these tests (with flags
+@option{-std=gnu++1z} and @option{-std=gnu++17} respectively chosen by the
+@file{configure} script).  Note that the C++17 feature tests are
+incomplete and are subject to change in future R versions as compiler
+support for the standard improves.
+
+The variables associated with the C++17 compiler use the prefix
+@samp{CXX1Z}.  Hence to use C++17 code in a package, the package's
+@file{Makevars} file (or @file{Makevars.win} on Windows) should
+include the line
+@example
+CXX_STD = CXX17
+@end example
+
+In the absence of a @file{Makevars} file, C++17 support can also be
+requested by the line:
+@example
+SystemRequirements: C++17
+@end example
+@noindent
+in the @file{DESCRIPTION} file. Finally, the C++17 compiler can be
+used systematically by setting the environment variable @env{USE_CXX1Z}.
 
 @node Checking and building packages, Writing package vignettes, Configure and cleanup, Creating R packages
 @section Checking and building packages
@@ -4904,6 +4951,7 @@ strlen strncmp strtol tan trunc
 @end example
 
 @item
+@c including clang as from 4.0.0
 Some C++ compilers refuse to compile constructs such as
 @example
       if(ptr > 0) @{ ....@}
@@ -4980,9 +5028,10 @@ However, modes of @command{gcc} with `GNU EXTENSIONS' (which are the
 default, either @option{-std=gnu99} or @option{-std=gnu11}) declare
 enough macros to ensure that missing declarations are rarely seen.
 
-This applies also to constants such as @code{M_PI}, which are part of
-the X/Open standard: to use these define @code{_XOPEN_SOURCE} before
-including any headers.
+This applies also to constants such as @code{M_PI} and @code{M_LN2},
+which are part of the X/Open standard: to use these define
+@code{_XOPEN_SOURCE} before including any headers, or include the @R{}
+header @file{Rmath.h}.
 
 @item
 Similarly, package authors commonly assume things are part of C++ when
@@ -4992,7 +5041,9 @@ they were introduced in C++11 if at all.  Recent examples from
 erf expm1 fmin fmax lgamma lround loglp round snprintf strcasecmp trunc
 @end example
 @noindent
-and the POSIX function @code{strdup}.
+(all of which are in the @code{std} namespace in C++11) and the POSIX
+functions @code{strdup} and @code{strncasecmp} and constants @code{M_PI}
+and @code{M_LN2} (see the previous item).
 
 @end itemize
 
@@ -8102,7 +8153,7 @@ of @R{} with extra instrumentation to help @code{valgrind} detect errors
 in the use of memory allocated from the @R{} heap.  The
 @command{configure} option is
 @option{--with-valgrind-instrumentation=@var{level}}, where @var{level}
-is 0, 1 or 2.  Level 0 is the default and does not add any anything.
+is 0, 1 or 2.  Level 0 is the default and does not add anything.
 Level 1 will detect some uses@footnote{Those in some numeric, logical,
 integer, raw, complex vectors and in memory allocated by
 @code{R_alloc}.} of uninitialised memory and has little impact on speed
@@ -8354,25 +8405,21 @@ separately.} of @command{clang} and GCC.  Its (main) runtime library is
 linked into each package's DLL, so it is less often needed to be
 included in @env{MAIN_LDFLAGS}.
 
-Some versions have greatly increased compilation times on a few
-files@footnote{e.g.@: @file{src/main/dotcode.c} and parts of the
-@CRANpkg{Matrix} sources with @command{clang} 3.7.0 amd later.}.
-
 This sanitizer can be combined with the Address Sanitizer by
 @option{-fsanitize=undefined,address} (where both are supported).
 
 Finer control of what is checked can be achieved by other options: for
 @command{clang} see
 @uref{http://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation}.@footnote{or
-the user manual for your version of @command{clang}, e.g.@:
-@uref{http://llvm.org/@/releases/@/3.8.1/@/tools/@/docs/@/UsersManual.html} or
-@uref{http://llvm.org/@/releases/@/3.8.0/@/tools/@/clang/@/docs/@/UsersManual.html}.}
+the user manual for your version of @command{clang}, e.g.@: (the paths
+have differed for some versions)
+@uref{http://llvm.org/@/releases/@/4.0.0/@/tools/@/clang/@/docs/@/UsersManual.html}.}
 The current set for @command{clang} is (on a single line):
 @example
 -fsanitize=alignment,bool,bounds,enum,float-cast-overflow,
 float-divide-by-zero,function,integer-divide-by-zero,nonnull-attribute,
 null,object-size,return,returns-nonnull-attribute,shift,
-signed-integer-overflow,unreachable,vla-bound,vptr
+signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
 @end example
 
 @noindent
@@ -8384,14 +8431,7 @@ like
 @end example
 
 @noindent
-(@code{function}, @code{return} and @code{vptr} apply only to C++).  In
-addition,
-@example
--fsanitize=unsigned-integer-overflow
-@end example
-@noindent
-is available as a separate option in some versions of @command{clang}
-(not enabled by @option{-fsanitize=undefined}).
+(@code{function}, @code{return} and @code{vptr} apply only to C++).
 
 @command{clang} 3.5 and later may need
 
@@ -8408,16 +8448,12 @@ could try building @R{} with something like
 MAIN_LD="clang++ -fsanitize=undefined"
 @end example
 @noindent
-and perhaps for @command{clang} 3.7.x
-@example
-R_OPENMP_CFLAGS="-fopenmp=libomp"
-@end example
-@noindent
 or add @code{-lclang_rt.asan_cxx-x86_64}@footnote{This includes the C++
 UBSAN handlers, despite its name.} or similar to @code{LD_FLAGS}).
 
-See @uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/Debugging-Options.html} (or
-the manual for your version of GCC, installed or @emph{via}
+See
+@uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/Instrumentation-Options.html}
+(or the manual for your version of GCC, installed or @emph{via}
 @uref{https://gcc.gnu.org/@/onlinedocs/}) for the options supported by
 GCC: 5.3 supports
 @example
@@ -8442,8 +8478,8 @@ GCC 6 added
 -fsanitize=bounds-strict
 @end example
 @noindent
-an extension of @code{bounds} to `flexible array member-like arrays'.
-
+(an extension of @code{bounds} to `flexible array member-like arrays'),
+@option{-fsanitize=shift-base} and @option{-fsanitize=shift-exponent}.
 
 Other useful flags include
 @example
@@ -13028,8 +13064,8 @@ without causing unnecessary overflows or throwing away too much accuracy.
 @deftypefunx double fmin2 (double @var{x}, double @var{y})
 Return the larger (@code{max}) or smaller (@code{min}) of two integer or
 double numbers, respectively.  Note that @code{fmax2} and @code{fmin2}
-differ from C99's @code{fmax} and @code{fmin} when one of the arguments
-is a @code{NaN}: these versions return @code{NaN}.
+differ from C99/C++11's @code{fmax} and @code{fmin} when one of the
+arguments is a @code{NaN}: these versions return @code{NaN}.
 @end deftypefun
 
 @deftypefun double sign (double @var{x})
@@ -13073,9 +13109,11 @@ not.)
 @c maybe not all into the index ...
 
 @R{} has a set of commonly used mathematical constants encompassing
-constants usually found @file{math.h} and contains further ones that are
-used in statistical computations.  All these are defined to (at least)
-30 digits accuracy in @file{Rmath.h}.  The following definitions
+constants defined by POSIX and usually@footnote{but see the second
+paragraph of @pxref{Portable C and C++ code}.} found in @file{math.h}
+(but maybe not in the C++ header @file{cmath}) and contains further ones
+that are used in statistical computations.  These are defined to (at
+least) 30 digits accuracy in @file{Rmath.h}.  The following definitions
 use @code{ln(x)} for the natural logarithm (@code{log(x)} in @R{}).
 
 @quotation

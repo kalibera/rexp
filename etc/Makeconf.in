@@ -32,6 +32,10 @@ CXX1Y = @CXX1Y@
 CXX1YFLAGS = @CXX1YFLAGS@
 CXX1YPICFLAGS = @CXX1YPICFLAGS@
 CXX1YSTD = @CXX1YSTD@
+CXX1Z = @CXX1Z@
+CXX1ZFLAGS = @CXX1ZFLAGS@
+CXX1ZPICFLAGS = @CXX1ZPICFLAGS@
+CXX1ZSTD = @CXX1ZSTD@
 DYLIB_EXT = @DYLIB_EXT@
 DYLIB_LD = @DYLIB_LD@
 DYLIB_LDFLAGS = @DYLIB_LDFLAGS@@BUILD_LTO_TRUE@ $(CFLAGS) $(CPICFLAGS)
@@ -43,7 +47,7 @@ ECHO_T = @ECHO_T@
 ## NB, set FC before F77 as on Solaris make, setting FC sets F77
 FC = @FC@
 FCFLAGS = @FCFLAGS@ $(LTO)
-## additional libs needed when linking with $(FC), e.g. on Solaris
+## additional libs needed when linking with $(FC), e.g. on some Oracle compilers
 FCLIBS = @FCLIBS@
 F77 = @F77@
 F77_VISIBILITY = @F77_VISIBILITY@
