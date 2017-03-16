@@ -1851,10 +1851,11 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
     Rboolean cond = NA_LOGICAL;
 
     if (length(s) > 1) {
-	PROTECT(s);	 /* needed as per PR#15990.  call gets protected by warningcall() */
-	warningcall(call,
-		    _("the condition has length > 1 and only the first element will be used"));
-	UNPROTECT(1);
+        R_Suicide("the condition has length > 1 and only the first element will be used XXXXXX");
+//	PROTECT(s);	 /* needed as per PR#15990.  call gets protected by warningcall() */
+//	warningcall(call,
+//		    _("the condition has length > 1 and only the first element will be used"));
+//	UNPROTECT(1);
     }
     if (length(s) > 0) {
 	/* inline common cases for efficiency */
