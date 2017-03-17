@@ -1845,12 +1845,34 @@ static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
     return lang3(op, symbol, val);
 }
 
-
+extern void printwhere(void);
+ 
 static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 {
     Rboolean cond = NA_LOGICAL;
 
     if (length(s) > 1) {
+        R_OutputCon = 2;
+        R_ErrorCon = 2;
+        REprintf(" ----------- FAILURE REPORT -------------- \n");
+        REprintf(" --- srcref --- \n");
+        SrcrefPrompt("", R_getCurrentSrcref());
+        REprintf("\n");
+        REprintf(" --- call (function) --- \n");
+        PrintValue(R_GlobalContext->call);
+        REprintf(" --- stacktrace ---\n");
+        printwhere();
+        REprintf(" --- value of length: %d type: %s ---\n", length(s), type2char(TYPEOF(s)));
+        PrintValue(s);
+        REprintf(" --- function --- \n");
+        if (R_GlobalContext->callfun != NULL && TYPEOF(R_GlobalContext->callfun) == CLOSXP) {
+            PrintValue(R_GlobalContext->callfun);
+        }
+        REprintf(" --- function (body) search ---\n");
+        if (R_GlobalContext->callfun != NULL && TYPEOF(R_GlobalContext->callfun) == CLOSXP) {
+            findFunctionForBody(R_ClosureExpr(R_GlobalContext->callfun));
+        }
+        REprintf(" ----------- END FAILURE REPORT -------------- \n");
         R_Suicide("the condition has length > 1 and only the first element will be used XXXXXX");
 //	PROTECT(s);	 /* needed as per PR#15990.  call gets protected by warningcall() */
 //	warningcall(call,
