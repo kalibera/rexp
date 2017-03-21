@@ -988,27 +988,32 @@ CXXFLAGS
 CXXPICFLAGS
 CXXSTD
 
-CXX1X
-CXX1XSTD
-CXX1XFLAGS
-CXX1XPICFLAGS
+CXX98
+CXX98STD
+CXX98FLAGS
+CXX98PICFLAGS
 
-CXX1Y
-CXX1YSTD
-CXX1YFLAGS
-CXX1YPICFLAGS
+CXX11
+CXX11STD
+CXX11FLAGS
+CXX11PICFLAGS
 
-CXX1Z
-CXX1ZSTD
-CXX1ZFLAGS
-CXX1ZPICFLAGS
+CXX14
+CXX14STD
+CXX14FLAGS
+CXX14PICFLAGS
+
+CXX17
+CXX17STD
+CXX17FLAGS
+CXX17PICFLAGS
 @end example
 @noindent
 The macros @code{CXX} etc are those used by default for C++ code.
 @command{configure} will attempt to set the rest suitably, choosing for
-@code{CXX1XSTD} a suitable flag such as @option{-std=c++11} for C++11
+@code{CXX11STD} a suitable flag such as @option{-std=c++11} for C++11
 support. Similarly, configure will if possible choose for
-@code{CXX1YSTD} a flag@footnote{Currently this is a valid option for
+@code{CXX14STD} a flag@footnote{Currently this is a valid option for
 @command{g++} 5 and later and 2016 versions of the Intel and Solaris
 compilers.  For earlier versions of @command{g++} one could try
 @option{-std=c++1y}.} such as @option{-std=c++14} for C++14 support and
@@ -1020,18 +1025,19 @@ compiling some C++11/14/17 code.
 It may be@footnote{This is true for earlier versions of @command{g++} such
 as 4.2.1, and also for commonly-used versions of the Solaris compiler
 @code{CC}.} that there is no suitable flag for C++11 support, in which
-case a different compiler could be selected for @code{CXX1X} and its
+case a different compiler could be selected for @code{CXX11} and its
 corresponding flags.  Likewise, a different compiler can be specified for
-C++14 support with @code{CXX1Y}. Some compilers@footnote{Currently only
+C++14 support with @code{CXX14} and for C++17 support with @code{CXX17}.
+Some compilers@footnote{Currently only
 GCC 6 and later, but this has been mooted for others.} by default assume
 a later standard than C++98 whereas the latter is assumed by some
 packages.  So users of GCC 6 might like to specify
 @example
 CXX='g++ -std=gnu++98'
-CXX1X=g++
-CXX1XSTD='-std=c++11'
-CXX1Y=g++
-CXX1YSTD='-std=c++14'
+CXX11=g++
+CXX11STD='-std=c++11'
+CXX14=g++
+CXX14STD='-std=c++14'
 @end example
 
 The @option{-std} flag is supported by the GCC, @command{clang}, Intel
@@ -1039,7 +1045,7 @@ and Solaris compilers (the latter from version 12.4).  Currently
 accepted values are (plus some synonyms)
 @example
 g++:     c++98 gnu++98 c++11 gnu+11 c++14 gnu++14 c++1z gnu++1z
-Intel:   gnu+98 c++11 c++14 (from 16.0)
+Intel:   gnu+98 c++11 c++14 (from 16.0) c++17 (from 17.0)
 Solaris: c++03 c++11 c++14 (from 12.5)
 @end example
 @noindent
@@ -1062,7 +1068,8 @@ support to be picked by @command{configure}.)  Option
 `Standards' for @command{g++} starting with @samp{gnu} enable `GNU
 extensions': what those are is hard to track down.
 
-For the use of C++11 in @R{} packages see the `Writing R Extensions' manual.
+For the use of C++11 and later in @R{} packages see the `Writing R
+Extensions' manual.
 
 @node Testing a Unix-alike Installation,  , Other Options, Installing R under Unix-alikes
 @section Testing an Installation
@@ -2310,8 +2317,8 @@ as @file{~/.R/Makevars} (see the next section).  Entries which may need
 to be changed include @samp{CC}, @samp{CXX}, @samp{FC}, @samp{F77},
 @samp{FLIBS} and the corresponding flags, and perhaps @samp{CXXCPP},
 @samp{DYLIB_LD}, @samp{MAIN_LD}, @samp{SHLIB_CXXLD}, @samp{SHLIB_FCLD}
-and @samp{SHLIB_LD}, as well as @samp{CXX1X}, @samp{CXX1Y} and
-@samp{CXX1Z} variants
+and @samp{SHLIB_LD}, as well as @samp{CXX11}, @samp{CXX14} and
+@samp{CXX17} variants
 
 So for example you could select @command{clang} for both C and C++ with
 extensive checking by having in @file{~/.R/Makevars}
@@ -3303,7 +3310,8 @@ command might be
 ./configure --enable-utf --enable-unicode-properties --enable-jit --disable-cpp
 @end example
 @noindent  
-The @option{--enable-jit} flag is supported for most common CPUs.
+The @option{--enable-jit} flag is supported for most common CPUs.  (See
+also the comments for Solaris.)
 
 @c libcurl 7.22.0 was released in Sep 2011, in Ubuntu 12.04 LTS,
 @c   end-of-life Apr 2017
@@ -3592,9 +3600,9 @@ configure variables @code{CXX}, @code{CXXFLAGS} and similar.
 @command{configure} will normally find a suitable compiler.  However, in
 many cases this will be a C++98 compiler, and it is
 possible to specify an alternative compiler for use with C++11 by the
-configure variables @code{CXX1X}, @code{CXX1XSTD}, @code{CXX1XFLAGS} and
+configure variables @code{CXX11}, @code{CXX11STD}, @code{CXX11FLAGS} and
 similar (@pxref{C++ Support}).  Again, @command{configure} will normally
-find a suitable value for @code{CXX1XSTD} if the compiler given by
+find a suitable value for @code{CXX11STD} if the compiler given by
 @code{CXX} is capable of compiling C++11 code, but it is possible that a
 completely different compiler will be needed.
 
@@ -4840,8 +4848,9 @@ apart from disabling @code{quartz()} and the ability to use the build
 with @Rapp{}, it also changes the default location of the personal
 library (see @code{?.libPaths}).
 
-Various compilers can be used.  The current @acronym{CRAN} distribution
-of @R{} is built using
+Various compilers can be used, and the recommendations for @R{} 3.4.0
+are under discussion.  The @acronym{CRAN} distribution of @R{} 3.3.3 was
+built using
 
 @example
 CC=clang
@@ -4866,15 +4875,21 @@ not run on Core 2 Duo Macs, and linking failures on macOS Sierra have
 been reported.  On other Sierra machines the reported failing examples
 work, albeit with many warnings.}
 
+More recent and complete distributions of @command{clang} are often
+available from @uref{http://llvm.org/releases/}: for example at the time
+of writing for 4.0.0 but not 3.9.1.  In particular, these may include
+support for OpenMP.
+
 There are installers@footnote{Some of these are unsigned packages: to
 install them you may need to right-click and select @code{Open with ->
-Installer}.} for Fortran compilers for El Capitan and Sierra at
+Installer}.} for Fortran compilers@footnote{and also @command{cpp},
+@command{gcc} and @command{g++}.} for El Capitan and Sierra at
 @uref{http://coudert.name/@/software/@/gfortran-6.1-ElCapitan.dmg} and
-@uref{http://coudert.name/@/software/@/gfortran-6.3-Sierra.dmg}.
-(These compilers are also available from a @code{CRAN} mirror: select
-`Other' under `Software' from the left-hand menu.)  One way to use these
-builds with a binary distribution of @R{} is to have a
-@file{~/.R/Makevars} file similar to (El Capitan)
+@uref{http://coudert.name/@/software/@/gfortran-6.3-Sierra.dmg}.  (These
+compilers are also available from a @code{CRAN} mirror: select `Other'
+under `Software' from the left-hand menu.)  One way to use these builds
+with a binary distribution of @R{} is to have a @file{~/.R/Makevars}
+file similar to (El Capitan)
 @example
 F77 = /usr/local/gfortran/bin/gfortran
 FC = /usr/local/gfortran/bin/gfortran
@@ -4890,11 +4905,6 @@ FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin16/6.3.0
 @end example
 @noindent
 (with lines broken here for legibility).
-
-More recent and complete distributions of @command{clang} are often
-available from @uref{http://llvm.org/releases/}: for example at the time
-of writing for 4.0.0 but not 3.9.1.  In particular, these may include
-support for OpenMP.
 
 Pre-compiled versions of many of the @ref{Useful libraries and programs}
 are available from @uref{https://r.research.att.com/libs/}.  You will
@@ -5171,6 +5181,11 @@ A large selection of Open Source software can be installed from
 @uref{https://www.opencsw.org}, by default installed under
 @file{/opt/csw}.  Solaris 10 ships with @code{bzlib} version 1.0.6
 (sufficient) but @code{zlib} version 1.2.3 (too old): OpenCSW has 1.2.8.
+
+At least when compiling with Oracle compilers, Solaris uses far more
+stack space than other platforms.  This makes it desirable to build PCRE
+with the option @option{--disable-stack-for-recursion}: the OpenCSW
+distribution was at the time of writing.
 
 The Oracle compilers are unusual in not including
 @file{/usr/local/include} in the default include search path: @R{}'s
