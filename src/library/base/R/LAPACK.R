@@ -58,3 +58,5 @@ La.svd <- function(x, nu = min(n, p), nv = min(n, p))
 }
 
 La_version <- function() .Internal(La_version())
+La_library <- function() .Internal(La_library())
+
