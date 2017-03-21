@@ -16,7 +16,7 @@
 La_version()
 }
 \value{
-  A character vector of length one (\code{""} when the name is not known). 
+  A character vector of length one (\code{""} when the name is not known).
   The value can be used as an indication of which \code{LAPACK}
   implementation is in use.  Typically, the \R version of \code{LAPACK} will
   appear as \code{libRlapack.so} (\code{libRlapack.dylib}), depending on how
