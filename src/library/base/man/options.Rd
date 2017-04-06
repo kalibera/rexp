@@ -116,9 +116,9 @@ getOption(x, default = NULL)
       and upon entry to a function whose debugging flag is set.
       Initially unset, and only used if set to a positive integer.}
 
-    \item{\code{digits}:}{controls the number of digits to print when
-      printing numeric values.  It is a suggestion only.  Valid values
-      are 1\dots{}22 with default 7.  See the note in
+    \item{\code{digits}:}{controls the number of significant digits to
+      print when printing numeric values.  It is a suggestion only.
+      Valid values are 1\dots{}22 with default 7.  See the note in
       \code{\link{print.default}} about values greater than 15.}
 
     \item{\code{digits.secs}:}{controls the maximum number of digits to
@@ -622,7 +622,7 @@ getOption(x, default = NULL)
       for binary installs on macOS and Windows, but can be used in a
       startup file for source installs \emph{via}
       \command{R CMD \link{INSTALL}}.  For binary installs, can also be
-      the character string \code{"pkgloack"}.}
+      the character string \code{"pkglock"}.}
 
     \item{\code{internet.info}:}{The minimum level of information to be
       printed on URL downloads etc, using the \code{"internal"} and
@@ -665,15 +665,15 @@ getOption(x, default = NULL)
 #ifdef windows
       Possible values are \code{"win.binary"}, \code{"source"} and
       \code{"both"} (the default).  Some macOS builds use
-      \code{"mac.binary"} and \code{"mac.binary.mavericks"}.
+      \code{"mac.binary.el-capitan"}.
 #endif
 #ifdef unix
       Possible values are \code{"source"} (the default except under a
-      CRAN macOS build), \code{"mac.binary."},
-      \code{"mac.binary.mavericks"} and \code{"both"} (the default for
-      CRAN macOS builds).  Windows uses
-      \code{"win.binary"}. (\code{"mac.binary.leopard"} and
-      \code{"mac.binary.universal"} are no longer in use.)
+      CRAN macOS build), \code{"mac.binary.el-capitan"} and
+      \code{"both"} (the default for CRAN macOS builds).  Windows uses
+      \code{"win.binary"}. (\code{"mac.binary.mavericks"},
+      \code{"mac.binary.leopard"}, \code{"mac.binary.universal"} are no
+      longer in use.)
 #endif
       Value \code{"binary"} is a synonym for the native binary type (if
       there is one); \code{"both"} is used by
