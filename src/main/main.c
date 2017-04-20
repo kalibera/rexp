@@ -719,6 +719,106 @@ void attribute_hidden BindDomain(char *R_Home)
 #endif
 }
 
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/resource.h>
+
+/*
+  Find a new limit for the C stack, within the existing limit.  Looks for
+  the first address in the stack area that is not accessible to the current
+  process.  This code could easily be made to work on different Unix
+  systems, not just on Linux, but it does not seem necessary at the moment.
+
+  limit is the first address not to access
+  bound is the new first address not to access
+  dir is 1 (stack grows up) or -1 (stack grows down, the usual)
+    so, incrementing by dir one traverses from stack start, from the oldest
+    things on the stace; note that in R_CStackDir, 1 means stack grows down
+
+  returns NULL in case of error, limit when no new limit is found,
+    a new limit when found
+    
+  returns NULL when from == limit  
+*/
+
+volatile int globald = 0;
+static void* findBound(char *from, char *limit, int dir)
+{
+  int pipefd[2];
+  pid_t cpid;
+    /* any positive size could be used, using page size is a heuristic */
+  int psize = (int) sysconf(_SC_PAGESIZE);
+  char buf[psize];
+
+  if ((dir==-1 && from<=limit) || (dir == 1 && from>=limit))
+    return NULL;
+
+  if (pipe(pipefd) == -1)
+    return NULL; /* error */
+
+  cpid = fork();
+  if (cpid == -1)
+    return NULL; /* error */
+
+  if (cpid == 0) {
+    /* child process, reads from the pipe */
+    close(pipefd[1]);
+
+    while (read(pipefd[0], &buf, psize) > 0);
+    _exit(0);
+  } else {
+    /* Parent process, writes data to the pipe looking for EFAULT error which
+       indicates an inaccesible page. For performance, the reading is first
+       done using a buffer (of the size of a page), but once EFAULT is reached,
+       it is re-tried byte-by-byte for the last buffer not read successfully.
+    */
+    close(pipefd[0]);
+    int failed = 0;
+    intmax_t diff = imaxabs(from-limit);
+    int step = (diff < psize) ? diff : psize;
+
+    for(; (dir == -1) ? (from-step+1 >= limit) : (from+step-1 <= limit)
+        ; from += dir * step)
+          
+      if (write(pipefd[1], (dir == -1) ? (from-step+1) : from, step) == -1) {
+        if (errno == EFAULT) {
+          if (step > 1) {
+             step = 1; /* now proceed byte by byte */
+             continue;
+           }
+        } else
+          failed = 1;
+        break;
+      } else {
+          for(int i = 0; i < step; i++) {
+            if (dir == -1) {
+              globald = *(from-step+1+i);
+            } else {
+              globald = *(from+i);
+            }
+          }
+        fprintf(stderr, "OK: %p %p\n", from-step+1, from);
+      }
+
+    close(pipefd[1]);
+    wait(NULL);
+    return failed ? NULL : from;
+  }
+}
+
+static void tryaccess(char *adr) {
+  fprintf(stderr, "Trying to access %p\n", adr);
+  fflush(stderr);
+  volatile char tmp = *adr;
+  globald += tmp;
+//  *adr = tmp;
+  fprintf(stderr, "Ok\n");
+  fflush(stderr);
+}
+
 void setup_Rmainloop(void)
 {
     volatile int doneit;
@@ -726,6 +826,54 @@ void setup_Rmainloop(void)
     SEXP cmd;
     char deferred_warnings[11][250];
     volatile int ndeferred_warnings = 0;
+    
+    fprintf(stderr, "R_CStackStart: %p\n", (void *)R_CStackStart);
+    fprintf(stderr, "R_CStackDir: %d\n", R_CStackDir);
+    fprintf(stderr, "original R_CStackLimit: %lu\n", (unsigned long)R_CStackLimit);
+    char *end = (char *)(R_CStackStart - (intptr_t)R_CStackLimit * R_CStackDir);
+    fprintf(stderr, "stack end (computed): %p\n", end);
+    char *from = (char *)R_CStackStart;
+    
+    //void *limit = (void *) ( (intptr_t)end - (intptr_t)R_CStackDir*8192 );
+    char *limit = end;
+    char *bound = findBound(from, limit, -R_CStackDir);
+    fprintf(stderr, "stack end (write-found): %p error by %" PRIdPTR "\n", bound,
+      (intptr_t)bound - (intptr_t)end*R_CStackDir);
+
+    char *startcomp = bound + (intptr_t)R_CStackLimit * R_CStackDir;
+    fprintf(stderr, "stack start (computed from bound): %p", startcomp);
+
+    // not the usual way, but test the code
+    char *startbound = findBound(bound + 1*R_CStackDir, (char *)(uintptr_t)-1, R_CStackDir) - R_CStackDir;
+    fprintf(stderr, "stack start (write-found): %p\n", startbound);
+    
+    fprintf(stderr, "pid is %d", getpid());
+    while(1);
+    
+    
+    fprintf(stderr, " R_CStackStack --- ");
+    tryaccess (from);
+    fprintf(stderr, " write-found end + 1 (inside) --- ");
+    tryaccess (bound + 1 * R_CStackDir);
+    
+
+    for(int i = -10; i < 0; i++) {
+      char *adr = bound - i * R_CStackDir;
+      fprintf(stderr, "Trying to access %p (bound %d)...\n", adr, i);
+      volatile char tmp = *adr;
+      *adr = tmp;
+      fprintf(stderr, "Ok");
+      fflush(stderr);
+     }
+
+    for(int i = -20000; i < 0; i++) {
+      char *adr = end - i * R_CStackDir;
+      fprintf(stderr, "Trying to access %p (end %d)...\n", adr, i);
+      volatile char tmp = *adr;
+      *adr = tmp;
+      fprintf(stderr, "Ok");
+      fflush(stderr);
+     }
 
     /* In case this is a silly limit: 2^32 -3 has been seen and
      * casting to intptr_r relies on this being smaller than 2^31 on a
