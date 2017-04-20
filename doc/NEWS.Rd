@@ -9,13 +9,33 @@
 
   \subsection{NEW FEATURES}{
     \itemize{
-      \item Placeholder.
+      \item \code{diag()} gets optional \code{names} argument.
+
+      \item \code{chooseCRANmirror} and \code{chooseBioCmirror} no
+      longer have a \code{useHTTPS} argument, not needed now all \R
+      builds support \samp{https://} downloads.
+
+      \item New \code{summary()} method for \code{warnings()} with a
+      (somewhat experimental) \code{print()} method.
     }
   }
 
   \subsection{BUG FIXES}{
     \itemize{
-      \item Placeholder.
+      \item \code{readRDS(url(....))} now works too.% <- port to 3.4.0 patched
+
+      \item \code{printCoefmat()} now also works without column names.
+
+      \item The S4 methods on \code{Ops()} for the \code{"structure"} class no
+      longer cause infinite recursion when the structure is not an S4 object.
+
+      \item \code{nlm(f, ..)} for the case where \code{f()} has a
+      \code{"hessian"} attribute now computes \eqn{LL' = H + µI} correctly,
+      (part 1 of \PR{17249}).
+
+      \item An S4 method that \dQuote{rematches} to its generic and
+      overrides the default value of a generic formal argument to
+      \code{NULL} no longer drops the argument from its formals.
     }
   }
 }
@@ -26,6 +46,16 @@
     \itemize{
       \item The deprecated support for PCRE versions older than 8.20
       will be removed in \R 3.4.1.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{getParseData()} gave incorrect column information when
+      code contained multi-byte characters.  (\PR{17254})
+
+      \item Asking for help using expressions like \code{?stats::cor()}
+      did not work.  (\PR{17250})
     }
   }
 }

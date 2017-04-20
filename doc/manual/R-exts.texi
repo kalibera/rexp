@@ -5050,7 +5050,11 @@ erf expm1 fmin fmax lgamma lround loglp round snprintf strcasecmp trunc
 @noindent
 (all of which are in the @code{std} namespace in C++11) and the POSIX
 functions @code{strdup} and @code{strncasecmp} and constants @code{M_PI}
-and @code{M_LN2} (see the previous item).
+and @code{M_LN2} (see the previous item).  @R{} has long provided
+@code{fmax2}, @code{fmin2}, @code{fround}, @code{ftrunc},
+@code{lgammafn}, @code{log1p} (if needed) and many of the X/Open
+constants, declared in header @file{Rmath.h}.  Uses of @code{erf} can be
+replaced by @code{pnorm} (see the @R{} help page for the latter).
 
 @item
 Using @code{alloca} portably is tricky: it is neither an ISO C nor a
@@ -9357,7 +9361,7 @@ static R_NativePrimitiveArgType myC_t[] = @{
 @};
 
 static const R_CMethodDef cMethods[] = @{
-   @{"myC", (DL_FUNC) &myC, 4, myC_t@}
+   @{"myC", (DL_FUNC) &myC, 4, myC_t@},
    @{NULL, NULL, 0, NULL@}
 @};
 @end group
@@ -9710,7 +9714,7 @@ Find all the relevant calls in the @R{} code and edit them to use the
 @smallexample
 temp <- .Call("spline_basis", knots, ord, x, derivs, PACKAGE = "splines")
 y[accept] <- .Call("spline_value", knots, coeff, ord, x[accept], deriv, PACKAGE = "splines")
-y = .Call"spline_value", knots, coef(object), ord, x, deriv, PACKAGE = "splines"))
+y = .Call("spline_value", knots, coef(object), ord, x, deriv, PACKAGE = "splines")
 @end smallexample
 @noindent
 to
@@ -9718,7 +9722,7 @@ to
 @smallexample
 temp <- .Call(C_spline_basis, knots, ord, x, derivs)
 y[accept] <- .Call(C_spline_value, knots, coeff, ord, x[accept], deriv)
-y = .Call(C_spline_value, knots, coef(object), ord, x, deriv))
+y = .Call(C_spline_value, knots, coef(object), ord, x, deriv)
 @end smallexample
 
 Check that there is no @code{exportPattern} directive which
@@ -10783,7 +10787,7 @@ SEXP out(SEXP x, SEXP y)
 @end group
 
 @group
-    UNPROTECT(3);
+    UNPROTECT(2);
     return ans;
 @}
 @end group
