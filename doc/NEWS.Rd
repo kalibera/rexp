@@ -9,33 +9,52 @@
 
   \subsection{NEW FEATURES}{
     \itemize{
-      \item \code{diag()} gets optional \code{names} argument.
+      \item \code{diag()} gets an optional \code{names} argument: this
+      may require updates to packages defining S4 methods for it.
 
-      \item \code{chooseCRANmirror} and \code{chooseBioCmirror} no
+      \item \code{chooseCRANmirror()} and \code{chooseBioCmirror()} no
       longer have a \code{useHTTPS} argument, not needed now all \R
       builds support \samp{https://} downloads.
 
       \item New \code{summary()} method for \code{warnings()} with a
       (somewhat experimental) \code{print()} method.
+
+      \item \code{.self} is now automatically registered as a global
+      variable when registering a reference class method.
+
+      \item \code{tempdir(check=TRUE)} recreates the \code{tmpdir()} if
+      it is no longer valid.
+
+      \item New \code{askYesNo()} function and \code{"askYesNo"} option
+      to ask the user binary response questions in a customizable but
+      consistent way.  Suggestion of \PR{17242}.
     }
   }
 
   \subsection{BUG FIXES}{
     \itemize{
-      \item \code{readRDS(url(....))} now works too.% <- port to 3.4.0 patched
-
       \item \code{printCoefmat()} now also works without column names.
 
       \item The S4 methods on \code{Ops()} for the \code{"structure"} class no
       longer cause infinite recursion when the structure is not an S4 object.
 
       \item \code{nlm(f, ..)} for the case where \code{f()} has a
-      \code{"hessian"} attribute now computes \eqn{LL' = H + µI} correctly,
-      (part 1 of \PR{17249}).
+      \code{"hessian"} attribute now computes
+      \eqn{LL' = H + \mu I}{LL' = H + µI} correctly.  (\PR{17249}).
 
       \item An S4 method that \dQuote{rematches} to its generic and
       overrides the default value of a generic formal argument to
       \code{NULL} no longer drops the argument from its formals.
+
+      \item \code{Rscript} can now accept more than one argument given on
+      the \samp{#!} line of a script. Previously, one could only pass a
+      single argument on the \samp{#!} line in Linux.
+
+      \item Dispatch on \code{\dots} calls the method using its name,
+      instead of \code{.Method} (for consistency with default dispatch),
+      and only attempts to pass non-missing arguments from the generic.
+
+      \item \code{callNextMethod()} works for \code{\dots} methods.
     }
   }
 }
@@ -45,7 +64,7 @@
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
       \item The deprecated support for PCRE versions older than 8.20
-      will be removed in \R 3.4.1.
+      has been removed.
     }
   }
 
@@ -56,6 +75,20 @@
 
       \item Asking for help using expressions like \code{?stats::cor()}
       did not work.  (\PR{17250})
+
+      \item \code{readRDS(url(....))} now works too.
+
+      \item \code{installed.packages()} on Windows would fail when
+      \code{file.mtime()} (?) returned NA.
+
+      \item \command{R CMD Sweave} again returns \samp{status = 0} on
+      successful completion.
+
+      \item Vignettes listed in \file{.Rbuildignore} were not being
+      ignored properly.  \PR{17246}
+
+      \item \code{file.mtime()} no longer returns NA on Windows when the
+      file or directory is being used by another process.
     }
   }
 }
