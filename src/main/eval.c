@@ -2808,7 +2808,10 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    COPY_TAG(tail, el);
 	}
 	else {
-	    SETCDR(tail, CONS(mkPROMISE(CAR(el), rho), R_NilValue));
+            if (TYPEOF(CAR(el)) == PROMSXP)
+              SETCDR(tail, CONS(CAR(el), R_NilValue));
+            else
+	      SETCDR(tail, CONS(mkPROMISE(CAR(el), rho), R_NilValue));
 	    tail = CDR(tail);
 	    COPY_TAG(tail, el);
 	}
