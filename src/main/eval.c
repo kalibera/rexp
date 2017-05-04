@@ -2789,8 +2789,8 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	    PROTECT(h = findVar(CAR(el), rho));
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-		    if (CAR(h) == R_MissingArg)
-		      SETCDR(tail, CONS(R_MissingArg, R_NilValue));
+		    if (TYPEOF(CAR(h)) == PROMSXP)
+		      SETCDR(tail, CONS(CAR(h), R_NilValue));
                     else
 		      SETCDR(tail, CONS(mkPROMISE(CAR(h), rho), R_NilValue));
 		    tail = CDR(tail);
