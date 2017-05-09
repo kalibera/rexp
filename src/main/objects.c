@@ -201,33 +201,32 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	    error(_("bad generic definition environment"));
     }
 
+    if (!s_S3MethodsTable)
+        s_S3MethodsTable = install(".__S3MethodsTable__.");
+    SEXP table = findVarInFrame3(defrho,
+				     s_S3MethodsTable,
+				     TRUE);
+    if (TYPEOF(table) == PROMSXP) {
+        PROTECT(table);
+        table = eval(table, R_BaseEnv);
+        UNPROTECT(1);
+    }
+    if (TYPEOF(table) == ENVSXP) {
+        val = findVarInFrame3(table, method, TRUE);
+        if (TYPEOF(val) == PROMSXP) {
+            PROTECT(val);
+            val = eval(val, rho);
+            UNPROTECT(1);
+        }
+        if (val != R_UnboundValue)
+            return val;
+    }
+
     /* This evaluates promises */
     val = findVar1(method, callrho, FUNSXP, TRUE);
     if (isFunction(val))
 	return val;
-    else {
-	/* We assume here that no one registered a non-function */
-	if (!s_S3MethodsTable)
-	    s_S3MethodsTable = install(".__S3MethodsTable__.");
-	SEXP table = findVarInFrame3(defrho,
-				     s_S3MethodsTable,
-				     TRUE);
-	if (TYPEOF(table) == PROMSXP) {
-	    PROTECT(table);
-	    table = eval(table, R_BaseEnv);
-	    UNPROTECT(1);
-	}
-	if (TYPEOF(table) == ENVSXP) {
-	    val = findVarInFrame3(table, method, TRUE);
-	    if (TYPEOF(val) == PROMSXP) {
-		PROTECT(val);
-		val = eval(val, rho);
-		UNPROTECT(1);
-	    }
-	    return val;
-	}
-	return R_UnboundValue;
-    }
+    return R_UnboundValue;
 }
 
 #ifdef UNUSED
