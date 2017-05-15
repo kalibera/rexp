@@ -255,12 +255,9 @@ SEXP attribute_hidden do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_body(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP) {
-	SEXP ans = BODY_EXPR(CAR(args));
-	if (!isNull(ans)) MARK_NOT_MUTABLE(ans);
-	return ans;
-	//return duplicate(BODY_EXPR(CAR(args)));
-    } else {
+    if (TYPEOF(CAR(args)) == CLOSXP)
+	return duplicate(BODY_EXPR(CAR(args)));
+    else {
 	if(!(TYPEOF(CAR(args)) == BUILTINSXP ||
 	     TYPEOF(CAR(args)) == SPECIALSXP))
 	    warningcall(call, _("argument is not a function"));
