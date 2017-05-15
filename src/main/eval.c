@@ -1308,7 +1308,12 @@ SEXP attribute_hidden R_cmpfun1(SEXP fun)
     return val;
 }
 
-SEXP attribute_hidden R_cmpfun(SEXP fun)
+/* The function is compiled in-place. If no compilation is done, fun is
+   not modified. Otherwise, the body of fun is replaced by a bytecode
+   object, which will point to (and thus keep protecting) the original
+   body of the function. */
+
+static void R_cmpfun(SEXP fun)
 {
     R_exprhash_t hash = 0;
     if (jit_strategy != STRATEGY_NO_CACHE) {
@@ -1329,9 +1334,25 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 			jit_srcref_match(jit_cache_srcref(entry),
 					 getAttrib(fun, R_SrcrefSymbol))) {
 			PRINT_JIT_INFO;
-			SET_BODY(fun, jit_cache_code(entry));
+			SEXP cachedbody = jit_cache_code(entry);
+			SEXP cachedexpr = bytecodeExpr(cachedbody);
+			if (BODY(fun) == cachedexpr)
+			    SET_BODY(fun, cachedbody);
+			else {
+			    SEXP newbody = PROTECT(allocSExp(BCODESXP));
+			    /* bytecode */
+			    SETCAR(newbody, lazy_duplicate(CAR(cachedbody)));
+			    /* R_NilValue */
+			    SET_TAG(newbody, lazy_duplicate(TAG(cachedbody)));
+			    /* constants */
+			    SEXP newconsts = shallow_duplicate(CDR(cachedbody));
+			    SET_VECTOR_ELT(newconsts, 0, BODY(fun));
+			    SETCDR(newbody, newconsts);
+			    SET_BODY(fun, newbody);
+			    UNPROTECT(1); /* newbody */
+			}
 			/**** reset the cache here?*/
-			return fun;
+			return;
 		    }
 		}
 		/* The functions probably differ only in source references
@@ -1350,7 +1371,7 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 		SET_NOJIT(fun);
 		/**** also mark the cache entry as NOJIT, or as need to see
 		      many times? */
-		return fun;
+		return;
 	    }
 	}
 	PRINT_JIT_INFO;
@@ -1358,12 +1379,26 @@ SEXP attribute_hidden R_cmpfun(SEXP fun)
 
     SEXP val = R_cmpfun1(fun);
 
-    if (TYPEOF(BODY(val)) != BCODESXP)
+    if (TYPEOF(BODY(val)) != BCODESXP) {
 	SET_NOJIT(fun);
-    else if (jit_strategy != STRATEGY_NO_CACHE)
-	set_jit_cache_entry(hash, val); /* val is protected by callee */
+	return;
+    }
 
-    return val;
+    if (jit_strategy != STRATEGY_NO_CACHE)
+	/* val is protected by callee */
+	set_jit_cache_entry(hash, val);
+
+    SEXP valbody = BODY(val);
+    SEXP valexpr = bytecodeExpr(valbody);
+    if (valexpr != BODY(fun)) {
+	/* the body expression of val must be already identical to that of fun,
+	   but we need to replace the reference because the old reference has
+	   to stay protected via fun; */
+	SEXP valconsts = CDR(valbody);
+	SET_VECTOR_ELT(valconsts, 0, BODY(fun)); /* update expr */
+    }
+    SET_BODY(fun, valbody);
+    return;
 }
 
 static SEXP R_compileExpr(SEXP expr, SEXP rho)
@@ -1564,11 +1599,9 @@ static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
     body = BODY(op);
     if (R_CheckJIT(op)) {
 	int old_enabled = R_jit_enabled;
-	SEXP newop;
 	R_jit_enabled = 0;
-	newop = R_cmpfun(op);
-	body = BODY(newop);
-	SET_BODY(op, body);
+	R_cmpfun(op); /* changes op in place */
+	body = BODY(op);
 	R_jit_enabled = old_enabled;
     }
 
