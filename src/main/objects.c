@@ -180,6 +180,42 @@ void R_warn_S3_for_S4(SEXP method) {
  *    3. fix up the argument list; it should be the arguments to the
  *	 generic matched to the formals of the method to be invoked */
 
+
+static SEXP findGlobalMethod(SEXP symbol, SEXP rho)
+{
+    SEXP vl;
+    while (rho != R_EmptyEnv) {
+	vl = findVarInFrame3(rho, symbol, TRUE);
+	if (vl != R_UnboundValue) {
+	    if (TYPEOF(vl) == PROMSXP) {
+		PROTECT(vl);
+		vl = eval(vl, rho);
+		UNPROTECT(1);
+	    }
+	    if ((TYPEOF(vl) == CLOSXP ||
+		 TYPEOF(vl) == BUILTINSXP ||
+		 TYPEOF(vl) == SPECIALSXP))
+		return (vl);
+	}
+	if (rho == R_GlobalEnv)
+	    /* skip over attached environments on the search path */
+	    /* alternatives:
+
+	       skip only package environments and Autoloads (quick and
+	       dirty version skips anything with attributes)
+
+	       stop at .GlobalEnv but search base if defenv is base
+
+	       might be slightly better to use IS_GLOBAL_FRAME(rho)
+	       instead of rho == R_GlobalEnv.
+	    */
+	    rho = R_BaseEnv;
+	else
+	    rho = ENCLOS(rho);
+    }
+    return (R_UnboundValue);
+}
+
 attribute_hidden
 SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 {
@@ -187,22 +223,22 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
     static SEXP s_S3MethodsTable = NULL;
 
     if (TYPEOF(callrho) != ENVSXP) {
-	if (TYPEOF(callrho) == NILSXP)
+        if (TYPEOF(callrho) == NILSXP)
 	    error(_("use of NULL environment is defunct"));
-	else
+        else
 	    error(_("bad generic call environment"));
     }
     if (defrho == R_BaseEnv)
 	defrho = R_BaseNamespace;
     else if (TYPEOF(defrho) != ENVSXP) {
-	if (TYPEOF(defrho) == NILSXP)
-	    error(_("use of NULL environment is defunct"));
-	else
-	    error(_("bad generic definition environment"));
+        if (TYPEOF(defrho) == NILSXP)
+            error(_("use of NULL environment is defunct"));
+        else
+            error(_("bad generic definition environment"));
     }
 
     /* This evaluates promises */
-    val = findVar1(method, callrho, FUNSXP, TRUE);
+    val = findGlobalMethod(method, callrho);
     if (isFunction(val))
 	return val;
     else {
@@ -220,9 +256,9 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	if (TYPEOF(table) == ENVSXP) {
 	    val = findVarInFrame3(table, method, TRUE);
 	    if (TYPEOF(val) == PROMSXP) {
-		PROTECT(val);
-		val = eval(val, rho);
-		UNPROTECT(1);
+	        PROTECT(val);
+	        val = eval(val, rho);
+	        UNPROTECT(1);
 	    }
 	    return val;
 	}
