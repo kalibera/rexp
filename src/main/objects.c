@@ -217,7 +217,7 @@ static SEXP findGlobalMethod(SEXP symbol, SEXP rho)
 }
 
 attribute_hidden
-SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
+SEXP R_LookupMethod_strict(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 {
     SEXP val;
     static SEXP s_S3MethodsTable = NULL;
@@ -265,6 +265,81 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	return R_UnboundValue;
     }
 }
+
+attribute_hidden
+SEXP R_LookupMethod_old(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
+{
+    SEXP val;
+    static SEXP s_S3MethodsTable = NULL;
+
+    if (TYPEOF(callrho) != ENVSXP) {
+	if (TYPEOF(callrho) == NILSXP)
+	    error(_("use of NULL environment is defunct"));
+	else
+	    error(_("bad generic call environment"));
+    }
+    if (defrho == R_BaseEnv)
+	defrho = R_BaseNamespace;
+    else if (TYPEOF(defrho) != ENVSXP) {
+	if (TYPEOF(defrho) == NILSXP)
+	    error(_("use of NULL environment is defunct"));
+	else
+	    error(_("bad generic definition environment"));
+    }
+
+    /* This evaluates promises */
+    val = findVar1(method, callrho, FUNSXP, TRUE);
+    if (isFunction(val))
+	return val;
+    else {
+	/* We assume here that no one registered a non-function */
+	if (!s_S3MethodsTable)
+	    s_S3MethodsTable = install(".__S3MethodsTable__.");
+	SEXP table = findVarInFrame3(defrho,
+				     s_S3MethodsTable,
+				     TRUE);
+	if (TYPEOF(table) == PROMSXP) {
+	    PROTECT(table);
+	    table = eval(table, R_BaseEnv);
+	    UNPROTECT(1);
+	}
+	if (TYPEOF(table) == ENVSXP) {
+	    val = findVarInFrame3(table, method, TRUE);
+	    if (TYPEOF(val) == PROMSXP) {
+		PROTECT(val);
+		val = eval(val, rho);
+		UNPROTECT(1);
+	    }
+	    return val;
+	}
+	return R_UnboundValue;
+    }
+}
+
+attribute_hidden
+SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
+{
+  SEXP strict = PROTECT(R_LookupMethod_strict(method, rho, callrho, defrho));
+  SEXP old = PROTECT(R_LookupMethod_old(method, rho, callrho, defrho));
+  
+  if (strict != old) {
+    REprintf("S3LOOKUP problem: method %s", translateChar(PRINTNAME(method)));
+    if (isFunction(old)) {
+      REprintf(" found in namespace %s",
+        R_IsNamespaceEnv(CLOENV(old)) ? translateChar(STRING_ELT(R_NamespaceEnvSpec(CLOENV(old)), 0)) : "unknown");
+    }
+    if (isFunction(strict)) {
+      REprintf(" strict method found it in namespace %s\n",
+        R_IsNamespaceEnv(CLOENV(strict)) ? translateChar(STRING_ELT(R_NamespaceEnvSpec(CLOENV(strict)), 0)) : "unknown"); 
+    } else
+      REprintf(" not found using strict method\n");
+  }
+  
+  UNPROTECT(2);
+  return old;
+}
+
+
 
 #ifdef UNUSED
 static int match_to_obj(SEXP arg, SEXP obj) {
