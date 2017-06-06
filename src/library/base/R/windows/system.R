@@ -20,7 +20,7 @@ system <- function(command, intern = FALSE,
                    ignore.stdout = FALSE, ignore.stderr = FALSE,
                    wait = TRUE, input = NULL,
                    show.output.on.console = TRUE, minimized = FALSE,
-                   invisible = TRUE)
+                   invisible = TRUE, timeout = 0)
 {
     if(!is.logical(intern) || is.na(intern))
         stop("'intern' must be TRUE or FALSE")
@@ -56,13 +56,14 @@ system <- function(command, intern = FALSE,
     }
     if (invisible) flag <- 20L + flag
     else if (minimized) flag <- 10L + flag
-    .Internal(system(command, as.integer(flag), f, stdout, stderr))
+    .Internal(system(command, as.integer(flag), f, stdout, stderr, timeout))
 }
 
 system2 <- function(command, args = character(),
                     stdout = "", stderr = "", stdin = "", input = NULL,
                     env = character(),
-                    wait = TRUE, minimized = FALSE, invisible = TRUE)
+                    wait = TRUE, minimized = FALSE, invisible = TRUE,
+                    timeout = 0)
 {
     if(!is.logical(wait) || is.na(wait))
         stop("'wait' must be TRUE or FALSE")
@@ -89,7 +90,7 @@ system2 <- function(command, args = character(),
     else 0L
     if (invisible) flag <- 20L + flag
     else if (minimized) flag <- 10L + flag
-    .Internal(system(command, flag, f, stdout, stderr))
+    .Internal(system(command, flag, f, stdout, stderr, timeout))
 }
 
 shell <- function(cmd, shell, flag = "/c", intern = FALSE,

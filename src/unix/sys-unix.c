@@ -31,6 +31,7 @@
 # include <config.h>
 #endif
 
+#define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Internal.h>
 #include <Fileio.h>
@@ -237,11 +238,298 @@ double R_getClockIncrement(void)
 # include <sys/wait.h>
 #endif
 
+/* R_popen_timeout, R_pclose_timeout - a partial implementation of popen/close
+   with support for timeout. The POSIX/Unix popen/pclose cannot be re-used,
+   because the PID of the child process is not accessible via POSIX API.
+
+   Timeout support code borrowed from coreutils timeout command.
+*/
+
+static struct {
+    pid_t child_pid;
+    pid_t oldpgid;
+    int timedout; /* set when the child has been timed out */
+    sigset_t oldset;
+    struct sigaction oldalrm, oldint, oldquit, oldhup, oldterm, oldttin,
+                     oldttou, oldchld, oldcont;
+    RCNTXT cntxt;
+    FILE *fp;
+} tost;
+
+
+static void timeout_cleanup(int sig);
+static void timeout_sigchld(int sig);
+static void timeout_cend(void *data) {
+    timeout_cleanup(0);
+}
+
+/* timeout init and set up */
+static void timeout_init()
+{
+    tost.child_pid = 0;
+    tost.timedout = 0;
+    tost.oldpgid = getpgid(0);
+    sigprocmask(0, NULL, &tost.oldset);
+    sigaction(SIGALRM, NULL, &tost.oldalrm);
+    sigaction(SIGINT, NULL, &tost.oldint);
+    sigaction(SIGQUIT, NULL, &tost.oldquit);
+    sigaction(SIGHUP, NULL, &tost.oldhup);
+    sigaction(SIGTERM, NULL, &tost.oldterm);
+    sigaction(SIGTTIN, NULL, &tost.oldttin);
+    sigaction(SIGTTOU, NULL, &tost.oldttou);
+    sigaction(SIGCHLD, NULL, &tost.oldchld);
+    sigaction(SIGCONT, NULL, &tost.oldcont);
+    tost.fp = NULL;
+ 
+    /* set up a context to recover from R error between popen and pclose */
+    begincontext(&tost.cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
+                 R_NilValue, R_NilValue);
+    tost.cntxt.cenddata = (void *)0; /* indicate this is from longjump */
+    tost.cntxt.cend = &timeout_cend;
+
+    setpgid(0, 0);
+
+    /* install handler */
+    struct sigaction sa;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_handler = &timeout_cleanup;
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGALRM, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGQUIT, &sa, NULL);
+    sigaction(SIGHUP, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+
+    sa.sa_handler = timeout_sigchld;
+    sigaction(SIGCHLD, &sa, NULL);
+}
+
+/* needed for sigsuspend() to be interrupted */
+static void timeout_sigchld(int sig) {};
+
+static void timeout_cleanup_set(sigset_t *ss)
+{
+    sigemptyset(ss);
+    sigaddset(ss, SIGALRM);
+    sigaddset(ss, SIGINT);
+    sigaddset(ss, SIGQUIT);
+    sigaddset(ss, SIGHUP);
+    sigaddset(ss, SIGTERM);
+    sigaddset(ss, SIGTTIN);
+    sigaddset(ss, SIGTTOU);
+    sigaddset(ss, SIGCHLD);
+    sigaddset(ss, SIGCONT);
+}
+
+/* timeout handler and cleanup */
+static void timeout_cleanup(int sig)
+{
+    if (sig == SIGALRM) {
+	tost.timedout = 1;
+	sig = SIGTERM;
+    }
+    if (tost.child_pid != 0) {
+	/* parent, received a signal */
+
+	/* Send signal each signal first directly to child as it may become
+	   a group leader and may have created its own group. Then send also
+	   to the current group, but ignore by this process to prevent signal
+	   loop. */
+	kill(tost.child_pid, sig);
+	signal(sig, SIG_IGN);
+	kill(0, sig);
+	if (sig != SIGKILL && sig != SIGCONT) {
+	    kill(tost.child_pid, SIGCONT);
+	    signal(sig, SIG_IGN);
+	    kill(0, SIGCONT);
+	}
+    } else {
+	/* child */
+	_exit(128 + sig); /* arbitrary status, such as in timeout utility */
+    }
+
+    if (sig == 0) { 
+	/* no signal, called from pclose or after longjump */
+	sigset_t ss;
+	timeout_cleanup_set(&ss);
+        sigprocmask(SIG_BLOCK, &ss, NULL);
+	alarm(0); /* clear alarm */
+
+        sigaction(SIGALRM, &tost.oldalrm, NULL);
+        sigaction(SIGINT, &tost.oldalrm, NULL);
+	sigaction(SIGQUIT, &tost.oldquit, NULL);
+	sigaction(SIGHUP, &tost.oldhup, NULL);
+	sigaction(SIGTERM, &tost.oldterm, NULL);
+	sigaction(SIGTTIN, &tost.oldttin, NULL);
+	sigaction(SIGTTOU, &tost.oldttou, NULL);
+	sigaction(SIGCHLD, &tost.oldchld, NULL);
+	sigaction(SIGCONT, &tost.oldcont, NULL);
+	sigprocmask(SIG_SETMASK, &tost.oldset, NULL);
+
+	setpgid(0, tost.oldpgid);
+    }
+}
+
+
+FILE *R_popen_timeout(const char *cmd, const char *type, int timeout)
+{
+    /* close-on-exec is not supported */
+    if (!type || type[1] ||  (type[0] != 'r' && type[0] != 'w')) {
+	errno = EINVAL;
+	return NULL;
+    }
+    int doread = (type[0] == 'r');
+    int pipefd[2];
+    int parent_end, child_end;
+    if (pipe(pipefd) < 0)
+	return NULL;
+    if (doread) {
+	parent_end = pipefd[0];
+	child_end = pipefd[1];
+    } else {
+	parent_end = pipefd[1];
+	child_end = pipefd[0];
+    }
+
+    /* Earlier version of R would block SIGPROF here on old Apple systems
+       following Luke's recommendation on how to fix PR#1140 (see R_open,
+       R_system). */
+
+    timeout_init();
+    signal(SIGTTIN, SIG_IGN);
+    signal(SIGTTOU, SIG_IGN);
+    tost.child_pid = fork();
+
+    if (tost.child_pid == 0) {
+	/* child */
+	signal(SIGTTIN, SIG_DFL);
+	signal(SIGTTOU, SIG_DFL);
+	dup2(child_end, doread ? 1 : 0);
+	close(child_end);
+	close(parent_end);
+
+	execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
+	_exit(127); /* execl failed */
+    } else if (tost.child_pid > 0) {
+	/* parent */
+	close(child_end);
+        tost.fp = fdopen(parent_end, type);
+	if (!tost.fp) {
+	    close(parent_end);
+	    return NULL;
+	}
+
+	sigset_t ss;
+	sigemptyset(&ss);
+	sigaddset(&ss, SIGALRM);
+	sigprocmask(SIG_UNBLOCK, &ss, NULL);
+	alarm(timeout); /* will get SIGALRM on timeout */
+	
+	return tost.fp;
+    } else {
+	close(parent_end);
+	return NULL;
+    }
+}
+
+int R_pclose_timeout(FILE *fp)
+{
+    if (fp != tost.fp)
+	/* should not happen */
+	error("Invalid file pointer in pclose");
+    fclose(fp);
+
+    pid_t wres;
+    int wstatus;
+
+    /* make sure we do not accidentally send signals to a new process
+       with re-used pid from the child */
+    sigset_t ss;
+    timeout_cleanup_set(&ss);
+    sigset_t unblocked_ss;
+    sigprocmask(SIG_BLOCK, &ss, &unblocked_ss);
+
+    while((wres = waitpid(tost.child_pid, &wstatus, WNOHANG)) == 0)
+	sigsuspend(&unblocked_ss);
+
+    timeout_cleanup(0);
+    endcontext(&tost.cntxt);
+
+    if (wres < 0)
+	return -1;
+    return wstatus;
+}
+
+int R_system_timeout(const char *cmd, int timeout)
+{
+    if (!cmd)
+	return R_system(cmd);
+
+    /* Earlier version of R would block SIGPROF here on old Apple systems
+       following Luke's recommendation on how to fix PR#1140 (see R_open,
+       R_system). */
+
+    timeout_init();
+    signal(SIGTTIN, SIG_IGN);
+    signal(SIGTTOU, SIG_IGN);
+    tost.child_pid = fork();
+
+    if (tost.child_pid == 0) {
+	/* child */
+	signal(SIGTTIN, SIG_DFL);
+	signal(SIGTTOU, SIG_DFL);
+
+	execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
+	_exit(127); /* execl failed */
+    } else if (tost.child_pid > 0) {
+	/* parent */
+	sigset_t ss;
+	sigemptyset(&ss);
+	sigaddset(&ss, SIGALRM);
+	sigprocmask(SIG_UNBLOCK, &ss, NULL);
+	alarm(timeout); /* will get SIGALRM on timeout */
+
+	pid_t wres;
+	int wstatus;
+
+	/* make sure we do not accidentally send signals to a new process
+	   with re-used pid from the child */
+	timeout_cleanup_set(&ss);
+	sigset_t unblocked_ss;
+	sigprocmask(SIG_BLOCK, &ss, &unblocked_ss);
+
+	while((wres = waitpid(tost.child_pid, &wstatus, WNOHANG)) == 0)
+	    sigsuspend(&unblocked_ss);
+
+	timeout_cleanup(0);
+	endcontext(&tost.cntxt);
+
+#ifdef HAVE_SYS_WAIT_H
+	if (WIFEXITED(wstatus)) wstatus = WEXITSTATUS(wstatus);
+#else
+	/* assume that this is shifted if a multiple of 256 */
+	if ((wstatus % 256) == 0) wstatus = wstatus/256;
+#endif
+        if (wstatus == -1) {
+	    /* this means that system() failed badly - it didn't
+	       even get to try to run the shell */
+	    warning(_("system call failed: %s"), strerror(errno));
+	    /* R system() is documented to return 127 on failure, and a lot of
+	       code relies on that - it will misinterpret -1 as success */
+	    wstatus = 127;
+	}
+	return wstatus;
+    } else {
+	return -1;
+    }
+}
+
 #define INTERN_BUFSIZE 8096
 SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP tlist = R_NilValue;
     int intern = 0;
+    int timeout = 0;
 
     checkArity(op, args);
     if (!isValidStringF(CAR(args)))
@@ -249,6 +537,9 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
     intern = asLogical(CADR(args));
     if (intern == NA_INTEGER)
 	error(_("'intern' must be logical and not NA"));
+    timeout = asInteger(CADDR(args));
+    if (timeout == NA_INTEGER || timeout < 0)
+	error(_("invalid '%s' argument"), "type");
     if (intern) { /* intern = TRUE */
 	FILE *fp;
 	char *x = "r",
@@ -265,7 +556,11 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(tlist);
 	cmd = translateChar(STRING_ELT(CAR(args), 0));
 	errno = 0; /* precaution */
-	if(!(fp = R_popen(cmd, x)))
+	if (timeout == 0)
+	    fp = R_popen(cmd, x);
+	else
+	    fp = R_popen_timeout(cmd, x, timeout);
+	if(!fp)
 	    error(_("cannot popen '%s', probable reason '%s'"),
 		  cmd, strerror(errno));
 #ifdef HAVE_GETLINE
@@ -288,7 +583,13 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
         if (buf != NULL)
           free(buf);
 #endif
-	res = pclose(fp);
+	if (timeout == 0)
+	    res = pclose(fp);
+	else {
+	    res = R_pclose_timeout(fp);
+	    if (tost.timedout)
+		warning(_("command '%s' timed out"), cmd);
+	}
 #ifdef HAVE_SYS_WAIT_H
 	if (WIFEXITED(res)) res = WEXITSTATUS(res);
 	else res = 0;
@@ -335,7 +636,15 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 	tlist = PROTECT(allocVector(INTSXP, 1));
 	fflush(stdout);
-	INTEGER(tlist)[0] = R_system(translateChar(STRING_ELT(CAR(args), 0)));
+	int res;
+	const char *cmd = translateChar(STRING_ELT(CAR(args), 0));
+	if (timeout == 0)
+	    res = R_system(cmd);
+	else
+	    res = R_system_timeout(cmd, timeout);
+	INTEGER(tlist)[0] = res;
+	if (tost.timedout)
+	    warning(_("command '%s' timed out"), cmd);
 #ifdef HAVE_AQUA
 	R_Busy(0);
 #endif
