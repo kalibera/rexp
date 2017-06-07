@@ -238,37 +238,30 @@ double R_getClockIncrement(void)
 # include <sys/wait.h>
 #endif
 
-/* R_popen_timeout, R_pclose_timeout - a partial implementation of popen/close
-   with support for timeout. The POSIX/Unix popen/pclose cannot be re-used,
-   because the PID of the child process is not accessible via POSIX API.
-
-   Timeout support code borrowed from coreutils timeout command.
-*/
+/* The timeout support is inspired by timeout utility from coreutils. A key
+   difference from coreutils is that it is the child process that creates a
+   new process group rather than the parent (R) process. We cannot temporarily
+   create a process group and then return to the previous group, because the
+   leader of the previous group may no longer exist. Like with coreutils,
+   the timeout is not bulletproof - an external application can run longer
+   than the timeout i.e. when it creates a new process group or when it spawns
+   a child process and exits without waiting for it to finish. */
 
 static struct {
     pid_t child_pid;
-    pid_t oldpgid;
     int timedout; /* set when the child has been timed out */
     sigset_t oldset;
     struct sigaction oldalrm, oldint, oldquit, oldhup, oldterm, oldttin,
-                     oldttou, oldchld, oldcont;
-    RCNTXT cntxt;
-    FILE *fp;
+                     oldttou, oldchld;
+    RCNTXT cntxt; /* for popen/pclose */
+    FILE *fp;     /* for popen/pclose, sanity check */
 } tost;
 
-
-static void timeout_cleanup(int sig);
-static void timeout_sigchld(int sig);
-static void timeout_cend(void *data) {
-    timeout_cleanup(0);
-}
-
-/* timeout init and set up */
+static void timeout_handler(int sig);
 static void timeout_init()
 {
     tost.child_pid = 0;
     tost.timedout = 0;
-    tost.oldpgid = getpgid(0);
     sigprocmask(0, NULL, &tost.oldset);
     sigaction(SIGALRM, NULL, &tost.oldalrm);
     sigaction(SIGINT, NULL, &tost.oldint);
@@ -278,34 +271,20 @@ static void timeout_init()
     sigaction(SIGTTIN, NULL, &tost.oldttin);
     sigaction(SIGTTOU, NULL, &tost.oldttou);
     sigaction(SIGCHLD, NULL, &tost.oldchld);
-    sigaction(SIGCONT, NULL, &tost.oldcont);
     tost.fp = NULL;
- 
-    /* set up a context to recover from R error between popen and pclose */
-    begincontext(&tost.cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
-                 R_NilValue, R_NilValue);
-    tost.cntxt.cenddata = (void *)0; /* indicate this is from longjump */
-    tost.cntxt.cend = &timeout_cend;
-
-    setpgid(0, 0);
 
     /* install handler */
     struct sigaction sa;
     sigemptyset(&sa.sa_mask);
-    sa.sa_handler = &timeout_cleanup;
+    sa.sa_handler = &timeout_handler;
     sa.sa_flags = SA_RESTART;
     sigaction(SIGALRM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGQUIT, &sa, NULL);
     sigaction(SIGHUP, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
-
-    sa.sa_handler = timeout_sigchld;
     sigaction(SIGCHLD, &sa, NULL);
 }
-
-/* needed for sigsuspend() to be interrupted */
-static void timeout_sigchld(int sig) {};
 
 static void timeout_cleanup_set(sigset_t *ss)
 {
@@ -318,60 +297,93 @@ static void timeout_cleanup_set(sigset_t *ss)
     sigaddset(ss, SIGTTIN);
     sigaddset(ss, SIGTTOU);
     sigaddset(ss, SIGCHLD);
-    sigaddset(ss, SIGCONT);
 }
 
-/* timeout handler and cleanup */
-static void timeout_cleanup(int sig)
+static void timeout_cleanup()
 {
+    sigset_t ss;
+    timeout_cleanup_set(&ss);
+    sigprocmask(SIG_BLOCK, &ss, NULL);
+    alarm(0); /* clear alarm */
+
+    sigaction(SIGALRM, &tost.oldalrm, NULL);
+    sigaction(SIGINT, &tost.oldalrm, NULL);
+    sigaction(SIGQUIT, &tost.oldquit, NULL);
+    sigaction(SIGHUP, &tost.oldhup, NULL);
+    sigaction(SIGTERM, &tost.oldterm, NULL);
+    sigaction(SIGTTIN, &tost.oldttin, NULL);
+    sigaction(SIGTTOU, &tost.oldttou, NULL);
+    sigaction(SIGCHLD, &tost.oldchld, NULL);
+
+    sigprocmask(SIG_SETMASK, &tost.oldset, NULL);
+}
+
+static void timeout_handler(int sig)
+{
+    if (sig == SIGCHLD)
+	return; /* needed for sigsuspend() to be interrupted */
     if (sig == SIGALRM) {
 	tost.timedout = 1;
 	sig = SIGTERM;
     }
-    if (tost.child_pid != 0) {
+    if (tost.child_pid > 0) {
 	/* parent, received a signal */
 
-	/* Send signal each signal first directly to child as it may become
-	   a group leader and may have created its own group. Then send also
-	   to the current group, but ignore by this process to prevent signal
-	   loop. */
 	kill(tost.child_pid, sig);
-	signal(sig, SIG_IGN);
-	kill(0, sig);
+	killpg(tost.child_pid, sig);
 	if (sig != SIGKILL && sig != SIGCONT) {
 	    kill(tost.child_pid, SIGCONT);
-	    signal(sig, SIG_IGN);
-	    kill(0, SIGCONT);
+	    killpg(tost.child_pid, SIGCONT);
 	}
-    } else {
+    } else if (tost.child_pid == 0) {
 	/* child */
 	_exit(128 + sig); /* arbitrary status, such as in timeout utility */
     }
-
-    if (sig == 0) { 
-	/* no signal, called from pclose or after longjump */
-	sigset_t ss;
-	timeout_cleanup_set(&ss);
-        sigprocmask(SIG_BLOCK, &ss, NULL);
-	alarm(0); /* clear alarm */
-
-        sigaction(SIGALRM, &tost.oldalrm, NULL);
-        sigaction(SIGINT, &tost.oldalrm, NULL);
-	sigaction(SIGQUIT, &tost.oldquit, NULL);
-	sigaction(SIGHUP, &tost.oldhup, NULL);
-	sigaction(SIGTERM, &tost.oldterm, NULL);
-	sigaction(SIGTTIN, &tost.oldttin, NULL);
-	sigaction(SIGTTOU, &tost.oldttou, NULL);
-	sigaction(SIGCHLD, &tost.oldchld, NULL);
-	sigaction(SIGCONT, &tost.oldcont, NULL);
-	sigprocmask(SIG_SETMASK, &tost.oldset, NULL);
-
-	setpgid(0, tost.oldpgid);
-    }
+    /* tost.child_pid is -1 when child process no longer exists */
 }
 
+static pid_t timeout_wait(int *wstatus)
+{
+    pid_t wres;
 
-FILE *R_popen_timeout(const char *cmd, const char *type, int timeout)
+    /* make sure we do not accidentally send signals to a new process
+       with re-used pid from the child */
+    sigset_t ss;
+    timeout_cleanup_set(&ss);
+    sigset_t unblocked_ss;
+    sigprocmask(SIG_BLOCK, &ss, &unblocked_ss);
+
+    while((wres = waitpid(tost.child_pid, wstatus, WNOHANG)) == 0)
+	sigsuspend(&unblocked_ss);
+
+    if (wres == tost.child_pid)
+	tost.child_pid = -1; /* the process no longer exists */
+    timeout_cleanup();
+    return wres;
+}
+
+static void timeout_cend(void *data)
+{
+    if (tost.child_pid > 0) {
+	timeout_handler(SIGTERM);
+	timeout_wait(NULL);
+    }
+    timeout_cleanup();
+}
+
+/* R_popen_timeout, R_pclose_timeout - a partial implementation of popen/close
+   with support for timeout. The POSIX/Unix popen/pclose cannot be re-used,
+   because the PID of the child process is not accessible via POSIX API.
+
+   This simple implementation only supports a single pipe to be open at a time
+   and R_system_timeout cannot be used at the same time.
+
+   It does not support close-on-exec ("e" flag).
+   A pipe opened with R_popen_timeout cannot be closed by pclose.
+   A pipe opened with popen cannot be closed by R_pclose_timeout.
+   Timeout is in seconds. After timing out, the child process is interrupted.
+*/
+static FILE *R_popen_timeout(const char *cmd, const char *type, int timeout)
 {
     /* close-on-exec is not supported */
     if (!type || type[1] ||  (type[0] != 'r' && type[0] != 'w')) {
@@ -396,12 +408,20 @@ FILE *R_popen_timeout(const char *cmd, const char *type, int timeout)
        R_system). */
 
     timeout_init();
+
+    /* set up a context to recover from R error between popen and pclose */
+    begincontext(&tost.cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
+                 R_NilValue, R_NilValue);
+    tost.cntxt.cenddata = NULL;
+    tost.cntxt.cend = &timeout_cend;
+
     signal(SIGTTIN, SIG_IGN);
     signal(SIGTTOU, SIG_IGN);
     tost.child_pid = fork();
 
     if (tost.child_pid == 0) {
 	/* child */
+	setpgid(0, 0);
 	signal(SIGTTIN, SIG_DFL);
 	signal(SIGTTOU, SIG_DFL);
 	dup2(child_end, doread ? 1 : 0);
@@ -442,17 +462,7 @@ int R_pclose_timeout(FILE *fp)
     pid_t wres;
     int wstatus;
 
-    /* make sure we do not accidentally send signals to a new process
-       with re-used pid from the child */
-    sigset_t ss;
-    timeout_cleanup_set(&ss);
-    sigset_t unblocked_ss;
-    sigprocmask(SIG_BLOCK, &ss, &unblocked_ss);
-
-    while((wres = waitpid(tost.child_pid, &wstatus, WNOHANG)) == 0)
-	sigsuspend(&unblocked_ss);
-
-    timeout_cleanup(0);
+    wres = timeout_wait(&wstatus);
     endcontext(&tost.cntxt);
 
     if (wres < 0)
@@ -460,7 +470,11 @@ int R_pclose_timeout(FILE *fp)
     return wstatus;
 }
 
-int R_system_timeout(const char *cmd, int timeout)
+/* Similar to system, but supports timeout in seconds.
+   Calls to R_system_timeout cannot be used when a pipe is open using
+   R_popen_timeout.
+*/
+static int R_system_timeout(const char *cmd, int timeout)
 {
     if (!cmd)
 	return R_system(cmd);
@@ -476,6 +490,7 @@ int R_system_timeout(const char *cmd, int timeout)
 
     if (tost.child_pid == 0) {
 	/* child */
+	setpgid(0, 0);
 	signal(SIGTTIN, SIG_DFL);
 	signal(SIGTTOU, SIG_DFL);
 
@@ -489,21 +504,10 @@ int R_system_timeout(const char *cmd, int timeout)
 	sigprocmask(SIG_UNBLOCK, &ss, NULL);
 	alarm(timeout); /* will get SIGALRM on timeout */
 
-	pid_t wres;
 	int wstatus;
-
-	/* make sure we do not accidentally send signals to a new process
-	   with re-used pid from the child */
-	timeout_cleanup_set(&ss);
-	sigset_t unblocked_ss;
-	sigprocmask(SIG_BLOCK, &ss, &unblocked_ss);
-
-	while((wres = waitpid(tost.child_pid, &wstatus, WNOHANG)) == 0)
-	    sigsuspend(&unblocked_ss);
-
-	timeout_cleanup(0);
-	endcontext(&tost.cntxt);
-
+	timeout_wait(&wstatus);
+	if (tost.child_pid != -1)
+	    return -1;
 #ifdef HAVE_SYS_WAIT_H
 	if (WIFEXITED(wstatus)) wstatus = WEXITSTATUS(wstatus);
 #else
@@ -519,9 +523,8 @@ int R_system_timeout(const char *cmd, int timeout)
 	    wstatus = 127;
 	}
 	return wstatus;
-    } else {
+    } else
 	return -1;
-    }
 }
 
 #define INTERN_BUFSIZE 8096

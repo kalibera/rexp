@@ -4,6 +4,7 @@ options(warn = 1)
 
 opts <- list("", NULL, FALSE, TRUE, "o1.txt", "o2.txt")
 outs <- c("o1.txt", "o2.txt")
+tos <- c(0, 10)
 
 process <- function(res)
 {
@@ -19,7 +20,7 @@ process <- function(res)
         }
 }
 
-for(to in c(0,10))
+for(to in tos)
     for(out in opts)
         for(err in opts) {
             ## skip this for the sake of Unix-alikes
@@ -30,7 +31,7 @@ for(to in c(0,10))
                             timeout = to))
         }
 
-for(to in c(0,10)) {
+for(to in tos) {
     # timeout 0 uses different implementations from timeout 10
     # the outputs should be identical
 
@@ -72,3 +73,17 @@ for(to in c(0,10)) {
     print(system2("test-system2", "7", timeout = to))
     system2("test-system2", "8", stdout=TRUE, timeout = to)
 }
+
+# tests that time out
+#   (each runs for a second)
+
+system("./test-system2 sleep 10", timeout = 1)
+system("./test-system2 infinite_loop", timeout = 1)
+system("./test-system2 sleep 10", timeout = 1, intern = T)
+system("./test-system2 infinite_loop", timeout = 1, intern = T)
+
+## test results with timeout set
+
+stopifnot(identical(system("./test-system2 2", timeout = 1), 2L))
+stopifnot(identical(system("./test-system2 2", timeout = 1, intern = T),
+                    structure("stdout 1", status = 2L)))
