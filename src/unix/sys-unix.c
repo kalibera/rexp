@@ -543,6 +543,25 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
     timeout = asInteger(CADDR(args));
     if (timeout == NA_INTEGER || timeout < 0)
 	error(_("invalid '%s' argument"), "type");
+    const char *cmd = translateChar(STRING_ELT(CAR(args), 0));
+    if (timeout > 0) {
+	/* command ending with & is not supported by timeout */
+	const char *c = translateCharUTF8(STRING_ELT(CAR(args), 0));
+	int last_is_amp = 0;
+	int len = 0;
+	for(;*c; c += len) {
+	    len = utf8clen(*c);
+	    if (len == 1) {
+		if (*c == '&')
+		    last_is_amp = 1;
+		else if (*c != ' ' && *c != '\t' && *c != '\r' && *c != '\n')
+		    last_is_amp = 0;
+	    } else
+		last_is_amp = 0;
+	}
+	if (last_is_amp)
+	    error("Timeout with background running processes is not supported.");
+    }
     if (intern) { /* intern = TRUE */
 	FILE *fp;
 	char *x = "r",
@@ -552,12 +571,10 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
 	    buf[INTERN_BUFSIZE];
 #endif
-	const char *cmd;
 	int i, j, res;
 	SEXP tchar, rval;
 
 	PROTECT(tlist);
-	cmd = translateChar(STRING_ELT(CAR(args), 0));
 	errno = 0; /* precaution */
 	if (timeout == 0)
 	    fp = R_popen(cmd, x);
@@ -640,7 +657,6 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 	tlist = PROTECT(allocVector(INTSXP, 1));
 	fflush(stdout);
 	int res;
-	const char *cmd = translateChar(STRING_ELT(CAR(args), 0));
 	if (timeout == 0)
 	    res = R_system(cmd);
 	else
