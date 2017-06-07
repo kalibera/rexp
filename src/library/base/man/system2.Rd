@@ -13,7 +13,7 @@
 system2(command, args = character(),
         stdout = "", stderr = "", stdin = "", input = NULL,
         env = character(), wait = TRUE,
-        minimized = FALSE, invisible = TRUE)
+        minimized = FALSE, invisible = TRUE, timeout = 0)
 }
 \arguments{
   \item{command}{the system command to be invoked, as a character string.}
@@ -35,6 +35,7 @@ system2(command, args = character(),
     interpreter should wait for the command to finish, or run it
     asynchronously.  This will be ignored (and the interpreter will
     always wait) if \code{stdout = TRUE}.}
+  \item{timeout}{timeout in seconds, ignored if 0}
 #ifdef unix
   \item{minimized, invisible}{arguments that are accepted on Windows but
     ignored on this platform, with a warning.}
@@ -64,6 +65,12 @@ system2(command, args = character(),
   Because of the way it is implemented, on a Unix-alike \code{stderr =
     TRUE} implies \code{stdout = TRUE}: a warning is given if this is
   not what was specified.
+
+  When \code{timeout} is non-zero, the command is terminated after the given
+  number of seconds.  The termination should work for typical applications,
+  but is not guaranteed; it is possible to write an application that would
+  escape the timeout. A non-zero timeout is only supported with
+  \code{wait = TRUE}.
 }
 %% We use popen, and that pipes stdout only
 

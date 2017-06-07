@@ -16,7 +16,7 @@
 system(command, intern = FALSE,
        ignore.stdout = FALSE, ignore.stderr = FALSE,
        wait = TRUE, input = NULL, show.output.on.console = TRUE,
-       minimized = FALSE, invisible = TRUE)
+       minimized = FALSE, invisible = TRUE, timeout = 0)
 }
 \arguments{
   \item{command}{the system command to be invoked, as a character string.}
@@ -32,6 +32,7 @@ system(command, intern = FALSE,
   \item{input}{if a character vector is supplied, this is copied one
     string per line to a temporary file, and the standard input of
     \code{command} is redirected to the file.}
+  \item{timeout}{timeout in seconds, ignored if 0}
 #ifdef unix
   \item{show.output.on.console, minimized, invisible}{arguments
     that are accepted on Windows but ignored on this platform, with a
@@ -96,6 +97,12 @@ system(command, intern = FALSE,
 
   There are many pitfalls in using \code{system} to ascertain if a
   command can be run --- \code{\link{Sys.which}} is more suitable.
+
+  When \code{timeout} is non-zero, the command is terminated after the given
+  number of seconds.  The termination should work for typical applications,
+  but is not guaranteed; it is possible to write an application that would
+  escape the timeout. A non-zero timeout is only supported with
+  \code{wait = TRUE}.
 }
 
 \value{
