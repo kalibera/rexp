@@ -454,7 +454,7 @@ static FILE *R_popen_timeout(const char *cmd, const char *type, int timeout)
 	sigaddset(&ss, SIGALRM);
 	sigprocmask(SIG_UNBLOCK, &ss, NULL);
 	alarm(timeout); /* will get SIGALRM on timeout */
-	
+
 	return tost.fp;
     } else {
 	close(parent_end);

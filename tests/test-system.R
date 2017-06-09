@@ -45,7 +45,7 @@ for(to in tos) {
     process(system("test-system2", TRUE, ignore.stdout = TRUE, timeout = to))
     process(system("test-system2", TRUE, ignore.stdout = TRUE,
                    ignore.stderr = TRUE, timeout = to))
-  
+
     process(system2("test-system2", "1", input=letters[1:4], timeout = to))
     process(system2("test-system2", "1", input=letters[1:4], stdout = TRUE,
                     timeout = to))
