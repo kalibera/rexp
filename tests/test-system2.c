@@ -12,26 +12,11 @@ void mysleep(int sec) {
 
 #else /* Unix/POSIX */
 
-#include <time.h>
-#include <errno.h>
+#include <unistd.h>
 
 void mysleep(int sec) {
-    struct timespec ts;
-    ts.tv_sec = sec;
-    ts.tv_nsec = 0;
-   
-    for(;;) {
-	struct timespec rem;
-	if (nanosleep(&ts, &rem) < 0) {
-	    if (errno != EINTR) {
-		printf("UKNONW SLEEP ERROR!\n");
-		exit(1);
-	    }
-	    ts.tv_sec = rem.tv_sec;
-	    ts.tv_nsec = ts.tv_nsec;
-	} else 
-	    break;
-    }
+    /* could use nanosleep, but on Solaris it needs -lrt  */
+    sleep(sec);
 }
 #endif
 
