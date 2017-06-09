@@ -469,7 +469,7 @@ int R_pclose_timeout(FILE *fp)
        then be reported by R's "system" function. */
     int fd = fileno(fp);
     if (fd >= 0)
-	close(fp);
+	close(fd);
 
     pid_t wres;
     int wstatus;
