@@ -101,9 +101,9 @@ system(command, intern = FALSE,
   When \code{timeout} is non-zero, the command is terminated after the given
   number of seconds.  The termination should work for typical applications,
   but is not guaranteed; it is possible to write an application that would
-  escape the timeout. A non-zero timeout is only supported with
-  \code{wait = TRUE}. The \code{timeout} option is currently experimental
-  and not yet implemented on Windows.
+  escape the timeout.  A non-zero timeout is only supported with \code{wait
+  = TRUE}.  Timeouts can only be set on batch jobs.  The \code{timeout}
+  option is currently experimental and not yet implemented on Windows.
 }
 
 \value{

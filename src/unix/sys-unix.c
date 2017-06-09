@@ -242,10 +242,14 @@ double R_getClockIncrement(void)
    difference from coreutils is that it is the child process that creates a
    new process group rather than the parent (R) process. We cannot temporarily
    create a process group and then return to the previous group, because the
-   leader of the previous group may no longer exist. Like with coreutils,
+   leader of the previous group may no longer exist, but according to comments
+   in coreutils this means that signals between foreground and background
+   process groups are not properly propagated. Like with coreutils,
    the timeout is not bulletproof - an external application can run longer
-   than the timeout i.e. when it creates a new process group or when it spawns
-   a child process and exits without waiting for it to finish.
+   than the timeout e.g. when it creates a new process group or when it spawns
+   a child process and exits without waiting for it to finish. Also, this
+   implementation is only for non-interactive jobs and has been seen to block
+   when one tries to run a shell with timeout.
 
    Currently we only have a single global structure and hence only one call
    to R_popen_timeout/R_system_timeout may be active at the same time. A more
@@ -337,6 +341,7 @@ static void timeout_handler(int sig)
 	kill(tost.child_pid, sig);
 	killpg(tost.child_pid, sig);
 	if (sig != SIGKILL && sig != SIGCONT) {
+	    /* NOTE: don't send SIGCONT for interactive jobs */
 	    kill(tost.child_pid, SIGCONT);
 	    killpg(tost.child_pid, SIGCONT);
 	}
@@ -431,7 +436,7 @@ static FILE *R_popen_timeout(const char *cmd, const char *type, int timeout)
 
     if (tost.child_pid == 0) {
 	/* child */
-	setpgid(0, 0);
+	setpgid(0, 0); /* NOTE: don't create new group in interactive jobs */
 	signal(SIGTTIN, SIG_DFL);
 	signal(SIGTTOU, SIG_DFL);
 	dup2(child_end, doread ? 1 : 0);
