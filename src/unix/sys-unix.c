@@ -353,9 +353,14 @@ static pid_t timeout_wait(int *wstatus)
     sigset_t unblocked_ss;
     sigprocmask(SIG_BLOCK, &ss, &unblocked_ss);
 
+    int saveerrno = errno;
     while((wres = waitpid(tost.child_pid, wstatus, WNOHANG)) == 0)
 	sigsuspend(&unblocked_ss);
 
+    if (errno == EINTR)
+	/* EINTR is not really an error but expected situation here, however,
+	   R's "system" call would report any non-zero errno as an error. */
+	errno = saveerrno;
     if (wres == tost.child_pid)
 	tost.child_pid = -1; /* the process no longer exists */
     timeout_cleanup();
@@ -457,7 +462,14 @@ int R_pclose_timeout(FILE *fp)
     if (fp != tost.fp)
 	/* should not happen */
 	error("Invalid file pointer in pclose");
-    fclose(fp);
+
+    /* Do not use fclose, because on Solaris it sets errno to "Invalid seek"
+       when the pipe is already closed (e.g. because of timeout). fclose would
+       not return an error, but it would set errno and the non-zero errno would
+       then be reported by R's "system" function. */
+    int fd = fileno(fp);
+    if (fd >= 0)
+	close(fp);
 
     pid_t wres;
     int wstatus;
@@ -624,6 +636,10 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 		error(_("error in running command"));
 	} else if (res) {
 	    if (errno)
+		/* FIXME: TK: non-zero errno is a sign of an error only when
+		   a function that modified it also signals an error by its
+		   return value, usually -1 or EOF. We should not be reporting
+		   an error here (CERT ERR30-C).*/
 		warningcall(R_NilValue,
 			    _("running command '%s' had status %d and error message '%s'"),
 			    cmd, res,
