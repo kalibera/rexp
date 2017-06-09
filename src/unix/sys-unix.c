@@ -245,7 +245,12 @@ double R_getClockIncrement(void)
    leader of the previous group may no longer exist. Like with coreutils,
    the timeout is not bulletproof - an external application can run longer
    than the timeout i.e. when it creates a new process group or when it spawns
-   a child process and exits without waiting for it to finish. */
+   a child process and exits without waiting for it to finish.
+
+   Currently we only have a single global structure and hence only one call
+   to R_popen_timeout/R_system_timeout may be active at the same time. A more
+   general implementation could use a linked list and identify entries by
+   file pointer and child pid. */
 
 static struct {
     pid_t child_pid;
@@ -640,6 +645,9 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 		   a function that modified it also signals an error by its
 		   return value, usually -1 or EOF. We should not be reporting
 		   an error here (CERT ERR30-C).*/
+		/* on Solaris, if the command ends with non-zero status and timeout
+		   is 0, "Illegal seek" error is reported; the timeout version
+		   works this around by using close(fileno) */
 		warningcall(R_NilValue,
 			    _("running command '%s' had status %d and error message '%s'"),
 			    cmd, res,
