@@ -1,7 +1,7 @@
 #  File src/library/base/R/windows/system.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2014 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@ system <- function(command, intern = FALSE,
                    show.output.on.console = TRUE, minimized = FALSE,
                    invisible = TRUE, timeout = 0)
 {
+    if(!identical(timeout, 0))
+        stop("'timeout' is not yet implemented on Windows.")
     if(!is.logical(intern) || is.na(intern))
         stop("'intern' must be TRUE or FALSE")
     if(!is.logical(ignore.stdout) || is.na(ignore.stdout))
@@ -65,6 +67,8 @@ system2 <- function(command, args = character(),
                     wait = TRUE, minimized = FALSE, invisible = TRUE,
                     timeout = 0)
 {
+    if(!identical(timeout, 0))
+        stop("'timeout' is not yet implemented on Windows.")
     if(!is.logical(wait) || is.na(wait))
         stop("'wait' must be TRUE or FALSE")
     if(!is.logical(minimized) || is.na(minimized))
