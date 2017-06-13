@@ -568,6 +568,7 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
     const char *cmd = translateChar(STRING_ELT(CAR(args), 0));
     if (timeout > 0) {
 	/* command ending with & is not supported by timeout */
+	const void *vmax = vmaxget();
 	const char *c = translateCharUTF8(STRING_ELT(CAR(args), 0));
 	int last_is_amp = 0;
 	int len = 0;
@@ -583,6 +584,7 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	if (last_is_amp)
 	    error("Timeout with background running processes is not supported.");
+	vmaxset(vmax);
     }
     if (intern) { /* intern = TRUE */
 	FILE *fp;
