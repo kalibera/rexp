@@ -90,6 +90,17 @@ system(command, intern = FALSE,
   \code{wait} is implemented by appending \code{&} to the command: this
   is in principle shell-dependent, but required by POSIX and so widely
   supported.
+
+  When \code{timeout} is non-zero, the command is terminated after the given
+  number of seconds.  The termination works for typical commands, but is not
+  guaranteed: it is possible to write a program that would keep running
+  after the time is out.  Timeouts can only be set with \code{wait = TRUE}
+  and only for non-interactive commands: the command is run with standard
+  input redirected from \code{/dev/null} and it must not modify terminal
+  settings.  As long as tty \code{tostop} option is disabled, which it
+  usually is by default, the executed command may write to standard output
+  and standard error.  The \code{timeout} option is currently experimental
+  and is not implemented on Windows.
 #endif
 
   The ordering of arguments after the first two has changed from time to
@@ -97,13 +108,6 @@ system(command, intern = FALSE,
 
   There are many pitfalls in using \code{system} to ascertain if a
   command can be run --- \code{\link{Sys.which}} is more suitable.
-
-  When \code{timeout} is non-zero, the command is terminated after the given
-  number of seconds.  The termination should work for typical applications,
-  but is not guaranteed; it is possible to write an application that would
-  escape the timeout.  A non-zero timeout is only supported with \code{wait
-  = TRUE}.  Timeouts can only be set on batch jobs.  The \code{timeout}
-  option is currently experimental and not yet implemented on Windows.
 }
 
 \value{

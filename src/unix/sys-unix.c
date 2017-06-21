@@ -48,6 +48,10 @@
 # endif
 #endif
 
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#endif
+
 #if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRUSAGE)
 /* on macOS it seems sys/resource.h needs sys/time.h first */
 # include <sys/time.h>
@@ -238,23 +242,33 @@ double R_getClockIncrement(void)
 # include <sys/wait.h>
 #endif
 
-/* The timeout support is inspired by timeout utility from coreutils. A key
-   difference from coreutils is that it is the child process that creates a
-   new process group rather than the parent (R) process. We cannot temporarily
-   create a process group and then return to the previous group, because the
-   leader of the previous group may no longer exist, but according to comments
-   in coreutils this means that signals between foreground and background
-   process groups are not properly propagated. Like with coreutils,
-   the timeout is not bulletproof - an external application can run longer
-   than the timeout e.g. when it creates a new process group or when it spawns
-   a child process and exits without waiting for it to finish. Also, this
-   implementation is only for non-interactive jobs and has been seen to block
-   when one tries to run a shell with timeout.
+/* The timeout support is inspired by timeout utility from coreutils.
+   However, here the child process creates a new process group rather than
+   the parent (R) process, because changing the group leader for the whole
+   of R might have undesirable consequences.  According to comments in
+   coreutils, this could lead to issues with propagating signals between
+   foreground and background process groups.  Like with coreutils, the
+   timeout is not always enforced: an external application can run longer
+   than the timeout when it creates a new process group or when it spawns a
+   child process and exits without waiting for it to finish (becomes a
+   daemon).  This implementation only works for processes that do not read
+   from the standard input - the new process group is always created, and
+   hence the executed process can no longer access the terminal.  To prevent
+   interference with job control, the new process is thus started with
+   standard input redirected from /dev/null.  Note that while the timeout
+   utility allows to run processes also without creating the new group
+   (option `foreground`), that approach would interfere with job control in
+   "/bin/sh" that is documented to be used by the R system call.  There does
+   not seem to be a simple way to address this issue, and hence interactive
+   applications cannot be executed with timeout (and note the same issues
+   arise when timeout utility is used with /bin/sh).
 
    Currently we only have a single global structure and hence only one call
    to R_popen_timeout/R_system_timeout may be active at the same time. A more
    general implementation could use a linked list and identify entries by
-   file pointer and child pid. */
+   file pointer and child pid.
+
+   Background jobs (ending with &) are not supported. */
 
 static struct {
     pid_t child_pid;
@@ -339,9 +353,10 @@ static void timeout_handler(int sig)
 	/* parent, received a signal */
 
 	kill(tost.child_pid, sig);
+	/* NOTE: don't signal the group and  don't send SIGCONT
+	         for interactive jobs */
 	killpg(tost.child_pid, sig);
 	if (sig != SIGKILL && sig != SIGCONT) {
-	    /* NOTE: don't send SIGCONT for interactive jobs */
 	    kill(tost.child_pid, SIGCONT);
 	    killpg(tost.child_pid, SIGCONT);
 	}
@@ -442,7 +457,12 @@ static FILE *R_popen_timeout(const char *cmd, const char *type, int timeout)
 	dup2(child_end, doread ? 1 : 0);
 	close(child_end);
 	close(parent_end);
-
+	close(doread ? 0 : 1);
+	/* ensure there is no read from terminal to avoid SIGTTIN */
+	if (open("/dev/null", O_RDONLY) < 0) {
+	    perror("Cannot open /dev/null for reading:");
+	    _exit(127);
+	}
 	execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
 	_exit(127); /* execl failed */
     } else if (tost.child_pid > 0) {
@@ -512,6 +532,12 @@ static int R_system_timeout(const char *cmd, int timeout)
 
     if (tost.child_pid == 0) {
 	/* child */
+	close(0);
+	/* ensure there is no read from terminal to avoid SIGTTIN */
+	if (open("/dev/null", O_RDONLY) < 0) {
+	    perror("Cannot open /dev/null for reading:");
+	    _exit(127);
+	}
 	setpgid(0, 0);
 	signal(SIGTTIN, SIG_DFL);
 	signal(SIGTTOU, SIG_DFL);
