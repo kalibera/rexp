@@ -9,6 +9,13 @@
 
   \subsection{NEW FEATURES}{
     \itemize{
+      \item \code{factor()} now uses \code{order()} to sort its levels,
+      not \code{sort.list()}.  This makes \code{factor()} support custom
+      vector-like objects if methods for the appropriate generics are
+      defined.  This change has the side effect of making \code{factor()}
+      succeed on empty or length-one non-atomic vector(-like) types (e.g.,
+      list), where it failed before.
+
       \item \code{diag()} gets an optional \code{names} argument: this
       may require updates to packages defining S4 methods for it.
 
@@ -22,12 +29,69 @@
       \item \code{.self} is now automatically registered as a global
       variable when registering a reference class method.
 
-      \item \code{tempdir(check=TRUE)} recreates the \code{tmpdir()} if
+      \item \code{tempdir(check = TRUE)} recreates the \code{tmpdir()} if
       it is no longer valid.
 
       \item New \code{askYesNo()} function and \code{"askYesNo"} option
       to ask the user binary response questions in a customizable but
-      consistent way.  Suggestion of \PR{17242}.
+      consistent way.  (Suggestion of \PR{17242}.)
+
+      \item New low level utilities \code{...elt(n)} and \code{...length()}
+      for working with \code{...} parts inside a function.
+
+      \item \code{isTRUE()} is more tolerant and now true in
+      \code{x <- rlnorm(99); isTRUE(median(x) == quantile(x)["50\%"])}.
+
+      New function \code{isFALSE()} defined analogously to \code{isTRUE()}.
+
+      \item The default symbol table size has been increased from 4119
+      to 49157; this may improve symbol resolution performance when many
+      packages are loaded.  (Suggested by Jim Hester.)
+
+      \item \code{line()} gets a new option \code{iter = 1}.
+
+      \item Reading from connections in text mode is buffered,
+      significantly improving the performance of \code{readLines()}, as
+      well as \code{scan()} and \code{read.table()}, at least when
+      specifying \code{colClasses}.
+
+      \item \code{order()} is smarter about picking a default sort
+      \code{method} when its arguments are objects.
+
+      \item \code{available.packages()} has two new arguments which
+      control if the values from the per-session repository cache are
+      used (default true, as before) and if so how old cached values can
+      be to be used (default one hour).
+
+      These arguments can be passed from \code{install.packages()},
+      \code{update.packages()} and functions calling that: to enable
+      this \code{available.packages()}, \code{packageStatus()} and
+      \code{download.file()} gain a \code{\dots} argument.
+
+      \item \code{packageStatus()}'s \code{upgrade()} method no longer ignores
+      its \code{\dots} argument but passes it to \code{install.packages()}.
+
+      \item \code{installed.packages()} gains a \code{\dots} argument to allow
+      arguments (including \code{noCache}) to be passed from
+      \code{new.packages()}, \code{old.packages()},
+      \code{update.packages()} and \code{packageStatus()}.
+
+      \item \code{factor(x, levels, labels)} now allows duplicated
+      \code{labels} (not duplicated \code{levels}!).  Hence you can map
+      different values of \code{x} to the same level directly.
+
+      \item No longer emit a warning when attempting to use
+      \code{names<-()} on an S4 derivative of a basic type.
+
+      \item The \code{list} method of \code{within()} gets an
+      option \code{keepAttrs = FALSE} for speed up.
+
+      \item \command{system()} and \command{system2()} now allow the
+      specification of a maximum elapsed time.
+      (This feature is currently experimental and subject to change.)
+
+      \item \code{debug()} supports debugging of methods on any
+      \code{"genericFunction"}, including group generics.
     }
   }
 
@@ -55,14 +119,85 @@
       and only attempts to pass non-missing arguments from the generic.
 
       \item \code{callNextMethod()} works for \code{\dots} methods.
-      
-      \item Connections are now written correctly with encoding 
+
+      \item Connections are now written correctly with encoding
       \code{"UTF-16LE"}.  (\PR{16737}).
+
+      \item Evaluation of \code{..0} now signals an error.  When
+      \code{..1} is used and \code{...} is empty, the error message is
+      more appropriate now.
+
+      \item (Windows mainly.)  High Unicode code points which require
+      surrogate pairs are now handled.  All systems should properly
+      handle surrogate pairs, even those systems that don't need to make
+      use of them.  (\PR{16098})
+
+      \item \code{stopifnot(e, e2, ...)} now evaluates the
+      expressions sequentially and in case of an error or warning shows
+      the relevant expression instead of the full \code{stopifnot(..)}
+      call.
+
+      \item \code{path.expand()} on Windows now accepts paths specified as
+      UTF-8-encoded character strings even if not representable in the
+      current locale.  (\PR{17120})
+
+      \item \code{line(x, y)} now correctly computes the medians of the
+      left and right group's x-values and in all cases reproduces
+      straight lines.
+
+      \item Extending S4 classes with slots corresponding to special
+      attributes like \code{dim} and \code{dimnames} now works.
+
+      \item Fix for \code{legend()} when \code{fill} has multiple
+      values, the first of which is \code{NA} (all colours then defaulted to
+      \code{par(fg)}).  (\PR{17288})
+
+      \item \code{installed.packages()} did not remove the cached value
+      for a library tree that had been emptied (but would not use the
+      old value, just waste time checking it).
+
+      \item The documentation for \code{installed.packages(noCache =
+	  TRUE)} incorrectly claimed it would refresh the cache.
+
+      \item \code{aggregate(<data.frame>)} no longer uses spurious names
+      in some cases.  (\PR{17283})
+
+      \item \code{object.size()} now also works for long vectors.
     }
   }
 }
 
-\section{\Rlogo CHANGES IN R 3.4.0 patched}{
+\section{\Rlogo CHANGES IN R 3.4.1 patched}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item Setting the \code{LC_ALL} category in \code{Sys.setlocale()}
+      invalidates any cached locale-specific day/month names and the
+      AM/PM indicator for \code{strptime()} (as setting \code{LC_TIME}
+      has since \R 3.1.0).
+      
+      \item The version of LAPACK included in the sources has been
+      updated to 3.7.1, a bug-fix release.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{within(List, rm(x1, x2))} works correctly again, also
+      when \code{List[["x2"]]} is \code{NULL}.
+
+      \item \code{regexec(pattern, text, *)} now also applies
+      \code{as.character(.)} to its first two arguments, as documented.
+
+      \item \code{write.table()} and related functions, \code{writeLines()},
+      and perhaps other functions writing text to connections did not signal
+      errors when the writes failed, e.g. due to a disk being full.
+      (\PR{17243}) 
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.4.1}{
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
@@ -79,19 +214,42 @@
       \item Asking for help using expressions like \code{?stats::cor()}
       did not work.  (\PR{17250})
 
-      \item \code{readRDS(url(....))} now works too.
-
-      \item \code{installed.packages()} on Windows would fail when
-      \code{file.mtime()} (?) returned NA.
+      \item \code{readRDS(url(....))} now works.
 
       \item \command{R CMD Sweave} again returns \samp{status = 0} on
       successful completion.
 
       \item Vignettes listed in \file{.Rbuildignore} were not being
-      ignored properly.  \PR{17246}
+      ignored properly.  (\PR{17246})
 
       \item \code{file.mtime()} no longer returns NA on Windows when the
-      file or directory is being used by another process.
+      file or directory is being used by another process.  This affected
+      \code{installed.packages()}, which is now protected against this.
+
+      \item \command{R CMD INSTALL} Windows .zip file obeys \code{--lock}
+      and \code{--pkglock} flags.
+
+      \item (Windows only)  The \code{choose.files()} function could
+      return incorrect results when called with \code{multi = FALSE}.
+      (\PR{17270})
+
+      \item \code{aggregate(<data.frame>, drop = FALSE)} now also works in
+      case of near-equal numbers in \code{by}.  (\PR{16918})
+
+      \item \code{fourfoldplot()} could encounter integer overflow when
+      calculating the odds ratio. (\PR{17286})
+
+      \item \code{parse()} no longer gives spurious warnings when
+      extracting srcrefs from a file not encoded in the current locale.
+
+      This was seen from \command{R CMD check} with \file{inst/doc/*.R}
+      files, and \code{check} has some additional protection for such files.
+
+      \item \code{print.noquote(x)} now always returns its argument
+      \code{x} (invisibly).
+
+      \item Non-UTF-8 multibyte character sets were not handled properly
+      in source references.  (\PR{16732})
     }
   }
 }
@@ -169,13 +327,6 @@
       accumulators where available).  \code{"blas"} calls BLAS directly
       for best speed, but usually with undefined behavior for inputs
       with \code{NaN}/\code{Inf}.
-
-      \item \code{factor()} now uses \code{order()} to sort its levels,
-      not \code{sort.list()}. This makes \code{factor()} support custom
-      vector-like objects if methods for the appropriate generics are
-      defined. This change has the side effect of making \code{factor()}
-      succeed on empty or length-one non-atomic vector(-like) types (e.g.,
-      list), where it failed before.
     }
   }
 
@@ -1795,12 +1946,12 @@
       \item The deprecated header \file{Rdefines.h} is now compatible
       with defining \code{R_NO_REMAP}.
 
-      \item The connections API now includes a function
+      \item The connections interface now includes a function
       \code{R_GetConnection()} which allows packages implementing
       connections to convert R \code{connection} objects to
-      \code{Rconnection} handles used in the API. Code which previously
+      \code{Rconnection} handles. Code which previously
       used the low-level R-internal \code{getConnection()} entry point
-      should switch to the official API.
+      should switch.
     }
   }
 

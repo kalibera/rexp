@@ -10,6 +10,25 @@ x <- NULL; tools::assertWarning(f <-    body(x)); stopifnot(is.null(f))
 x <- NULL; tools::assertWarning(f <- formals(x)); stopifnot(is.null(f))
 ## these all silently coerced NULL to a function in R <= 3.2.x
 
+## A good guess if we have _not_ translated error/warning/.. messages:
+## (should something like this be part of package tools ?)
+englishMsgs <- {
+    ## 1. LANGUAGE takes precedence over locale settings:
+    if(nzchar(lang <- Sys.getenv("LANGUAGE")))
+        lang == "en"
+    else { ## query the  locale
+        if(.Platform$OS.type != "windows") {
+            ## sub() :
+            lc.msgs <- sub("\\..*", "", print(Sys.getlocale("LC_MESSAGES")))
+            lc.msgs == "C" || substr(lc.msgs, 1,2) == "en"
+        } else { ## Windows
+            lc.type <- sub("\\..*", "", sub("_.*", "", print(Sys.getlocale("LC_CTYPE"))))
+            lc.type == "English" || lc.type == "C"
+        }
+    }
+}
+cat(sprintf("English messages: %s\n", englishMsgs))
+
 
 ## match(x, t): fast algorithm for length-1 'x' -- PR#16885
 ## a) string 'x'  when only encoding differs
@@ -461,7 +480,7 @@ tools::assertError(format(d))
 dlt <- structure(
     list(sec = 52, min = 59L, hour = 18L, mday = 6L, mon = 11L, year = 116L,
          wday = 2L, yday = 340L, isdst = 0L, zone = "CET", gmtoff = 3600L),
-    class = c("POSIXlt", "POSIXt"), tzone = c("", "CET", "CEST"))
+    class = c("POSIXlt", "POSIXt"), tzone = "CET")
 dlt$sec <- 10000 + 1:10 # almost three hours & uses re-cycling ..
 fd <- format(dlt)
 stopifnot(length(fd) == 10, identical(fd, format(dct <- as.POSIXct(dlt))))
@@ -741,9 +760,163 @@ stopifnot(grepl("exit status 0", o[2]))
 setwd(owd)
 ## R CMD Sweave gave status 1 and hence an error in R 3.4.0 (only)
 
+
 ## print.noquote(*,  right = *)
-print(noquote(LETTERS[1:9]), right = TRUE)
-## failed a few days end in R-devel ca. May 1, 2017
+nq <- noquote(LETTERS[1:9]); stopifnot(identical(nq, print(nq, right = TRUE)))
+## print() failed a few days end in R-devel ca. May 1, 2017; non-identical for longer
+tt <- table(c(rep(1, 7), 2,2,2))
+stopifnot(identical(tt, print.noquote(tt)))
+## print.noquote(<table>) failed for 6 weeks after r72638
+
+
+## accessing  ..1  when ... is empty and using ..0, etc.
+t0 <- function(...) ..0
+t1 <- function(...) ..1
+t2 <- function(...) ..2
+stopifnot(identical(t1(pi, 2), pi), identical(t1(t1), t1),
+	  identical(t2(pi, 2), 2))
+et1 <- tryCatch(t1(), error=identity)
+if(englishMsgs)
+    stopifnot(identical("the ... list does not contain any elements",
+			conditionMessage(et1)))
+## previously gave   "'nthcdr' needs a list to CDR down"
+et0   <- tryCatch(t0(),  error=identity); (mt0   <- conditionMessage(et0))
+et2.0 <- tryCatch(t2(),  error=identity); (mt2.0 <- conditionMessage(et2.0))
+et2.1 <- tryCatch(t2(1), error=identity); (mt2.1 <- conditionMessage(et2.1))
+if(englishMsgs)
+    stopifnot(grepl("indexing '...' with .* index 0", mt0),
+	      identical("the ... list does not contain 2 elements", mt2.0),
+	      identical(mt2.0, mt2.1))
+tools::assertError(t0(1))
+tools::assertError(t0(1, 2))
+## the first gave a different error msg, the next gave no error in R < 3.5.0
+
+
+## stopifnot(e1, e2, ...) .. evaluating expressions sequentially
+one <- 1
+try(stopifnot(3 < 4:5, 5:6 >= 5, 6:8 <= 7, one <- 2))
+stopifnot(identical(one, 1))
+## all the expressions were evaluated in R <= 3.4.x
+et <- tryCatch(stopifnot(0 < 1:10, is.numeric(..vaporware..)),
+	       error=identity)
+stopifnot(identical(print(conditionCall(et))[[1]],
+		    quote(is.numeric)))
+## call was the full 'stopifnot(..)' in R < 3.5.0
+
+
+## path.expand shouldn't translate to local encoding PR#17120
+## This has been fixed on Windows, but not yet on Unix non-UTF8 systems
+if(.Platform$OS.type == "windows") {
+    filename <- "\U9b3c.R"
+    stopifnot(identical(path.expand(paste0("~/", filename)),
+		 	      paste0(path.expand("~/"), filename)))
+}
+## Chinese character was changed to hex code
+
+
+## aggregate.data.frame(*, drop=FALSE)  {new feature in R 3.3.0}
+## PR#16918 : problem with near-eq. factor() levels "not quite matching"
+group <- c(2 + 2^-51, 2)
+d1 <- data.frame(n = seq(group))
+b1 <- list(group = group)
+stopifnot(
+    identical(aggregate(d1, b1, length, drop = TRUE),
+              aggregate(d1, b1, length, drop = FALSE)))
+## drop=FALSE gave two rows + deprec. warning in R 3.3.x, and an error in 3.4.0
+
+
+## line() [Tukey's resistant line]
+cfs <- t(sapply(2:50, function(k) {x <- 1:k; line(x, 2+x)$coefficients }))
+set.seed(7)
+cf2 <- t(sapply(2:50, function(k) {
+    x <- sample.int(k)
+    line(x, 1-2*x)$coefficients }))
+stopifnot(all.equal(cfs, matrix(c(2,  1), 49, 2, byrow=TRUE), tol = 1e-14), # typically exact
+          all.equal(cf2, matrix(c(1, -2), 49, 2, byrow=TRUE), tol = 1e-14))
+## had incorrect medians of the left/right third of the data (x_L, x_R), in R < 3.5.0
+
+
+## 0-length Date and POSIX[cl]t:  PR#71290
+D <- structure(17337, class = "Date") # Sys.Date() of "now"
+D; D[0]; D[c(1,2,1)] # test printing of NA too
+stopifnot(identical(capture.output(D[0]), "Date of length 0"))
+D <- structure(1497973313.62798, class = c("POSIXct", "POSIXt")) # Sys.time()
+D; D[0]; D[c(1,2,1)] # test printing of NA too
+stopifnot(identical(capture.output(D[0]), "POSIXct of length 0"))
+D <- as.POSIXlt(D)
+D; D[0]; D[c(1,2,1)] # test printing of NA too
+stopifnot(identical(capture.output(D[0]), "POSIXlt of length 0"))
+## They printed as   '[1] "Date of length 0"'  etc in R < 3.5.0
+
+
+## aggregate.data.frame() producing spurious names  PR#17283
+dP <- state.x77[,"Population", drop=FALSE]
+by <- list(Region = state.region, Cold = state.x77[,"Frost"] > 130)
+a1 <- aggregate(dP, by=by, FUN=mean, simplify=TRUE)
+a2 <- aggregate(dP, by=by, FUN=mean, simplify=FALSE)
+stopifnot(is.null(names(a1$Population)),
+	  is.null(names(a2$Population)),
+	  identical(unlist(a2$Population), a1$Population),
+	  all.equal(unlist(a2$Population),
+		    c(8802.8, 4208.12, 7233.83, 4582.57, 1360.5, 2372.17, 970.167),
+		    tol = 1e-6))
+## in R <= 3.4.1, a2$Population had spurious names
+
+
+## factor() with duplicated labels allowing to "merge levels"
+x <- c("Male", "Man", "male", "Man", "Female")
+## The pre-3.5.0 way {two function calls, nicely aligned}:
+xf1 <- factor(x, levels = c("Male", "Man",  "male", "Female"))
+           levels(xf1) <- c("Male", "Male", "Male", "Female")
+## the new "direct" way:
+xf <- factor(x, levels = c("Male", "Man",  "male", "Female"),
+                labels = c("Male", "Male", "Male", "Female"))
+stopifnot(identical(xf1, xf),
+          identical(xf, factor(c(rep(1,4),2), labels = c("Male", "Female"))))
+## Before R 3.5.0, the 2nd factor() call gave an error
+aN <- c("a",NA)
+stopifnot(identical(levels(factor(1:2, labels = aN)), aN))
+## the NA-level had been dropped for a few days in R-devel(3.5.0)
+##
+## This slightly changed - for the better - in R >= 3.5.0 :
+ff <- factor(c(NA,2,3), levels = c(2, NA), labels = c("my", NA), exclude = NULL)
+stopifnot( ## all these but the last were TRUE "forever" :
+    identical(as.vector(ff), as.character(ff)),
+    identical(as.vector(ff), c(NA, "my", NA)),
+    identical(capture.output(ff), c("[1] <NA> my   <NA>",
+				    "Levels: my <NA>")),
+    identical(factor(ff),
+	      structure(c(NA, 1L, NA), .Label = "my", class = "factor")),
+    identical(factor(ff, exclude=NULL),
+	      structure(c(2L, 1L, 2L), .Label = c("my", NA), class = "factor")),
+    identical(as.integer(ff), # <- new in R 3.5.0 : c(2, 1, 2); before was c(2, 1, NA)
+	      as.integer(factor(ff, exclude=NULL))))
+
+
+## within.list({ .. rm( >=2 entries ) }) :
+L <- list(x = 1, y = 2, z = 3)
+stopifnot(identical(within(L, rm(x,y)), list(z = 3)))
+## has failed since R 2.7.2 patched (Aug. 2008) without any noticeable effect
+sortN <- function(x) x[sort(names(x))]
+LN <- list(y = 2, N = NULL, z = 5)
+stopifnot(
+    identical(within(LN, { z2 <- z^2 ; rm(y,z,N) }),
+              list(z2 = 5^2)) ## failed since Aug. 2008
+   ,
+    identical(within(LN, { z2 <- z^2 ; rm(y,z) }),
+              list(N = NULL, z2 = 5^2)) ## failed for a few days in R-devel
+   , # within.list() fast version
+    identical(sortN(within(LN, { z2 <- z^2 ; rm(y,z) }, keepAttrs=FALSE)),
+              sortN(list(N = NULL, z2 = 5^2)))
+)
+
+
+## write.csv did not signal an error if the disk was full PR#17243
+if (file.access("/dev/full", mode = 2) == 0)  # Only on Linux...
+    stopifnot(inherits(tryCatch(write.table(data.frame(x=1:1000000), file = "/dev/full"), error = identity),
+                            "error"))
+## Silently failed up to 3.4.1
+    
 
 
 ## keep at end

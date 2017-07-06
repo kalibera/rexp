@@ -196,6 +196,8 @@ FUNTAB R_FunTab[] =
 
 /* Primitives */
 
+{"...elt",      do_dotsElt,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"...length",   do_dotsLength,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"length",	do_length,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"length<-",	do_lengthgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
 {"c",/* bind.c: */ do_c,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -650,9 +652,9 @@ FUNTAB R_FunTab[] =
 {"internalsID",	do_internalsID,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	  0}},
 
 #ifdef Win32
-{"system",	do_system,	0,	211,	5,	{PP_FUNCALL, PREC_FN,	0}},
+{"system",	do_system,	0,	211,	6,	{PP_FUNCALL, PREC_FN,	0}},
 #else
-{"system",	do_system,	0,	211,	2,	{PP_FUNCALL, PREC_FN,	0}},
+{"system",	do_system,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
 #endif
 
 #ifdef Win32

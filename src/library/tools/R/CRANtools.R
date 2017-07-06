@@ -17,7 +17,7 @@
 #  https://www.R-project.org/Licenses/
 
 summarize_CRAN_check_status <-
-function(packages, results = NULL, details = NULL, mtnotes = NULL)
+function(packages, results = NULL, details = NULL, issues = NULL)
 {
     if(is.null(results))
         results <- CRAN_check_results()
@@ -50,9 +50,8 @@ function(packages, results = NULL, details = NULL, mtnotes = NULL)
               "Flags")
     }
 
-    if(is.null(mtnotes))
-        mtnotes <- CRAN_memtest_notes()
-
+    if(is.null(issues))
+        issues <- CRAN_check_issues()
 
     summarize_results <- function(p, r) {
         if(!NROW(r)) return(character())
@@ -114,32 +113,45 @@ function(packages, results = NULL, details = NULL, mtnotes = NULL)
               collapse = "\n\n")
     }
 
-    summarize_mtnotes <- function(p, m) {
-        if(!length(m)) return(character())
-        tests <- m[, "Test"]
-        paths <- m[, "Path"]
-        isdir <- !grepl("-Ex.Rout$", paths)
-        if(any(isdir))
-            paths[isdir] <- sprintf("%s/", paths[isdir])
-        paste(c(paste("Memtest notes:",
-                      paste(unique(tests), collapse = " ")),
-                sprintf("See: %s",
-                        paste(sprintf("<https://www.stats.ox.ac.uk/pub/bdr/memtests/%s/%s>",
-                                      tests,
-                                      paths),
-                              collapse = ",\n     "))),
+    ## summarize_mtnotes <- function(p, m) {
+    ##     if(!length(m)) return(character())
+    ##     tests <- m[, "Test"]
+    ##     paths <- m[, "Path"]
+    ##     isdir <- !grepl("-Ex.Rout$", paths)
+    ##     if(any(isdir))
+    ##         paths[isdir] <- sprintf("%s/", paths[isdir])
+    ##     paste(c(paste("Memtest notes:",
+    ##                   paste(unique(tests), collapse = " ")),
+    ##             sprintf("See: %s",
+    ##                     paste(sprintf("<https://www.stats.ox.ac.uk/pub/bdr/memtests/%s/%s>",
+    ##                                   tests,
+    ##                                   paths),
+    ##                           collapse = ",\n     "))),
+    ##           collapse = "\n")
+    ## }
+
+    summarize_issues <- function(i) {
+        if(!length(i)) return(character())
+        ## In principle the hyperrefs can be obtained from the package
+        ## check results page already pointed to by summarize_results(),
+        ## but this is not convenient for plain text processing ...
+        paste(c("Additional issues:",
+                sprintf("  %s <%s>", i$kind, i$href)),
               collapse = "\n")
     }
 
-    summarize <- function(p, r, d, m) {
+    summarize <- function(p, r, d, i) {
         paste(c(summarize_results(p, r),
-                summarize_mtnotes(p, m),
+                summarize_issues(i),
                 summarize_details(p, d)),
               collapse = "\n\n")
     }
 
+    ## Split according to package.
+    issues <- split(issues[-1L], issues[[1L]])
+
     s <- if(length(packages) == 1L) {
-        summarize(packages, results, details, mtnotes[[packages]])
+        summarize(packages, results, details, issues[[packages]])
     } else {
         results <- split(results, factor(results$Package, packages))
         details <- split(details, factor(details$Package, packages))
@@ -148,7 +160,7 @@ function(packages, results = NULL, details = NULL, mtnotes = NULL)
                           summarize(p,
                                     results[[p]],
                                     details[[p]],
-                                    mtnotes[[p]])
+                                    issues[[p]])
                       }))
     }
 
@@ -188,12 +200,12 @@ function()
 
     results <- CRAN_check_results()
     details <- CRAN_check_details()
-    mtnotes <- CRAN_memtest_notes()
+    issues <- CRAN_check_issues()
 
     split(format(summarize_CRAN_check_status(pdb[ind, "Package"],
                                              results,
                                              details,
-                                             mtnotes),
+                                             issues),
                  header = TRUE),
           maintainer[ind])
 }
@@ -241,10 +253,19 @@ function(flavors = NULL)
     db
 }
 
+## Deprecated in 3.4.1
 CRAN_memtest_notes <-
 function()
+{
+    .Deprecated("CRAN_check_issues")
     read_CRAN_object(CRAN_baseurl_for_web_area(),
                      "web/checks/memtest_notes.rds")
+}
+
+CRAN_check_issues <-
+function()
+    read_CRAN_object(CRAN_baseurl_for_web_area(),
+                     "web/checks/check_issues.rds")
 
 CRAN_package_db <-
 function()

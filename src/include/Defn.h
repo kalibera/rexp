@@ -303,7 +303,7 @@ extern int putenv(char *string);
 #endif
 #endif
 
-#define HSIZE	   4119	/* The size of the hash table for symbols */
+#define HSIZE	  49157	/* The size of the hash table for symbols */
 #define MAXIDSIZE 10000	/* Largest symbol size,
 			   in bytes excluding terminator.
 			   Was 256 prior to 2.13.0, now just a sanity check.
@@ -806,7 +806,6 @@ extern0 int R_jit_enabled INI_as(0); /* has to be 0 during R startup */
 extern0 int R_compile_pkgs INI_as(0);
 extern0 int R_check_constants INI_as(0);
 extern0 int R_disable_bytecode INI_as(0);
-extern SEXP R_cmpfun(SEXP);
 extern SEXP R_cmpfun1(SEXP); /* unconditional fresh compilation */
 extern void R_init_jit_enabled(void);
 extern void R_initAssignSymbols(void);
