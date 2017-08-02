@@ -912,11 +912,119 @@ stopifnot(
 
 
 ## write.csv did not signal an error if the disk was full PR#17243
-if (file.access("/dev/full", mode = 2) == 0)  # Only on Linux...
-    stopifnot(inherits(tryCatch(write.table(data.frame(x=1:1000000), file = "/dev/full"), error = identity),
-                            "error"))
+if (file.access("/dev/full", mode = 2) == 0) { # Not on all systems...
+    # Large writes should fail mid-write
+    stopifnot(inherits(tryCatch(write.table(data.frame(x=1:1000000),
+                                            file = "/dev/full"),
+                                error = identity),
+                       "error"))
+    # Small writes should fail on closing
+    stopifnot(inherits(tryCatch(write.table(data.frame(x=1),
+                                                file = "/dev/full"),
+                                    warning = identity),
+                       "warning"))
+}
 ## Silently failed up to 3.4.1
-    
+
+
+## model.matrix() with "empty RHS" -- PR#14992 re-opened
+row.names(trees) <- 42 + seq_len(nrow(trees))
+.RN <- row.names(mf <- model.frame(log(Volume) ~ log(Height) + log(Girth), trees))
+stopifnot(identical(.RN, row.names(model.matrix(~ 1, mf))),
+	  identical(.RN, row.names(model.matrix(~ 0, mf))))
+## had 1:nrow()  up to 3.4.x
+
+
+## "\n" etc in calls and function definitions
+(qq <- quote(-"\n"))
+stopifnot(identical('-"\\n"', cq <- capture.output(qq)),
+          identical(5L, nchar(cq)),
+          identical(6L, nchar(capture.output(quote(("\t"))))))
+## backslashes in language objects accidentally duplicated in R 3.4.1
+
+
+## length(<pairlist>) <- N
+pl <- pairlist(a=1, b=2); length(pl) <- 1
+al <- formals(ls);        length(al) <- 2
+stopifnot(identical(pl, pairlist(a = 1)),
+	  identical(al, as.pairlist(alist(name = , pos = -1L))))
+## both `length<-` failed in R <= 3.4.1; the 2nd one for the wrong reason
+
+
+## dist(*, "canberra") :
+x <- cbind(c(-1,-5,10), c(-2,7,8)); (dc <- dist(x, method="canberra"))
+##          1        2
+## 2 1.666667
+## 3 2.000000 1.066667
+stopifnot(all.equal(as.vector(dc), c(25, 30, 16)/15))
+## R's definition wrongly assumed x[] entries all of the same sign
+
+
+## sigma( <rank-deficient model> ), PR#17313
+dd <- data.frame(x1 = LETTERS[c(1,2,3, 1,2,3, 1,2,3)],
+                 x2 = letters[c(1,2,1, 2,1,1, 1,2,1)], y = 1:9)
+(sf <- summary(fit <- lm(y ~ x1*x2, data = dd))) ## last coef is NA
+stopifnot(all.equal(sigma(fit)^2,  27/2,  tol = 1e-14),
+	  all.equal(sigma(fit), sf$sigma, tol = 1e-14))
+## was too large because of wrong denom. d.f. in R <= 3.4.1
+
+
+## nclass.FD() and nclass.scott() for "extreme" data, PR#17274
+NC <- function(x) c(Sturges = nclass.Sturges(x),
+                    Scott = nclass.scott(x), FD = nclass.FD(x))
+xE <- function(eps, n = 5) {
+    stopifnot(n >= 2, is.numeric(eps), eps >= 0)
+    c(rep.int(1, n-2), 1+eps, 2)
+}
+ncE <- c(Sturges = 4, Scott = 2, FD = 1)
+stopifnot(sapply(-5:-16, function(E) identical(NC(xE(10^E)), ncE)),
+	  identical(NC(xE(1e-4)), c(Sturges = 4, Scott = 2, FD = 8550)),
+	  identical(NC(xE(1e-3)), c(Sturges = 4, Scott = 2, FD =  855)))
+## for these, nclass.FD() had "exploded" in R <= 3.4.1
+## Extremely large diff(range(.)) :
+XXL <- c(1:9, c(-1,1)*1e300)
+stopifnot(nclass.scott(XXL) == 1)
+## gave 0 in R <= 3.4.1
+tools::assertWarning(hh <- hist(XXL, "FD", plot=FALSE))
+stopifnot(sum(hh$counts) == length(XXL))
+## gave error from pretty.default + NA coercion warning in R <= 3.4.1
+
+
+## methods:::rbind / cbind no longer deeply recursive also fixes bug:
+library(methods)
+myM <- setClass("myMatrix", contains="matrix")
+T <- rbind(1:2, c=2, "a+"=10, myM(4:1,2), deparse.level=0)
+stopifnot(identical(rownames(T), c("", "c", "a+", "", "")))
+## rownames(.) wrongly were NULL in R <= 3.4.1
+
+
+## qr.coef(qr(X, LAPACK=TRUE)) when X has column names, etc
+X <- cbind(int = 1,
+           c2 = c(2, 8, 3, 10),
+           c3 = c(2, 5, 2, 2)); rownames(X) <- paste0("r", 1:4)
+y <- c(2,3,5,7); yc <- as.complex(y)
+q.Li <- qr(X);              cfLi <- qr.coef(q.Li, y)
+q.LA <- qr(X, LAPACK=TRUE); cfLA <- qr.coef(q.LA, y)
+q.Cx <- qr(X + 0i);         cfCx <- qr.coef(q.Cx, y)
+e1 <- tryCatch(qr.coef(q.Li, y[-4]), error=identity); e1
+e2 <- tryCatch(qr.coef(q.LA, y[-4]), error=identity)
+stopifnot(
+    all.equal(cfLi,    cfLA , tol = 1e-14)# 6.376e-16 (64b Lx)
+   ,all.equal(cfLi, Re(cfCx), tol = 1e-14)#  (ditto)
+   ,identical(conditionMessage(e1), conditionMessage(e2)))
+## 1) cfLA & cfCx had no names in R <= 3.4.1
+## 2) error messages were not consistent
+
+
+## invalid user device function  options(device = *) -- PR#15883
+graphics.off() # just in case
+options(device=function(...){}) # non-sense device
+tools::assertError(plot.new(), verbose = TRUE)
+if(no.grid <- !("grid" %in% loadedNamespaces())) requireNamespace("grid")
+tools::assertError(grid::grid.newpage(), verbose = TRUE)
+if(no.grid) unloadNamespace("grid")
+## both errors gave segfaults in R <= 3.4.1
+
 
 
 ## keep at end

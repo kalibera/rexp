@@ -2285,6 +2285,28 @@ setRlibs <-
 
     check_src_dir <- function(desc)
     {
+        ## Added in R 3.4.2: check line endings for shell scripts:
+        ## for Unix CRLF line endings are fatal but these are not used
+        ## on Windows and hence this is not detected.
+        ## Packages could have arbitrary scripts, so we could
+        ## extend this to look for scripts at top level or elsewhere.
+        scripts <- dir(".", pattern = "^(configure|configure.in|configure.ac|cleanup)$")
+        if(length(scripts)) {
+            checkingLog(Log, "line endings in shell scripts")
+            bad_files <- character()
+            for(f in scripts) {
+                contents <- readChar(f, file.size(f), useBytes = TRUE)
+                if (grepl("\r", contents, fixed = TRUE, useBytes = TRUE))
+                    bad_files <- c(bad_files, f)
+            }
+            if (length(bad_files)) {
+                warningLog(Log, "Found the following shell script(s) with CR or CRLF line endings:")
+                printLog0(Log, .format_lines_with_indent(bad_files), "\n")
+                printLog(Log, "Non-Windows OSes require LF line endings.\n")
+            } else resultLog(Log, "OK")
+       }
+
+
         ## Check C/C++/Fortran sources/headers for CRLF line endings.
         ## <FIXME>
         ## Does ISO C really require LF line endings?  (Reference?)
@@ -2759,21 +2781,22 @@ setRlibs <-
                 }
 
                 theta <-
-                    as.numeric(Sys.getenv("_R_CHECK_EXAMPLE_TIMING_USER_TO_ELAPSED_THRESHOLD_",
+                    as.numeric(Sys.getenv("_R_CHECK_EXAMPLE_TIMING_CPU_TO_ELAPSED_THRESHOLD_",
                                           NA_character_))
                 if(!is.na(theta)) {
-                    keep <- (times[[1L]] >= pmax(theta * times[[3L]], 1))
+                    keep <- ((times[[1L]] + times[[2L]]) >=
+                              pmax(theta * times[[3L]], 1))
                     if(any(keep)) {
                         if(!any && check_incoming) {
                             noteLog(Log)
                             any <- TRUE
                         }
                         printLog(Log,
-                                 sprintf("Examples with user time > %g times elapsed time\n",
+                                 sprintf("Examples with CPU time > %g times elapsed time\n",
                                          theta))
                         bad <- times[keep, ]
-                        bad <- cbind(bad,
-                                     ratio = round(bad[[1L]] / bad[[3L]], 3L))
+                        ratio <- (bad[[1L]] + bad[[2L]]) / bad[[3L]]
+                        bad <- cbind(bad, ratio = round(ratio, 3L))
                         bad <- bad[order(bad$ratio, decreasing = TRUE), ]
                         out <- utils::capture.output(format(bad))
                         printLog0(Log, paste(out, collapse = "\n"), "\n")
@@ -3012,6 +3035,10 @@ setRlibs <-
 
     run_vignettes <- function(desc)
     {
+        theta <-
+            as.numeric(Sys.getenv("_R_CHECK_VIGNETTE_TIMING_CPU_TO_ELAPSED_THRESHOLD_",
+                                  NA_character_))
+
         libpaths <- .libPaths()
         .libPaths(c(libdir, libpaths))
         vigns <- pkgVignettes(dir = pkgdir)
@@ -3278,6 +3305,15 @@ setRlibs <-
                         if (!config_val_to_logical(Sys.getenv("_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_", use_valgrind)))
                             unlink(outfile)
                     }
+                    if(!WINDOWS && !is.na(theta)) {
+                        td <- t2b - t1b
+                        cpu <- sum(td[-3L])
+                        if(cpu >= pmax(theta * td[3L], 1)) {
+                            ratio <- round(cpu/td[3L], 1L)
+                            cat(sprintf("Running R code from vignette %s had CPU time %g times elapsed time\n",
+                                        sQuote((basename(file))), ratio))
+                        }
+                    }
                 }
                 t2 <- proc.time()
                 if(!ran) {
@@ -3298,6 +3334,16 @@ setRlibs <-
                             maybe_exit(1L)
                         }
                     } else resultLog(Log, "OK")
+                    if(!WINDOWS && !is.na(theta)) {
+                        td <- t2 - t1
+                        cpu <- sum(td[-3L])
+                        if(cpu >= pmax(theta * td[3L], 1)) {
+                            ratio <- round(cpu/td[3L], 1L)
+                            printLog(Log,
+                                     sprintf("Running R code from vignettes had CPU time %g times elapsed time\n",
+                                             ratio))
+                        }
+                    }
                 }
             }
 
@@ -3363,6 +3409,16 @@ setRlibs <-
                     if (!config_val_to_logical(Sys.getenv("_R_CHECK_ALWAYS_LOG_VIGNETTE_OUTPUT_", "false")))
                             unlink(outfile)
                     resultLog(Log, "OK")
+                }
+                if(!WINDOWS && !is.na(theta)) {
+                    td <- t2 - t1
+                    cpu <- sum(td[-3L])
+                    if(cpu >= pmax(theta * td[3L], 1)) {
+                        ratio <- round(cpu/td[3L], 1L)
+                        printLog(Log,
+                                 sprintf("Re-building vignettes had CPU time %g times elapsed time\n",
+                                        ratio))
+                    }
                 }
             } else {
                 checkingLog(Log, "re-building of vignette outputs")
