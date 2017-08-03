@@ -685,16 +685,16 @@ static R_size_t R_NodesInUse = 0;
    place them on the forwarding list.  The forwarding list is assumed
    to be in a local variable of the caller named named
    forwarded_nodes. */
+SEXP sUndefined = NULL;
+
 #define CHECK_SYM(s) do { \
-  if (s != NULL && TYPEOF(s) == SYMSXP && ATTRIB(s) != R_NilValue) { \
+  if (s != NULL && TYPEOF(s) == SYMSXP && ATTRIB(s) != R_NilValue && \
+      s != sUndefined) { \
     int oldcon = R_OutputCon; \
     R_OutputCon = 2; \
     REprintf("SYMERROR: GC found a symbol with attribute!\n"); \
-    REprintf("symbol:\n"); \
-    PrintValue(s); \
-    REprintf("attributes:\n"); \
-    PrintValue(ATTRIB(s)); \
-    R_Suicide("Attribute on symbol found in GC\n"); \
+    REprintf("symbol: %s\n", CHAR(PRINTNAME(s))); \
+    R_Suicide("found symbol with an attribute during GC\n"); \
     R_OutputCon = oldcon; \
   } \
 } while(0)
@@ -2938,6 +2938,7 @@ static void gc_end_timing(void)
 
 static void R_gc_internal(R_size_t size_needed)
 {
+
     if (!R_GCEnabled) {
       if (NO_FREE_NODES())
 	R_NSize = R_NodesInUse + 1;

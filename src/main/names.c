@@ -1049,8 +1049,11 @@ static void installFunTab(int i)
 	SET_SYMVALUE(install(R_FunTab[i].name), prim);
 }
 
+extern SEXP sUndefined;
+
 static void SymbolShortcuts(void)
 {  /* ../include/Rinternals.h : */
+    sUndefined = install("<UNDEFINED>");
     R_Bracket2Symbol = install("[[");
     R_BracketSymbol = install("[");
     R_BraceSymbol = install("{");

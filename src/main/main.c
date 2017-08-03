@@ -503,6 +503,7 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 	if((intptr_t) R_CStackLimit != -1) upper += R_CStackLimit;
 	if(diff > 0 && diff < upper) {
 	    REprintf(_("Error: segfault from C stack overflow\n"));
+	    *(int *)0 = 1;
 	    jump_to_toplevel();
 	}
     }

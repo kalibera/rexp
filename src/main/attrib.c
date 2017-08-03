@@ -35,6 +35,10 @@ static SEXP commentgets(SEXP, SEXP);
 void printwhere(void);
 static void symattr(SEXP vec, SEXP name, SEXP val, const char *fun)
 {
+    static SEXP sUndef = NULL;
+    if (!sUndef)
+	sUndef = install("<UNDEFINED>");
+    if (vec == sUndef) return; /* exception, S4 does this... */
     int oldout = R_OutputCon;
     R_OutputCon = 2;
     REprintf("\nSYMERROR: attempt to set an attribute on a symbol--------------\n");
