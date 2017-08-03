@@ -32,12 +32,34 @@ static SEXP removeAttrib(SEXP, SEXP);
 SEXP comment(SEXP);
 static SEXP commentgets(SEXP, SEXP);
 
+void printwhere(void);
+static void symattr(SEXP vec, SEXP name, SEXP val, const char *fun)
+{
+    int oldout = R_OutputCon;
+    R_OutputCon = 2;
+    REprintf("\nSYMERROR: attempt to set an attribute on a symbol--------------\n");
+    REprintf("vector:\n");
+    PrintValue(vec);
+    REprintf("name:\n");
+    PrintValue(name);
+    REprintf("value:\n");
+    PrintValue(val);
+    REprintf("function: %s\n", fun);
+    printwhere();
+    REprintf("\nSYMERROR: end of report ---------------------------------------\n");
+    R_Suicide("Attempt to set an attribute on a symbol\n"); 
+    R_OutputCon = oldout;
+}
+
 static SEXP row_names_gets(SEXP vec , SEXP val)
 {
     SEXP ans;
 
     if (vec == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
+
+    if (TYPEOF(vec) == SYMSXP)
+	symattr(vec, R_RowNamesSymbol, val, "row_names_gets");
 
     if(isReal(val) && LENGTH(val) == 2 && ISNAN(REAL(val)[0]) ) {
 	/* This should not happen, but if a careless user dput()s a
@@ -235,6 +257,9 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
     if (vec == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
+    if (TYPEOF(vec) == SYMSXP)
+	symattr(vec, name, val, "setAttrib");
+
     if (MAYBE_REFERENCED(val)) val = R_FixupRHS(vec, val);
     //SET_NAMED(val, NAMED(val) | NAMED(vec));
     UNPROTECT(2);
@@ -269,6 +294,9 @@ void copyMostAttrib(SEXP inp, SEXP ans)
     if (ans == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
+    if (TYPEOF(ans) == SYMSXP)
+	symattr(ans, R_NilValue, R_NilValue, "copyMostAttrib");
+
     PROTECT(ans);
     PROTECT(inp);
     for (s = ATTRIB(inp); s != R_NilValue; s = CDR(s)) {
@@ -290,6 +318,9 @@ void copyMostAttribNoTs(SEXP inp, SEXP ans)
 
     if (ans == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
+
+    if (TYPEOF(ans) == SYMSXP)
+	symattr(ans, R_NilValue, R_NilValue, "copyMostAttribsNoTs");
 
     PROTECT(ans);
     PROTECT(inp);
@@ -335,6 +366,10 @@ static SEXP installAttrib(SEXP vec, SEXP name, SEXP val)
 
     if(TYPEOF(vec) == CHARSXP)
 	error("cannot set attribute on a CHARSXP");
+
+    if(TYPEOF(vec) == SYMSXP)
+	symattr(vec, name, val, "installAttrib");
+
     /* this does no allocation */
     for (SEXP s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
 	if (TAG(s) == name) {
@@ -360,6 +395,9 @@ static SEXP removeAttrib(SEXP vec, SEXP name)
     SEXP t;
     if(TYPEOF(vec) == CHARSXP)
 	error("cannot set attribute on a CHARSXP");
+// "identical" sometimes removes unconditionally source references from objects
+//    if (TYPEOF(vec) == SYMSXP)
+//	symattr(vec, name, R_NilValue, "removeAttrib");
     if (name == R_NamesSymbol && isPairList(vec)) {
 	for (t = vec; t != R_NilValue; t = CDR(t))
 	    SET_TAG(t, R_NilValue);
@@ -406,6 +444,9 @@ SEXP tspgets(SEXP vec, SEXP val)
 
     if (vec == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
+
+    if (TYPEOF(vec) == SYMSXP)
+	symattr(vec, R_TspSymbol, val, "tspgets");
 
     if(IS_S4_OBJECT(vec)) { /* leave validity checking to validObject */
 	if (!isNumeric(val)) /* but should have been checked */
@@ -454,6 +495,9 @@ static SEXP commentgets(SEXP vec, SEXP comment)
     if (vec == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
+    if (TYPEOF(vec) == SYMSXP)
+	symattr(vec, R_CommentSymbol, comment, "commentgets");
+
     if (isNull(comment) || isString(comment)) {
 	if (length(comment) <= 0) {
 	    SET_ATTRIB(vec, stripAttrib(R_CommentSymbol, ATTRIB(vec)));
@@ -485,6 +529,9 @@ SEXP attribute_hidden do_comment(SEXP call, SEXP op, SEXP args, SEXP env)
 
 SEXP classgets(SEXP vec, SEXP klass)
 {
+    if (TYPEOF(vec) == SYMSXP)
+	symattr(vec, R_ClassSymbol, klass, "classgets");
+
     if (isNull(klass) || isString(klass)) {
 	int ncl = length(klass);
 	if (ncl <= 0) {
@@ -899,6 +946,9 @@ SEXP namesgets(SEXP vec, SEXP val)
     PROTECT(vec);
     PROTECT(val);
 
+    if (TYPEOF(vec) == SYMSXP)
+	symattr(vec, R_NilValue, val, "namesgets");
+
     /* Ensure that the labels are indeed */
     /* a vector of character strings */
 
@@ -1031,6 +1081,9 @@ SEXP dimnamesgets(SEXP vec, SEXP val)
     PROTECT(vec);
     PROTECT(val);
 
+    if (TYPEOF(vec) == SYMSXP)
+	symattr(vec, R_NilValue, val, "dimnamesgets");
+
     if (!isArray(vec) && !isList(vec))
 	error(_("'dimnames' applied to non-array"));
     /* This is probably overkill, but you never know; */
@@ -1158,6 +1211,8 @@ SEXP dimgets(SEXP vec, SEXP val)
 
     if (!isVector(val) && !isList(val))
 	error(_("invalid second argument"));
+    if (TYPEOF(vec) == SYMSXP)
+	symattr(vec, R_DimSymbol, val, "dimgets");
     val = coerceVector(val, INTSXP);
     UNPROTECT(1);
     PROTECT(val);
@@ -1754,6 +1809,8 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
 		     *  slot(obj, name, check=FALSE) <- value  must work on
 		     * "pre-objects", currently only in makePrototypeFromClassDef() */
 	error(_("attempt to set slot on NULL object"));
+    if (TYPEOF(obj) == SYMSXP)
+	symattr(obj, name, value, "R_do_slot_assign");
 #endif
     PROTECT(obj); PROTECT(value);
     /* Ensure that name is a symbol */
