@@ -724,6 +724,7 @@ attribute_hidden
 extern
 #endif
 SEXP	R_RestartToken;     /* Marker for restarted function calls */
+SEXP	R_UndefinedReturnValue;     /* Marker for returnValue that is undefined */
 
 /* Symbol Table Shortcuts */
 LibExtern SEXP	R_AsCharacterSymbol;/* "as.character" */
