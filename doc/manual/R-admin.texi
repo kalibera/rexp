@@ -4482,12 +4482,15 @@ build directory.  This requires other tools to be installed, discussed
 in the rest of this section.
 
 File @file{configure} is created from @file{configure.ac} and the files
-under @file{m4} by @command{autoconf} and @command{aclocal}.  There is a
-formal version requirement on @command{autoconf} of 2.62 or later, but
-it is unlikely that anything other than the most recent versions have
-been thoroughly tested.
+under @file{m4} by @command{autoconf} and @command{aclocal} (part of the
+@pkg{automake} package).  There is a formal version requirement on
+@command{autoconf} of 2.62 or later, but it is unlikely that anything
+other than the most recent versions@footnote{at the time of revsion of
+this para in 2017, @pkg{autoconf-2.69} from 2012 and @pkg{automake-1.15}
+from 2015.} have been thoroughly tested.
 
-File @file{src/include/config.h} is created by @command{autoheader}.
+File @file{src/include/config.h} is created by @command{autoheader}
+(part of @pkg{autoconf}).
 
 Grammar files @file{*.y} are converted to C sources by an implementation
 of @command{yacc}, usually @command{bison -y}: these are found in
@@ -4500,9 +4503,13 @@ The ultimate sources for package @pkg{compiler} are in its @file{noweb}
 directory.  To re-create the sources from
 @file{src/library/compiler/noweb/compiler.nw}, the command
 @command{notangle} is required.  Some Linux distributions include this
-command in package @pkg{noweb}.  It can also be installed from the sources
-at @url{https://www.cs.tufts.edu/~nr/noweb/} (and can also be found on
-CTAN).  The package sources are only re-created even in maintainer mode if
+command in package @pkg{noweb}.  It can also be installed from the
+sources at @url{https://www.cs.tufts.edu/~nr/noweb/}@footnote{The links
+there have proved difficult to access, in which case either point an FTP
+client at @uref{ftp://www.eecs.harvard.edu/pub/nr/} or grab the copy
+made available at
+@uref{http://developer.r-project.org/noweb-2.11b.tgz}.}.  The package
+sources are only re-created even in maintainer mode if
 @file{src/library/compiler/noweb/compiler.nw} has been updated.
 
 It is likely that in future creating @code{configure} will need the GNU
@@ -4527,8 +4534,9 @@ recent reports.
 
 C macros to select particular platforms can be tricky to track down
 (there is a fair amount of misinformation on the Web).  The Wiki
-(currently) at @uref{http://sourceforge.net/@/p/@/predef/@/wiki/@/Home/} can be
-helpful.  The @R{} sources currently use
+(currently) at @uref{http://sourceforge.net/@/p/@/predef/@/wiki/@/Home/}
+can be helpful.  The @R{} sources have used (often in included software
+under @file{src/extra})
 @example
 AIX: _AIX
 Cygwin: __CYGWIN__

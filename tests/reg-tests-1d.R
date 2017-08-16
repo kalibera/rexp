@@ -976,7 +976,7 @@ xE <- function(eps, n = 5) {
     stopifnot(n >= 2, is.numeric(eps), eps >= 0)
     c(rep.int(1, n-2), 1+eps, 2)
 }
-ncE <- c(Sturges = 4, Scott = 2, FD = 1)
+ncE <- c(Sturges = 4, Scott = 2, FD = 3)
 stopifnot(sapply(-5:-16, function(E) identical(NC(xE(10^E)), ncE)),
 	  identical(NC(xE(1e-4)), c(Sturges = 4, Scott = 2, FD = 8550)),
 	  identical(NC(xE(1e-3)), c(Sturges = 4, Scott = 2, FD =  855)))
@@ -1024,6 +1024,30 @@ if(no.grid <- !("grid" %in% loadedNamespaces())) requireNamespace("grid")
 tools::assertError(grid::grid.newpage(), verbose = TRUE)
 if(no.grid) unloadNamespace("grid")
 ## both errors gave segfaults in R <= 3.4.1
+
+
+## readRDS(textConnection())
+abc <- c("a", "b", "c"); tmpC <- ""
+zz <- textConnection('tmpC', 'wb')
+saveRDS(abc, zz, ascii = TRUE)
+sObj <- paste(textConnectionValue(zz), collapse='\n')
+close(zz); rm(zz)
+stopifnot(identical(abc, readRDS(textConnection(tmpC))),
+          identical(abc, readRDS(textConnection(sObj))))
+## failed in R 3.4.1 only
+
+
+## Ops (including arithmetic) with 0-column data frames:
+d0 <- USArrests[, FALSE]
+stopifnot(identical(d0, sin(d0))
+        , identical(d0, d0 + 1), identical(d0, 2 / d0) # failed
+        , all.equal(sqrt(USArrests), USArrests ^ (1/2)) # now both data frames
+        , is.matrix(m0 <- 0 < d0)
+        , identical(dim(m0), dim(d0))
+        , identical(dimnames(m0)[1], dimnames(d0)[1])
+        , identical(d0 & d0, m0)
+          )
+## all but the first failed in R < 3.5.0
 
 
 

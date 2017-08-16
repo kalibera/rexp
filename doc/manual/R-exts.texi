@@ -652,7 +652,9 @@ codes.
 @c DESCRIPTION field RdMacros
 An @samp{RdMacros} field can be used to hold a comma-separated list of
 packages from which the current package will import @file{Rd} macro
-definitions.  These will be imported after the system macros, in the
+definitions.  These package should also be listed in @samp{Imports},
+@samp{Suggests} or @samp{Depends}.  The macros in these packages will be 
+imported after the system macros, in the 
 order listed in the @samp{RdMacros} field, before any macro definitions
 in the current package are loaded.  Macro definitions in individual
 @file{.Rd} files in the @file{man} directory are loaded last, and are
@@ -9634,10 +9636,10 @@ Alternatively, examine the package's @R{} code for all @code{.C},
 @code{.Fortran}, @code{.Call} and @code{.External} calls.
 
 @item
-Construct the registration table.
-First write skeleton registration code, conventionally in file
-@file{src/init.c} (or at the end of the only C source file in the
-package):
+Construct the registration table.  First write skeleton registration
+code, conventionally in file @file{src/init.c} (or at the end of the
+only C source file in the package: if included in a C++ file the
+@samp{R_init} function would need to be declared @code{extern "C"}):
 
 @example
 @group

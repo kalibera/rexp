@@ -45,8 +45,8 @@
       New function \code{isFALSE()} defined analogously to \code{isTRUE()}.
 
       \item The default symbol table size has been increased from 4119
-      to 49157; this may improve symbol resolution performance when many
-      packages are loaded.  (Suggested by Jim Hester.)
+      to 49157; this may improve the performance of symbol resolution
+      when many packages are loaded.  (Suggested by Jim Hester.)
 
       \item \code{line()} gets a new option \code{iter = 1}.
 
@@ -87,7 +87,7 @@
       option \code{keepAttrs = FALSE} for speed up.
 
       \item \command{system()} and \command{system2()} now allow the
-      specification of a maximum elapsed time.
+      specification of a maximum elapsed time (\sQuote{timeout}).
       (This feature is currently experimental and subject to change.)
 
       \item \code{debug()} supports debugging of methods on any object
@@ -100,6 +100,38 @@
       \item Attempting to increase the length of a variable containing
       \code{NULL} using \code{length()<-} still has no effect on the
       target variable, but now triggers a warning.
+
+      \item \code{type.convert()} becomes a generic function, with
+      additional methods that operate recursively over list and
+      \code{data.frame} objects. Courtesy of Arni Magnusson
+      (\PR{17269}).
+
+      \item \code{lower.tri(x)} and \code{upper.tri(x)} only needing
+      \code{dim(x)} now work via new \code{.row()} \code{.col()} and
+      no longer call \code{as.matrix()} by default in order to work
+      efficiently for all kind of matrix-like objects.
+
+      \item \code{print()} methods for \code{"xgettext"} and
+      \code{"xngettext"} now use \code{encodeString()} which keeps,
+      e.g., \code{"\n"}, visible.  (Wish of \PR{17298}.)
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \code{install.packages()} for source packages now has the
+      possibility to set a \sQuote{timeout} (elapsed-time limit).  For
+      serial installs this uses the \sQuote{timeout} argument of
+      \code{system2()}: for parallel installs it requires the
+      \command{timeout} utility command from GNU \pkg{coreutils}.
+      [This is currently experimental and subject to change.]
+
+      \item It is now possible to set \sQuote{timeouts} (elapsed-time
+      limits) for most parts of \command{R CMD check} \emph{via}
+      environment variables documented in the \sQuote{R Internals}
+      manual. [This depends on the experimental \sQuote{timeout} argument
+      of \code{system2()} and hence subject to change, as are the names
+      of the environment variables.]
     }
   }
 
@@ -184,12 +216,20 @@
       single observation.  \code{interpSpline()} gives a more friendly
       error message when the number of points is less than four.
 
-      \item \code{dist(x, method="canberra")} now uses the correct
+      \item \code{dist(x, method = "canberra")} now uses the correct
       definition; the result may only differ when \code{x} contains
       values of differing signs, i.e., e.g., not for 0-1 data.
 
       \item \code{methods:::cbind()} and \code{methods:::rbind()} avoid
       deep recursion, thanks to Suharto Anggono via \PR{17300}.
+
+      \item arithmetic with zero-column data frames now works more
+      consistently; issue raised by Bill Dunlap.
+
+      \item \code{pretty(x, n=<large>)} now works better (though
+      it was never meant for large \code{n}); internally it uses the
+      same rounding fuzz (1e-10) as \code{seq.default()} - as it did up
+      to 2010-02-03 when both were 1e-7.
     }
   }
 }
@@ -209,7 +249,11 @@
       \item The default for \code{tools::write_PACKAGES(rds_compress=)}
       has been changed to \code{"xz"} to match the compression used by
       \acronym{CRAN}.
+    }
+  }
 
+  \subsection{UTILITIES}{
+    \itemize{
       \item \command{R CMD check} checks for and \command{R CMD build}
       corrects CRLF line endings in shell scripts \command{configure}
       and \command{cleanup} (even on Windows).
@@ -275,6 +319,12 @@
 
       \item \code{encodeString(<very large string>)} no longer
       segfaults.  (\PR{15885})
+
+      \item It is again possible to use \command{configure
+	--enable-maintainer-mode} without having installed
+      \command{notangle} (it was required in \R 3.4.[01]).
+
+      \item \code{readRDS(textConnection(.))} works again.  (\PR{17325})
     }
   }
 }
