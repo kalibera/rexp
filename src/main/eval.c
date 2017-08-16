@@ -1610,7 +1610,7 @@ static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
 		cntxt.returnValue = R_ReturnedValue;
 	}
 	else
-	    cntxt.returnValue = R_UndefinedReturnValue;
+	    cntxt.returnValue = NULL; /* undefined */
     }
     else
 	/* make it available to on.exit and implicitly protect */
@@ -7627,8 +7627,7 @@ SEXP attribute_hidden do_returnValue(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP val;
     checkArity(op, args);
-    if (R_ExitContext && (val = R_ExitContext->returnValue) &&
-        val != R_UndefinedReturnValue) {
+    if (R_ExitContext && (val = R_ExitContext->returnValue)) {
 
 	MARK_NOT_MUTABLE(val);
 	return val;

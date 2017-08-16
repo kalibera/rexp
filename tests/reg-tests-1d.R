@@ -1049,7 +1049,88 @@ stopifnot(identical(d0, sin(d0))
           )
 ## all but the first failed in R < 3.5.0
 
+## returnValue corner case: return 'default' on error
 
+hret <- NULL
+fret <- NULL
+h <- function() {
+  on.exit(hret <<- returnValue(27))
+  stop("h fails")
+}
+f <- function() {
+    on.exit(fret <<- returnValue(27))
+    h()
+    1
+}
+res <- tryCatch(f(), error=function(e) 21)
+stopifnot(identical(fret, 27))
+stopifnot(identical(hret, 27))
+stopifnot(identical(res, 21))
+
+## returnValue corner case: return 'default' on non-local return
+
+fret <- NULL
+gret <- NULL
+f <- function(expr) {
+  on.exit(fret <<- returnValue(28))
+  expr
+  1
+}
+g <- function() {
+  on.exit(gret <<- returnValue(28))
+  f(return(2))
+  3
+}
+res <- g()
+stopifnot(identical(fret, 28))
+stopifnot(identical(gret, 2))
+stopifnot(identical(res, 2))
+
+## returnValue corner case: return 'default' on restart
+
+mret <- NULL
+hret <- NULL
+lret <- NULL
+uvarg <- NULL
+uvret <- NULL
+h <- function(x) {
+  on.exit(hret <<- returnValue(29))
+  withCallingHandlers(
+    myerror = function(e) invokeRestart("use_value", 1),
+    m(x)
+  )
+}
+m <- function(x) {
+  on.exit(mret <<- returnValue(29))
+  res <- withRestarts(
+    l(x),
+    use_value = function(x) {
+      on.exit(uvret <<- returnValue(29))
+      uvarg <<- x
+      3
+    }
+  )
+  res
+}
+l <- function(x) {
+  on.exit(lret <<- returnValue(29))
+  if (x > 1) {
+    res <- x+1
+    return(res)
+  }
+  cond <- structure(
+    class = c("myerror", "error", "condition"),
+    list(message = c("This is not an error", call = sys.call()))
+  )
+  stop(cond)
+}
+res <- h(1)
+stopifnot(identical(res, 3))
+stopifnot(identical(mret, 3))
+stopifnot(identical(hret, 3))
+stopifnot(identical(lret, 29))
+stopifnot(identical(uvarg, 1))
+stopifnot(identical(uvret, 3))
 
 ## keep at end
 rbind(last =  proc.time() - .pt,

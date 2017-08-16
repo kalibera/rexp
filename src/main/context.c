@@ -138,7 +138,7 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
 	    R_ExitContext = c;
 	    c->conexit = R_NilValue; /* prevent recursion */
 	    /* we are in intermediate jump, so returnValue is undefined */
-	    c->returnValue = R_UndefinedReturnValue;
+	    c->returnValue = NULL;
 	    R_HandlerStack = c->handlerstack;
 	    R_RestartStack = c->restartstack;
 	    PROTECT(s);

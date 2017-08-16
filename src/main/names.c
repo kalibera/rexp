@@ -1166,7 +1166,6 @@ void attribute_hidden InitNames()
     R_InBCInterpreter = mkSymMarker(mkChar("<in-bc-interp>"));
     R_RestartToken = mkSymMarker(mkChar(""));
     R_CurrentExpression = mkSymMarker(mkChar("<current-expression>"));
-    R_UndefinedReturnValue = mkSymMarker(mkChar("<undefined-return-value>"));
 
     /* String constants (CHARSXP values) */
     /* Note: we don't want NA_STRING to be in the CHARSXP cache, so that
