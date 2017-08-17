@@ -1132,6 +1132,44 @@ stopifnot(identical(lret, 29))
 stopifnot(identical(uvarg, 1))
 stopifnot(identical(uvret, 3))
 
+## returnValue: callCC
+
+fret <- NULL
+f <- function(exitfun) {
+  on.exit(fret <<- returnValue(30))
+  exitfun(3)
+  4
+}
+res <- callCC(f)
+stopifnot(identical(res, 3))
+stopifnot(identical(fret, 30))
+
+## returnValue: instrumented callCC
+
+fret <- NULL
+mycallCCret <- NULL
+funret <- NULL
+mycallCC <- function(fun) {
+  value <- NULL
+  on.exit(mycallCCret <<- returnValue(31))
+  delayedAssign("throw", return(value))
+  fun(function(v) {
+    on.exit(funret <<- returnValue(31))
+    value <<- v
+    throw
+  })
+}
+f <- function(exitfun) {
+  on.exit(fret <<- returnValue(31))
+  exitfun(3)
+  4
+}
+res <- mycallCC(f)
+stopifnot(identical(res, 3))
+stopifnot(identical(fret, 31))
+stopifnot(identical(mycallCCret, 3))
+stopifnot(identical(funret, 31))
+
 ## keep at end
 rbind(last =  proc.time() - .pt,
       total = proc.time())
