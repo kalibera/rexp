@@ -211,7 +211,7 @@ SEXP alloc(size_t sz);
 void* allocBigObj(size_t sexp_sz) {
   size_t sz = sexp_sz;
 
-  if (HEAP.size + sz > HEAP.heapLimit)
+  if (gc_pending || HEAP.size + sz > HEAP.heapLimit)
     doGc(NUM_BUCKETS);
 
   SEXP data = (SEXP)malloc(sz);
@@ -388,7 +388,7 @@ void* slowAllocInBucket(unsigned bkt) {
   // No luck so far. If we are below the page limit
   // we can allocate more. Otherwise we need to do a gc.
   SizeBucket* bucket = &HEAP.sizeBucket[bkt];
-  if (HEAP.num_pages >= HEAP.page_limit ||
+  if (gc_pending || HEAP.num_pages >= HEAP.page_limit ||
       HEAP.size + PAGE_SIZE > HEAP.heapLimit) {
     doGc(bkt);
     // TODO: something a more sane...
@@ -723,6 +723,44 @@ void heapStatistics() {
   printf(" Page freelist has %d buckets with %d entries of which %d are commited\n", freePageBuckets, freePages, freeCommitedPages);
 }
 
+size_t bucketPageAvailableNodes(unsigned bkt) {
+  return (PAGE_SIZE - sizeof(Page)) / BUCKET_SIZE[bkt];
+}
+
+size_t nodesPerPage() {
+  return bucketPageAvailableNodes(CONS_BUCKET);
+}
+
+size_t largeVallocSize() {
+  size_t total = 0;
+  for (size_t i = 0; i < NUM_BUCKETS; ++i) {
+    total += HEAP.sizeBucket[i].num_pages *
+        bucketPageAvailableNodes(i) * BUCKET_SIZE[i];
+  }
+  return HEAP.size - total;
+}
+
+size_t smallVallocSize() {
+  size_t total = 0;
+  for (size_t i = FIRST_GENERIC_BUCKET; i < NUM_BUCKETS; ++i) {
+    total += HEAP.sizeBucket[i].num_pages *
+        bucketPageAvailableNodes(i) * BUCKET_SIZE[i];
+  }
+  return total;
+}
+
+size_t nodesNumber() {
+  size_t total = 0;
+  for (size_t i = 0; i < FIRST_GENERIC_BUCKET; ++i) {
+    total += HEAP.sizeBucket[i].num_pages * bucketPageAvailableNodes(i);
+  }
+  return total;
+}
+
+size_t vheapUsed() {
+  return HEAP.size - nodesNumber() * sizeof(SEXPREC);
+}
+
 static void traceHeap();
 void traceStack();
 FORCE_INLINE void PROCESS_NODE(SEXP);
@@ -839,6 +877,7 @@ void doGc(unsigned bkt) {
       oversize = TRUE;
       HEAP.heapLimit = HEAP.size + HEAP.size * (1-HEAP_SIZE_SLACK);
     }
+
 #ifdef GCPROF
     printf("Growing heap limit to %f\n", HEAP.heapLimit/1024.0/1024.0);
 #endif
@@ -852,6 +891,11 @@ void doGc(unsigned bkt) {
     printf("Growing page limit to %d\n", HEAP.page_limit);
 #endif
   }
+
+  R_NSize = HEAP.page_limit * nodesPerPage();
+  R_VSize = HEAP.heapLimit;
+  if (HEAP.heapLimit > R_MaxVSize + R_MaxNSize * sizeof(SEXPREC))
+    HEAP.heapLimit = R_MaxVSize + R_MaxNSize * sizeof(SEXPREC);
 
 #ifdef GCPROF
   clock_gettime(CLOCK_MONOTONIC, &time4);
@@ -868,10 +912,12 @@ void doGc(unsigned bkt) {
       toMS(&time4) - toMS(&time1),
       marked);
 #endif
+
   fullCollection =
     heapPressure > FULL_COLLECTION_TRIGGER ||
     pagePressure > FULL_COLLECTION_TRIGGER ||
     oversize;
+
 }
 
 void clear_marks() {
