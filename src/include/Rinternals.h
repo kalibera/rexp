@@ -202,12 +202,10 @@ struct sxpinfo_struct {
     unsigned int obj   :  1;
     unsigned int named :  2;
     unsigned int gp    : 16;
-    unsigned int mark  :  1;
     unsigned int debug :  1;
     unsigned int trace :  1;  /* functions and memory tracing */
     unsigned int spare :  1;  /* currently unused */
-    unsigned int gcgen :  1;  /* old generation number */
-    unsigned int gccls :  3;  /* node class */
+    unsigned int old   :  1;  // used for write barrier (except write to attrib)
 }; /*		    Tot: 32 */
 
 struct vecsxp_struct {
@@ -265,8 +263,7 @@ struct promsxp_struct {
 
 #define SEXPREC_HEADER \
     struct sxpinfo_struct sxpinfo; \
-    struct SEXPREC *attrib; \
-    struct SEXPREC *gengc_next_node, *gengc_prev_node
+    struct SEXPREC *attrib
 
 /* The standard node structure consists of a header followed by the
    node data. */
@@ -300,7 +297,6 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 /* General Cons Cell Attributes */
 #define ATTRIB(x)	((x)->attrib)
 #define OBJECT(x)	((x)->sxpinfo.obj)
-#define MARK(x)		((x)->sxpinfo.mark)
 #define TYPEOF(x)	((x)->sxpinfo.type)
 #define NAMED(x)	((x)->sxpinfo.named)
 #define RTRACE(x)	((x)->sxpinfo.trace)

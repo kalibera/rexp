@@ -27,6 +27,8 @@
  *	and reset the stack pointer.
  */
 
+#include "new_gc.c"
+
 #define USE_RINTERNALS
 
 #ifdef HAVE_CONFIG_H
@@ -248,16 +250,8 @@ static void R_ReportNewPage();
     gc_inhibit_release = __release__;		   \
 }  while(0)
 
-static void R_gc_internal(R_size_t size_needed);
-static void R_gc_full(R_size_t size_needed);
 static void mem_err_heap(R_size_t size);
 static void mem_err_malloc(R_size_t size);
-
-static SEXPREC UnmarkedNodeTemplate;
-#define NODE_IS_MARKED(s) (MARK(s)==1)
-#define MARK_NODE(s) (MARK(s)=1)
-#define UNMARK_NODE(s) (MARK(s)=0)
-
 
 /* Tuning Constants. Most of these could be made settable from R,
    within some reasonable constraints at least.  Since there are quite
@@ -472,279 +466,7 @@ static int NodeClassSize[NUM_SMALL_NODE_CLASSES] = { 0, 1, 2, 4, 8, 16 };
 #define NODE_CLASS(s) ((s)->sxpinfo.gccls)
 #define SET_NODE_CLASS(s,v) (((s)->sxpinfo.gccls) = (v))
 
-
-/* Node Generations. */
-
-#define NUM_OLD_GENERATIONS 2
-
-/* sxpinfo allocates one bit for the old generation count, so only 1
-   or 2 is allowed */
-#if NUM_OLD_GENERATIONS > 2 || NUM_OLD_GENERATIONS < 1
-# error number of old generations must be 1 or 2
-#endif
-
-#define NODE_GENERATION(s) ((s)->sxpinfo.gcgen)
-#define SET_NODE_GENERATION(s,g) ((s)->sxpinfo.gcgen=(g))
-
-#define NODE_GEN_IS_YOUNGER(s,g) \
-  (! NODE_IS_MARKED(s) || NODE_GENERATION(s) < (g))
-#define NODE_IS_OLDER(x, y) \
-  (NODE_IS_MARKED(x) && \
-   (! NODE_IS_MARKED(y) || NODE_GENERATION(x) > NODE_GENERATION(y)))
-
-static int num_old_gens_to_collect = 0;
-static int gen_gc_counts[NUM_OLD_GENERATIONS + 1];
-static int collect_counts[NUM_OLD_GENERATIONS];
-
-
-/* Node Pages.  Non-vector nodes and small vector nodes are allocated
-   from fixed size pages.  The pages for each node class are kept in a
-   linked list. */
-
-typedef union PAGE_HEADER {
-  union PAGE_HEADER *next;
-  double align;
-} PAGE_HEADER;
-
-#define BASE_PAGE_SIZE 2000
-#define R_PAGE_SIZE \
-  (((BASE_PAGE_SIZE - sizeof(PAGE_HEADER)) / sizeof(SEXPREC)) \
-   * sizeof(SEXPREC) \
-   + sizeof(PAGE_HEADER))
-#define NODE_SIZE(c) \
-  ((c) == 0 ? sizeof(SEXPREC) : \
-   sizeof(SEXPREC_ALIGN) + NodeClassSize[c] * sizeof(VECREC))
-
-#define PAGE_DATA(p) ((void *) (p + 1))
-#define VHEAP_FREE() (R_VSize - R_LargeVallocSize - R_SmallVallocSize)
-
-
-/* The Heap Structure.  Nodes for each class/generation combination
-   are arranged in circular doubly-linked lists.  The double linking
-   allows nodes to be removed in constant time; this is used by the
-   collector to move reachable nodes out of free space and into the
-   appropriate generation.  The circularity eliminates the need for
-   end checks.  In addition, each link is anchored at an artificial
-   node, the Peg SEXPREC's in the structure below, which simplifies
-   pointer maintenance.  The circular doubly-linked arrangement is
-   taken from Baker's in-place incremental collector design; see
-   ftp://ftp.netcom.com/pub/hb/hbaker/NoMotionGC.html or the Jones and
-   Lins GC book.  The linked lists are implemented by adding two
-   pointer fields to the SEXPREC structure, which increases its size
-   from 5 to 7 words. Other approaches are possible but don't seem
-   worth pursuing for R.
-
-   There are two options for dealing with old-to-new pointers.  The
-   first option is to make sure they never occur by transferring all
-   referenced younger objects to the generation of the referrer when a
-   reference to a newer object is assigned to an older one.  This is
-   enabled by defining EXPEL_OLD_TO_NEW.  The second alternative is to
-   keep track of all nodes that may contain references to newer nodes
-   and to "age" the nodes they refer to at the beginning of each
-   collection.  This is the default.  The first option is simpler in
-   some ways, but will create more floating garbage and add a bit to
-   the execution time, though the difference is probably marginal on
-   both counts.*/
-/*#define EXPEL_OLD_TO_NEW*/
-static struct {
-    SEXP Old[NUM_OLD_GENERATIONS], New, Free;
-    SEXPREC OldPeg[NUM_OLD_GENERATIONS], NewPeg;
-#ifndef EXPEL_OLD_TO_NEW
-    SEXP OldToNew[NUM_OLD_GENERATIONS];
-    SEXPREC OldToNewPeg[NUM_OLD_GENERATIONS];
-#endif
-    int OldCount[NUM_OLD_GENERATIONS], AllocCount, PageCount;
-    PAGE_HEADER *pages;
-} R_GenHeap[NUM_NODE_CLASSES];
-
-static R_size_t R_NodesInUse = 0;
-
-#define NEXT_NODE(s) (s)->gengc_next_node
-#define PREV_NODE(s) (s)->gengc_prev_node
-#define SET_NEXT_NODE(s,t) (NEXT_NODE(s) = (t))
-#define SET_PREV_NODE(s,t) (PREV_NODE(s) = (t))
-
-
-/* Node List Manipulation */
-
-/* unsnap node s from its list */
-#define UNSNAP_NODE(s) do { \
-  SEXP un__n__ = (s); \
-  SEXP next = NEXT_NODE(un__n__); \
-  SEXP prev = PREV_NODE(un__n__); \
-  SET_NEXT_NODE(prev, next); \
-  SET_PREV_NODE(next, prev); \
-} while(0)
-
-/* snap in node s before node t */
-#define SNAP_NODE(s,t) do { \
-  SEXP sn__n__ = (s); \
-  SEXP next = (t); \
-  SEXP prev = PREV_NODE(next); \
-  SET_NEXT_NODE(sn__n__, next); \
-  SET_PREV_NODE(next, sn__n__); \
-  SET_NEXT_NODE(prev, sn__n__); \
-  SET_PREV_NODE(sn__n__, prev); \
-} while (0)
-
-/* move all nodes on from_peg to to_peg */
-#define BULK_MOVE(from_peg,to_peg) do { \
-  SEXP __from__ = (from_peg); \
-  SEXP __to__ = (to_peg); \
-  SEXP first_old = NEXT_NODE(__from__); \
-  SEXP last_old = PREV_NODE(__from__); \
-  SEXP first_new = NEXT_NODE(__to__); \
-  SET_PREV_NODE(first_old, __to__); \
-  SET_NEXT_NODE(__to__, first_old); \
-  SET_PREV_NODE(first_new, last_old); \
-  SET_NEXT_NODE(last_old, first_new); \
-  SET_NEXT_NODE(__from__, __from__); \
-  SET_PREV_NODE(__from__, __from__); \
-} while (0);
-
-
-/* Processing Node Children */
-
-/* This macro calls dc__action__ for each child of __n__, passing
-   dc__extra__ as a second argument for each call. */
-/* When the CHARSXP hash chains are maintained through the ATTRIB
-   field it is important that we NOT trace those fields otherwise too
-   many CHARSXPs will be kept alive artificially. As a safety we don't
-   ignore all non-NULL ATTRIB values for CHARSXPs but only those that
-   are themselves CHARSXPs, which is what they will be if they are
-   part of a hash chain.  Theoretically, for CHARSXPs the ATTRIB field
-   should always be either R_NilValue or a CHARSXP. */
-#ifdef PROTECTCHECK
-# define HAS_GENUINE_ATTRIB(x) \
-    (TYPEOF(x) != FREESXP && ATTRIB(x) != R_NilValue && \
-     (TYPEOF(x) != CHARSXP || TYPEOF(ATTRIB(x)) != CHARSXP))
-#else
-# define HAS_GENUINE_ATTRIB(x) \
-    (ATTRIB(x) != R_NilValue && \
-     (TYPEOF(x) != CHARSXP || TYPEOF(ATTRIB(x)) != CHARSXP))
-#endif
-
-#ifdef PROTECTCHECK
-#define FREE_FORWARD_CASE case FREESXP: if (gc_inhibit_release) break;
-#else
-#define FREE_FORWARD_CASE
-#endif
-#define DO_CHILDREN(__n__,dc__action__,dc__extra__) do { \
-  if (HAS_GENUINE_ATTRIB(__n__)) \
-    dc__action__(ATTRIB(__n__), dc__extra__); \
-  switch (TYPEOF(__n__)) { \
-  case NILSXP: \
-  case BUILTINSXP: \
-  case SPECIALSXP: \
-  case CHARSXP: \
-  case LGLSXP: \
-  case INTSXP: \
-  case REALSXP: \
-  case CPLXSXP: \
-  case WEAKREFSXP: \
-  case RAWSXP: \
-  case S4SXP: \
-    break; \
-  case STRSXP: \
-  case EXPRSXP: \
-  case VECSXP: \
-    { \
-      R_xlen_t i; \
-      for (i = 0; i < XLENGTH(__n__); i++) \
-	dc__action__(VECTOR_ELT(__n__, i), dc__extra__); \
-    } \
-    break; \
-  case ENVSXP: \
-    dc__action__(FRAME(__n__), dc__extra__); \
-    dc__action__(ENCLOS(__n__), dc__extra__); \
-    dc__action__(HASHTAB(__n__), dc__extra__); \
-    break; \
-  case CLOSXP: \
-  case PROMSXP: \
-  case LISTSXP: \
-  case LANGSXP: \
-  case DOTSXP: \
-  case SYMSXP: \
-  case BCODESXP: \
-    dc__action__(TAG(__n__), dc__extra__); \
-    dc__action__(CAR(__n__), dc__extra__); \
-    dc__action__(CDR(__n__), dc__extra__); \
-    break; \
-  case EXTPTRSXP: \
-    dc__action__(EXTPTR_PROT(__n__), dc__extra__); \
-    dc__action__(EXTPTR_TAG(__n__), dc__extra__); \
-    break; \
-  FREE_FORWARD_CASE \
-  default: \
-    register_bad_sexp_type(__n__, __LINE__);		\
-  } \
-} while(0)
-
-
-/* Forwarding Nodes.  These macros mark nodes or children of nodes and
-   place them on the forwarding list.  The forwarding list is assumed
-   to be in a local variable of the caller named named
-   forwarded_nodes. */
-
-#define FORWARD_NODE(s) do { \
-  SEXP fn__n__ = (s); \
-  if (fn__n__ && ! NODE_IS_MARKED(fn__n__)) { \
-    CHECK_FOR_FREE_NODE(fn__n__) \
-    MARK_NODE(fn__n__); \
-    UNSNAP_NODE(fn__n__); \
-    SET_NEXT_NODE(fn__n__, forwarded_nodes); \
-    forwarded_nodes = fn__n__; \
-  } \
-} while (0)
-
-#define FC_FORWARD_NODE(__n__,__dummy__) FORWARD_NODE(__n__)
-#define FORWARD_CHILDREN(__n__) DO_CHILDREN(__n__,FC_FORWARD_NODE, 0)
-
-/* This macro should help localize where a FREESXP node is encountered
-   in the GC */
-#ifdef PROTECTCHECK
-#define CHECK_FOR_FREE_NODE(s) { \
-    SEXP cf__n__ = (s); \
-    if (TYPEOF(cf__n__) == FREESXP && ! gc_inhibit_release) \
-	register_bad_sexp_type(cf__n__, __LINE__); \
-}
-#else
-#define CHECK_FOR_FREE_NODE(s)
-#endif
-
-
 /* Node Allocation. */
-
-#define CLASS_GET_FREE_NODE(c,s) do { \
-  SEXP __n__ = R_GenHeap[c].Free; \
-  if (__n__ == R_GenHeap[c].New) { \
-    GetNewPage(c); \
-    __n__ = R_GenHeap[c].Free; \
-  } \
-  R_GenHeap[c].Free = NEXT_NODE(__n__); \
-  R_NodesInUse++; \
-  (s) = __n__; \
-} while (0)
-
-#define NO_FREE_NODES() (R_NodesInUse >= R_NSize)
-#define GET_FREE_NODE(s) CLASS_GET_FREE_NODE(0,s)
-
-/* versions that assume nodes are avaialble without adding a new page */
-#define CLASS_QUICK_GET_FREE_NODE(c,s) do {		\
-	SEXP __n__ = R_GenHeap[c].Free;			\
-	if (__n__ == R_GenHeap[c].New)			\
-	    error("need new page - should not happen");	\
-	R_GenHeap[c].Free = NEXT_NODE(__n__);		\
-	R_NodesInUse++;					\
-	(s) = __n__;					\
-    } while (0)
-
-#define QUICK_GET_FREE_NODE(s) CLASS_QUICK_GET_FREE_NODE(0,s)
-
-/* QUICK versions can be used if (CLASS_)NEED_NEW_PAGE returns FALSE */
-#define CLASS_NEED_NEW_PAGE(c) (R_GenHeap[c].Free == R_GenHeap[c].New)
-#define NEED_NEW_PAGE() CLASS_NEED_NEW_PAGE(0)
-
 
 /* Debugging Routines. */
 
@@ -850,136 +572,6 @@ static void DEBUG_RELEASE_PRINT(int rel_pages, int maxrel_pages, int i)
 #define DEBUG_RELEASE_PRINT(rel_pages, maxrel_pages, i)
 #endif /* DEBUG_RELEASE_MEM */
 
-#ifdef COMPUTE_REFCNT_VALUES
-#define INIT_REFCNT(x) do {			\
-	SEXP __x__ = (x);			\
-	SET_REFCNT(__x__, 0);			\
-	SET_TRACKREFS(__x__, TRUE);		\
-    } while (0)
-#else
-#define INIT_REFCNT(x) do {} while (0)
-#endif
-
-/* Page Allocation and Release. */
-
-static void GetNewPage(int node_class)
-{
-    SEXP s, base;
-    char *data;
-    PAGE_HEADER *page;
-    int node_size, page_count, i;  // FIXME: longer type?
-
-    node_size = NODE_SIZE(node_class);
-    page_count = (R_PAGE_SIZE - sizeof(PAGE_HEADER)) / node_size;
-
-    page = malloc(R_PAGE_SIZE);
-    if (page == NULL) {
-	R_gc_full(0);
-	page = malloc(R_PAGE_SIZE);
-	if (page == NULL)
-	    mem_err_malloc((R_size_t) R_PAGE_SIZE);
-    }
-#ifdef R_MEMORY_PROFILING
-    R_ReportNewPage();
-#endif
-    page->next = R_GenHeap[node_class].pages;
-    R_GenHeap[node_class].pages = page;
-    R_GenHeap[node_class].PageCount++;
-
-    data = PAGE_DATA(page);
-    base = R_GenHeap[node_class].New;
-    for (i = 0; i < page_count; i++, data += node_size) {
-	s = (SEXP) data;
-	R_GenHeap[node_class].AllocCount++;
-	SNAP_NODE(s, base);
-#if  VALGRIND_LEVEL > 1
-	if (NodeClassSize[node_class] > 0)
-	    VALGRIND_MAKE_MEM_NOACCESS(DATAPTR(s), NodeClassSize[node_class]*sizeof(VECREC));
-#endif
-	s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
-	INIT_REFCNT(s);
-	SET_NODE_CLASS(s, node_class);
-#ifdef PROTECTCHECK
-	TYPEOF(s) = NEWSXP;
-#endif
-	base = s;
-	R_GenHeap[node_class].Free = s;
-    }
-}
-
-static void ReleasePage(PAGE_HEADER *page, int node_class)
-{
-    SEXP s;
-    char *data;
-    int node_size, page_count, i;
-
-    node_size = NODE_SIZE(node_class);
-    page_count = (R_PAGE_SIZE - sizeof(PAGE_HEADER)) / node_size;
-    data = PAGE_DATA(page);
-
-    for (i = 0; i < page_count; i++, data += node_size) {
-	s = (SEXP) data;
-	UNSNAP_NODE(s);
-	R_GenHeap[node_class].AllocCount--;
-    }
-    R_GenHeap[node_class].PageCount--;
-    free(page);
-}
-
-static void TryToReleasePages(void)
-{
-    SEXP s;
-    int i;
-    static int release_count = 0;
-
-    if (release_count == 0) {
-	release_count = R_PageReleaseFreq;
-	for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++) {
-	    int pages_free = 0;
-	    PAGE_HEADER *page, *last, *next;
-	    int node_size = NODE_SIZE(i);
-	    int page_count = (R_PAGE_SIZE - sizeof(PAGE_HEADER)) / node_size;
-	    int maxrel, maxrel_pages, rel_pages, gen;
-
-	    maxrel = R_GenHeap[i].AllocCount;
-	    for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++)
-		maxrel -= (1.0 + R_MaxKeepFrac) * R_GenHeap[i].OldCount[gen];
-	    maxrel_pages = maxrel > 0 ? maxrel / page_count : 0;
-
-	    /* all nodes in New space should be both free and unmarked */
-	    for (page = R_GenHeap[i].pages, rel_pages = 0, last = NULL;
-		 rel_pages < maxrel_pages && page != NULL;) {
-		int j, in_use;
-		char *data = PAGE_DATA(page);
-
-		next = page->next;
-		for (in_use = 0, j = 0; j < page_count;
-		     j++, data += node_size) {
-		    s = (SEXP) data;
-		    if (NODE_IS_MARKED(s)) {
-			in_use = 1;
-			break;
-		    }
-		}
-		if (! in_use) {
-		    ReleasePage(page, i);
-		    if (last == NULL)
-			R_GenHeap[i].pages = next;
-		    else
-			last->next = next;
-		    pages_free++;
-		    rel_pages++;
-		}
-		else last = page;
-		page = next;
-	    }
-	    DEBUG_RELEASE_PRINT(rel_pages, maxrel_pages, i);
-	    R_GenHeap[i].Free = NEXT_NODE(R_GenHeap[i].New);
-	}
-    }
-    else release_count--;
-}
-
 /* compute size in VEC units so result will fit in LENGTH field for FREESXPs */
 static R_INLINE R_size_t getVecSizeInVEC(SEXP s)
 {
@@ -1018,136 +610,10 @@ static R_INLINE R_size_t getVecSizeInVEC(SEXP s)
 
 static void custom_node_free(void *ptr);
 
-static void ReleaseLargeFreeVectors()
-{
-    for (int node_class = CUSTOM_NODE_CLASS; node_class <= LARGE_NODE_CLASS; node_class++) {
-	SEXP s = NEXT_NODE(R_GenHeap[node_class].New);
-	while (s != R_GenHeap[node_class].New) {
-	    SEXP next = NEXT_NODE(s);
-	    if (CHAR(s) != NULL) {
-		R_size_t size;
-#ifdef PROTECTCHECK
-		if (TYPEOF(s) == FREESXP)
-		    size = XLENGTH(s);
-		else
-		    /* should not get here -- arrange for a warning/error? */
-		    size = getVecSizeInVEC(s);
-#else
-		size = getVecSizeInVEC(s);
-#endif
-		UNSNAP_NODE(s);
-		R_GenHeap[node_class].AllocCount--;
-		if (node_class == LARGE_NODE_CLASS) {
-		    R_LargeVallocSize -= size;
-#ifdef LONG_VECTOR_SUPPORT
-		    if (IS_LONG_VEC(s))
-			free(((char *) s) - sizeof(R_long_vec_hdr_t));
-		    else
-			free(s);
-#else
-		    free(s);
-#endif
-		} else {
-#ifdef LONG_VECTOR_SUPPORT
-		    if (IS_LONG_VEC(s))
-			custom_node_free(((char *) s) - sizeof(R_long_vec_hdr_t));
-		    else
-			custom_node_free(s);
-#else
-		    custom_node_free(s);
-#endif
-		}
-	    }
-	    s = next;
-	}
-    }
-}
-
-
 /* Heap Size Adjustment. */
 
 static void AdjustHeapSize(R_size_t size_needed)
 {
-    R_size_t R_MinNFree = (R_size_t)(orig_R_NSize * R_MinFreeFrac);
-    R_size_t R_MinVFree = (R_size_t)(orig_R_VSize * R_MinFreeFrac);
-    R_size_t NNeeded = R_NodesInUse + R_MinNFree;
-    R_size_t VNeeded = R_SmallVallocSize + R_LargeVallocSize
-	+ size_needed + R_MinVFree;
-    double node_occup = ((double) NNeeded) / R_NSize;
-    double vect_occup =	((double) VNeeded) / R_VSize;
-
-    if (node_occup > R_NGrowFrac) {
-	R_size_t change = (R_size_t)(R_NGrowIncrMin + R_NGrowIncrFrac * R_NSize);
-	if (R_MaxNSize >= R_NSize + change)
-	    R_NSize += change;
-    }
-    else if (node_occup < R_NShrinkFrac) {
-	R_NSize -= (R_NShrinkIncrMin + R_NShrinkIncrFrac * R_NSize);
-	if (R_NSize < NNeeded)
-	    R_NSize = (NNeeded < R_MaxNSize) ? NNeeded: R_MaxNSize;
-	if (R_NSize < orig_R_NSize)
-	    R_NSize = orig_R_NSize;
-    }
-
-    if (vect_occup > 1.0 && VNeeded < R_MaxVSize)
-	R_VSize = VNeeded;
-    if (vect_occup > R_VGrowFrac) {
-	R_size_t change = (R_size_t)(R_VGrowIncrMin + R_VGrowIncrFrac * R_VSize);
-	if (R_MaxVSize - R_VSize >= change)
-	    R_VSize += change;
-    }
-    else if (vect_occup < R_VShrinkFrac) {
-	R_VSize -= R_VShrinkIncrMin + R_VShrinkIncrFrac * R_VSize;
-	if (R_VSize < VNeeded)
-	    R_VSize = VNeeded;
-	if (R_VSize < orig_R_VSize)
-	    R_VSize = orig_R_VSize;
-    }
-
-    DEBUG_ADJUST_HEAP_PRINT(node_occup, vect_occup);
-}
-
-
-/* Managing Old-to-New References. */
-
-#define AGE_NODE(s,g) do { \
-  SEXP an__n__ = (s); \
-  int an__g__ = (g); \
-  if (an__n__ && NODE_GEN_IS_YOUNGER(an__n__, an__g__)) { \
-    if (NODE_IS_MARKED(an__n__)) \
-       R_GenHeap[NODE_CLASS(an__n__)].OldCount[NODE_GENERATION(an__n__)]--; \
-    else \
-      MARK_NODE(an__n__); \
-    SET_NODE_GENERATION(an__n__, an__g__); \
-    UNSNAP_NODE(an__n__); \
-    SET_NEXT_NODE(an__n__, forwarded_nodes); \
-    forwarded_nodes = an__n__; \
-  } \
-} while (0)
-
-static void AgeNodeAndChildren(SEXP s, int gen)
-{
-    SEXP forwarded_nodes = NULL;
-    AGE_NODE(s, gen);
-    while (forwarded_nodes != NULL) {
-	s = forwarded_nodes;
-	forwarded_nodes = NEXT_NODE(forwarded_nodes);
-	if (NODE_GENERATION(s) != gen)
-	    REprintf("****snapping into wrong generation\n");
-	SNAP_NODE(s, R_GenHeap[NODE_CLASS(s)].Old[gen]);
-	R_GenHeap[NODE_CLASS(s)].OldCount[gen]++;
-	DO_CHILDREN(s, AGE_NODE, gen);
-    }
-}
-
-static void old_to_new(SEXP x, SEXP y)
-{
-#ifdef EXPEL_OLD_TO_NEW
-    AgeNodeAndChildren(y, NODE_GENERATION(x));
-#else
-    UNSNAP_NODE(x);
-    SNAP_NODE(x, R_GenHeap[NODE_CLASS(x)].OldToNew[NODE_GENERATION(x)]);
-#endif
 }
 
 #ifdef COMPUTE_REFCNT_VALUES
@@ -1164,48 +630,6 @@ static void old_to_new(SEXP x, SEXP y)
 #else
 #define FIX_REFCNT(x, old, new) do {} while (0)
 #endif
-
-#define CHECK_OLD_TO_NEW(x,y) do { \
-  if (NODE_IS_OLDER(CHK(x), CHK(y))) old_to_new(x,y);  } while (0)
-
-
-/* Node Sorting.  SortNodes attempts to improve locality of reference
-   by rearranging the free list to place nodes on the same place page
-   together and order nodes within pages.  This involves a sweep of the
-   heap, so it should not be done too often, but doing it at least
-   occasionally does seem essential.  Sorting on each full colllection is
-   probably sufficient.
-*/
-
-#define SORT_NODES
-#ifdef SORT_NODES
-static void SortNodes(void)
-{
-    SEXP s;
-    int i;
-
-    for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++) {
-	PAGE_HEADER *page;
-	int node_size = NODE_SIZE(i);
-	int page_count = (R_PAGE_SIZE - sizeof(PAGE_HEADER)) / node_size;
-
-	SET_NEXT_NODE(R_GenHeap[i].New, R_GenHeap[i].New);
-	SET_PREV_NODE(R_GenHeap[i].New, R_GenHeap[i].New);
-	for (page = R_GenHeap[i].pages; page != NULL; page = page->next) {
-	    int j;
-	    char *data = PAGE_DATA(page);
-
-	    for (j = 0; j < page_count; j++, data += node_size) {
-		s = (SEXP) data;
-		if (! NODE_IS_MARKED(s))
-		    SNAP_NODE(s, R_GenHeap[i].New);
-	    }
-	}
-	R_GenHeap[i].Free = NEXT_NODE(R_GenHeap[i].New);
-    }
-}
-#endif
-
 
 /* Finalization and Weak References */
 
@@ -1506,94 +930,8 @@ SEXP attribute_hidden do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* The Generational Collector. */
-
-#define PROCESS_NODES() do { \
-    while (forwarded_nodes != NULL) { \
-	s = forwarded_nodes; \
-	forwarded_nodes = NEXT_NODE(forwarded_nodes); \
-	SNAP_NODE(s, R_GenHeap[NODE_CLASS(s)].Old[NODE_GENERATION(s)]); \
-	R_GenHeap[NODE_CLASS(s)].OldCount[NODE_GENERATION(s)]++; \
-	FORWARD_CHILDREN(s); \
-    } \
-} while (0)
-
-static void RunGenCollect(R_size_t size_needed)
+static void traceHeap()
 {
-    int i, gen, gens_collected;
-    RCNTXT *ctxt;
-    SEXP s;
-    SEXP forwarded_nodes;
-
-    bad_sexp_type_seen = 0;
-
-    /* determine number of generations to collect */
-    while (num_old_gens_to_collect < NUM_OLD_GENERATIONS) {
-	if (collect_counts[num_old_gens_to_collect]-- <= 0) {
-	    collect_counts[num_old_gens_to_collect] =
-		collect_counts_max[num_old_gens_to_collect];
-	    num_old_gens_to_collect++;
-	}
-	else break;
-    }
-
-#ifdef PROTECTCHECK
-    num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-#endif
-
- again:
-    gens_collected = num_old_gens_to_collect;
-
-#ifndef EXPEL_OLD_TO_NEW
-    /* eliminate old-to-new references in generations to collect by
-       transferring referenced nodes to referring generation */
-    for (gen = 0; gen < num_old_gens_to_collect; gen++) {
-	for (i = 0; i < NUM_NODE_CLASSES; i++) {
-	    s = NEXT_NODE(R_GenHeap[i].OldToNew[gen]);
-	    while (s != R_GenHeap[i].OldToNew[gen]) {
-		SEXP next = NEXT_NODE(s);
-		DO_CHILDREN(s, AgeNodeAndChildren, gen);
-		UNSNAP_NODE(s);
-		if (NODE_GENERATION(s) != gen)
-		    REprintf("****snapping into wrong generation\n");
-		SNAP_NODE(s, R_GenHeap[i].Old[gen]);
-		s = next;
-	    }
-	}
-    }
-#endif
-
-    DEBUG_CHECK_NODE_COUNTS("at start");
-
-    /* unmark all marked nodes in old generations to be collected and
-       move to New space */
-    for (gen = 0; gen < num_old_gens_to_collect; gen++) {
-	for (i = 0; i < NUM_NODE_CLASSES; i++) {
-	    R_GenHeap[i].OldCount[gen] = 0;
-	    s = NEXT_NODE(R_GenHeap[i].Old[gen]);
-	    while (s != R_GenHeap[i].Old[gen]) {
-		SEXP next = NEXT_NODE(s);
-		if (gen < NUM_OLD_GENERATIONS - 1)
-		    SET_NODE_GENERATION(s, gen + 1);
-		UNMARK_NODE(s);
-		s = next;
-	    }
-	    if (NEXT_NODE(R_GenHeap[i].Old[gen]) != R_GenHeap[i].Old[gen])
-		BULK_MOVE(R_GenHeap[i].Old[gen], R_GenHeap[i].New);
-	}
-    }
-
-    forwarded_nodes = NULL;
-
-#ifndef EXPEL_OLD_TO_NEW
-    /* scan nodes in uncollected old generations with old-to-new pointers */
-    for (gen = num_old_gens_to_collect; gen < NUM_OLD_GENERATIONS; gen++)
-	for (i = 0; i < NUM_NODE_CLASSES; i++)
-	    for (s = NEXT_NODE(R_GenHeap[i].OldToNew[gen]);
-		 s != R_GenHeap[i].OldToNew[gen];
-		 s = NEXT_NODE(s))
-		FORWARD_CHILDREN(s);
-#endif
 
     /* forward all roots */
     FORWARD_NODE(R_NilValue);	           /* Builtin constants */
@@ -1624,6 +962,10 @@ static void RunGenCollect(R_size_t size_needed)
 
     FORWARD_NODE(R_print.na_string);
     FORWARD_NODE(R_print.na_string_noquote);
+
+    int i;
+    RCNTXT* ctxt;
+    SEXP s;
 
     if (R_SymbolTable != NULL)             /* in case of GC during startup */
 	for (i = 0; i < HSIZE; i++)        /* Symbol table */
@@ -1658,8 +1000,10 @@ static void RunGenCollect(R_size_t size_needed)
 
     FORWARD_NODE(R_PreciousList);
 
+#ifndef CONSERVATIVE_STACK_SCAN
     for (i = 0; i < R_PPStackTop; i++)	   /* Protected pointers */
 	FORWARD_NODE(R_PPStack[i]);
+#endif
 
     FORWARD_NODE(R_VStack);		   /* R_alloc stack */
 
@@ -1742,121 +1086,6 @@ static void RunGenCollect(R_size_t size_needed)
     }
     FORWARD_NODE(R_StringHash);
     PROCESS_NODES();
-
-#ifdef PROTECTCHECK
-    for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
-	s = NEXT_NODE(R_GenHeap[i].New);
-	while (s != R_GenHeap[i].New) {
-	    SEXP next = NEXT_NODE(s);
-	    if (TYPEOF(s) != NEWSXP) {
-		if (TYPEOF(s) != FREESXP) {
-		    SETOLDTYPE(s, TYPEOF(s));
-		    TYPEOF(s) = FREESXP;
-		}
-		if (gc_inhibit_release)
-		    FORWARD_NODE(s);
-	    }
-	    s = next;
-	}
-    }
-    for (i = CUSTOM_NODE_CLASS; i <= LARGE_NODE_CLASS; i++) {
-	s = NEXT_NODE(R_GenHeap[i].New);
-	while (s != R_GenHeap[i].New) {
-	    SEXP next = NEXT_NODE(s);
-	    if (TYPEOF(s) != NEWSXP) {
-		if (TYPEOF(s) != FREESXP) {
-		    /**** could also leave this alone and restore the old
-			  node type in ReleaseLargeFreeVectors before
-			  calculating size */
-		    if (CHAR(s) != NULL) {
-			R_size_t size = getVecSizeInVEC(s);
-			SETLENGTH(s, size);
-		    }
-		    SETOLDTYPE(s, TYPEOF(s));
-		    TYPEOF(s) = FREESXP;
-		}
-		if (gc_inhibit_release)
-		    FORWARD_NODE(s);
-	    }
-	    s = next;
-	}
-    }
-    if (gc_inhibit_release)
-	PROCESS_NODES();
-#endif
-
-    /* release large vector allocations */
-    ReleaseLargeFreeVectors();
-
-    DEBUG_CHECK_NODE_COUNTS("after releasing large allocated nodes");
-
-    /* tell Valgrind about free nodes */
-#if VALGRIND_LEVEL > 1
-    for(i = 1; i< NUM_NODE_CLASSES; i++) {
-	for(s = NEXT_NODE(R_GenHeap[i].New);
-	    s != R_GenHeap[i].Free;
-	    s = NEXT_NODE(s)) {
-	    VALGRIND_MAKE_MEM_NOACCESS(DATAPTR(s),
-				       NodeClassSize[i]*sizeof(VECREC));
-	}
-    }
-#endif
-
-    /* reset Free pointers */
-    for (i = 0; i < NUM_NODE_CLASSES; i++)
-	R_GenHeap[i].Free = NEXT_NODE(R_GenHeap[i].New);
-
-
-    /* update heap statistics */
-    R_Collected = R_NSize;
-    R_SmallVallocSize = 0;
-    for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++) {
-	for (i = 1; i < NUM_SMALL_NODE_CLASSES; i++)
-	    R_SmallVallocSize += R_GenHeap[i].OldCount[gen] * NodeClassSize[i];
-	for (i = 0; i < NUM_NODE_CLASSES; i++)
-	    R_Collected -= R_GenHeap[i].OldCount[gen];
-    }
-    R_NodesInUse = R_NSize - R_Collected;
-
-    if (num_old_gens_to_collect < NUM_OLD_GENERATIONS) {
-	if (R_Collected < R_MinFreeFrac * R_NSize ||
-	    VHEAP_FREE() < size_needed + R_MinFreeFrac * R_VSize) {
-	    num_old_gens_to_collect++;
-	    if (R_Collected <= 0 || VHEAP_FREE() < size_needed)
-		goto again;
-	}
-	else num_old_gens_to_collect = 0;
-    }
-    else num_old_gens_to_collect = 0;
-
-    gen_gc_counts[gens_collected]++;
-
-    if (gens_collected == NUM_OLD_GENERATIONS) {
-	/**** do some adjustment for intermediate collections? */
-	AdjustHeapSize(size_needed);
-	TryToReleasePages();
-	DEBUG_CHECK_NODE_COUNTS("after heap adjustment");
-    }
-    else if (gens_collected > 0) {
-	TryToReleasePages();
-	DEBUG_CHECK_NODE_COUNTS("after heap adjustment");
-    }
-#ifdef SORT_NODES
-    if (gens_collected == NUM_OLD_GENERATIONS)
-	SortNodes();
-#endif
-
-    if (R_check_constants > 2 ||
-	    (R_check_constants > 1 && gens_collected == NUM_OLD_GENERATIONS))
-	R_checkConstants(TRUE);
-
-    if (gc_reporting) {
-	REprintf("Garbage collection %d = %d", gc_count, gen_gc_counts[0]);
-	for (i = 0; i < NUM_OLD_GENERATIONS; i++)
-	    REprintf("+%d", gen_gc_counts[i + 1]);
-	REprintf(" (level %d) ... ", gens_collected);
-	DEBUG_GC_SUMMARY(gens_collected == NUM_OLD_GENERATIONS);
-    }
 }
 
 /* public interface for controlling GC torture settings */
@@ -1956,51 +1185,27 @@ void attribute_hidden get_current_mem(size_t *smallvsize,
 				      size_t *largevsize,
 				      size_t *nodes)
 {
-    *smallvsize = R_SmallVallocSize;
-    *largevsize = R_LargeVallocSize;
-    *nodes = R_NodesInUse * sizeof(SEXPREC);
     return;
 }
 
 SEXP attribute_hidden do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP value;
-    int ogc, reset_max;
-    R_size_t onsize = R_NSize /* can change during collection */;
-
-    checkArity(op, args);
-    ogc = gc_reporting;
-    gc_reporting = asLogical(CAR(args));
-    reset_max = asLogical(CADR(args));
-    num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-    R_gc();
-#ifndef IMMEDIATE_FINALIZERS
-    R_RunPendingFinalizers();
-#endif
-    gc_reporting = ogc;
-    /*- now return the [used , gc trigger size] for cells and heap */
     PROTECT(value = allocVector(REALSXP, 14));
-    REAL(value)[0] = onsize - R_Collected;
-    REAL(value)[1] = R_VSize - VHEAP_FREE();
-    REAL(value)[4] = R_NSize;
-    REAL(value)[5] = R_VSize;
-    /* next four are in 0.1Mb, rounded up */
-    REAL(value)[2] = 0.1*ceil(10. * (onsize - R_Collected)/Mega * sizeof(SEXPREC));
-    REAL(value)[3] = 0.1*ceil(10. * (R_VSize - VHEAP_FREE())/Mega * vsfac);
-    REAL(value)[6] = 0.1*ceil(10. * R_NSize/Mega * sizeof(SEXPREC));
-    REAL(value)[7] = 0.1*ceil(10. * R_VSize/Mega * vsfac);
-    REAL(value)[8] = (R_MaxNSize < R_SIZE_T_MAX) ?
-	0.1*ceil(10. * R_MaxNSize/Mega * sizeof(SEXPREC)) : NA_REAL;
-    REAL(value)[9] = (R_MaxVSize < R_SIZE_T_MAX) ?
-	0.1*ceil(10. * R_MaxVSize/Mega * vsfac) : NA_REAL;
-    if (reset_max){
-	    R_N_maxused = onsize - R_Collected;
-	    R_V_maxused = R_VSize - VHEAP_FREE();
-    }
-    REAL(value)[10] = R_N_maxused;
-    REAL(value)[11] = R_V_maxused;
-    REAL(value)[12] = 0.1*ceil(10. * R_N_maxused/Mega*sizeof(SEXPREC));
-    REAL(value)[13] = 0.1*ceil(10. * R_V_maxused/Mega*vsfac);
+    REAL(value)[0] = 0;
+    REAL(value)[1] = 0;
+    REAL(value)[4] = 0;
+    REAL(value)[5] = 0;
+    REAL(value)[2] = 0;
+    REAL(value)[3] = 0;
+    REAL(value)[6] = 0;
+    REAL(value)[7] = 0;
+    REAL(value)[8] = 0;
+    REAL(value)[9] = 0;
+    REAL(value)[10] = 0;
+    REAL(value)[11] = 0;
+    REAL(value)[12] = 0;
+    REAL(value)[13] = 0;
     UNPROTECT(1);
     return value;
 }
@@ -2030,6 +1235,7 @@ static int R_StandardPPStackSize, R_RealPPStackSize;
 
 void attribute_hidden InitMemory()
 {
+    new_gc_initHeap();
     int i;
     int gen;
 
@@ -2049,31 +1255,6 @@ void attribute_hidden InitMemory()
     R_VSize = (R_VSize + 1)/vsfac;
     if (R_MaxVSize < R_SIZE_T_MAX) R_MaxVSize = (R_MaxVSize + 1)/vsfac;
 
-    UNMARK_NODE(&UnmarkedNodeTemplate);
-
-    for (i = 0; i < NUM_NODE_CLASSES; i++) {
-      for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++) {
-	R_GenHeap[i].Old[gen] = &R_GenHeap[i].OldPeg[gen];
-	SET_PREV_NODE(R_GenHeap[i].Old[gen], R_GenHeap[i].Old[gen]);
-	SET_NEXT_NODE(R_GenHeap[i].Old[gen], R_GenHeap[i].Old[gen]);
-
-#ifndef EXPEL_OLD_TO_NEW
-	R_GenHeap[i].OldToNew[gen] = &R_GenHeap[i].OldToNewPeg[gen];
-	SET_PREV_NODE(R_GenHeap[i].OldToNew[gen], R_GenHeap[i].OldToNew[gen]);
-	SET_NEXT_NODE(R_GenHeap[i].OldToNew[gen], R_GenHeap[i].OldToNew[gen]);
-#endif
-
-	R_GenHeap[i].OldCount[gen] = 0;
-      }
-      R_GenHeap[i].New = &R_GenHeap[i].NewPeg;
-      SET_PREV_NODE(R_GenHeap[i].New, R_GenHeap[i].New);
-      SET_NEXT_NODE(R_GenHeap[i].New, R_GenHeap[i].New);
-    }
-
-    for (i = 0; i < NUM_NODE_CLASSES; i++)
-	R_GenHeap[i].Free = NEXT_NODE(R_GenHeap[i].New);
-
-    SET_NODE_CLASS(&UnmarkedNodeTemplate, 0);
     orig_R_NSize = R_NSize;
     orig_R_VSize = R_VSize;
 
@@ -2084,7 +1265,6 @@ void attribute_hidden InitMemory()
        since the write barrier prevents assignments to R_NilValue's fields.
        because of checks for nil */
     GET_FREE_NODE(R_NilValue);
-    R_NilValue->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     INIT_REFCNT(R_NilValue);
     SET_REFCNT(R_NilValue, REFCNTMAX);
     SET_TYPEOF(R_NilValue, NILSXP);
@@ -2230,13 +1410,7 @@ char *S_realloc(char *p, long new, long old, int size)
 SEXP allocSExp(SEXPTYPE t)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	R_gc_internal(0);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    GET_FREE_NODE(s);
-    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    ALLOC_SEXP(s, t);
     INIT_REFCNT(s);
     SET_TYPEOF(s, t);
     CAR(s) = R_NilValue;
@@ -2249,13 +1423,7 @@ SEXP allocSExp(SEXPTYPE t)
 static SEXP allocSExpNonCons(SEXPTYPE t)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	R_gc_internal(0);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-    GET_FREE_NODE(s);
-    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
+    ALLOC_SEXP(s, t);
     INIT_REFCNT(s);
     SET_TYPEOF(s, t);
     TAG(s) = R_NilValue;
@@ -2268,25 +1436,8 @@ static SEXP allocSExpNonCons(SEXPTYPE t)
 SEXP cons(SEXP car, SEXP cdr)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	PROTECT(car);
-	PROTECT(cdr);
-	R_gc_internal(0);
-	UNPROTECT(2);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
+    ALLOC_CONS(s, car, cdr);
 
-    if (NEED_NEW_PAGE()) {
-	PROTECT(car);
-	PROTECT(cdr);
-	GET_FREE_NODE(s);
-	UNPROTECT(2);
-    }
-    else
-	QUICK_GET_FREE_NODE(s);
-
-    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     INIT_REFCNT(s);
     SET_TYPEOF(s, LISTSXP);
     CAR(s) = CHK(car); if (car) INCREMENT_REFCNT(car);
@@ -2299,25 +1450,8 @@ SEXP cons(SEXP car, SEXP cdr)
 SEXP CONS_NR(SEXP car, SEXP cdr)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	PROTECT(car);
-	PROTECT(cdr);
-	R_gc_internal(0);
-	UNPROTECT(2);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
+    ALLOC_CONS(s, car, cdr);
 
-    if (NEED_NEW_PAGE()) {
-	PROTECT(car);
-	PROTECT(cdr);
-	GET_FREE_NODE(s);
-	UNPROTECT(2);
-    }
-    else
-	QUICK_GET_FREE_NODE(s);
-
-    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     INIT_REFCNT(s);
     DISABLE_REFCNT(s);
     SET_TYPEOF(s, LISTSXP);
@@ -2350,27 +1484,8 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 {
     SEXP v, n, newrho;
 
-    if (FORCE_GC || NO_FREE_NODES()) {
-	PROTECT(namelist);
-	PROTECT(valuelist);
-	PROTECT(rho);
-	R_gc_internal(0);
-	UNPROTECT(3);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
+    ALLOC_ENV(newrho, namelist, valuelist, rho);
 
-    if (NEED_NEW_PAGE()) {
-	PROTECT(namelist);
-	PROTECT(valuelist);
-	PROTECT(rho);
-	GET_FREE_NODE(newrho);
-	UNPROTECT(3);
-    }
-    else
-	QUICK_GET_FREE_NODE(newrho);
-
-    newrho->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     INIT_REFCNT(newrho);
     SET_TYPEOF(newrho, ENVSXP);
     FRAME(newrho) = valuelist;
@@ -2393,29 +1508,12 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 {
     SEXP s;
-    if (FORCE_GC || NO_FREE_NODES()) {
-	PROTECT(expr);
-	PROTECT(rho);
-	R_gc_internal(0);
-	UNPROTECT(2);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-    }
-
-    if (NEED_NEW_PAGE()) {
-	PROTECT(expr);
-	PROTECT(rho);
-	GET_FREE_NODE(s);
-	UNPROTECT(2);
-    }
-    else
-	QUICK_GET_FREE_NODE(s);
+    ALLOC_PROM(s, expr, rho);
 
     /* precaution to ensure code does not get modified via
        substitute() and the like */
     if (NAMED(expr) < 2) SET_NAMED(expr, 2);
 
-    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     INIT_REFCNT(s);
     SET_TYPEOF(s, PROMSXP);
     PRCODE(s) = CHK(expr);
@@ -2474,309 +1572,7 @@ static void custom_node_free(void *ptr) {
 
 SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 {
-    SEXP s;     /* For the generational collector it would be safer to
-		   work in terms of a VECSEXP here, but that would
-		   require several casts below... */
-    R_size_t size = 0, alloc_size, old_R_VSize;
-    int node_class;
-#if VALGRIND_LEVEL > 0
-    R_size_t actual_size = 0;
-#endif
-
-    /* Handle some scalars directly to improve speed. */
-    if (length == 1) {
-	switch(type) {
-	case REALSXP:
-	case INTSXP:
-	case LGLSXP:
-	    node_class = 1;
-	    alloc_size = NodeClassSize[1];
-	    if (FORCE_GC || NO_FREE_NODES() || VHEAP_FREE() < alloc_size) {
-		R_gc_internal(alloc_size);
-		if (NO_FREE_NODES())
-		    mem_err_cons();
-		if (VHEAP_FREE() < alloc_size)
-		    mem_err_heap(size);
-	    }
-
-	    CLASS_GET_FREE_NODE(node_class, s);
-#if VALGRIND_LEVEL > 1
-	    switch(type) {
-	    case REALSXP: actual_size = sizeof(double); break;
-	    case INTSXP: actual_size = sizeof(int); break;
-	    case LGLSXP: actual_size = sizeof(int); break;
-	    }
-	    VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
-#endif
-	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
-	    SET_NODE_CLASS(s, node_class);
-	    R_SmallVallocSize += alloc_size;
-	    ATTRIB(s) = R_NilValue;
-	    SET_TYPEOF(s, type);
-	    SET_SHORT_VEC_LENGTH(s, (R_len_t) length); // is 1
-	    SET_SHORT_VEC_TRUELENGTH(s, 0);
-	    SET_NAMED(s, 0);
-	    INIT_REFCNT(s);
-	    return(s);
-	}
-    }
-
-    if (length > R_XLEN_T_MAX)
-	error(_("vector is too large")); /**** put length into message */
-    else if (length < 0 )
-	error(_("negative length vectors are not allowed"));
-    /* number of vector cells to allocate */
-    switch (type) {
-    case NILSXP:
-	return R_NilValue;
-    case RAWSXP:
-	size = BYTE2VEC(length);
-#if VALGRIND_LEVEL > 0
-	actual_size = length;
-#endif
-	break;
-    case CHARSXP:
-	error("use of allocVector(CHARSXP ...) is defunct\n");
-    case intCHARSXP:
-	type = CHARSXP;
-	size = BYTE2VEC(length + 1);
-#if VALGRIND_LEVEL > 0
-	actual_size = length + 1;
-#endif
-	break;
-    case LGLSXP:
-    case INTSXP:
-	if (length <= 0)
-	    size = 0;
-	else {
-	    if (length > R_SIZE_T_MAX / sizeof(int))
-		error(_("cannot allocate vector of length %d"), length);
-	    size = INT2VEC(length);
-#if VALGRIND_LEVEL > 0
-	    actual_size = length*sizeof(int);
-#endif
-	}
-	break;
-    case REALSXP:
-	if (length <= 0)
-	    size = 0;
-	else {
-	    if (length > R_SIZE_T_MAX / sizeof(double))
-		error(_("cannot allocate vector of length %d"), length);
-	    size = FLOAT2VEC(length);
-#if VALGRIND_LEVEL > 0
-	    actual_size = length * sizeof(double);
-#endif
-	}
-	break;
-    case CPLXSXP:
-	if (length <= 0)
-	    size = 0;
-	else {
-	    if (length > R_SIZE_T_MAX / sizeof(Rcomplex))
-		error(_("cannot allocate vector of length %d"), length);
-	    size = COMPLEX2VEC(length);
-#if VALGRIND_LEVEL > 0
-	    actual_size = length * sizeof(Rcomplex);
-#endif
-	}
-	break;
-    case STRSXP:
-    case EXPRSXP:
-    case VECSXP:
-	if (length <= 0)
-	    size = 0;
-	else {
-	    if (length > R_SIZE_T_MAX / sizeof(SEXP))
-		error(_("cannot allocate vector of length %d"), length);
-	    size = PTR2VEC(length);
-#if VALGRIND_LEVEL > 0
-	    actual_size = length * sizeof(SEXP);
-#endif
-	}
-	break;
-    case LANGSXP:
-	if(length == 0) return R_NilValue;
-#ifdef LONG_VECTOR_SUPPORT
-	if (length > R_SHORT_LEN_MAX) error("invalid length for pairlist");
-#endif
-	s = allocList((int) length);
-	SET_TYPEOF(s, LANGSXP);
-	return s;
-    case LISTSXP:
-#ifdef LONG_VECTOR_SUPPORT
-	if (length > R_SHORT_LEN_MAX) error("invalid length for pairlist");
-#endif
-	return allocList((int) length);
-    default:
-	error(_("invalid type/length (%s/%d) in vector allocation"),
-	      type2char(type), length);
-    }
-
-    if (allocator) {
-	node_class = CUSTOM_NODE_CLASS;
-	alloc_size = size;
-    } else {
-	if (size <= NodeClassSize[1]) {
-	    node_class = 1;
-	    alloc_size = NodeClassSize[1];
-	}
-	else {
-	    node_class = LARGE_NODE_CLASS;
-	    alloc_size = size;
-	    for (int i = 2; i < NUM_SMALL_NODE_CLASSES; i++) {
-		if (size <= NodeClassSize[i]) {
-		    node_class = i;
-		    alloc_size = NodeClassSize[i];
-		    break;
-		}
-	    }
-	}
-    }
-
-    /* save current R_VSize to roll back adjustment if malloc fails */
-    old_R_VSize = R_VSize;
-
-    /* we need to do the gc here so allocSExp doesn't! */
-    if (FORCE_GC || NO_FREE_NODES() || VHEAP_FREE() < alloc_size) {
-	R_gc_internal(alloc_size);
-	if (NO_FREE_NODES())
-	    mem_err_cons();
-	if (VHEAP_FREE() < alloc_size)
-	    mem_err_heap(size);
-    }
-
-    if (size > 0) {
-	if (node_class < NUM_SMALL_NODE_CLASSES) {
-	    CLASS_GET_FREE_NODE(node_class, s);
-#if VALGRIND_LEVEL > 1
-	    VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
-#endif
-	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
-	    INIT_REFCNT(s);
-	    SET_NODE_CLASS(s, node_class);
-	    R_SmallVallocSize += alloc_size;
-	    SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
-	}
-	else {
-	    Rboolean success = FALSE;
-	    R_size_t hdrsize = sizeof(SEXPREC_ALIGN);
-#ifdef LONG_VECTOR_SUPPORT
-	    if (length > R_SHORT_LEN_MAX)
-		hdrsize = sizeof(SEXPREC_ALIGN) + sizeof(R_long_vec_hdr_t);
-#endif
-	    void *mem = NULL; /* initialize to suppress warning */
-	    if (size < (R_SIZE_T_MAX / sizeof(VECREC)) - hdrsize) { /*** not sure this test is quite right -- why subtract the header? LT */
-		mem = allocator ?
-		    custom_node_alloc(allocator, hdrsize + size * sizeof(VECREC)) :
-		    malloc(hdrsize + size * sizeof(VECREC));
-		if (mem == NULL) {
-		    /* If we are near the address space limit, we
-		       might be short of address space.  So return
-		       all unused objects to malloc and try again. */
-		    R_gc_full(alloc_size);
-		    mem = allocator ?
-			custom_node_alloc(allocator, hdrsize + size * sizeof(VECREC)) :
-			malloc(hdrsize + size * sizeof(VECREC));
-		}
-		if (mem != NULL) {
-#ifdef LONG_VECTOR_SUPPORT
-		    if (length > R_SHORT_LEN_MAX) {
-			s = (SEXP) (((char *) mem) + sizeof(R_long_vec_hdr_t));
-			SET_SHORT_VEC_LENGTH(s, R_LONG_VEC_TOKEN);
-			SET_LONG_VEC_LENGTH(s, length);
-			SET_LONG_VEC_TRUELENGTH(s, 0);
-		    }
-		    else {
-			s = mem;
-			SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
-		    }
-#else
-		    s = mem;
-		    SETLENGTH(s, length);
-#endif
-		    success = TRUE;
-		}
-		else s = NULL;
-#ifdef R_MEMORY_PROFILING
-		R_ReportAllocation(hdrsize + size * sizeof(VECREC));
-#endif
-	    } else s = NULL; /* suppress warning */
-	    if (! success) {
-		double dsize = (double)size * sizeof(VECREC)/1024.0;
-		/* reset the vector heap limit */
-		R_VSize = old_R_VSize;
-		if(dsize > 1024.0*1024.0)
-		    errorcall(R_NilValue,
-			      _("cannot allocate vector of size %0.1f Gb"),
-			      dsize/1024.0/1024.0);
-		if(dsize > 1024.0)
-		    errorcall(R_NilValue,
-			      _("cannot allocate vector of size %0.1f Mb"),
-			      dsize/1024.0);
-		else
-		    errorcall(R_NilValue,
-			      _("cannot allocate vector of size %0.f Kb"),
-			      dsize);
-	    }
-	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
-	    INIT_REFCNT(s);
-	    SET_NODE_CLASS(s, node_class);
-	    if (!allocator) R_LargeVallocSize += size;
-	    R_GenHeap[node_class].AllocCount++;
-	    R_NodesInUse++;
-	    SNAP_NODE(s, R_GenHeap[node_class].New);
-	}
-	ATTRIB(s) = R_NilValue;
-	SET_TYPEOF(s, type);
-    }
-    else {
-	GC_PROT(s = allocSExpNonCons(type));
-	SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
-    }
-    SET_SHORT_VEC_TRUELENGTH(s, 0);
-    SET_NAMED(s, 0);
-    INIT_REFCNT(s);
-
-    /* The following prevents disaster in the case */
-    /* that an uninitialised string vector is marked */
-    /* Direct assignment is OK since the node was just allocated and */
-    /* so is at least as new as R_NilValue and R_BlankString */
-    if (type == EXPRSXP || type == VECSXP) {
-	SEXP *data = STRING_PTR(s);
-#if VALGRIND_LEVEL > 1
-	VALGRIND_MAKE_MEM_DEFINED(STRING_PTR(s), actual_size);
-#endif
-	for (R_xlen_t i = 0; i < length; i++)
-	    data[i] = R_NilValue;
-    }
-    else if(type == STRSXP) {
-	SEXP *data = STRING_PTR(s);
-#if VALGRIND_LEVEL > 1
-	VALGRIND_MAKE_MEM_DEFINED(STRING_PTR(s), actual_size);
-#endif
-	for (R_xlen_t i = 0; i < length; i++)
-	    data[i] = R_BlankString;
-    }
-    else if (type == CHARSXP || type == intCHARSXP) {
-#if VALGRIND_LEVEL > 0
-	VALGRIND_MAKE_MEM_UNDEFINED(CHAR(s), actual_size);
-#endif
-	CHAR_RW(s)[length] = 0;
-    }
-#if VALGRIND_LEVEL > 0
-    else if (type == REALSXP)
-	VALGRIND_MAKE_MEM_UNDEFINED(REAL(s), actual_size);
-    else if (type == INTSXP)
-	VALGRIND_MAKE_MEM_UNDEFINED(INTEGER(s), actual_size);
-    else if (type == LGLSXP)
-	VALGRIND_MAKE_MEM_UNDEFINED(LOGICAL(s), actual_size);
-    else if (type == CPLXSXP)
-	VALGRIND_MAKE_MEM_UNDEFINED(COMPLEX(s), actual_size);
-    else if (type == RAWSXP)
-	VALGRIND_MAKE_MEM_UNDEFINED(RAW(s), actual_size);
-#endif
-    return s;
+  return new_gc_allocVector3(type, length, allocator);
 }
 
 /* For future hiding of allocVector(CHARSXP) */
@@ -2858,13 +1654,7 @@ SEXP allocFormalsList6(SEXP sym1, SEXP sym2, SEXP sym3, SEXP sym4,
 
 void R_gc(void)
 {
-    R_gc_internal(0);
-}
-
-static void R_gc_full(R_size_t size_needed)
-{
-    num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-    R_gc_internal(size_needed);
+  // TODO
 }
 
 static double gctimes[5], gcstarttimes[5];
@@ -2920,160 +1710,11 @@ static void gc_end_timing(void)
 
 #define R_MAX(a,b) (a) < (b) ? (b) : (a)
 
-static void R_gc_internal(R_size_t size_needed)
-{
-    if (!R_GCEnabled) {
-      if (NO_FREE_NODES())
-	R_NSize = R_NodesInUse + 1;
-      if (size_needed > VHEAP_FREE())
-	R_VSize += size_needed - VHEAP_FREE();
-      gc_pending = TRUE;
-      return;
-    }
-    gc_pending = FALSE;
-
-    R_size_t onsize = R_NSize /* can change during collection */;
-    double ncells, vcells, vfrac, nfrac;
-    SEXPTYPE first_bad_sexp_type = 0;
-#ifdef PROTECTCHECK
-    SEXPTYPE first_bad_sexp_type_old_type = 0;
-#endif
-    SEXP first_bad_sexp_type_sexp = NULL;
-    int first_bad_sexp_type_line = 0;
-
-#ifdef IMMEDIATE_FINALIZERS
-    Rboolean first = TRUE;
- again:
-#endif
-
-    gc_count++;
-
-    R_N_maxused = R_MAX(R_N_maxused, R_NodesInUse);
-    R_V_maxused = R_MAX(R_V_maxused, R_VSize - VHEAP_FREE());
-
-    BEGIN_SUSPEND_INTERRUPTS {
-	R_in_gc = TRUE;
-	gc_start_timing();
-	RunGenCollect(size_needed);
-	gc_end_timing();
-	R_in_gc = FALSE;
-    } END_SUSPEND_INTERRUPTS;
-
-    if (bad_sexp_type_seen != 0 && first_bad_sexp_type == 0) {
-	first_bad_sexp_type = bad_sexp_type_seen;
-#ifdef PROTECTCHECK
-	first_bad_sexp_type_old_type = bad_sexp_type_old_type;
-#endif
-	first_bad_sexp_type_sexp = bad_sexp_type_sexp;
-	first_bad_sexp_type_line = bad_sexp_type_line;
-    }
-
-    if (gc_reporting) {
-	ncells = onsize - R_Collected;
-	nfrac = (100.0 * ncells) / R_NSize;
-	/* We try to make this consistent with the results returned by gc */
-	ncells = 0.1*ceil(10*ncells * sizeof(SEXPREC)/Mega);
-	REprintf("\n%.1f Mbytes of cons cells used (%d%%)\n",
-		 ncells, (int) (nfrac + 0.5));
-	vcells = R_VSize - VHEAP_FREE();
-	vfrac = (100.0 * vcells) / R_VSize;
-	vcells = 0.1*ceil(10*vcells * vsfac/Mega);
-	REprintf("%.1f Mbytes of vectors used (%d%%)\n",
-		 vcells, (int) (vfrac + 0.5));
-    }
-
-#ifdef IMMEDIATE_FINALIZERS
-    if (first) {
-	first = FALSE;
-	/* Run any eligible finalizers.  The return result of
-	   RunFinalizers is TRUE if any finalizers are actually run.
-	   There is a small chance that running finalizers here may
-	   chew up enough memory to make another immediate collection
-	   necessary.  If so, we jump back to the beginning and run
-	   the collection, but on this second pass we do not run
-	   finalizers. */
-	if (RunFinalizers() &&
-	    (NO_FREE_NODES() || size_needed > VHEAP_FREE()))
-	    goto again;
-    }
-#endif
-
-    if (first_bad_sexp_type != 0) {
-#ifdef PROTECTCHECK
-	if (first_bad_sexp_type == FREESXP)
-	    error("GC encountered a node (%p) with type FREESXP (was %s)"
-		  " at memory.c:%d",
-		  first_bad_sexp_type_sexp,
-		  sexptype2char(first_bad_sexp_type_old_type),
-		  first_bad_sexp_type_line);
-	else
-	    error("GC encountered a node (%p) with an unknown SEXP type: %s"
-		  " at memory.c:%d",
-		  first_bad_sexp_type_sexp,
-		  sexptype2char(first_bad_sexp_type),
-		  first_bad_sexp_type_line);
-#else
-	error("GC encountered a node (%p) with an unknown SEXP type: %s"
-	      " at memory.c:%d",
-	      first_bad_sexp_type_sexp,
-	      sexptype2char(first_bad_sexp_type),
-	      first_bad_sexp_type_line);
-#endif
-    }
-
-    /* sanity check on logical scalar values */
-    if (R_TrueValue != NULL && LOGICAL(R_TrueValue)[0] != TRUE) {
-	LOGICAL(R_TrueValue)[0] = TRUE;
-	error("internal TRUE value has been modified");
-    }
-    if (R_FalseValue != NULL && LOGICAL(R_FalseValue)[0] != FALSE) {
-	LOGICAL(R_FalseValue)[0] = FALSE;
-	error("internal FALSE value has been modified");
-    }
-    if (R_LogicalNAValue != NULL &&
-	LOGICAL(R_LogicalNAValue)[0] != NA_LOGICAL) {
-	LOGICAL(R_LogicalNAValue)[0] = NA_LOGICAL;
-	error("internal logical NA value has been modified");
-    }
-    /* compiler constants are checked in RunGenCollect */
-}
-
 
 SEXP attribute_hidden do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP ans, nms;
-    int i, tmp;
-
-    checkArity(op, args);
-    PROTECT(ans = allocVector(INTSXP, 24));
-    PROTECT(nms = allocVector(STRSXP, 24));
-    for (i = 0; i < 24; i++) {
-	INTEGER(ans)[i] = 0;
-	SET_STRING_ELT(nms, i, type2str(i > LGLSXP? i+2 : i));
-    }
-    setAttrib(ans, R_NamesSymbol, nms);
-
-    BEGIN_SUSPEND_INTERRUPTS {
-      int gen;
-
-      /* run a full GC to make sure that all stuff in use is in Old space */
-      num_old_gens_to_collect = NUM_OLD_GENERATIONS;
-      R_gc();
-      for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++) {
-	for (i = 0; i < NUM_NODE_CLASSES; i++) {
-	  SEXP s;
-	  for (s = NEXT_NODE(R_GenHeap[i].Old[gen]);
-	       s != R_GenHeap[i].Old[gen];
-	       s = NEXT_NODE(s)) {
-	      tmp = TYPEOF(s);
-	      if(tmp > LGLSXP) tmp -= 2;
-	      INTEGER(ans)[tmp]++;
-	  }
-	}
-      }
-    } END_SUSPEND_INTERRUPTS;
-    UNPROTECT(2);
-    return ans;
+  // TODO
+  return R_NilValue;
 }
 
 /* "protect" push a single argument onto R_PPStack */
@@ -3121,9 +1762,11 @@ void NORET R_signal_unprotect_error(void)
 #ifndef INLINE_PROTECT
 SEXP protect(SEXP s)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
     if (R_PPStackTop >= R_PPStackSize)
 	R_signal_protect_error();
     R_PPStack[R_PPStackTop++] = CHK(s);
+#endif
     return s;
 }
 
@@ -3132,9 +1775,11 @@ SEXP protect(SEXP s)
 
 void unprotect(int l)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
     if (R_PPStackTop >=  l)
 	R_PPStackTop -= l;
     else R_signal_unprotect_error();
+#endif
 }
 #endif
 
@@ -3142,6 +1787,7 @@ void unprotect(int l)
 
 void unprotect_ptr(SEXP s)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
     int i = R_PPStackTop;
 
     /* go look for  s  in  R_PPStack */
@@ -3157,12 +1803,14 @@ void unprotect_ptr(SEXP s)
     while (++i < R_PPStackTop) R_PPStack[i - 1] = R_PPStack[i];
 
     R_PPStackTop--;
+#endif
 }
 
 /* Debugging function:  is s protected? */
 
 int Rf_isProtected(SEXP s)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
     int i = R_PPStackTop;
 
     /* go look for  s  in  R_PPStack */
@@ -3173,14 +1821,19 @@ int Rf_isProtected(SEXP s)
 
     /* OK, got it, and  i  is indexing its location */
     return(i);
+#else
+    return TRUE;
+#endif
 }
 
 
 #ifndef INLINE_PROTECT
 void R_ProtectWithIndex(SEXP s, PROTECT_INDEX *pi)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
     protect(s);
     *pi = R_PPStackTop - 1;
+#endif
 }
 #endif
 
@@ -3195,9 +1848,11 @@ void NORET R_signal_reprotect_error(PROTECT_INDEX i)
 #ifndef INLINE_PROTECT
 void R_Reprotect(SEXP s, PROTECT_INDEX i)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
     if (i >= R_PPStackTop || i < 0)
 	R_signal_reprotect_error(i);
     R_PPStack[i] = s;
+#endif
 }
 #endif
 
@@ -3327,15 +1982,15 @@ void R_SetExternalPtrAddr(SEXP s, void *p)
 void R_SetExternalPtrTag(SEXP s, SEXP tag)
 {
     FIX_REFCNT(s, EXTPTR_TAG(s), tag);
-    CHECK_OLD_TO_NEW(s, tag);
     EXTPTR_TAG(s) = tag;
+    WRITE_BARRIER(s, tag);
 }
 
 void R_SetExternalPtrProtected(SEXP s, SEXP p)
 {
     FIX_REFCNT(s, EXTPTR_PROT(s), p);
-    CHECK_OLD_TO_NEW(s, p);
     EXTPTR_PROT(s) = p;
+    WRITE_BARRIER(s, p);
 }
 
 /*
@@ -3372,7 +2027,6 @@ DL_FUNC R_ExternalPtrAddrFn(SEXP s)
 /* General Cons Cell Attributes */
 SEXP (ATTRIB)(SEXP x) { return CHK(ATTRIB(CHK(x))); }
 int (OBJECT)(SEXP x) { return OBJECT(CHK(x)); }
-int (MARK)(SEXP x) { return MARK(CHK(x)); }
 int (TYPEOF)(SEXP x) { return TYPEOF(CHK(x)); }
 int (NAMED)(SEXP x) { return NAMED(CHK(x)); }
 int (RTRACE)(SEXP x) { return RTRACE(CHK(x)); }
@@ -3384,8 +2038,8 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
 	error("value of 'SET_ATTRIB' must be a pairlist or NULL, not a '%s'",
 	      type2char(TYPEOF(x)));
     FIX_REFCNT(x, ATTRIB(x), v);
-    CHECK_OLD_TO_NEW(x, v);
     ATTRIB(x) = v;
+    ATTRIB_WRITE_BARRIER(x, v);
 }
 void (SET_OBJECT)(SEXP x, int v) { SET_OBJECT(CHK(x), v); }
 void (SET_TYPEOF)(SEXP x, int v) { SET_TYPEOF(CHK(x), v); }
@@ -3521,8 +2175,8 @@ void (SET_STRING_ELT)(SEXP x, R_xlen_t i, SEXP v) {
 	error(_("attempt to set index %lu/%lu in SET_STRING_ELT"),
 	      i, XLENGTH(x));
     FIX_REFCNT(x, STRING_ELT(x, i), v);
-    CHECK_OLD_TO_NEW(x, v);
     STRING_ELT(x, i) = v;
+    WRITE_BARRIER(x, v);
 }
 
 SEXP (SET_VECTOR_ELT)(SEXP x, R_xlen_t i, SEXP v) {
@@ -3537,8 +2191,9 @@ SEXP (SET_VECTOR_ELT)(SEXP x, R_xlen_t i, SEXP v) {
 	error(_("attempt to set index %lu/%lu in SET_VECTOR_ELT"),
 	      i, XLENGTH(x));
     FIX_REFCNT(x, VECTOR_ELT(x, i), v);
-    CHECK_OLD_TO_NEW(x, v);
-    return VECTOR_ELT(x, i) = v;
+    SEXP res = VECTOR_ELT(x, i) = v;
+    WRITE_BARRIER(x, v);
+    return res;
 }
 
 
@@ -3556,15 +2211,15 @@ SEXP (CADDDR)(SEXP e) { return CHK(CADDDR(CHK(e))); }
 SEXP (CAD4R)(SEXP e) { return CHK(CAD4R(CHK(e))); }
 int (MISSING)(SEXP x) { return MISSING(CHK(x)); }
 
-void (SET_TAG)(SEXP x, SEXP v) { FIX_REFCNT(x, TAG(x), v); CHECK_OLD_TO_NEW(x, v); TAG(x) = v; }
+void (SET_TAG)(SEXP x, SEXP v) { FIX_REFCNT(x, TAG(x), v); TAG(x) = v; WRITE_BARRIER(x, v); }
 
 SEXP (SETCAR)(SEXP x, SEXP y)
 {
     if (x == NULL || x == R_NilValue)
 	error(_("bad value"));
     FIX_REFCNT(x, CAR(x), y);
-    CHECK_OLD_TO_NEW(x, y);
     CAR(x) = y;
+    WRITE_BARRIER(x, y);
     return y;
 }
 
@@ -3573,8 +2228,8 @@ SEXP (SETCDR)(SEXP x, SEXP y)
     if (x == NULL || x == R_NilValue)
 	error(_("bad value"));
     FIX_REFCNT(x, CDR(x), y);
-    CHECK_OLD_TO_NEW(x, y);
     CDR(x) = y;
+    WRITE_BARRIER(x, y);
     return y;
 }
 
@@ -3586,8 +2241,8 @@ SEXP (SETCADR)(SEXP x, SEXP y)
 	error(_("bad value"));
     cell = CDR(x);
     FIX_REFCNT(cell, CAR(cell), y);
-    CHECK_OLD_TO_NEW(cell, y);
     CAR(cell) = y;
+    WRITE_BARRIER(cell, y);
     return y;
 }
 
@@ -3600,8 +2255,8 @@ SEXP (SETCADDR)(SEXP x, SEXP y)
 	error(_("bad value"));
     cell = CDDR(x);
     FIX_REFCNT(cell, CAR(cell), y);
-    CHECK_OLD_TO_NEW(cell, y);
     CAR(cell) = y;
+    WRITE_BARRIER(cell, y);
     return y;
 }
 
@@ -3615,8 +2270,8 @@ SEXP (SETCADDDR)(SEXP x, SEXP y)
 	error(_("bad value"));
     cell = CDDDR(x);
     FIX_REFCNT(cell, CAR(cell), y);
-    CHECK_OLD_TO_NEW(cell, y);
     CAR(cell) = y;
+    WRITE_BARRIER(cell, y);
     return y;
 }
 
@@ -3633,8 +2288,8 @@ SEXP (SETCAD4R)(SEXP x, SEXP y)
 	error(_("bad value"));
     cell = CD4R(x);
     FIX_REFCNT(cell, CAR(cell), y);
-    CHECK_OLD_TO_NEW(cell, y);
     CAR(cell) = y;
+    WRITE_BARRIER(cell, y);
     return y;
 }
 
@@ -3647,9 +2302,9 @@ SEXP (CLOENV)(SEXP x) { return CHK(CLOENV(CHK(x))); }
 int (RDEBUG)(SEXP x) { return RDEBUG(CHK(x)); }
 int (RSTEP)(SEXP x) { return RSTEP(CHK(x)); }
 
-void (SET_FORMALS)(SEXP x, SEXP v) { FIX_REFCNT(x, FORMALS(x), v); CHECK_OLD_TO_NEW(x, v); FORMALS(x) = v; }
-void (SET_BODY)(SEXP x, SEXP v) { FIX_REFCNT(x, BODY(x), v); CHECK_OLD_TO_NEW(x, v); BODY(x) = v; }
-void (SET_CLOENV)(SEXP x, SEXP v) { FIX_REFCNT(x, CLOENV(x), v); CHECK_OLD_TO_NEW(x, v); CLOENV(x) = v; }
+void (SET_FORMALS)(SEXP x, SEXP v) { FIX_REFCNT(x, FORMALS(x), v); FORMALS(x) = v; WRITE_BARRIER(x, v); }
+void (SET_BODY)(SEXP x, SEXP v) { FIX_REFCNT(x, BODY(x), v); BODY(x) = v; WRITE_BARRIER(x, v); }
+void (SET_CLOENV)(SEXP x, SEXP v) { FIX_REFCNT(x, CLOENV(x), v); CLOENV(x) = v; WRITE_BARRIER(x, v); }
 void (SET_RDEBUG)(SEXP x, int v) { SET_RDEBUG(CHK(x), v); }
 void (SET_RSTEP)(SEXP x, int v) { SET_RSTEP(CHK(x), v); }
 
@@ -3668,9 +2323,9 @@ SEXP (SYMVALUE)(SEXP x) { return CHK(SYMVALUE(CHK(x))); }
 SEXP (INTERNAL)(SEXP x) { return CHK(INTERNAL(CHK(x))); }
 int (DDVAL)(SEXP x) { return DDVAL(CHK(x)); }
 
-void (SET_PRINTNAME)(SEXP x, SEXP v) { FIX_REFCNT(x, PRINTNAME(x), v); CHECK_OLD_TO_NEW(x, v); PRINTNAME(x) = v; }
-void (SET_SYMVALUE)(SEXP x, SEXP v) { FIX_REFCNT(x, SYMVALUE(x), v); CHECK_OLD_TO_NEW(x, v); SYMVALUE(x) = v; }
-void (SET_INTERNAL)(SEXP x, SEXP v) { FIX_REFCNT(x, INTERNAL(x), v); CHECK_OLD_TO_NEW(x, v); INTERNAL(x) = v; }
+void (SET_PRINTNAME)(SEXP x, SEXP v) { FIX_REFCNT(x, PRINTNAME(x), v); PRINTNAME(x) = v; WRITE_BARRIER(x, v); }
+void (SET_SYMVALUE)(SEXP x, SEXP v) { FIX_REFCNT(x, SYMVALUE(x), v); SYMVALUE(x) = v; WRITE_BARRIER(x, v); }
+void (SET_INTERNAL)(SEXP x, SEXP v) { FIX_REFCNT(x, INTERNAL(x), v); INTERNAL(x) = v; WRITE_BARRIER(x, v); }
 void (SET_DDVAL)(SEXP x, int v) { SET_DDVAL(CHK(x), v); }
 
 /* Environment Accessors */
@@ -3679,9 +2334,9 @@ SEXP (ENCLOS)(SEXP x) { return CHK(ENCLOS(CHK(x))); }
 SEXP (HASHTAB)(SEXP x) { return CHK(HASHTAB(CHK(x))); }
 int (ENVFLAGS)(SEXP x) { return ENVFLAGS(CHK(x)); }
 
-void (SET_FRAME)(SEXP x, SEXP v) { FIX_REFCNT(x, FRAME(x), v); CHECK_OLD_TO_NEW(x, v); FRAME(x) = v; }
-void (SET_ENCLOS)(SEXP x, SEXP v) { FIX_REFCNT(x, ENCLOS(x), v); CHECK_OLD_TO_NEW(x, v); ENCLOS(x) = v; }
-void (SET_HASHTAB)(SEXP x, SEXP v) { FIX_REFCNT(x, HASHTAB(x), v); CHECK_OLD_TO_NEW(x, v); HASHTAB(x) = v; }
+void (SET_FRAME)(SEXP x, SEXP v) { FIX_REFCNT(x, FRAME(x), v); FRAME(x) = v; WRITE_BARRIER(x, v); }
+void (SET_ENCLOS)(SEXP x, SEXP v) { FIX_REFCNT(x, ENCLOS(x), v); ENCLOS(x) = v; WRITE_BARRIER(x, v); }
+void (SET_HASHTAB)(SEXP x, SEXP v) { FIX_REFCNT(x, HASHTAB(x), v); HASHTAB(x) = v; WRITE_BARRIER(x, v); }
 void (SET_ENVFLAGS)(SEXP x, int v) { SET_ENVFLAGS(x, v); }
 
 /* Promise Accessors */
@@ -3690,9 +2345,9 @@ SEXP (PRENV)(SEXP x) { return CHK(PRENV(CHK(x))); }
 SEXP (PRVALUE)(SEXP x) { return CHK(PRVALUE(CHK(x))); }
 int (PRSEEN)(SEXP x) { return PRSEEN(CHK(x)); }
 
-void (SET_PRENV)(SEXP x, SEXP v){ FIX_REFCNT(x, PRENV(x), v); CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
-void (SET_PRVALUE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRVALUE(x), v); CHECK_OLD_TO_NEW(x, v); PRVALUE(x) = v; }
-void (SET_PRCODE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRCODE(x), v); CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
+void (SET_PRENV)(SEXP x, SEXP v){ FIX_REFCNT(x, PRENV(x), v); PRENV(x) = v; WRITE_BARRIER(x, v); }
+void (SET_PRVALUE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRVALUE(x), v); PRVALUE(x) = v; WRITE_BARRIER(x, v); }
+void (SET_PRCODE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRCODE(x), v); PRCODE(x) = v; WRITE_BARRIER(x, v); }
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
 
 /* Hashing Accessors */
@@ -3715,8 +2370,8 @@ SEXP (SET_CXTAIL)(SEXP x, SEXP v) {
 	error("value of 'SET_CXTAIL' must be a char or NULL, not a '%s'",
 	      type2char(TYPEOF(v)));
 #endif
-    /*CHECK_OLD_TO_NEW(x, v); *//* not needed since not properly traced */
     ATTRIB(x) = v;
+    /*WRITE_BARRIER(x, v); *//* not needed since not properly traced */
     return x;
 }
 

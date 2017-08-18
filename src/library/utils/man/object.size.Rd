@@ -137,7 +137,7 @@ print(sl, units = "auto", standard = "SI")   ## 209.3 kB
 (fsl <- sapply(c("Kb", "KB", "KiB"),
                function(u) format(sl, units = u)))
 stopifnot(identical( ## assert that all three are the same :
-             unique(substr(as.vector(fsl), 1,5)),
+             unique(substr(as.vector(fsl), 1,3)),
              format(round(as.vector(sl)/1024, 1))))
 
 ## find the 10 largest objects in the base package

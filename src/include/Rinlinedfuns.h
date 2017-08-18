@@ -81,14 +81,17 @@ extern SEXP* R_PPStack;
 
 INLINE_FUN SEXP protect(SEXP s)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
     if (R_PPStackTop < R_PPStackSize)
 	R_PPStack[R_PPStackTop++] = s;
     else R_signal_protect_error();
+#endif
     return s;
 }
 
 INLINE_FUN void unprotect(int l)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
 #ifdef PROTECT_PARANOID
     if (R_PPStackTop >=  l)
 	R_PPStackTop -= l;
@@ -96,19 +99,24 @@ INLINE_FUN void unprotect(int l)
 #else
     R_PPStackTop -= l;
 #endif
+#endif
 }
 
 INLINE_FUN void R_ProtectWithIndex(SEXP s, PROTECT_INDEX *pi)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
     protect(s);
     *pi = R_PPStackTop - 1;
+#endif
 }
 
 INLINE_FUN void R_Reprotect(SEXP s, PROTECT_INDEX i)
 {
+#ifndef CONSERVATIVE_STACK_SCAN
     if (i >= R_PPStackTop || i < 0)
 	R_signal_reprotect_error(i);
     R_PPStack[i] = s;
+#endif
 }
 #endif /* INLINE_PROTECT */
 
