@@ -1181,6 +1181,23 @@ stopifnot(identical(fret, 31))
 stopifnot(identical(mycallCCret, 3))
 stopifnot(identical(funret, 31))
 
+## chaining on.exit handlers with return statements
+
+x <- 0
+fret1 <- NULL
+fret2 <- NULL
+f <- function() {
+  on.exit(return(4))
+  on.exit({fret1 <<- returnValue(); return(5)}, add = T)
+  on.exit({fret2 <<- returnValue(); x <<- 2}, add = T)
+  3
+}
+res <- f()
+stopifnot(identical(res, 5))
+stopifnot(identical(x, 2))
+stopifnot(identical(fret1, 4))
+stopifnot(identical(fret2, 5))
+
 ## keep at end
 rbind(last =  proc.time() - .pt,
       total = proc.time())
