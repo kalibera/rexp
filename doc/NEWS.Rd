@@ -257,6 +257,12 @@
       \item Reverted unintended change in behavior of \code{return}
       calls in \code{on.exit} expressions introduced by stack unwinding
       changes in \R 3.3.0.
+
+      \item \code{array(character(), 1)} now gives (a 1D array with)
+      \code{NA} as has been documented for a long time as in the other
+      cases of zero-length array initialization and also compatibly with
+      \code{matrix(character(), *)}.  As mentioned there, this also
+      fixes \PR{17333}.
     }
   }
 }
@@ -355,6 +361,9 @@
 
       \item \code{(1:n)[-n]} no longer segfaults for \code{n <- 2.2e9}
       (on a platform with enough RAM).
+
+      \item \code{x <- 1:2; tapply(x, list(x, x), function(x) "")[1,2]}
+      now correctly returns \code{NA} again.  (\PR{17333})
     }
   }
 }
