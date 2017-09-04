@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2017-08-25 r73136) -- "Unsuffered Consequences"
+R Under development (unstable) (2017-09-04 r73198) -- "Unsuffered Consequences"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -540,7 +540,7 @@ match.call()
 checking body(.):
 quote(match.call())
 checking formals(.):
-pairlist(... = )
+as.pairlist(alist(... = ))
 __ not parse()able __
 --=--=--=--=--
 CO: function (..., file = NULL, append = FALSE, type = c("output", 
@@ -629,8 +629,8 @@ quote({
     else rval
 })
 checking formals(.):
-pairlist(... = , file = NULL, append = FALSE, type = quote(c("output", 
-    "message")), split = FALSE)
+as.pairlist(alist(... = , file = NULL, append = FALSE, type = quote(c("output", 
+    "message")), split = FALSE))
 __ not parse()able __
 --=--=--=--=--
 D5.: new("ddiMatrix",
@@ -646,7 +646,7 @@ CC(...)
 checking body(.):
 quote(CC(...))
 checking formals(.):
-pairlist(... = )
+as.pairlist(alist(... = ))
 __ not parse()able __
 --=--=--=--=--
 I3: new("ddiMatrix",
@@ -746,7 +746,7 @@ quote({
     invisible(obj)
 })
 checking formals(.):
-pairlist(obj = , show = quote(!hasReal(obj)))
+as.pairlist(alist(obj = , show = quote(!hasReal(obj))))
 __ not parse()able __
 --=--=--=--=--
 dPut: function (x, control = c("all", "digits17")) 
@@ -754,7 +754,7 @@ dput(x, control = control)
 checking body(.):
 quote(dput(x, control = control))
 checking formals(.):
-pairlist(x = , control = quote(c("all", "digits17")))
+as.pairlist(alist(x = , control = quote(c("all", "digits17"))))
 __ not parse()able __
 --=--=--=--=--
 dn: list(c("A", "B", "C"), c("a", "b", "c", "d", "e"))
@@ -775,7 +775,7 @@ substitute(list(x, ...))
 checking body(.):
 quote(substitute(list(x, ...)))
 checking formals(.):
-pairlist(x = , ... = )
+as.pairlist(alist(x = , ... = ))
 __ not parse()able __
 --=--=--=--=--
 fx: structure(c(1L, 3L, 2L), .Label = c("a", "b", NA), class = "factor")
@@ -785,7 +785,7 @@ h(f(...))
 checking body(.):
 quote(h(f(...)))
 checking formals(.):
-pairlist(... = )
+as.pairlist(alist(... = ))
 __ not parse()able __
 --=--=--=--=--
 h: function (...) 
@@ -793,7 +793,7 @@ list(...)
 checking body(.):
 quote(list(...))
 checking formals(.):
-pairlist(... = )
+as.pairlist(alist(... = ))
 __ not parse()able __
 --=--=--=--=--
 hasReal: function (x) 
@@ -829,7 +829,7 @@ quote({
     else FALSE
 })
 checking formals(.):
-pairlist(x = )
+as.pairlist(alist(x = ))
 __ not parse()able __
 --=--=--=--=--
 i: c(1, 3, 4, 5, 6, 7, 8)
@@ -839,7 +839,7 @@ eval(parse(text = deparse(expr, control = control, ...)))
 checking body(.):
 quote(eval(parse(text = deparse(expr, control = control, ...))))
 checking formals(.):
-pairlist(expr = , control = quote(c("all", "digits17")), ... = )
+as.pairlist(alist(expr = , control = quote(c("all", "digits17")), ... = ))
 __ not parse()able __
 --=--=--=--=--
 isMissObj: function (obj) 
@@ -847,7 +847,7 @@ identical(obj, alist(a = )[[1]])
 checking body(.):
 quote(identical(obj, alist(a = )[[1]]))
 checking formals(.):
-pairlist(obj = )
+as.pairlist(alist(obj = ))
 __ not parse()able __
 --=--=--=--=--
 j: c(2, 9, 6, 7, 8, 9, 10)
@@ -857,7 +857,7 @@ g(...)
 checking body(.):
 quote(g(...))
 checking formals(.):
-pairlist(... = )
+as.pairlist(alist(... = ))
 __ not parse()able __
 --=--=--=--=--
 l3: structure(c(FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, 
@@ -900,8 +900,8 @@ parse(text = deparse(expr, control = control, ...))
 checking body(.):
 quote(parse(text = deparse(expr, control = control, ...)))
 checking formals(.):
-pairlist(expr = , control = quote(c("keepInteger", "showAttributes", 
-    "keepNA")), ... = )
+as.pairlist(alist(expr = , control = quote(c("keepInteger", "showAttributes", 
+    "keepNA")), ... = ))
 __ not parse()able __
 --=--=--=--=--
 perm: c(2L, 3L, 6L, 4L, 1L, 7L, 5L)
@@ -951,7 +951,7 @@ quote({
     deparse(substitute(x))
 })
 checking formals(.):
-pairlist(x = )
+as.pairlist(alist(x = ))
 __ not parse()able __
 --=--=--=--=--
 u: --=--=--=--=--
@@ -973,5 +973,5 @@ Summary of (a total of 36) warning messages:
 > 
 > ## at the very end
 > cat('Time elapsed: ', proc.time() - .proctime00,'\n')
-Time elapsed:  0.709 0.127 0.839 0 0 
+Time elapsed:  1.356 0.044 1.432 0 0 
 > 

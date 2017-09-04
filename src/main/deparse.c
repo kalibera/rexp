@@ -744,7 +744,7 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 {
     PPinfo fop;
     Rboolean lookahead = FALSE, lbreak = FALSE, parens, fnarg = d->fnarg,
-             outerparens, doquote;
+             outerparens, doquote, missing;
     SEXP op, t;
     int localOpts = d->opts, i, n;
 
@@ -855,7 +855,18 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	break;
     case LISTSXP:
 	if (localOpts & SHOWATTRIBUTES) attr1(s, d);
-	print2buff("pairlist(", d);
+	/* pairlist(x=) cannot be evaluated, hence with missings we use
+	   as.pairlist(alist(...)) to allow evaluation of deparsed formals */
+	missing = FALSE;
+	for(t=s; t != R_NilValue; t=CDR(t))
+	    if (CAR(t) == R_MissingArg) {
+		missing = TRUE;
+		break;
+	    }
+	if (missing)
+	    print2buff("as.pairlist(alist(", d);
+	else
+	    print2buff("pairlist(", d);
 	d->inlist++;
 	for (t=s ; CDR(t) != R_NilValue ; t=CDR(t) ) {
 	    if( TAG(t) != R_NilValue ) {
@@ -874,7 +885,10 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 	    print2buff(" = ", d);
 	}
 	deparse2buff(CAR(t), d);
-	print2buff(")", d);
+	if (missing)
+	    print2buff("))", d);
+	else
+	    print2buff(")", d);
 	d->inlist--;
 	if (localOpts & SHOWATTRIBUTES) attr2(s, d);
 	break;
