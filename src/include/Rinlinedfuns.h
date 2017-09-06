@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1999-2015  The R Core Team.
+ *  Copyright (C) 1999-2017  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -73,6 +73,30 @@
 #include <string.h> /* for strlen, strcmp */
 
 /* define inline-able functions */
+
+INLINE_FUN void *DATAPTR(SEXP x) {
+    return RAWDATAPTR(x);
+}
+
+INLINE_FUN R_xlen_t XLENGTH(SEXP x)
+{
+    return ALTREP(x) ? ALTREP_LENGTH(x) : STDVEC_LENGTH(x);
+}
+
+INLINE_FUN R_xlen_t XTRUELENGTH(SEXP x)
+{
+    return ALTREP(x) ? ALTREP_TRUELENGTH(x) : STDVEC_TRUELENGTH(x);
+}
+
+INLINE_FUN int LENGTH_EX(SEXP x, const char *file, int line)
+{
+    R_xlen_t len = XLENGTH(x);
+#ifdef LONG_VECTOR_SUPPORT
+    if (len > R_SHORT_LEN_MAX)
+	R_BadLongVector(x, file, line);
+#endif
+    return len;
+}
 
 #ifdef INLINE_PROTECT
 extern int R_PPStackSize;
