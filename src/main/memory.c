@@ -685,23 +685,9 @@ static R_size_t R_NodesInUse = 0;
    place them on the forwarding list.  The forwarding list is assumed
    to be in a local variable of the caller named named
    forwarded_nodes. */
-SEXP sUndefined = NULL;
-
-#define CHECK_SYM(s) do { \
-  if (s != NULL && TYPEOF(s) == SYMSXP && ATTRIB(s) != R_NilValue && \
-      s != sUndefined) { \
-    int oldcon = R_OutputCon; \
-    R_OutputCon = 2; \
-    REprintf("SYMERROR: GC found a symbol with attribute!\n"); \
-    REprintf("symbol: %s\n", CHAR(PRINTNAME(s))); \
-    R_Suicide("found symbol with an attribute during GC\n"); \
-    R_OutputCon = oldcon; \
-  } \
-} while(0)
 
 #define FORWARD_NODE(s) do { \
   SEXP fn__n__ = (s); \
-  CHECK_SYM(s); \
   if (fn__n__ && ! NODE_IS_MARKED(fn__n__)) { \
     CHECK_FOR_FREE_NODE(fn__n__) \
     MARK_NODE(fn__n__); \
@@ -1654,7 +1640,10 @@ static void RunGenCollect(R_size_t size_needed)
     if (R_SymbolTable != NULL)             /* in case of GC during startup */
 	for (i = 0; i < HSIZE; i++) {      /* Symbol table */
 	    FORWARD_NODE(R_SymbolTable[i]);
-	    CHECK_SYM(R_SymbolTable[i]);
+	    SEXP s;
+	    for (s = R_SymbolTable[i]; s != R_NilValue; s = CDR(s))
+		if (ATTRIB(CAR(s)) != R_NilValue)
+		    REprintf("****found a symbol with attributes\n");
 	}
 
     if (R_CurrentExpr != NULL)	           /* Current expression */
@@ -2961,7 +2950,6 @@ static void gc_end_timing(void)
 
 static void R_gc_internal(R_size_t size_needed)
 {
-
     if (!R_GCEnabled) {
       if (NO_FREE_NODES())
 	R_NSize = R_NodesInUse + 1;

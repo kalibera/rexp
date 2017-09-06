@@ -503,7 +503,6 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 	if((intptr_t) R_CStackLimit != -1) upper += R_CStackLimit;
 	if(diff > 0 && diff < upper) {
 	    REprintf(_("Error: segfault from C stack overflow\n"));
-	    *(int *)0 = 1;
 	    jump_to_toplevel();
 	}
     }
@@ -1093,7 +1092,7 @@ void mainloop(void)
 /*this functionality now appears in 3
   places-jump_to_toplevel/profile/here */
 
-void printwhere(void)
+static void printwhere(void)
 {
   RCNTXT *cptr;
   int lct = 1;
