@@ -1399,10 +1399,18 @@ static Rboolean RunFinalizers(void)
     for (s = R_weak_refs, last = R_NilValue; s != R_NilValue;) {
 	SEXP next = WEAKREF_NEXT(s);
 	if (IS_READY_TO_FINALIZE(s)) {
+	    /**** use R_ToplevelExec here? */
 	    RCNTXT thiscontext;
 	    RCNTXT * volatile saveToplevelContext;
 	    volatile int savestack;
-	    volatile SEXP topExp;
+	    volatile SEXP topExp, oldHStack, oldRStack, oldRVal;
+	    volatile Rboolean oldvis;
+	    PROTECT(oldHStack = R_HandlerStack);
+	    PROTECT(oldRStack = R_RestartStack);
+	    PROTECT(oldRVal = R_ReturnedValue);
+	    oldvis = R_Visible;
+	    R_HandlerStack = R_NilValue;
+	    R_RestartStack = R_NilValue;
 
 	    finalizer_run = TRUE;
 
@@ -1436,7 +1444,11 @@ static Rboolean RunFinalizers(void)
 	    R_ToplevelContext = saveToplevelContext;
 	    R_PPStackTop = savestack;
 	    R_CurrentExpr = topExp;
-	    UNPROTECT(1);
+	    R_HandlerStack = oldHStack;
+	    R_RestartStack = oldRStack;
+	    R_ReturnedValue = oldRVal;
+	    R_Visible = oldvis;
+	    UNPROTECT(4);/* topExp, oldRVal, oldRStack, oldHStack */
 	}
 	else last = s;
 	s = next;
@@ -3413,6 +3425,8 @@ void SHALLOW_DUPLICATE_ATTRIB(SEXP to, SEXP from) {
     SET_OBJECT(CHK(to), OBJECT(from));
     IS_S4_OBJECT(from) ?  SET_S4_OBJECT(to) : UNSET_S4_OBJECT(to);
 }
+
+void (ENSURE_NAMEDMAX)(SEXP x) { ENSURE_NAMEDMAX(CHK(x)); }
 
 /* S4 object testing */
 int (IS_S4_OBJECT)(SEXP x){ return IS_S4_OBJECT(CHK(x)); }

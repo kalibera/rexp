@@ -129,6 +129,19 @@
       \emph{via} \code{.deparseOpts()}, \code{"nice_names"}, which when
       set (e.g.\sspace{}as part of \code{"all"}) also use the
       \code{(tag = value)} syntax for atomic vectors.
+
+      \item If the option \code{setWidthOnResize} is set and \code{TRUE},
+      \R run in a terminal using a recent \code{readline} library will
+      set the \code{width} option when the terminal is
+      resized.  Suggested by Ralf Goertz.
+
+      \item If multiple \code{on.exit} expressions are set using
+      \code{add = TRUE} then all expressions will now be run even if one
+      signals an error.
+
+      \item \code{mclapply()} gets an option \code{affinity.list} which
+      allows more efficient execution with heterogenous processors,
+      thanks to Helena Kotthaus.
     }
   }
 
@@ -147,6 +160,15 @@
       manual. [This depends on the experimental \sQuote{timeout} argument
       of \code{system2()} and hence subject to change, as are the names
       of the environment variables.]
+    }
+  }
+
+  \subsection{DOCUMENTATION}{
+    \itemize{
+      \item \sQuote{Writing R Extensions} now mentions the macros
+      \code{MAYBE_REFERENCED}, \code{MAYBE_SHARED}, and
+      \code{MARK_NOT_MUTABLE} that should be used by package \code{C}
+      code instead \code{NAMED} or \code{SET_NAMED}.
     }
   }
 
@@ -364,6 +386,15 @@
 
       \item \code{x <- 1:2; tapply(x, list(x, x), function(x) "")[1,2]}
       now correctly returns \code{NA} again.  (\PR{17333})
+
+      \item Runing of finalizers after explicit GC request moved from
+      the \R interface \code{do_gc} to the \code{C} interface
+      \code{R_gc}.  This helps with reclaiming inaccessible connections.
+
+      \item \code{help.search(topic)} and \code{??topic} matching topics
+      in vignettes with multiple file name extensions (e.g.,
+      \file{*.md.rsp} but not \file{*.Rmd}) failed with an error 
+      when using \code{options(help_type = "html")}.      
     }
   }
 }
