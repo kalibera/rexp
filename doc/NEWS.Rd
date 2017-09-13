@@ -129,6 +129,7 @@
       \emph{via} \code{.deparseOpts()}, \code{"nice_names"}, which when
       set (e.g.\sspace{}as part of \code{"all"}) also use the
       \code{(tag = value)} syntax for atomic vectors.
+      \cr \code{m:n} now also deparses nicely when \eqn{m > n}.
 
       \item If the option \code{setWidthOnResize} is set and \code{TRUE},
       \R run in a terminal using a recent \code{readline} library will
@@ -142,6 +143,14 @@
       \item \code{mclapply()} gets an option \code{affinity.list} which
       allows more efficient execution with heterogenous processors,
       thanks to Helena Kotthaus.
+
+      \item The \code{character} methods for \code{as.Date()} and
+      \code{as.POSIXlt} become more flexible via new arguments
+      \code{tryFormats} and \code{optional}.
+
+      \item The object header layout has been changed to support merging
+      the \code{ALTREP} branch. This requires re-installing packages
+      that use compiled code.
     }
   }
 
@@ -280,11 +289,8 @@
       calls in \code{on.exit} expressions introduced by stack unwinding
       changes in \R 3.3.0.
 
-      \item \code{array(character(), 1)} now gives (a 1D array with)
-      \code{NA} as has been documented for a long time as in the other
-      cases of zero-length array initialization and also compatibly with
-      \code{matrix(character(), *)}.  As mentioned there, this also
-      fixes \PR{17333}.
+      \item Attributes on symbols are now detected and prevented; attempt
+      to add an attribute to a symbol results in an error.
     }
   }
 }
@@ -379,6 +385,10 @@
 	--enable-maintainer-mode} without having installed
       \command{notangle} (it was required in \R 3.4.[01]).
 
+      \item Dispatch on \code{\dots} calls the method using its name,
+      instead of \code{.Method} (for consistency with default dispatch),
+      and only attempts to pass non-missing arguments from the generic.
+
       \item \code{readRDS(textConnection(.))} works again.  (\PR{17325})
 
       \item \code{(1:n)[-n]} no longer segfaults for \code{n <- 2.2e9}
@@ -393,8 +403,16 @@
 
       \item \code{help.search(topic)} and \code{??topic} matching topics
       in vignettes with multiple file name extensions (e.g.,
-      \file{*.md.rsp} but not \file{*.Rmd}) failed with an error 
-      when using \code{options(help_type = "html")}.      
+      \file{*.md.rsp} but not \file{*.Rmd}) failed with an error
+      when using \code{options(help_type = "html")}.
+
+      \item The X11 device no longer uses the Xlib backing store (\PR{16497}).
+
+      \item \code{array(character(), 1)} now gives (a 1D array with)
+      \code{NA} as has been documented for a long time as in the other
+      cases of zero-length array initialization and also compatibly with
+      \code{matrix(character(), *)}.  As mentioned there, this also
+      fixes \PR{17333}.
     }
   }
 }
