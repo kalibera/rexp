@@ -1856,7 +1856,7 @@ Optional Packages:
                           (0/1/2) [0]
   --with-system-valgrind-headers
                           use system valgrind headers (if available) [no]
-  --with-internal-tzcode  use internal time-zone code [no]
+  --with-internal-tzcode  use internal time-zone code [no, yes on macOS]
   --with-recommended-packages
                           use/install recommended R packages [yes]
   --with-ICU              use ICU library (if available) [yes]
@@ -24828,7 +24828,7 @@ if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_prog_c_openmp='none needed'
 else
   ac_cv_prog_c_openmp='unsupported'
-	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -qopenmp \
+	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
                            -openmp -mp -omp -qsmp=omp -homp \
 			   -fopenmp=libomp \
                            -Popenmp --openmp; do
@@ -26333,7 +26333,7 @@ if ac_fn_f77_try_link "$LINENO"; then :
   ac_cv_prog_f77_openmp='none needed'
 else
   ac_cv_prog_f77_openmp='unsupported'
-	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -qopenmp \
+	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
                            -openmp -mp -omp -qsmp=omp -homp \
 			   -fopenmp=libomp \
                            -Popenmp --openmp; do
@@ -26464,7 +26464,7 @@ if ac_fn_cxx_try_link "$LINENO"; then :
   ac_cv_prog_cxx_openmp='none needed'
 else
   ac_cv_prog_cxx_openmp='unsupported'
-	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -qopenmp \
+	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
                            -openmp -mp -omp -qsmp=omp -homp \
 			   -fopenmp=libomp \
                            -Popenmp --openmp; do
@@ -46243,7 +46243,7 @@ if ac_fn_fc_try_link "$LINENO"; then :
   ac_cv_prog_fc_openmp='none needed'
 else
   ac_cv_prog_fc_openmp='unsupported'
-	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  for ac_option in -fopenmp -xopenmp -qopenmp \
+	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
                            -openmp -mp -omp -qsmp=omp -homp \
 			   -fopenmp=libomp \
                            -Popenmp --openmp; do

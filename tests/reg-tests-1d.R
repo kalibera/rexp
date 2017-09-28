@@ -1197,9 +1197,7 @@ stopifnot(identical(a, matrix(character(), 1,2)), is.na(a))
 ## had "" instead of NA in R < 3.5.0
 
 
-
 ## chaining on.exit handlers with return statements
-
 x <- 0
 fret1 <- NULL
 fret2 <- NULL
@@ -1214,6 +1212,55 @@ stopifnot(identical(res, 5))
 stopifnot(identical(x, 2))
 stopifnot(identical(fret1, 4))
 stopifnot(identical(fret2, 5))
+
+
+## splineDesign(*, derivs = <too large>):
+if(no.splines <- !("splines" %in% loadedNamespaces())) requireNamespace("splines")
+x <- (0:8)/8
+aKnots <- c(rep(0, 4), c(0.3, 0.5, 0.6), rep(1, 4))
+tools::assertError(splines::splineDesign(aKnots, x, derivs = 4), verbose = TRUE)
+## gave seg.fault in R <= 3.4.1
+
+
+## allow on.exit handlers to be added in LIFO order
+x <- character(0)
+f <- function() {
+    on.exit(x <<- c(x, "first"))
+    on.exit(x <<- c(x, "last"), add = TRUE, after = FALSE)
+}
+f()
+stopifnot(identical(x, c("last", "first")))
+##
+x <- character(0)
+f <- function() {
+    on.exit(x <<- c(x, "last"), add = TRUE, after = FALSE)
+}
+f()
+stopifnot(identical(x, "last"))
+
+
+## deparse(<symbol>)
+##_reverted_for_now
+##_ brc <- quote(`{`)
+##_ stopifnot(identical(brc, eval(parse(text = deparse(brc, control="all")))))
+## default was to set  backtick=FALSE  so parse() failed in R <= 3.4.x
+
+
+## sys.on.exit() is called in the correct frame
+fn <- function() {
+    on.exit("foo")
+    identity(sys.on.exit())
+}
+stopifnot(identical(fn(), "foo"))
+
+
+## rep.POSIXt(*, by="n  DSTdays") - PR#17342
+x <- seq(as.POSIXct("1982-04-15 05:00", tz="US/Central"),
+         as.POSIXct("1994-10-15",       tz="US/Central"), by="360 DSTdays")
+stopifnot(length(x) == 13, diff((as.numeric(x) - 39600)/86400) == 360)
+## length(x) was 1802 and ended in many NA's in R <= 3.4.2
+
+
 
 ## keep at end
 rbind(last =  proc.time() - .pt,
