@@ -1770,6 +1770,50 @@ transitive closure of language objects, only searches from the first, but
 returns what remains to be searched. The variables found are stored into an
 environment, which avoids some extra calls and assures that each variable is
 listed at most once.
+
+<<[[findLocals1Old]] function>>=
+findLocals1Old <- function(e, shadowed = character(0), cntxt) {
+    if (typeof(e) == "language") {
+        if (typeof(e[[1]]) %in% c("symbol", "character")) {
+            v <- as.character(e[[1]])
+            switch(v,
+                   <<[[findLocals1Old]] switch clauses>>
+                   findLocalsList1Old(e[-1], shadowed, cntxt))
+        }
+         else findLocalsList1Old(e, shadowed, cntxt)
+    }
+    else character(0)
+}
+@ %def findLocals1Old
+<<[[findLocalsList1Old]] function>>=
+findLocalsList1Old <- function(elist, shadowed, cntxt)
+    unique(unlist(lapply(elist, findLocals1Old, shadowed, cntxt)))
+@ %def findLocalsList1Old
+<<[[findLocals1Old]] switch clauses>>=
+"=" =,
+"<-" = unique(c(getAssignedVar(e, cntxt),
+                findLocalsList1Old(e[-1], shadowed, cntxt))),
+"for" = unique(c(as.character(e[2]),
+                 findLocalsList1Old(e[-2], shadowed, cntxt))),
+"delayedAssign" =,
+"assign" = if (length(e) == 3 &&
+               is.character(e[[2]]) &&
+               length(e[[2]]) == 1)
+               c(e[[2]], findLocals1Old(e[[3]], shadowed, cntxt))
+           else findLocalsList1Old(e[1], shadowed, cntxt),
+"function" = character(0),
+"~" = character(0),
+@ %def
+<<[[findLocals1Old]] switch clauses>>=
+"local" = if (! v %in% shadowed && length(e) == 2)
+              character(0)
+          else findLocalsList1Old(e[-1], shadowed, cntxt),
+"expression" =,
+"quote" = if (! v %in% shadowed)
+              character(0)
+          else findLocalsList1Old(e[-1], shadowed, cntxt),
+@ %def
+
 <<[[findLocals1]] function>>=
 addVar <- function(v, vars) assign(v, 1, envir = vars)
 findLocals1 <- function(e, shadowed = character(0), cntxt, vars) {
@@ -1866,7 +1910,29 @@ findLocalsList <- function(elist, cntxt) {
     sf <- initialShadowedFuns
     nsf <- length(sf)
     repeat {
-        vals <- findLocalsList1(elist, sf, cntxt)
+        #vals <- findLocalsList1(elist, sf, cntxt)
+
+        valsNew <- findLocalsList1(elist, sf, cntxt)
+	valsOld <- findLocalsList1Old(elist, sf, cntxt)
+	if (!is.null(valsNew))
+          valsNew <- sort(valsNew)
+        if (!is.null(valsOld))
+          valsOld <- sort(valsOld)
+	if (length(valsNew) > 0 && length(valsOld) > 0 && !identical(valsNew, valsOld)) {
+	  cat("!!!! variables differ for expression\n")
+	  cat("type old", typeof(valsOld), " length ", length(valsOld), "\n")
+	  cat("type new", typeof(valsNew), " length ", length(valsNew), "\n")
+	  cat("!!!! original:\n")
+	  cat(valsOld)
+	  cat("\n!!!! new:\n")
+	  cat(valsNew)
+	  cat("\nexpression:\n")
+          show(elist)
+	  stop("\nvars differ!!!")
+          .Internal(inspect(1)) # wait for debugger
+	}
+        vals <- valsNew
+
         redefined <- sf %in% vals
         last.nsf <- nsf
         sf <- unique(c(shadowed, sf[redefined]))
@@ -6222,6 +6288,10 @@ Opcodes.names <- names(Opcodes.argc)
 <<[[findLocals1]] function>>
 
 <<[[findLocalsList1]] function>>
+
+<<[[findLocals1Old]] function>>
+
+<<[[findLocalsList1Old]] function>>
 
 <<[[findLocals]] function>>
 

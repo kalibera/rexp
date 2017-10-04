@@ -268,6 +268,41 @@ findLocalsList1 <- function(elist, shadowed, cntxt) {
 }
 
 
+findLocals1Old <- function(e, shadowed = character(0), cntxt) {
+    if (typeof(e) == "language") {
+        if (typeof(e[[1]]) %in% c("symbol", "character")) {
+            v <- as.character(e[[1]])
+            switch(v,
+                   "=" =,
+                   "<-" = unique(c(getAssignedVar(e, cntxt),
+                                   findLocalsList1Old(e[-1], shadowed, cntxt))),
+                   "for" = unique(c(as.character(e[2]),
+                                    findLocalsList1Old(e[-2], shadowed, cntxt))),
+                   "delayedAssign" =,
+                   "assign" = if (length(e) == 3 &&
+                                  is.character(e[[2]]) &&
+                                  length(e[[2]]) == 1)
+                                  c(e[[2]], findLocals1Old(e[[3]], shadowed, cntxt))
+                              else findLocalsList1Old(e[1], shadowed, cntxt),
+                   "function" = character(0),
+                   "~" = character(0),
+                   "local" = if (! v %in% shadowed && length(e) == 2)
+                                 character(0)
+                             else findLocalsList1Old(e[-1], shadowed, cntxt),
+                   "expression" =,
+                   "quote" = if (! v %in% shadowed)
+                                 character(0)
+                             else findLocalsList1Old(e[-1], shadowed, cntxt),
+                   findLocalsList1Old(e[-1], shadowed, cntxt))
+        }
+         else findLocalsList1Old(e, shadowed, cntxt)
+    }
+    else character(0)
+}
+
+findLocalsList1Old <- function(elist, shadowed, cntxt)
+    unique(unlist(lapply(elist, findLocals1Old, shadowed, cntxt)))
+
 findLocals <- function(e, cntxt)
     findLocalsList(list(e), cntxt)
 
@@ -278,7 +313,29 @@ findLocalsList <- function(elist, cntxt) {
     sf <- initialShadowedFuns
     nsf <- length(sf)
     repeat {
-        vals <- findLocalsList1(elist, sf, cntxt)
+        #vals <- findLocalsList1(elist, sf, cntxt)
+
+        valsNew <- findLocalsList1(elist, sf, cntxt)
+        valsOld <- findLocalsList1Old(elist, sf, cntxt)
+        if (!is.null(valsNew))
+          valsNew <- sort(valsNew)
+        if (!is.null(valsOld))
+          valsOld <- sort(valsOld)
+        if (length(valsNew) > 0 && length(valsOld) > 0 && !identical(valsNew, valsOld)) {
+          cat("!!!! variables differ for expression\n")
+          cat("type old", typeof(valsOld), " length ", length(valsOld), "\n")
+          cat("type new", typeof(valsNew), " length ", length(valsNew), "\n")
+          cat("!!!! original:\n")
+          cat(valsOld)
+          cat("\n!!!! new:\n")
+          cat(valsNew)
+          cat("\nexpression:\n")
+          show(elist)
+          stop("\nvars differ!!!")
+          .Internal(inspect(1)) # wait for debugger
+        }
+        vals <- valsNew
+
         redefined <- sf %in% vals
         last.nsf <- nsf
         sf <- unique(c(shadowed, sf[redefined]))
