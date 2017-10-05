@@ -10,7 +10,8 @@
 \alias{code point}
 \title{Convert Integer Vectors to or from UTF-8-encoded Character Vectors}
 \description{
-  Conversion of UTF-8 encoded character vectors to and from integer vectors.
+  Conversion of UTF-8 encoded character vectors to and from integer
+  vectors representing a UTF-32 encoding.
 }
 \usage{
 utf8ToInt(x)
@@ -24,6 +25,10 @@ intToUtf8(x, multiple = FALSE)
 \details{
   These will work in any locale, including on platforms that do not
   otherwise support multi-byte character sets.
+
+  \code{intToUtf8} does not handle surrogate pairs (which should not
+  occur in UTF-32): inputs in the surrogate ranges are mapped to
+  \code{NA}.
 }
 \value{
   Unicode defines a name and a number of all of the glyphs it
@@ -49,6 +54,11 @@ intToUtf8(0x03B2L) # Greek beta
 }
 utf8ToInt("bi\u00dfchen")
 utf8ToInt("\xfa\xb4\xbf\xbf\x9f")
+
+## A valid UTF-16LE surrogate pair (for U+10437)
+x <- c(0xDC37, 0xD801)
+intToUtf8(x)
+intToUtf8(x, TRUE)
 }
 \keyword{character}
 \keyword{utilities}

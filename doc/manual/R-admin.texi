@@ -2837,9 +2837,14 @@ in most of the Chinese-speaking world.
 @subsection Locales under macOS
 
 macOS supports locales in its own particular way, but the @R{} GUI tries to
-make this easier for users. See
-@uref{https://developer.apple.com/@/documentation/@/MacOSX/@/Conceptual/@/BPInternational/}
-for how users can set their locales.  As with Windows, end users will
+make this easier for users.
+@c <FIXME>
+@c URL no longer works ...
+@c See
+@c @uref{https://developer.apple.com/@/documentation/@/MacOSX/@/Conceptual/@/BPInternational/}
+@c for how users can set their locales.
+@c </FIXME>
+As with Windows, end users will
 generally only see lists of languages/territories.  Users of @R{} in a
 terminal may need to set the locale to something like @samp{en_GB.UTF-8}
 if it defaults to @samp{C} (as it sometimes does when logging in
@@ -4869,8 +4874,8 @@ will make use of it if GNU readline is not found.}  That and other
 binary components are available from
 @uref{https://r.research.att.com/libs}: you will need @code{pcre} and
 @code{xz} (for @code{libzma}) as recent macOS versions provide libraries
-but not headers for these (and the system @code{pcre} is too old at
-version 8.02).
+but not headers for these (and the system @code{pcre} is too old at 8.02
+for versions up to Sierra, although High Sierra has 8.40).
 
 An X sub-system is required unless configuring using
 @option{--without-x}: see @uref{https://xquartz.macosforge.org/}. @R{}'s
@@ -4943,7 +4948,7 @@ FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin16/6.3.0
 
 More recent and complete distributions of @command{clang} are often
 available from @uref{http://llvm.org/releases/}: for example at the time
-of writing for 4.0.1, built for Sierra or later.  In particular, these
+of writing of 5.0.0 built for Sierra or later.  In particular, these
 should include support for OpenMP.  Another build of clang 4.0.0 is
 available at
 @uref{https://r.research.att.com/@/libs/@/clang-4.0.0-darwin15.6-Release.tar.gz}.

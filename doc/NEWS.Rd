@@ -123,7 +123,7 @@
       \item \code{deparse()} (and \code{dump()}) are more useful for S4
       objects; \code{dput()} now using the same internal C code (instead
       of its previous imperfect workaround R code).
-      
+
       \code{dput()}, \emph{etc} now print the \code{names()} information
       only once, using the more readable \code{(tag = value)} syntax.
 
@@ -170,6 +170,15 @@
       if \env{TZ} is subsequently unset.
 
       \item Provide \code{`[`} method for \code{"DLLInfoList"}
+
+      \item \code{glm()} and \code{glm.fit} get the same
+      \code{singular.ok=TRUE} argument that \code{lm()} has had
+      forever.  As a consequence, in \code{glm(*, method = <your_own>)},
+      user specified methods need to accept a \code{singular.ok}
+      argument as well.
+
+      \item \code{aspell()} gains a filter for Markdown (\file{.md} and
+      \file{.Rmd}) files.
     }
   }
 
@@ -197,7 +206,7 @@
       \code{MAYBE_REFERENCED}, \code{MAYBE_SHARED} and
       \code{MARK_NOT_MUTABLE} that should be used by package \code{C}
       code instead \code{NAMED} or \code{SET_NAMED}.
- 
+
       \item The object header layout has been changed to support merging
       the \code{ALTREP} branch. This requires re-installing packages
       that use compiled code.
@@ -349,6 +358,15 @@
       default on macOS).
     }
   }
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{raw(0) & raw(0)} again returns \code{raw(0)} (rather
+      than \code{logical(0)}; ditto for \code{|}.
+
+      \item \code{intToUtf8()} converts integers corresponding to
+      surrogate code points to \code{NA} rather than invalid UTF-8.
+    }
+  }
 }
 
 \section{\Rlogo CHANGES IN R 3.4.2}{
@@ -453,7 +471,7 @@
       \item It is again possible to use \command{configure
 	--enable-maintainer-mode} without having installed
       \command{notangle} (it was required in \R 3.4.[01]).
-      
+
       \item S4 method dispatch on \code{\dots} calls the method by name
       instead of \code{.Method} (for consistency with default dispatch),
       and only attempts to pass non-missing arguments from the generic.

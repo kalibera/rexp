@@ -576,6 +576,9 @@
 /* Define to 1 if you have pangocairo. */
 #undef HAVE_PANGOCAIRO
 
+/* Define if your system has pcre2. */
+#undef HAVE_PCRE2
+
 /* Define to 1 if you have the <pcre.h> header file. */
 #undef HAVE_PCRE_H
 
@@ -986,6 +989,9 @@
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
+/* macOS 10.12 (Sierra) or earlier */
+#undef MACOS_SIERRA
+
 /* Define if mktime sets errno. */
 #undef MKTIME_SETS_ERRNO
 
@@ -1018,6 +1024,9 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* PCRE2 code unit width wanted. */
+#undef PCRE2_CODE_UNIT_WIDTH
 
 /* Define if <inttypes.h> exists and defines unusable PRI* macros. (For intl)
    */
