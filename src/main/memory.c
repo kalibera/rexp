@@ -28,6 +28,7 @@
  */
 
 #define USE_RINTERNALS
+#define COMPILING_MEMORY_C
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -905,7 +906,7 @@ static void GetNewPage(int node_class)
 	SNAP_NODE(s, base);
 #if  VALGRIND_LEVEL > 1
 	if (NodeClassSize[node_class] > 0)
-	    VALGRIND_MAKE_MEM_NOACCESS(DATAPTR(s), NodeClassSize[node_class]*sizeof(VECREC));
+	    VALGRIND_MAKE_MEM_NOACCESS(STDVEC_DATAPTR(s), NodeClassSize[node_class]*sizeof(VECREC));
 #endif
 	s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	INIT_REFCNT(s);
@@ -1810,7 +1811,7 @@ static void RunGenCollect(R_size_t size_needed)
 	for(s = NEXT_NODE(R_GenHeap[i].New);
 	    s != R_GenHeap[i].Free;
 	    s = NEXT_NODE(s)) {
-	    VALGRIND_MAKE_MEM_NOACCESS(DATAPTR(s),
+	    VALGRIND_MAKE_MEM_NOACCESS(STDVEC_DATAPTR(s),
 				       NodeClassSize[i]*sizeof(VECREC));
 	}
     }
@@ -2518,7 +2519,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    case INTSXP: actual_size = sizeof(int); break;
 	    case LGLSXP: actual_size = sizeof(int); break;
 	    }
-	    VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
+	    VALGRIND_MAKE_MEM_UNDEFINED(STDVEC_DATAPTR(s), actual_size);
 #endif
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    SETSCALAR(s, 1);
@@ -2665,7 +2666,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	if (node_class < NUM_SMALL_NODE_CLASSES) {
 	    CLASS_GET_FREE_NODE(node_class, s);
 #if VALGRIND_LEVEL > 1
-	    VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
+	    VALGRIND_MAKE_MEM_UNDEFINED(STDVEC_DATAPTR(s), actual_size);
 #endif
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    INIT_REFCNT(s);
@@ -3477,8 +3478,10 @@ SEXP (STRING_ELT)(SEXP x, R_xlen_t i) {
 	      "STRING_ELT", "character vector", type2char(TYPEOF(x)));
     if (ALTREP(x))
 	return CHK(ALTSTRING_ELT(CHK(x), i));
-    else
-	return CHK(STRING_PTR(CHK(x))[i]);
+    else {
+	SEXP *ps = STDVEC_DATAPTR(CHK(x));
+	return CHK(ps[i]);
+    }
 }
 
 SEXP (VECTOR_ELT)(SEXP x, R_xlen_t i) {
@@ -3573,21 +3576,23 @@ SEXP * NORET (VECTOR_PTR)(SEXP x)
 }
 
 void (SET_STRING_ELT)(SEXP x, R_xlen_t i, SEXP v) {
-    if(TYPEOF(x) != STRSXP)
+    if(TYPEOF(CHK(x)) != STRSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "SET_STRING_ELT", "character vector", type2char(TYPEOF(x)));
-    if(TYPEOF(v) != CHARSXP)
+    if(TYPEOF(CHK(v)) != CHARSXP)
        error("Value of SET_STRING_ELT() must be a 'CHARSXP' not a '%s'",
 	     type2char(TYPEOF(v)));
     if (i < 0 || i >= XLENGTH(x))
 	error(_("attempt to set index %lu/%lu in SET_STRING_ELT"),
 	      i, XLENGTH(x));
-    FIX_REFCNT(x, STRING_ELT(x, i), v);
     CHECK_OLD_TO_NEW(x, v);
     if (ALTREP(x))
 	ALTSTRING_SET_ELT(x, i, v);
-    else
-	STRING_PTR(x)[i] = v;
+    else {
+	SEXP *ps = STDVEC_DATAPTR(x);
+	FIX_REFCNT(x, ps[i], v);
+	ps[i] = v;
+    }
 }
 
 SEXP (SET_VECTOR_ELT)(SEXP x, R_xlen_t i, SEXP v) {
@@ -4059,50 +4064,5 @@ int Seql(SEXP a, SEXP b)
 R_len_t NORET R_BadLongVector(SEXP x, const char *file, int line)
 {
     error(_("long vectors not supported yet: %s:%d"), file, line);
-}
-#endif
-
-
-#define ALTREP_STUBS
-#ifdef ALTREP_STUBS
-R_xlen_t ALTREP_LENGTH(SEXP x) { return 0; }
-R_xlen_t ALTREP_TRUELENGTH(SEXP x) { return 0; }
-SEXP ALTREP_DUPLICATE_EX(SEXP x, Rboolean deep) { return NULL; }
-SEXP ALTREP_SERIALIZED_CLASS(SEXP x) { return NULL; }
-SEXP ALTREP_SERIALIZED_STATE(SEXP x) { return NULL; }
-SEXP ALTREP_UNSERIALIZE_EX(SEXP info, SEXP state, SEXP attr, int objf, int levs)
-{
-    return NULL;
-}
-Rboolean
-ALTREP_INSPECT(SEXP x, int pre, int deep, int pvec,
-	       void (*inspect_subtree)(SEXP, int, int, int))
-{
-    return FALSE;
-}
-void *ALTVEC_DATAPTR(SEXP x, Rboolean writeable) { return NULL; }
-void *ALTVEC_DATAPTR_OR_NULL(SEXP x, Rboolean writeable) { return NULL; }
-SEXP ALTVEC_EXTRACT_SUBSET(SEXP x, SEXP indx, SEXP call) {return NULL; }
-int ALTINTEGER_ELT(SEXP x, R_xlen_t i) { return 0; }
-int ALTLOGICAL_ELT(SEXP x, R_xlen_t i) { return 0; }
-double ALTREAL_ELT(SEXP x, R_xlen_t i) { return 0.0; }
-Rcomplex ALTCOMPLEX_ELT(SEXP x, R_xlen_t i)
-{
-    Rcomplex v = {0.0, 0.0};
-    return v;
-}
-
-SEXP ALTSTRING_ELT(SEXP x, R_xlen_t i) { return NULL; }
-void ALTSTRING_SET_ELT(SEXP x, R_xlen_t i, SEXP v) {}
-
-void R_reinit_altrep_classes(DllInfo *dll) {}
-
-R_xlen_t INTEGER_GET_REGION(SEXP sx, R_xlen_t i, R_xlen_t n, int *buf)
-{
-    return 0;
-}
-R_xlen_t REAL_GET_REGION(SEXP sx, R_xlen_t i, R_xlen_t n, double *buf)
-{
-    return 0;
 }
 #endif

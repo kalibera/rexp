@@ -350,6 +350,13 @@ INLINE_FUN void SET_SCALAR_BVAL(SEXP x, Rbyte v) {
     RAW0(x)[0] = v;
 }
 
+INLINE_FUN SEXP ALTREP_CLASS(SEXP x) { return TAG(x); }
+
+INLINE_FUN SEXP R_altrep_data1(SEXP x) { return CAR(x); }
+INLINE_FUN SEXP R_altrep_data2(SEXP x) { return CDR(x); }
+INLINE_FUN void R_set_altrep_data1(SEXP x, SEXP v) { SETCAR(x, v); }
+INLINE_FUN void R_set_altrep_data2(SEXP x, SEXP v) { SETCDR(x, v); }
+
 INLINE_FUN int INTEGER_ELT(SEXP x, R_xlen_t i)
 {
     CHECK_VECTOR_INT_ELT(x, i);
@@ -384,6 +391,18 @@ INLINE_FUN Rcomplex COMPLEX_ELT(SEXP x, R_xlen_t i)
     return ALTREP(x) ? ALTCOMPLEX_ELT(x, i) : COMPLEX0(x)[i];
 }
 
+#if !defined(COMPILING_R) && !defined(COMPILING_MEMORY_C) &&\
+    !defined(TESTING_WRITE_BARRIER)
+/* if not inlining use version in memory.c with more error checking */
+INLINE_FUN SEXP STRING_ELT(SEXP x, R_xlen_t i) {
+    if (ALTREP(x))
+	return ALTSTRING_ELT(x, i);
+    else {
+	SEXP *ps = STDVEC_DATAPTR(x);
+	return ps[i];
+    }
+}
+#endif
 
 #ifdef INLINE_PROTECT
 extern int R_PPStackSize;

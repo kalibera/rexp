@@ -30,9 +30,9 @@ function(given = NULL, family = NULL, middle = NULL,
     args <- list(given = given, family = family, middle = middle,
                  email = email, role = role, comment = comment,
 		 first = first, last = last)
-    if(all(sapply(args, is.null))) {
+    if(all(vapply(args, is.null, NA)))
         return(structure(list(), class = "person"))
-    }
+
     args <- lapply(args, .listify)
     args_length <- lengths(args)
     if(!all(args_length_ok <- args_length %in% c(1L, max(args_length))))
@@ -114,6 +114,20 @@ function(given = NULL, family = NULL, middle = NULL,
         if(length(role))
             role <- .canonicalize_person_role(role)
 
+        if(length(comment)) {
+            ## Be nice and recognize ORCID identifiers given as URLs
+            ## but perhaps without an ORCID name.
+            ind <- grepl(paste0("^https?://orcid.org/",
+                                "([[:digit:]]{4}[-]){3}[[:digit:]]{3}[[:alnum:]]$"),
+                         comment)
+            if(any(ind)) {
+                if(is.null(names(comment)))
+                    names(comment) <- ifelse(ind, "ORCID", " ")
+                else
+                    names(comment)[ind] <- "ORCID"
+            }
+        }
+
         rval <- list(given = given, family = family, role = role,
                      email = email, comment = comment)
         ## Canonicalize 0-length character arguments to NULL.
@@ -125,7 +139,7 @@ function(given = NULL, family = NULL, middle = NULL,
         else
             rval
     } ## end{ person1 }
-
+    force(person1)# {codetools}
     rval <-
         lapply(seq_along(args$given),
                function(i)
@@ -441,6 +455,14 @@ function(x,
     braces <- braces[include]
     collapse <- collapse[include]
 
+    if(any(include == "comment"))
+        x <- lapply(x,
+                    function(e) {
+                        e$comment <-
+                            .expand_ORCID_identifier(e$comment)
+                        e
+                    })
+
     paste_collapse <- function(x, collapse) {
         if(is.na(collapse) || identical(collapse, FALSE)) {
  	    x[1L]
@@ -480,6 +502,22 @@ function(object, ...)
                 braces = list(given = br, family = c("", ",")))
     })
     paste(object[nzchar(object)], collapse = " and ")
+}
+
+.canonicalize_ORCID_identifier <-
+function(x)
+{
+    paste0("https://orcid.org/", sub(".*/", "", x))
+}
+
+.expand_ORCID_identifier <-
+function(x)
+{
+    if(any(ind <- (names(x) == "ORCID")))
+        x[ind] <- paste0("<",
+                         .canonicalize_ORCID_identifier(x[ind]),
+                         ">")
+    x
 }
 
 ######################################################################

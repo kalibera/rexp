@@ -169,8 +169,8 @@ static hlen shash(SEXP x, R_xlen_t indx, HashData *d)
 {
     unsigned int k;
     const char *p;
-    const void *vmax = vmaxget();
     if(!d->useUTF8 && d->useCache) return cshash(x, indx, d);
+    const void *vmax = vmaxget();
     /* Not having d->useCache really should not happen anymore. */
     p = translateCharUTF8(STRING_ELT(x, indx));
     k = 0;
@@ -230,14 +230,16 @@ static int cequal(SEXP x, R_xlen_t i, SEXP y, R_xlen_t j)
 static int sequal(SEXP x, R_xlen_t i, SEXP y, R_xlen_t j)
 {
     if (i < 0 || j < 0) return 0;
+    SEXP xi = STRING_ELT(x, i);
+    SEXP yj = STRING_ELT(y, j);
     /* Two strings which have the same address must be the same,
        so avoid looking at the contents */
-    if (STRING_ELT(x, i) == STRING_ELT(y, j)) return 1;
+    if (xi == yj) return 1;
     /* Then if either is NA the other cannot be */
     /* Once all CHARSXPs are cached, Seql will handle this */
-    if (STRING_ELT(x, i) == NA_STRING || STRING_ELT(y, j) == NA_STRING)
+    if (xi == NA_STRING || yj == NA_STRING)
 	return 0;
-    return Seql(STRING_ELT(x, i), STRING_ELT(y, j));
+    return Seql(xi, yj);
 }
 
 static hlen rawhash(SEXP x, R_xlen_t indx, HashData *d)
@@ -810,9 +812,10 @@ static SEXP HashLookup(SEXP table, SEXP x, HashData *d)
 
     n = XLENGTH(x);
     PROTECT(ans = allocVector(INTSXP, n));
+    int *pa = INTEGER(ans);
     for (i = 0; i < n; i++) {
 //	if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	INTEGER(ans)[i] = Lookup(table, x, i, d);
+	pa[i] = Lookup(table, x, i, d);
     }
     UNPROTECT(1);
     return ans;

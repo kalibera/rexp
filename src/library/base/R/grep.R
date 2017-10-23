@@ -258,21 +258,21 @@ function(x, m, invert = FALSE)
     ili <- is.list(m)
 
     ## Handle useBytes/encoding issues.
-    ## For regexpr() and gregexpr(), we get useBytes as TRUE if useBytes
-    ## was given as TRUE, or all character string involved were ASCII.
-    ## Hence, if useBytes is TRUE, we need to convert non-ASCII strings
-    ## to a bytes encoding before computing match substrings.
+    ## Match positions from regexpr(), gregexpr() and regexec() are in
+    ## characters unless 'useBytes = TRUE' was given, now recorded via
+    ## the 'index.type' attribute (in addition to the 'useBytes' one
+    ## being TRUE when 'useBytes = TRUE' was given *or* all character
+    ## string involved were ASCII).
+    ## To convince substring() and nchar() used below accordingly that
+    ## match data positions are in bytes, we set the input encoding to
+    ## "bytes" for the former and call the latter with 'type = "bytes"'.
+    itype <- "chars"
     useBytes <- if(ili)
-        any(unlist(lapply(m, attr, "useBytes")))
+        any(unlist(lapply(m, attr, "index.type")) == "bytes")
     else
-        any(attr(m, "useBytes"))
+        any(attr(m, "index.type") == "bytes")
     if(useBytes) {
-        ## Cf. tools::showNonASCII():
-        asc <- iconv(x, "latin1", "ASCII")
-        ind <- is.na(asc) | (asc != x)
-        ## Alternatively, could do as in tools:::.is_ASCII().
-        if(any(ind))
-            Encoding(x[ind]) <- "bytes"
+        itype <- Encoding(x) <- "bytes"
     }
 
     ## For NA matches (from matching a non-NA pattern on an NA string),
@@ -304,7 +304,7 @@ function(x, m, invert = FALSE)
                              domain = NA)
                 }
                 beg <- c(1L, c(rbind(so, eo + 1L)))
-                end <- c(c(rbind(so - 1L, eo)), nchar(u))
+                end <- c(c(rbind(so - 1L, eo)), nchar(u, itype))
                 substring(u, beg, end)
             },
             x, m,
@@ -332,7 +332,7 @@ function(x, m, invert = FALSE)
                 } else {
                     c(1L, so + ml)
                 }
-                end <- c(so - 1L, nchar(u))
+                end <- c(so - 1L, nchar(u, itype))
                 substring(u, beg, end)
             },
             x, m,
