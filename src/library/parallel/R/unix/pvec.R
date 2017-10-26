@@ -47,8 +47,8 @@ pvec <- function(v, FUN, ..., mc.set.seed = TRUE, mc.silent = FALSE,
         if (length(jobs) && mc.cleanup) {
             ## first take care of uncollected children
             mccollect(children(jobs), FALSE)
-            mckill(children(jobs),
-                   if (is.integer(mc.cleanup)) mc.cleanup else 15L)
+#            mckill(children(jobs),
+#                   if (is.integer(mc.cleanup)) mc.cleanup else 15L)
             mccollect(children(jobs))
         }
         if (length(jobs)) {
@@ -56,7 +56,7 @@ pvec <- function(v, FUN, ..., mc.set.seed = TRUE, mc.silent = FALSE,
             mccollect(children(jobs), FALSE)
 
             ## just in case there are open file descriptors
-            sapply(children(jobs), function(x) rmChild(x$pid))
+#            sapply(children(jobs), rmChild)
         }
     }
     on.exit(cleanup())
