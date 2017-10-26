@@ -46,8 +46,8 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
         if (length(jobs) && mc.cleanup) {
             ## first take care of uncollected children
             mccollect(children(jobs), FALSE)
-            mckill(children(jobs),
-                   if (is.integer(mc.cleanup)) mc.cleanup else tools::SIGTERM)
+#            mckill(children(jobs),
+#                   if (is.integer(mc.cleanup)) mc.cleanup else tools::SIGTERM)
             mccollect(children(jobs))
         }
         if (length(jobs)) {
@@ -55,7 +55,7 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
             mccollect(children(jobs), FALSE)
 
             ## just in case there are open file descriptors
-            sapply(children(jobs), function(x) rmChild(x$pid))
+            #sapply(children(jobs), rmChild)
         }
     }
     on.exit(cleanup())
@@ -182,7 +182,7 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
             mcexit(0L)
         }
         jobs[[core]] <<- ch[[core]] <<- f
-        cp[core] <<- f$pid
+        cp[core] <<- processID(f)
         NULL
     }
     job.res <- lapply(seq_len(cores), inner.do)
@@ -203,6 +203,10 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
                     if (inherits(ijr, "try-error"))
                         has.errors <- c(has.errors, core)
                     dr[core] <- TRUE
+                } else if (is.null(a)) {
+                    # the child no longer exists
+                    core <- which(cp == processID(ch))
+                    fin[core] <- TRUE
                 }
             }
     }
