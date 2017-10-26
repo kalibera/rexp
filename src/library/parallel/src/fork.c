@@ -492,19 +492,17 @@ SEXP mc_select_children(SEXP sTimeout, SEXP sWhich)
     if (maxfd == -1)
 	return R_NilValue; /* NULL signifies no children to tend to */
 
-    if (timeout < 0) { /* block possibly indefinitely */
-	/* Note: I'm not sure we really should allow this .. */
-	for(;;) {
-	    /* will longjump out on user interrupt */
-	    R_ProcessEvents();
-	    sr = R_SelectEx(maxfd + 1, &fs, 0, 0, NULL, NULL);
-	    if (sr < 0 && errno == EINTR) break;
-	    continue;
-	}
+    if (timeout == 0) {
+	/* polling */
+	struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	sr = R_SelectEx(maxfd + 1, &fs, 0, 0, &tv, NULL);
     } else {
 	double before = currentTime();
 	double remains = timeout;
 	struct timeval tv;
+
 	for(;;) {
 	    R_ProcessEvents();
 	    /* re-set tv as it may get updated by select */
@@ -512,17 +510,23 @@ SEXP mc_select_children(SEXP sTimeout, SEXP sWhich)
 		tv.tv_sec = 0;
 		tv.tv_usec = R_wait_usec;
 		/* FIXME: ?Rg_wait_usec */
-	    } else {
+	    } else if (timeout > 0) {
 		tv.tv_sec = (int) remains;
 		tv.tv_usec = (int) ((remains - ((double) tv.tv_sec)) * 1e6);
+	    } else {
+		/* Note: I'm not sure we really should allow this .. */
+		tv.tv_sec = 1; /* still allow to process events */
+		tv.tv_usec = 0;
 	    }
 	    sr = R_SelectEx(maxfd + 1, &fs, 0, 0, &tv, NULL);
 	    if (sr > 0 || (sr < 0 && errno != EINTR))
 		break;
-	    remains = timeout - (currentTime() - before);
-	    if (remains <= 0)
-		/* sr == 0 (timed out) or sr<0 && errno==EINTR */
-		break;
+	    if (timeout > 0) {
+		remains = timeout - (currentTime() - before);
+		if (remains <= 0)
+		    /* sr == 0 (timed out) or sr<0 && errno==EINTR */
+		    break;
+	    }
 	}
     }
 #ifdef MC_DEBUG

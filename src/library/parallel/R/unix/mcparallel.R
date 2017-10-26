@@ -74,7 +74,7 @@ mccollect <- function(jobs, wait = TRUE, timeout = 0, intermediate = FALSE)
         names(res) <- pnames
         fin <- rep(FALSE, length(jobs))
         while (!all(fin)) {
-            s <- selectChildren(pids, 0.5)
+            s <- selectChildren(pids[!fin], -1)
             if (is.integer(s)) {
                 for (pid in s) {
                     r <- readChild(pid)
@@ -83,7 +83,9 @@ mccollect <- function(jobs, wait = TRUE, timeout = 0, intermediate = FALSE)
                         res[which(pid == pids)] <- list(unserialize(r))
                 }
                 if (is.function(intermediate)) intermediate(res)
-            } else if (all(is.na(match(pids, processID(children()))))) break
+            } else
+                ## should not happen
+                if (all(is.na(match(pids, processID(children()))))) break
         }
     }
     res

@@ -115,8 +115,8 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
             jobsp <- processID(jobs)
             has.errors <- 0L
             while (!all(fin)) {
-                s <- selectChildren(jobs, 0.5)
-                if (is.null(s)) break   # no children -> no hope
+                s <- selectChildren(jobs[!is.na(jobsp)], -1)
+                if (is.null(s)) break   # no children -> no hope (should not happen)
                 if (is.integer(s))
                     for (ch in s) {
                         ji <- match(TRUE, jobsp == ch)
@@ -131,6 +131,9 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
                             if (!is.null(child.res)) res[[ci]] <- child.res
                         } else {
                             fin[ci] <- TRUE
+                            ## the job has finished, so we must not run
+                            ## select on its fds again
+                            jobsp[ji] <- jobid[ji] <- NA
                             if (any(ava)) { # still something to do,
                                 ## look for first job which is allowed to
                                 ## run on the now idling core and spawn it
@@ -189,8 +192,8 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
     ac <- cp[cp > 0]
     has.errors <- integer(0)
     while (!all(fin)) {
-        s <- selectChildren(ac, 1)
-        if (is.null(s)) break # no children -> no hope we get anything
+        s <- selectChildren(ac[!fin], -1)
+        if (is.null(s)) break # no children -> no hope we get anything (should not happen)
         if (is.integer(s))
             for (ch in s) {
                 a <- readChild(ch)
@@ -204,8 +207,8 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
                         has.errors <- c(has.errors, core)
                     dr[core] <- TRUE
                 } else if (is.null(a)) {
-                    # the child no longer exists
-                    core <- which(cp == processID(ch))
+                    # the child no longer exists (should not happen)
+                    core <- which(cp == ch)
                     fin[core] <- TRUE
                 }
             }
