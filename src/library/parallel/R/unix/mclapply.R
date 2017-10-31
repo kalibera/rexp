@@ -41,24 +41,9 @@ mclapply <- function(X, FUN, ..., mc.preschedule = TRUE, mc.set.seed = TRUE,
     }
 
     jobs <- list()
-    cleanup <- function() {
-        ## kill children if cleanup is requested
-        if (length(jobs) && mc.cleanup) {
-            ## first take care of uncollected children
-            mccollect(children(jobs), FALSE)
-#            mckill(children(jobs),
-#                   if (is.integer(mc.cleanup)) mc.cleanup else tools::SIGTERM)
-            mccollect(children(jobs))
-        }
-        if (length(jobs)) {
-            ## just in case there are zombies
-            mccollect(children(jobs), FALSE)
-
-            ## just in case there are open file descriptors
-            #sapply(children(jobs), rmChild)
-        }
-    }
-    on.exit(cleanup())
+    ## all processes created from now on will be terminated by cleanup
+    prepareCleanup()
+    on.exit(cleanup(mc.cleanup))
     ## Follow lapply
     if(!is.vector(X) || is.object(X)) X <- as.list(X)
     if(!is.null(affinity.list) && length(affinity.list) < length(X))

@@ -24,7 +24,7 @@
 
 ## registered as finalizer in .onLoad() to kill all child processes
 clean_pids <- function(e)
-    if(length(pids <- processID(children()))) tools::pskill(pids, tools::SIGKILL)
+    cleanup(kill = tools::SIGKILL, detach = TRUE, shutdown = TRUE)
 
 ## used in mclapply, mcparallel, newWorkNode
 mcfork <- function(estranged = FALSE) {
@@ -168,3 +168,10 @@ mcaffinity <- function(affinity = NULL) .Call(C_mc_affinity, affinity)
 
 # used by mcparallel
 mcinteractive <- function(interactive) .Call(C_mc_interactive, interactive)
+
+# used by mclapply, pvec
+prepareCleanup <- function() .Call(C_mc_prepare_cleanup)
+
+# used by mclapply, pvec, mccollect
+cleanup <- function(kill = TRUE, detach = TRUE, shutdown = FALSE)
+    .Call(C_mc_cleanup, kill, detach, shutdown)

@@ -88,5 +88,6 @@ mccollect <- function(jobs, wait = TRUE, timeout = 0, intermediate = FALSE)
                 if (all(is.na(match(pids, processID(children()))))) break
         }
     }
+    cleanup(kill = FALSE, detach = FALSE) # compact children
     res
 }

@@ -1,7 +1,7 @@
 #  File src/library/parallel/R/unix/forkCluster.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2014 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ newForkNode <- function(..., options = defaultClusterOptions, rank)
     timeout <- getClusterOption("timeout", options)
     renice <- getClusterOption("renice", options)
 
-    f <- mcfork()
+    f <- mcfork(TRUE)
     if (inherits(f, "masterProcess")) { # the slave
         on.exit(mcexit(1L, structure("fatal error in wrapper code",
                                   class = "try-error")))

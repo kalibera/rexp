@@ -23,6 +23,7 @@
    
    Derived from multicore version 0.1-8 by Simon Urbanek
 */
+//#define MC_DEBUG
 
 #ifdef HAVE_CONFIG_H
 # include <config.h> /* for affinity function checks and sigaction */
@@ -41,6 +42,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
 
 #include <Rinterface.h> /* for R_Interactive */
 #include <R_ext/eventloop.h> /* for R_SelectEx */
@@ -67,12 +69,13 @@ void Dprintf(char *format, ...) {
 #endif
 
 /* A child is created in mc_fork as detached (sEstranged=TRUE, has sifd
-   and pfd set to -1) or attached (sifd and pfd connected to pipes).
+   and pfd set to -1) or attached (sifd and pfd connected to pipes). The list
+   of children also includes cleanup marks.
 
    A detached child is not visible to R user code (children(), mccollect(),
    readChild(), selectChildren(), rmChild(), etc). Upon receiving sigchld,
    a detached child is waited-for from the signal handler and waitedfor is
-   set. The child is eventually removed from the list by cleanup_children.
+   set. The child is eventually removed from the list by compact_children.
    User R code must never do anything with a detached child to avoid race
    conditions/unpredictable behavior due to PID reuse. A detached child
    can never become attached.
@@ -92,6 +95,13 @@ void Dprintf(char *format, ...) {
    acted upon), its file descriptors will be closed, and hence selectChildren
    in select will be notified of EOF on pfd and eventually readChild will
    detach the child.
+
+   A cleanup mark is a child entry that is detached, waited-for, and has a
+   pid of -1. Hence, it is easy to skip in most code accessing the list.
+   The mark is created by mc_prepare_cleanup. mc_cleanup removes all children
+   up to and including the cleanup mark (terminates and detaches the children
+   and optionally also sends them kill signals and actively waits for them
+   to terminate).
 */
 typedef struct child_info {
     pid_t pid; /* child's pid */
@@ -118,7 +128,7 @@ static void wait_for_child_ci(child_info_t *ci) {
 	ci->waitedfor = 1;
 #ifdef MC_DEBUG
 	if (WIFEXITED(wstat))
-	    Dprintf("child %d terminated with %d\n", ci->pid,
+	    Dprintf("child %d terminated with exit status %d\n", ci->pid,
 	            WEXITSTATUS(wstat));
 	else
 	    Dprintf("child %d terminated by signal %d\n", ci->pid,
@@ -127,28 +137,68 @@ static void wait_for_child_ci(child_info_t *ci) {
     }
 }
 
-/* must only be called on attached child */
-static void terminate_and_detach_child_ci(child_info_t *ci)
+static void block_sigchld(sigset_t *oldset)
 {
-    /* need to atomically check sigchld and set detached */
     sigset_t ss;
     sigaddset(&ss, SIGCHLD);
     sigemptyset(&ss);
-    sigprocmask(SIG_BLOCK, &ss, NULL);
+    sigprocmask(SIG_BLOCK, &ss, oldset);
+}
+
+static void restore_sigchld(sigset_t *oldset)
+{
+    sigprocmask(SIG_SETMASK, oldset, NULL);
+}
+
+/* must only be called on attached child */
+static void kill_and_detach_child_ci(child_info_t *ci, int sig)
+{
+    /* need to atomically wait and set detached */
+    sigset_t ss;
+    block_sigchld(&ss);
 
     if (ci->pfd > 0) { close(ci->pfd); ci->pfd = -1; }
     if (ci->sifd > 0) { close(ci->sifd); ci->sifd = -1; }
-    /* send USR1 to the child to make sure it exits */
-    kill(ci->pid, SIGUSR1);
+
+    if (kill(ci->pid, sig) == -1)
+	warning(_("unable to terminate child process: %s"), strerror(errno));
 
     ci->detached = 1;
     /* check if the child has exited already, as sigchld may already have
        been received */
     wait_for_child_ci(ci);
 #ifdef MC_DEBUG
-    Dprintf("detached child %d\n", pid);
+    Dprintf("detached child %d (signal %d)\n", ci->pid, sig);
 #endif
-    sigprocmask(SIG_UNBLOCK, &ss, NULL);
+    restore_sigchld(&ss);
+}
+
+/* must only be called on attached child */
+static void terminate_and_detach_child_ci(child_info_t *ci)
+{
+    kill_and_detach_child_ci(ci, SIGUSR1);
+}
+
+/* must only be called on a detached child */
+static void kill_detached_child_ci(child_info_t *ci, int sig)
+{
+    /* need to atomically check waitedfor and kill */
+    sigset_t ss;
+    block_sigchld(&ss);
+
+    if (!ci->waitedfor) {
+        if (kill(ci->pid, sig) == -1) {
+	    warning(_("unable to terminate child: %s"), strerror(errno));
+#ifdef MC_DEBUG
+	    Dprintf("failed to kill detached child %d (signal %d)\n", ci->pid, sig);
+#endif
+	}
+#ifdef MC_DEBUG
+	else
+	    Dprintf("killed detached child %d (signal %d)\n", ci->pid, sig);
+#endif
+    }
+    restore_sigchld(&ss);
 }
 
 /* detach and terminate a child */
@@ -173,20 +223,19 @@ static int rm_child(int pid)
 }
 
 /* delete entries for waited-for children */
-static void cleanup_children() {
+static void compact_children() {
     child_info_t *ci = children, *prev = NULL;
 
     /* prevent interference with signal handler accessing the list */
     sigset_t ss;
-    sigaddset(&ss, SIGCHLD);
-    sigemptyset(&ss);
-    sigprocmask(SIG_BLOCK, &ss, NULL);
+    block_sigchld(&ss);
 
     while(ci) {
-	if (ci->waitedfor) {
+	if (ci->waitedfor && ci->pid >= 0) {
+	    /* ci->pid >= to skip cleanup mark */
 	    /* fds have been closed when detaching */
 #ifdef MC_DEBUG
-    Dprintf("removing child %d from the list\n", ci->pid);
+    Dprintf("removing waited-for child %d from the list\n", ci->pid);
 #endif
 	    child_info_t *next = ci->next;
 	    if (prev) prev->next = next;
@@ -199,7 +248,139 @@ static void cleanup_children() {
 	}
     }
 
-    sigprocmask(SIG_UNBLOCK, &ss, NULL);
+    restore_sigchld(&ss);
+}
+
+/* insert a cleanup mark into children */
+SEXP mc_prepare_cleanup()
+{
+    child_info_t *ci;
+
+    compact_children();
+    ci = (child_info_t*) malloc(sizeof(child_info_t));
+    if (!ci) error(_("memory allocation error"));
+    ci->waitedfor = 1;
+    ci->detached = 1;
+    ci->pid = -1; /* a cleanup mark */
+    ci->next = children;
+    children = ci;
+
+    return R_NilValue;
+}
+
+/* Terminate and detach all children up to the first cleanup mark. Compact
+   children.
+
+   sKill - like mc.cleanup from mclapply;
+             TRUE - send SIGTERM to all children,
+             FALSE - do not kill children (but detach until sDetach = FALSE)
+             num>0 - send signal of this number
+
+   sDetach - TRUE - detach children (with a signal specified via sKill, or
+             with SIGUSR1 when sKill = FALSE)
+
+   sShutdown - shut down parallel (when unloading the package or exiting R)
+             TRUE - act on all children, not just up to the first mark,
+                    wait until they all terminate, deregister signal handler
+             FALSE - none of the above
+
+   Typical use:
+     sKill = TRUE, sDetach = TRUE, sShutdown = FALSE
+       (mclapply, pvec)
+     sKill = FALSE, sDetach = FALSE, sShutdown = FALSE
+       (mccollect - only compact children)
+     sKill = tools:SIGKILL, sDetach = TRUE, sShutdown = TRUE
+       (clean_pids - finalizer on a private object in the package namespace)
+*/
+static void restore_sig_handler();
+
+SEXP mc_cleanup(SEXP sKill, SEXP sDetach, SEXP sShutdown)
+{
+    int sig = -1; /* signal from sKilli/mc.cleanup */
+    if (isLogical(sKill)) {
+	int lkill = asLogical(sKill);
+	if (lkill == TRUE) sig = SIGTERM;
+	else if (lkill == FALSE) sig = 0;
+    } else {
+	int ikill = asInteger(sKill);
+	if (ikill >=1 && ikill != NA_INTEGER)
+	    sig = ikill;
+    }
+    if (sig == -1)
+	error(_("invalid '%s' argument"), "mc.cleanup");
+
+    int detach = asLogical(sDetach);
+    if (detach == NA_LOGICAL)
+	error(_("invalid '%s' argument"), "detach");
+
+    int shutdown = asLogical(sShutdown);
+    if (shutdown == NA_LOGICAL)
+	error(_("invalid '%s' argument"), "shutdown");
+
+    compact_children();
+
+    child_info_t *ci = children;
+    int nattached = 0;
+    while(ci) {
+	if (ci->detached && ci->waitedfor && ci->pid == -1) {
+	    /* cleanup mark */
+	    /* set pid to a nonzero number so that the child will be removed
+	       from the list by compact_children; as it is waitedfor, it will
+	       not be sent any signal */
+	    ci->pid = INT_MAX;
+	    if (!shutdown) break;
+	}
+	if (ci->detached && sig)
+	    /* only kills if not waited for */
+	    kill_detached_child_ci(ci, sig);
+	if (!ci->detached && detach) {
+	    /* With sKill ==  FALSE (mclapply mc.cleanup=FALSE), send
+	       SIGUSR1 to just detach the child. Detaching also closes the file
+	       descriptors which contributes to termination probably even more,
+	       as it is not likely that the child will be finished just waiting
+	       for SIGUSR1. */
+	    kill_and_detach_child_ci(ci, sig ? sig : SIGUSR1);
+	    nattached++;
+	}
+	ci = ci->next;
+    }
+
+    /* now all children in the range are detached */
+    if (nattached > 0) {
+#ifdef MC_DEBUG
+	Dprintf("  %d children detached during cleanup\n", nattached);
+#endif
+	sleep(1); /* wait a tiny bit for at least the first child */
+    }
+    compact_children(); /* also removes the cleanup mark(s) */
+
+    if (shutdown) {
+	double before = currentTime();
+	while(children) {
+	    sleep(1); /* can be interrupted by SIGCHLD */
+	    compact_children();
+	    if (!children)
+		break;
+#ifdef MC_DEBUG
+	    ci = children;
+	    while(ci) {
+		Dprintf(" still existing child: %d (waitedfor=%d detached=%d)\n",
+		        ci->pid, ci->waitedfor, ci->detached);
+		ci = ci->next;
+	    }
+#endif
+	    double now = currentTime();
+	    if (now - before > 10) { /* give up after 10 seconds */
+		REprintf(_("Error while shutting down parallel: unable to terminate some child processes\n"));
+		return R_NilValue;
+	    }
+	}
+	restore_sig_handler();
+#ifdef MC_DEBUG
+	Dprintf("parallel shutdown ok\n");
+#endif
+    }
+    return R_NilValue;
 }
 
 #ifndef STDIN_FILENO
@@ -211,6 +392,9 @@ static void cleanup_children() {
 #ifndef STDERR_FILENO
 #define STDERR_FILENO 2
 #endif
+
+/* FIXME: child_exit_status is always -1 */
+/* FIXME: do we still need SIGUSR1 to signal children they can exit? */
 
 static int child_can_exit = 0, child_exit_status = -1;
 
@@ -254,6 +438,14 @@ static void setup_sig_handler()
 	sa.sa_handler = parent_sig_handler;
 	sa.sa_flags = SA_RESTART;
 	sigaction(SIGCHLD, &sa, &old_sig_handler);
+    }
+}
+
+static void restore_sig_handler()
+{
+    if (parent_handler_set) {
+	parent_handler_set = 0;
+	sigaction(SIGCHLD, &old_sig_handler, NULL);
     }
 }
 
@@ -322,7 +514,6 @@ SEXP mc_fork(SEXP sEstranged)
 
 	ci = (child_info_t*) malloc(sizeof(child_info_t));
 	if (!ci) error(_("memory allocation error"));
-	cleanup_children();
 	ci->pid = pid;
 	ci->waitedfor = 0;
 
@@ -390,6 +581,56 @@ SEXP mc_close_fds(SEXP sFDS)
     return ScalarLogical(1);
 }
 
+/* Read from descriptor with restart on signal interrupt. While we register
+   SIGCHLD with SA_RESTART, some other package might register a signal
+   without it. */
+static ssize_t readrep(int fildes, void *buf, size_t nbyte)
+{
+    size_t rbyte = 0;
+    char *ptr = (char *)buf;
+    for(;;) {
+	ssize_t r = read(fildes, ptr + rbyte, nbyte - rbyte);
+	if (r == -1) {
+	    if (errno == EINTR)
+		continue;
+	    else
+		return -1;
+	}
+	if (r == 0) /* EOF */
+	    return rbyte;
+	rbyte += r;
+	if (rbyte == nbyte)
+	    return rbyte;
+    }
+}
+
+/* Write to descriptor with restart on signal interrupt. While we register
+   SIGCHLD with SA_RESTART, some other package might register a signal
+   without it. */
+static ssize_t writerep(int fildes, const void *buf, size_t nbyte)
+{
+    size_t wbyte = 0;
+    const char *ptr = (const char *)buf;
+    for(;;) {
+	ssize_t w = write(fildes, ptr + wbyte, nbyte - wbyte);
+	if (w == -1) {
+	    if (errno == EINTR)
+		continue;
+	    else
+		return -1;
+	}
+	if (w == 0) {
+	    /* possibly sending EOF on some systems via nbyte == 0,
+	       or an old indication that non-blocking read of not
+	       even a single more byte is possible */
+	    return wbyte;
+	}
+	wbyte += w;
+	if (wbyte == nbyte)
+	    return wbyte;
+    }
+}
+
 /* This format is read by read_child_ci (only).
    Prior to R 3.4.0 len was unsigned int and the format did not
    allow long vectors.
@@ -405,16 +646,16 @@ SEXP mc_send_master(SEXP what)
     R_xlen_t len = XLENGTH(what);
     unsigned char *b = RAW(what);
 #ifdef MC_DEBUG
-    Dprintf("child %d: send_master (%d bytes)\n", getpid(), len);
+    Dprintf("child %d: send_master (%lld bytes)\n", getpid(), (long long)len);
 #endif
-    if (write(master_fd, &len, sizeof(len)) != sizeof(len)) {
+    if (writerep(master_fd, &len, sizeof(len)) != sizeof(len)) {
 	close(master_fd);
 	master_fd = -1;
 	error(_("write error, closing pipe to the master"));
     }
     ssize_t n;
     for (R_xlen_t i = 0; i < len; i += n) {
-	n = write(master_fd, b + i, len - i);
+	n = writerep(master_fd, b + i, len - i);
 	if (n < 1) {
 	    close(master_fd);
 	    master_fd = -1;
@@ -440,11 +681,19 @@ SEXP mc_send_child_stdin(SEXP sPid, SEXP what)
     unsigned char *b = RAW(what);
     unsigned int fd = ci -> sifd;
     for (R_xlen_t i = 0; i < len;) {
-	ssize_t n = write(fd, b + i, len - i);
+	ssize_t n = writerep(fd, b + i, len - i);
 	if (n < 1) error(_("write error"));
 	i += n;
     }
     return ScalarLogical(1);
+}
+
+/* some systems have FD_COPY */
+void fdcopy(fd_set *dst, fd_set *src, int nfds)
+{
+    FD_ZERO(dst);
+    for(int i = 0; i < nfds; i++)
+	if (FD_ISSET(i, src)) FD_SET(i, dst);
 }
 
 SEXP mc_select_children(SEXP sTimeout, SEXP sWhich) 
@@ -470,23 +719,35 @@ SEXP mc_select_children(SEXP sTimeout, SEXP sWhich)
 	    /* attached children have ci->pfd > 0 */
 	    if (which) { /* check for the FD only if it's on the list */
 		unsigned int k = 0;
+		int found = 0;
 		while (k < wlen) 
 		    if (which[k++] == ci->pid) { 
 			FD_SET(ci->pfd, &fs);
 			if (ci->pfd > maxfd) maxfd = ci->pfd;
+#ifdef MC_DEBUG
+			Dprintf("select_children: added child %d (%d)\n", ci->pid, ci->pfd);
+#endif
 			wcount++;
+			found = 1;
 			break; 
 		    }
+		if (!found)
+		    /* FIXME: probably should be an error */
+		    warning(_("cannot wait for child %d as it does not exist"), ci->pid);
 	    } else {
+		/* not sure if this should be allowed */
 		FD_SET(ci->pfd, &fs);
 		if (ci->pfd > maxfd) maxfd = ci->pfd;
+#ifdef MC_DEBUG
+		Dprintf("select_children: added child %d (%d)\n", ci->pid, ci->pfd);
+#endif
 	    }
 	}
 	ci = ci->next;
     }
 
 #ifdef MC_DEBUG
-    Dprintf("select_children: maxfd=%d, wlen=%d, wcount=%d, timeout=%d:%d\n", maxfd, wlen, wcount, (int)tv.tv_sec, (int)tv.tv_usec);
+    Dprintf("select_children: maxfd=%d, wlen=%d, wcount=%d, timeout=%f\n", maxfd, wlen, wcount, timeout);
 #endif
 
     if (maxfd == -1)
@@ -502,6 +763,8 @@ SEXP mc_select_children(SEXP sTimeout, SEXP sWhich)
 	double before = currentTime();
 	double remains = timeout;
 	struct timeval tv;
+	fd_set savefs;
+	fdcopy(&savefs, &fs, maxfd + 1);
 
 	for(;;) {
 	    R_ProcessEvents();
@@ -527,6 +790,7 @@ SEXP mc_select_children(SEXP sTimeout, SEXP sWhich)
 		    /* sr == 0 (timed out) or sr<0 && errno==EINTR */
 		    break;
 	    }
+	    fdcopy(&fs, &savefs, maxfd + 1);
 	}
     }
 #ifdef MC_DEBUG
@@ -570,9 +834,9 @@ static SEXP read_child_ci(child_info_t *ci)
     R_xlen_t len;
     int fd = ci->pfd;
     int pid = ci->pid;
-    ssize_t n = read(fd, &len, sizeof(len));
+    ssize_t n = readrep(fd, &len, sizeof(len));
 #ifdef MC_DEBUG
-    Dprintf(" read_child_ci(%d) - read length returned %d\n", pid, n);
+    Dprintf("read_child_ci(%d) - read length returned %lld\n", pid, (long long)n);
 #endif
     if (n != sizeof(len) || len == 0) {
 	/* child is exiting (len==0), or error */
@@ -583,9 +847,10 @@ static SEXP read_child_ci(child_info_t *ci)
 	unsigned char *rvb = RAW(rv);
 	R_xlen_t i = 0;
 	while (i < len) {
-	    n = read(fd, rvb + i, len - i);
+	    n = readrep(fd, rvb + i, len - i);
 #ifdef MC_DEBUG
-	    Dprintf(" read_child_ci(%d) - read %d at %d returned %d\n", ci->pid, len-i, i, n);
+	    Dprintf("read_child_ci(%d) - read %lld at %lld returned %lld\n",
+	            ci->pid, (long long)len-i, (long long)i, (long long)n);
 #endif
 	    if (n < 1) { /* error */
 		terminate_and_detach_child_ci(ci);
@@ -681,7 +946,6 @@ SEXP mc_rm_child(SEXP sPid)
 
 SEXP mc_children() 
 {
-    cleanup_children();
     child_info_t *ci = children;
     unsigned int count = 0;
     while (ci) {
@@ -756,7 +1020,7 @@ SEXP NORET mc_exit(SEXP sRes)
     if (master_fd != -1) { /* send 0 to signify that we're leaving */
 	size_t len = 0;
 	/* assign result for Fedora security settings */
-	ssize_t n = write(master_fd, &len, sizeof(len));
+	ssize_t n = writerep(master_fd, &len, sizeof(len));
 	/* make sure the pipe is closed before we enter any waiting */
 	close(master_fd);
 	master_fd = -1;
@@ -767,6 +1031,7 @@ SEXP NORET mc_exit(SEXP sRes)
 	Dprintf("child %d is waiting for permission to exit\n", getpid());
 #endif
 	while (!child_can_exit) sleep(1);
+	    /* SIGUSR1 will terminate the sleep */
     }
 		
 #ifdef MC_DEBUG
