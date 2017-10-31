@@ -78,6 +78,16 @@ mccollect(jobs, wait = TRUE, timeout = 0, intermediate = FALSE)
   terminating job that has sent its results already after which the
   job is no longer available.
 
+  Jobs are identified by process IDs (even when referred to as job objects),
+  which are reused by the operating system.  Detached jobs created by
+  \code{mcparallel} can thus never be safely referred to by their PIDs nor
+  process IDs.  Non-detached jobs are guaranteed to exist until collected by
+  \code{mccollect} (and even if crashed or terminated by a signal).  With
+  \code{wait = TRUE}, all jobs passed to \code{mccollect} are collected.
+  With \code{wait = FALSE}, the collected jobs are given as names of the
+  result vector, and thus e.g.  in a subsequent call to \code{mccollect}
+  these jobs must be excluded.
+
   The \code{mc.affinity} parameter can be used to try to restrict
   the child process to specific CPUs. The availability and the extent of
   this feature is system-dependent (e.g., some systems will only
