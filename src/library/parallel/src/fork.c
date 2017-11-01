@@ -102,12 +102,21 @@ void Dprintf(char *format, ...) {
    up to and including the cleanup mark (terminates and detaches the children
    and optionally also sends them kill signals and actively waits for them
    to terminate).
+
+   When R is forked by mc_fork, the children list is cleaned in the child,
+   freeing the entries and closing the file descriptors, so that the entries
+   belonging to the parent to end up in the child. However, R could also be
+   forked by some other function outside of parallel. To be robust against
+   that, parallel always checks whether the child still belongs to it. We
+   could use getppid for that, but it would not work for cleanup marks, hence
+   there is also ppid field in child entries.
 */
 typedef struct child_info {
     pid_t pid; /* child's pid */
     int pfd, sifd;  /* master's ends of pipes */
     int detached;   /* run with mcfork(estranged=TRUE) or manually removed */
     int waitedfor;  /* the child has been reaped */
+    pid_t ppid; /* parent's pid when the child/mark is created */
     struct child_info *next;
 } child_info_t;
 
@@ -208,9 +217,10 @@ static int rm_child(int pid)
 #ifdef MC_DEBUG
     Dprintf("removing child %d\n", pid);
 #endif
+    pid_t ppid = getpid();
     while (ci) {
 	/* detached children are not visible to R code */
-	if (!ci->detached && ci->pid == pid) {
+	if (!ci->detached && ci->pid == pid && ci->ppid == ppid) {
 	    terminate_and_detach_child_ci(ci);
 	    return 1;
 	}
@@ -222,20 +232,29 @@ static int rm_child(int pid)
     return 0;
 }
 
-/* delete entries for waited-for children */
+/* delete entries for waited-for children and children that are not of this process */
 static void compact_children() {
     child_info_t *ci = children, *prev = NULL;
+    pid_t ppid = getpid();
 
     /* prevent interference with signal handler accessing the list */
     sigset_t ss;
     block_sigchld(&ss);
 
     while(ci) {
-	if (ci->waitedfor && ci->pid >= 0) {
+	if ((ci->waitedfor && ci->pid >= 0) || ci->ppid != ppid) {
 	    /* ci->pid >= to skip cleanup mark */
-	    /* fds have been closed when detaching */
+	    /* fds of waited-for children have been closed when detaching */
+	    if (ci->ppid != ppid) {
+		if (ci->pfd > 0) close(ci->pfd);
+		if (ci->sifd > 0) close(ci->sifd);
 #ifdef MC_DEBUG
-    Dprintf("removing waited-for child %d from the list\n", ci->pid);
+		Dprintf("removing child %d from the listi as it is not ours\n", ci->pid);
+#endif
+	    }
+#ifdef MC_DEBUG
+	    else
+		Dprintf("removing waited-for child %d from the list\n", ci->pid);
 #endif
 	    child_info_t *next = ci->next;
 	    if (prev) prev->next = next;
@@ -262,6 +281,7 @@ SEXP mc_prepare_cleanup()
     ci->waitedfor = 1;
     ci->detached = 1;
     ci->pid = -1; /* a cleanup mark */
+    ci->ppid = getpid();
     ci->next = children;
     children = ci;
 
@@ -317,7 +337,7 @@ SEXP mc_cleanup(SEXP sKill, SEXP sDetach, SEXP sShutdown)
     if (shutdown == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "shutdown");
 
-    compact_children();
+    compact_children(); /* also removes children that are not ours */
 
     child_info_t *ci = children;
     int nattached = 0;
@@ -377,7 +397,7 @@ SEXP mc_cleanup(SEXP sKill, SEXP sDetach, SEXP sShutdown)
 	}
 	restore_sig_handler();
 #ifdef MC_DEBUG
-	Dprintf("parallel shutdown ok\n");
+	Dprintf("process %d parallel shutdown ok\n", getpid());
 #endif
     }
     return R_NilValue;
@@ -472,7 +492,11 @@ SEXP mc_fork(SEXP sEstranged)
 
     /* make sure we get SIGCHLD to clean up the child process */
     setup_sig_handler();
-
+    sigset_t ss;
+    /* Block sigchld to make sure the child does not exist before registered
+       in children list. Also make sure that the parent signal handler is not
+       used in the child. */
+    block_sigchld(&ss);
     fflush(stdout); // or children may output pending text
     pid = fork();
     if (pid == -1) {
@@ -485,8 +509,17 @@ SEXP mc_fork(SEXP sEstranged)
     res_i[0] = (int) pid;
     if (pid == 0) { /* child */
 	R_isForkedChild = 1;
-	/* don't track any children of the child by default */
-	signal(SIGCHLD, SIG_DFL);
+	/* free children entries inherited from parent */
+	while(children) {
+	    if (children->pfd > 0) close(children->pfd);
+	    if (children->sifd > 0) close(children->sifd);
+	    child_info_t *ci = children->next;
+	    free(children);
+	    children = ci;
+	}
+	restore_sigchld(&ss);
+	restore_sig_handler(); /* enable the previous signal handler */
+
 	if (estranged)
 	    res_i[1] = res_i[2] = NA_INTEGER;
 	else {
@@ -515,6 +548,7 @@ SEXP mc_fork(SEXP sEstranged)
 	ci = (child_info_t*) malloc(sizeof(child_info_t));
 	if (!ci) error(_("memory allocation error"));
 	ci->pid = pid;
+	ci->ppid = getpid();
 	ci->waitedfor = 0;
 
 	if (estranged) {
@@ -539,6 +573,7 @@ SEXP mc_fork(SEXP sEstranged)
     #endif
 	ci->next = children;
 	children = ci;
+	restore_sigchld(&ss);
     }
     return res; /* (pid, fd of data pipe, fd of child-stdin pipe) */
 }
@@ -672,8 +707,9 @@ SEXP mc_send_child_stdin(SEXP sPid, SEXP what)
 	error(_("only the master process can send data to a child process"));
     if (TYPEOF(what) != RAWSXP) error("what must be a raw vector");
     child_info_t *ci = children;
+    pid_t ppid = getpid();
     while (ci) {
-	if (!ci->detached && ci->pid == pid) break;
+	if (!ci->detached && ci->pid == pid && ci->ppid == ppid) break;
 	ci = ci->next;
     }
     if (!ci || ci->sifd < 0) error(_("child %d does not exist"), pid);
@@ -705,6 +741,8 @@ SEXP mc_select_children(SEXP sTimeout, SEXP sWhich)
     child_info_t *ci = children;
     fd_set fs;
     double timeout = 0;
+    pid_t ppid = getpid();
+
     if (isReal(sTimeout) && LENGTH(sTimeout) == 1)
 	timeout = asReal(sTimeout);
 
@@ -715,7 +753,7 @@ SEXP mc_select_children(SEXP sTimeout, SEXP sWhich)
 
     FD_ZERO(&fs);
     while (ci) {
-	if (!ci->detached) {
+	if (!ci->detached && ci->ppid == ppid) {
 	    /* attached children have ci->pfd > 0 */
 	    if (which) { /* check for the FD only if it's on the list */
 		unsigned int k = 0;
@@ -811,7 +849,7 @@ SEXP mc_select_children(SEXP sTimeout, SEXP sWhich)
     res = allocVector(INTSXP, sr);
     res_i = INTEGER(res);
     while (ci) { /* fill the array */
-	if (!ci->detached && FD_ISSET(ci->pfd, &fs)) {
+	if (!ci->detached && ci->ppid == ppid && FD_ISSET(ci->pfd, &fs)) {
 	    (res_i++)[0] = ci->pid;
 #ifdef MC_DEBUG
 	    Dprintf("%d ", ci->pid);
@@ -874,8 +912,9 @@ SEXP mc_read_child(SEXP sPid)
 {
     int pid = asInteger(sPid);
     child_info_t *ci = children;
+    pid_t ppid = getpid();
     while (ci) {
-	if (!ci->detached && ci->pid == pid) break;
+	if (!ci->detached && ci->pid == pid && ci->ppid == ppid) break;
 	ci = ci->next;
     }
 #ifdef MC_DEBUG
@@ -948,8 +987,9 @@ SEXP mc_children()
 {
     child_info_t *ci = children;
     unsigned int count = 0;
+    pid_t ppid = getpid();
     while (ci) {
-	if (!ci->detached) count++;
+	if (!ci->detached && ci->ppid == ppid) count++;
 	ci = ci->next;
     }
     SEXP res = allocVector(INTSXP, count);
@@ -958,7 +998,7 @@ SEXP mc_children()
 	int *pids = INTEGER(res);
 	ci = children;
 	while (ci) {
-	    if (!ci->detached) (pids++)[0] = ci->pid;
+	    if (!ci->detached && ci->ppid == ppid) (pids++)[0] = ci->pid;
 	    ci = ci->next;
 	}
     }

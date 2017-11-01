@@ -55,8 +55,6 @@ newForkNode <- function(..., options = defaultClusterOptions, rank)
                        Sys.getpid(), paste(master, port, sep = ":"),
                        format(Sys.time(), "%H:%M:%OS3"))
         cat(msg)
-        ## allow this to quit when the loop is done.
-        tools::pskill(Sys.getpid(), tools::SIGUSR1)
         if(!is.na(renice) && renice) ## ignore 0
             tools::psnice(Sys.getpid(), renice)
         slaveLoop(makeSOCKmaster(master, port, timeout))
