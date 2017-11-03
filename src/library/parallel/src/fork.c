@@ -149,8 +149,8 @@ static void wait_for_child_ci(child_info_t *ci) {
 static void block_sigchld(sigset_t *oldset)
 {
     sigset_t ss;
-    sigaddset(&ss, SIGCHLD);
     sigemptyset(&ss);
+    sigaddset(&ss, SIGCHLD);
     sigprocmask(SIG_BLOCK, &ss, oldset);
 }
 
