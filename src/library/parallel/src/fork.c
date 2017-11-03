@@ -159,6 +159,13 @@ static void restore_sigchld(sigset_t *oldset)
     sigprocmask(SIG_SETMASK, oldset, NULL);
 }
 
+/* must not be called from a signal handler */
+static void close_fds_child_ci(child_info_t *ci)
+{
+    if (ci->pfd > 0) { close(ci->pfd); ci->pfd = -1; }
+    if (ci->sifd > 0) { close(ci->sifd); ci->sifd = -1; }
+}
+
 /* must only be called on attached child */
 static void kill_and_detach_child_ci(child_info_t *ci, int sig)
 {
@@ -166,8 +173,7 @@ static void kill_and_detach_child_ci(child_info_t *ci, int sig)
     sigset_t ss;
     block_sigchld(&ss);
 
-    if (ci->pfd > 0) { close(ci->pfd); ci->pfd = -1; }
-    if (ci->sifd > 0) { close(ci->sifd); ci->sifd = -1; }
+    close_fds_child_ci(ci);
 
     if (kill(ci->pid, sig) == -1)
 	warning(_("unable to terminate child process: %s"), strerror(errno));
@@ -246,8 +252,7 @@ static void compact_children() {
 	    /* ci->pid >= to skip cleanup mark */
 	    /* fds of waited-for children have been closed when detaching */
 	    if (ci->ppid != ppid) {
-		if (ci->pfd > 0) close(ci->pfd);
-		if (ci->sifd > 0) close(ci->sifd);
+		close_fds_child_ci(ci);
 #ifdef MC_DEBUG
 		Dprintf("removing child %d from the listi as it is not ours\n", ci->pid);
 #endif
@@ -511,8 +516,7 @@ SEXP mc_fork(SEXP sEstranged)
 	R_isForkedChild = 1;
 	/* free children entries inherited from parent */
 	while(children) {
-	    if (children->pfd > 0) close(children->pfd);
-	    if (children->sifd > 0) close(children->sifd);
+	    close_fds_child_ci(children);
 	    child_info_t *ci = children->next;
 	    free(children);
 	    children = ci;
@@ -944,9 +948,12 @@ SEXP mc_read_children(SEXP sTimeout)
 	while (waitpid(-1, &wstat, WNOHANG) > 0) ; /* check for zombies */
     }
     FD_ZERO(&fs);
-    while (ci && ci->pid) {
-	if (ci->pfd > maxfd) maxfd = ci->pfd;
-	if (ci->pfd > 0) FD_SET(ci->pfd, &fs);
+    pid_t ppid = getpid();
+    while (ci) {
+	if (!ci->detached && ci->ppid == ppid) {
+	    if (ci->pfd > maxfd) maxfd = ci->pfd;
+	    if (ci->pfd > 0) FD_SET(ci->pfd, &fs);
+	}
 	ci = ci -> next;
     }
 #ifdef MC_DEBUG
@@ -963,8 +970,10 @@ SEXP mc_read_children(SEXP sTimeout)
     }
     if (sr < 1) return ScalarLogical(1); /* TRUE on timeout */
     ci = children;
-    while (ci && ci->pid) {
-	if (ci->pfd > 0 && FD_ISSET(ci->pfd, &fs)) break;
+    while (ci) {
+	if (!ci->detached && ci->ppid == ppid) {
+	    if (ci->pfd > 0 && FD_ISSET(ci->pfd, &fs)) break;
+	}
 	ci = ci -> next;
     }
 #ifdef MC_DEBUG
@@ -1012,8 +1021,9 @@ SEXP mc_fds(SEXP sFdi)
     unsigned int count = 0;
     SEXP res;
     child_info_t *ci = children;
+    pid_t ppid = getpid();
     while (ci) {
-	if (!ci->detached) count++;
+	if (!ci->detached && ci->ppid == ppid) count++;
 	ci = ci->next;
     }
     res = allocVector(INTSXP, count);
@@ -1021,7 +1031,7 @@ SEXP mc_fds(SEXP sFdi)
 	int *fds = INTEGER(res);
 	ci = children;
 	while (ci) {
-	    if (!ci->detached)
+	    if (!ci->detached && ci->ppid == ppid)
 		(fds++)[0] = (fdi == 0) ? ci->pfd : ci->sifd;
 	    ci = ci->next;
 	}
