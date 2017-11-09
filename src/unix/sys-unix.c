@@ -364,7 +364,7 @@ static void timeout_handler(int sig)
 {
     if (sig == SIGCHLD)
 	return; /* needed for sigsuspend() to be interrupted */
-    if (sig == SIGALRM) {
+    if (tost.child_pid > 0 && sig == SIGALRM) {
 	tost.timedout = 1;
 	if (tost.kill_attempts < 3) {
 	    sig = kill_signals[tost.kill_attempts];
@@ -383,10 +383,16 @@ static void timeout_handler(int sig)
 	kill(tost.child_pid, sig);
 	/* NOTE: don't signal the group and  don't send SIGCONT
 	         for interactive jobs */
+	int saveerrno = errno;
+	/* on macOS, killpg fails with EPERM for groups with zombies */
 	killpg(tost.child_pid, sig);
+	errno = saveerrno;
 	if (sig != SIGKILL && sig != SIGCONT) {
 	    kill(tost.child_pid, SIGCONT);
+	    saveerrno = errno;
+	    /* on macOS, killpg fails with EPERM for groups with zombies */
 	    killpg(tost.child_pid, SIGCONT);
+	    errno = saveerrno;
 	}
     } else if (tost.child_pid == 0) {
 	/* child */
@@ -427,6 +433,19 @@ static void timeout_cend(void *data)
 	timeout_wait(NULL);
     }
     timeout_cleanup();
+}
+
+/* Fork with blocked SIGCHLD to make sure that tost.child_pid is set
+   in the parent before the signal is received. Also makes sure
+   SIGCHLD is unblocked in the parent after the call. */
+static void timeout_fork()
+{
+    sigset_t css; 
+    sigemptyset(&css);
+    sigaddset(&css, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &css, NULL);
+    tost.child_pid = fork();
+    sigprocmask(SIG_UNBLOCK, &css, NULL);
 }
 
 /* R_popen_timeout, R_pclose_timeout - a partial implementation of popen/close
@@ -475,7 +494,7 @@ static FILE *R_popen_timeout(const char *cmd, const char *type, int timeout)
 
     signal(SIGTTIN, SIG_IGN);
     signal(SIGTTOU, SIG_IGN);
-    tost.child_pid = fork();
+    timeout_fork();
 
     if (tost.child_pid == 0) {
 	/* child */
@@ -556,7 +575,7 @@ static int R_system_timeout(const char *cmd, int timeout)
     timeout_init();
     signal(SIGTTIN, SIG_IGN);
     signal(SIGTTOU, SIG_IGN);
-    tost.child_pid = fork();
+    timeout_fork();
 
     if (tost.child_pid == 0) {
 	/* child */
@@ -616,14 +635,10 @@ static void warn_status(const char *cmd, int res)
 	/* on Solaris, if the command ends with non-zero status and timeout
 	   is 0, "Illegal seek" error is reported; the timeout version
 	   works this around by using close(fileno) */
-	warningcall(R_NilValue,
-		    _("running command '%s' had status %d and error message '%s'"),
-		    cmd, res,
-		    strerror(errno));
+	warning(_("running command '%s' had status %d and error message '%s'"),
+		cmd, res, strerror(errno));
     else
-	warningcall(R_NilValue,
-		    _("running command '%s' had status %d"),
-		    cmd, res);
+	warning(_("running command '%s' had status %d"), cmd, res);
 }
 
 #define INTERN_BUFSIZE 8096
@@ -708,6 +723,12 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    res = pclose(fp);
 	else 
 	    res = R_pclose_timeout(fp);
+
+	/* On Solaris, pclose sometimes returns -1 and sets errno to ESPIPE
+	   (Illegal seek). In that case, do_system reports 0 exit status and
+	   displays a warning via warn_status. ESPIPE is not mentioned by
+	   POSIX as possible outcome of pclose. */
+
 #ifdef HAVE_SYS_WAIT_H
 	if (WIFEXITED(res)) res = WEXITSTATUS(res);
 	else res = 0;
@@ -724,8 +745,7 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 	if (timeout && tost.timedout) {
 	    res = 124;
-	    warningcall(R_NilValue, _("command '%s' timed out after %ds"),
-	                cmd, timeout);
+	    warning(_("command '%s' timed out after %ds"), cmd, timeout);
 	} else
 	    warn_status(cmd, res);
 
@@ -756,10 +776,11 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    res = R_system(cmd);
 	else 
 	    res = R_system_timeout(cmd, timeout);
+	if (res == 127) 
+	    warning(_("error in running command"));
 	if (timeout && tost.timedout) {
 	    res = 124;
-	    warningcall(R_NilValue, _("command '%s' timed out after %ds"),
-	                cmd, timeout);
+	    warning(_("command '%s' timed out after %ds"), cmd, timeout);
 	} 
 	INTEGER(tlist)[0] = res;
 #ifdef HAVE_AQUA

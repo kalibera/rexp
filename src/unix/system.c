@@ -335,6 +335,8 @@ int Rf_initialize_R(int ac, char **av)
        If run from the shell script, only Tk|tk|X11|x11 are allowed.
      */
     for(i = 0, avv = av; i < ac; i++, avv++) {
+	if (!strcmp(*avv, "--args"))
+	    break;
 	if(!strncmp(*avv, "--gui", 5) || !strncmp(*avv, "-g", 2)) {
 	    if(!strncmp(*avv, "--gui", 5) && strlen(*avv) >= 7)
 		p = &(*avv)[6];
@@ -539,7 +541,8 @@ int R_EditFiles(int nfile, const char **file, const char **title,
 		snprintf(buf, 1024, "\"%s\" \"%s\"", editor, file[0]);
 	    else
 		snprintf(buf, 1024, "%s \"%s\"", editor, file[0]);
-	    R_system(buf);
+	    if (R_system(buf) == 127)
+		warningcall(R_NilValue, _("error in running command"));
 	}
 	return 0;
     }
