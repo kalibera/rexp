@@ -124,12 +124,14 @@
       of its previous imperfect workaround R code).
 
       \code{dput()}, \emph{etc} now print the \code{names()} information
-      only once, using the more readable \code{(tag = value)} syntax.
+      only once, using the more readable \code{(tag = value)} syntax,
+      notably for \code{list()}s, i.e., including data frames.
 
-      These functions gain a new (partly experimental) control option
-      \emph{via} \code{.deparseOpts()}, \code{"niceNames"}, which when
-      set (e.g.\sspace{}as part of \code{"all"}) also use the \code{(tag
-      = value)} syntax for atomic vectors.
+      These functions gain a new control option \code{"niceNames"} (see
+      \code{.deparseOpts()}), which when set (as by default) also uses
+      the \code{(tag = value)} syntax for atomic vectors.  OTOH, without
+      deparse options \code{"showAttributes"} and \code{"niceNames"},
+      names are no longer shown also for lists.
 
       \code{m:n} now also deparses nicely when \eqn{m > n}.
 
@@ -432,6 +434,9 @@
       \item The self starting function \code{attr(SSlogis, "initial")}
       now also works when the y values have exact minimum zero and is
       slightly changed in general, behaving symmetrically in the y range.
+
+      \item The printing of named raw vectors is now formatted nicely as
+      for other such atomic vectors, thanks to Lukas Stadler.
     }
   }
 }
