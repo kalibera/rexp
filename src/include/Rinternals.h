@@ -403,6 +403,12 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define VECTOR_ELT(x,i)	((SEXP *) DATAPTR(x))[i]
 #define STRING_PTR(x)	((SEXP *) DATAPTR(x))
 #define VECTOR_PTR(x)	((SEXP *) DATAPTR(x))
+#define LOGICAL_RO(x)	((const int *) DATAPTR_RO(x))
+#define INTEGER_RO(x)	((const int *) DATAPTR_RO(x))
+#define RAW_RO(x)	((const Rbyte *) DATAPTR_RO(x))
+#define COMPLEX_RO(x)	((const Rcomplex *) DATAPTR_RO(x))
+#define REAL_RO(x)	((const double *) DATAPTR_RO(x))
+#define STRING_PTR_RO(x)((const SEXP *) DATAPTR_RO(x))
 
 /* List Access Macros */
 /* These also work for ... objects */
@@ -584,11 +590,17 @@ int  *(INTEGER)(SEXP x);
 Rbyte *(RAW)(SEXP x);
 double *(REAL)(SEXP x);
 Rcomplex *(COMPLEX)(SEXP x);
+const int  *(LOGICAL_RO)(SEXP x);
+const int  *(INTEGER_RO)(SEXP x);
+const Rbyte *(RAW_RO)(SEXP x);
+const double *(REAL_RO)(SEXP x);
+const Rcomplex *(COMPLEX_RO)(SEXP x);
 //SEXP (STRING_ELT)(SEXP x, R_xlen_t i);
 SEXP (VECTOR_ELT)(SEXP x, R_xlen_t i);
 void SET_STRING_ELT(SEXP x, R_xlen_t i, SEXP v);
 SEXP SET_VECTOR_ELT(SEXP x, R_xlen_t i, SEXP v);
 SEXP *(STRING_PTR)(SEXP x);
+const SEXP *(STRING_PTR_RO)(SEXP x);
 SEXP * NORET (VECTOR_PTR)(SEXP x);
 
 /* ALTREP support */
@@ -603,18 +615,22 @@ SEXP ALTREP_SERIALIZED_STATE(SEXP);
 SEXP ALTREP_UNSERIALIZE_EX(SEXP, SEXP, SEXP, int, int);
 R_xlen_t ALTREP_LENGTH(SEXP x);
 R_xlen_t ALTREP_TRUELENGTH(SEXP x);
-void *ALTVEC_DATAPTR(SEXP x, Rboolean writable);
-void *ALTVEC_DATAPTR_OR_NULL(SEXP x, Rboolean writable);
+void *ALTVEC_DATAPTR(SEXP x);
+const void *ALTVEC_DATAPTR_RO(SEXP x);
+const void *ALTVEC_DATAPTR_OR_NULL(SEXP x);
 SEXP ALTVEC_EXTRACT_SUBSET(SEXP x, SEXP indx, SEXP call);
 int ALTINTEGER_ELT(SEXP x, R_xlen_t i);
-int ALTINTEGER_SET_ELT(SEXP x, R_xlen_t i, int v);
+void ALTINTEGER_SET_ELT(SEXP x, R_xlen_t i, int v);
 int ALTLOGICAL_ELT(SEXP x, R_xlen_t i);
+void ALTLOGICAL_SET_ELT(SEXP x, R_xlen_t i, int v);
 double ALTREAL_ELT(SEXP x, R_xlen_t i);
-double ALTREAL_SET_ELT(SEXP x, R_xlen_t i, double v);
+void ALTREAL_SET_ELT(SEXP x, R_xlen_t i, double v);
 SEXP ALTSTRING_ELT(SEXP, R_xlen_t);
 void ALTSTRING_SET_ELT(SEXP, R_xlen_t, SEXP);
 Rcomplex ALTCOMPLEX_ELT(SEXP x, R_xlen_t i);
+void ALTCOMPLEX_SET_ELT(SEXP x, R_xlen_t i, Rcomplex v);
 Rbyte ALTRAW_ELT(SEXP x, R_xlen_t i);
+void ALTRAW_SET_ELT(SEXP x, R_xlen_t i, int v);
 R_xlen_t INTEGER_GET_REGION(SEXP sx, R_xlen_t i, R_xlen_t n, int *buf);
 int INTEGER_IS_SORTED(SEXP x);
 int INTEGER_NO_NA(SEXP x);
@@ -1482,13 +1498,13 @@ void R_Reprotect(SEXP, PROTECT_INDEX);
 # endif
 SEXP R_FixupRHS(SEXP x, SEXP y);
 void *(DATAPTR)(SEXP x);
-void *(DATAPTR_RO)(SEXP x);
-void *(DATAPTR_OR_NULL)(SEXP x, Rboolean writeable);
-int *(LOGICAL_OR_NULL)(SEXP x, Rboolean w);
-int *(INTEGER_OR_NULL)(SEXP x, Rboolean w);
-double *(REAL_OR_NULL)(SEXP x, Rboolean w);
-Rcomplex *(COMPLEX_OR_NULL)(SEXP x, Rboolean w);
-Rbyte *(RAW_OR_NULL)(SEXP x, Rboolean w);
+const void *(DATAPTR_RO)(SEXP x);
+const void *(DATAPTR_OR_NULL)(SEXP x);
+const int *(LOGICAL_OR_NULL)(SEXP x);
+const int *(INTEGER_OR_NULL)(SEXP x);
+const double *(REAL_OR_NULL)(SEXP x);
+const Rcomplex *(COMPLEX_OR_NULL)(SEXP x);
+const Rbyte *(RAW_OR_NULL)(SEXP x);
 void *(STDVEC_DATAPTR)(SEXP x);
 int (INTEGER_ELT)(SEXP x, R_xlen_t i);
 double (REAL_ELT)(SEXP x, R_xlen_t i);

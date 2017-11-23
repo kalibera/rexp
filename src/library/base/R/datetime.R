@@ -18,8 +18,13 @@
 
 Sys.time <- function() .POSIXct(.Internal(Sys.time()))
 
+### There is no portable way to find the system timezone by location.
+### For some ideas (not all accurate) see
+### https://stackoverflow.com/questions/3118582/how-do-i-find-the-current-system-timezone
 Sys.timezone <- function(location = TRUE)
 {
+    ## Many Unix set TZ, e.g. Solaris and AIX.
+    ## For Solaris the system setting is a line in /etc/TIMEZONE
     tz <- Sys.getenv("TZ", names = FALSE)
     if(nzchar(tz))
         tz
@@ -30,6 +35,8 @@ Sys.timezone <- function(location = TRUE)
             lt <- normalizePath("/etc/localtime") # most Linux, macOS, ...
             if (grepl(pat <- "^/usr/share/zoneinfo/", lt) ||
                 grepl(pat <- "^/usr/share/zoneinfo.default/", lt)) sub(pat, "", lt)
+            else if(grepl(pat <- ".*/zoneinfo/(.*)", lt))  sub(pat, "\\1", lt)
+            ## Debian-based Linuxen do not have /etc/localtime
             else if (lt == "/etc/localtime" && file.exists("/etc/timezone") &&
                      dir.exists("/usr/share/zoneinfo") &&
                      { # Debian etc.
@@ -389,7 +396,6 @@ Summary.POSIXlt <- function (..., na.rm)
 function(x, ..., drop = TRUE)
 {
     cl <- oldClass(x)
-    ## class(x) <- NULL
     val <- NextMethod("[")
     class(val) <- cl
     attr(val, "tzone") <- attr(x, "tzone")
@@ -400,7 +406,6 @@ function(x, ..., drop = TRUE)
 function(x, ..., drop = TRUE)
 {
     cl <- oldClass(x)
-    ## class(x) <- NULL
     val <- NextMethod("[[")
     class(val) <- cl
     attr(val, "tzone") <- attr(x, "tzone")
@@ -413,7 +418,6 @@ function(x, ..., value) {
     value <- unclass(as.POSIXct(value))
     cl <- oldClass(x)
     tz <- attr(x, "tzone")
-    class(x) <- NULL
     x <- NextMethod(.Generic)
     class(x) <- cl
     attr(x, "tzone") <- tz
@@ -572,7 +576,6 @@ print.difftime <- function(x, digits = getOption("digits"), ...)
 `[.difftime` <- function(x, ..., drop = TRUE)
 {
     cl <- oldClass(x)
-    class(x) <- NULL
     val <- NextMethod("[")
     class(val) <- cl
     attr(val, "units") <- attr(x, "units")

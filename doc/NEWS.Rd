@@ -119,21 +119,26 @@
       \item \code{approx()}, \code{spline()}, \code{splinefun()} and
       \code{approxfun()} also work for long vectors.
 
+      %% one item with several paragraphs
       \item \code{deparse()} (and \code{dump()}) are more useful for S4
-      objects; \code{dput()} now using the same internal C code (instead
-      of its previous imperfect workaround R code).
+      objects; \code{dput()} now using the same internal C code instead
+      of its previous imperfect workaround R code.
 
-      \code{dput()}, \emph{etc} now print the \code{names()} information
-      only once, using the more readable \code{(tag = value)} syntax,
-      notably for \code{list()}s, i.e., including data frames.
+      \code{dput()}, \code{deparse()} and \code{dump()} now print the
+      \code{names()} information only once, using the more readable
+      \code{(tag = value)} syntax, notably for \code{list()}s, i.e.,
+      including data frames.
 
       These functions gain a new control option \code{"niceNames"} (see
       \code{.deparseOpts()}), which when set (as by default) also uses
       the \code{(tag = value)} syntax for atomic vectors.  OTOH, without
       deparse options \code{"showAttributes"} and \code{"niceNames"},
       names are no longer shown also for lists.
+      \code{as.character(list(  c (one = 1)))} now shows the name as
+      \code{as.character(list(list(one = 1)))} has always done.
 
       \code{m:n} now also deparses nicely when \eqn{m > n}.
+
 
       \item If the option \code{setWidthOnResize} is set and \code{TRUE},
       \R run in a terminal using a recent \code{readline} library will
@@ -154,11 +159,11 @@
 
       \item \code{on.exit()} gains an optional argument \code{after}
       with default \code{TRUE}. Using \code{after = FALSE} with
-      \code{add = TRUE} adds an exit expression on top of any
-      existing ones. This way the expressions are run in a first in last
-      out fashion. From Lionel Henry.
+      \code{add = TRUE} adds an exit expression before any
+      existing ones. This way the expressions are run in a first-in
+      last-out fashion. (From Lionel Henry.)
 
-      \item On Windows, \code{file.rename} internally retries the
+      \item On Windows, \code{file.rename()} internally retries the
       operation in case of error to attempt to recover from possible
       anti-virus interference.
 
@@ -170,10 +175,10 @@
       and so will be used rather than the default deduced from the OS
       if \env{TZ} is subsequently unset.
 
-      \item Provide \code{`[`} method for \code{"DLLInfoList"}
+      \item Provide \code{`[`} method for class \code{"DLLInfoList"}
 
       \item \code{glm()} and \code{glm.fit} get the same
-      \code{singular.ok=TRUE} argument that \code{lm()} has had
+      \code{singular.ok = TRUE} argument that \code{lm()} has had
       forever.  As a consequence, in \code{glm(*, method = <your_own>)},
       user specified methods need to accept a \code{singular.ok}
       argument as well.
@@ -205,17 +210,21 @@
       makes the \code{vcov()} methods more consistent with the
       \code{coef()} methods in the case of singular designs.  The
       former (\dQuote{back compatible}) behavior is now achieved by
-      \code{vcov(*, complete=FALSE)}.
+      \code{vcov(*, complete = FALSE)}.
 
       \item \code{coef()} methods (for \code{lm} etc) also gain a
       \code{complete = TRUE} optional argument for consistency with
       \code{vcov()}. \cr
       For \code{"aov"}, both \code{coef()} and \code{vcov()} methods
-      remain back compatibly consistent, using the \emph{other} default,
+      remain back-compatibly consistent, using the \emph{other} default,
       \code{complete = FALSE}.
 
       \item \code{attach(*, pos = 1)} is now an error instead of a
       warning.
+
+      \item New function \code{getDefaultCluster()} in package
+      \pkg{parallel} to get the default cluster set via
+      \code{setDefaultCluster()}.
     }
   }
 
@@ -339,7 +348,7 @@
 
       \item \code{dist(x, method = "canberra")} now uses the correct
       definition; the result may only differ when \code{x} contains
-      values of differing signs, i.e., e.g., not for 0-1 data.
+      values of differing signs, e.g.\sspace{}not for 0-1 data.
 
       \item \code{methods:::cbind()} and \code{methods:::rbind()} avoid
       deep recursion, thanks to Suharto Anggono via \PR{17300}.
@@ -391,20 +400,27 @@
 
       \item \code{.C()} when returning a logical vector now always maps
       values other than FALSE and NA to TRUE (as documented).
+
+      \item Subassignment with zero length vectors now coerces as
+      documented.  (\PR{17344})
+
+      \item \code{mclapply}, \code{pvec} and \code{mcparallel} (when
+      \code{mccollect} is used to collect results) no longer leave zombie
+      processes behind.
     }
   }
 }
 
 
-\section{\Rlogo CHANGES IN R 3.4.2 patched}{
+\section{\Rlogo CHANGES IN R 3.4.3}{
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
-      \item A workaround has been added for the change in location of
-      time-zone files on macOS 10.13 \sQuote{High Sierra}, so the
-      default time zone is deduced correctly from the system setting
-      when \R is configured with \option{--with-internal-tzcode} (the
-      default on macOS).
+      \item A workaround has been added for the changes in location of
+      time-zone files in macOS 10.13 \sQuote{High Sierra} and
+      again in 10.13.1, so the default time zone is deduced
+      correctly from the system setting when \R is configured with
+      \option{--with-internal-tzcode} (the default on macOS).
 
       \item \command{R CMD javareconf} has been updated to recognize the
       use of a Java 9 SDK on macOS.
@@ -801,7 +817,7 @@
       \code{tol} in the result, and optionally parts of the internal
       matrix computations.
 
-      \item \code{addNA()} is faster now, e.g.\sspace{} when applied twice.
+      \item \code{addNA()} is faster now, e.g.\sspace{}when applied twice.
       (Part of \PR{16895}.)
 
       \item New option \code{rstandard(<lm>, type = "predicted")}
