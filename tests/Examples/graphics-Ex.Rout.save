@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2017-11-16 r73734) -- "Unsuffered Consequences"
+R version 3.4.2 Patched (2017-11-17 r73741) -- "Short Summer"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -1048,26 +1048,20 @@ Warning in plot.histogram(r, freq = freq1, col = col, border = border, angle = a
 > 
 > ## A function to use identify to select points, and overplot the
 > ## points with another symbol as they are selected
-> identifyPch <- function(x, y = NULL, n = length(x), plot = FALSE, pch = 19, ...)
+> identifyPch <- function(x, y = NULL, n = length(x), pch = 19, ...)
 + {
 +     xy <- xy.coords(x, y); x <- xy$x; y <- xy$y
-+     sel <- rep(FALSE, length(x))
++     sel <- rep(FALSE, length(x)); res <- integer(0)
 +     while(sum(sel) < n) {
-+         ans <- identify(x[!sel], y[!sel], labels = which(!sel), n = 1, plot = plot, ...)
++         ans <- identify(x[!sel], y[!sel], n = 1, plot = FALSE, ...)
 +         if(!length(ans)) break
 +         ans <- which(!sel)[ans]
 +         points(x[ans], y[ans], pch = pch)
 +         sel[ans] <- TRUE
++         res <- c(res, ans)
 +     }
-+     ## return indices of selected points
-+     which(sel)
++     res
 + }
-> 
-> if(dev.interactive()) { ## use it
-+   x <- rnorm(50); y <- rnorm(50)
-+   plot(x,y); identifyPch(x,y) # how fast to get all?
-+ }
-> 
 > 
 > 
 > 
@@ -2080,7 +2074,7 @@ N
 > points.default # to see how it calls "plot.xy(xy.coords(x, y), ...)"
 function (x, y = NULL, type = "p", ...) 
 plot.xy(xy.coords(x, y), type = type, ...)
-<bytecode: 0x2859be0>
+<bytecode: 0x38cb148>
 <environment: namespace:graphics>
 > 
 > 
@@ -2950,7 +2944,7 @@ function (xy = 1, warn.log = TRUE)
     u <- par("usr")
     xy * c(u[2L] - u[1L], u[4L] - u[3L])/par("pin")
 }
-<bytecode: 0x38589b8>
+<bytecode: 0x453b198>
 <environment: namespace:graphics>
 > 
 > ## plot labels offset 0.12 inches to the right
@@ -3030,7 +3024,7 @@ function (xy = 1, warn.log = TRUE)
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.739 0.054 2.806 0 0 
+Time elapsed:  2.929 0.069 3.014 0 0 
 > grDevices::dev.off()
 null device 
           1 

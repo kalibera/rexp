@@ -238,10 +238,9 @@ all.equal.formula <- function(target, current, ...)
     ## NB: this assumes the default method for class formula, not
     ## the misquided one in package Formula
     if(length(target) != length(current))
-	return(paste0("target, current differ in having response: ",
-                      length(target) == 3L,
-                      ", ",
-                      length(current) == 3L))
+	return(paste("target, current differ in having response: ",
+		     length(target) == 3L, ", ",
+                     length(current) == 3L, sep=""))
     ## <NOTE>
     ## This takes same-length formulas as all equal if they deparse
     ## identically.  As of 2010-02-24, deparsing strips attributes; if

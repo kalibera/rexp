@@ -3,7 +3,7 @@ useDynLib(utils, .registration = TRUE, .fixes = "C_")
 
 export("?", .DollarNames, .S3methods, .romans, CRAN.packages, Rprof,
        Rprofmem, RShowDoc, RSiteSearch, URLdecode, URLencode, View,
-       adist, alarm, apropos, aregexec, argsAnywhere, askYesNo,
+       adist, alarm, apropos, aregexec, argsAnywhere,
        assignInMyNamespace, assignInNamespace, as.roman, as.person,
        as.personList, as.relistable, aspell, aspell_package_C_files,
        aspell_package_R_files, aspell_package_Rd_files,
@@ -117,9 +117,6 @@ S3method(tail, ftable)
 S3method(tail, table)
 S3method(toBibtex, person)
 S3method(toLatex, sessionInfo)
-S3method(type.convert, default)
-S3method(type.convert, list)
-S3method(type.convert, data.frame)
 S3method(unlist, relistable)
 S3method(unstack, data.frame)
 S3method(unstack, default)

@@ -109,8 +109,8 @@ printFont <- function(font) {
 }
 
 printFonts <- function(fonts) {
-    cat(paste0(names(fonts), ": ", unlist(lapply(fonts, printFont)),
-               collapse=""))
+    cat(paste(names(fonts), ": ", unlist(lapply(fonts, printFont)),
+              sep="", collapse=""))
 }
 
 # If no arguments spec'ed, return entire font database

@@ -114,8 +114,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
         ## version.  Other mismatches should be caught earlier by the
         ## version checks.
         needsComp <- as.character(pkgInfo$DESCRIPTION["NeedsCompilation"])
-        if (identical(needsComp, "yes") ||
-            file.exists(file.path(pkgpath, "libs"))) {
+        if (identical(needsComp, "yes")) {
             internalsID <- features$internalsID
             if (is.null(internalsID))
                 ## the initial internalsID for packages installed
@@ -281,15 +280,15 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                     oldversion <- as.numeric_version(getNamespaceVersion(package))
                     if (newversion != oldversion) {
                     	## No, so try to unload the previous one
-			tryCatch(unloadNamespace(package),
-				 error = function(e) {
-				     P <- if(!is.null(cc <- conditionCall(e)))
-					      paste("Error in", deparse(cc)[1L], ": ")
-					  else "Error : "
-				     stop(gettextf("Package %s version %s cannot be unloaded:\n %s",
-						   sQuote(package), oldversion,
-						   paste0(P, conditionMessage(e),"\n")),
-					  domain=NA)})
+                    	res <- tryCatch(unloadNamespace(package),
+					error = function(e) {
+					    P <- if(!is.null(cc <- conditionCall(e)))
+						     paste("Error in", deparse(cc)[1L], ": ")
+						 else "Error : "
+					    stop(gettextf("Package %s version %s cannot be unloaded:\n %s",
+							  sQuote(package), oldversion,
+							  paste0(P, conditionMessage(e),"\n")),
+						 domain=NA)})
                     }
                 }
 		tt <- tryCatch({

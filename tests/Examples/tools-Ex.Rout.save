@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2017-11-17 r73742) -- "Unsuffered Consequences"
+R version 3.4.2 Patched (2017-11-17 r73741) -- "Short Summer"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -44,7 +44,7 @@ Type 'q()' to quit R.
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: HTMLheader
-> ### Title: Generate a Standard HTML Header for R Help
+> ### Title: Generate a standard HTML header for R help
 > ### Aliases: HTMLheader
 > ### Keywords: utilities documentation
 > 
@@ -86,7 +86,7 @@ Type 'q()' to quit R.
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: Rd2txt_options
-> ### Title: Set Formatting Options for Text Help
+> ### Title: Set formatting options for text help
 > ### Aliases: Rd2txt_options
 > ### Keywords: documentation
 > 
@@ -173,7 +173,7 @@ Error in assertWarning(ff()) :
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: bibstyle
-> ### Title: Select or Define a Bibliography Style
+> ### Title: Select or define a bibliography style.
 > ### Aliases: bibstyle getBibstyle
 > ### Keywords: utilties documentation
 > 
@@ -202,7 +202,7 @@ Error in assertWarning(ff()) :
 > bibstyle("unsorted", sortKeys = function(refs) seq_along(refs),
 +     fmtPrefix = function(paper) paste0("[", paper$.index, "]"),
 +        .init = TRUE)
-<environment: 0x1178fd8>
+<environment: 0x3744db0>
 > print(refs, .bibstyle = "unsorted")
 [1] R Core Team (2013). _R: A Language and Environment for Statistical
 Computing_. R Foundation for Statistical Computing, Vienna, Austria.
@@ -407,7 +407,7 @@ _Journal of the Royal Statistical Society, Series B_, *26*, pp.
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: checkPoFiles
-> ### Title: Check Translation Files for Inconsistent Format Strings
+> ### Title: Check translation files for inconsistent format strings.
 > ### Aliases: checkPoFile checkPoFiles
 > ### Keywords: utilities
 > 
@@ -612,7 +612,7 @@ attr(,"match.length")
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: getVignetteInfo
-> ### Title: Get Information on Installed Vignettes
+> ### Title: Get information on installed vignettes.
 > ### Aliases: getVignetteInfo
 > ### Keywords: utilities documentation
 > 
@@ -628,7 +628,7 @@ attr(,"match.length")
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: loadRdMacros
-> ### Title: Load User-defined Rd Help System Macros
+> ### Title: Load user-defined Rd help system macros.
 > ### Aliases: loadRdMacros loadPkgRdMacros
 > ### Keywords: utilities documentation
 > 
@@ -743,7 +743,7 @@ attr(,"match.length")
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: parseLatex
-> ### Title: Experimental Functions to Work with LaTeX Code
+> ### Title: These experimental functions work with a subset of LaTeX code.
 > ### Aliases: parseLatex deparseLatex latexToUtf8
 > ### Keywords: utilities documentation
 > 
@@ -833,7 +833,7 @@ function (x, ...)
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: toHTML
-> ### Title: Display an Object in HTML
+> ### Title: Display an object in HTML.
 > ### Aliases: toHTML toHTML.packageIQR toHTML.news_db
 > ### Keywords: utilities documentation
 > 
@@ -962,7 +962,7 @@ List of 6
 > flush(stderr()); flush(stdout())
 > 
 > ### Name: write_PACKAGES
-> ### Title: Generate PACKAGES Files
+> ### Title: Generate PACKAGES files
 > ### Aliases: write_PACKAGES
 > ### Keywords: file utilities
 > 
@@ -997,7 +997,7 @@ List of 6
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  0.458 0.015 0.476 0 0 
+Time elapsed:  0.39 0.014 0.405 0 0 
 > grDevices::dev.off()
 null device 
           1 

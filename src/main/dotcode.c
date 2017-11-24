@@ -2395,7 +2395,7 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 			      Fort ? ".Fortran" : ".C",
 			      symName, type2char(type), na+1);
 	    } else {
-		int *iptr = (int *)p, tmp;
+		int *iptr = INTEGER(arg), tmp;
 		for (R_xlen_t i = 0 ; i < n ; i++) {
 		    tmp =  iptr[i];
 		    iptr[i] = (tmp == NA_INTEGER || tmp == 0) ? tmp : 1;
@@ -2647,7 +2647,7 @@ void call_R(char *func, long nargs, void **arguments, char **modes,
 	}
 	if(names && names[i])
 	    SET_TAG(pcall, install(names[i]));
-	ENSURE_NAMEDMAX(CAR(pcall));
+	SET_NAMED(CAR(pcall), 2);
     }
     PROTECT(s = eval(call, R_GlobalEnv));
     switch(TYPEOF(s)) {

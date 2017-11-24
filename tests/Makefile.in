@@ -30,8 +30,7 @@ DISTFILES = Makefile.in Makefile.win Makefile.install Makefile.common \
 	testit.tex.save testit-Ex.R.save \
 	ver20.Rd ver20.txt.save ver20.html.save ver20.tex.save ver20-Ex.R.save \
 	R-intro.Rout.save \
-	test-system.R test-system.Rout.save test-system2.c \
-	reg-large.R utf8.R
+	test-system.R test-system.Rout.save test-system2.c
 
 SUBDIRS = Embedding Examples
 SUBDIRS_WITH_NO_BUILD = Pkgs
@@ -95,13 +94,13 @@ clean:
 	-@rm -f *.tar.gz
 	-@rm -f keepsource.tex test-system2 test-system.Rout
 	-@rm -f *.log *.tsin *.trin
-	-@rm -f df0.Rd l0.Rd m0.Rd 'integer(0)-package.Rd' .Rd .RData
+	-@rm -f df0.Rd l0.Rd m0.Rd 'integer(0)-package.Rd'
 
 distclean: clean
 	-@for d in $(SUBDIRS); do \
 	  (cd $${d} && $(MAKE) $@); \
 	done
-	-@rm -f Makefile $(test-out) $(test-src-auto) *.Rout.fail
+	-@rm -f Makefile $(test-out) $(test-src-auto) .RData
 	-@rm -rf *.Rcheck RecPackages
 	-@rm -f *.fail
 

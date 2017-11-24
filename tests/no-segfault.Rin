@@ -4,8 +4,9 @@
 ###--- We need to use such a long "real script" instead of a for loop,
 ###--- because "error --> jump_to_toplevel", i.e., outside any loop.
 
-core.pkgs <- local({x <- installed.packages(.Library)
-    unname(x[x[,"Priority"] %in% "base", "Package"])})
+core.pkgs <-
+{x <- installed.packages(file.path(R.home(), "library"));
+    x[x[,"Priority"] %in% "base", "Package"]}
 core.pkgs <-
     core.pkgs[- match(c("methods", "parallel", "tcltk", "stats4"), core.pkgs, 0)]
 ## move methods to the end because it has side effects (overrides primitives)
@@ -24,7 +25,7 @@ edit.int <- c("fix", "edit", "edit.data.frame", "edit.matrix",
 ## warning: trace will load methods.
 ## warning: rm and remove zap c0, l0, m0, df0
 ## warning: parent.env(NULL) <- NULL creates a loop
-## warning: browseVignettes launches many browser processes.
+## warning: browseVignettes lanuches many browser processes.
 ## news, readNEWS, rtags are slow, and R-only code.
 misc.int <- c("browser", "browseVignettes", "bug.report", "checkCRAN",
               "getCRANmirrors", "lazyLoad", "menu", "repeat",
@@ -107,7 +108,7 @@ for (pkg in core.pkgs) {
   }
   this.pos <- match(paste("package", pkg, sep=":"), search())
 
-  for(nm in ls(pkgname)) { # <==>  no '.<name>' functions are tested here
+  for(nm in ls(pkgname)) {
       if(!(nm %in% stop.list[[pkg]]) &&
 	 is.function(f <- get(nm, pos = pkgname))) {
 	  cat("\n## ", nm, " :\n")

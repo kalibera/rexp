@@ -8,7 +8,7 @@
 \alias{assignInMyNamespace}
 \alias{getFromNamespace}
 \alias{fixInNamespace}
-\title{Utility Functions for Developing Namespaces}
+\title{Utility functions for Developing Namespaces}
 \description{
   Utility functions to access and replace the non-exported functions in
   a namespace, for use in developing packages with namespaces.

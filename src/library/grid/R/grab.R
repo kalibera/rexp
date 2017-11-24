@@ -178,10 +178,8 @@ grabDL <- function(warn, wrap, ...) {
           # Includes viewports, vpLists, vpTrees, and vpStacks
           # Check to see if about to push a viewport
           # with existing viewport name
-          if (warn > 1) {
-            if (vpExists(elt))
-              warning("viewport overwritten (grab MAY not be faithful)")
-          }
+          if (vpExists(elt))
+            warning("viewport overwritten (grab MAY not be faithful)")
           grid.draw(elt, recording=FALSE)
         ###########
         # grabPop

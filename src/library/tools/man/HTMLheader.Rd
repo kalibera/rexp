@@ -5,7 +5,9 @@
 
 \name{HTMLheader}
 \alias{HTMLheader}
-\title{Generate a Standard HTML Header for R Help}
+\title{
+  Generate a standard HTML header for R help
+}
 \description{
 This function generates the standard HTML header used on R help pages.
 }

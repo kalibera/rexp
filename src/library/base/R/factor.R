@@ -1,7 +1,7 @@
 #  File src/library/base/R/factor.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,37 +23,25 @@ factor <- function(x = character(), levels, labels = levels,
     nx <- names(x)
     if (missing(levels)) {
 	y <- unique(x, nmax = nmax)
-	ind <- order(y)
+	ind <- sort.list(y) # or possibly order(x) which is more (too ?) tolerant
 	levels <- unique(as.character(y)[ind])
     }
     force(ordered) # check if original x is an ordered factor
     if(!is.character(x))
 	x <- as.character(x)
-    ## levels could be a long vector, but match will not handle that.
+    ## levels could be a long vectors, but match will not handle that.
     levels <- levels[is.na(match(levels, exclude))]
     f <- match(x, levels)
     if(!is.null(nx))
 	names(f) <- nx
-    if(missing(labels)) { ## default: labels := levels
-	levels(f) <- as.character(levels)
-    } else { ## labels specified explicitly
-	nlab <- length(labels)
-	if(nlab == length(levels)) { ## NB: duplicated labels should work
-	    ## a version of  f <- `levels<-.factor`(f, as.character(labels))
-	    ## ... but not dropping NA :
-	    nlevs <- unique(xlevs <- as.character(labels))
-	    at <- attributes(f)
-	    at$levels <- nlevs
-	    f <- match(xlevs[f], nlevs)
-	    attributes(f) <- at
-	}
-	else if(nlab == 1L)
-	    levels(f) <- paste0(labels, seq_along(levels))
-	else ## nlab is neither 1 nor length(levels)
-	    stop(gettextf("invalid 'labels'; length %d should be 1 or %d",
-			  nlab, length(levels)),
-		 domain = NA)
-    }
+    nl <- length(labels)
+    nL <- length(levels)
+    if(!any(nl == c(1L, nL)))
+	stop(gettextf("invalid 'labels'; length %d should be 1 or %d", nl, nL),
+	     domain = NA)
+    levels(f) <- ## nl == nL or 1
+	if (nl == nL) as.character(labels)
+	else paste0(labels, seq_along(levels))
     class(f) <- c(if(ordered) "ordered", "factor")
     f
 }

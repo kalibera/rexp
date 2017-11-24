@@ -60,8 +60,7 @@ f <- function(x = 1:2,
     w(names(u$inner)[2:4] <- v[1:2] <- c("X", "Y", "Z", "U")[1:2])
         # quote(`[<-`(names(u$inner), 2:4, value = v[1:2] <- c("X", "Y", "Z", "U")[1:2]))
 
-    ##_ Not anymore, as stopifnot() massages its error/warning message:
-    ##_ e(stopifnot(is.numeric(dummy)))
+    e(stopifnot(is.numeric(dummy)))
 }
 
 old=options()

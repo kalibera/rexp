@@ -450,9 +450,9 @@ RweaveLatexWritedoc <- function(object, chunk)
  	which <- grep(begindoc, chunk)
  	if (length(which)) {
             chunk[which] <- sub(begindoc,
-                                paste0("\\\\usepackage{",
-                                       object$styfile,
-                                       "}\n\\\\begin{document}"),
+                                paste("\\\\usepackage{",
+                                      object$styfile,
+                                      "}\n\\\\begin{document}", sep = ""),
                                 chunk[which])
             idx <- c(1L:which, which, seq(from = which+1L,
                      length.out = length(linesout)-which))

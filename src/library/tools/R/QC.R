@@ -1,7 +1,7 @@
 #  File src/library/tools/R/QC.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -226,9 +226,9 @@ function(package, dir, lib.loc = NULL)
         ## </NOTE>
         ## The bad ones:
         S4_classes <-
-            S4_classes[vapply(S4_classes, utils:::topicName, " ",
-                              type = "class", USE.NAMES = FALSE)
-                       %notin% all_doc_topics]
+            S4_classes[!vapply(S4_classes, utils:::topicName, " ",
+                               type = "class", USE.NAMES=FALSE)
+                       %in% all_doc_topics]
         undoc_things <-
             c(undoc_things, list("S4 classes" = unique(S4_classes)))
     }
@@ -255,9 +255,9 @@ function(package, dir, lib.loc = NULL)
 
         ## The bad ones:
         S4_methods <-
-	    S4_methods[vapply(S4_methods, utils:::topicName, " ",
-			       type="method", USE.NAMES = FALSE)
-                       %notin% all_doc_topics]
+	    S4_methods[!vapply(S4_methods, utils:::topicName, " ",
+			       type="method", USE.NAMES=FALSE)
+                       %in% all_doc_topics]
         undoc_things <-
             c(undoc_things,
               list("S4 methods" =
@@ -623,7 +623,7 @@ function(package, dir, lib.loc = NULL,
         ## Catch assignments: checkDocFiles() will report these, so drop
         ## them here.
         ## And also unary/binary operators
-        ind <- (functions %notin% c("<-", "=", "+", "-"))
+        ind <- !(functions %in% c("<-", "=", "+", "-"))
         exprs <- exprs[ind]
         functions <- functions[ind]
         functions <- .transform_S3_method_markup(as.character(functions))
@@ -674,7 +674,7 @@ function(package, dir, lib.loc = NULL,
         ## by comparing the explicit \usage entries for S4 methods to
         ## what is actually in the code.  We most likely also should do
         ## something similar for S3 methods.
-        ind <- grepl(.S4_method_markup_regexp, functions)
+        ind <- grep(.S4_method_markup_regexp, functions)
         if(any(ind))
             functions <- functions[!ind]
         ## </FIXME>
@@ -812,8 +812,7 @@ function(x, ...)
             s <- paste(deparse(s), collapse = "")
             s <- gsub(" = ([,\\)])", "\\1", s)
             s <- gsub("<unescaped bksl>", "\\", s, fixed = TRUE)
-            s <- gsub("^pairlist", "function", s)
-            gsub("^as.pairlist\\(alist\\((.*)\\)\\)$", "function(\\1)", s)
+            gsub("^pairlist", "function", s)
         }
     }
 
@@ -2002,7 +2001,7 @@ function(package, dir, file, lib.loc = NULL,
         ## This might be symbol from another (base?) package.
         ## Allow for Rcpp modules
         parg <- unclass(sym$dll)$name
-        if(length(parg) == 1L && parg %notin% c("Rcpp", pkgDLL)) {
+        if(length(parg) == 1L && ! parg %in% c("Rcpp", pkgDLL)) {
             wrong_pkg <<- c(wrong_pkg, e)
             bad_pkg <<- c(bad_pkg, parg)
         }
@@ -2033,8 +2032,7 @@ function(package, dir, file, lib.loc = NULL,
                 }
             }
         }
-    	if (inherits(sym, "CallRoutine") &&
-            (FF_fun %notin% c(".Call", ".Call.graphics"))) {
+    	if (inherits(sym, "CallRoutine") && !(FF_fun %in% c(".Call", ".Call.graphics"))) {
     	    other_problem <<- c(other_problem, e)
     	    other_desc <<- c(other_desc, sprintf("%s registered as %s, but called with %s", sQuote(name), ".Call", FF_fun))
     	    return("OTHER")
@@ -2080,8 +2078,7 @@ function(package, dir, file, lib.loc = NULL,
                             ## This might be symbol from another package.
                             ## Allow for Rcpp modules
                             parg <- unclass(sym$dll)$name
-                            if(length(parg) == 1L &&
-                               parg %notin% c("Rcpp", pkgDLL)) {
+                            if(length(parg) == 1L && !parg %in% c("Rcpp", pkgDLL)) {
                                 wrong_pkg <<- c(wrong_pkg, e)
                                 bad_pkg <<- c(bad_pkg, parg)
                             }
@@ -2137,7 +2134,7 @@ function(package, dir, file, lib.loc = NULL,
         }
     } else {
         if(!is.na(enc) &&
-           (Sys.getlocale("LC_CTYPE") %notin% c("C", "POSIX"))) {
+           !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
             ## FIXME: what if conversion fails on e.g. UTF-8 comments
 	    con <- file(file, encoding=enc)
             on.exit(close(con))
@@ -2849,7 +2846,7 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE,
             info <- available[, dependencies, drop = FALSE]
             rn <- rownames(info)
             deps <- function(p) {
-                if(p %notin% rn) return(character())
+                if(!(p %in% rn)) return(character())
                 this <- utils:::.clean_up_dependencies(info[p, ])
                 setdiff(this, "R")
             }
@@ -2964,9 +2961,7 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE,
                     bad_depends$required_but_obsolete <- bad
             }
         }
-        if (length(lenhances) &&
-            !config_val_to_logical(Sys.getenv("_R_CHECK_PACKAGE_DEPENDS_IGNORE_MISSING_ENHANCES_",
-                                             "FALSE"))) {
+        if (length(lenhances)) {
             m <- setdiff(sapply(lenhances, `[[`, 1L), installed)
             if(length(m))
                 bad_depends$enhances_but_not_installed <- m
@@ -3183,7 +3178,7 @@ function(dfile, strict = FALSE)
     ## Determine encoding and re-encode if necessary and possible.
     if("Encoding" %in% names(db)) {
         encoding <- db["Encoding"]
-        if(Sys.getlocale("LC_CTYPE") %notin% c("C", "POSIX"))
+        if((! Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX")))
             db <- iconv(db, encoding, sub = "byte")
     }
     else if(!all(.is_ISO_8859(db))) {
@@ -3192,7 +3187,7 @@ function(dfile, strict = FALSE)
         out$missing_encoding <- TRUE
     }
 
-    if(anyNA(nchar(db, "c", TRUE))) {
+    if(any(is.na(nchar(db, "c", TRUE)))) {
         ## Ouch, invalid in the current locale.
         ## (Can only happen in a MBCS locale.)
         ## Try re-encoding from Latin1.
@@ -3262,7 +3257,7 @@ function(dfile, strict = FALSE)
             }
             if(nzchar(sub(dep_regexp, "\\2", dep))) {
                 ## If not just a valid package name ...
-                if(sub(dep_regexp, "\\3", dep) %notin%
+                if(!sub(dep_regexp, "\\3", dep) %in%
                    c("<=", ">=", "<", ">", "==", "!="))
                     bad_dep_op <- c(bad_dep_op, dep)
                 else if(grepl("^[[:space:]]*R", dep)) {
@@ -3290,7 +3285,7 @@ function(dfile, strict = FALSE)
     if(!is.na(val <- db["Priority"])
        && !is.na(package_name)
        && (tolower(val) %in% c("base", "recommended", "defunct-base"))
-       && (package_name %notin% unlist(standard_package_names)))
+       && !(package_name %in% unlist(standard_package_names)))
         out$bad_priority <- val
 
     ## Minimal check (so far) of Title and Description.
@@ -3304,6 +3299,7 @@ function(dfile, strict = FALSE)
         out$bad_Description <- TRUE
 
     class(out) <- "check_package_description"
+
     out
 }
 
@@ -3420,7 +3416,7 @@ function(dfile)
         status <- 0L
         current <- as.numeric_version("3.0.1")
         for(depends in deps) {
-            if(depends$op %notin% c("<=", ">=", "<", ">", "==", "!=")) next
+            if(!depends$op %in% c("<=", ">=", "<", ">", "==", "!=")) next
             status <- if(inherits(depends$version, "numeric_version"))
                 !do.call(depends$op, list(current, depends$version))
             else {
@@ -3529,7 +3525,7 @@ function(aar, strict = FALSE)
                                utils:::MARC_relator_db_codes_used_with_R)
                     ind <- lengths(non_standard_roles) > 0L
                     if(any(ind)) {
-                        out$authors_at_R_field_has_persons_with_nonstandard_roles <-
+                        out$bad_authors_at_R_field_has_persons_with_nonstandard_roles <-
                             sprintf("%s: %s",
                                     format(aar[ind]),
                                     sapply(non_standard_roles[ind], paste,
@@ -3605,11 +3601,11 @@ function(x)
       if(length(x[["bad_authors_at_R_field_has_no_author_roles"]])) {
           gettext("Authors@R field gives no person with name and author role")
       },
-      ## if(length(bad <-
-      ##           x[["authors_at_R_field_has_persons_with_nonstandard_roles"]])) {
-      ##     c(gettext("Authors@R field gives persons with non-standard roles:"),
-      ##       paste0("  ", bad))
-      ## },
+      if(length(bad <-
+                x[["bad_authors_at_R_field_has_persons_with_nonstandard_roles"]])) {
+          c(gettext("Authors@R field gives persons with non-standard roles:"),
+            paste0("  ", bad))
+      },
       if(length(bad <- x[["bad_authors_at_R_field_for_maintainer"]])) {
           c(gettext("Cannot extract Maintainer field from Authors@R field:"),
             paste0("  ", bad))
@@ -3640,7 +3636,7 @@ function(dfile)
     if(any(ind <- !.is_ASCII(names(db))))
         out$fields_with_non_ASCII_tags <- names(db)[ind]
 
-    if("Encoding" %notin% names(db)) {
+    if(! "Encoding" %in% names(db)) {
         ind <- !.is_ASCII(db)
         if(any(ind)) {
             out$missing_encoding <- TRUE
@@ -3648,7 +3644,7 @@ function(dfile)
         }
     } else {
         enc <- db[["Encoding"]]
-        if (enc %notin% c("latin1", "latin2", "UTF-8"))
+        if (! enc %in% c("latin1", "latin2", "UTF-8"))
             out$non_portable_encoding <- enc
     }
 
@@ -3950,9 +3946,6 @@ function(package, lib.loc = NULL)
                    envir = compat)
         }
         if(.Platform$OS.type != "windows") {
-            assign("askYesNoWinDialog",
-                   function(msg, ...) {},
-                   envir = compat)
             assign("bringToTop", function (which = grDevices::dev.cur(), stay = FALSE) {},
                    envir = compat)
             assign("choose.dir",
@@ -4069,7 +4062,7 @@ function(package, lib.loc = NULL)
     }
     checkMethodUsagePackage <- function (pack, ...) {
 	pname <- paste0("package:", pack)
-	if (pname %notin% search())
+	if (!pname %in% search())
 	    stop("package must be loaded", domain = NA)
 	checkMethodUsageEnv(if (isNamespaceLoaded(pack))
 			    getNamespace(pack) else as.environment(pname), ...)
@@ -4177,7 +4170,7 @@ function(package, dir, lib.loc = NULL)
     pkgs <- setdiff(unique(deps), base)
     try_Rd_aliases <- function(...) tryCatch(Rd_aliases(...), error = identity)
     aliases <- c(aliases, lapply(pkgs, try_Rd_aliases, lib.loc = lib.loc))
-    aliases[sapply(aliases, inherits, "error")] <- NULL
+    aliases[sapply(aliases, class) == "error"] <- NULL
 
     ## Add the aliases from the package itself, and build a db with all
     ## (if any) \link xrefs in the package Rd objects.
@@ -4267,7 +4260,6 @@ function(package, dir, lib.loc = NULL)
                                                        FALSE)))
                 !good & (thisfile[this] %in% aliases1)
             } else FALSE
-            db[this, "bad"] <- !good & !suspect            
         }
         else
             unknown <- c(unknown, pkg)
@@ -4461,7 +4453,7 @@ function(pkgDir, thorough = FALSE)
         files <- Sys.glob(c(file.path(pkgDir, "data", "*.rda"),
                             file.path(pkgDir, "data", "*.RData")))
         ## Exclude .RData, which this may or may not match
-        files <- filtergrep("/[.]RData$", files)
+        files <- grep("/[.]RData$", files, value = TRUE, invert = TRUE)
         if (length(files)) {
             cpdir <- tempfile('cp')
             dir.create(cpdir)
@@ -4766,7 +4758,7 @@ function(dir)
         .error <- .warnings <- character()
         file <- file.path(dir, f)
         if(!is.na(enc) &&
-           (Sys.getlocale("LC_CTYPE") %notin% c("C", "POSIX"))) {
+           !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
             lines <- iconv(readLines(file, warn = FALSE), from = enc, to = "",
                            sub = "byte")
             withCallingHandlers(tryCatch(parse(text = lines),
@@ -5414,7 +5406,7 @@ function(package, dir, lib.loc = NULL)
                             }
                        } else {
                            pkg <- sub('^"(.*)"$', '\\1', deparse(pkg))
-                            if(pkg %notin% c(depends_suggests, common_names))
+                            if(! pkg %in% c(depends_suggests, common_names))
                                 bad_exprs <<- c(bad_exprs, pkg)
                             if(pkg %in% depends)
                                 bad_deps <<- c(bad_deps, pkg)
@@ -5427,7 +5419,7 @@ function(package, dir, lib.loc = NULL)
             } else if(Call %in% "::") {
                 pkg <- deparse(e[[2L]])
                 all_imports <<- c(all_imports, pkg)
-                if(pkg %notin% imports)
+                if(! pkg %in% imports)
                     bad_imports <<- c(bad_imports, pkg)
                 else {
                     imp2 <<- c(imp2, pkg)
@@ -5438,7 +5430,7 @@ function(package, dir, lib.loc = NULL)
                 all_imports <<- c(all_imports, pkg)
                 imp3 <<- c(imp3, pkg)
                 imp3f <<- c(imp3f, deparse(e[[3L]]))
-                if(pkg %notin% imports)
+                if(! pkg %in% imports)
                     bad_imports <<- c(bad_imports, pkg)
             } else if(Call %in% c("setClass", "setMethod")) {
                 uses_methods <<- TRUE
@@ -5473,7 +5465,7 @@ function(package, dir, lib.loc = NULL)
     else {
         enc <- db["Encoding"]
         if(!is.na(enc) &&
-           (Sys.getlocale("LC_CTYPE") %notin% c("C", "POSIX"))) {
+           !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
             ## FIXME: what if conversion fails on e.g. UTF-8 comments
 	    con <- file(file, encoding=enc)
             on.exit(close(con))
@@ -5502,7 +5494,7 @@ function(package, dir, lib.loc = NULL)
     depends_not_import <- setdiff(depends, c(imp, default_package_names))
 
     methods_message <-
-        if(uses_methods && "methods" %notin% c(depends, imports))
+        if(uses_methods && !"methods" %in% c(depends, imports))
             gettext("package 'methods' is used but not declared")
         else ""
 
@@ -5848,7 +5840,7 @@ function(db, files)
                             dunno <- TRUE
                         ## </NOTE>
                         if(! dunno
-                           && pkg %notin% c(depends_suggests, common_names))
+                           && ! pkg %in% c(depends_suggests, common_names))
                             bad_exprs <<- c(bad_exprs, pkg)
                     }
                 }
@@ -5860,11 +5852,11 @@ function(db, files)
                     bad_imports <<- c(bad_imports, pkg)
             } else if(Call %in%  "data" && length(e) >= 3L) {
                 mc <- match.call(utils::data, e)
-                if(!is.null(pkg <- mc$package) && pkg %notin% depends_suggests)
+                if(!is.null(pkg <- mc$package) && !pkg %in% depends_suggests)
                     bad_data <<- c(bad_data, pkg)
             } else if(deparse(e[[1L]])[1L] %in% c("utils::data", "utils:::data")) {
                 mc <- match.call(utils::data, e)
-                if(!is.null(pkg <- mc$package) && pkg %notin% depends_suggests)
+                if(!is.null(pkg <- mc$package) && !pkg %in% depends_suggests)
                     bad_data <<- c(bad_data, pkg)
             }
 
@@ -5939,7 +5931,7 @@ function(package, dir, lib.loc = NULL)
     on.exit(unlink(file))
     enc <- db["Encoding"]
     if(!is.na(enc) &&
-       (Sys.getlocale("LC_CTYPE") %notin% c("C", "POSIX"))) {
+       !(Sys.getlocale("LC_CTYPE") %in% c("C", "POSIX"))) {
         ## FIXME: what if conversion fails on e.g. UTF-8 comments
         con <- file(file, encoding = enc)
         on.exit(close(con), add = TRUE)
@@ -6194,7 +6186,7 @@ function(package, dir, lib.loc = NULL, details = TRUE)
         if(length(package) != 1L)
             stop("argument 'package' must be of length 1")
         dir <- find.package(package, lib.loc)
-        if(package %notin% .get_standard_package_names()$base) {
+        if(! package %in% .get_standard_package_names()$base) {
             .load_package_quietly(package, lib.loc)
             code_env <- if(packageHasNamespace(package, dirname(dir)))
                            asNamespace(package)
@@ -6474,7 +6466,7 @@ function(package, dir, lib.loc = NULL, WINDOWS = FALSE)
         if(length(package) != 1L)
             stop("argument 'package' must be of length 1")
         dir <- find.package(package, lib.loc)
-        if(package %notin% .get_standard_package_names()$base) {
+        if(! package %in% .get_standard_package_names()$base) {
             .load_package_quietly(package, lib.loc)
             code_env <- if(packageHasNamespace(package, dirname(dir)))
                            asNamespace(package)
@@ -6657,31 +6649,21 @@ function(dir, localOnly = FALSE)
     if(any(unlist(package_version(ver)) >= 1234))
         out$version_with_large_components <- ver
 
-    .aspell_package_description_for_CRAN <- function(dir, meta = NULL) {
-        if(!is.null(meta)) {
-            dir.create(dir <- tempfile(pattern = "aspell"))
-            on.exit(unlink(dir, recursive = TRUE))
-            .write_description(meta, file.path(dir, "DESCRIPTION"))
-        }
-        ignore <-
-            list(c("(?<=[ \t[:punct:]])'[^']*'(?=[ \t[:punct:]])",
-                   "(?<=[ \t[:punct:]])([[:alnum:]]+::)?[[:alnum:]_.]*\\(\\)(?=[ \t[:punct:]])",
-                   "(?<=[<])(https?://|DOI:|doi:|arXiv:)[^>]+(?=[>])"),
-                 perl = TRUE)
-        utils:::aspell_package_description(dir,
-                                           ignore = ignore,
-                                           control =
-                                               c("--master=en_US",
-                                                 "--add-extra-dicts=en_GB"),
-                                           program = "aspell",
-                                           dictionaries = "en_stats")
-    }
-
     language <- meta["Language"]
     if((is.na(language) || language == "en") &&
        config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_USE_ASPELL_",
                                         "FALSE"))) {
-        a <- .aspell_package_description_for_CRAN(dir)
+        ignore <-
+            list(c("(?<=[ \t[:punct:]])'[^']*'(?=[ \t[:punct:]])",
+                   "(?<=[ \t[:punct:]])([[:alnum:]]+::)?[[:alnum:]_.]*\\(\\)(?=[ \t[:punct:]])"),
+                 perl = TRUE)
+        a <- utils:::aspell_package_description(dir,
+                                                ignore = ignore,
+                                                control =
+                                                 c("--master=en_US",
+                                                   "--add-extra-dicts=en_GB"),
+                                                program = "aspell",
+                                                dictionaries = "en_stats")
         if(NROW(a))
             out$spelling <- a
     }
@@ -6693,15 +6675,7 @@ function(dir, localOnly = FALSE)
     nms <- names(meta)
     stdNms <- .get_standard_DESCRIPTION_fields()
     nms <- nms[is.na(match(nms, stdNms)) &
-               !grepl(paste0("^(",
-                             paste(c("X-CRAN",
-                                     "X-schema.org",
-                                     "Repository/R-Forge",
-                                     "VCS/",
-                                     "Config/"),
-                                   collapse = "|"),
-                             ")"),
-                      nms)]
+               !grepl("^(X-CRAN|Repository/R-Forge|VCS/|Config/)", nms)]
     if(length(nms) && ## Allow maintainer notes  <stdName>Note :
        length(nms <- nms[is.na(match(nms, paste0(stdNms,"Note")))]))
         out$fields <- nms
@@ -6716,10 +6690,8 @@ function(dir, localOnly = FALSE)
         p2 <- grep("^(BRugs|R2OpenBUGS|R2WinBUGS)( |\\(|$)", p, value = TRUE)
         BUGS <- c(BUGS, p2)
     }
-    if (length(uses))
-        out$uses <- sort(unique(gsub("[[:space:]]+", " ", uses)))
-    if (length(BUGS))
-        out$BUGS <- sort(unique(gsub("[[:space:]]+", " ", BUGS)))
+    if (length(uses)) out$uses <- sort(unique(uses))
+    if (length(BUGS)) out$BUGS <- sort(unique(BUGS))
 
     ## Check for non-Sweave vignettes (as indicated by the presence of a
     ## 'VignetteBuilder' field in DESCRIPTION) without
@@ -6823,8 +6795,7 @@ function(dir, localOnly = FALSE)
         .libPaths(character())
         on.exit(.libPaths(libpaths))
         out <- list()
-        installed <- nzchar(system.file(package = meta["Package"]))
-        if(installed) {
+        if(nzchar(system.file(package = meta["Package"]))) {
             ## Ignore pre-2.8.0 compatibility calls to
             ## packageDescription() inside
             ##   if(!exists("meta") || is.null(meta))
@@ -6846,40 +6817,14 @@ function(dir, localOnly = FALSE)
                           c("packageDescription", "library", "require"))
             if(length(cnames))
                 out$citation_calls <- cnames
-            cinfo <-
-                .eval_with_capture(tryCatch(utils::readCitationFile(cfile,
-                                                                    meta),
-                                            error = identity))$value
-            if(inherits(cinfo, "error")) {
-                out$citation_error_reading_if_installed <-
-                    conditionMessage(cinfo)
-                return(out)
-            }
         } else {
             cinfo <-
                 .eval_with_capture(tryCatch(utils::readCitationFile(cfile,
                                                                     meta),
                                             error = identity))$value
-            if(inherits(cinfo, "error")) {
-                out$citation_error_reading_if_not_installed <-
-                    conditionMessage(cinfo)
-                return(out)
-            }
+            if(inherits(cinfo, "error"))
+                out$citation_error <- conditionMessage(cinfo)
         }
-        ## If we can successfully read in the citation file, also check
-        ## whether we can at least format the bibentries we obtained. 
-        cfmt <- tryCatch(format(cinfo, style = "text"),
-                         warning = identity, error = identity)
-        ## This only finds unbalanced braces by default, with messages
-        ##   unexpected END_OF_INPUT ... { no }
-        ##   unexpected '}'          ... } no {
-        ## One can also find 'unknown Rd macros' by setting env var
-        ## _R_UTILS_FORMAT_BIBENTRY_VIA_RD_PERMISSIVE_ to something
-        ## true, and perhaps we should do this here. 
-        if(inherits(cfmt, "condition"))
-            out$citation_problem_when_formatting <-
-                conditionMessage(cfmt)
-
         out
     }
     if(file.exists(cfile <- file.path(dir, "inst", "CITATION"))) {
@@ -6945,18 +6890,7 @@ function(dir, localOnly = FALSE)
     if(grepl("^(The|This|A|In this|In the) package", descr))
         out$descr_bad_start <- TRUE
     if(!isTRUE(out$descr_bad_start) && !grepl("^['\"]?[[:upper:]]", descr))
-        out$descr_bad_initial <- TRUE
-    descr <- strwrap(descr)
-    if(any(ind <- grepl("(^|[^<])https?://", descr))) {
-        ## Could try to filter out the matches for DOIs and arXiv ids
-        ## noted differently below: not entirely straightforward when
-        ## matching wrapped texts for to ease reporting ...
-        out$descr_bad_URLs <- descr[ind]
-    }
-    if(any(ind <- grepl("https?://.*doi.org/", descr)))
-        out$descr_bad_DOIs <- descr[ind]
-    if(any(ind <- grepl("https?://arxiv.org", descr)))
-        out$descr_bad_arXiv_ids <- descr[ind]
+       out$descr_bad_initial <- TRUE
 
     skip_dates <-
         config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_SKIP_DATES_",
@@ -7131,7 +7065,7 @@ function(dir, localOnly = FALSE)
     ## need to re-encode.  Eventually, it might be in UTF-8 ...
     entry <- odb[odb[, "Package"] == meta["Package"], ]
     entry <- entry[!is.na(entry) &
-                   (names(entry) %notin% c("Package", "X-CRAN-History"))]
+                   !(names(entry) %in% c("Package", "X-CRAN-History"))]
     if(length(entry)) {
         ## Check for conflicts between package license implications and
         ## repository overrides.  Note that the license info predicates
@@ -7176,7 +7110,7 @@ function(dir, localOnly = FALSE)
     ## ignoring case.
     package <- meta["Package"]
     packages <- db[, "Package"]
-    if(package %notin% packages) out$new_submission <- TRUE
+    if(! package %in% packages) out$new_submission <- TRUE
     clashes <- character()
     pos <- which((tolower(packages) == tolower(package)) &
                  (packages != package))
@@ -7364,10 +7298,8 @@ function(dir, localOnly = FALSE)
     db <- tryCatch(CRAN_package_db(), error = identity)
     if(inherits(db, "error")) return(out)
 
-    meta0 <- unlist(db[db[, "Package"] == package, ])
-
     m_m <- as.vector(meta["Maintainer"]) # drop name
-    m_d <- meta0["Maintainer"]
+    m_d <- db[db[, "Package"] == package, "Maintainer"]
     # There may be white space differences here
     m_m_1 <- gsub("[[:space:]]+", " ", m_m)
     m_d_1 <- gsub("[[:space:]]+", " ", m_d)
@@ -7378,26 +7310,10 @@ function(dir, localOnly = FALSE)
         out$new_maintainer <- list(m_m, m_d)
     }
 
-    l_d <- meta0["License"]
+    l_d <- db[db[, "Package"] == package, "License"]
     if(!foss && analyze_license(l_d)$is_verified)
         out$new_license <- list(meta["License"], l_d)
 
-    ## Re-check for possible mis-spellings and keep only the new ones,
-    ## if enabled and current version was published recently enough.
-    if(NROW(a <- out$spelling)
-       && config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_ASPELL_RECHECK_MAYBE_",
-                                           "TRUE"))
-       && !inherits(year <- tryCatch(format(as.Date(meta0["Published"]),
-                                            "%Y"),
-                                     error = identity),
-                    "error")
-       && (year >=
-           as.numeric(Sys.getenv("_R_CHECK_CRAN_INCOMING_ASPELL_RECHECK_START_",
-                                 "2013")))) {
-        a0 <- .aspell_package_description_for_CRAN(meta = meta0)
-        out$spelling <- a[is.na(match(a$Original, a0$Original)), ]
-    }
-       
     out
 }
 
@@ -7603,20 +7519,10 @@ function(x, ...)
                                 indent = 2L, exdent = 4L)),
                       collapse = "\n")
             },
-            if(length(y <- x$citation_error_reading_if_installed)) {
-                paste(c("Reading CITATION file fails with",
-                        paste0("  ", y)),
-                      collapse = "\n")
-            },
-            if(length(y <- x$citation_error_reading_if_not_installed)) {
+            if(length(y <- x$citation_error)) {
                 paste(c("Reading CITATION file fails with",
                         paste0("  ", y),
                         "when package is not installed."),
-                      collapse = "\n")
-            },
-            if(length(y <- x$citation_problem_when_formatting)) {
-                paste(c("Problems when formatting CITATION entries:",
-                        paste0("  ", y)),
                       collapse = "\n")
             })),
       fmt(c(if(length(y <- x$bad_urls)) {
@@ -7702,26 +7608,7 @@ function(x, ...)
             },
             if(length(x$descr_bad_start)) {
                 "The Description field should not start with the package name,\n  'This package' or similar."
-            },
-            if(length(y <- x$descr_bad_URLs)) {
-                paste(c("The Description field contains",
-                        paste0("  ", y),
-                        "Please enclose URLs in angle brackets (<...>)."),
-                      collapse = "\n")
-            },
-            if(length(y <- x$descr_bad_DOIs)) {
-                paste(c("The Description field contains",
-                        paste0("  ", y),
-                        "Please write DOIs as <doi:10.prefix/suffix>."),
-                      collapse = "\n")
-            },
-            if(length(y <- x$descr_bad_arXiv_ids)) {
-                paste(c("The Description field contains",
-                        paste0("  ", y),
-                        "Please write arXiv ids as <arXiv:YYMM.NNNNN>."),
-                      collapse = "\n")
-            }
-            )),
+            })),
       fmt(c(if(length(x$bad_date)) {
                 "The Date field is not in ISO 8601 yyyy-mm-dd format."
             },

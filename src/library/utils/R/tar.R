@@ -349,26 +349,17 @@ tar <- function(tarfile, files = NULL,
                             "xz" = "-Jcf")
 
             if (grepl("darwin", R.version$os)) {
-                ## Precaution for macOS to omit resource forks
-                ## This is supposed to work for  >= 10.5 (Leopard).
-                tar <- paste("COPYFILE_DISABLE=1", tar)
+                ## precaution for macOS to omit resource forks
+                ## we can't tell the running OS version from R.version$os
+                ## but at least it will not be older
+                tar <- paste("COPYFILE_DISABLE=1", tar) # >= 10.5, Leopard
+                if (grepl("darwin8", R.version$os)) # 10.4, Tiger
+                    tar <- paste("COPY_EXTENDED_ATTRIBUTES_DISABLE=1", tar)
             }
             if (is.null(extra_flags)) extra_flags <- ""
-            ## precaution added in R 3.5.0 for over-long command lines
-            nc <- nchar(ff <- paste(shQuote(files), collapse=" "))
-            ## -T is not supported by Solaris nor Heirloom Toolchest's tar
-            if(nc > 1000 &&
-               any(grepl("(GNU tar|libarchive)",
-                         tryCatch(system(paste(tar, "--version"), intern = TRUE),
-                                  error = function(e) "")))) {
-                tf <- tempfile("Rtar"); on.exit(unlink(tf))
-                writeLines(files, tf)
-                cmd <- paste(tar, extra_flags, flags, shQuote(tarfile),
-                             "-T", shQuote(tf))
-            } else {
-                ## 'tar' might be a command + flags, so don't quote it
-                cmd <- paste(tar, extra_flags, flags, shQuote(tarfile), ff)
-            }
+            ## 'tar' might be a command + flags, so don't quote it
+            cmd <- paste(tar, extra_flags, flags, shQuote(tarfile),
+                         paste(shQuote(files), collapse=" "))
             return(invisible(system(cmd)))
         }
 

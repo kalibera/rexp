@@ -1,6 +1,6 @@
 % File src/library/splines/man/bs.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2017 R Core Team
+% Copyright 1995-2015 R Core Team
 % Distributed under GPL 2 or later
 
 \name{bs}
@@ -19,8 +19,7 @@ bs(x, df = NULL, knots = NULL, degree = 3, intercept = FALSE,
     \code{knots}; \code{bs()} then chooses \code{df-degree} (minus one
     if there is an intercept) knots at suitable quantiles of \code{x}
     (which will ignore missing values).  The default, \code{NULL},
-    takes the number of inner knots as \code{length(knots)}.  If that is
-    zero as per default, that corresponds to \code{df = degree - intercept}.}
+    corresponds to \emph{no} inner knots, i.e., \code{degree - intercept}.}
   \item{knots}{the \emph{internal} breakpoints that define the
     spline.  The default is \code{NULL}, which results in a basis for
     ordinary polynomial regression.  Typical values are the mean or
@@ -37,7 +36,7 @@ bs(x, df = NULL, knots = NULL, degree = 3, intercept = FALSE,
     \code{Boundary.knots}.}
 }
 \details{
-  \code{bs} is based on the function \code{\link{splineDesign}}.
+  \code{bs} is based on the function \code{\link{spline.des}}.
   It generates a basis matrix for
   representing the family of piecewise polynomials with the specified
   interior knots and degree, evaluated at the values of \code{x}.  A

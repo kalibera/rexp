@@ -369,7 +369,7 @@ BugReports: https://pkgname.bugtracker.url
 @noindent
 The format is that of a version of a `Debian Control File' (see the help
 for @samp{read.dcf} and
-@uref{https://www.debian.org/@/doc/@/debian-policy/@/index.html#document-ch-controlfields}:
+@uref{https://www.debian.org/@/doc/@/debian-policy/@/ch-controlfields.html}:
 @R{} does not require encoding in UTF-8 and does not support comments
 starting with @samp{#}).  Fields start with an @acronym{ASCII} name
 immediately followed by a colon: the value starts after the colon and a
@@ -652,9 +652,7 @@ codes.
 @c DESCRIPTION field RdMacros
 An @samp{RdMacros} field can be used to hold a comma-separated list of
 packages from which the current package will import @file{Rd} macro
-definitions.  These package should also be listed in @samp{Imports},
-@samp{Suggests} or @samp{Depends}.  The macros in these packages will be 
-imported after the system macros, in the 
+definitions.  These will be imported after the system macros, in the
 order listed in the @samp{RdMacros} field, before any macro definitions
 in the current package are loaded.  Macro definitions in individual
 @file{.Rd} files in the @file{man} directory are loaded last, and are
@@ -1468,7 +1466,7 @@ strsplit(tclvalue('auto_path'), " ")[[1]]
 
 @noindent
 then download the sources from
-@uref{https://sourceforge.net/@/projects/@/tcllib/@/files/@/BWidget/} and
+@uref{http://sourceforge.net/@/projects/@/tcllib/@/files/@/BWidget/} and
 at the command line run something like
 
 @example
@@ -1505,7 +1503,7 @@ https://cran.r-project.org/package=@var{pkgname}
 
 @noindent
 and not a version starting
-@samp{https://cran.r-project.org/web/packages/@var{pkgname}}.
+@samp{http://cran.r-project.org/web/packages/@var{pkgname}}.
 
 @node Configure and cleanup, Checking and building packages, Package structure, Creating R packages
 @section Configure and cleanup
@@ -2128,7 +2126,7 @@ default@footnote{Windows default, not MinGW-w64 default.} FPU control
 word, so computations done on OpenMP threads will not make use of
 extended-precision arithmetic which is the default for the main process.
 @c mingw64-public, 2015-02-02.
-@c https://stackoverflow.com/questions/2553725/is-the-fpu-control-word-setting-per-thread-or-per-process
+@c http://stackoverflow.com/questions/2553725/is-the-fpu-control-word-setting-per-thread-or-per-process
 
 Calling any of the @R{} API from threaded code is `for experts only':
 they will need to read the source code to determine if it is
@@ -2650,8 +2648,8 @@ using std::make_unique;
 
 @noindent
 Code needing C++14 features would do better to test for their presence
-@emph{via} `SD-6 feature tests'@footnote{See
-@uref{https://isocpp.org/@/std/@/standing-documents/@/sd-6-sg10-feature-test-recommendations}
+@emph{via} `SD-6 feature tests'@footnote{@uref{See
+https://isocpp.org/@/std/@/standing-documents/@/sd-6-sg10-feature-test-recommendations}
 or
 @uref{http://en.cppreference.com/@/w/@/cpp/@/experimental/@/feature_test}.
 It seems a reasonable assumption that any compiler promising some C++14
@@ -4385,7 +4383,8 @@ interfaces to @R{}'s RNGs described in @ref{Random numbers}.  In
 particular, if more than one package initializes the system RNG (e.g.@:
 @emph{via} @code{srand}), they will interfere with each other.
 
-Nor should the C++11 random number library be used.
+Nor should the C++11 random number library be used, nor any other
+third-party random number generators such as those in GSL.
 
 @item
 Errors in memory allocation and reading/writing outside arrays are very
@@ -7675,7 +7674,7 @@ Developers have recommended @command{sample} (or @command{Sampler.app},
 which is a GUI version), @command{Shark} (in version of @code{Xcode}
 up to those for Snow Leopard), and @command{Instruments} (part of
 @code{Xcode}, see
-@uref{https://developer.apple.com/library/content/documentation/DeveloperTools/Conceptual/InstrumentsUserGuide/index.html}).
+@uref{https://developer.apple.com/library/mac/#documentation/DeveloperTools/Conceptual/InstrumentsUserGuide/Introduction/Introduction.html}).
 
 
 @node Debugging, System and foreign language interfaces, Tidying and profiling R code, Top
@@ -8324,8 +8323,8 @@ Xcode 7 and later), with some support for Solaris.  On some platforms
 the runtime library, @pkg{libasan}, needs to be installed separately,
 and for checking C++ you may also need @pkg{libubsan}.} of @command{gcc}
 and @command{clang} on common Linux and macOS platforms.  See
-@uref{https://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation},
-@uref{https://clang.llvm.org/@/docs/@/AddressSanitizer.html} and
+@uref{http://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation},
+@uref{http://clang.llvm.org/@/docs/@/AddressSanitizer.html} and
 @uref{https://code.google.com/@/p/@/address-sanitizer/}.
 
 More thorough checks of C++ code are done if the C++ library has been
@@ -8496,7 +8495,7 @@ This sanitizer can be combined with the Address Sanitizer by
 
 Finer control of what is checked can be achieved by other options: for
 @command{clang} see
-@uref{https://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation}.@footnote{or
+@uref{http://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation}.@footnote{or
 the user manual for your version of @command{clang}, e.g.@: (the paths
 have differed for some versions)
 @uref{http://llvm.org/@/releases/@/4.0.0/@/tools/@/clang/@/docs/@/UsersManual.html}.}
@@ -8596,13 +8595,13 @@ It may or may not be possible to build @R{} itself with
 Recent versions of @command{clang} on @cputype{x86_64} Linux have
 `ThreadSanitizer' (@uref{https://code.google.com/@/p/@/thread-sanitizer/}),
 a `data race detector for C/C++ programs', and `MemorySanitizer'
-(@uref{https://clang.llvm.org/@/docs/@/MemorySanitizer.html},
+(@uref{http://clang.llvm.org/@/docs/@/MemorySanitizer.html},
 @uref{https://code.google.com/@/p/@/memory-sanitizer/@/wiki/@/MemorySanitizer})
 for the detection of uninitialized memory.  Both are based on and
 provide similar functionality to tools in @command{valgrind}.
 
 @command{clang} has a `Static Analyser' which can be run on the source
-files during compilation: see @uref{https://clang-analyzer.llvm.org/}.
+files during compilation: see @uref{http://clang-analyzer.llvm.org/}.
 
 @node Using `Dr. Memory', Fortran array bounds checking, Other analyses with `clang', Checking memory access
 @subsection Using `Dr. Memory'
@@ -9463,7 +9462,7 @@ September 2001, pages 20--23,
 @uref{https://www.r-project.org/@/doc/@/Rnews/Rnews_2001-3.pdf}).
 
 Once routines are registered, they can be referred to as @R{} objects if
-this is arranged in the @code{useDynLib} call in the package's
+they this is arranged in the @code{useDynLib} call in the package's
 @file{NAMESPACE} file (see @ref{useDynLib}).  So for example the
 @pkg{stats} package has
 @example
@@ -9550,7 +9549,7 @@ can make a large difference.  The results can depend quite markedly on
 the OS (and even if it is 32- or 64-bit), on the version of @R{} and
 what else is loaded into @R{} at the time.
 
-To fix ideas, first consider @code{x86_64} OS 10.7 and @R{} 2.15.2.  A
+To fix ideas, first consider @code{x84_64} OS 10.7 and @R{} 2.15.2.  A
 simple @code{.Call} function might be
 @example
 foo <- function(x) .Call("foo", x)
@@ -9730,7 +9729,7 @@ and @code{.Fortran} are all pointers, specifying them as @code{void *}
 suffices. (For most platforms one can omit all the arguments.)
 
 @item
-(Optional but highly recommended.)  Restrict @code{.Call} etc to use the
+(Optional but highly recommended.)  Restrict @code{.Call} etc to using the
 symbols you chose to register by editing @file{src/init.c} to contain
 
 @example
@@ -9783,7 +9782,7 @@ Check that there is no @code{exportPattern} directive which
 unintentionally exports the newly created @R{} objects.
 
 @item
-Restrict @code{.Call} to use the @R{} symbols by editing
+Restrict @code{.Call} to using the @R{} symbols by editing
 @file{src/init.c} to contain
 
 @example
@@ -9815,7 +9814,7 @@ nm -g /path/to/splines.so | grep " T "
 @noindent
 If there were any entry points not intended to be used by the package we
 should try to avoid exporting them, for example by making them
-@code{static}.  Now that the two relevant entry points are only accessed
+@code{static}.  Now the two relevant entry points are only accessed
 @emph{via} the registration table, we can hide them.  There are two ways
 to do so on some Unix-alikes.  We can hide individual entry points
 @emph{via}
@@ -9933,8 +9932,8 @@ routines.
 A package that wishes to make use of header files in other packages
 needs to declare them as a comma-separated list in the field
 @samp{LinkingTo} in the @file{DESCRIPTION} file.  This then arranges
-for the @file{include} directories in the installed linked-to packages
-to be added to the include paths for C and C++ code.
+that the @file{include} directories in the installed linked-to packages
+are added to the include paths for C and C++ code.
 
 It must specify@footnote{whether or not @samp{LinkingTo} is used.}
 @samp{Imports} or @samp{Depends} of those packages, for they have to be
@@ -9945,7 +9944,7 @@ loaded@footnote{so there needs to be a corresponding @code{import} or
 
 @acronym{CRAN} examples of the use of this mechanism include @CRANpkg{coxme}
 linking to @CRANpkg{bdsmatrix} and @CRANpkg{xts} linking to
-@CRANpkg{zoo}.
+@CRANpkg{zoo}
 
 @node Creating shared objects, Interfacing C++ code, Registering native routines, System and foreign language interfaces
 @section Creating shared objects
@@ -9989,7 +9988,7 @@ It is possible to arrange to include compiled code from other languages
 by setting the macro @samp{OBJECTS} in file @file{Makevars}, together
 with suitable rules to make the objects.
 
-Flags that are already set (for example in file
+Flags which are already set (for example in file
 @file{etc@var{R_ARCH}/Makeconf}) can be overridden by the environment
 variable @env{MAKEFLAGS} (at least for systems using a POSIX-compliant
 @code{make}), as in (Bourne shell syntax)
@@ -11201,10 +11200,9 @@ can take values
 The object is not bound to any symbol
 @item 1
 The object has been bound to exactly one symbol
-@item >= 2
+@item 2
 The object has potentially been bound to two or more symbols, and one
 should act as if another variable is currently bound to this value.
-The maximal value is @code{NAMEDMAX}.
 @end table
 
 @noindent
@@ -11212,11 +11210,11 @@ Note the past tenses: @R{} does not do full reference counting and there
 may currently be fewer bindings.
 
 It is safe to modify the value of any @code{SEXP} for which
-@code{NAMED(foo)} is zero, and if @code{NAMED(foo)} is two or more, the
-value should be duplicated (@emph{via} a call to @code{duplicate})
-before any modification.  Note that it is the responsibility of the
-author of the code making the modification to do the duplication, even
-if it is @code{x} whose value is being modified after @code{y <- x}.
+@code{NAMED(foo)} is zero, and if @code{NAMED(foo)} is two, the value
+should be duplicated (@emph{via} a call to @code{duplicate}) before any
+modification.  Note that it is the responsibility of the author of the
+code making the modification to do the duplication, even if it is
+@code{x} whose value is being modified after @code{y <- x}.
 
 The case @code{NAMED(foo) == 1} allows some optimization, but it can be
 ignored (and duplication done whenever @code{NAMED(foo) > 0}).  (This
@@ -11244,23 +11242,11 @@ rebound immediately.  (Provided the remaining code in @code{"foo<-"}
 make no reference to @code{x}, and no one is going to attempt a direct
 call such as @code{y <- "foo<-"(x)}.)
 
-This mechanism is likely to be replaced in future versions of @R{}. To
-support future changes, package code should use the macros
-@code{MAYBE_REFERENCED}, @code{MAYBE_SHARED}, and
-@code{MARK_NOT_MUTABLE}. These currently correspond to
-
-@table@code
-@item MAYBE_REFERENCED(x)
-@code{NAMED(x) > 0}
-@item MAYBE_SHARED(x)
-@code{NAMED(x) > 1}
-@item MARK_NOT_MUTABLE(x)
-@code{SET_NAMED(x, NAMEDMAX)}
-@end table
+This mechanism is likely to be replaced in future versions of @R{}.
 
 @c commented out as people misread this as general.
 @c Currently all arguments to a @code{.Call} call will have @code{NAMED}
-@c set to 2 or higher and so users must assume that they need to be duplicated
+@c set to 2, and so users must assume that they need to be duplicated
 @c before alteration.
 
 @node Interface functions .Call and .External, Evaluating R expressions from C, Handling R objects in C, System and foreign language interfaces
@@ -12167,7 +12153,8 @@ void R_RunWeakRefFinalizer(SEXP w);
 @end example
 
 A toy example of the use of weak references can be found at
-@uref{https://homepage.stat.uiowa.edu/~luke/R/references/weakfinex.html},
+@uref{http://homepage.stat.uiowa.edu/~luke/R/references/weakfinex.html,
+@code{homepage.@/stat.@/uiowa.@/edu/@/~luke/@/R/references/@/weakfinex.html}},
 but that is used to add finalizers to external pointers which can now be
 done more directly.  At the time of writing no @acronym{CRAN} or
 Bioconductor package uses weak references.

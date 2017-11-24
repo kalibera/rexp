@@ -1,7 +1,7 @@
 #  File src/library/base/R/New-Internal.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -32,7 +32,8 @@ try <- function(expr, silent = FALSE,
             dcall <- deparse(call)[1L]
             prefix <- paste("Error in", dcall, ": ")
             LONG <- 75L # to match value in errors.c
-            sm <- strsplit(conditionMessage(e), "\n")[[1L]]
+            msg <- conditionMessage(e)
+            sm <- strsplit(msg, "\n")[[1L]]
             w <- 14L + nchar(dcall, type="w") + nchar(sm[1L], type="w")
             ## this could be NA if any of this is invalid in a MBCS
             if(is.na(w))
@@ -96,35 +97,32 @@ rbind <- function(..., deparse.level = 1)
 
 
 # convert deparsing options to bitmapped integer
-..deparseOpts <-
-    ## the exact order of these is determined by the integer codes in
-    ## ../../../include/Defn.h
-    c("all",
-      "keepInteger", "quoteExpressions", "showAttributes", # 2,3,4
-      "useSource", "warnIncomplete", "delayPromises",      # 5,6,7
-      "keepNA", "S_compatible", "hexNumeric",              # 8,9,10
-      "digits17", "niceNames")                             # 11,12
 
 .deparseOpts <- function(control) {
-    if(!length(control)) return(0) # fast exit
-    opts <- pmatch(as.character(control), ..deparseOpts)
+    opts <- pmatch(as.character(control),
+                   ## the exact order of these is determined by the integer codes in
+                   ## ../../../include/Defn.h
+                   c("all",
+                     "keepInteger", "quoteExpressions", "showAttributes",
+                     "useSource", "warnIncomplete", "delayPromises",
+                     "keepNA", "S_compatible", "hexNumeric", "digits17"))
     if (anyNA(opts))
         stop(sprintf(ngettext(as.integer(sum(is.na(opts))),
                               "deparse option %s is not recognized",
                               "deparse options %s are not recognized"),
                      paste(sQuote(control[is.na(opts)]), collapse=", ")),
              call. = FALSE, domain = NA)
-    if (any(opts == 1L)) # "all"
-        opts <- unique(c(opts[opts != 1L], 2L,3L,4L,5L,6L,8L, 12L)) # not (7,9:11)
+    if (any(opts == 1L))
+        opts <- unique(c(opts[opts != 1L], 2L,3L,4L,5L,6L,8L)) # not (7,9:11)
     if(10L %in% opts && 11L %in% opts)
         stop('"hexNumeric" and "digits17" are mutually exclusive')
-    sum(2^(opts-2))
+    return(sum(2^(opts-2)))
 }
 
 deparse <-
     function(expr, width.cutoff = 60L,
 	     backtick = mode(expr) %in% c("call", "expression", "(", "function"),
-	     control = c("keepNA", "keepInteger", "niceNames", "showAttributes"),
+	     control = c("keepInteger", "showAttributes", "keepNA"),
              nlines = -1L)
     .Internal(deparse(expr, width.cutoff, backtick,
                       .deparseOpts(control), nlines))
@@ -143,9 +141,9 @@ drop <- function(x) .Internal(drop(x))
 format.info <- function(x, digits = NULL, nsmall = 0L)
     .Internal(format.info(x, digits, nsmall))
 
-gc <- function(verbose = getOption("verbose"),	reset=FALSE, full=TRUE)
+gc <- function(verbose = getOption("verbose"),	reset=FALSE)
 {
-    res <- .Internal(gc(verbose, reset, full))
+    res <- .Internal(gc(verbose, reset))
     res <- matrix(res, 2L, 7L,
 		  dimnames = list(c("Ncells","Vcells"),
 		  c("used", "(Mb)", "gc trigger", "(Mb)",

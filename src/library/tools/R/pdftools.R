@@ -237,7 +237,7 @@ function(file, cache = TRUE)
             pos <- .con_seek(con)
             pdf_read_object_header(con)
             obj <- pdf_read_object(con)
-            if(("Type" %notin% names(obj)) ||
+            if(!("Type" %in% names(obj)) ||
                !(obj[["Type"]] == "XRef")) {
                 ## Something's wrong.
                 ## Try finding the xref table before pos.

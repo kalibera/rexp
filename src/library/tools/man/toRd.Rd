@@ -7,7 +7,9 @@
 \alias{toRd}
 \alias{toRd.default}
 \alias{toRd.bibentry}
-\title{Generic Function to Convert Object to a Fragment of Rd Code}
+\title{
+Generic function to convert object to a fragment of Rd code.
+}
 \description{
 Methods for this function render their associated classes as a fragment of Rd
 code, which can then be rendered into text, HTML, or LaTeX.

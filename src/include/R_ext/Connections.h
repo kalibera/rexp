@@ -80,8 +80,6 @@ struct Rconn {
     void *ex_ptr;
     void *private;
     int status; /* for pipes etc */
-    unsigned char *buff;
-    size_t buff_len, buff_stored_len, buff_pos;
 };
 
 #ifdef  __cplusplus

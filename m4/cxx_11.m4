@@ -238,6 +238,7 @@ m4_define([_AX_CXX_COMPILE_STDCXX_testbody_new_in_11], [[
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 

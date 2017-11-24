@@ -48,7 +48,7 @@ format.default <-
 	       NULL = "NULL",
 	       character = .Internal(format(x, trim, digits, nsmall, width, adj,
 					    na.encode, scientific, NA_character_)),
-	       call =, expression =, "function" =, "(" = deparse(x, backtick=TRUE),
+	       call =, expression =, "function" =, "("  = deparse(x),
 	       raw = as.character(x),
            {
 	       ## else: logical, numeric, complex, .. :

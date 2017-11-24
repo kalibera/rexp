@@ -5,7 +5,9 @@
 
 \name{RdTextFilter}
 \alias{RdTextFilter}
-\title{Select Text in an Rd File}
+\title{
+Select text in an Rd file.
+}
 \description{
 This function blanks out all non-text in an Rd file,
 for spell checking or other uses.

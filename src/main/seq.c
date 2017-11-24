@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998-2017  The R Core Team.
  *  Copyright (C) 1995-1998  Robert Gentleman and Ross Ihaka
+ *  Copyright (C) 1998-2017  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -225,7 +225,7 @@ static SEXP rep2(SEXP s, SEXP ncopy)
 	    SEXP elt = lazy_duplicate(VECTOR_ELT(s, i)); \
 	    for (j = (R_xlen_t) it[i]; j > 0; j--) \
 		SET_VECTOR_ELT(a, n++, elt); \
-	    if (j > 1) ENSURE_NAMEDMAX(elt); \
+	    if (j > 1) SET_NAMED(elt, 2); \
 	} \
 	break; \
     case RAWSXP: \
@@ -680,8 +680,7 @@ SEXP attribute_hidden do_rep(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    warningcall(call, "'x' is NULL so the result will be NULL");
 	SEXP a;
 	PROTECT(a = duplicate(x));
-	if(len != NA_INTEGER && len > 0 && x != R_NilValue)
-	    a = xlengthgets(a, len);
+	if(len != NA_INTEGER && len > 0) a = xlengthgets(a, len);
 	UNPROTECT(3);
 	return a;
     }

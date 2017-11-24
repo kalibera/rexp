@@ -1,7 +1,7 @@
 #  File src/library/tools/R/install.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 # NB: also copyright dates in Usages.
 #
@@ -50,9 +50,9 @@
 
     do_exit <-
 	if(no.q)
-	    function(status) stop(".install_packages() exit status ", status)
+	    function(status = 1L) stop(".install_packages() exit status ", status)
 	else
-	    function(status) q("no", status = status, runLast = FALSE)
+	    function(status = 1L) q("no", status = status, runLast = FALSE)
 
     do_exit_on_error <- function(status = 1L)
     {
@@ -740,7 +740,7 @@
                     message("  running 'src/Makefile.win' ...", domain = NA)
                     res <- system(paste("make --no-print-directory",
                                         paste("-f", shQuote(makefiles), collapse = " ")))
-                    if (res == 0L) shlib_install(instdir, rarch)
+                    if (res == 0) shlib_install(instdir, rarch)
                     else has_error <- TRUE
                 } else { ## no src/Makefile.win
                     srcs <- dir(pattern = "\\.([cfmM]|cc|cpp|f90|f95|mm)$",
@@ -758,16 +758,18 @@
                         ## for now, hardcode some exceptions
                         ## These are packages which have arch-independent
                         ## code in configure.win
-                        if(pkg_name %notin%
-                           c("AnalyzeFMRI", "CORElearn", "PearsonDS",
-                             "PKI", "RGtk2", "RNetCDF", "RODBC",
-                             "RSclient", "Rcpp", "Runuran", "SQLiteMap",
-                             "XML", "arulesSequences", "cairoDevice",
-                             "diversitree", "foreign", "fastICA",
-                             "glmnet", "gstat", "igraph", "jpeg", "png",
-                             "proj4", "randtoolbox", "rgdal", "rngWELL",
-                             "rphast", "rtfbs", "sparsenet", "tcltk2",
-                             "tiff", "udunits2"))
+                        if(!pkg_name %in% c("AnalyzeFMRI", "CORElearn",
+                                            "PearsonDS", "PKI", "RGtk2",
+                                            "RNetCDF", "RODBC", "RSclient",
+                                            "Rcpp", "Runuran", "SQLiteMap",
+                                            "XML", "arulesSequences",
+                                            "cairoDevice", "diversitree",
+                                            "foreign", "fastICA", "glmnet",
+                                            "gstat", "igraph", "jpeg", "png",
+                                            "proj4", "randtoolbox", "rgdal",
+                                            "rngWELL", "rphast", "rtfbs",
+                                            "sparsenet", "tcltk2", "tiff",
+                                            "udunits2"))
                             one_only <- sum(nchar(readLines("../configure.win", warn = FALSE), "bytes")) > 0
                         if(one_only && !force_biarch) {
                             if(parse_description_field(desc, "Biarch", FALSE))
@@ -814,7 +816,7 @@
                                    makevars_user())
                     res <- system(paste(MAKE,
                                         paste("-f", shQuote(makefiles), collapse = " ")))
-                    if (res == 0L) shlib_install(instdir, rarch)
+                    if (res == 0) shlib_install(instdir, rarch)
                     else has_error <- TRUE
                     setwd(owd)
                 } else { ## no src/Makefile
@@ -827,7 +829,7 @@
                     archs <- Sys.glob("*")
                     setwd(wd2)
                     if (length(allfiles)) {
-                        ## if there is an executable configure script we install only the main
+                        ## if there is a configure script we install only the main
                         ## sub-architecture
                         if (!multiarch || length(archs) <= 1 ||
                             file_test("-x", "../configure")) {
@@ -873,7 +875,8 @@
             if (length(dirs)) {
                 descfile <- file.path(instdir, "DESCRIPTION")
                 olddesc <- readLines(descfile, warn = FALSE)
-                olddesc <- filtergrep("^Archs:", olddesc, useBytes = TRUE)
+                olddesc <- grep("^Archs:", olddesc,
+                                invert = TRUE, value = TRUE, useBytes = TRUE)
                 newdesc <- c(olddesc,
                              paste("Archs:", paste(dirs, collapse = ", "))
                              )
@@ -1042,7 +1045,8 @@
             length(dir("inst", all.files = TRUE)) > 2L) {
 	    starsmsg(stars, "inst")
             i_dirs <- list.dirs("inst")[-1L] # not inst itself
-            i_dirs <- filtergrep(.vc_dir_names_re, i_dirs)
+            i_dirs <- grep(.vc_dir_names_re, i_dirs,
+                           invert = TRUE, value = TRUE)
             ## This ignores any restrictive permissions in the source
             ## tree, since the later .Call(C_dirchmod) call will
             ## fix the permissions.
@@ -1054,22 +1058,27 @@
                 ignore[nzchar(ignore)]
             } else character()
             for(e in ignore)
-                i_dirs <- filtergrep(e, i_dirs, perl = TRUE, ignore.case = TRUE)
+                i_dirs <- grep(e, i_dirs, perl = TRUE, invert = TRUE,
+                               value = TRUE, ignore.case = TRUE)
             lapply(gsub("^inst", instdir, i_dirs),
                    function(p) dir.create(p, FALSE, TRUE)) # be paranoid
             i_files <- list.files("inst", all.files = TRUE,
                                   full.names = TRUE, recursive = TRUE)
-            i_files <- filtergrep(.vc_dir_names_re, i_files)
+            i_files <- grep(.vc_dir_names_re, i_files,
+                            invert = TRUE, value = TRUE)
             for(e in ignore)
-                i_files <- filtergrep(e, i_files, perl = TRUE, ignore.case = TRUE)
+                i_files <- grep(e, i_files, perl = TRUE, invert = TRUE,
+                                value = TRUE, ignore.case = TRUE)
             i_files <- i_files %w/o% c("inst/doc/Rplots.pdf",
                                        "inst/doc/Rplots.ps")
-            i_files <- filtergrep("inst/doc/.*[.](log|aux|bbl|blg|dvi)$",
-                                  i_files, perl = TRUE, ignore.case = TRUE)
+            i_files <- grep("inst/doc/.*[.](log|aux|bbl|blg|dvi)$",
+                            i_files, perl = TRUE, invert = TRUE,
+                            value = TRUE, ignore.case = TRUE)
             ## Temporary kludge
-            if (!dir.exists("vignettes") && pkgname %notin% c("RCurl"))
-                i_files <- filtergrep("inst/doc/.*[.](png|jpg|jpeg|gif|ps|eps)$",
-                                      i_files, perl = TRUE, ignore.case = TRUE)
+            if (!dir.exists("vignettes") && ! pkgname %in% c("RCurl"))
+                i_files <- grep("inst/doc/.*[.](png|jpg|jpeg|gif|ps|eps)$",
+                                i_files, perl = TRUE, invert = TRUE,
+                                value = TRUE, ignore.case = TRUE)
             i_files <- i_files %w/o% "Makefile"
             i2_files <- gsub("^inst", instdir, i_files)
             file.copy(i_files, i2_files)
@@ -1220,14 +1229,12 @@
             deps_only <-
                 config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_", "FALSE"))
             env <- if (deps_only) setRlibs(lib0, self = TRUE, quote = TRUE) else ""
-            tlim <- get_timeout(Sys.getenv("_R_INSTALL_TEST_LOAD_ELAPSED_TIMEOUT_"))
             if (length(test_archs) > 1L) {
                 msgs <- character()
                 opts <- "--no-save --slave"
                 for (arch in test_archs) {
                     starsmsg("***", "arch - ", arch)
-                    out <- R_runR(cmd, opts, env = env, arch = arch,
-                                  timeout = tlim)
+                    out <- R_runR(cmd, opts, env = env, arch = arch)
                     if(length(attr(out, "status")))
                         msgs <- c(msgs, arch)
                     if(length(out))
@@ -1241,7 +1248,7 @@
             } else {
                 opts <- paste(if(deps_only) "--vanilla" else "--no-save",
                               "--slave")
-                out <- R_runR(cmd, opts, env = env, timeout = tlim)
+                out <- R_runR(cmd, opts, env = env)
                 if(length(out))
                     cat(paste(c(out, ""), collapse = "\n"))
                 if(length(attr(out, "status")))
@@ -1250,7 +1257,7 @@
         }
     }
 
-    options(showErrorCalls = FALSE)
+    options(showErrorCalls=FALSE)
     pkgs <- character()
     if (is.null(args)) {
         args <- commandArgs(TRUE)
@@ -1586,7 +1593,7 @@
             res <- try(dir.create(fn, showWarnings = FALSE))
             if (inherits(res, "try-error") || !res) ok <- FALSE
             else unlink(fn, recursive = TRUE)
-        } else ok <- file.access(lib, 2L) == 0L
+        } else ok <- file.access(lib, 2L) == 0
     }
     if (!ok)
         stop("ERROR: no permission to install to directory ",

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2017  The R Core Team
+ *  Copyright (C) 1995--2015  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -597,8 +597,8 @@ static void InFormat(R_inpstream_t stream)
 
 #define PTRHASH(obj) (((R_size_t) (obj)) >> 2)
 
-#define HASH_TABLE_COUNT(ht) ((int) TRUELENGTH(CDR(ht)))
-#define SET_HASH_TABLE_COUNT(ht, val) SET_TRUELENGTH(CDR(ht), ((int) (val)))
+#define HASH_TABLE_COUNT(ht) TRUELENGTH(CDR(ht))
+#define SET_HASH_TABLE_COUNT(ht, val) SET_TRUELENGTH(CDR(ht), val)
 
 #define HASH_TABLE_SIZE(ht) LENGTH(CDR(ht))
 
@@ -661,7 +661,6 @@ static int HashGet(SEXP item, SEXP ht)
 #define BCREPREF          243
 #define EMPTYENV_SXP	  242
 #define BASEENV_SXP	  241
-#define ALTREP_SXP	  240
 
 /* The following are needed to preserve attribute information on
    expressions in the constant pool of byte code objects. This is
@@ -979,22 +978,6 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 
  tailcall:
     R_CheckStack();
-    if (ALTREP(s)) {
-	SEXP info = ALTREP_SERIALIZED_CLASS(s);
-	SEXP state = ALTREP_SERIALIZED_STATE(s);
-	if (info != NULL && state != NULL) {
-	    int flags = PackFlags(ALTREP_SXP, LEVELS(s), OBJECT(s), 0, 0);
-	    PROTECT(state);
-	    PROTECT(info);
-	    OutInteger(stream, flags);
-	    WriteItem(info, ref_table, stream);
-	    WriteItem(state, ref_table, stream);
-	    WriteItem(ATTRIB(s), ref_table, stream);
-	    UNPROTECT(2); /* state, info */
-	    return;
-	}
-	/* else fall through to standard processing */
-    }
     if ((t = GetPersistentName(stream, s)) != R_NilValue) {
 	R_assert(TYPEOF(t) == STRSXP && LENGTH(t) > 0);
 	PROTECT(t);
@@ -1366,9 +1349,9 @@ static SEXP GetReadRef(SEXP table, int index)
 static void AddReadRef(SEXP table, SEXP value)
 {
     SEXP data = CAR(table);
-    R_xlen_t count = TRUELENGTH(data) + 1;
+    int count = TRUELENGTH(data) + 1;
     if (count >= LENGTH(data)) {
-	R_xlen_t i, len;
+	int i, len;
 	SEXP newdata;
 
 	PROTECT(value);
@@ -1579,17 +1562,6 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	UNPROTECT(1);
 	AddReadRef(ref_table, s);
 	return s;
-    case ALTREP_SXP:
-	{
-	    R_ReadItemDepth++;
-	    SEXP info = PROTECT(ReadItem(ref_table, stream));
-	    SEXP state = PROTECT(ReadItem(ref_table, stream));
-	    SEXP attr = PROTECT(ReadItem(ref_table, stream));
-	    s = ALTREP_UNSERIALIZE_EX(info, state, attr, objf, levs);
-	    UNPROTECT(3); /* info, state, attr */
-	    R_ReadItemDepth--;
-	    return s;
-	}
     case SYMSXP:
 	R_ReadItemDepth++;
 	PROTECT(s = ReadItem(ref_table, stream)); /* print name */
@@ -2093,10 +2065,10 @@ static void InBytesConn(R_inpstream_t stream, void *buf, int length)
 	if (stream->type == R_pstream_ascii_format) {
 	    char linebuf[4];
 	    unsigned char *p = buf;
-	    int i;
+	    int i, ncread;
 	    unsigned int res;
 	    for (i = 0; i < length; i++) {
-		size_t ncread = Rconn_getline(con, linebuf, 3);
+		ncread = Rconn_getline(con, linebuf, 3);
 		if (ncread != 2)
 		    error(_("error reading from ascii connection"));
 		if (!sscanf(linebuf, "%02x", &res))
@@ -2809,7 +2781,7 @@ static SEXP R_getVarsFromFrame(SEXP vars, SEXP env, SEXP forcesxp)
 	if (force && TYPEOF(tmp) == PROMSXP) {
 	    PROTECT(tmp);
 	    tmp = eval(tmp, R_GlobalEnv);
-	    ENSURE_NAMEDMAX(tmp);
+	    SET_NAMED(tmp, 2);
 	    UNPROTECT(1);
 	}
 	else if (TYPEOF(tmp) != NILSXP && NAMED(tmp) < 1)
@@ -2888,7 +2860,7 @@ do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
     if (TYPEOF(val) == PROMSXP) {
 	REPROTECT(val, vpi);
 	val = eval(val, R_GlobalEnv);
-	ENSURE_NAMEDMAX(val);
+	SET_NAMED(val, 2);
     }
     UNPROTECT(1);
     return val;

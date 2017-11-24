@@ -40,11 +40,9 @@ prmatrix <-
     .Internal(prmatrix(x, rowlab, collab, quote, right, na.print))
 }
 
-noquote <- function(obj, right = FALSE) {
+noquote <- function(obj) {
     ## constructor for a useful "minor" class
-    if(!inherits(obj,"noquote"))
-        class(obj) <- c(attr(obj, "class"),
-                        if(right) c(right = "noquote") else "noquote")
+    if(!inherits(obj,"noquote")) class(obj) <- c(attr(obj, "class"),"noquote")
     obj
 }
 
@@ -65,22 +63,15 @@ c.noquote <- function(..., recursive = FALSE)
 }
 
 print.noquote <- function(x, ...) {
-    rgt.in.dots <- any("right" == names(list(...)))
     if(copy <- !is.null(cl <- attr(x, "class"))) {
 	isNQ <- cl == "noquote"
-	if(!rgt.in.dots)
-	    right <- any("right" == names(cl[isNQ]))
 	if(copy <- any(isNQ)) {
 	    ox <- x
 	    cl <- cl[!isNQ]
 	    attr(x, "class") <- if(length(cl)) cl # else NULL
 	}
-    } else
-	right <- FALSE
-    if(rgt.in.dots)
-	print(x, quote = FALSE, ...)
-    else
-	print(x, quote = FALSE, right = right, ...)
+    }
+    print(x, quote = FALSE, ...)
     invisible(if(copy) ox else x)
 }
 

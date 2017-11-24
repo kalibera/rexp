@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2017  The R Core Team.
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
+ *  Copyright (C) 1998--2016  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,7 +28,6 @@
  */
 
 #define USE_RINTERNALS
-#define COMPILING_MEMORY_C
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -250,8 +249,7 @@ static void R_ReportNewPage();
 }  while(0)
 
 static void R_gc_internal(R_size_t size_needed);
-static void R_gc_no_finalizers(R_size_t size_needed);
-static void R_gc_lite();
+static void R_gc_full(R_size_t size_needed);
 static void mem_err_heap(R_size_t size);
 static void mem_err_malloc(R_size_t size);
 
@@ -508,11 +506,7 @@ typedef union PAGE_HEADER {
   double align;
 } PAGE_HEADER;
 
-#if ( SIZEOF_SIZE_T > 4 )
-# define BASE_PAGE_SIZE 8000
-#else
-# define BASE_PAGE_SIZE 2000
-#endif
+#define BASE_PAGE_SIZE 2000
 #define R_PAGE_SIZE \
   (((BASE_PAGE_SIZE - sizeof(PAGE_HEADER)) / sizeof(SEXPREC)) \
    * sizeof(SEXPREC) \
@@ -635,16 +629,9 @@ static R_size_t R_NodesInUse = 0;
 #else
 #define FREE_FORWARD_CASE
 #endif
-/*** assume for now all ALTREP nodes are based on CONS nodes */
 #define DO_CHILDREN(__n__,dc__action__,dc__extra__) do { \
   if (HAS_GENUINE_ATTRIB(__n__)) \
     dc__action__(ATTRIB(__n__), dc__extra__); \
-  if (ALTREP(__n__)) {					\
-	  dc__action__(TAG(__n__), dc__extra__);	\
-	  dc__action__(CAR(__n__), dc__extra__);	\
-	  dc__action__(CDR(__n__), dc__extra__);	\
-      }							\
-  else \
   switch (TYPEOF(__n__)) { \
   case NILSXP: \
   case BUILTINSXP: \
@@ -887,7 +874,7 @@ static void GetNewPage(int node_class)
 
     page = malloc(R_PAGE_SIZE);
     if (page == NULL) {
-	R_gc_no_finalizers(0);
+	R_gc_full(0);
 	page = malloc(R_PAGE_SIZE);
 	if (page == NULL)
 	    mem_err_malloc((R_size_t) R_PAGE_SIZE);
@@ -907,13 +894,13 @@ static void GetNewPage(int node_class)
 	SNAP_NODE(s, base);
 #if  VALGRIND_LEVEL > 1
 	if (NodeClassSize[node_class] > 0)
-	    VALGRIND_MAKE_MEM_NOACCESS(STDVEC_DATAPTR(s), NodeClassSize[node_class]*sizeof(VECREC));
+	    VALGRIND_MAKE_MEM_NOACCESS(DATAPTR(s), NodeClassSize[node_class]*sizeof(VECREC));
 #endif
 	s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	INIT_REFCNT(s);
 	SET_NODE_CLASS(s, node_class);
 #ifdef PROTECTCHECK
-	SET_TYPEOF(s, NEWSXP);
+	TYPEOF(s) = NEWSXP;
 #endif
 	base = s;
 	R_GenHeap[node_class].Free = s;
@@ -997,7 +984,7 @@ static void TryToReleasePages(void)
 static R_INLINE R_size_t getVecSizeInVEC(SEXP s)
 {
     if (IS_GROWABLE(s))
-	SET_STDVEC_LENGTH(s, XTRUELENGTH(s));
+	SETLENGTH(s, XTRUELENGTH(s));
 
     R_size_t size;
     switch (TYPEOF(s)) {	/* get size in bytes */
@@ -1041,7 +1028,7 @@ static void ReleaseLargeFreeVectors()
 		R_size_t size;
 #ifdef PROTECTCHECK
 		if (TYPEOF(s) == FREESXP)
-		    size = STDVEC_LENGTH(s);
+		    size = XLENGTH(s);
 		else
 		    /* should not get here -- arrange for a warning/error? */
 		    size = getVecSizeInVEC(s);
@@ -1052,9 +1039,23 @@ static void ReleaseLargeFreeVectors()
 		R_GenHeap[node_class].AllocCount--;
 		if (node_class == LARGE_NODE_CLASS) {
 		    R_LargeVallocSize -= size;
+#ifdef LONG_VECTOR_SUPPORT
+		    if (IS_LONG_VEC(s))
+			free(((char *) s) - sizeof(R_long_vec_hdr_t));
+		    else
+			free(s);
+#else
 		    free(s);
+#endif
 		} else {
+#ifdef LONG_VECTOR_SUPPORT
+		    if (IS_LONG_VEC(s))
+			custom_node_free(((char *) s) - sizeof(R_long_vec_hdr_t));
+		    else
+			custom_node_free(s);
+#else
 		    custom_node_free(s);
+#endif
 		}
 	    }
 	    s = next;
@@ -1076,25 +1077,7 @@ static void AdjustHeapSize(R_size_t size_needed)
     double vect_occup =	((double) VNeeded) / R_VSize;
 
     if (node_occup > R_NGrowFrac) {
-	R_size_t change =
-	    (R_size_t)(R_NGrowIncrMin + R_NGrowIncrFrac * R_NSize);
-
-	/* for early andjustments grow more agressively */
-	static R_size_t last_in_use = 0;
-	static int adjust_count = 1;
-	if (adjust_count < 50) {
-	    adjust_count++;
-
-	    /* estimate next in-use count by assuming linear growth */
-	    R_size_t next_in_use = R_NodesInUse + (R_NodesInUse - last_in_use);
-	    last_in_use = R_NodesInUse;
-
-	    /* try to achieve and occupancy rate of R_NGrowFrac */
-	    R_size_t next_nsize = (R_size_t) (next_in_use / R_NGrowFrac);
-	    if (next_nsize > R_NSize + change)
-		change = next_nsize - R_NSize;
-	}
-
+	R_size_t change = (R_size_t)(R_NGrowIncrMin + R_NGrowIncrFrac * R_NSize);
 	if (R_MaxNSize >= R_NSize + change)
 	    R_NSize += change;
     }
@@ -1367,8 +1350,8 @@ SEXP R_WeakRefValue(SEXP w)
     if (TYPEOF(w) != WEAKREFSXP)
 	error(_("not a weak reference"));
     v = WEAKREF_VALUE(w);
-    if (v != R_NilValue)
-	ENSURE_NAMEDMAX(v);
+    if (v != R_NilValue && NAMED(v) <= 1)
+	SET_NAMED(v, 2);
     return v;
 }
 
@@ -1655,13 +1638,8 @@ static void RunGenCollect(R_size_t size_needed)
     FORWARD_NODE(R_print.na_string_noquote);
 
     if (R_SymbolTable != NULL)             /* in case of GC during startup */
-	for (i = 0; i < HSIZE; i++) {      /* Symbol table */
+	for (i = 0; i < HSIZE; i++)        /* Symbol table */
 	    FORWARD_NODE(R_SymbolTable[i]);
-	    SEXP s;
-	    for (s = R_SymbolTable[i]; s != R_NilValue; s = CDR(s))
-		if (ATTRIB(CAR(s)) != R_NilValue)
-		    REprintf("****found a symbol with attributes\n");
-	}
 
     if (R_CurrentExpr != NULL)	           /* Current expression */
 	FORWARD_NODE(R_CurrentExpr);
@@ -1785,7 +1763,7 @@ static void RunGenCollect(R_size_t size_needed)
 	    if (TYPEOF(s) != NEWSXP) {
 		if (TYPEOF(s) != FREESXP) {
 		    SETOLDTYPE(s, TYPEOF(s));
-		    SET_TYPEOF(s, FREESXP);
+		    TYPEOF(s) = FREESXP;
 		}
 		if (gc_inhibit_release)
 		    FORWARD_NODE(s);
@@ -1804,10 +1782,10 @@ static void RunGenCollect(R_size_t size_needed)
 			  calculating size */
 		    if (CHAR(s) != NULL) {
 			R_size_t size = getVecSizeInVEC(s);
-			SET_STDVEC_LENGTH(s, size);
+			SETLENGTH(s, size);
 		    }
 		    SETOLDTYPE(s, TYPEOF(s));
-		    SET_TYPEOF(s, FREESXP);
+		    TYPEOF(s) = FREESXP;
 		}
 		if (gc_inhibit_release)
 		    FORWARD_NODE(s);
@@ -1830,7 +1808,7 @@ static void RunGenCollect(R_size_t size_needed)
 	for(s = NEXT_NODE(R_GenHeap[i].New);
 	    s != R_GenHeap[i].Free;
 	    s = NEXT_NODE(s)) {
-	    VALGRIND_MAKE_MEM_NOACCESS(STDVEC_DATAPTR(s),
+	    VALGRIND_MAKE_MEM_NOACCESS(DATAPTR(s),
 				       NodeClassSize[i]*sizeof(VECREC));
 	}
     }
@@ -1999,18 +1977,15 @@ void attribute_hidden get_current_mem(size_t *smallvsize,
 SEXP attribute_hidden do_gc(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP value;
-    int ogc, reset_max, full;
+    int ogc, reset_max;
     R_size_t onsize = R_NSize /* can change during collection */;
 
     checkArity(op, args);
     ogc = gc_reporting;
     gc_reporting = asLogical(CAR(args));
     reset_max = asLogical(CADR(args));
-    full = asLogical(CADDR(args));
-    if (full)
-	R_gc();
-    else
-	R_gc_lite();
+    num_old_gens_to_collect = NUM_OLD_GENERATIONS;
+    R_gc();
 
     gc_reporting = ogc;
     /*- now return the [used , gc trigger size] for cells and heap */
@@ -2448,7 +2423,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
 
     /* precaution to ensure code does not get modified via
        substitute() and the like */
-    ENSURE_NAMEDMAX(expr);
+    if (NAMED(expr) < 2) SET_NAMED(expr, 2);
 
     s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     INIT_REFCNT(s);
@@ -2541,18 +2516,15 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    case INTSXP: actual_size = sizeof(int); break;
 	    case LGLSXP: actual_size = sizeof(int); break;
 	    }
-	    VALGRIND_MAKE_MEM_UNDEFINED(STDVEC_DATAPTR(s), actual_size);
+	    VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
 #endif
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
-	    SETSCALAR(s, 1);
 	    SET_NODE_CLASS(s, node_class);
 	    R_SmallVallocSize += alloc_size;
-	    /* Note that we do not include the header size into VallocSize,
-	       but it is counted into memory usage via R_NodesInUse. */
 	    ATTRIB(s) = R_NilValue;
 	    SET_TYPEOF(s, type);
-	    SET_STDVEC_LENGTH(s, (R_len_t) length); // is 1
-	    SET_STDVEC_TRUELENGTH(s, 0);
+	    SET_SHORT_VEC_LENGTH(s, (R_len_t) length); // is 1
+	    SET_SHORT_VEC_TRUELENGTH(s, 0);
 	    SET_NAMED(s, 0);
 	    INIT_REFCNT(s);
 	    return(s);
@@ -2688,24 +2660,23 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	if (node_class < NUM_SMALL_NODE_CLASSES) {
 	    CLASS_GET_FREE_NODE(node_class, s);
 #if VALGRIND_LEVEL > 1
-	    VALGRIND_MAKE_MEM_UNDEFINED(STDVEC_DATAPTR(s), actual_size);
+	    VALGRIND_MAKE_MEM_UNDEFINED(DATAPTR(s), actual_size);
 #endif
 	    s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
 	    INIT_REFCNT(s);
 	    SET_NODE_CLASS(s, node_class);
 	    R_SmallVallocSize += alloc_size;
-	    SET_STDVEC_LENGTH(s, (R_len_t) length);
+	    SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
 	}
 	else {
 	    Rboolean success = FALSE;
 	    R_size_t hdrsize = sizeof(SEXPREC_ALIGN);
+#ifdef LONG_VECTOR_SUPPORT
+	    if (length > R_SHORT_LEN_MAX)
+		hdrsize = sizeof(SEXPREC_ALIGN) + sizeof(R_long_vec_hdr_t);
+#endif
 	    void *mem = NULL; /* initialize to suppress warning */
 	    if (size < (R_SIZE_T_MAX / sizeof(VECREC)) - hdrsize) { /*** not sure this test is quite right -- why subtract the header? LT */
-		/* I think subtracting the header is fine, "size" (*VSize)
-		   variables do not count the header, but the header is
-		   included into memory usage via NodesInUse, instead.
-		   We want the whole object including the header to be
-		   indexable by size_t. - TK */
 		mem = allocator ?
 		    custom_node_alloc(allocator, hdrsize + size * sizeof(VECREC)) :
 		    malloc(hdrsize + size * sizeof(VECREC));
@@ -2713,14 +2684,27 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 		    /* If we are near the address space limit, we
 		       might be short of address space.  So return
 		       all unused objects to malloc and try again. */
-		    R_gc_no_finalizers(alloc_size);
+		    R_gc_full(alloc_size);
 		    mem = allocator ?
 			custom_node_alloc(allocator, hdrsize + size * sizeof(VECREC)) :
 			malloc(hdrsize + size * sizeof(VECREC));
 		}
 		if (mem != NULL) {
+#ifdef LONG_VECTOR_SUPPORT
+		    if (length > R_SHORT_LEN_MAX) {
+			s = (SEXP) (((char *) mem) + sizeof(R_long_vec_hdr_t));
+			SET_SHORT_VEC_LENGTH(s, R_LONG_VEC_TOKEN);
+			SET_LONG_VEC_LENGTH(s, length);
+			SET_LONG_VEC_TRUELENGTH(s, 0);
+		    }
+		    else {
+			s = mem;
+			SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
+		    }
+#else
 		    s = mem;
-		    SET_STDVEC_LENGTH(s, length);
+		    SETLENGTH(s, length);
+#endif
 		    success = TRUE;
 		}
 		else s = NULL;
@@ -2751,9 +2735,6 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    if (!allocator) R_LargeVallocSize += size;
 	    R_GenHeap[node_class].AllocCount++;
 	    R_NodesInUse++;
-	    /* FIXME: for long vectors, the R_long_vec_hdr_t size will not be
-	       included into memory usage. It is neither in VallocSize nor in
-	       NodesInUse. */
 	    SNAP_NODE(s, R_GenHeap[node_class].New);
 	}
 	ATTRIB(s) = R_NilValue;
@@ -2761,10 +2742,9 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
     }
     else {
 	GC_PROT(s = allocSExpNonCons(type));
-	SET_STDVEC_LENGTH(s, (R_len_t) length);
+	SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
     }
-    SETALTREP(s, 0);
-    SET_STDVEC_TRUELENGTH(s, 0);
+    SET_SHORT_VEC_TRUELENGTH(s, 0);
     SET_NAMED(s, 0);
     INIT_REFCNT(s);
 
@@ -2888,22 +2868,13 @@ SEXP allocFormalsList6(SEXP sym1, SEXP sym2, SEXP sym3, SEXP sym4,
 
 void R_gc(void)
 {
-    num_old_gens_to_collect = NUM_OLD_GENERATIONS;
     R_gc_internal(0);
 #ifndef IMMEDIATE_FINALIZERS
     R_RunPendingFinalizers();
 #endif
 }
 
-void R_gc_lite(void)
-{
-    R_gc_internal(0);
-#ifndef IMMEDIATE_FINALIZERS
-    R_RunPendingFinalizers();
-#endif
-}
-
-static void R_gc_no_finalizers(R_size_t size_needed)
+static void R_gc_full(R_size_t size_needed)
 {
     num_old_gens_to_collect = NUM_OLD_GENERATIONS;
     R_gc_internal(size_needed);
@@ -3099,6 +3070,7 @@ SEXP attribute_hidden do_memoryprofile(SEXP call, SEXP op, SEXP args, SEXP env)
       int gen;
 
       /* run a full GC to make sure that all stuff in use is in Old space */
+      num_old_gens_to_collect = NUM_OLD_GENERATIONS;
       R_gc();
       for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++) {
 	for (i = 0; i < NUM_NODE_CLASSES; i++) {
@@ -3379,7 +3351,7 @@ void R_SetExternalPtrProtected(SEXP s, SEXP p)
     EXTPTR_PROT(s) = p;
 }
 
-/*
+/* 
    Added to API in R 3.4.0.
    Work around casting issues: works where it is needed.
  */
@@ -3418,14 +3390,12 @@ int (TYPEOF)(SEXP x) { return TYPEOF(CHK(x)); }
 int (NAMED)(SEXP x) { return NAMED(CHK(x)); }
 int (RTRACE)(SEXP x) { return RTRACE(CHK(x)); }
 int (LEVELS)(SEXP x) { return LEVELS(CHK(x)); }
-int (REFCNT)(SEXP x) { return REFCNT(CHK(x)); }
-int (ALTREP)(SEXP x) { return ALTREP(CHK(x)); }
-int (IS_SCALAR)(SEXP x, int type) { return IS_SCALAR(CHK(x), type); }
+int (REFCNT)(SEXP x) { return REFCNT(x); }
 
 void (SET_ATTRIB)(SEXP x, SEXP v) {
     if(TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
 	error("value of 'SET_ATTRIB' must be a pairlist or NULL, not a '%s'",
-	      type2char(TYPEOF(v)));
+	      type2char(TYPEOF(x)));
     FIX_REFCNT(x, ATTRIB(x), v);
     CHECK_OLD_TO_NEW(x, v);
     ATTRIB(x) = v;
@@ -3446,8 +3416,6 @@ void SHALLOW_DUPLICATE_ATTRIB(SEXP to, SEXP from) {
     IS_S4_OBJECT(from) ?  SET_S4_OBJECT(to) : UNSET_S4_OBJECT(to);
 }
 
-void (ENSURE_NAMEDMAX)(SEXP x) { ENSURE_NAMEDMAX(CHK(x)); }
-
 /* S4 object testing */
 int (IS_S4_OBJECT)(SEXP x){ return IS_S4_OBJECT(CHK(x)); }
 void (SET_S4_OBJECT)(SEXP x){ SET_S4_OBJECT(CHK(x)); }
@@ -3465,7 +3433,7 @@ int (IS_GROWABLE)(SEXP x) { return IS_GROWABLE(CHK(x)); }
 void (SET_GROWABLE_BIT)(SEXP x) { SET_GROWABLE_BIT(CHK(x)); }
 
 static int nvec[32] = {
-    1,1,1,1,1,1,1,1,
+    0,1,1,1,1,1,1,1,  // does NILSXP really count?
     1,0,0,1,1,0,0,0,
     0,1,1,0,0,1,1,0,
     0,1,1,1,1,1,1,1
@@ -3480,38 +3448,26 @@ static R_INLINE SEXP CHK2(SEXP x)
 }
 
 /* Vector Accessors */
-int (LENGTH)(SEXP x) { return x == R_NilValue ? 0 : LENGTH(CHK2(x)); }
+int (LENGTH)(SEXP x) { return LENGTH(CHK2(x)); }
+int (TRUELENGTH)(SEXP x) { return TRUELENGTH(CHK2(x)); }
+void (SETLENGTH)(SEXP x, int v) { SETLENGTH(CHK2(x), v); }
+void (SET_TRUELENGTH)(SEXP x, int v) { SET_TRUELENGTH(CHK2(x), v); }
 R_xlen_t (XLENGTH)(SEXP x) { return XLENGTH(CHK2(x)); }
-R_xlen_t (TRUELENGTH)(SEXP x) { return TRUELENGTH(CHK2(x)); }
-void (SETLENGTH)(SEXP x, R_xlen_t v) { SET_STDVEC_LENGTH(CHK2(x), v); }
-void (SET_TRUELENGTH)(SEXP x, R_xlen_t v) { SET_TRUELENGTH(CHK2(x), v); }
+R_xlen_t (XTRUELENGTH)(SEXP x) { return XTRUELENGTH(CHK2(x)); }
 int  (IS_LONG_VEC)(SEXP x) { return IS_LONG_VEC(CHK2(x)); }
-#ifdef TESTING_WRITE_BARRIER
-R_xlen_t (STDVEC_LENGTH)(SEXP x) { return STDVEC_LENGTH(CHK2(x)); }
-R_xlen_t (STDVEC_TRUELENGTH)(SEXP x) { return STDVEC_TRUELENGTH(CHK2(x)); }
-void (SETALTREP)(SEXP x, int v) { SETALTREP(x, v); }
-#endif
-
-/* temporary, to ease transition away from remapping */
-R_xlen_t Rf_XLENGTH(SEXP x) { return XLENGTH(x); }
 
 const char *(R_CHAR)(SEXP x) {
-    if(TYPEOF(x) != CHARSXP) // Han-Tak proposes to prepend  'x && '
+    if(TYPEOF(x) != CHARSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "CHAR", "CHARSXP", type2char(TYPEOF(x)));
-    return (const char *) CHAR(CHK(x));
+    return (const char *)CHAR(x);
 }
 
 SEXP (STRING_ELT)(SEXP x, R_xlen_t i) {
     if(TYPEOF(x) != STRSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "STRING_ELT", "character vector", type2char(TYPEOF(x)));
-    if (ALTREP(x))
-	return CHK(ALTSTRING_ELT(CHK(x), i));
-    else {
-	SEXP *ps = STDVEC_DATAPTR(CHK(x));
-	return CHK(ps[i]);
-    }
+    return CHK(STRING_ELT(x, i));
 }
 
 SEXP (VECTOR_ELT)(SEXP x, R_xlen_t i) {
@@ -3521,51 +3477,14 @@ SEXP (VECTOR_ELT)(SEXP x, R_xlen_t i) {
        TYPEOF(x) != WEAKREFSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "VECTOR_ELT", "list", type2char(TYPEOF(x)));
-    return CHK(VECTOR_ELT(CHK(x), i));
-}
-
-#ifdef TESTING_WRITE_BARRIER
-# define CATCH_ZERO_LENGTH_ACCESS
-#endif
-#ifdef CATCH_ZERO_LENGTH_ACCESS
-/* Attempts to read or write elements of a zero length vector will
-   result in a segfault, rather than read and write random memory.
-   Returning NULL would be more natural, but Matrix seems to assume
-   that even zero-length vectors have non-NULL data pointers, so
-   return (void *) NULL instead. */
-# define CHKZLN(x) do {					\
-	CHK(x);						\
-	if (STDVEC_LENGTH(x) == 0) return (void *) 1;	\
-    } while (0)
-#else
-# define CHKZLN(x) do { } while (0)
-#endif
-
-void *(STDVEC_DATAPTR)(SEXP x)
-{
-    if (ALTREP(x))
-	error("cannot get STDVEC_DATAPTR from ALTREP object");
-    if (! isVector(x) && TYPEOF(x) != WEAKREFSXP)
-	error("STDVEC_DATAPTR can only be applied to a vector, not a '%s'",
-	      type2char(TYPEOF(x)));
-    CHKZLN(x);
-    return STDVEC_DATAPTR(x);
+    return CHK(VECTOR_ELT(x, i));
 }
 
 int *(LOGICAL)(SEXP x) {
     if(TYPEOF(x) != LGLSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "LOGICAL",  "logical", type2char(TYPEOF(x)));
-    CHKZLN(x);
-    return LOGICAL(x);
-}
-
-const int *(LOGICAL_RO)(SEXP x) {
-    if(TYPEOF(x) != LGLSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "LOGICAL",  "logical", type2char(TYPEOF(x)));
-    CHKZLN(x);
-    return LOGICAL_RO(x);
+  return LOGICAL(x);
 }
 
 /* Maybe this should exclude logicals, but it is widely used */
@@ -3573,31 +3492,13 @@ int *(INTEGER)(SEXP x) {
     if(TYPEOF(x) != INTSXP && TYPEOF(x) != LGLSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "INTEGER", "integer", type2char(TYPEOF(x)));
-    CHKZLN(x);
     return INTEGER(x);
-}
-
-const int *(INTEGER_RO)(SEXP x) {
-    if(TYPEOF(x) != INTSXP && TYPEOF(x) != LGLSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "INTEGER", "integer", type2char(TYPEOF(x)));
-    CHKZLN(x);
-    return INTEGER_RO(x);
 }
 
 Rbyte *(RAW)(SEXP x) {
     if(TYPEOF(x) != RAWSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "RAW", "raw", type2char(TYPEOF(x)));
-    CHKZLN(x);
-    return RAW(x);
-}
-
-const Rbyte *(RAW_RO)(SEXP x) {
-    if(TYPEOF(x) != RAWSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "RAW", "raw", type2char(TYPEOF(x)));
-    CHKZLN(x);
     return RAW(x);
 }
 
@@ -3608,44 +3509,14 @@ double *(REAL)(SEXP x) {
     return REAL(x);
 }
 
-const double *(REAL_RO)(SEXP x) {
-    if(TYPEOF(x) != REALSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "REAL", "numeric", type2char(TYPEOF(x)));
-    return REAL_RO(x);
-}
-
 Rcomplex *(COMPLEX)(SEXP x) {
     if(TYPEOF(x) != CPLXSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "COMPLEX", "complex", type2char(TYPEOF(x)));
-    CHKZLN(x);
     return COMPLEX(x);
 }
 
-const Rcomplex *(COMPLEX_RO)(SEXP x) {
-    if(TYPEOF(x) != CPLXSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "COMPLEX", "complex", type2char(TYPEOF(x)));
-    CHKZLN(x);
-    return COMPLEX_RO(x);
-}
-
-SEXP *(STRING_PTR)(SEXP x) {
-    if(TYPEOF(x) != STRSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "STRING_PTR", "character", type2char(TYPEOF(x)));
-    CHKZLN(x);
-    return STRING_PTR(x);
-}
-
-const SEXP *(STRING_PTR_RO)(SEXP x) {
-    if(TYPEOF(x) != STRSXP)
-	error("%s() can only be applied to a '%s', not a '%s'",
-	      "STRING_PTR_RO", "character", type2char(TYPEOF(x)));
-    CHKZLN(x);
-    return STRING_PTR_RO(x);
-}
+SEXP *(STRING_PTR)(SEXP x) { return STRING_PTR(CHK(x)); }
 
 SEXP * NORET (VECTOR_PTR)(SEXP x)
 {
@@ -3653,23 +3524,18 @@ SEXP * NORET (VECTOR_PTR)(SEXP x)
 }
 
 void (SET_STRING_ELT)(SEXP x, R_xlen_t i, SEXP v) {
-    if(TYPEOF(CHK(x)) != STRSXP)
+    if(TYPEOF(x) != STRSXP)
 	error("%s() can only be applied to a '%s', not a '%s'",
 	      "SET_STRING_ELT", "character vector", type2char(TYPEOF(x)));
-    if(TYPEOF(CHK(v)) != CHARSXP)
+    if(TYPEOF(v) != CHARSXP)
        error("Value of SET_STRING_ELT() must be a 'CHARSXP' not a '%s'",
 	     type2char(TYPEOF(v)));
     if (i < 0 || i >= XLENGTH(x))
 	error(_("attempt to set index %lu/%lu in SET_STRING_ELT"),
 	      i, XLENGTH(x));
+    FIX_REFCNT(x, STRING_ELT(x, i), v);
     CHECK_OLD_TO_NEW(x, v);
-    if (ALTREP(x))
-	ALTSTRING_SET_ELT(x, i, v);
-    else {
-	SEXP *ps = STDVEC_DATAPTR(x);
-	FIX_REFCNT(x, ps[i], v);
-	ps[i] = v;
-    }
+    STRING_ELT(x, i) = v;
 }
 
 SEXP (SET_VECTOR_ELT)(SEXP x, R_xlen_t i, SEXP v) {
@@ -3688,58 +3554,26 @@ SEXP (SET_VECTOR_ELT)(SEXP x, R_xlen_t i, SEXP v) {
     return VECTOR_ELT(x, i) = v;
 }
 
-/* check for a CONS-like object */
-#ifdef TESTING_WRITE_BARRIER
-static R_INLINE SEXP CHKCONS(SEXP e)
-{
-    if (ALTREP(e))
-	return CHK(e);
-    switch (TYPEOF(e)) {
-    case LISTSXP:
-    case LANGSXP:
-    case NILSXP:
-    case DOTSXP:
-    case CLOSXP:    /**** use separate accessors? */
-    case BCODESXP:  /**** use separate accessors? */
-    case ENVSXP:    /**** use separate accessors? */
-    case PROMSXP:   /**** use separate accessors? */
-    case EXTPTRSXP: /**** use separate accessors? */
-	return CHK(e);
-    default:
-	error("CAR/CDR/TAG or similar applied to %s object",
-	      type2char(TYPEOF(e)));
-    }
-}
-#else
-#define CHKCONS(e) CHK(e)
-#endif
 
 /* List Accessors */
-SEXP (TAG)(SEXP e) { return CHK(TAG(CHKCONS(e))); }
-SEXP (CAR)(SEXP e) { return CHK(CAR(CHKCONS(e))); }
-SEXP (CDR)(SEXP e) { return CHK(CDR(CHKCONS(e))); }
-SEXP (CAAR)(SEXP e) { return CHK(CAAR(CHKCONS(e))); }
-SEXP (CDAR)(SEXP e) { return CHK(CDAR(CHKCONS(e))); }
-SEXP (CADR)(SEXP e) { return CHK(CADR(CHKCONS(e))); }
-SEXP (CDDR)(SEXP e) { return CHK(CDDR(CHKCONS(e))); }
-SEXP (CDDDR)(SEXP e) { return CHK(CDDDR(CHKCONS(e))); }
-SEXP (CADDR)(SEXP e) { return CHK(CADDR(CHKCONS(e))); }
-SEXP (CADDDR)(SEXP e) { return CHK(CADDDR(CHKCONS(e))); }
-SEXP (CAD4R)(SEXP e) { return CHK(CAD4R(CHKCONS(e))); }
-int (MISSING)(SEXP x) { return MISSING(CHKCONS(x)); }
+SEXP (TAG)(SEXP e) { return CHK(TAG(CHK(e))); }
+SEXP (CAR)(SEXP e) { return CHK(CAR(CHK(e))); }
+SEXP (CDR)(SEXP e) { return CHK(CDR(CHK(e))); }
+SEXP (CAAR)(SEXP e) { return CHK(CAAR(CHK(e))); }
+SEXP (CDAR)(SEXP e) { return CHK(CDAR(CHK(e))); }
+SEXP (CADR)(SEXP e) { return CHK(CADR(CHK(e))); }
+SEXP (CDDR)(SEXP e) { return CHK(CDDR(CHK(e))); }
+SEXP (CDDDR)(SEXP e) { return CHK(CDDDR(CHK(e))); }
+SEXP (CADDR)(SEXP e) { return CHK(CADDR(CHK(e))); }
+SEXP (CADDDR)(SEXP e) { return CHK(CADDDR(CHK(e))); }
+SEXP (CAD4R)(SEXP e) { return CHK(CAD4R(CHK(e))); }
+int (MISSING)(SEXP x) { return MISSING(CHK(x)); }
 
-void (SET_TAG)(SEXP x, SEXP v)
-{
-    if (CHKCONS(x) == NULL || x == R_NilValue)
-	error(_("bad value"));
-    FIX_REFCNT(x, TAG(x), v);
-    CHECK_OLD_TO_NEW(x, v);
-    TAG(x) = v;
-}
+void (SET_TAG)(SEXP x, SEXP v) { FIX_REFCNT(x, TAG(x), v); CHECK_OLD_TO_NEW(x, v); TAG(x) = v; }
 
 SEXP (SETCAR)(SEXP x, SEXP y)
 {
-    if (CHKCONS(x) == NULL || x == R_NilValue)
+    if (x == NULL || x == R_NilValue)
 	error(_("bad value"));
     FIX_REFCNT(x, CAR(x), y);
     CHECK_OLD_TO_NEW(x, y);
@@ -3749,7 +3583,7 @@ SEXP (SETCAR)(SEXP x, SEXP y)
 
 SEXP (SETCDR)(SEXP x, SEXP y)
 {
-    if (CHKCONS(x) == NULL || x == R_NilValue)
+    if (x == NULL || x == R_NilValue)
 	error(_("bad value"));
     FIX_REFCNT(x, CDR(x), y);
     CHECK_OLD_TO_NEW(x, y);
@@ -3760,8 +3594,8 @@ SEXP (SETCDR)(SEXP x, SEXP y)
 SEXP (SETCADR)(SEXP x, SEXP y)
 {
     SEXP cell;
-    if (CHKCONS(x) == NULL || x == R_NilValue ||
-	CHKCONS(CDR(x)) == NULL || CDR(x) == R_NilValue)
+    if (x == NULL || x == R_NilValue ||
+	CDR(x) == NULL || CDR(x) == R_NilValue)
 	error(_("bad value"));
     cell = CDR(x);
     FIX_REFCNT(cell, CAR(cell), y);
@@ -3773,9 +3607,9 @@ SEXP (SETCADR)(SEXP x, SEXP y)
 SEXP (SETCADDR)(SEXP x, SEXP y)
 {
     SEXP cell;
-    if (CHKCONS(x) == NULL || x == R_NilValue ||
-	CHKCONS(CDR(x)) == NULL || CDR(x) == R_NilValue ||
-	CHKCONS(CDDR(x)) == NULL || CDDR(x) == R_NilValue)
+    if (x == NULL || x == R_NilValue ||
+	CDR(x) == NULL || CDR(x) == R_NilValue ||
+	CDDR(x) == NULL || CDDR(x) == R_NilValue)
 	error(_("bad value"));
     cell = CDDR(x);
     FIX_REFCNT(cell, CAR(cell), y);
@@ -3787,10 +3621,10 @@ SEXP (SETCADDR)(SEXP x, SEXP y)
 SEXP (SETCADDDR)(SEXP x, SEXP y)
 {
     SEXP cell;
-    if (CHKCONS(x) == NULL || x == R_NilValue ||
-	CHKCONS(CDR(x)) == NULL || CDR(x) == R_NilValue ||
-	CHKCONS(CDDR(x)) == NULL || CDDR(x) == R_NilValue ||
-	CHKCONS(CDDDR(x)) == NULL || CDDDR(x) == R_NilValue)
+    if (CHK(x) == NULL || x == R_NilValue ||
+	CHK(CDR(x)) == NULL || CDR(x) == R_NilValue ||
+	CHK(CDDR(x)) == NULL || CDDR(x) == R_NilValue ||
+	CHK(CDDDR(x)) == NULL || CDDDR(x) == R_NilValue)
 	error(_("bad value"));
     cell = CDDDR(x);
     FIX_REFCNT(cell, CAR(cell), y);
@@ -3804,11 +3638,11 @@ SEXP (SETCADDDR)(SEXP x, SEXP y)
 SEXP (SETCAD4R)(SEXP x, SEXP y)
 {
     SEXP cell;
-    if (CHKCONS(x) == NULL || x == R_NilValue ||
-	CHKCONS(CDR(x)) == NULL || CDR(x) == R_NilValue ||
-	CHKCONS(CDDR(x)) == NULL || CDDR(x) == R_NilValue ||
-	CHKCONS(CDDDR(x)) == NULL || CDDDR(x) == R_NilValue ||
-	CHKCONS(CD4R(x)) == NULL || CD4R(x) == R_NilValue)
+    if (CHK(x) == NULL || x == R_NilValue ||
+	CHK(CDR(x)) == NULL || CDR(x) == R_NilValue ||
+	CHK(CDDR(x)) == NULL || CDDR(x) == R_NilValue ||
+	CHK(CDDDR(x)) == NULL || CDDDR(x) == R_NilValue ||
+	CHK(CD4R(x)) == NULL || CD4R(x) == R_NilValue)
 	error(_("bad value"));
     cell = CD4R(x);
     FIX_REFCNT(cell, CAR(cell), y);
@@ -3817,7 +3651,7 @@ SEXP (SETCAD4R)(SEXP x, SEXP y)
     return y;
 }
 
-void (SET_MISSING)(SEXP x, int v) { SET_MISSING(CHKCONS(x), v); }
+void (SET_MISSING)(SEXP x, int v) { SET_MISSING(CHK(x), v); }
 
 /* Closure Accessors */
 SEXP (FORMALS)(SEXP x) { return CHK(FORMALS(CHK(x))); }
@@ -3836,9 +3670,9 @@ void (SET_RSTEP)(SEXP x, int v) { SET_RSTEP(CHK(x), v); }
 #ifdef TESTING_WRITE_BARRIER
 /* Primitive Accessors */
 /* not hidden since needed in some base packages */
-int (PRIMOFFSET)(SEXP x) { return PRIMOFFSET(CHK(x)); }
+int (PRIMOFFSET)(SEXP x) { return PRIMOFFSET(x); }
 attribute_hidden
-void (SET_PRIMOFFSET)(SEXP x, int v) { SET_PRIMOFFSET(CHK(x), v); }
+void (SET_PRIMOFFSET)(SEXP x, int v) { SET_PRIMOFFSET(x, v); }
 #endif
 
 /* Symbol Accessors */
@@ -3900,67 +3734,67 @@ SEXP (SET_CXTAIL)(SEXP x, SEXP v) {
 }
 
 /* Test functions */
-Rboolean Rf_isNull(SEXP s) { return isNull(CHK(s)); }
-Rboolean Rf_isSymbol(SEXP s) { return isSymbol(CHK(s)); }
-Rboolean Rf_isLogical(SEXP s) { return isLogical(CHK(s)); }
-Rboolean Rf_isReal(SEXP s) { return isReal(CHK(s)); }
-Rboolean Rf_isComplex(SEXP s) { return isComplex(CHK(s)); }
-Rboolean Rf_isExpression(SEXP s) { return isExpression(CHK(s)); }
-Rboolean Rf_isEnvironment(SEXP s) { return isEnvironment(CHK(s)); }
-Rboolean Rf_isString(SEXP s) { return isString(CHK(s)); }
-Rboolean Rf_isObject(SEXP s) { return isObject(CHK(s)); }
+Rboolean Rf_isNull(SEXP s) { return isNull(s); }
+Rboolean Rf_isSymbol(SEXP s) { return isSymbol(s); }
+Rboolean Rf_isLogical(SEXP s) { return isLogical(s); }
+Rboolean Rf_isReal(SEXP s) { return isReal(s); }
+Rboolean Rf_isComplex(SEXP s) { return isComplex(s); }
+Rboolean Rf_isExpression(SEXP s) { return isExpression(s); }
+Rboolean Rf_isEnvironment(SEXP s) { return isEnvironment(s); }
+Rboolean Rf_isString(SEXP s) { return isString(s); }
+Rboolean Rf_isObject(SEXP s) { return isObject(s); }
 
 /* Bindings accessors */
 Rboolean attribute_hidden
-(IS_ACTIVE_BINDING)(SEXP b) {return IS_ACTIVE_BINDING(CHK(b));}
+(IS_ACTIVE_BINDING)(SEXP b) {return IS_ACTIVE_BINDING(b);}
 Rboolean attribute_hidden
-(BINDING_IS_LOCKED)(SEXP b) {return BINDING_IS_LOCKED(CHK(b));}
+(BINDING_IS_LOCKED)(SEXP b) {return BINDING_IS_LOCKED(b);}
 void attribute_hidden
-(SET_ACTIVE_BINDING_BIT)(SEXP b) {SET_ACTIVE_BINDING_BIT(CHK(b));}
-void attribute_hidden (LOCK_BINDING)(SEXP b) {LOCK_BINDING(CHK(b));}
-void attribute_hidden (UNLOCK_BINDING)(SEXP b) {UNLOCK_BINDING(CHK(b));}
+(SET_ACTIVE_BINDING_BIT)(SEXP b) {SET_ACTIVE_BINDING_BIT(b);}
+void attribute_hidden (LOCK_BINDING)(SEXP b) {LOCK_BINDING(b);}
+void attribute_hidden (UNLOCK_BINDING)(SEXP b) {UNLOCK_BINDING(b);}
 
 attribute_hidden
-void (SET_BASE_SYM_CACHED)(SEXP b) { SET_BASE_SYM_CACHED(CHK(b)); }
+void (SET_BASE_SYM_CACHED)(SEXP b) { SET_BASE_SYM_CACHED(b); }
 attribute_hidden
-void (UNSET_BASE_SYM_CACHED)(SEXP b) { UNSET_BASE_SYM_CACHED(CHK(b)); }
+void (UNSET_BASE_SYM_CACHED)(SEXP b) { UNSET_BASE_SYM_CACHED(b); }
 attribute_hidden
-Rboolean (BASE_SYM_CACHED)(SEXP b) { return BASE_SYM_CACHED(CHK(b)); }
+Rboolean (BASE_SYM_CACHED)(SEXP b) { return BASE_SYM_CACHED(b); }
 
 attribute_hidden
-void (SET_SPECIAL_SYMBOL)(SEXP b) { SET_SPECIAL_SYMBOL(CHK(b)); }
+void (SET_SPECIAL_SYMBOL)(SEXP b) { SET_SPECIAL_SYMBOL(b); }
 attribute_hidden
-void (UNSET_SPECIAL_SYMBOL)(SEXP b) { UNSET_SPECIAL_SYMBOL(CHK(b)); }
+void (UNSET_SPECIAL_SYMBOL)(SEXP b) { UNSET_SPECIAL_SYMBOL(b); }
 attribute_hidden
-Rboolean (IS_SPECIAL_SYMBOL)(SEXP b) { return IS_SPECIAL_SYMBOL(CHK(b)); }
+Rboolean (IS_SPECIAL_SYMBOL)(SEXP b) { return IS_SPECIAL_SYMBOL(b); }
 attribute_hidden
-void (SET_NO_SPECIAL_SYMBOLS)(SEXP b) { SET_NO_SPECIAL_SYMBOLS(CHK(b)); }
+void (SET_NO_SPECIAL_SYMBOLS)(SEXP b) { SET_NO_SPECIAL_SYMBOLS(b); }
 attribute_hidden
-void (UNSET_NO_SPECIAL_SYMBOLS)(SEXP b) { UNSET_NO_SPECIAL_SYMBOLS(CHK(b)); }
+void (UNSET_NO_SPECIAL_SYMBOLS)(SEXP b) { UNSET_NO_SPECIAL_SYMBOLS(b); }
 attribute_hidden
-Rboolean (NO_SPECIAL_SYMBOLS)(SEXP b) { return NO_SPECIAL_SYMBOLS(CHK(b)); }
+Rboolean (NO_SPECIAL_SYMBOLS)(SEXP b) { return NO_SPECIAL_SYMBOLS(b); }
 
 /* R_FunTab accessors, only needed when write barrier is on */
 /* Not hidden to allow experimentaiton without rebuilding R - LT */
 /* attribute_hidden */
-int (PRIMVAL)(SEXP x) { return PRIMVAL(CHK(x)); }
+int (PRIMVAL)(SEXP x) { return PRIMVAL(x); }
 /* attribute_hidden */
-CCODE (PRIMFUN)(SEXP x) { return PRIMFUN(CHK(x)); }
+CCODE (PRIMFUN)(SEXP x) { return PRIMFUN(x); }
 /* attribute_hidden */
-void (SET_PRIMFUN)(SEXP x, CCODE f) { PRIMFUN(CHK(x)) = f; }
+void (SET_PRIMFUN)(SEXP x, CCODE f) { PRIMFUN(x) = f; }
 
 /* for use when testing the write barrier */
-int  attribute_hidden (IS_BYTES)(SEXP x) { return IS_BYTES(CHK(x)); }
-int  attribute_hidden (IS_LATIN1)(SEXP x) { return IS_LATIN1(CHK(x)); }
-int  attribute_hidden (IS_ASCII)(SEXP x) { return IS_ASCII(CHK(x)); }
-int  attribute_hidden (IS_UTF8)(SEXP x) { return IS_UTF8(CHK(x)); }
-void attribute_hidden (SET_BYTES)(SEXP x) { SET_BYTES(CHK(x)); }
-void attribute_hidden (SET_LATIN1)(SEXP x) { SET_LATIN1(CHK(x)); }
-void attribute_hidden (SET_UTF8)(SEXP x) { SET_UTF8(CHK(x)); }
-void attribute_hidden (SET_ASCII)(SEXP x) { SET_ASCII(CHK(x)); }
-int  (ENC_KNOWN)(SEXP x) { return ENC_KNOWN(CHK(x)); }
-void attribute_hidden (SET_CACHED)(SEXP x) { SET_CACHED(CHK(x)); }
-int  (IS_CACHED)(SEXP x) { return IS_CACHED(CHK(x)); }
+int  attribute_hidden (IS_BYTES)(SEXP x) { return IS_BYTES(x); }
+int  attribute_hidden (IS_LATIN1)(SEXP x) { return IS_LATIN1(x); }
+int  attribute_hidden (IS_ASCII)(SEXP x) { return IS_ASCII(x); }
+int  attribute_hidden (IS_UTF8)(SEXP x) { return IS_UTF8(x); }
+void attribute_hidden (SET_BYTES)(SEXP x) { SET_BYTES(x); }
+void attribute_hidden (SET_LATIN1)(SEXP x) { SET_LATIN1(x); }
+void attribute_hidden (SET_UTF8)(SEXP x) { SET_UTF8(x); }
+void attribute_hidden (SET_ASCII)(SEXP x) { SET_ASCII(x); }
+int  (ENC_KNOWN)(SEXP x) { return ENC_KNOWN(x); }
+void attribute_hidden (SET_CACHED)(SEXP x) { SET_CACHED(x); }
+int  (IS_CACHED)(SEXP x) { return IS_CACHED(x); }
 
 /*******************************************/
 /* Non-sampling memory use profiler
@@ -3982,17 +3816,20 @@ static R_size_t R_MemReportingThreshold;
 
 static void R_OutputStackTrace(FILE *file)
 {
+    int newline = 0;
     RCNTXT *cptr;
 
     for (cptr = R_GlobalContext; cptr; cptr = cptr->nextcontext) {
 	if ((cptr->callflag & (CTXT_FUNCTION | CTXT_BUILTIN))
 	    && TYPEOF(cptr->call) == LANGSXP) {
 	    SEXP fun = CAR(cptr->call);
+	    if (!newline) newline = 1;
 	    fprintf(file, "\"%s\" ",
 		    TYPEOF(fun) == SYMSXP ? CHAR(PRINTNAME(fun)) :
 		    "<Anonymous>");
 	}
     }
+    if (newline) fprintf(file, "\n");
 }
 
 static void R_ReportAllocation(R_size_t size)
@@ -4001,7 +3838,6 @@ static void R_ReportAllocation(R_size_t size)
 	if(size > R_MemReportingThreshold) {
 	    fprintf(R_MemReportingOutfile, "%lu :", (unsigned long) size);
 	    R_OutputStackTrace(R_MemReportingOutfile);
-	    fprintf(R_MemReportingOutfile, "\n");
 	}
     }
     return;
@@ -4012,7 +3848,6 @@ static void R_ReportNewPage(void)
     if (R_IsMemReporting) {
 	fprintf(R_MemReportingOutfile, "new page:");
 	R_OutputStackTrace(R_MemReportingOutfile);
-	fprintf(R_MemReportingOutfile, "\n");
     }
     return;
 }

@@ -610,7 +610,7 @@ setMethod <-
     ## assigns the methodslist object
     ## and deals with flags for primitives & for updating group members
     assignMethodsMetaData(f, whereMethods, fdef, where)
-    invisible(f)
+    f
 }
 
 removeMethod <- function(f, signature = character(), where = topenv(parent.frame())) {

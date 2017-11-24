@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997-2017   The R Core Team
  *  Copyright (C) 1995-1996   Robert Gentleman and Ross Ihaka
+ *  Copyright (C) 1997-2017   The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@
 #include <R_ext/Riconv.h>
 #include <Rinterface.h>
 #include <errno.h>
-#include <rlocale.h>
 
 /*
   See ../unix/system.txt for a description of some of these functions.
@@ -50,8 +49,6 @@
 #ifdef HAVE_SYS_STAT_H
 # include <sys/stat.h>
 #endif
-
-static int isDir(char *path);
 
 #ifdef HAVE_AQUA
 int (*ptr_CocoaSystem)(const char*);
@@ -107,11 +104,11 @@ Rboolean attribute_hidden R_HiddenFile(const char *name)
 
 static char * fixmode(const char *mode)
 {
-    /* Rconnection can have a mode of 4 chars plus a ccs= setting plus a null; we might
-     * add one char if neither b nor t is specified. */
-    static char fixedmode[20];
-    fixedmode[19] = '\0';
-    strncpy(fixedmode, mode, 19);
+    /* Rconnection can have a mode of 4 chars plus a null; we might
+     * add one char */
+    static char fixedmode[6];
+    fixedmode[4] = '\0';
+    strncpy(fixedmode, mode, 4);
     if (!strpbrk(fixedmode, "bt")) {
 	strcat(fixedmode, "t");
     }
@@ -120,9 +117,9 @@ static char * fixmode(const char *mode)
 
 static wchar_t * wcfixmode(const wchar_t *mode)
 {
-    static wchar_t wcfixedmode[20];
-    wcfixedmode[19] = L'\0';
-    wcsncpy(wcfixedmode, mode, 19);
+    static wchar_t wcfixedmode[6];
+    wcfixedmode[4] = L'\0';
+    wcsncpy(wcfixedmode, mode, 4);
     if (!wcspbrk(wcfixedmode, L"bt")) {
 	wcscat(wcfixedmode, L"t");
     }
@@ -232,11 +229,6 @@ SEXP attribute_hidden do_interactive(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_tempdir(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    Rboolean check = asLogical(CAR(args));
-    if(check && !isDir(R_TempDir)) {
-	R_TempDir = NULL;
-	R_reInitTempDir(/* die_on_fail = */ FALSE);
-    }
     return mkString(R_TempDir);
 }
 
@@ -374,11 +366,11 @@ SEXP attribute_hidden do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
 	wchar_t **w;
 	for (i = 0, w = _wenviron; *w != NULL; i++, w++)
 	    n = max(n, wcslen(*w));
-	N = 4*n+1;
+	N = 3*n+1;
 	char buf[N];
 	PROTECT(ans = allocVector(STRSXP, i));
 	for (i = 0, w = _wenviron; *w != NULL; i++, w++) {
-	    wcstoutf8(buf, *w, sizeof(buf));
+	    wcstoutf8(buf, *w, N); buf[N-1] = '\0';
 	    SET_STRING_ELT(ans, i, mkCharCE(buf, CE_UTF8));
 	}
 #else
@@ -397,10 +389,10 @@ SEXP attribute_hidden do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (w == NULL)
 		SET_STRING_ELT(ans, j, STRING_ELT(CADR(args), 0));
 	    else {
-		int n = wcslen(w), N = 4*n+1; /* UTF-16 maps to <= 4 UTF-8 */
+		int n = wcslen(w), N = 3*n+1; /* UCS-2 maps to <=3 UTF-8 */
 		R_CheckStack2(N);
 		char buf[N];
-		wcstoutf8(buf, w, sizeof(buf));
+		wcstoutf8(buf, w, N); buf[N-1] = '\0'; /* safety */
 		SET_STRING_ELT(ans, j, mkCharCE(buf, CE_UTF8));
 	    }
 #else
@@ -647,10 +639,8 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 		SHALLOW_DUPLICATE_ATTRIB(ans, x);
 	    }
 	} else {
-	    if(TYPEOF(x) != STRSXP) {
-		Riconv_close(obj);
+	    if(TYPEOF(x) != STRSXP)
 		error(_("'x' must be a character vector"));
-	    }
 	    if(toRaw) {
 		PROTECT(ans = allocVector(VECSXP, LENGTH(x)));
 		SHALLOW_DUPLICATE_ATTRIB(ans, x);
@@ -664,10 +654,8 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 		if (TYPEOF(si) == NILSXP) {
 		    if (!toRaw) SET_STRING_ELT(ans, i, NA_STRING);
 		    continue;
-		} else if (TYPEOF(si) != RAWSXP) {
-		    Riconv_close(obj);
+		} else if (TYPEOF(si) != RAWSXP)
 		    error(_("'x' must be a character vector or a list of NULL or raw vectors"));
-		}
 	    } else {
 		si = STRING_ELT(x, i);
 		if (si == NA_STRING) {
@@ -861,10 +849,10 @@ static void translateToNative(const char *ans, R_StringBuffer *cbuff,
 	    if(obj == (void *)(-1))
 #ifdef Win32
 		error(_("unsupported conversion from '%s' in codepage %d"),
-		      "UTF-8", localeCP);
+		      "latin1", localeCP);
 #else
 		error(_("unsupported conversion from '%s' to '%s'"),
-		      "UTF-8", "");
+		      "latin1", "");
 #endif
 	    utf8_obj = obj;
 	}
@@ -893,22 +881,21 @@ next_char:
 	    /* This must be the first byte */
 	    size_t clen;
 	    wchar_t wc;
-	    Rwchar_t ucs;
 	    clen = utf8toucs(&wc, inbuf);
 	    if(clen > 0 && inb >= clen) {
-	    	if (IS_HIGH_SURROGATE(wc))
-	    	    ucs = utf8toucs32(wc, inbuf);
-	    	else
-	    	    ucs = (Rwchar_t) wc;
 		inbuf += clen; inb -= clen;
-		if(ucs < 65536) {
+# ifndef Win32
+		if((unsigned int) wc < 65536) {
+# endif
 		// gcc 7 objects to this with unsigned int
-		    snprintf(outbuf, 9, "<U+%04X>", (unsigned short) ucs);
+		    snprintf(outbuf, 9, "<U+%04X>", (unsigned short) wc);
 		    outbuf += 8; outb -= 8;
+# ifndef Win32
 		} else {
-		    snprintf(outbuf, 13, "<U+%08X>", ucs);
+		    snprintf(outbuf, 13, "<U+%08X>", (unsigned int) wc);
 		    outbuf += 12; outb -= 12;
 		}
+# endif
 	    } else {
 		snprintf(outbuf, 5, "<%02x>", (unsigned char)*inbuf);
 		outbuf += 4; outb -= 4;
@@ -930,8 +917,7 @@ next_char:
 const char *translateChar(SEXP x)
 {
     if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "translateChar", type2char(TYPEOF(x)));
+	error(_("'%s' must be called on a CHARSXP"), "translateChar");
     nttype_t t = needsTranslation(x);
     const char *ans = CHAR(x);
     if (t == NT_NONE) return ans;
@@ -949,8 +935,7 @@ const char *translateChar(SEXP x)
 SEXP installTrChar(SEXP x)
 {
     if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "installTrChar", type2char(TYPEOF(x)));
+	error(_("'%s' must be called on a CHARSXP"), "installTrChar");
     nttype_t t = needsTranslation(x);
     if (t == NT_NONE) return installChar(x);
 
@@ -983,8 +968,7 @@ const char *translateCharUTF8(SEXP x)
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
     if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "translateCharUTF8", type2char(TYPEOF(x)));
+	error(_("'%s' must be called on a CHARSXP"), "translateCharUTF8");
     if(x == NA_STRING) return ans;
     if(IS_UTF8(x)) return ans;
     if(IS_ASCII(x)) return ans;
@@ -995,10 +979,9 @@ const char *translateCharUTF8(SEXP x)
     if(obj == (void *)(-1))
 #ifdef Win32
 	error(_("unsupported conversion from '%s' in codepage %d"),
-	      IS_LATIN1(x) ? "latin1" : "", localeCP);
+	      "latin1", localeCP);
 #else
-	error(_("unsupported conversion from '%s' to '%s'"),
-	      IS_LATIN1(x) ? "latin1" : "", "UTF-8");
+       error(_("unsupported conversion from '%s' to '%s'"), "latin1", "UTF-8");
 #endif
     R_AllocStringBuffer(0, &cbuff);
 top_of_loop:
@@ -1082,7 +1065,7 @@ const wchar_t *wtransChar(SEXP x)
 	    obj = Riconv_open(TO_WCHAR, "UTF-8");
 	    if(obj == (void *)(-1))
 		error(_("unsupported conversion from '%s' to '%s'"),
-		      "UTF-8", TO_WCHAR);
+		      "latin1", TO_WCHAR);
 	    utf8_wobj = obj;
 	} else
 	    obj = utf8_wobj;
@@ -1366,27 +1349,12 @@ next_char:
 void attribute_hidden
 invalidate_cached_recodings(void)
 {
-    if (latin1_obj) {
-	Riconv_close(latin1_obj);
-	latin1_obj = NULL;
-    }
-    if (utf8_obj) {
-	Riconv_close(utf8_obj);
-	utf8_obj = NULL;
-    }
-    if (ucsmb_obj) {
-	Riconv_close(ucsmb_obj);
-	ucsmb_obj = NULL;
-    }
+    latin1_obj = NULL;
+    utf8_obj = NULL;
+    ucsmb_obj = NULL;
 #ifdef Win32
-    if (latin1_wobj) {
-	Riconv_close(latin1_wobj);
-	latin1_wobj = NULL;
-    }
-    if (utf8_wobj) {
-	Riconv_close(utf8_wobj);
-	utf8_wobj = NULL;
-    }
+    latin1_wobj = NULL;
+    utf8_wobj=NULL;
 #endif
 }
 
@@ -1589,19 +1557,13 @@ extern char * mkdtemp (char *template);
 # include <ctype.h>
 #endif
 
-void R_reInitTempDir(int die_on_fail)
+void attribute_hidden InitTempDir()
 {
     char *tmp, *tm, tmp1[PATH_MAX+11], *p;
 #ifdef Win32
     char tmp2[PATH_MAX];
     int hasspace = 0;
 #endif
-
-#define ERROR_MAYBE_DIE(MSG_)			\
-    if(die_on_fail)				\
-	R_Suicide(MSG_);			\
-    else					\
-	errorcall(R_NilValue, MSG_)
 
     if(R_TempDir) return; /* someone else set it */
     tmp = NULL; /* getenv("R_SESSION_TMPDIR");   no longer set in R.sh */
@@ -1632,9 +1594,7 @@ void R_reInitTempDir(int die_on_fail)
 	snprintf(tmp1, PATH_MAX+11, "%s/RtmpXXXXXX", tm);
 #endif
 	tmp = mkdtemp(tmp1);
-	if(!tmp) {
-	    ERROR_MAYBE_DIE(_("cannot create 'R_TempDir'"));
-	}
+	if(!tmp) R_Suicide(_("cannot create 'R_TempDir'"));
 #ifndef Win32
 # ifdef HAVE_SETENV
 	if(setenv("R_SESSION_TMPDIR", tmp, 1))
@@ -1658,16 +1618,12 @@ void R_reInitTempDir(int die_on_fail)
     size_t len = strlen(tmp) + 1;
     p = (char *) malloc(len);
     if(!p)
-	ERROR_MAYBE_DIE(_("cannot allocate 'R_TempDir'"));
+	R_Suicide(_("cannot allocate 'R_TempDir'"));
     else {
 	R_TempDir = p;
 	strcpy(R_TempDir, tmp);
 	Sys_TempDir = R_TempDir;
     }
-}
-
-void attribute_hidden InitTempDir() {
-    R_reInitTempDir(/* die_on_fail = */ TRUE);
 }
 
 char * R_tmpnam(const char * prefix, const char * tempdir)
@@ -1677,7 +1633,7 @@ char * R_tmpnam(const char * prefix, const char * tempdir)
 
 /* NB for use with multicore: parent and all children share the same
    session directory and run in parallel.
-   So as from 2.14.1, we make sure getpid() is part of the process.
+   So as from 2.14.1, we make sure getpic() is part of the process.
 */
 char * R_tmpnam2(const char *prefix, const char *tempdir, const char *fileext)
 {
@@ -1882,9 +1838,9 @@ SEXP attribute_hidden do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
     {
 	wchar_t *w = globbuf.gl_pathv[i];
 	char *buf;
-	int nb = wcstoutf8(NULL, w, INT_MAX);
-	buf = R_AllocStringBuffer(nb, &cbuff);
-	wcstoutf8(buf, w, nb);
+	int nb = wcstoutf8(NULL, w, 0);
+	buf = R_AllocStringBuffer(nb+1, &cbuff);
+	wcstoutf8(buf, w, nb+1); buf[nb] = '\0'; /* safety check */
 	SET_STRING_ELT(ans, i, mkCharCE(buf, CE_UTF8));
     }
 #else

@@ -31,8 +31,7 @@ DISTFILES = \
 	Rlapackrc.rc dllversion.rc \
 	$(HEADERS) Lapack.c init_win.c \
 	vecLibg95c.c vecLibg95f.f \
-	cmplx.f dlapack.f dlamch.f \
-	dble.txt cmplx.txt
+	cmplx.f dlapack.f dlamch.f
 
 lapack_la = lapack$(SHLIB_EXT)
 Rlapack_la = libRlapack$(R_DYLIB_EXT)
@@ -88,7 +87,7 @@ $(Rlapack_la): $(LIBOBJECTS)
 Rlapack_install: $(Rlapack_la) 
 	@$(MKINSTALLDIRS) "$(DESTDIR)$(Rexeclibdir)"
 	@$(SHELL) $(top_srcdir)/tools/copy-if-change $(Rlapack_la) \
-	  "$(Rexeclibdir)/$(Rlapack_la)"
+	  $(Rexeclibdir)/$(Rlapack_la)
 
 install: installdirs
 	@$(SHELL) $(top_srcdir)/tools/copy-if-change $(lapack_la) "$(DESTDIR)$(Rexecmodulesdir)/$(lapack_la)"

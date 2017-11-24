@@ -132,30 +132,21 @@ SEXP attribute_hidden do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     RCNTXT *ctxt;
-    SEXP code, oldcode, argList;
-    int addit = FALSE;
-    int after = TRUE;
+    SEXP code, oldcode, tmp, argList;
+    int addit = 0;
     static SEXP do_onexit_formals = NULL;
 
     checkArity(op, args);
     if (do_onexit_formals == NULL)
-        do_onexit_formals = allocFormalsList3(install("expr"),
-                                              install("add"),
-                                              install("after"));
+	do_onexit_formals = allocFormalsList2(install("expr"), install("add"));
 
     PROTECT(argList =  matchArgs(do_onexit_formals, args, call));
     if (CAR(argList) == R_MissingArg) code = R_NilValue;
     else code = CAR(argList);
-
     if (CADR(argList) != R_MissingArg) {
 	addit = asLogical(eval(CADR(args), rho));
 	if (addit == NA_INTEGER)
 	    errorcall(call, _("invalid '%s' argument"), "add");
-    }
-    if (CADDR(argList) != R_MissingArg) {
-        after = asLogical(eval(CADDR(args), rho));
-        if (after == NA_INTEGER)
-            errorcall(call, _("invalid '%s' argument"), "lifo");
     }
 
     ctxt = R_GlobalContext;
@@ -168,22 +159,27 @@ SEXP attribute_hidden do_onexit(SEXP call, SEXP op, SEXP args, SEXP rho)
 	ctxt = ctxt->nextcontext;
     if (ctxt->callflag & CTXT_FUNCTION)
     {
-	if (code == R_NilValue && ! addit)
-	    ctxt->conexit = R_NilValue;
-	else {
-	    oldcode = ctxt->conexit;
-	    if (oldcode == R_NilValue || ! addit)
-                ctxt->conexit = CONS(code, R_NilValue);
-	    else {
-                if (after) {
-                    SEXP codelist = PROTECT(CONS(code, R_NilValue));
-                    ctxt->conexit = listAppend(duplicate(oldcode), codelist);
-                    UNPROTECT(1);
-                } else {
-                    ctxt->conexit = CONS(code, oldcode);
-                }
+	if (addit && (oldcode = ctxt->conexit) != R_NilValue ) {
+	    if ( CAR(oldcode) != R_BraceSymbol )
+	    {
+		PROTECT(tmp = allocList(3));
+		SETCAR(tmp, R_BraceSymbol);
+		SETCADR(tmp, oldcode);
+		SETCADDR(tmp, code);
+		SET_TYPEOF(tmp, LANGSXP);
+		ctxt->conexit = tmp;
+		UNPROTECT(1);
+	    }
+	    else
+	    {
+		PROTECT(tmp = allocList(1));
+		SETCAR(tmp, code);
+		ctxt->conexit = listAppend(duplicate(oldcode),tmp);
+		UNPROTECT(1);
 	    }
 	}
+	else
+	    ctxt->conexit = code;
     }
     UNPROTECT(1);
     return R_NilValue;
@@ -246,12 +242,9 @@ SEXP attribute_hidden do_args(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP) {
-	SEXP f = FORMALS(CAR(args));
-	if (NAMED(CAR(args)) > NAMED(f))
-	    SET_NAMED(f, NAMED(CAR(args)));
-	return f;
-    } else {
+    if (TYPEOF(CAR(args)) == CLOSXP)
+	return duplicate(FORMALS(CAR(args)));
+    else {
 	if(!(TYPEOF(CAR(args)) == BUILTINSXP ||
 	     TYPEOF(CAR(args)) == SPECIALSXP))
 	    warningcall(call, _("argument is not a function"));
@@ -262,12 +255,9 @@ SEXP attribute_hidden do_formals(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_body(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP) {
-	SEXP b = BODY_EXPR(CAR(args));
-	if (NAMED(CAR(args)) > NAMED(b))
-	    SET_NAMED(b, NAMED(CAR(args)));
-	return b;
-    } else {
+    if (TYPEOF(CAR(args)) == CLOSXP)
+	return duplicate(BODY_EXPR(CAR(args)));
+    else {
 	if(!(TYPEOF(CAR(args)) == BUILTINSXP ||
 	     TYPEOF(CAR(args)) == SPECIALSXP))
 	    warningcall(call, _("argument is not a function"));
@@ -278,12 +268,9 @@ SEXP attribute_hidden do_body(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_bodyCode(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    if (TYPEOF(CAR(args)) == CLOSXP) {
-	SEXP bc = BODY(CAR(args));
-	if (NAMED(CAR(args)) > NAMED(bc))
-	    SET_NAMED(bc, NAMED(CAR(args)));
-	return bc;
-    } else return R_NilValue;
+    if (TYPEOF(CAR(args)) == CLOSXP)
+	return duplicate(BODY(CAR(args)));
+    else return R_NilValue;
 }
 
 /* get environment from a subclass if possible; else return NULL */
@@ -834,8 +821,6 @@ SEXP xlengthgets(SEXP x, R_xlen_t len)
     if (!isVector(x) && !isList(x))
 	error(_("cannot set length of non-(vector or list)"));
     if (len < 0) error(_("invalid value")); // e.g. -999 from asVecSize()
-    if (isNull(x) && len > 0)
-    	warning(_("length of NULL cannot be changed"));
     lenx = xlength(x);
     if (lenx == len)
 	return (x);

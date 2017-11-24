@@ -120,8 +120,8 @@ function (x, file = "", append = FALSE, quote = TRUE, sep = " ",
 	if(append)
 	    warning("appending column names to file")
 	if(quoteC)
-	    col.names <- paste0("\"", gsub('"', qstring, col.names),
-                                "\"")
+	    col.names <- paste("\"", gsub('"', qstring, col.names),
+                               "\"", sep = "")
         writeLines(paste(col.names, collapse = sep), file, sep = eol)
     }
 

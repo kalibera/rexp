@@ -107,10 +107,10 @@ summaryRprof(filename = "Rprof.out", chunksize = 5000,
   in addition to the timings.
 
   If \code{memory = "tseries"} a data frame giving memory statistics over
-  time. Memory usage is in bytes.
+  time.
 
   If \code{memory = "stats"} a \code{\link{by}} object giving memory statistics
-  by function. Memory usage is in bytes.
+  by function.
   
   If no events were recorded, a zero-row data frame is returned.
 }

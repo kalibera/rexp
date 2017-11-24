@@ -1036,7 +1036,7 @@ stopifnot(is.data.frame(d20), dim(d20) == c(2,2),
 stopifnot(identical(names(myD), names(format(head(myD)))),
 	  identical(names(myD), c("Variable.1", "", "stringsAsFactors")),
 	  identical(rbind.data.frame(2:1, 1:2), ## was wrong for some days
-		    data.frame(X2.1 = 2:1, X1.2 = 1:2)))
+		    data.frame(c.2L..1L. = c(2L, 1L), X1.2 = 1:2)))
 ## format.data.frame() did not show "stringsAsFactors" in R <= 3.2.2
 ## Follow up: the new as.data.frame.list() must be careful with 'AsIs' columns:
 desc <- structure( c("a", NA, "z"), .Names = c("A", NA, "Z"))
@@ -1531,22 +1531,19 @@ stopifnot(all.equal(Fn(t), t/5))
 
 
 ## tar() default (i.e. "no files") behaviour:
-doit <- function(...) {
-    dir.create(td <- tempfile("tar-experi"))
-    setwd(td)
-    dfil <- "base_Desc"
-    file.copy(system.file("DESCRIPTION"), dfil)
-    ## tar w/o specified files
-    tar("ex.tar", ... ) # all files, i.e. 'dfil'
-    unlink(dfil)
-    stopifnot(grepl(dfil, untar("ex.tar", list = TRUE)))
-    untar("ex.tar")
-    myF2 <- c(dfil, "ex.tar")
-    stopifnot(identical(list.files(), myF2))
-    unlink(myF2)
-}
-doit() # produced an empty tar file in R < 3.3.0, PR#16716
-if(nzchar(Sys.which("tar"))) doit(tar = "tar")
+dir.create(td <- tempfile("tar-experi"))
+setwd(td)
+dfil <- "base_Desc"
+file.copy(system.file("DESCRIPTION"), dfil)
+## tar w/o specified files
+tar("ex.tar")# all files, i.e. 'dfil'
+unlink(dfil)
+stopifnot(grepl(dfil, untar("ex.tar", list = TRUE)))
+untar("ex.tar")
+myF2 <- c(dfil, "ex.tar")
+stopifnot(identical(list.files(), myF2))
+unlink(myF2)
+## produced an empty tar file in R < 3.3.0, PR#16716
 
 
 ## format.POSIXlt() of Jan.1 if  1941 or '42 is involved:

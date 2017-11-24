@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997--2017  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
+ *  Copyright (C) 1997--2016  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -129,8 +129,6 @@ SEXP do_direxists(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dirname(SEXP, SEXP, SEXP, SEXP);
 SEXP do_docall(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotcall(SEXP, SEXP, SEXP, SEXP);
-SEXP do_dotsElt(SEXP, SEXP, SEXP, SEXP);
-SEXP do_dotsLength(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotcallgr(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dotCode(SEXP, SEXP, SEXP, SEXP);
 SEXP do_dput(SEXP, SEXP, SEXP, SEXP);
@@ -267,8 +265,6 @@ SEXP do_memoryprofile(SEXP, SEXP, SEXP, SEXP);
 SEXP do_merge(SEXP, SEXP, SEXP, SEXP);
 SEXP do_mget(SEXP, SEXP, SEXP, SEXP);
 SEXP do_missing(SEXP, SEXP, SEXP, SEXP);
-SEXP do_mmap_file(SEXP, SEXP, SEXP, SEXP);
-SEXP do_munmap_file(SEXP, SEXP, SEXP, SEXP);
 SEXP do_names(SEXP, SEXP, SEXP, SEXP);
 SEXP do_namesgets(SEXP, SEXP, SEXP, SEXP);
 SEXP do_nargs(SEXP, SEXP, SEXP, SEXP);
@@ -437,7 +433,6 @@ SEXP do_warning(SEXP, SEXP, SEXP, SEXP);
 SEXP do_while(SEXP, SEXP, SEXP, SEXP);
 SEXP do_which(SEXP, SEXP, SEXP, SEXP);
 SEXP do_withVisible(SEXP, SEXP, SEXP, SEXP);
-SEXP do_wrap_meta(SEXP, SEXP, SEXP, SEXP);
 SEXP do_xtfrm(SEXP, SEXP, SEXP, SEXP);
 
 SEXP do_getSnapshot(SEXP, SEXP, SEXP, SEXP);

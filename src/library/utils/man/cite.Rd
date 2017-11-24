@@ -6,7 +6,9 @@
 \name{cite}
 \alias{cite}
 \alias{citeNatbib}
-\title{Cite a Bibliography Entry}
+\title{
+Cite a bibliography entry.
+}
 \description{
 Cite a \code{bibentry} object in text.  The \code{cite()} function
 uses the \code{cite()} function from the default

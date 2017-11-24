@@ -416,7 +416,7 @@ Rd2HTML <-
     }
 
     writeBlock <- function(block, tag, blocktag) {
-        doParas <- (blocktag %notin% c("\\tabular"))
+        doParas <- !(blocktag %in% c("\\tabular"))
 	switch(tag,
                UNKNOWN =,
                VERB = of1(vhtmlify(block, inEqn)),
@@ -694,7 +694,7 @@ Rd2HTML <-
     		})
     	    },
     	    { # default
-    	    	if (inlist && (blocktag %notin% c("\\itemize", "\\enumerate"))
+    	    	if (inlist && !(blocktag %in% c("\\itemize", "\\enumerate"))
     	    	           && !(tag == "TEXT" && isBlankRd(block))) {
     	    	    switch(blocktag,
     	    	    "\\arguments" =,

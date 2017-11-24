@@ -1,19 +1,10 @@
 % File src/library/base/man/Logic.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2017 R Core Team
+% Copyright 1995-2014 R Core Team
 % Distributed under GPL 2 or later
 
 \name{Logic}
 \title{Logical Operators}
-\alias{!}
-\alias{&}
-\alias{&&}
-\alias{|}
-\alias{||}
-\alias{xor}
-\alias{Logic}
-\alias{isTRUE}
-\alias{isFALSE}
 \usage{
 ! x
 x & y
@@ -22,9 +13,16 @@ x | y
 x || y
 xor(x, y)
 
-isTRUE (x)
-isFALSE(x)
+isTRUE(x)
 }
+\alias{!}
+\alias{&}
+\alias{&&}
+\alias{|}
+\alias{||}
+\alias{xor}
+\alias{Logic}
+\alias{isTRUE}
 \description{
   These operators act on raw, logical and number-like vectors.
 }
@@ -47,13 +45,10 @@ isFALSE(x)
 
   \code{xor} indicates elementwise exclusive OR.
 
-  \code{isTRUE(x)} is the same as
-  \code{{ is.logical(x) && length(x) == 1 && !is.na(x) && x }};
-  \code{isFALSE()} is defined analogously.  Consequently,
-  \code{if(isTRUE(cond))} may be preferable to \code{if(cond)} because
-  of \code{\link{NA}}s.\cr
-  In earlier \R versions, \code{isTRUE <- function(x) identical(x, TRUE)},
-  had the drawback to be false e.g., for \code{x <- c(val = TRUE)}.
+  \code{isTRUE(x)} is an abbreviation of \code{identical(TRUE, x)}, and
+  so is true if and only if \code{x} is a length-one logical vector
+  whose only element is \code{TRUE} and which has no attributes (not even
+  names).
 
   Numeric and complex vectors will be coerced to logical values, with
   zero being false and all non-zero values being true.  Raw vectors are

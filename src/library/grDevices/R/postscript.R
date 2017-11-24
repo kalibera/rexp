@@ -513,8 +513,8 @@ printFont.CIDFont <- function(font)
            ")\n    ", font$CMap, "\n    ", font$encoding, "\n")
 
 printFonts <- function(fonts)
-    cat(paste0(names(fonts), ": ", unlist(lapply(fonts, printFont)),
-               collapse = ""))
+    cat(paste(names(fonts), ": ", unlist(lapply(fonts, printFont)),
+              sep = "", collapse = ""))
 
 # If no arguments specified, return entire font database
 # If no named arguments specified, all args should be font names

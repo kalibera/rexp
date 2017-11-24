@@ -8,7 +8,9 @@
 \alias{changedFiles}
 \alias{print.changedFiles}
 \alias{print.fileSnapshot}
-\title{Detect which Files Have Changed}
+\title{
+Detect which files have changed
+}
 \description{
 \code{fileSnapshot} takes a snapshot of a selection of files,
 recording summary information about each.  \code{changedFiles}

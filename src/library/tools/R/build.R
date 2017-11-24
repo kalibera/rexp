@@ -120,10 +120,10 @@ inRbuildignore <- function(files, pkgdir) {
 
     do_exit <-
 	if(no.q)
-	    function(status) (if(status) stop else message)(
+	    function(status = 1L) (if(status) stop else message)(
 		".build_packages() exit status ", status)
 	else
-	    function(status) q("no", status = status, runLast = FALSE)
+	    function(status = 1L) q("no", status = status, runLast = FALSE)
 
     ## Used for BuildVignettes, BuildManual, BuildKeepEmpty,
     ## and (character not logical) BuildResaveData
@@ -238,7 +238,7 @@ inRbuildignore <- function(files, pkgdir) {
 	    printLog(Log, "      -----------------------------------\n")
 	    unlink(libdir, recursive = TRUE)
 	    printLog(Log, "ERROR: package installation failed\n")
-	    do_exit(1L)
+	    do_exit(1)
 	}
 	Sys.setenv("R_BUILD_TEMPLIB" = libdir)
 	TRUE
@@ -751,8 +751,9 @@ inRbuildignore <- function(files, pkgdir) {
         if(!dir.exists(ddir <- file.path(pkgname, "data")))
             return()
         ddir <- normalizePath(ddir)
-        dataFiles <- filtergrep("\\.(rda|RData)$",
-                                list_files_with_type(ddir, "data"))
+        dataFiles <- grep("\\.(rda|RData)$",
+                          list_files_with_type(ddir, "data"),
+                          invert = TRUE, value = TRUE)
         if (!length(dataFiles)) return()
         resaved <- character()
         on.exit(unlink(resaved))
@@ -889,7 +890,7 @@ inRbuildignore <- function(files, pkgdir) {
         args <- args[-1L]
     }
 
-    if(compact_vignettes %notin% c("no", "qpdf", "gs", "gs+qpdf", "both")) {
+    if(!compact_vignettes %in% c("no", "qpdf", "gs", "gs+qpdf", "both")) {
         warning(gettextf("invalid value for '--compact-vignettes', assuming %s",
                          "\"qpdf\""),
                 domain = NA)
@@ -998,9 +999,9 @@ inRbuildignore <- function(files, pkgdir) {
                         full.names = TRUE, include.dirs = TRUE)
         allfiles <- substring(allfiles, 3L)  # drop './'
         bases <- basename(allfiles)
-
+	
         exclude <- inRbuildignore(allfiles, pkgdir)
-
+	
         isdir <- dir.exists(allfiles)
         ## old (pre-2.10.0) dirnames
         exclude <- exclude | (isdir & (bases %in%

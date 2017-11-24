@@ -30,9 +30,9 @@ function(given = NULL, family = NULL, middle = NULL,
     args <- list(given = given, family = family, middle = middle,
                  email = email, role = role, comment = comment,
 		 first = first, last = last)
-    if(all(vapply(args, is.null, NA)))
+    if(all(sapply(args, is.null))) {
         return(structure(list(), class = "person"))
-
+    }
     args <- lapply(args, .listify)
     args_length <- lengths(args)
     if(!all(args_length_ok <- args_length %in% c(1L, max(args_length))))
@@ -114,20 +114,6 @@ function(given = NULL, family = NULL, middle = NULL,
         if(length(role))
             role <- .canonicalize_person_role(role)
 
-        if(length(comment)) {
-            ## Be nice and recognize ORCID identifiers given as URLs
-            ## but perhaps without an ORCID name.
-            ind <- grepl(paste0("^https?://orcid.org/",
-                                "([[:digit:]]{4}[-]){3}[[:digit:]]{3}[[:alnum:]]$"),
-                         comment)
-            if(any(ind)) {
-                if(is.null(names(comment)))
-                    names(comment) <- ifelse(ind, "ORCID", "")
-                else
-                    names(comment)[ind] <- "ORCID"
-            }
-        }
-
         rval <- list(given = given, family = family, role = role,
                      email = email, comment = comment)
         ## Canonicalize 0-length character arguments to NULL.
@@ -139,7 +125,7 @@ function(given = NULL, family = NULL, middle = NULL,
         else
             rval
     } ## end{ person1 }
-    force(person1)# {codetools}
+
     rval <-
         lapply(seq_along(args$given),
                function(i)
@@ -283,7 +269,7 @@ function(x)
 {
     if(inherits(x, "person")) return(x)
 
-    x <- trimws(as.character(x))
+    x <- as.character(x)
 
     if(!length(x)) return(person())
 
@@ -455,14 +441,6 @@ function(x,
     braces <- braces[include]
     collapse <- collapse[include]
 
-    if(any(include == "comment"))
-        x <- lapply(x,
-                    function(e) {
-                        e$comment <-
-                            .expand_ORCID_identifier(e$comment)
-                        e
-                    })
-
     paste_collapse <- function(x, collapse) {
         if(is.na(collapse) || identical(collapse, FALSE)) {
  	    x[1L]
@@ -502,22 +480,6 @@ function(object, ...)
                 braces = list(given = br, family = c("", ",")))
     })
     paste(object[nzchar(object)], collapse = " and ")
-}
-
-.canonicalize_ORCID_identifier <-
-function(x)
-{
-    paste0("https://orcid.org/", sub(".*/", "", x))
-}
-
-.expand_ORCID_identifier <-
-function(x)
-{
-    if(any(ind <- (names(x) == "ORCID")))
-        x[ind] <- paste0("<",
-                         .canonicalize_ORCID_identifier(x[ind]),
-                         ">")
-    x
 }
 
 ######################################################################
@@ -703,9 +665,7 @@ format.bibentry <-
 function(x, style = "text", .bibstyle = NULL,
          citation.bibtex.max = getOption("citation.bibtex.max", 1),
          bibtex = length(x) <= citation.bibtex.max,
-         sort = FALSE,
-         macros = NULL,
-         ...)
+         sort = FALSE, ...)
 {
     if(!length(x)) return(character())
 
@@ -715,22 +675,12 @@ function(x, style = "text", .bibstyle = NULL,
     x$.index <- as.list(seq_along(x))
     if(!missing(citation.bibtex.max))
 	warning(gettextf("Argument '%s' is deprecated; rather set '%s' instead.",
-			 "citation.bibtex.max", "bibtex=*"),
-                domain = NA)
+			 "citation.bibtex.max", "bibtex=*"), domain=NA)
 
     format_via_Rd <- function(f) {
         out <- file()
         saveopt <- tools::Rd2txt_options(width = getOption("width"))
         on.exit({tools::Rd2txt_options(saveopt); close(out)})
-        permissive <-
-            Sys.getenv("_R_UTILS_FORMAT_BIBENTRY_VIA_RD_PERMISSIVE_",
-                       "TRUE")
-        permissive <- tools:::config_val_to_logical(permissive)
-        macros <- if(is.null(macros))
-		      tools:::initialRdMacros()
-                  else if(is.character(macros))
-		      tools::loadRdMacros(macros,
-                                          tools:::initialRdMacros())
         sapply(.bibentry_expand_crossrefs(x),
                function(y) {
                    txt <- tools::toRd(y, style = .bibstyle)
@@ -743,8 +693,7 @@ function(x, style = "text", .bibstyle = NULL,
                    on.exit(close(con))
                    rd <- tools::parse_Rd(con,
                                          fragment = TRUE,
-                                         permissive = permissive,
-                                         macros = macros)
+                                         permissive = TRUE)
                    rd <- tools:::processRdSexprs(rd,
                                                  "build",
                                                  macros = attr(rd, "macros"))
@@ -1188,7 +1137,7 @@ function(file, meta = NULL)
     if(!.is_not_nonempty_text(mfooter))
         attr(rval, "mfooter") <- paste(mfooter, collapse = "\n")
 
-    .citation(rval, meta$Package)
+    .citation(rval)
 }
 
 ######################################################################
@@ -1238,7 +1187,7 @@ function(package = "base", lib.loc = NULL, auto = NULL)
     	attr(cit, "mheader")[1L] <-
 	    paste0("The ", sQuote(package), " package is part of R.  ",
 		   attr(cit, "mheader")[1L])
-        return(.citation(cit, package))
+        return(.citation(cit))
     }
 
     year <- sub("-.*", "", meta$`Date/Publication`)
@@ -1354,12 +1303,10 @@ function(package = "base", lib.loc = NULL, auto = NULL)
                      footer = footer,
                      other = z
                      )
-    .citation(rval, package)
+    .citation(rval)
 }
 
-.citation <-
-function(x, package = NULL)
-    structure(x, package = package, class = c("citation", "bibentry"))
+.citation <- function(x) structure(x, class = c("citation", "bibentry"))
 
 .read_authors_at_R_field <-
 function(x)

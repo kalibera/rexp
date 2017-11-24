@@ -6,7 +6,9 @@
 \name{getParseData}
 \alias{getParseData}
 \alias{getParseText}
-\title{Get Detailed Parse Information from Object}
+\title{
+Get detailed parse information from object.
+}
 \description{
   If the \code{"keep.source"} option is \code{TRUE}, \R's parser
   will attach detailed information on the object it has parsed.  These

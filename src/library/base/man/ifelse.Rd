@@ -1,6 +1,6 @@
 % File src/library/base/man/ifelse.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2015 R Core Team
 % Distributed under GPL 2 or later
 
 \name{ifelse}
@@ -83,20 +83,19 @@ y <- ifelse(as.POSIXlt(x)$mday == 29, x, NA)
 head(y) # not what you expected ... ==> need restore the class attribute:
 class(y) <- class(x)
 y
-## This is a (not atypical) case where it is better *not* to use ifelse(),
-## but rather the more efficient and still clear:
+## ==> Again a case where it is better *not* to use ifelse(), but
+## both more efficient and clear:
 y2 <- x
 y2[as.POSIXlt(x)$mday != 29] <- NA
-## which gives the same as ifelse()+class() hack:
 stopifnot(identical(y2, y))
 
 
-## example of different return modes (and 'test' alone determining length):
+## example of different return modes:
 yes <- 1:3
-no  <- pi^(1:4)
-utils::str( ifelse(NA,    yes, no) ) # logical, length 1
-utils::str( ifelse(TRUE,  yes, no) ) # integer, length 1
-utils::str( ifelse(FALSE, yes, no) ) # double,  length 1
+no <- pi^(0:3)
+typeof(ifelse(NA,    yes, no)) # logical
+typeof(ifelse(TRUE,  yes, no)) # integer
+typeof(ifelse(FALSE, yes, no)) # double
 }
 \keyword{logic}
 \keyword{programming}

@@ -161,7 +161,6 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE,
         if(nl > 3L && startsWith(txt[nl-2L], "> proc.time()"))
             txt <- txt[1:(nl-3L)]
         ## remove text between IGNORE_RDIFF markers.
-        ## maybe this should only be done for forEx = TRUE?
         txt <- txt[(cumsum(txt == "> ## IGNORE_RDIFF_BEGIN") <=
                     cumsum(txt == "> ## IGNORE_RDIFF_END"))]
         ## (Keeps the end markers, but that's ok.)
@@ -194,7 +193,8 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE,
     if (forEx) {
         left <- clean2(left)
         ## remove lines from R CMD check --timings
-        left <- filtergrep("[.](format_|)ptime", left, useBytes = TRUE)
+        left <- grep("[.](format_|)ptime", left, value = TRUE,
+                     invert = TRUE, useBytes = TRUE)
         right <- clean2(right)
     }
     if (!useDiff && (length(left) == length(right))) {
@@ -431,19 +431,11 @@ testInstalledPackage <-
 }
 
 .runPackageTests <-
-    function(use_gct = FALSE, use_valgrind = FALSE, Log = NULL,
-             stop_on_error = TRUE, ...)
+    function(use_gct = FALSE, use_valgrind = FALSE, Log = NULL, stop_on_error = TRUE, ...)
 {
-    tlim <- Sys.getenv("_R_CHECK_ONE_TEST_ELAPSED_TIMEOUT_",
-            Sys.getenv("_R_CHECK_TESTS_ELAPSED_TIMEOUT_",
-            Sys.getenv("_R_CHECK_ELAPSED_TIMEOUT_")))
-    tlim <- get_timeout(tlim)
     if (!is.null(Log)) Log <- file(Log, "wt")
     WINDOWS <- .Platform$OS.type == "windows"
     td0 <- as.numeric(Sys.getenv("_R_CHECK_TIMINGS_"))
-    theta <-
-        as.numeric(Sys.getenv("_R_CHECK_TEST_TIMING_CPU_TO_ELAPSED_THRESHOLD_",
-                              NA_character_))
     if (is.na(td0)) td0 <- Inf
     print_time <- function(t1, t2, Log)
     {
@@ -479,22 +471,10 @@ testInstalledPackage <-
         } else
             cmd <- paste("LANGUAGE=C", "R_TESTS=startup.Rs", cmd)
         t1 <- proc.time()
-        res <- system(cmd, timeout = tlim)
+        res <- system(cmd)
         t2 <- proc.time()
         print_time(t1, t2, Log)
-        if (!WINDOWS && !is.na(theta)) {
-            td <- t2 - t1
-            cpu <- sum(td[-3L])
-            if(cpu >= pmax(theta * td[3L], 1)) {
-                ratio <- round(cpu/td[3L], 1L)
-                msg <- sprintf("Running R code in %s had CPU time %g times elapsed time\n",
-                               sQuote(f), ratio)
-                cat(msg)
-                if (!is.null(Log)) cat(msg, file = Log)
-            }
-        }
         if (res) {
-            if(identical(res, 124L)) report_timeout(tlim)
             file.rename(outfile, paste0(outfile, ".fail"))
             return(1L)
         }
@@ -753,14 +733,14 @@ detachPackages <- function(pkgs, verbose = TRUE)
         ## hopefully force = TRUE is never needed, but it does ensure
         ## that progress gets made
         try(detach(this, character.only = TRUE,
-                   unload = unload && (this %notin% exclusions),
+                   unload = unload && !(this %in% exclusions),
                    force = TRUE))
         deps <- deps[-i]
     }
 }
 
 ## Usage: Rscript --vanilla --default-packages=NULL args
-.Rdiff <- function(no.q = FALSE)
+.Rdiff <- function()
 {
     options(showErrorCalls=FALSE)
 
@@ -778,12 +758,8 @@ detachPackages <- function(pkgs, verbose = TRUE)
             sep = "\n")
     }
 
-    do_exit <-
-	if(no.q)
-	    function(status = 0L) (if(status) stop else message)(
-		".Rdiff() exit status ", status)
-	else
-	    function(status = 0L) q("no", status = status, runLast = FALSE)
+    do_exit <- function(status = 0L)
+        q("no", status = status, runLast = FALSE)
 
     args <- commandArgs(TRUE)
     if (!length(args)) {
@@ -793,7 +769,7 @@ detachPackages <- function(pkgs, verbose = TRUE)
     args <- paste(args, collapse=" ")
     args <- strsplit(args,'nextArg', fixed = TRUE)[[1L]][-1L]
     if (length(args) == 1L) {
-        if(args[1L] %in% c("-h", "--help")) { Usage(); do_exit(0) }
+        if(args[1L] %in% c("-h", "--help")) { Usage(); do_exit() }
         if(args[1L] %in% c("-v", "--version")) {
             cat("R output diff: ",
                 R.version[["major"]], ".",  R.version[["minor"]],
@@ -803,7 +779,7 @@ detachPackages <- function(pkgs, verbose = TRUE)
                 "This is free software; see the GNU General Public License version 2",
                 "or later for copying conditions.  There is NO warranty.",
                 sep = "\n")
-            do_exit(0)
+            do_exit()
         }
         Usage()
         do_exit(1L)

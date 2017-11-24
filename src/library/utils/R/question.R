@@ -183,5 +183,7 @@ function(topic, package = NULL)
     ## an error.)
     h <- tryCatch(do.call("help", list(topic, package = package)),
                   error = identity)
-    if(inherits(h, "error") || !length(h)) NULL else h
+    if(inherits(h, "error") || !length(h))
+        h <- NULL
+    h
 }

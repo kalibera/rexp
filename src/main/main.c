@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998-2017   The R Core Team
+ *  Copyright (C) 1998-2015   The R Core Team
  *  Copyright (C) 2002-2005  The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -726,29 +726,6 @@ void setup_Rmainloop(void)
     SEXP cmd;
     char deferred_warnings[11][250];
     volatile int ndeferred_warnings = 0;
-
-#if 0 
-    /* testing stack base and size detection */
-    printf("stack limit %ld, start %lx dir %d \n",
-	(unsigned long) R_CStackLimit,
-        (unsigned long) R_CStackStart,
-	R_CStackDir);
-    uintptr_t firstb = R_CStackStart - R_CStackDir;
-    printf("first accessible byte %lx\n", (unsigned long) firstb);
-    if (R_CStackLimit != (uintptr_t)(-1)) {
-        uintptr_t lastb = R_CStackStart - R_CStackDir * R_CStackLimit;
-	printf("last accessible byte %lx\n", (unsigned long) lastb);
-    }
-    printf("accessing first byte...\n");
-    volatile char dummy = *(char *)firstb;
-    if (R_CStackLimit != (uintptr_t)(-1)) {
-	printf("accessing all bytes...\n");
-	/* have to access all bytes in order to map stack, e.g. on Linux */
-	for(uintptr_t o = 0; o < R_CStackLimit; o++)
-	    /* with exact bounds, o==-1 and o==R_CStackLimit will segfault */
-	    dummy = *((char *)firstb - R_CStackDir * o);
-    }
-#endif
 
     /* In case this is a silly limit: 2^32 -3 has been seen and
      * casting to intptr_r relies on this being smaller than 2^31 on a
@@ -1681,16 +1658,14 @@ void attribute_hidden dummy12345(void)
     F77_CALL(intpr)("dummy", &i, &i, &i);
 }
 
-/* Used in unix/system.c, avoid inlining by using an extern there. */
+/* Used in unix/system.c, avoid inlining by using an extern there.
+
+   This is intended to return a local address.
+   Use -Wno-return-local-addr when compiling.
+ */
 uintptr_t dummy_ii(void)
 {
     int ii;
-
-    /* This is intended to return a local address. We could just return
-       (uintptr_t) &ii, but doing it indirectly through ii_addr avoids
-       a compiler warning (-Wno-return-local-addr would do as well).
-    */
-    volatile uintptr_t ii_addr = (uintptr_t) &ii;
-    return ii_addr;
+    return (uintptr_t) &ii;
 }
 #endif

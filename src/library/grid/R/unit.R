@@ -373,10 +373,8 @@ is.unit <- function(unit) {
   inherits(unit, "unit")
 }
 
-print.unit <- function(x, ...) {
-    print(as.character(x), quote=FALSE, ...)
-    invisible(x)
-}
+print.unit <- function(x, ...)
+  print(as.character(x), quote=FALSE, ...)
 
 
 #########################

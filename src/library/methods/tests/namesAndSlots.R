@@ -1,7 +1,8 @@
 setClass("B", contains = "numeric")
 xx <- new("B", 1)
-names(xx) <- "A"
-stopifnot(identical(names(xx), "A"))
+stopifnot(is(tryCatch(names(xx) <- "A" , warning = function(e)e), "warning"))
+names(xx) <- "A" # after this should not warn
+stopifnot(is(tryCatch(names(xx) <- "B" , warning = function(e)e), "character"))
 setClass("A", representation(xx = "numeric"))
 a <- new("A", xx = 1)
 stopifnot(is(tryCatch(names(a) <- "A" , error = function(e)e), "error"))

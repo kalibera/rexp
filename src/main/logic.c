@@ -54,7 +54,7 @@ SEXP attribute_hidden do_logic(SEXP call, SEXP op, SEXP args, SEXP env)
     if (CDR(args) == R_NilValue) { // one argument  <==>  !(arg1)
 	if (!attr1 && IS_SCALAR(arg1, LGLSXP)) {
 	    /* directly handle '!' operator for simple logical scalars. */
-	    int v = SCALAR_LVAL(arg1);
+	    int v = LOGICAL(arg1)[0];
 	    return ScalarLogical(v == NA_LOGICAL ? v : ! v);
 	}
 	return lunary(call, op, arg1);
@@ -204,58 +204,37 @@ static SEXP lunary(SEXP call, SEXP op, SEXP arg)
     }
     switch(TYPEOF(arg)) {
     case LGLSXP:
-	{
-	    int *px = LOGICAL(x);
-	    const int *parg = LOGICAL_RO(arg);
-	    for (i = 0; i < len; i++) {
-//	        if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-		int v = parg[i];
-		px[i] = (v == NA_LOGICAL) ? NA_LOGICAL : v == 0;
-	    }
+	for (i = 0; i < len; i++) {
+//	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
+	    LOGICAL(x)[i] = (LOGICAL(arg)[i] == NA_LOGICAL) ?
+		NA_LOGICAL : LOGICAL(arg)[i] == 0;
 	}
 	break;
     case INTSXP:
-	{
-	    int *px = LOGICAL(x);
-	    const int *parg = INTEGER_RO(arg);
-	    for (i = 0; i < len; i++) {
-//	        if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-		int v = parg[i];
-		px[i] = (v == NA_INTEGER) ? NA_LOGICAL : v == 0;
-	    }
+	for (i = 0; i < len; i++) {
+//	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
+	    LOGICAL(x)[i] = (INTEGER(arg)[i] == NA_INTEGER) ?
+		NA_LOGICAL : INTEGER(arg)[i] == 0;
 	}
 	break;
     case REALSXP:
-	{
-	    int *px = LOGICAL(x);
-	    const double *parg = REAL_RO(arg);
-	    for (i = 0; i < len; i++){
-//	        if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-		double v = parg[i];
-		px[i] = ISNAN(v) ? NA_LOGICAL : v == 0;
-	    }
+	for (i = 0; i < len; i++){
+//	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
+	    LOGICAL(x)[i] = ISNAN(REAL(arg)[i]) ?
+		NA_LOGICAL : REAL(arg)[i] == 0;
 	}
 	break;
     case CPLXSXP:
-	{
-	    int *px = LOGICAL(x);
-	    const Rcomplex *parg = COMPLEX_RO(arg);
-	    for (i = 0; i < len; i++) {
-//	        if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-		Rcomplex v = parg[i];
-		px[i] = (ISNAN(v.r) || ISNAN(v.i))
-		    ? NA_LOGICAL : (v.r == 0. && v.i == 0.);
-	    }
+	for (i = 0; i < len; i++) {
+//	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
+	    LOGICAL(x)[i] = (ISNAN(COMPLEX(arg)[i].r) || ISNAN(COMPLEX(arg)[i].i))
+		? NA_LOGICAL : (COMPLEX(arg)[i].r == 0. && COMPLEX(arg)[i].i == 0.);
 	}
 	break;
     case RAWSXP:
-	{
-	    Rbyte *px = RAW(x);
-	    const Rbyte *parg = RAW_RO(arg);
-	    for (i = 0; i < len; i++) {
-//	        if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-		px[i] = 0xFF ^ parg[i];
-	    }
+	for (i = 0; i < len; i++) {
+//	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
+	    RAW(x)[i] = 0xFF ^ RAW(arg)[i];
 	}
 	break;
     default:
@@ -333,35 +312,31 @@ static SEXP binaryLogic(int code, SEXP s1, SEXP s2)
     }
     ans = allocVector(LGLSXP, n);
 
-    int *px1 = LOGICAL(s1);
-    int *px2 = LOGICAL(s2);
-    int *pa = LOGICAL(ans);
-
     switch (code) {
     case 1:		/* & : AND */
 	MOD_ITERATE2(n, n1, n2, i, i1, i2, {
 //	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    x1 = px1[i1];
-	    x2 = px2[i2];
+	    x1 = LOGICAL(s1)[i1];
+	    x2 = LOGICAL(s2)[i2];
 	    if (x1 == 0 || x2 == 0)
-		pa[i] = 0;
+		LOGICAL(ans)[i] = 0;
 	    else if (x1 == NA_LOGICAL || x2 == NA_LOGICAL)
-		pa[i] = NA_LOGICAL;
+		LOGICAL(ans)[i] = NA_LOGICAL;
 	    else
-		pa[i] = 1;
+		LOGICAL(ans)[i] = 1;
 	});
 	break;
     case 2:		/* | : OR */
 	MOD_ITERATE2(n, n1, n2, i, i1, i2, {
 //	    if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	    x1 = px1[i1];
-	    x2 = px2[i2];
+	    x1 = LOGICAL(s1)[i1];
+	    x2 = LOGICAL(s2)[i2];
 	    if ((x1 != NA_LOGICAL && x1) || (x2 != NA_LOGICAL && x2))
-		pa[i] = 1;
+		LOGICAL(ans)[i] = 1;
 	    else if (x1 == 0 && x2 == 0)
-		pa[i] = 0;
+		LOGICAL(ans)[i] = 0;
 	    else
-		pa[i] = NA_LOGICAL;
+		LOGICAL(ans)[i] = NA_LOGICAL;
 	});
 	break;
     case 3:
@@ -411,18 +386,16 @@ static SEXP binaryLogic2(int code, SEXP s1, SEXP s2)
 #define _OP_ALL 1
 #define _OP_ANY 2
 
-static int checkValues(int op, int na_rm, SEXP x, R_xlen_t n)
+static int checkValues(int op, int na_rm, int *x, R_xlen_t n)
 {
     R_xlen_t i;
     int has_na = 0;
-    int *px = LOGICAL(x);
     for (i = 0; i < n; i++) {
 //	if ((i+1) % NINTERRUPT == 0) R_CheckUserInterrupt();
-	int xi = px[i];
-	if (!na_rm && xi == NA_LOGICAL) has_na = 1;
+	if (!na_rm && x[i] == NA_LOGICAL) has_na = 1;
 	else {
-	    if (xi == TRUE && op == _OP_ANY) return TRUE;
-	    if (xi == FALSE && op == _OP_ALL) return FALSE;
+	    if (x[i] == TRUE && op == _OP_ANY) return TRUE;
+	    if (x[i] == FALSE && op == _OP_ALL) return FALSE;
 	}
     }
     switch (op) {
@@ -477,7 +450,7 @@ SEXP attribute_hidden do_logic3(SEXP call, SEXP op, SEXP args, SEXP env)
 			    type2char(TYPEOF(t)));
 	    t = coerceVector(t, LGLSXP);
 	}
-	val = checkValues(PRIMVAL(op), narm, t, XLENGTH(t));
+	val = checkValues(PRIMVAL(op), narm, LOGICAL(t), XLENGTH(t));
 	if (val != NA_LOGICAL) {
 	    if ((PRIMVAL(op) == _OP_ANY && val)
 		|| (PRIMVAL(op) == _OP_ALL && !val)) {

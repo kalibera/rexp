@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2017  The R Core Team
+ *  Copyright (C) 1997--2016  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Pulic License as published by
@@ -176,15 +176,10 @@ int R_nchar(SEXP string, nchar_type type_,
 		return NA_INTEGER;
 	    } else {
 		wchar_t wc1;
-		Rwchar_t ucs;
 		int nc = 0;
 		for( ; *p; p += utf8clen(*p)) {
 		    utf8toucs(&wc1, p);
-		    if (IS_HIGH_SURROGATE(wc1)) 
-		    	ucs = utf8toucs32(wc1, p);
-		    else
-		    	ucs = wc1;
-		    nc += Ri18n_wcwidth(ucs); 
+		    nc += Ri18n_wcwidth(wc1);
 		}
 		return nc;
 	    }
@@ -769,9 +764,9 @@ donewsc:
 		if (iswspace((int)wc[i])) mywcscpy(wc + i, wc + i + 1);
     }
 
-    int nb = (int) wcstoutf8(NULL, wc, INT_MAX);
-    char *cbuf = CallocCharBuf(nb);
-    wcstoutf8(cbuf, wc, nb);
+    int nb = (int) wcstoutf8(NULL, wc, 0);
+    char *cbuf = CallocCharBuf(nb+1);
+    wcstoutf8(cbuf, wc, nb + 1);
     SEXP ans = mkCharCE(cbuf, CE_UTF8);
     Free(cbuf);
     return ans;
@@ -987,9 +982,9 @@ SEXP attribute_hidden do_tolower(SEXP call, SEXP op, SEXP args, SEXP env)
 		    if (ienc == CE_UTF8) {
 			utf8towcs(wc, xi, nc + 1);
 			for (j = 0; j < nc; j++) wc[j] = towctrans(wc[j], tr);
-			nb = (int) wcstoutf8(NULL, wc, INT_MAX);
+			nb = (int) wcstoutf8(NULL, wc, 0);
 			cbuf = CallocCharBuf(nb);
-			wcstoutf8(cbuf, wc, nb);
+			wcstoutf8(cbuf, wc, nb + 1);
 			SET_STRING_ELT(y, i, mkCharCE(cbuf, CE_UTF8));
 		    } else {
 			mbstowcs(wc, xi, nc + 1);
@@ -1426,9 +1421,9 @@ SEXP attribute_hidden do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
 		    if (tbl) wc[j] = tbl->c_new;
 		}
 		if (ienc == CE_UTF8) {
-		    nb = (int) wcstoutf8(NULL, wc, INT_MAX);
+		    nb = (int) wcstoutf8(NULL, wc, 0);
 		    cbuf = CallocCharBuf(nb);
-		    wcstoutf8(cbuf, wc, nb);
+		    wcstoutf8(cbuf, wc, nb + 1);
 		    SET_STRING_ELT(y, i, mkCharCE(cbuf, CE_UTF8));
 		} else {
 		    nb = (int) wcstombs(NULL, wc, 0);
@@ -1548,7 +1543,7 @@ SEXP attribute_hidden do_strtrim(SEXP call, SEXP op, SEXP args, SEXP env)
 	    mbs_init(&mb_st);
 	    for (p = This, w0 = 0, q = buf; *p ;) {
 		nb =  (int) Mbrtowc(&wc, p, MB_CUR_MAX, &mb_st);
-		w0 = Ri18n_wcwidth((Rwchar_t)wc);
+		w0 = Ri18n_wcwidth(wc);
 		if (w0 < 0) { p += nb; continue; } /* skip non-printable chars */
 		wsum += w0;
 		if (wsum <= w) {

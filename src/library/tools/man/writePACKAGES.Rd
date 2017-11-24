@@ -5,7 +5,7 @@
 
 \name{write_PACKAGES}
 \alias{write_PACKAGES}
-\title{Generate PACKAGES Files}
+\title{Generate PACKAGES files}
 \description{
   Generate \file{PACKAGES}, \file{PACKAGES.gz} and \file{PACKAGES.rds}
   files for a repository of source or Mac/Windows binary packages.

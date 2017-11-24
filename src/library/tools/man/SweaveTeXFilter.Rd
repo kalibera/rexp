@@ -5,7 +5,9 @@
 
 \name{SweaveTeXFilter}
 \alias{SweaveTeXFilter}
-\title{Strip R Code out of Sweave File}
+\title{
+  Strip R code out of Sweave file
+}
 \description{
   This function blanks out code chunks and Noweb markup in an Sweave
   input file, for spell checking or other uses.

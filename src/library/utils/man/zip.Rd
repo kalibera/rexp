@@ -5,7 +5,9 @@
 
 \name{zip}
 \alias{zip}
-\title{Create Zip Archives}
+\title{
+  Create Zip archives
+}
 \description{
   A wrapper for an external \command{zip} command to create zip archives.
 }

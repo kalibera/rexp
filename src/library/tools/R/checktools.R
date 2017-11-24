@@ -1,7 +1,7 @@
 #  File src/library/tools/R/checktools.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 2013-2017 The R Core Team
+#  Copyright (C) 2013-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -324,7 +324,6 @@ function(dir,
                          sprintf("check_%s_stderr.txt", pname))
         env <- c(check_env_db[[pname]],
                  sprintf("R_LIBS=%s", shQuote(libdir)))
-        lim <- get_timeout(Sys.getenv("_R_CHECK_ELAPSED_TIMEOUT_"))
         system.time(system2(file.path(R.home("bin"), "R"),
                             c("CMD",
                               "check",
@@ -333,8 +332,7 @@ function(dir,
                               pfile),
                             stdout = out,
                             stderr = err,
-                            env = env,
-                            timeout = lim))
+                            env = env))
     }
 
     if(Ncpus > 1L) {
@@ -708,15 +706,14 @@ function(log, drop = TRUE)
     ## Remove eventually.
     len <- length(lines)
     end <- lines[len]
-    if(length(end) &&
-       grepl(re <- "^(\\*.*\\.\\.\\.)(\\* elapsed time.*)$", end,
+    if(grepl(re <- "^(\\*.*\\.\\.\\.)(\\* elapsed time.*)$", end,
              perl = TRUE, useBytes = TRUE)) {
         lines <- c(lines[seq_len(len - 1L)],
                    sub(re, "\\1", end, perl = TRUE, useBytes = TRUE),
                    sub(re, "\\2", end, perl = TRUE, useBytes = TRUE))
     }
     ## </FIXME
-
+    
     lines
 }
 
@@ -743,7 +740,7 @@ function(log, drop_ok = TRUE)
         sub(pattern, replacement, x, perl = TRUE, useBytes = TRUE)
         ## .Internal(sub(pattern, replacement, x, FALSE, TRUE, FALSE, TRUE))
     ## </FIXME>
-
+    
     ## Alternatives for left and right quotes.
     lqa <- "'|\xe2\x80\x98"
     rqa <- "'|\xe2\x80\x99"
@@ -825,7 +822,7 @@ function(log, drop_ok = TRUE)
             sub(re, "\\2", header[pos[1L]],
                 perl = TRUE, useBytes = TRUE)
         } else ""
-
+    
     ## Get footer.
     len <- length(lines)
     pos <- which(lines == "* DONE")
@@ -1002,19 +999,20 @@ function(x, ...)
 {
     flags <- x$Flags
     flavor <- x$Flavor
-    paste0(sprintf("Package: %s %s\n",
-                   x$Package, x$Version),
-           ifelse(nzchar(flavor),
-                  sprintf("Flavor: %s\n", flavor),
-                  ""),
-           ifelse(nzchar(flags),
-                  sprintf("Flags: %s\n", flags),
-                  ""),
-           sprintf("Check: %s, Result: %s\n",
-                   x$Check, x$Status),
-           sprintf("  %s",
-                   gsub("\n", "\n  ", x$Output,
-                        perl = TRUE, useBytes = TRUE)))
+    paste(sprintf("Package: %s %s\n",
+                  x$Package, x$Version),
+          ifelse(nzchar(flavor),
+                 sprintf("Flavor: %s\n", flavor),
+                 ""),
+          ifelse(nzchar(flags),
+                 sprintf("Flags: %s\n", flags),
+                 ""),
+          sprintf("Check: %s, Result: %s\n",
+                  x$Check, x$Status),
+          sprintf("  %s",
+                  gsub("\n", "\n  ", x$Output,
+                       perl = TRUE, useBytes = TRUE)),
+          sep = "")
 }
 
 print.check_details <-
@@ -1141,25 +1139,6 @@ function(new, old, outputs = FALSE)
     class(db) <- check_details_changes_classes
 
     db
-}
-
-`[.check_details_changes` <-
-function(x, i, j, drop = FALSE)
-{
-    if(((na <- nargs() - (!missing(drop))) == 3L)
-       && (length(i) == 1L)
-       && any(!is.na(match(i, c("==", "!=", "<", "<=", ">", ">="))))) {
-        levels <- c("", "OK", "NOTE", "WARNING", "ERROR", "FAIL")
-        encode <- function(s) {
-            s <- sub("\n.*", "", s)
-            s[is.na(match(s, levels))] <- ""
-            ordered(s, levels)
-        }
-        old <- encode(x$Old)
-        new <- encode(x$New)
-        i <- do.call(i, list(old, new))
-    }
-    NextMethod()
 }
 
 format.check_details_changes <-

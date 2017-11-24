@@ -71,7 +71,7 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
     on.exit(Sys.setlocale("LC_CTYPE", ctype), add = TRUE)
     Sys.setlocale("LC_CTYPE", "C")
 
-    lines <- readLines(file, skipNul = TRUE)
+    lines <- readLines(file)
 
     ## Try to find out about invalid things: mostly, lines which do not
     ## start with blanks but have no ':' ...
@@ -99,10 +99,9 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
     line_has_tag <- grepl("^[^[:blank:]][^:]*:", lines)
 
     ## Check that records start with tag lines.
-    pos <- which(diff(nums) > 0L) + 1L
-    ind <- !line_has_tag[pos]
-    if(any(ind)) {
-        lines <- strtrim(lines[pos[ind]], 0.7 * getOption("width"))
+    ind <- which(!line_has_tag[which(diff(nums) > 0L) + 1L])
+    if(length(ind)) {
+        lines <- strtrim(lines[ind], 0.7 * getOption("width"))
         stop(gettextf("Invalid DCF format.\nContinuation lines must not start a record.\nOffending lines start with:\n%s",
                       paste0("  ", lines, collapse = "\n")),
              domain = NA)

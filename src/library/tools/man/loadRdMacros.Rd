@@ -3,10 +3,13 @@
 % Copyright 2016 R Core Team
 % Distributed under GPL 2 or later
 
+
 \name{loadRdMacros}
 \alias{loadRdMacros}
 \alias{loadPkgRdMacros}
-\title{Load User-defined Rd Help System Macros}
+\title{
+  Load user-defined Rd help system macros.
+}
 \description{
   Loads macros from an \file{.Rd} file, or from several \file{.Rd}
   files contained in a package.
@@ -37,7 +40,7 @@ loadPkgRdMacros(pkgdir, macros)
   \code{loadPkgRdMacros} in the same session.  These results should be
   assumed to be valid only within the current session.
 
-  The \code{loadPkgRdMacros} function first looks for an \code{"RdMacros"}
+  The \code{loadPkgMacros} function first looks for an \code{"RdMacros"}
   entry in the package \file{DESCRIPTION} file.  If present, it should
   contain a comma-separated list of other package names; their macros
   will be loaded before those of the current package.  It will then look

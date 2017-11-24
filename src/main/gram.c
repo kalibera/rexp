@@ -65,7 +65,7 @@
 
 
 /*
- *  R : A Computer Language for Statistical Data Analysis
+ *  R : A Computer Langage for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 1997--2017  The R Core Team
  *  Copyright (C) 2009--2011  Romain Francois
@@ -4617,7 +4617,7 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
 #ifdef WC_NOT_UNICODE
     for(char *ss = s; *wcs; wcs++) ss += ucstoutf8(ss, *wcs);
 #else
-    wcstoutf8(s, wcs, sizeof(s));
+    wcstoutf8(s, wcs, nb);
 #endif
     PROTECT(t = allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharCE(s, CE_UTF8));
@@ -4773,14 +4773,7 @@ static int StringValue(int c, Rboolean forSymbol)
 		    else CTEXT_PUSH(c);
 		}
 		if (!val)
-		    error(_("nul character not allowed (line %d)"), ParseState.xxlineno);
-#ifdef Win32
-		if (0x010000 <= val && val <= 0x10FFFF) {   /* Need surrogate pair in Windows */
-		    val = val - 0x010000;
-		    WTEXT_PUSH( 0xD800 | (val >> 10) );
-		    val = 0xDC00 | (val & 0x03FF);
-		}
-#endif
+		    error(_("nul character not allowed (line %d)"), ParseState.xxlineno);		
 		WTEXT_PUSH(val);
 		use_wcs = TRUE;
 		continue;

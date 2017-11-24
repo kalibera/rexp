@@ -10,7 +10,7 @@
   Save the current page of a cairo \code{\link{X11}()} device to a file.
 }
 \usage{
-savePlot(filename = paste0("Rplot.", type),
+savePlot(filename = paste("Rplot", type, sep = "."),
          type = c("png", "jpeg", "tiff", "bmp"),
          device = dev.cur())
 }

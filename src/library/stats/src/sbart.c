@@ -18,9 +18,11 @@
 		 abd,p1ip,p2ip,ld4,ldnk,ier)
 
  is itself called from	 qsbart() [./qsbart.f]	 which has only one work array
-
- Now allows to pass 'lambda' (not just 'spar') via spar[0] == *spar  iff  *isetup = 2
 */
+
+/***** TODO : allow to pass 'lambda' (not just 'spar') e.g. via uspar[0] *
+ **    ----  and signalling that via *isetup = 2
+ */
 void F77_SUB(sbart)
     (double *penalt, double *dofoff,
      double *xs, double *ys, double *ws, double *ssw,

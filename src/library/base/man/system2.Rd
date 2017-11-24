@@ -13,7 +13,7 @@
 system2(command, args = character(),
         stdout = "", stderr = "", stdin = "", input = NULL,
         env = character(), wait = TRUE,
-        minimized = FALSE, invisible = TRUE, timeout = 0)
+        minimized = FALSE, invisible = TRUE)
 }
 \arguments{
   \item{command}{the system command to be invoked, as a character string.}
@@ -35,9 +35,6 @@ system2(command, args = character(),
     interpreter should wait for the command to finish, or run it
     asynchronously.  This will be ignored (and the interpreter will
     always wait) if \code{stdout = TRUE}.}
-  \item{timeout}{timeout in seconds, ignored if 0.  This is a limit for the
-    elapsed time running \code{command} in a separate process.   Fractions
-    of seconds are ignored.}
 #ifdef unix
   \item{minimized, invisible}{arguments that are accepted on Windows but
     ignored on this platform, with a warning.}
@@ -67,20 +64,6 @@ system2(command, args = character(),
   Because of the way it is implemented, on a Unix-alike \code{stderr =
     TRUE} implies \code{stdout = TRUE}: a warning is given if this is
   not what was specified.
-
-  When \code{timeout} is non-zero, the command is terminated after the given
-  number of seconds.  The termination works for typical commands, but is not
-  guaranteed: it is possible to write a program that would keep running
-  after the time is out.  Timeouts can only be set with \code{wait = TRUE}.
-  The \code{timeout} option is currently experimental.
-
-#ifdef unix
-  Timeouts cannot be used with interactive commands: the command is run with
-  standard input redirected from \code{/dev/null} and it must not modify
-  terminal settings.  As long as tty \code{tostop} option is disabled, which
-  it usually is by default, the executed command may write to standard
-  output and standard error.
-#endif
 }
 %% We use popen, and that pipes stdout only
 
@@ -93,17 +76,12 @@ system2(command, args = character(),
   in the attribute \code{"status"} of the result: an attribute
   \code{"errmsg"} may also be available.
 
-  In other cases, the return value is an error code (\code{0} for
-  success), given the \link{invisible} attribute (so needs to be printed
+  In other cases, the return value is an error code (\code{0}
+  for success), given the \link{invisible} attribute (so needs to be printed
   explicitly).  If the command could not be run for any reason, the
-  value is \code{127} and a warning is issued (as from \R 3.5.0).
-  Otherwise if \code{wait = TRUE} the value is the exit status returned
-  by the command, and if \code{wait = FALSE} it is \code{0} (the
-  conventional success value).
-
-  If the command times out, a warning is issued and the exit status is
-  \code{124}.
-
+  value is \code{127}.  Otherwise if \code{wait = TRUE} the value is the
+  exit status returned by the command, and if \code{wait = FALSE} it is
+  \code{0} (the conventional success value).
 #ifdef windows
   Some Windows commands return out-of-range status values
   (e.g., \code{-1}) and so only the bottom 16 bits of the value are used.

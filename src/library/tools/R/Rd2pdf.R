@@ -39,7 +39,7 @@
     } else out <- outfile
     cat("\\begin{description}", "\\raggedright{}", sep="\n", file=out)
     fields <- names(desc)
-    fields <- fields %w/o% c("Package", "Packaged", "Built")
+    fields <- fields[! fields %in% c("Package", "Packaged", "Built")]
     if ("Encoding" %in% fields)
         cat("\\inputencoding{", latex_canonical_encoding(desc["Encoding"]),
             "}\n", sep = "", file = out)
@@ -120,12 +120,9 @@
                                 attr(res,"latexEncoding"))
             lines <- readLines(out)
             if (attr(res, "hasFigures")) {
-                graphicspath <-
-                    paste0("\\graphicspath{{\"",
-                           normalizePath(file.path(dirname(f),
-                                                   "figures"),
-                                         "/"),
-                           "/\"}}")
+                graphicspath <- paste("\\graphicspath{{",
+                                      normalizePath(file.path(dirname(f), "figures"), "/"),
+                                      "/}}", sep="")
             	lines <- c(graphicspath, lines)
             	hasFigures <- TRUE
             }
@@ -144,14 +141,6 @@
              extraDirs = NULL, append = FALSE, silent = FALSE,
              pkglist = NULL)
 {
-    ## For Rd \packageFOO macro expansion:
-    path <- normalizePath(pkgdir)
-    if(file.exists(file.path(path, "DESCRIPTION")))
-        Sys.setenv("_R_RD_MACROS_PACKAGE_DIR_" = path)
-    else if((basename(path) == "man") &&
-            file.exists(file.path(dirname(path), "DESCRIPTION")))
-        Sys.setenv("_R_RD_MACROS_PACKAGE_DIR_" = dirname(path))
-    
     ## sort order for topics, a little tricky
     re <- function(x) x[order(toupper(x), x)]
 
@@ -202,12 +191,9 @@
                                     attr(res, "latexEncoding"))
                 if (attr(res, "hasFigures")) {
                     lines <- readLines(outfilename)
-                    graphicspath <-
-                        paste0("\\graphicspath{{\"",
-                               normalizePath(file.path(pkgdir, "help",
-                                                       "figures"),
-                                             "/"),
-                               "/\"}}")
+                    graphicspath <- paste("\\graphicspath{{",
+                    		    normalizePath(file.path(pkgdir, "help", "figures"), "/"),
+                    		    "/}}", sep="")
                     writeLines(c(graphicspath, lines), outfilename)
                     hasFigures <- TRUE
                 }
@@ -252,9 +238,7 @@
             if (!silent) message("Converting Rd files to LaTeX ",
                                  appendLF = FALSE, domain = NA)
             cnt <- 0L
-            macros <- loadPkgRdMacros(pkgdir, initialRdMacros())
-            ## (Be nice and give the system macros also when 'pkgdir' is
-            ## not a package root directory.)
+            macros <- loadPkgRdMacros(pkgdir)
             macros <- initialRdMacros(pkglist, macros)
             for(i in seq_along(paths)) {
                 cnt <- cnt + 1L
@@ -272,11 +256,12 @@
                 if (attr(res, "hasFigures")) {
                     lines <- readLines(outfilename)
                     graphicspath <-
-                        paste0("\\graphicspath{{\"",
-                               normalizePath(file.path(dirname(paths[i]),
-                                                       "figures"),
-                                             "/"),
-                               "/\"}}")
+                        paste("\\graphicspath{{",
+                              normalizePath(file.path(dirname(paths[i]),
+                                                      "figures"),
+                                            "/"),
+                              "/}}",
+                              sep = "")
                     writeLines(c(graphicspath, lines), outfilename)
                     hasFigures <- TRUE
                 }
@@ -512,9 +497,9 @@ function(pkgdir, outfile, title, batch = FALSE,
     ## trailer is for detection if we want to edit it later.
     latex_outputEncoding <- latex_canonical_encoding(outputEncoding)
     setEncoding <-
-        paste0("\\usepackage[",
-               latex_outputEncoding, "]{",
-               inputenc, "} % @SET ENCODING@")
+        paste("\\usepackage[",
+              latex_outputEncoding, "]{",
+              inputenc, "} % @SET ENCODING@", sep="")
     useGraphicx <- "% \\usepackage{graphicx} % @USE GRAPHICX@"
     writeLines(c(setEncoding,
                  if (inputenc == "inputenx" &&
@@ -606,13 +591,15 @@ function(pkgdir, outfile, title, batch = FALSE,
 		paste0("\\usepackage[", encs, "]{", inputenc, "}")
 	} else {
 	    setEncoding2 <-
-		paste0("\\usepackage[", encs, "]{", inputenc, "}\n",
-                       "\\IfFileExists{t2aenc.def}{\\usepackage[T2A]{fontenc}}{}")
+		paste(
+"\\usepackage[", encs, "]{", inputenc, "}
+\\IfFileExists{t2aenc.def}{\\usepackage[T2A]{fontenc}}{}", sep = "")
 	}
 	if (moreUnicode) {
 	    setEncoding2 <-
-		paste0(setEncoding2,
-                       "\n\\IfFileExists{ix-utf8enc.dfu}{\\input{ix-utf8enc.dfu}}{}")
+		paste0(
+setEncoding2, "
+\\IfFileExists{ix-utf8enc.dfu}{\\input{ix-utf8enc.dfu}}{}")
         }
         lines[lines == setEncoding] <- setEncoding2
 	if (hasFigures)

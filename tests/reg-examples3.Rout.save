@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2017-11-17 r73742) -- "Unsuffered Consequences"
+R version 3.4.2 Patched (2017-11-17 r73741) -- "Short Summer"
 Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -220,19 +220,6 @@ factor> factor(z, exclude = "B") # ditto
 [1] C    <NA> A   
 Levels: A < C
 
-factor> ## Now, labels maybe duplicated:
-factor> ## factor() with duplicated labels allowing to "merge levels"
-factor> x <- c("Man", "Male", "Man", "Lady", "Female")
-
-factor> ## Map from 4 different values to only two levels:
-factor> (xf <- factor(x, levels = c("Male", "Man" , "Lady",   "Female"),
-factor+                  labels = c("Male", "Male", "Female", "Female")))
-[1] Male   Male   Male   Female Female
-Levels: Male Female
-
-factor> #> [1] Male   Male   Male   Female Female
-factor> #> Levels: Male Female
-factor> 
 factor> ## Using addNA()
 factor> Month <- airquality$Month
 

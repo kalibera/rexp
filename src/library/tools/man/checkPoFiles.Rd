@@ -6,7 +6,9 @@
 \name{checkPoFiles}
 \alias{checkPoFile}
 \alias{checkPoFiles}
-\title{Check Translation Files for Inconsistent Format Strings}
+\title{
+  Check translation files for inconsistent format strings.
+}
 \description{
   These functions compare formats embedded in English messages
   with translated strings to check for consistency.  \code{checkPoFile}

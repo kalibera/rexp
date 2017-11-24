@@ -57,7 +57,7 @@ else
   $1="${[$1]}${separator}$2"
 fi])# R_SH_VAR_ADD
 
-## R_MISSING_PROG(NAME, PROGRAM, [ACTION-IF-MISSING])
+## R_MISSING_PROG(NAME, PROGRAM)
 ## -----------------------------
 ## Simplified variant of AM_MISSING_PROG.
 ## Set NAME to PROGRAM if this is found and works (in the sense of
@@ -69,9 +69,8 @@ if ($2 --version) < /dev/null > /dev/null 2>&1; then
   $1=$2
   AC_MSG_RESULT([found])
 else
-  $1="\$(SHELL) \"\$(abs_top_srcdir)/tools/missing\" $2"
+  $1="\$(SHELL) \$(top_srcdir)/tools/missing $2"
   AC_MSG_RESULT([missing])
-  [$3]  
 fi
 AC_SUBST($1)
 ])# R_MISSING_PROG
@@ -3196,7 +3195,7 @@ if test "x${r_cv_have_pcre820}" != xyes; then
   have_pcre=no
   LIBS="${r_save_LIBS}"
 else
-AC_CACHE_CHECK([if PCRE version >= 8.32], [r_cv_have_pcre_832],
+AC_CACHE_CHECK([if PCRE version >= 8.32], [r_cv_have_pcre832],
 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #ifdef HAVE_PCRE_PCRE_H
 #include <pcre/pcre.h>
@@ -3212,7 +3211,7 @@ int main() {
   exit(1);
 #endif
 }
-]])], [r_cv_have_pcre_832=yes], [r_cv_have_pcre_832=no], [r_cv_have_pcre_832=no])])
+]])], [r_cv_have_pcre832=yes], [r_cv_have_pcre832=no], [r_cv_have_pcre832=no])])
 fi
 
 AC_MSG_CHECKING([whether PCRE support suffices])
@@ -3221,47 +3220,11 @@ if test "x${r_cv_have_pcre820}" != xyes; then
 else
   AC_MSG_RESULT([yes])
 fi
-if test "x${r_cv_have_pcre_832}" != xyes; then
+if test "x${r_cv_have_pcre832}" != xyes; then
   warn_pcre_version="pcre < 8.32 is deprecated"
   AC_MSG_WARN([${warn_pcre_version}])
 fi
 ])# R_PCRE
-
-## R_PCRE2
-## -------
-## Try finding pcre2 (8-bit) library and header.
-AC_DEFUN([R_PCRE2],
-[have_pcre2=no
-if "${PKGCONF}" --exists libpcre2-8; then
-  PCRE2_CPPFLAGS=`"${PKGCONF}" --cflags libpcre2-8`
-  PCRE2_LIBS=`"${PKGCONF}" --libs libpcre2-8`
-  have_pcre2=yes
-else
-  AC_PATH_PROG(PCRE2_CONFIG, pcre2-config)
-  if test -n "${PCRE2_CONFIG}"; then
-    PCRE2_CPPFLAGS=`"${PCRE2_CONFIG}" --cflags`
-    PCRE2_LIBS=`"${PCRE2_CONFIG}" --libs8`
-    have_pcre2=yes
-  fi
-fi
-if test "x${have_pcre2}" = "xyes"; then
-  r_save_CPPFLAGS="${CPPFLAGS}"
-  CPPFLAGS="${PCRE2_CPPFLAGS} ${CPPFLAGS}"
-  r_save_LIBS="${LIBS}"
-  LIBS="${PCRE2_LIBS} ${LIBS}"
-  AC_DEFINE([PCRE2_CODE_UNIT_WIDTH], [8], [PCRE2 code unit width wanted.])
-  AC_CHECK_HEADER(pcre2.h, [have_pcre2=yes], [have_pcre2=no])
-  if test "x${have_pcre2}" = "xyes"; then
-    AC_CHECK_LIB(pcre2-8, pcre2_compile_8, [have_pcre2=yes], [have_pcre2=no])
-  fi
-  if test "x${have_pcre2}" = "xyes"; then
-    AC_DEFINE(HAVE_PCRE2, 1, [Define if your system has pcre2.])
-  else
-    CPPFLAGS="${r_save_CPPFLAGS}"
-    LIBS="${r_save_LIBS}"
-  fi
-fi
-])# R_PCRE2
 
 ## R_BZLIB
 ## -------
@@ -4360,15 +4323,6 @@ if test "x${r_cv_func_ctanh_works}" = xyes; then
             [Define if ctanh() exists and is working correctly.])
 fi
 ])# R_FUNC_CTANH
-
-## R_MNT_WARN(MSG)
-## --------------------------------------------------------
-## Prints a warning if in maintainer mode.
-AC_DEFUN([R_MNT_WARN],
-[if test "x${use_maintainer_mode}" = xyes; then
-  AC_MSG_WARN([$1])
-fi
-])# R_MNT_WARN
 
 ### Local variables: ***
 ### mode: outline-minor ***

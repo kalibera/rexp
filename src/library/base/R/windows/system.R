@@ -1,7 +1,7 @@
 #  File src/library/base/R/windows/system.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2014 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ system <- function(command, intern = FALSE,
                    ignore.stdout = FALSE, ignore.stderr = FALSE,
                    wait = TRUE, input = NULL,
                    show.output.on.console = TRUE, minimized = FALSE,
-                   invisible = TRUE, timeout = 0)
+                   invisible = TRUE)
 {
     if(!is.logical(intern) || is.na(intern))
         stop("'intern' must be TRUE or FALSE")
@@ -56,14 +56,13 @@ system <- function(command, intern = FALSE,
     }
     if (invisible) flag <- 20L + flag
     else if (minimized) flag <- 10L + flag
-    .Internal(system(command, as.integer(flag), f, stdout, stderr, timeout))
+    .Internal(system(command, as.integer(flag), f, stdout, stderr))
 }
 
 system2 <- function(command, args = character(),
                     stdout = "", stderr = "", stdin = "", input = NULL,
                     env = character(),
-                    wait = TRUE, minimized = FALSE, invisible = TRUE,
-                    timeout = 0)
+                    wait = TRUE, minimized = FALSE, invisible = TRUE)
 {
     if(!is.logical(wait) || is.na(wait))
         stop("'wait' must be TRUE or FALSE")
@@ -90,7 +89,7 @@ system2 <- function(command, args = character(),
     else 0L
     if (invisible) flag <- 20L + flag
     else if (minimized) flag <- 10L + flag
-    .Internal(system(command, flag, f, stdout, stderr, timeout))
+    .Internal(system(command, flag, f, stdout, stderr))
 }
 
 shell <- function(cmd, shell, flag = "/c", intern = FALSE,
@@ -124,6 +123,14 @@ shell <- function(cmd, shell, flag = "/c", intern = FALSE,
 
 shell.exec <- function(file) .Internal(shell.exec(file))
 
-## Sys.timezone() --> common function for all platforms
+Sys.timezone <- function(location = TRUE)
+{
+    tz <- Sys.getenv("TZ", names = FALSE)
+    if(nzchar(tz)) return(tz)
+    if(location) return(.Internal(tzone_name()))
+    z <- as.POSIXlt(Sys.time())
+    zz <- attr(z, "tzone")
+    if(length(zz) == 3L) zz[2L + z$isdst] else zz[1L]
+}
 
 Sys.which <- function(names) .Internal(Sys.which(as.character(names)))

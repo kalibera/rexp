@@ -1,7 +1,7 @@
 #  File src/library/base/R/zzz.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -56,8 +56,6 @@ is.name <- is.symbol
 .ArgsEnv <- new.env(hash = TRUE, parent = emptyenv())
 
 assign("%*%", function(x, y) NULL, envir = .ArgsEnv)
-assign("...length", function() NULL, envir = .ArgsEnv)
-assign("...elt", function(n) NULL, envir = .ArgsEnv)
 assign(".C", function(.NAME, ..., NAOK = FALSE, DUP = TRUE, PACKAGE,
                       ENCODING) NULL,
        envir = .ArgsEnv)
@@ -130,7 +128,7 @@ assign("nargs", function() NULL, envir = .ArgsEnv)
 assign("nzchar", function(x, keepNA=FALSE) NULL, envir = .ArgsEnv)
 assign("oldClass", function(x) NULL, envir = .ArgsEnv)
 assign("oldClass<-", function(x, value) NULL, envir = .ArgsEnv)
-assign("on.exit", function(expr = NULL, add = FALSE, after = TRUE) NULL, envir = .ArgsEnv)
+assign("on.exit", function(expr = NULL, add = FALSE) NULL, envir = .ArgsEnv)
 assign("pos.to.env", function(x) NULL, envir = .ArgsEnv)
 assign("proc.time", function() NULL, envir = .ArgsEnv)
 assign("quote", function(expr) NULL, envir = .ArgsEnv)

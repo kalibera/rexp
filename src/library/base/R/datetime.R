@@ -18,53 +18,35 @@
 
 Sys.time <- function() .POSIXct(.Internal(Sys.time()))
 
-### There is no portable way to find the system timezone by location.
-### For some ideas (not all accurate) see
-### https://stackoverflow.com/questions/3118582/how-do-i-find-the-current-system-timezone
+## overridden on Windows
 Sys.timezone <- function(location = TRUE)
 {
-    ## Many Unix set TZ, e.g. Solaris and AIX.
-    ## For Solaris the system setting is a line in /etc/TIMEZONE
     tz <- Sys.getenv("TZ", names = FALSE)
-    if(nzchar(tz))
-        tz
-    else if(location) {
-        if(.Platform$OS.type == "windows")
-            .Internal(tzone_name())
-        else { ## "unix" including macOS
-            lt <- normalizePath("/etc/localtime") # most Linux, macOS, ...
-            if (grepl(pat <- "^/usr/share/zoneinfo/", lt) ||
-                grepl(pat <- "^/usr/share/zoneinfo.default/", lt)) sub(pat, "", lt)
-            else if(grepl(pat <- ".*/zoneinfo/(.*)", lt))  sub(pat, "\\1", lt)
-            ## Debian-based Linuxen do not have /etc/localtime
-            else if (lt == "/etc/localtime" && file.exists("/etc/timezone") &&
-                     dir.exists("/usr/share/zoneinfo") &&
-                     { # Debian etc.
-                         info <- file.info(normalizePath("/etc/timezone"),
-                                           extra_cols = FALSE)
-                         (!info$isdir && info$size <= 200L)
-                     } && {
-                         tz1 <- tryCatch(readBin("/etc/timezone", "raw", 200L),
-                                         error = function(e) raw(0L))
-                         length(tz1) > 0L &&
-                             all(tz1 %in% as.raw(c(9:10, 13L, 32:126)))
-                     } && {
-                         tz2 <- gsub("^[[:space:]]+|[[:space:]]+$", "", rawToChar(tz1))
-                         tzp <- file.path("/usr/share/zoneinfo", tz2)
-                         file.exists(tzp) && !dir.exists(tzp) &&
-                             identical(file.size(normalizePath(tzp)),
-                                       file.size(lt))
-                     })
-                tz2
-            else
-                NA_character_
-        }
-    } else { # !location
-        st <- as.POSIXlt(Sys.time())
-        z <- attr(st, "tzone")
-        if(length(z) == 3L) z[2L + st$isdst]
-        else if(length(z)) z[1L] else NA_character_
-    }
+    if(!location || nzchar(tz)) return(Sys.getenv("TZ", unset = NA_character_))
+    lt <- normalizePath("/etc/localtime") # most Linux, macOS, ...
+    if (grepl(pat <- "^/usr/share/zoneinfo/", lt) ||
+        grepl(pat <- "^/usr/share/zoneinfo.default/", lt)) sub(pat, "", lt)
+    else if(grepl(pat <- ".*/zoneinfo/(.*)", lt))  sub(pat, "\\1", lt)
+    else if (lt == "/etc/localtime" && file.exists("/etc/timezone") &&
+	     dir.exists("/usr/share/zoneinfo") &&
+	     { # Debian etc.
+		 info <- file.info(normalizePath("/etc/timezone"),
+				   extra_cols = FALSE)
+		 (!info$isdir && info$size <= 200L)
+	     } && {
+		 tz1 <- tryCatch(readBin("/etc/timezone", "raw", 200L),
+				 error = function(e) raw(0L))
+		 length(tz1) > 0L &&
+		     all(tz1 %in% as.raw(c(9:10, 13L, 32:126)))
+	     } && {
+		tz2 <- gsub("^[[:space:]]+|[[:space:]]+$", "", rawToChar(tz1))
+		tzp <- file.path("/usr/share/zoneinfo", tz2)
+		file.exists(tzp) && !dir.exists(tzp) &&
+		    identical(file.size(normalizePath(tzp)),
+			      file.size(lt))
+	     })
+	tz2
+    else NA_character_
 }
 
 as.POSIXlt <- function(x, tz = "", ...) UseMethod("as.POSIXlt")
@@ -88,37 +70,31 @@ as.POSIXlt.factor <- function(x, ...)
     y
 }
 
-as.POSIXlt.character <-
-    function(x, tz = "", format,
-             tryFormats = c("%Y-%m-%d %H:%M:%OS",
-                            "%Y/%m/%d %H:%M:%OS",
-                            "%Y-%m-%d %H:%M",
-                            "%Y/%m/%d %H:%M",
-                            "%Y-%m-%d",
-                            "%Y/%m/%d"), optional = FALSE, ...)
+as.POSIXlt.character <- function(x, tz = "", format, ...)
 {
-    x <- unclass(x) # precaution PR#7826
+    x <- unclass(x) # precaution PR7826
     if(!missing(format)) {
         res <- strptime(x, format, tz = tz)
         if(nzchar(tz)) attr(res, "tzone") <- tz
         return(res)
     }
     xx <- x[!is.na(x)]
-    if (!length(xx)) { # all NA
+    if (!length(xx)) {
         res <- strptime(x, "%Y/%m/%d")
         if(nzchar(tz)) attr(res, "tzone") <- tz
         return(res)
-    } else
-        for(f in tryFormats)
-            if(all(!is.na(strptime(xx, f, tz = tz)))) {
-                res <- strptime(x, f, tz = tz)
-                if(nzchar(tz)) attr(res, "tzone") <- tz
-                return(res)
-            }
-    ## no success :
-    if(optional)
-        as.POSIXlt.character(rep.int(NA_character_, length(x)), tz=tz)
-    else stop("character string is not in a standard unambiguous format")
+    } else if(all(!is.na(strptime(xx, f <- "%Y-%m-%d %H:%M:%OS", tz = tz))) ||
+            all(!is.na(strptime(xx, f <- "%Y/%m/%d %H:%M:%OS", tz = tz))) ||
+            all(!is.na(strptime(xx, f <- "%Y-%m-%d %H:%M", tz = tz))) ||
+            all(!is.na(strptime(xx, f <- "%Y/%m/%d %H:%M", tz = tz))) ||
+            all(!is.na(strptime(xx, f <- "%Y-%m-%d", tz = tz))) ||
+            all(!is.na(strptime(xx, f <- "%Y/%m/%d", tz = tz)))
+            ) {
+        res <- strptime(x, f, tz = tz)
+        if(nzchar(tz)) attr(res, "tzone") <- tz
+        return(res)
+    }
+    stop("character string is not in a standard unambiguous format")
 }
 
 as.POSIXlt.numeric <- function(x, tz = "", origin, ...)
@@ -127,17 +103,16 @@ as.POSIXlt.numeric <- function(x, tz = "", origin, ...)
     as.POSIXlt(as.POSIXct(origin, tz = "UTC", ...) + x, tz = tz)
 }
 
-as.POSIXlt.default <- function(x, tz = "", optional = FALSE, ...)
+as.POSIXlt.default <- function(x, tz = "", ...)
 {
+
     if(inherits(x, "POSIXlt")) return(x)
     if(is.logical(x) && all(is.na(x)))
         return(as.POSIXlt(as.POSIXct.default(x), tz = tz))
-    if(optional)
-        as.POSIXlt.character(rep.int(NA_character_, length(x)), tz=tz)
-    else stop(gettextf("do not know how to convert '%s' to class %s",
-                       deparse(substitute(x)),
-                       dQuote("POSIXlt")),
-              domain = NA)
+    stop(gettextf("do not know how to convert '%s' to class %s",
+                  deparse(substitute(x)),
+                  dQuote("POSIXlt")),
+         domain = NA)
 }
 
 as.POSIXct <- function(x, tz = "", ...) UseMethod("as.POSIXct")
@@ -269,10 +244,8 @@ print.POSIXlt <- function(x, tz = "", usetz = TRUE, ...)
 	print(FORM(x[seq_len(max.print)]), ...)
         cat(' [ reached getOption("max.print") -- omitted',
             length(x) - max.print, 'entries ]\n')
-    } else if(length(x))
-	print(FORM(x), max = max.print, ...)
-    else
-	cat(class(x)[1L], "of length 0\n")
+    } else
+	print(if(length(x)) FORM(x) else paste(class(x)[1L], "of length 0"), ...)
     invisible(x)
 }
 
@@ -396,6 +369,7 @@ Summary.POSIXlt <- function (..., na.rm)
 function(x, ..., drop = TRUE)
 {
     cl <- oldClass(x)
+    ## class(x) <- NULL
     val <- NextMethod("[")
     class(val) <- cl
     attr(val, "tzone") <- attr(x, "tzone")
@@ -406,6 +380,7 @@ function(x, ..., drop = TRUE)
 function(x, ..., drop = TRUE)
 {
     cl <- oldClass(x)
+    ## class(x) <- NULL
     val <- NextMethod("[[")
     class(val) <- cl
     attr(val, "tzone") <- attr(x, "tzone")
@@ -418,6 +393,7 @@ function(x, ..., value) {
     value <- unclass(as.POSIXct(value))
     cl <- oldClass(x)
     tz <- attr(x, "tzone")
+    class(x) <- NULL
     x <- NextMethod(.Generic)
     class(x) <- cl
     attr(x, "tzone") <- tz
@@ -576,6 +552,7 @@ print.difftime <- function(x, digits = getOption("digits"), ...)
 `[.difftime` <- function(x, ..., drop = TRUE)
 {
     cl <- oldClass(x)
+    class(x) <- NULL
     val <- NextMethod("[")
     class(val) <- cl
     attr(val, "units") <- attr(x, "units")
@@ -811,7 +788,7 @@ seq.POSIXt <-
             if(!missing(to)) {
                 ## We might have a short day, so need to over-estimate.
                 length.out <- 2L + floor((unclass(as.POSIXct(to)) -
-					  unclass(as.POSIXct(from)))/(by * 86400))
+                                          unclass(as.POSIXct(from)))/86400)
             }
             r1$mday <- seq.int(r1$mday, by = by, length.out = length.out)
         }

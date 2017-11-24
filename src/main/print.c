@@ -200,7 +200,7 @@ static void PrintLanguageEtc(SEXP s, Rboolean useSource, Rboolean isClosure)
 	const char *ctmp = EncodeString(STRING_ELT(t, i),  0, 0, Rprt_adj_none);
 	Rprintf("%s\n", ctmp); /* translated */
 #else
- 	Rprintf("%s\n", translateChar(STRING_ELT(t, i))); // translate: for srcref part (PR#16732)
+ 	Rprintf("%s\n", CHAR(STRING_ELT(t, i))); /* translated */
 #endif
     }
     UNPROTECT(1);
@@ -344,10 +344,9 @@ static void PrintGenericVector(SEXP s, SEXP env)
 		break;
 	    case LGLSXP:
 		if (LENGTH(tmp) == 1) {
-		    const int *x = LOGICAL_RO(tmp);
-		    formatLogical(x, 1, &w);
+		    formatLogical(LOGICAL(tmp), 1, &w);
 		    snprintf(pbuf, 115, "%s",
-			     EncodeLogical(x[0], w));
+			     EncodeLogical(LOGICAL(tmp)[0], w));
 		} else
 		    snprintf(pbuf, 115, "Logical,%d", LENGTH(tmp));
 		break;
@@ -357,26 +356,24 @@ static void PrintGenericVector(SEXP s, SEXP env)
 		    snprintf(pbuf, 115, "factor,%d", LENGTH(tmp));
 		} else {
 		    if (LENGTH(tmp) == 1) {
-			const int *x = INTEGER_RO(tmp);
-			formatInteger(x, 1, &w);
+			formatInteger(INTEGER(tmp), 1, &w);
 			snprintf(pbuf, 115, "%s",
-				 EncodeInteger(x[0], w));
+				 EncodeInteger(INTEGER(tmp)[0], w));
 		    } else
 			snprintf(pbuf, 115, "Integer,%d", LENGTH(tmp));
 		}
 		break;
 	    case REALSXP:
 		if (LENGTH(tmp) == 1) {
-		    const double *x = REAL_RO(tmp);
-		    formatReal(x, 1, &w, &d, &e, 0);
+		    formatReal(REAL(tmp), 1, &w, &d, &e, 0);
 		    snprintf(pbuf, 115, "%s",
-			     EncodeReal0(x[0], w, d, e, OutDec));
+			     EncodeReal0(REAL(tmp)[0], w, d, e, OutDec));
 		} else
 		    snprintf(pbuf, 115, "Numeric,%d", LENGTH(tmp));
 		break;
 	    case CPLXSXP:
 		if (LENGTH(tmp) == 1) {
-		    const Rcomplex *x = COMPLEX_RO(tmp);
+		    Rcomplex *x = COMPLEX(tmp);
 		    if (ISNA(x[0].r) || ISNA(x[0].i))
 			/* formatReal(NA) --> w=R_print.na_width, d=0, e=0 */
 			snprintf(pbuf, 115, "%s",

@@ -125,12 +125,12 @@ available to @R{} Extensions: rather @code{SEXP} is an opaque pointer,
 and the internals can only be accessed by the functions provided.
 
 @cindex node
-Both types of node structure have as their first three fields a 64-bit
+Both types of node structure have as their first three fields a 32-bit
 @code{sxpinfo} header and then three pointers (to the attributes and the
 previous and next node in a doubly-linked list), and then some further
 fields.  On a 32-bit platform a node@footnote{strictly, a @code{SEXPREC}
 node; @code{VECTOR_SEXPREC} nodes are slightly smaller but followed by
-data in the node.} occupies 32 bytes: on a 64-bit platform typically 56
+data in the node.} occupies 28 bytes: on a 64-bit platform typically 56
 bytes (depending on alignment constraints).
 
 The first five bits of the @code{sxpinfo} header specify one of up to 32
@@ -225,28 +225,23 @@ solely of a simple type such as an atomic vector or function.
 @node Rest of header, The 'data', SEXPTYPEs, SEXPs
 @subsection Rest of header
 
-Note that the size and structure of the header changed in @R{} 3.5.0:
-see earlier editions of this manual for the previous layout.
+Note that the size and structure of the header will change in @R{} 3.5.0.
 
-The @code{sxpinfo} header is defined as a 64-bit C structure by
+The @code{sxpinfo} header is currently defined as a 32-bit C structure by
 
 @example
-#define NAMED_BITS 16
 struct sxpinfo_struct @{
     SEXPTYPE type      :  5;  /* @r{discussed above} */
-    unsigned int scalar:  1;  /* @r{is this a numeric vector of length 1?}
     unsigned int obj   :  1;  /* @r{is this an object with a class attribute?} */
-    unsigned int alt   :  1;  /* @r{is this an @code{ALTREP} object?} */
+    unsigned int named :  2;  /* @r{used to control copying} */
     unsigned int gp    : 16;  /* @r{general purpose, see below} */
     unsigned int mark  :  1;  /* @r{mark object as `in use' in GC} */
     unsigned int debug :  1;
     unsigned int trace :  1;
-    unsigned int spare :  1;  /* @r{debug once and with reference counting} */
+    unsigned int spare :  1;  /* @r{debug once} */
     unsigned int gcgen :  1;  /* @r{generation for GC} */
     unsigned int gccls :  3;  /* @r{class of node for GC} */
-    unsigned int named : NAMED_BITS; /* @r{used to control copying} */
-    unsigned int extra : 32 - NAMED_BITS;
-@}; /*		    Tot: 64 */
+@};  /*              Tot: 32 */
 @end example
 
 @findex debug bit
@@ -264,13 +259,12 @@ other objects when tracing duplications (see @code{tracemem}).
 The @code{spare} bit is used for closures to mark them for one-time
 debugging.
 
-@findex named bits
+@findex named bit
 @findex NAMED
 @findex SET_NAMED
 @cindex copying semantics
 The @code{named} field is set and accessed by the @code{SET_NAMED} and
-@code{NAMED} macros, and take values @code{0}, @code{1} and @code{2}, or
-possibly higher if @code{NAMEDMAX} is set to a higher value.
+@code{NAMED} macros, and take values @code{0}, @code{1} and @code{2}.
 @R{} has a `call by value' illusion, so an assignment like
 @example
 b <- a
@@ -283,7 +277,7 @@ is no need to copy.  What really happens is that a new symbol @code{b}
 is bound to the same value as @code{a} and the @code{named} field on the
 value object is set (in this case to @code{2}).  When an object is about
 to be altered, the @code{named} field is consulted.  A value of @code{2}
-or more means that the object must be duplicated before being changed.  (Note
+means that the object must be duplicated before being changed.  (Note
 that this does not say that it is necessary to duplicate, only that it
 should be duplicated whether necessary or not.)  A value of @code{0}
 means that it is known that no other @code{SEXP} shares data with this
@@ -892,7 +886,7 @@ used for the evaluation of the body of the function, and promises will
 be forced (and hence actual or default arguments evaluated) when they
 are encountered.
 @findex NAMED
-(Evaluating a promise sets @code{NAMED = NAMEDMAX} on its value, so if the
+(Evaluating a promise sets @code{NAMED = 2} on its value, so if the
 argument was a symbol its binding is regarded as having multiple
 references during the evaluation of the closure call.)
 
@@ -2115,7 +2109,7 @@ The following basic replacement and extractor functions
 @group
 length      length<-
 class       class<-
-oldClass    oldClass<-
+oldClass    oldCLass<-
 attr        attr<-
 attributes  attributes<-
 names       names<-
@@ -2131,7 +2125,7 @@ dimnames    dimnames<-
 @noindent
 Note that optimizing @code{NAMED = 1} is only effective within a
 primitive (as the closure wrapper of a @code{.Internal} will set
-@code{NAMED = NAMEDMAX} when the promise to the argument is evaluated) and
+@code{NAMED = 2} when the promise to the argument is evaluated) and
 hence replacement functions should where possible be primitive to avoid
 copying (at least in their default methods).
 
@@ -2140,11 +2134,11 @@ The following functions are primitive for efficiency reasons:
 
 @example
 @group
-:           ~           c           list
-call        expression  substitute
-UseMethod   standardGeneric
-.C          .Fortran   .Call        .External
-round       signif      rep         seq.int
+:          ~          c           list
+call       expression substitute
+UseMethod  standardGeneric
+.C         .Fortran   .Call       .External
+round      signif      rep        seq.int
 @end group
 @end example
 
@@ -2153,10 +2147,10 @@ as well as the following internal-use-only functions
 
 @example
 @group
-.Primitive      .Internal
-.Call.graphics  .External.graphics
-.subset         .subset2
-.primTrace      .primUntrace
+.Primitive     .Internal
+.Call.graphics .External.graphics
+.subset        .subset2
+.primTrace     .primUntrace
 lazyLoadDBfetch
 @end group
 @end example
@@ -2350,7 +2344,7 @@ internationalized in the same way as other packages.
 * R code::                      
 * Main C code::                 
 * Windows-GUI-specific code::   
-* macOS GUI::                   
+* macOS GUI::                    
 * Updating::                    
 @end menu
 
@@ -3959,31 +3953,6 @@ indicate that no report is required, a value of @samp{0} that a report
 is always required.
 Default: @code{""}. (@code{10} for CRAN checks.)
 
-@item _R_CHECK_EXAMPLE_TIMING_THRESHOLD_
-If timings are being recorded, set the threshold in seconds for
-reporting long-running examples (either user+system CPU time or elapsed
-time).  Default: @code{"5"}.
-
-@item _R_CHECK_EXAMPLE_TIMING_CPU_TO_ELAPSED_THRESHOLD_
-For checks with timings enabled, report examples where the ratio of CPU
-time to elapsed time exceeds this threshold (and the CPU time is at
-least one second).  This can help detect the simultaneous use of
-multiple CPU cores.
-Default: @code{NA}.
-
-@item _R_CHECK_TEST_TIMING_CPU_TO_ELAPSED_THRESHOLD_
-Report for running an individual test if the ratio of CPU time to
-elapsed time exceeds this threshold (and the CPU time is at least one
-second).  Not supported on Windows.
-Default: @code{NA}.
-
-@item _R_CHECK_VIGNETTE_TIMING_CPU_TO_ELAPSED_THRESHOLD_
-Report if when running/re-building vignettes (individually or in
-aggregate) the ratio of CPU time to elapsed time exceeds this threshold
-(and the CPU time is at least one second).  Not supported on
-Windows.
-Default: @code{NA}.
-
 @item _R_CHECK_INSTALL_DEPENDS_
 If set to a true value and a test installation is to be done, this is
 done with @code{.libPaths()} containing just a temporary library
@@ -4142,11 +4111,6 @@ Windows, @command{objdump.exe} to be on the @env{PATH}.  This would be
 normal when using a package with compiled code (which are the only ones
 this checks), but Windows' users should check.)
 Default: false (but true for CRAN submission checks).
-
-@item _R_CHECK_NO_STOP_ON_TEST_ERROR_
-If set to a true value, do not stop running tests after first error (as
-if command line option @option{--no-stop-on-test-error} had been given).
-Default: false (but true for CRAN submission checks).
 @end vtable
 
 CRAN's submission checks use something like
@@ -4184,43 +4148,6 @@ _R_CHECK_FORCE_SUGGESTS_=FALSE
 @noindent
 since some packages do suggest other packages not available on CRAN or
 other commonly-used repositories.
-
-Several environment variables can be used to set `timeouts': limits for
-the elapsed time taken by the sub-processes used for parts of the
-checks.  A value of @code{0} indicates no limit, and is the default.
-Character strings ending in @samp{s}, @samp{m} or @samp{h} indicate a
-number of seconds, minutes or hours respectively: other values are
-interpreted as a whole number of seconds (with invalid inputs being
-treated as no limit).
-@vtable @code
-@item _R_CHECK_ELAPSED_TIMEOUT_
-The default timeout for sub-processes not otherwise mentioned, and the
-default value for all except @env{_R_CHECK_ONE_TEST_ELAPSED_TIMEOUT_}.
-(This is also used by @code{tools::check_packages_in_dir}.)
-
-@item _R_CHECK_INSTALL_ELAPSED_TIMEOUT_
-Limit for when @command{R CMD INSTALL} is run by @command{check}.
-
-@item _R_CHECK_EXAMPLES_ELAPSED_TIMEOUT_
-Limit for running all the examples for one sub-architecture.
-
-@item _R_CHECK_ONE_TEST_ELAPSED_TIMEOUT_
-Limit for running one test for one sub-architecture.  Default
-@env{_R_CHECK_TESTS_ELAPSED_TIMEOUT_}.
-
-@item _R_CHECK_TESTS_ELAPSED_TIMEOUT_
-Limit for running all the tests for one sub-architecture (and the
-default limit for running one test).
-
-@item _R_CHECK_ONE_VIGNETTE_ELAPSED_TIMEOUT_
-Limit for running the @R{} code in one vignette.
-
-@item _R_CHECK_BUILD_VIGNETTES_ELAPSED_TIMEOUT_
-Limit for re-building (all) vignettes.
-
-@item _R_CHECK_PKGMAN_ELAPSED_TIMEOUT_
-Limit for each attempt at building the PDF package manual.
-@end vtable
 
 Another variable which enables stricter checks is to set
 @env{R_CHECK_CONSTANTS} to @code{5}.  This checks that
@@ -4499,9 +4426,16 @@ matrix indices were all converted to positive integers): it now works
 with either @code{INTSXP} or @code{REALSXP} indices.
 
 @item
-The @R{} function @code{length} returns a double value if the length
-exceeds 2^31-1. Code calling @code{as.integer(length(x))} before passing
-to @code{.C}/@code{.Fortran} should checks for an @code{NA} result.
+@R{} function @code{length} was documented to currently return an
+integer, possibly @code{NA}.  A lot of code has been written that
+assumes that, and even code which calls @code{as.integer(length(x))}
+before passing to @code{.C}/@code{.Fortran} rarely checks for an
+@code{NA} result.
+
+There is a new function @code{xlength} which works for long vectors and
+returns a double value if the length exceeds 2^31-1. At present
+@code{length} returns @code{NA} for long vectors, but it may be safer to
+make that an error.
 
 @end itemize
 

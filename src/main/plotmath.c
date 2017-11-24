@@ -1263,7 +1263,6 @@ static BBOX RenderSpace(SEXP expr, int draw, mathContext *mc,
 }
 
 static SymTab BinTable[] = {
-    { "!",               041 },
     { "*",		 052 },	/* Binary Operators */
     { "+",		 053 },
     { "-",		 055 },
