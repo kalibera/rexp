@@ -1848,7 +1848,7 @@ static SEXP assignCall(SEXP op, SEXP symbol, SEXP fun,
     return lang3(op, symbol, val);
 }
 
-
+void printwhere(void);
 static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 {
     Rboolean cond = NA_LOGICAL;
