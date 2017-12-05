@@ -1290,7 +1290,18 @@ x[1] <- numeric(); stopifnot(identical(x, n0))
 NUL <- NULL
 NUL[3] <- integer(0); NUL[,2] <- character() ; NUL[3,4,5] <- list()
 stopifnot(is.null(NUL))
-## had failed for one day in R-devel
+## above had failed for one day in R-devel; next one always worked
+NUL <- NULL; NUL[character()] <- "A"
+stopifnot(identical(NUL, character()))
+## 0-0-length subassignment should not change atomic to list:
+ec <- e0 <- matrix(, 0, 4) # a  0 x 4  matrix
+ec[,1:2] <- list()
+x <- 1[0]; x[1:2] <- list()
+a <- a0 <- array("", 0:2); a[,1,] <- expression()
+stopifnot(identical(ec, e0)
+        , identical(x, 1[0])
+        , identical(a, a0)
+)## failed for a couple of days in R-devel
 
 
 ## as.character(<list>) should keep names in some nested cases
@@ -1307,6 +1318,26 @@ stopifnot(
     identical(as.character(list(list(one = 1))), "list(one = 1)")
   , identical(as.character(list(  c (one = 1))),    "c(one = 1)")
 )## the last gave "1" in all previous versions of R
+
+
+## as.matrix( <data.frame in d.fr.> ) -- prompted by Patrick Perry, R-devel 2017-11-30
+dm <- dd <- d1 <- data.frame(n = 1:3)
+dd[[1]] <- d1            # -> 'dd' has "n" twice
+dm[[1]] <- as.matrix(d1) #    (ditto)
+d. <- structure(list(d1), class = "data.frame", row.names = c(NA, -3L))
+d2. <- data.frame(ch = c("A","b"), m = 10:11)
+d2  <- data.frame(V = 1:2); d2$V <- d2.; d2
+stopifnot(identical(capture.output(dd),
+                    capture.output(d.))
+        , identical(as.matrix(dd), (cbind(n = 1:3) -> m.))
+        , identical(as.matrix(d.), m.)
+        , identical(as.matrix(d2), array(c("A", "b", "10", "11"), c(2L, 2L),
+                                         dimnames = list(NULL, c("V.ch", "V.m"))))
+        , identical(as.matrix(dm), m.)
+        , identical(as.matrix(d1), m.)
+        , identical(colnames(m2 <- as.matrix(d2)), c("V.ch", "V.m"))
+)
+## the first  3  as.matrix() have failed at least since R-1.9.1, 2004
 
 
 

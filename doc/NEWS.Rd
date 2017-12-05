@@ -193,8 +193,14 @@
       e.g.\sspace{}\emph{via} \code{dyn.load()} has been increased up to 614
       when the OS limit on the number of open files allows.
 
-      \item \code{Sys.timezone()} is slightly less platform-dependent,
-      notably for \code{location = FALSE}.
+      \item \code{Sys.timezone()} tries even more heuristics on
+      Unix-alikes.  As some of these ways are slow, the value is cached
+      at first use in a session.  For the slowest method, a warning is
+      given recommending that \env{TZ} is set to avoid the search.
+
+      The same ways are now used to find the system timezone to pass the
+      code used when \R is configured with
+      \option{--with-internal-tzcode}.
 
       \item When \code{tar()} is used with an external command which is
       detected to be GNU \command{tar} or libarchive \command{tar} (aka
@@ -225,6 +231,11 @@
       \item New function \code{getDefaultCluster()} in package
       \pkg{parallel} to get the default cluster set via
       \code{setDefaultCluster()}.
+
+      \item \code{str(x)} for atomic objects \code{x} now treats both
+      cases of \code{is.vector(x)} similarly, and hence much less prints
+      \code{"atomic"}.   This is a slight non-back compatible change
+      producing typically both more informative and shorter output.
     }
   }
 
@@ -265,6 +276,13 @@
       \item The object header layout has been changed to support merging
       the \code{ALTREP} branch. This requires re-installing packages
       that use compiled code.
+    }
+  }
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item \code{Sys.timezone(location = FALSE)} is defunct, and is
+      ignored (with a warning).
     }
   }
 
@@ -402,15 +420,43 @@
       values other than FALSE and NA to TRUE (as documented).
 
       \item Subassignment with zero length vectors now coerces as
-      documented.  (\PR{17344})
+      documented (\PR{17344}).\cr
+      Further, \code{x <- numeric(); x[1] <- character()} now signals
+      an error \sQuote{\verb{replacement has length zero}} (or a
+      translation of that) instead of doing nothing.
 
       \item \code{mclapply}, \code{pvec} and \code{mcparallel} (when
       \code{mccollect} is used to collect results) no longer leave zombie
       processes behind.
+
+      \item \code{R CMD INSTALL <pkg>} now produces the intended error
+      message when, e.g., the \code{LazyData} field is invalid.
+
+      \item \code{as.matrix(dd)} now works when the data frame \code{dd}
+      contains a data frame as column.
     }
   }
 }
 
+\section{\Rlogo CHANGES IN R 3.4.3 patched}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{Sys.timezone()} tries more heuristics on Unix-alikes and so
+      is more likely to succeed (especially on Linux).
+    }
+  }
+
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item \code{Sys.timezone(location = FALSE)} (which was a stop-gap
+      measure for Windows long ago) is deprecated.  It no longer returns
+      the value of environment variable \env{TZ} (a location).
+    }
+  }
+  
+}
 
 \section{\Rlogo CHANGES IN R 3.4.3}{
 

@@ -21,50 +21,157 @@ Sys.time <- function() .POSIXct(.Internal(Sys.time()))
 ### There is no portable way to find the system timezone by location.
 ### For some ideas (not all accurate) see
 ### https://stackoverflow.com/questions/3118582/how-do-i-find-the-current-system-timezone
+
+### will be called from C startup code for internal tzcode as Sys.timezone()
+### and for bootstrapping, it must be simple if TZ is set.
 Sys.timezone <- function(location = TRUE)
 {
+    if(!location)
+        .Deprecated(msg = "Sys.timezone(location = FALSE) is defunct and ignored")
+
+    if(!is.na(tz <- get0(".sys.timezone", baseenv(), mode = "character",
+                         inherits = FALSE, ifnotfound = NA_character_)))
+        return(tz)
+
+    cacheIt <- function(tz) assign(".sys.timezone",  tz, baseenv())
+
     ## Many Unix set TZ, e.g. Solaris and AIX.
     ## For Solaris the system setting is a line in /etc/TIMEZONE
-    tz <- Sys.getenv("TZ", names = FALSE)
-    if(nzchar(tz))
-        tz
-    else if(location) {
-        if(.Platform$OS.type == "windows")
-            .Internal(tzone_name())
-        else { ## "unix" including macOS
-            lt <- normalizePath("/etc/localtime") # most Linux, macOS, ...
-            if (grepl(pat <- "^/usr/share/zoneinfo/", lt) ||
-                grepl(pat <- "^/usr/share/zoneinfo.default/", lt)) sub(pat, "", lt)
-            else if(grepl(pat <- ".*/zoneinfo/(.*)", lt))  sub(pat, "\\1", lt)
-            ## Debian-based Linuxen do not have /etc/localtime
-            else if (lt == "/etc/localtime" && file.exists("/etc/timezone") &&
-                     dir.exists("/usr/share/zoneinfo") &&
-                     { # Debian etc.
-                         info <- file.info(normalizePath("/etc/timezone"),
-                                           extra_cols = FALSE)
-                         (!info$isdir && info$size <= 200L)
-                     } && {
-                         tz1 <- tryCatch(readBin("/etc/timezone", "raw", 200L),
-                                         error = function(e) raw(0L))
-                         length(tz1) > 0L &&
-                             all(tz1 %in% as.raw(c(9:10, 13L, 32:126)))
-                     } && {
-                         tz2 <- gsub("^[[:space:]]+|[[:space:]]+$", "", rawToChar(tz1))
-                         tzp <- file.path("/usr/share/zoneinfo", tz2)
-                         file.exists(tzp) && !dir.exists(tzp) &&
-                             identical(file.size(normalizePath(tzp)),
-                                       file.size(lt))
-                     })
-                tz2
-            else
-                NA_character_
-        }
-    } else { # !location
-        st <- as.POSIXlt(Sys.time())
-        z <- attr(st, "tzone")
-        if(length(z) == 3L) z[2L + st$isdst]
-        else if(length(z)) z[1L] else NA_character_
+    tz <- Sys.getenv("TZ")
+    if(nzchar(tz)) return(tz)
+    if(.Platform$OS.type == "windows") return(.Internal(tzone_name()))
+
+    ## At least tzcode and glibc respect this.
+    tzdir <- Sys.getenv("TZDIR", "/usr/share/zoneinfo")
+    if(!nzchar(tzdir)) {
+        if(dir.exists(tzdir <- "/usr/share/lib/zoneinfo") ||
+           dir.exists(tzdir <- "/usr/share/lib/zoneinfo") ||
+           dir.exists(tzdir <- "/usrlib/zoneinfo") ||
+           dir.exists(tzdir <- "/usr/local/etc/zoneinfo") ||
+           dir.exists(tzdir <- "/etc/zoneinfo") ||
+           dir.exists(tzdir <- "/usr/etc/zoneinfo")) {
+        } else tzdir <- ""
     }
+    if(!nzchar(tzdir) && !dir.exists(tzdir)) tzdir <- ""
+
+    ## First try timedatectl: should work on any modern Linux
+    ## as part of systemd (and probably nowhere else)
+    if (nzchar(Sys.which("timedatectl"))) {
+        inf <- system("timedatectl", intern = TRUE)
+        ## typical format:
+        ## "       Time zone: Europe/London (GMT, +0000)"
+        ## "       Time zone: Europe/Vienna (CET, +0100)"
+        lines <- grep("Time zone: ", inf)
+        if (length(lines)) {
+            tz <- sub(" .*", "", sub(" *Time zone: ", "", inf[lines[1L]]))
+            ## quick sanity check
+            if(!nzchar(tzdir)) {
+                if(file.exists(file.path(tzdir, tz))) {
+                    cacheIt(tz)
+                    return(tz)
+                } else warning(sprintf("%s indicates the non-existent timezone name %s",
+                                       sQuote("timedatectl"), sQuote(tz)),
+                               call. = FALSE, immediate. = TRUE, domain = NA)
+           }
+        }
+    }
+
+    ## Debian/Ubuntu Linux do things differently, so try that next.
+    ## Derived loosely from PR#17186
+    ## As the Java sources say
+    ##
+    ## 'There's no spec of the file format available. This parsing
+    ## assumes that there's one line of an Olson tzid followed by a
+    ## '\n', no leading or trailing spaces, no comments.'
+    ##
+    ## but we do trim whitespace and do a sanity check (Java does not)
+    if (grepl("linux", R.Version()$platform, ignore.case = TRUE) &&
+        file.exists("/etc/timezone")) {
+        tz0 <- try(readLines("/etc/timezone"))
+        if(!inherits(tz0, "try-error") && length(tz0) == 1L) {
+            tz <- trimws(tz0)
+            ## quick sanity check
+            if(!nzchar(tzdir)) {
+                if(file.exists(file.path(tzdir, tz))) {
+                    cacheIt(tz)
+                    return(tz)
+                } else warning(sprintf("%s indicates the non-existent timezone name %s",
+                                       sQuote("/etc/timezone"), sQuote(tz)),
+                               call. = FALSE, immediate. = TRUE, domain = NA)
+            }
+        }
+    }
+
+    ## non-Debian Linux (if not covered above), macOS, *BSD, ...
+    ## According to the glibc (at least 2.26)
+    ##   manual/time.texi, it can be configured to use
+    ##   /etc/localtime or /usr/local/etc/localtime
+    ## This should be a symlink,
+    ##   but people including Debian have copied files instead.
+    ## tzcode mentions /usr/local/etc/zoneinfo/localtime
+    ##  as the 'local time zone file' (not seen in the wild)
+    if ((file.exists(lt0 <- "/etc/localtime") ||
+         file.exists(lt0 <- "/usr/local/etc/localtime") ||
+         file.exists(lt0 <- "/usr/local/etc/zoneinfo/localtime")) &&
+        (lt <- normalizePath(lt0)) != lt0) { # so it is a link
+        tz <- NA_character_
+        ## glibc and macOS < 10.13 this is a link into /usr/share/zoneinfo
+        ## (Debian Etch and later replaced it with a copy.)
+        ## macOS 10.13.0 is a link into /usr/share/zoneinfo.default/
+        ## macOS 10.13.1 is a link to something like
+        ##   /var/db/timezone/zoneinfo/Europe/London and hence
+        ##   /private/var/db/timezone/tz/2017c.1.0/zoneinfo/
+        if ((nzchar(tzdir) && grepl(pat<- paste0("^", tzdir), lt)) ||
+            grepl(pat <- "^/usr/share/zoneinfo.default/", lt))
+            tz <- sub(pat, "", lt)
+        ## all the locations listed for OlsonNames end in zoneinfo
+        else if(grepl(pat <- ".*/zoneinfo/(.*)", lt)) {
+            tz <- sub(pat, "\\1", lt)
+        }
+        else if(nzchar(Sys.which("readlink"))) {
+            ## To be more future-proof try following only first link
+            ## readlink exists on at least Linux, macOS and *BSD.
+            lt <- system2("readlink", lt0, stdout = TRUE, stderr = TRUE)
+            if(grepl(pat <- ".*/zoneinfo/(.*)", lt))
+                tz <- sub(pat, "\\1", lt)
+        }
+        if(!is.na(tz)) {
+            cacheIt(tz)
+            return(tz)
+        }
+    }
+
+    ## Last-gasp (slow, several seconds) fallback: compare a
+    ## non-link lt0 to all the files under tzdir (as Java does).
+    ## This could match more than one tz file: we don't care which.
+    if (nzchar(tzdir) &&
+        (file.exists(lt0 <- "/etc/localtime") ||
+         file.exists(lt0 <- "/usr/local/etc/localtime") ||
+         file.exists(lt0 <- "/usr/local/etc/zoneinfo/localtime") &&
+         (normalizePath(lt0)) == lt0)) {
+        warning(sprintf("Your system is mis-configured: %s is not a link",
+                        sQuote(lt0)),
+                call. = FALSE, immediate. = TRUE, domain = NA)
+        if(nzchar(Sys.which("cmp"))) {
+            known <- dir(tzdir, recursive = TRUE)
+            for(tz in known) {
+                status <- system2("cmp", c("-s", lt0, file.path(tzdir, tz)))
+                if (status == 0L) {
+                    cacheIt(tz)
+                    warning(sprintf("It is strongly recommended to set envionment variable TZ to %s (or equivalent)",
+                                    sQuote(tz)),
+                            call. = FALSE, immediate. = TRUE, domain = NA)
+                    return(tz)
+                }
+            }
+            warning(sprintf("%s is not the same as any known timezone file",
+                            sQuote(lt0)),
+                    call. = FALSE, immediate. = TRUE, domain = NA)
+        }
+    }
+
+    ## all heuristics have failed, so give up
+    NA_character_
 }
 
 as.POSIXlt <- function(x, tz = "", ...) UseMethod("as.POSIXlt")
