@@ -1773,7 +1773,7 @@ function(x, dfile)
         }
     }
     ## Avoid declared encodings when writing out.
-##    Encoding(x) <- "unknown"
+    Encoding(x) <- "unknown"
     ## Avoid folding for fields where we keep whitespace when reading,
     ## plus two where legacy code does not strip whitespace and so
     ## we should not wrap the field.
