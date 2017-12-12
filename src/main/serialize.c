@@ -1602,10 +1602,21 @@ ReadChar(R_inpstream_t stream, char *buf, int length, int levs)
 
     /* native encoding, not ascii */
     if (!stream->native_encoding[0] || /* original native encoding unknown */
-        (stream->nat2nat_obj == (void *)-1 && /* conversion not possible */
+        (stream->nat2nat_obj == (void *)-1 && /* translation impossible or disabled */
          stream->nat2utf8_obj == (void *)-1))
 	return mkCharLenCE(buf, length, CE_NATIVE);
     /* try converting to native encoding */
+    if (!stream->nat2nat_obj &&
+        !strcmp(stream->native_encoding, R_nativeEncoding())) {
+	/* No translation needed. Performance optimization but also leaves
+	   invalid strings in their encoding undetected. */
+	stream->nat2nat_obj = (void *)-1;
+	stream->nat2utf8_obj = (void *)-1;
+#ifdef WARN_DESERIALIZE_INVALID_UTF8
+	if (known_to_be_utf8 && !utf8Valid(buf))
+	    warning(_("deserializing invalid UTF-8 string '%s'", buf));
+#endif
+    }
     if (!stream->nat2nat_obj) {
 	char *from = native_fromcode(stream);
 	stream->nat2nat_obj = Riconv_open("", from);
