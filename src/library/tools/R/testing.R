@@ -179,9 +179,9 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE,
         txt <- .canonicalize_quotes(txt)
         if(.Platform$OS.type == "windows") {
             ## not entirely safe ...
-            txt <- gsub(paste0("(",rawToChar(0x91),"|",rawToChar(0x92),")"),
+            txt <- gsub(paste0("(",rawToChar(as.raw(0x91)),"|",rawToChar(as.raw(0x92)),")"),
                         "'", txt, perl = TRUE, useBytes = TRUE)
-            txt <- gsub(paste0("(",rawToChar(0x93),"|",rawToChar(0x94),")"),
+            txt <- gsub(paste0("(",rawToChar(as.raw(0x93)),"|",rawToChar(as.raw(0x94)),")"),
                         '"', txt, perl = TRUE, useBytes = TRUE)
         }
         ## massageExamples() adds options(pager = "console") only for
