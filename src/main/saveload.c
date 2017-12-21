@@ -1870,8 +1870,9 @@ void attribute_hidden R_SaveToFileV(SEXP obj, FILE *fp, int ascii, int version)
 	struct R_outpstream_st out;
 	R_pstream_format_t type;
 	int magic;
+	/* version == 0 means R_DefaultSerializeVersion, currently 3 */
 	if (ascii) {
-	    magic = (version == 2) ? R_MAGIC_ASCII_V2 : R_MAGIC_ASCII_V2;
+	    magic = (version == 2) ? R_MAGIC_ASCII_V2 : R_MAGIC_ASCII_V3;
 	    type = R_pstream_ascii_format;
 	}
 	else {
@@ -1918,12 +1919,15 @@ SEXP attribute_hidden R_LoadFromFile(FILE *fp, int startup)
     case R_MAGIC_XDR_V1:
 	return_and_free(NewXdrLoad(fp, &data));
     case R_MAGIC_ASCII_V2:
+    case R_MAGIC_ASCII_V3:
 	R_InitFileInPStream(&in, fp, R_pstream_ascii_format, NULL, NULL);
 	return_and_free(R_Unserialize(&in));
     case R_MAGIC_BINARY_V2:
+    case R_MAGIC_BINARY_V3:
 	R_InitFileInPStream(&in, fp, R_pstream_binary_format, NULL, NULL);
 	return_and_free(R_Unserialize(&in));
     case R_MAGIC_XDR_V2:
+    case R_MAGIC_XDR_V3:
 	R_InitFileInPStream(&in, fp, R_pstream_xdr_format, NULL, NULL);
 	return_and_free(R_Unserialize(&in));
     default:
@@ -2252,7 +2256,7 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     Rconnection con;
     struct R_outpstream_st out;
     R_pstream_format_t type;
-    char *magic;
+    char magic[6];
     RCNTXT cntxt;
 
     checkArity(op, args);
@@ -2299,17 +2303,20 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     if(!con->canwrite)
 	error(_("connection not open for writing"));
 
+    strcpy(magic, "RD??\n");
     if (ascii) {
-	magic = (version == 2) ? "RDA2\n" : "RDA3\n";
+	magic[2] = 'A';
 	type = (ascii == NA_LOGICAL) ?
 	    R_pstream_asciihex_format : R_pstream_ascii_format;
     }
     else {
 	if (con->text)
 	    error(_("cannot save XDR format to a text-mode connection"));
-	magic = (version == 2) ? "RDX2\n" : "RDX3\n";
+	magic[2] = 'X';
 	type = R_pstream_xdr_format;
     }
+    /* if version is too high, R_Serialize will fail with error */
+    magic[3] = '0' + version;
 
     if (con->text)
 	Rconn_printf(con, "%s", magic);
