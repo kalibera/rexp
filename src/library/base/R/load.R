@@ -27,9 +27,9 @@ load <- function (file, envir = parent.frame(), verbose = FALSE)
         ## and closes it again.
         magic <- readChar(con, 5L, useBytes = TRUE)
 	if (!length(magic)) stop("empty (zero-byte) input file")
-	if (!grepl("RD[AX]2\n", magic)) {
+	if (!grepl("RD[AX][23]\n", magic)) {
             ## a check while we still know the call to load()
-            if(grepl("RD[ABX][12]\r", magic))
+            if(grepl("RD[ABX][123]\r", magic))
                 stop("input has been corrupted, with LF replaced by CR")
             ## Not a version 2 magic number, so try the pre-R-1.4.0 code
             warning(sprintf("file %s has magic number '%s'\n",

@@ -58,6 +58,9 @@
  *    oldest reader R version as -1.
  */
 
+#define R_MAGIC_ASCII_V3   3001
+#define R_MAGIC_BINARY_V3  3002
+#define R_MAGIC_XDR_V3     3003
 #define R_MAGIC_ASCII_V2   2001
 #define R_MAGIC_BINARY_V2  2002
 #define R_MAGIC_XDR_V2     2003
@@ -1765,14 +1768,23 @@ static void R_WriteMagic(FILE *fp, int number)
     case R_MAGIC_XDR_V1:     /* Version 1 - R Data, XDR Binary Format */
 	strcpy((char*)buf, "RDX1");
 	break;
-    case R_MAGIC_ASCII_V2:   /* Version >=2 - R Data, ASCII Format */
+    case R_MAGIC_ASCII_V2:   /* Version 2 - R Data, ASCII Format */
 	strcpy((char*)buf, "RDA2");
 	break;
-    case R_MAGIC_BINARY_V2:  /* Version >=2 - R Data, Binary Format */
+    case R_MAGIC_BINARY_V2:  /* Version 2 - R Data, Binary Format */
 	strcpy((char*)buf, "RDB2");
 	break;
-    case R_MAGIC_XDR_V2:     /* Version >=2 - R Data, XDR Binary Format */
+    case R_MAGIC_XDR_V2:     /* Version 2 - R Data, XDR Binary Format */
 	strcpy((char*)buf, "RDX2");
+	break;
+    case R_MAGIC_ASCII_V3:   /* Version >=3 - R Data, ASCII Format */
+	strcpy((char*)buf, "RDA3");
+	break;
+    case R_MAGIC_BINARY_V3:  /* Version >=3 - R Data, Binary Format */
+	strcpy((char*)buf, "RDB3");
+	break;
+    case R_MAGIC_XDR_V3:     /* Version >=3 - R Data, XDR Binary Format */
+	strcpy((char*)buf, "RDX3");
 	break;
     default:
 	buf[0] = (unsigned char)((number/1000) % 10 + '0');
@@ -1817,6 +1829,15 @@ static int R_ReadMagic(FILE *fp)
     else if (strncmp((char*)buf, "RDX2\n", 5) == 0) {
 	return R_MAGIC_XDR_V2;
     }
+    if (strncmp((char*)buf, "RDA3\n", 5) == 0) {
+	return R_MAGIC_ASCII_V3;
+    }
+    else if (strncmp((char*)buf, "RDB3\n", 5) == 0) {
+	return R_MAGIC_BINARY_V3;
+    }
+    else if (strncmp((char*)buf, "RDX3\n", 5) == 0) {
+	return R_MAGIC_XDR_V3;
+    }
     else if (strncmp((char *)buf, "RD", 2) == 0)
 	return R_MAGIC_MAYBE_TOONEW;
 
@@ -1850,11 +1871,11 @@ void attribute_hidden R_SaveToFileV(SEXP obj, FILE *fp, int ascii, int version)
 	R_pstream_format_t type;
 	int magic;
 	if (ascii) {
-	    magic = R_MAGIC_ASCII_V2;
+	    magic = (version == 2) ? R_MAGIC_ASCII_V2 : R_MAGIC_ASCII_V2;
 	    type = R_pstream_ascii_format;
 	}
 	else {
-	    magic = R_MAGIC_XDR_V2;
+	    magic = (version == 2) ? R_MAGIC_XDR_V2 : R_MAGIC_XDR_V3;
 	    type = R_pstream_xdr_format;
 	}
 	R_WriteMagic(fp, magic);
@@ -2207,7 +2228,7 @@ static void con_cleanup(void *data)
 /* Ideally it should be possible to do this entirely in R code with
    something like
 
-	magic <- if (ascii) "RDA2\n" else ...
+	magic <- if (ascii) "RDA3\n" else ...
 	writeChar(magic, con, eos = NULL)
 	val <- lapply(list, get, envir = envir)
 	names(val) <- list
@@ -2279,14 +2300,14 @@ SEXP attribute_hidden do_saveToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("connection not open for writing"));
 
     if (ascii) {
-	magic = "RDA2\n";
+	magic = (version == 2) ? "RDA2\n" : "RDA3\n";
 	type = (ascii == NA_LOGICAL) ?
 	    R_pstream_asciihex_format : R_pstream_ascii_format;
     }
     else {
 	if (con->text)
 	    error(_("cannot save XDR format to a text-mode connection"));
-	magic = "RDX2\n";
+	magic = (version == 2) ? "RDX2\n" : "RDX3\n";
 	type = R_pstream_xdr_format;
     }
 
@@ -2371,7 +2392,10 @@ SEXP attribute_hidden do_loadFromConn2(SEXP call, SEXP op, SEXP args, SEXP env)
     if (count == 0) error(_("no input is available"));
     if (strncmp((char*)buf, "RDA2\n", 5) == 0 ||
 	strncmp((char*)buf, "RDB2\n", 5) == 0 ||
-	strncmp((char*)buf, "RDX2\n", 5) == 0) {
+	strncmp((char*)buf, "RDX2\n", 5) == 0 ||
+	strncmp((char*)buf, "RDA3\n", 5) == 0 ||
+	strncmp((char*)buf, "RDB3\n", 5) == 0 ||
+	strncmp((char*)buf, "RDX3\n", 5) == 0) {
 	R_InitConnInPStream(&in, con, R_pstream_any_format, NULL, NULL);
 	/* PROTECT is paranoia: some close() method might allocate */
 	R_InitReadItemDepth = R_ReadItemDepth = -asInteger(CADDR(args));
