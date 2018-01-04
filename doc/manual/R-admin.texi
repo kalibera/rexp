@@ -946,9 +946,9 @@ environment variable @env{TZ}.
 
 By default @command{configure} searches for suitable
 options@footnote{for example, @option{-fopenmp}, @option{-xopenmp} or
-@option{-qopenmp}.  This includes for @command{clang} 3.7.x and the
-Intel C compiler.} for OpenMP support for the C, C++98, FORTRAN 77 and
-Fortran compilers.
+@option{-qopenmp}.  This includes for @command{clang} and the Intel C
+compiler.} for OpenMP support for the C, C++98, FORTRAN 77 and Fortran
+compilers.
 
 Only the C result is currently used for @R{} itself, and only if
 @code{MAIN_LD}/@code{DYLIB_LD} were not specified.  This can be
@@ -970,11 +970,15 @@ SHLIB_OPENMP_FFLAGS
 
 @noindent
 Setting to an empty value will disable OpenMP for that compiler (and
-configuring with @option{--disable-openmp} will disable all detection of
-OpenMP).  The @command{configure} detection test is to compile and link
-a standalone OpenMP program, which is not the same as compiling a shared
-object and loading it into the C program of @R{}'s executable.  Note
-that overridden values are not tested.
+configuring with @option{--disable-openmp} will disable all
+detection@footnote{This does not necessarily disable @emph{use} of
+OpenMP -- the @command{configure} code allows for platforms where OpenMP
+is used without a flag. For the @command{flang} compiler in late 2017,
+the Fortran runtime always used OpenMP.} of OpenMP).  The
+@command{configure} detection test is to compile and link a standalone
+OpenMP program, which is not the same as compiling a shared object and
+loading it into the C program of @R{}'s executable.  Note that
+overridden values are not tested.
 
 @node C++ Support,  , OpenMP Support, Other Options
 @subsection C++ Support
@@ -4788,9 +4792,37 @@ project (@url{http://libcxx.llvm.org/}, Fedora RPM @code{libcxx-devel})
 has also been tested: for some @R{} packages only the variant using
 @code{libcxxabi} was successful.
 
-Earlier builds of @command{clang} have no OpenMP support, those of
-versions 3.7.0 or later may.@footnote{This also needs the OpenMP runtime
-which has sometimes been distributed separately.}
+Recent versions have (optional when built) OpenMP support.@footnote{This
+also needs the OpenMP runtime which has sometimes been distributed
+separately.}
+
+There is a project called @command{flang}
+(@uref{https://github.com/@/flang-compiler/@/flang})) to develop a
+Fortran compiler similar to clang but based on the Portland Group's front
+end.  This needs something like
+@example
+FC=/usr/local/flang/bin/flang
+F77=/usr/local/flang/bin/flang
+LDFLAGS="-L/usr/local/flang/lib -L/usr/local/lib64"
+@end example
+@noindent
+and in earlier versions of @R{} it may be necessary to set
+@example
+FCPICFLAGS=-fpic
+FPICFLAGS=-fpic
+@end example
+
+Note that @command{flang} accepts all the flags which @command{clang}
+does (the driver is a modified version of @command{clang}, and
+@command{flang} is a symbolic link to @command{clang}), but does not
+implement all of them for Fortran compilation: it also accepts most
+PGI-style flags such as @option{-mp} for OpenMP.  It currently produces
+few diagnostics even with @option{-Wall -pedantic}.
+
+@command{flang}'s Fortran runtime is compiled against OpenMP and it
+seems this conflicts with using OpenMP in @R{}.  So it may be necessary
+to disable the latter by configuring using @option{--without-openmp}.
+
 
 @node Intel compilers,  , Clang, Linux
 @subsection Intel compilers

@@ -293,7 +293,19 @@ int main(int argc_, char *argv_[])
     }
     av[ac] = (char *) NULL;
 #ifdef HAVE_PUTENV
-    if(!set_dp && !getenv("R_DEFAULT_PACKAGES"))
+    /* If provided, R_SCRIPT_DEFAULT_PACKAGES takes precedence
+       over R_DEFAULT_PACKAGES. */
+    char *rdpvar = "R_DEFAULT_PACKAGES";
+    char *rsdp = getenv("R_SCRIPT_DEFAULT_PACKAGES");
+    if (rsdp && strlen(rdpvar) + strlen(rsdp) + 1 < sizeof(buf2)) {
+	snprintf(buf2, sizeof(buf2), "%s=%s", rdpvar, rsdp);
+	putenv(buf2);
+    }
+
+    p = getenv("R_SCRIPT_LEGACY");
+    //int legacy = (p && (strcmp(p, "yes") == 0)) ? 1 : 0;
+    int legacy = (p && (strcmp(p, "no") == 0)) ? 0 : 1;
+    if(legacy && !set_dp && !getenv("R_DEFAULT_PACKAGES"))
 	putenv("R_DEFAULT_PACKAGES=datasets,utils,grDevices,graphics,stats");
 
 #ifndef _WIN32

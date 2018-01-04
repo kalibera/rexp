@@ -7,6 +7,17 @@
 
 \section{\Rlogo CHANGES IN R-devel}{
 
+  \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
+    \itemize{
+      \item The default version for \code{save()}, \code{saveRDS()},
+      \code{serialize()} and similar has been changed to \samp{3}.
+      Objects saved with version 3 are not readable by earlier versions
+      of \R.
+
+      This includes saved workspaces.
+    }
+  }
+
   \subsection{NEW FEATURES}{
     \itemize{
       \item \code{factor()} now uses \code{order()} to sort its levels,
@@ -236,6 +247,24 @@
       prints \code{"atomic"}.  This is a slight non-back-compatible
       change producing typically both more informative and shorter
       output.
+
+      \item \code{write.dcf()} gets optional argument \code{useBytes}.
+
+      \item New function \code{packageDate()} which tries to get a valid
+      \code{"Date"} object from a package \file{DESCRIPTION} file,
+      thanks to suggestions in \PR{17324}.
+
+      \item \code{tools::resaveRdaFiles()} gains a \code{version}
+      argument, for use when packages should remain compatible with
+      earlier versions of \R.
+
+      \item \code{ar.yw(x)} and hence by default \code{ar(x)} now work
+      when \code{x} has \code{NA}s, mostly thanks to a patch by Pavel
+      Krivitsky in \PR{17366}.   The \code{ar.yw.default()}'s AIC
+      computations have become more efficient by using
+      \code{determinant()}.
+
+      \item New \code{warnErrList()} utility (from package \pkg{nlme}, improved).
     }
   }
 
@@ -256,6 +285,16 @@
       Bioconductor 3.6 and later has been removed from
       \code{setRepositories()}.  This changes the mapping for 6--8 used
       by \code{setRepositories(ind=)}.
+
+      \item \command{R CMD check} now also applies the settings of
+      environment variables \env{_R_CHECK_SUGGESTS_ONLY_} and
+      \env{_R_CHECK_DEPENDS_ONLY_} to the re-building of vignettes.
+
+      \item \command{R CMD check} with environment variable
+      \env{_R_CHECK_DEPENDS_ONLY_} set to a true value makes
+      test-suite-management packages available and (for the time being)
+      works around a common omission of \CRANpkg{rmarkdown} from the
+      \samp{VignetteBuilder} field.
     }
   }
 
@@ -264,6 +303,12 @@
       \item Support for a system Java on macOS has been
       removed --- install a fairly recent Oracle Java (see \sQuote{R
 	Installation and Administration} §C.3.2).
+
+      \item \code{configure} will use \command{pkg-config} to find the
+      flags to link to \code{jpeg} if available (as it should be for
+      \code{jpeg-9c} and \code{libjpeg-turbo}).  (This amends the code
+      added in \R 3.3.0 as the module name in \code{jpeg-9c} is not what
+      that tested for.)
     }
   }
 
@@ -426,16 +471,16 @@
       an error \sQuote{\verb{replacement has length zero}} (or a
       translation of that) instead of doing nothing.
 
-      \item \code{mclapply}, \code{pvec} and \code{mcparallel} (when
-      \code{mccollect} is used to collect results) no longer leave zombie
-      processes behind.
+      \item (Package \pkg{parallel}.)  \code{mclapply()}, \code{pvec()}
+      and \code{mcparallel()} (when \code{mccollect()} is used to
+      collect results) no longer leave zombie processes behind.
 
       \item \code{R CMD INSTALL <pkg>} now produces the intended error
       message when, e.g., the \code{LazyData} field is invalid.
 
       \item \code{as.matrix(dd)} now works when the data frame \code{dd}
-      contains a data frame (or matrix, including 0-column matrix/d.f.)
-      as column.
+      contains a column which is a data frame or matrix, including a
+      0-column matrix/d.f. .
     }
   }
 }
@@ -450,7 +495,7 @@
       avoid the search.
 
       \item The version of LAPACK included in the sources has been
-      updated to 3.8.0 (for the routines used by \R a very minor bug-fix
+      updated to 3.8.0 (for the routines used by \R, a very minor bug-fix
       change).
     }
   }
@@ -459,7 +504,10 @@
     \itemize{
       \item \code{Sys.timezone(location = FALSE)} (which was a stop-gap
       measure for Windows long ago) is deprecated.  It no longer returns
-      the value of environment variable \env{TZ} (a location).
+      the value of environment variable \env{TZ} (usually a location).
+
+      \item Legacy support of \command{make} macros such as \samp{CXX1X}
+      is formally deprecated: use the \samp{CXX11} forms instead.
     }
   }
 
@@ -470,6 +518,9 @@
 
       \item \code{removeSource()} no longer erroneously removes
       \code{NULL} in certain cases, thanks to Dénes Tóth.
+
+      \item \code{nls(`NO [mol/l]` ~ f(t))} and \code{nls(y ~ a)} now
+      work.  (partly from \PR{17367})
     }
   }
 }

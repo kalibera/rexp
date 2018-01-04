@@ -650,8 +650,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    else tmp = PRVALUE(tmp);
 	    ENSURE_NAMEDMAX(tmp);
 	}
-	else if (!isNull(tmp) && NAMED(tmp) == 0)
-	    SET_NAMED(tmp, 1);
+	else ENSURE_NAMED(tmp); /* should not really be needed - LT */
 	break;
     case PROMSXP:
 	if (PRVALUE(e) == R_UnboundValue)
@@ -743,8 +742,12 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 	}
 	else if (TYPEOF(op) == CLOSXP) {
-	    PROTECT(tmp = promiseArgs(CDR(e), rho));
-	    tmp = applyClosure(e, op, tmp, rho, R_NilValue);
+	    SEXP pargs = promiseArgs(CDR(e), rho);
+	    PROTECT(pargs);
+	    tmp = applyClosure(e, op, pargs, rho, R_NilValue);
+#ifdef ADJUST_ENVIR_REFCNTS
+	    unpromiseArgs(pargs);
+#endif
 	    UNPROTECT(1);
 	}
 	else
@@ -1472,6 +1475,143 @@ static void PrintCall(SEXP call, SEXP rho)
     R_BrowseLines = old_bl;
 }
 
+#ifdef ADJUST_ENVIR_REFCNTS
+/* After executing a closure call the environment created for the call
+   may no longer be reachable. If this is the case, then its bindings
+   can be cleared to reduce the reference counts on the binding
+   values.
+
+   The environment will no longer be reachable if it is not being
+   returned as the value of the closure and has no references. It will
+   also no longer be reachable be the case if all references to it are
+   internal cycles through its bindings. A full check for internal
+   cycles would be too expensive, but the two most important cases can
+   be checked at reasonable cost:
+
+   - a promise with no other references, most likely from an
+     unevaluated argument default expression;
+
+   - a closure with no further references and not returned as the
+     value, most likely a local helper function.
+
+   The promises created for a closure call can also be cleared one the
+   call is complete and the promises are no longer reachable. This
+   drops reference counts on the values and the environments.
+*/
+
+static int countCycleRefs(SEXP rho, SEXP val)
+{
+    /* check for simple cycles */
+    int crefs = 0;
+    for (SEXP b = FRAME(rho);
+	 b != R_NilValue && REFCNT(b) == 1;
+	 b = CDR(b)) {
+	SEXP v = CAR(b);
+	if (val != v) {
+	    switch(TYPEOF(v)) {
+	    case PROMSXP:
+		if (REFCNT(v) == 1 && PRENV(v) == rho)
+		    crefs++;
+		break;
+	    case CLOSXP:
+		if (REFCNT(v) == 1 && CLOENV(v) == rho)
+		    crefs++;
+		break;
+	    case ENVSXP: /* is this worth bothering with? */
+		if (v == rho)
+		    crefs++;
+		break;
+	    }
+	}
+    }
+    return crefs;
+}
+
+static R_INLINE void cleanupEnvDots(SEXP d)
+{
+    for (; d != R_NilValue && REFCNT(d) == 1; d = CDR(d)) {
+	SEXP v = CAR(d);
+	if (REFCNT(v) == 1 && TYPEOF(v) == PROMSXP) {
+	    SET_PRVALUE(v, R_UnboundValue);
+	    SET_PRENV(v, R_NilValue);
+	}
+	SETCAR(d, R_NilValue);
+    }
+}
+
+static R_INLINE void cleanupEnvVector(SEXP v)
+{
+    /* This is mainly for handling results of list(...) stored as a
+       local variable. It would be cheaper to just use
+       DECREMENT_REFCNT. It might also make sense to max out at len =
+       10 or so. But this may still be too expensive. */
+    R_xlen_t len = LENGTH(v);
+    for (R_xlen_t i = 0; i < len; i++)
+	SET_VECTOR_ELT(v, i, R_NilValue);
+}
+
+static R_INLINE void R_CleanupEnvir(SEXP rho, SEXP val)
+{
+    if (val != rho) {
+	/* release the bindings and promises in rho if rho is no
+	   longer accessible from R */
+	int refs = REFCNT(rho);
+	if (refs > 0)
+	    refs -= countCycleRefs(rho, val);
+	if (refs == 0) {
+	    for (SEXP b = FRAME(rho);
+		 b != R_NilValue && REFCNT(b) == 1;
+		 b = CDR(b)) {
+		SEXP v = CAR(b);
+		if (REFCNT(v) == 1 && v != val) {
+		    switch(TYPEOF(v)) {
+		    case PROMSXP:
+			SET_PRVALUE(v, R_UnboundValue);
+			SET_PRENV(v, R_NilValue);
+			break;
+		    case DOTSXP:
+			cleanupEnvDots(v);
+			break;
+		    case VECSXP: /* mainly for list(...) */
+			cleanupEnvVector(v);
+			break;
+		    }
+		}
+		SETCAR(b, R_NilValue);
+	    }
+	    SET_ENCLOS(rho, R_EmptyEnv);
+	}
+    }
+}
+
+void attribute_hidden unpromiseArgs(SEXP pargs)
+{
+    /* This assumes pargs will no longer be references. We could
+       double check the refcounts on pargs as a sanity check. */
+    for (; pargs != R_NilValue; pargs = CDR(pargs)) {
+	SEXP v = CAR(pargs);
+	if (TYPEOF(v) == PROMSXP && REFCNT(v) == 1) {
+	    SET_PRVALUE(v, R_UnboundValue);
+	    SET_PRENV(v, R_NilValue);
+	}
+	SETCAR(pargs, R_NilValue);
+    }
+}
+#endif
+
+static R_INLINE void FIX_CLOSURE_CALL_ARG_REFCNTS(SEXP args)
+{
+    /* it would be better not to build this arglist with CONS_NR in
+       the first place */
+    for (SEXP a = args; a  != R_NilValue; a = CDR(a)) {
+	if (! TRACKREFS(a)) {
+	    ENABLE_REFCNT(a);
+	    INCREMENT_REFCNT(CAR(a));
+	    INCREMENT_REFCNT(CDR(a));
+	}
+    }
+}
+
 /* Note: GCC will not inline execClosure because it calls setjmp */
 static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
                                    SEXP rho, SEXP arglist, SEXP op);
@@ -1507,9 +1647,11 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
 
     /* Turn on reference counting for the binding cells so local
-       assignments arguments increment REFCNT values */
-    for (a = actuals; a != R_NilValue; a = CDR(a))
-	ENABLE_REFCNT(a);
+       assignments to arguments increment REFCNT values. Also make sure
+       reference to current value is counted. Instead of backpatching
+       here it would have been better not to have used CONS_NR in the
+       first place for creating this 'actuals' list. */
+    FIX_CLOSURE_CALL_ARG_REFCNTS(actuals);
 
     /*  Use the default code for unbound formals.  FIXME: It looks like
 	this code should preceed the building of the environment so that
@@ -1548,10 +1690,14 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	the generic as the sysparent of the method because the method
 	is a straight substitution of the generic.  */
 
-    return R_execClosure(call, newrho,
-	                 (R_GlobalContext->callflag == CTXT_GENERIC) ?
-	                     R_GlobalContext->sysparent : rho,
-	                 rho, arglist, op);
+    SEXP val = R_execClosure(call, newrho,
+			     (R_GlobalContext->callflag == CTXT_GENERIC) ?
+			     R_GlobalContext->sysparent : rho,
+			     rho, arglist, op);
+#ifdef ADJUST_ENVIR_REFCNTS
+    R_CleanupEnvir(newrho, val);
+#endif
+    return val;
 }
 
 static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
@@ -1676,7 +1822,11 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 		errorcall(e, _("argument %d is empty"), i + 1);
 	    else error("something weird happened");
 	}
-	tmp = applyClosure(e, fun, tmp, rho, R_NilValue);
+	SEXP pargs = tmp;
+	tmp = applyClosure(e, fun, pargs, rho, R_NilValue);
+#ifdef ADJUST_ENVIR_REFCNTS
+	unpromiseArgs(pargs);
+#endif
 	UNPROTECT(1);
     }
     else {
@@ -1750,7 +1900,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
 	}
     }
 
-    /* copy the bindings of the spacial dispatch variables in the top
+    /* copy the bindings of the special dispatch variables in the top
        frame of the generic call to the new frame */
     defineVar(R_dot_defined, findVarInFrame(rho, R_dot_defined), newrho);
     defineVar(R_dot_Method, findVarInFrame(rho, R_dot_Method), newrho);
@@ -1777,6 +1927,9 @@ SEXP R_execMethod(SEXP op, SEXP rho)
     call = cptr->call;
     arglist = cptr->promargs;
     val = R_execClosure(call, newrho, callerenv, callerenv, arglist, op);
+#ifdef ADJUST_ENVIR_REFCNTS
+    R_CleanupEnvir(newrho, val);
+#endif
     UNPROTECT(1);
     return val;
 }
@@ -1790,8 +1943,8 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 	if(MAYBE_SHARED(vl)) {
 	    PROTECT(vl = shallow_duplicate(vl));
 	    defineVar(symbol, vl, rho);
+	    INCREMENT_NAMED(vl);
 	    UNPROTECT(1);
-	    SET_NAMED(vl, 1);
 	}
 	return vl;
     }
@@ -1802,8 +1955,8 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 
     PROTECT(vl = shallow_duplicate(vl));
     defineVar(symbol, vl, rho);
+    INCREMENT_NAMED(vl);
     UNPROTECT(1);
-    SET_NAMED(vl, 1);
     return vl;
 }
 
@@ -1913,7 +2066,7 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call)
 #define ALLOC_LOOP_VAR(v, val_type, vpi) do { \
 	if (v == R_NilValue || MAYBE_SHARED(v)) { \
 	    REPROTECT(v = allocVector(val_type, 1), vpi); \
-	    SET_NAMED(v, 1); \
+	    INCREMENT_NAMED(v);				  \
 	} \
     } while(0)
 
@@ -2370,7 +2523,7 @@ static void tmp_cleanup(void *data)
 	SEXP __v__ = CAR(__lhs__); \
 	if (MAYBE_SHARED(__v__)) { \
 	    __v__ = shallow_duplicate(__v__); \
-	    SET_NAMED(__v__, 1); \
+	    ENSURE_NAMED(__v__); \
 	    SETCAR(__lhs__, __v__); \
 	} \
 	R_SetVarLocValue(loc, __v__); \
@@ -2570,16 +2723,6 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
     DECREMENT_REFCNT(saverhs);
     return saverhs;
 }
-
-/* Defunct in 1.5.0
-SEXP attribute_hidden do_alias(SEXP call, SEXP op, SEXP args, SEXP rho)
-{
-    checkArity(op,args);
-    Rprintf(".Alias is deprecated; there is no replacement \n");
-    SET_NAMED(CAR(args), 0);
-    return CAR(args);
-}
-*/
 
 /*  Assignment in its various forms  */
 
@@ -2834,7 +2977,9 @@ SEXP attribute_hidden promiseArgs(SEXP el, SEXP rho)
 	el = CDR(el);
     }
     UNPROTECT(1);
-    return CDR(ans);
+    ans = CDR(ans);
+    DECREMENT_REFCNT(ans);
+    return ans;
 }
 
 
@@ -3240,10 +3385,17 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    {
 		endcontext(&cntxt);
 		UNPROTECT(nprotect);
+#ifdef ADJUST_ENVIR_REFCNTS
+		R_CleanupEnvir(rho1, *ans);
+		unpromiseArgs(pargs);
+#endif
 		return 1;
 	    }
 	    endcontext(&cntxt);
-	    DECREMENT_REFCNT(x);
+#ifdef ADJUST_ENVIR_REFCNTS
+	    R_CleanupEnvir(rho1, R_NilValue);
+	    unpromiseArgs(pargs);
+#endif
 	}
     }
     if(!argsevald) {
@@ -3470,6 +3622,9 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     }
 
     *ans = applyClosure(t, lsxp, s, rho, newvars);
+#ifdef ADJUST_ENVIR_REFCNTS
+    unpromiseArgs(s);
+#endif
     UNPROTECT(10);
     return 1;
 }
@@ -4807,8 +4962,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	PROTECT(value);
 	value = FORCE_PROMISE(value, symbol, rho, keepmiss);
 	UNPROTECT(1);
-    } else if (NAMED(value) == 0 && value != R_NilValue)
-	SET_NAMED(value, 1);
+    } else ENSURE_NAMED(value); /* should not really be needed - LT */
     return value;
 }
 
@@ -4834,9 +4988,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	case REALSXP: \
 	case INTSXP: \
 	case LGLSXP: \
-	    /* may be ok to skip this test: */ \
-	    if (NAMED(value) == 0) \
-		SET_NAMED(value, 1); \
+	    ENSURE_NAMED(value); /* should not really be needed - LT */ \
 	    R_Visible = TRUE; \
 	    BCNPUSH(value); \
 	    NEXT(); \
@@ -4852,8 +5004,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 		    }							\
 		    else value = pv;					\
 		}							\
-		else if (NAMED(value) == 0)				\
-		    SET_NAMED(value, 1);				\
+		/* should not really be needed - LT */			\
+		else ENSURE_NAMED(value);				\
 		R_Visible = TRUE;					\
 		BCNPUSH(value);						\
 		NEXT();							\
@@ -4962,7 +5114,12 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
     dispatched = TRUE;
   endcontext(&cntxt);
   UNPROTECT(2);
+#ifdef ADJUST_ENVIR_REFCNTS
+  R_CleanupEnvir(rho1, dispatched ? *pv : R_NilValue);
+  unpromiseArgs(pargs);
+#else
   if (! dispatched) DECREMENT_REFCNT(x);
+#endif
   return dispatched;
 }
 
@@ -5019,7 +5176,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
   if (MAYBE_SHARED(lhs)) { \
     lhs = shallow_duplicate(lhs); \
     SETSTACK(-2, lhs); \
-    SET_NAMED(lhs, 1); \
+    ENSURE_NAMED(lhs); \
   } \
   SEXP value = NULL; \
   if (isObject(lhs) && \
@@ -5074,7 +5231,7 @@ static int tryAssignDispatch(char *generic, SEXP call, SEXP lhs, SEXP rhs,
 	if (MAYBE_SHARED(lhs)) { \
 	    lhs = shallow_duplicate(lhs); \
 	    SETSTACK(-2, lhs); \
-	    SET_NAMED(lhs, 1); \
+	    ENSURE_NAMED(lhs); \
 	} \
 	SEXP value = NULL; \
 	if (tryAssignDispatch(generic, call, lhs, rhs, rho, &value)) { \
@@ -5193,8 +5350,7 @@ static R_INLINE SEXP mkVector1(SEXP s)
 	case VECSXP:						\
 	    if (XLENGTH(vec) <= i) break;			\
 	    SEXP elt = VECTOR_ELT(vec, i);			\
-	    if (NAMED(vec) > NAMED(elt))			\
-		SET_NAMED(elt, NAMED(vec));			\
+	    RAISE_NAMED(elt, NAMED(vec));			\
 	    if (subset2)					\
 		SETSTACK_PTR(sv, elt);				\
 	    else						\
@@ -5343,7 +5499,7 @@ static R_INLINE SEXP addStackArgsList(int n, R_bcstack_t *start, SEXP val)
     R_bcstack_t *p = start + n - 1;
     BCNPUSH(val); /* to protect */
     for (int i = 0; i < n; i++, p--) {
-	val = CONS(GETSTACK_PTR(p), val);
+	val = CONS_NR(GETSTACK_PTR(p), val);
 	SETSTACK(-1, val); /* to protect */
     }
     BCNPOP_IGNORE_VALUE();
@@ -5373,7 +5529,7 @@ static R_INLINE void SUBSET_N_PTR(R_bcstack_t *sx, int rank,
     }
 
     /* fall through to the standard default handler */
-    PROTECT(args = CONS(x, getStackArgsList(rank, si)));
+    PROTECT(args = CONS_NR(x, getStackArgsList(rank, si)));
     SEXP call = callidx < 0 ? consts : VECTOR_ELT(consts, callidx);
     if (subset2)
 	value = do_subset2_dflt(call, R_Subset2Sym, args, rho);
@@ -5427,7 +5583,7 @@ static R_INLINE Rboolean setElementFromScalar(SEXP vec, R_xlen_t i, int typev,
 	int typev = bcStackScalar(srhs, &v);				\
 	if (setElementFromScalar(vec, i, typev, &v)) {			\
 	    SETSTACK_PTR(sv, vec);					\
-	    if (NAMED(vec) == 1) SET_NAMED(vec, 0);			\
+	    SETTER_CLEAR_NAMED(vec);					\
 	    return;							\
 	}								\
 	else if (subassign2 && TYPEOF(vec) == VECSXP &&			\
@@ -5435,7 +5591,7 @@ static R_INLINE Rboolean setElementFromScalar(SEXP vec, R_xlen_t i, int typev,
 	    SEXP rhs = R_FixupRHS(vec, GETSTACK_PTR(srhs));		\
 	    if (rhs != R_NilValue) {					\
 		SET_VECTOR_ELT(vec, i, rhs);				\
-		if (NAMED(vec) == 1) SET_NAMED(vec, 0);			\
+		SETTER_CLEAR_NAMED(vec);				\
 		SETSTACK_PTR(sv, vec);					\
 		return;							\
 	    }								\
@@ -5565,7 +5721,7 @@ static R_INLINE void SUBASSIGN_N_PTR(R_bcstack_t *sx, int rank,
     value = GETSTACK_PTR(srhs);
     args = CONS_NR(value, R_NilValue);
     SET_TAG(args, R_valueSym);
-    PROTECT(args = CONS(x, addStackArgsList(rank, si, args)));
+    PROTECT(args = CONS_NR(x, addStackArgsList(rank, si, args)));
     SEXP call = callidx < 0 ? consts : VECTOR_ELT(consts, callidx);
     if (subassign2)
 	x = do_subassign2_dflt(call, R_Subassign2Sym, args, rho);
@@ -5646,7 +5802,7 @@ static R_INLINE void checkForMissings(SEXP args, SEXP call)
     if (MAYBE_SHARED(var)) {				\
 	(var) = allocVector(TYPEOF(seq), 1);		\
 	SETSTACK(pos, var);				\
-	SET_NAMED(var, 1);				\
+	INCREMENT_NAMED(var);				\
     }							\
 } while (0)
 
@@ -6151,7 +6307,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	case STRSXP:
 	case RAWSXP:
 	    value = allocVector(TYPEOF(seq), 1);
-	    SET_NAMED(value, 1);
+	    INCREMENT_NAMED(value);
 	    BCNPUSH(value);
 	    break;
 	default: BCNPUSH(R_NilValue);
@@ -6469,7 +6625,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
+	  FIX_CLOSURE_CALL_ARG_REFCNTS(args);
 	  value = applyClosure(call, fun, args, rho, R_NilValue);
+#ifdef ADJUST_ENVIR_REFCNTS
+	  unpromiseArgs(args);
+#endif
 	  break;
 	default: error(_("bad function"));
 	}
@@ -6651,7 +6811,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (MAYBE_SHARED(x)) {
 	    x = shallow_duplicate(x);
 	    SETSTACK(-2, x);
-	    SET_NAMED(x, 1);
+	    ENSURE_NAMED(x);
 	}
 	SEXP value = NULL;
 	if (isObject(x)) {
@@ -6790,7 +6950,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (MAYBE_SHARED(lhs)) {
 	  lhs = shallow_duplicate(lhs);
 	  SETSTACK_BELOW_CALL_FRAME(-2, lhs);
-	  SET_NAMED(lhs, 1);
+	  ENSURE_NAMED(lhs);
 	}
 	SEXP value = NULL;
 	switch (TYPEOF(fun)) {
@@ -6833,7 +6993,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  prom = R_mkEVPROMISE(R_TmpvalSymbol, lhs);
 	  SETCAR(args, prom);
 	  /* make the call */
+	  FIX_CLOSURE_CALL_ARG_REFCNTS(args);
 	  value = applyClosure(call, fun, args, rho, R_NilValue);
+#ifdef ADJUST_ENVIR_REFCNTS
+	  unpromiseArgs(args);
+#endif
 	  break;
 	default: error(_("bad function"));
 	}
@@ -6874,7 +7038,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  prom = R_mkEVPROMISE(R_TmpvalSymbol, lhs);
 	  SETCAR(args, prom);
 	  /* make the call */
+	  FIX_CLOSURE_CALL_ARG_REFCNTS(args);
 	  value = applyClosure(call, fun, args, rho, R_NilValue);
+#ifdef ADJUST_ENVIR_REFCNTS
+	  unpromiseArgs(args);
+#endif
 	  break;
 	default: error(_("bad function"));
 	}

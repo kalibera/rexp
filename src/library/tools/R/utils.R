@@ -1590,6 +1590,53 @@ nonS3methods <- function(package)
     if(!length(thisPkg)) character() else thisPkg
 }
 
+### ** .make_S3_methods_table_for_base
+
+.make_S3_methods_table_for_base <-
+function()
+{
+    env <- baseenv()
+    objects <- ls(env, all.names = TRUE)
+    ind <- vapply(objects,
+                  function(o) .is_S3_generic(o, env),
+                  FALSE)
+    generics <- sort(unique(c(objects[ind],
+                              .get_S3_group_generics(),
+                              .get_internal_S3_generics())))
+    ind <- grepl("^[[:alpha:]]", generics)
+    generics <- c(generics[!ind], generics[ind])
+    ## The foo.bar objects in base:
+    objects <- grep("[^.]+[.]", objects, value = TRUE)
+    ## Make our lives easier ...
+    objects <- setdiff(objects, nonS3methods("base"))
+    ## Find the ones matching GENERIC.CLASS from the list of generics.
+    methods <-
+        lapply(generics,
+               function(e) objects[startsWith(objects, paste0(e, "."))])
+    names(methods) <- generics
+    ## Need to separate all from all.equal:
+    methods$all <- methods$all[!startsWith(methods$all, "all.equal")]
+    methods <- Filter(length, methods)
+    classes <- Map(substring, methods, nchar(names(methods)) + 2L)
+
+    cbind(generic = rep.int(names(classes), lengths(classes)),
+          class = unlist(classes, use.names = FALSE))
+}
+
+.deparse_S3_methods_table_for_base <-
+function()
+{
+    mdb <- .make_S3_methods_table_for_base()
+    n <- nrow(mdb)
+    c(sprintf("%s\"%s\", \"%s\"%s",
+              c("matrix(c(", rep.int("         ", n - 1L)),
+              mdb[, 1L],
+              mdb[, 2L],
+              c(rep.int(",", n - 1L), "),")),
+      "       ncol = 2L, byrow = TRUE,",
+      "       dimnames = list(NULL, c(\"generic\", \"class\")))")
+}
+
 ### ** .package_apply
 
 .package_apply <-
@@ -1765,8 +1812,8 @@ function(x, dfile)
         ## content.
         ## Cf. tools::showNonASCII():
         asc <- iconv(x, "latin1", "ASCII")
-        ind <- is.na(asc) | (asc != x)
-        if(any(ind)) {
+        ## fields might have been NA to start with, so use identical.
+        if(!identical(asc, x)) {
             warning(gettext("Unknown encoding with non-ASCII data: converting to ASCII"),
                     domain = NA)
             x[ind] <- iconv(x[ind], "latin1", "ASCII", sub = "byte")

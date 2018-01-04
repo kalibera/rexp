@@ -1979,7 +1979,7 @@ fi])
 
 ## R_BITMAPS
 ## ---------
-## This is the version used without png-config
+## This is the version used without pkg-config
 ## Here we only need any old -lz, and don't need zlib.h.
 ## However, we do need recent enough libpng and jpeg, and so check both
 ## the header versions and for key routines in the library.
@@ -2048,17 +2048,18 @@ AC_SUBST(BITMAP_LIBS)
 
 ## R_BITMAPS2
 ## ---------
-## This is the version used with png-config
+## This is the version used with pkg-config
 AC_DEFUN([R_BITMAPS2],
 [BITMAP_CPPFLAGS=
 BITMAP_LIBS=
 if test "${use_jpeglib}" = yes; then
    save_CPPFLAGS=${CPPFLAGS}
-  ## jpeglib does not support pkg-config, although some OSes add it.
-  ## This is untested.
-  if "${PKGCONF}" --exists jpeg; then
-    JPG_CPPFLAGS=`"${PKGCONF}" --cflags jpeg`
-    JPG_LIBS=`"${PKGCONF}" --libs jpeg`
+  ## IJGj does not currently support pkg-config, although some OSes add i.
+  ## and its version 9c (due Jan 2018) will have support as libjpeg.
+  ## libjpeg-turbo has had this for a while.
+  if "${PKGCONF}" --exists libjpeg; then
+    JPG_CPPFLAGS=`"${PKGCONF}" --cflags libjpeg`
+    JPG_LIBS=`"${PKGCONF}" --libs libjpeg`
     CPPFLAGS="${CPPFLAGS} ${JPG_CPPFLAGS}"
   fi
   _R_HEADER_JPEGLIB
@@ -4113,12 +4114,19 @@ fi
 if test "${G77}" = yes; then
   R_SYSTEM_ABI="${R_SYSTEM_ABI},gfortran"
 else
-case "${host_os}" in
-  solaris*)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
-  ;;
+case "${F77}" in
+  *flang)
+    R_SYSTEM_ABI="${R_SYSTEM_ABI},flang"
+    ;;
   *)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    case "${host_os}" in
+      solaris*)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
+      ;;
+      *)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    esac
+    ;;
 esac
 fi
 ## Fortran 90/95: AC_PROG_FC does not seem to set a shell variable
@@ -4127,12 +4135,19 @@ fi
 if test "${ac_cv_fc_compiler_gnu}" = yes; then
   R_SYSTEM_ABI="${R_SYSTEM_ABI},gfortran"
 else
-case "${host_os}" in
-  solaris*)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
-  ;;
+case "${F77}" in
+  *flang)
+    R_SYSTEM_ABI="${R_SYSTEM_ABI},flang"
+    ;;
   *)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    case "${host_os}" in
+      solaris*)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
+      ;;
+      *)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    esac
+    ;;
 esac
 fi
 AC_SUBST(R_SYSTEM_ABI)

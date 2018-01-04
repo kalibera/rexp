@@ -24834,7 +24834,7 @@ if ac_fn_c_try_link "$LINENO"; then :
   ac_cv_prog_c_openmp='none needed'
 else
   ac_cv_prog_c_openmp='unsupported'
-	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
+	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
                            -openmp -mp -omp -qsmp=omp -homp \
 			   -fopenmp=libomp \
                            -Popenmp --openmp; do
@@ -26339,7 +26339,7 @@ if ac_fn_f77_try_link "$LINENO"; then :
   ac_cv_prog_f77_openmp='none needed'
 else
   ac_cv_prog_f77_openmp='unsupported'
-	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
+	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
                            -openmp -mp -omp -qsmp=omp -homp \
 			   -fopenmp=libomp \
                            -Popenmp --openmp; do
@@ -26470,7 +26470,7 @@ if ac_fn_cxx_try_link "$LINENO"; then :
   ac_cv_prog_cxx_openmp='none needed'
 else
   ac_cv_prog_cxx_openmp='unsupported'
-	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
+	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
                            -openmp -mp -omp -qsmp=omp -homp \
 			   -fopenmp=libomp \
                            -Popenmp --openmp; do
@@ -27568,12 +27568,19 @@ fi
 if test "${G77}" = yes; then
   R_SYSTEM_ABI="${R_SYSTEM_ABI},gfortran"
 else
-case "${host_os}" in
-  solaris*)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
-  ;;
+case "${F77}" in
+  *flang)
+    R_SYSTEM_ABI="${R_SYSTEM_ABI},flang"
+    ;;
   *)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    case "${host_os}" in
+      solaris*)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
+      ;;
+      *)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    esac
+    ;;
 esac
 fi
 ## Fortran 90/95: AC_PROG_FC does not seem to set a shell variable
@@ -27582,12 +27589,19 @@ fi
 if test "${ac_cv_fc_compiler_gnu}" = yes; then
   R_SYSTEM_ABI="${R_SYSTEM_ABI},gfortran"
 else
-case "${host_os}" in
-  solaris*)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
-  ;;
+case "${F77}" in
+  *flang)
+    R_SYSTEM_ABI="${R_SYSTEM_ABI},flang"
+    ;;
   *)
-  R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    case "${host_os}" in
+      solaris*)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},solf95"
+      ;;
+      *)
+      R_SYSTEM_ABI="${R_SYSTEM_ABI},?"
+    esac
+    ;;
 esac
 fi
 
@@ -27733,6 +27747,7 @@ if test "${GCC}" = yes; then
   esac
   shlib_ldflags="-shared"
 fi
+## G77 includes gfortran
 if test "${G77}" = yes; then
   case "${host_cpu}" in
     sparc*|ppc64*|powerpc64*|s390*)
@@ -27743,6 +27758,12 @@ if test "${G77}" = yes; then
       ;;
   esac
 fi
+## Assume flang is the same as clang (it is a modified front end)
+case "${F77}" in
+  *flang)
+    fpicflags=${cpicflags}
+    ;;
+esac
 if test "${GXX}" = yes; then
   case "${host_cpu}" in
     sparc*|ppc64*|powerpc64*|s390*)
@@ -27962,6 +27983,7 @@ $as_echo "$as_me: WARNING: Use of flat namespace is requested by user." >&2;}
         if test "${GCC}" = yes; then
           cpicflags="-fPIC"
         fi
+	## G77 includes gfortran
         if test "${G77}" = yes; then
           fpicflags="-fPIC"
         fi
@@ -27999,7 +28021,7 @@ $as_echo "$as_me: WARNING: Use of flat namespace is requested by user." >&2;}
         fi
       fi
     fi
-    ## G77 include gfortran
+    ## G77 includes gfortran
     if test "${G77}" != yes; then
       fpicflags="-PIC"
     else
@@ -41434,11 +41456,12 @@ BITMAP_CPPFLAGS=
 BITMAP_LIBS=
 if test "${use_jpeglib}" = yes; then
    save_CPPFLAGS=${CPPFLAGS}
-  ## jpeglib does not support pkg-config, although some OSes add it.
-  ## This is untested.
-  if "${PKGCONF}" --exists jpeg; then
-    JPG_CPPFLAGS=`"${PKGCONF}" --cflags jpeg`
-    JPG_LIBS=`"${PKGCONF}" --libs jpeg`
+  ## IJGj does not currently support pkg-config, although some OSes add i.
+  ## and its version 9c (due Jan 2018) will have support as libjpeg.
+  ## libjpeg-turbo has had this for a while.
+  if "${PKGCONF}" --exists libjpeg; then
+    JPG_CPPFLAGS=`"${PKGCONF}" --cflags libjpeg`
+    JPG_LIBS=`"${PKGCONF}" --libs libjpeg`
     CPPFLAGS="${CPPFLAGS} ${JPG_CPPFLAGS}"
   fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if jpeglib version >= 6b" >&5
@@ -46464,7 +46487,7 @@ if ac_fn_fc_try_link "$LINENO"; then :
   ac_cv_prog_fc_openmp='none needed'
 else
   ac_cv_prog_fc_openmp='unsupported'
-	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
+	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
                            -openmp -mp -omp -qsmp=omp -homp \
 			   -fopenmp=libomp \
                            -Popenmp --openmp; do
@@ -46525,7 +46548,6 @@ FCLIBS=${FCLIBS}
 ## OpenMP package stuff (needs to come *after* configuration of all
 ## compilers).
 ## We allow the users to override this for packages only (for now)
-## FIXME: what if SHLIB_OPENMP_?FLAGS is set but empty? (could use -n "${VAR+set}")
 if test "x${shlib_ld_was_given}" = xno -a \
         "${SHLIB_LD}" = "\$(CC)" -a \
         "x${ac_cv_prog_c_openmp}" != "xunsupported" -a \
@@ -46606,6 +46628,9 @@ case "${host_os}" in
       ## Portland Group
       *pgf95|*pgf90)
         fcpicflags="-fpic"
+        ;;
+      *flang)
+        fcpicflags=${cpicflags}
         ;;
     esac
     ;;

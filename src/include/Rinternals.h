@@ -260,12 +260,14 @@ struct promsxp_struct {
    fields used to maintain the collector's linked list structures. */
 
 /* Define SWITH_TO_REFCNT to use reference counting instead of the
-   'NAMED' mechanism. This uses the R-devel binary layout. The two
-   'named' field bits are used for the REFCNT, so REFCNTMAX is 3. */
+   'NAMED' mechanism. */
 //#define SWITCH_TO_REFCNT
 
 #if defined(SWITCH_TO_REFCNT) && ! defined(COMPUTE_REFCNT_VALUES)
 # define COMPUTE_REFCNT_VALUES
+#endif
+#if defined(SWITCH_TO_REFCNT) && ! defined(ADJUST_ENVIR_REFCNTS)
+# define ADJUST_ENVIR_REFCNTS
 #endif
 #define REFCNTMAX ((1 << NAMED_BITS) - 1)
 
@@ -336,6 +338,17 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 	SEXP __enm_v__ = (v);			\
 	if (NAMED(__enm_v__) < NAMEDMAX)	\
 	    SET_NAMED( __enm_v__, NAMEDMAX);	\
+    } while (0)
+#define ENSURE_NAMED(v) do { if (NAMED(v) == 0) SET_NAMED(v, 1); } while (0)
+#define SETTER_CLEAR_NAMED(x) do {				\
+	SEXP __x__ = (x);				\
+	if (NAMED(__x__) == 1) SET_NAMED(__x__, 0);	\
+    } while (0)
+#define RAISE_NAMED(x, n) do {			\
+	SEXP __x__ = (x);			\
+	int __n__ = (n);			\
+	if (NAMED(__x__) < __n__)		\
+	    SET_NAMED(__x__, __n__);		\
     } while (0)
 
 /* S4 object bit, set by R_do_new_object for all new() calls */
@@ -546,6 +559,7 @@ int  (MARK)(SEXP x);
 int  (TYPEOF)(SEXP x);
 int  (NAMED)(SEXP x);
 int  (REFCNT)(SEXP x);
+int  (TRACKREFS)(SEXP x);
 void (SET_OBJECT)(SEXP x, int v);
 void (SET_TYPEOF)(SEXP x, int v);
 void (SET_NAMED)(SEXP x, int v);
@@ -553,6 +567,9 @@ void SET_ATTRIB(SEXP x, SEXP v);
 void DUPLICATE_ATTRIB(SEXP to, SEXP from);
 void SHALLOW_DUPLICATE_ATTRIB(SEXP to, SEXP from);
 void (ENSURE_NAMEDMAX)(SEXP x);
+void (ENSURE_NAMED)(SEXP x);
+void (SETTER_CLEAR_NAMED)(SEXP x);
+void (RAISE_NAMED)(SEXP x, int n);
 
 /* S4 object testing */
 int (IS_S4_OBJECT)(SEXP x);
@@ -1192,6 +1209,7 @@ void R_InitConnInPStream(R_inpstream_t stream,  Rconnection con,
 
 void R_Serialize(SEXP s, R_outpstream_t ops);
 SEXP R_Unserialize(R_inpstream_t ips);
+SEXP R_SerializeInfo(R_inpstream_t ips);
 
 /* slot management (in attrib.c) */
 SEXP R_do_slot(SEXP obj, SEXP name);
