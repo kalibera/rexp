@@ -2,7 +2,7 @@
 ###
 ### Process this file with autoconf to produce a configure script.
 ###
-### Copyright (C) 1998-2017 R Core Team
+### Copyright (C) 1998-2018 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -1113,11 +1113,23 @@ case "${host_os}" in
     ;;
 esac
 
+## Note that you can have 32-bit builds on x86_64, using -m32
+## This was -ffloat-store on all gfortran/g77 platforms prior to 3.5.0
+## Suggestion adopted from https://gcc.gnu.org/wiki/FloatingPointMath
+## It was already the default on 32-bit macOS
 if test "${SAFE_FFLAGS+set}" != set; then
-  if test "x${ac_cv_f77_compiler_gnu}" = xyes; then
-    SAFE_FFLAGS="${FFLAGS} -ffloat-store"
+  if test "x${ac_cv_f77_compiler_gnu}" = xyes \
+       -a "x${ac_cv_sizeof_size_t}" = x4; then
+    case "${host_cpu}" in
+      i*86|x86_64)
+      SAFE_FFLAGS="${FFLAGS} -msse2 -mfpmath=sse"
+      ;;
+    *)
+      SAFE_FFLAGS="${FFLAGS}"
+      ::
+    esac
   else
-    SAFE_FFLAGS=${FFLAGS}
+    SAFE_FFLAGS="${FFLAGS}"
   fi
 fi
 

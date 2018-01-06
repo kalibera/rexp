@@ -500,6 +500,12 @@ Rboolean (Rf_isObject)(SEXP s);
 	if (NAMED(__x__) != NAMEDMAX)			\
 	    SET_NAMED(__x__, NAMED(__x__) + 1);		\
     } while (0)
+#define DECREMENT_NAMED(x) do {				    \
+	SEXP __x__ = (x);				    \
+	int __n__ = NAMED(__x__);			    \
+	if (__n__ > 0 && __n__ < NAMEDMAX)		    \
+	    SET_NAMED(__x__, __n__ - 1);		    \
+    } while (0)
 
 #if defined(COMPUTE_REFCNT_VALUES)
 # define SET_REFCNT(x,v) (REFCNT(x) = (v))
@@ -976,6 +982,7 @@ SEXP Rf_stringSuffix(SEXP, int);
 SEXPTYPE Rf_str2type(const char *);
 Rboolean Rf_StringBlank(SEXP);
 SEXP Rf_substitute(SEXP,SEXP);
+SEXP Rf_topenv(SEXP, SEXP);
 const char * Rf_translateChar(SEXP);
 const char * Rf_translateChar0(SEXP);
 const char * Rf_translateCharUTF8(SEXP);

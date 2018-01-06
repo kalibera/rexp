@@ -165,8 +165,6 @@ void R_warn_S3_for_S4(SEXP method) {
 }
 #endif
 
-SEXP topenv(SEXP, SEXP);	/* should be in a header file */
-
 static SEXP findFunInEnvRange(SEXP symbol, SEXP rho, SEXP target)
 {
     SEXP vl;
@@ -257,7 +255,7 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
     if(lookup_registry_after_topenv == -1) {
 	lookup = getenv("_R_S3_METHOD_LOOKUP_REGISTRY_AFTER_TOPENV_");
 	lookup_registry_after_topenv =
-	    ((lookup != NULL) && StringTrue(lookup)) ? 1 : 0;
+	    ((lookup != NULL) && StringFalse(lookup)) ? 0 : 1;
     }
     if(lookup_baseenv_after_globalenv == -1) {
 	lookup = getenv("_R_S3_METHOD_LOOKUP_BASEENV_AFTER_GLOBALENV_");

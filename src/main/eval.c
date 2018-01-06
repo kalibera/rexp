@@ -33,8 +33,8 @@
 
 static SEXP bcEval(SEXP, SEXP, Rboolean);
 
-/* BC_PROILFING needs to be enabled at build time. It is not enabled
-   by default as enabling it disabled the more efficient threaded code
+/* BC_PROFILING needs to be enabled at build time. It is not enabled
+   by default as enabling it disables the more efficient threaded code
    implementation of the byte code interpreter. */
 #ifdef BC_PROFILING
 static Rboolean bc_profiling = FALSE;
@@ -1115,7 +1115,6 @@ static R_INLINE Rboolean R_CheckJIT(SEXP fun)
 # define PRINT_JIT_INFO	do { } while(0)
 #endif
 
-SEXP topenv(SEXP, SEXP); /**** should be in a header file */
 
 /* FIXME: this should not depend on internals from envir.c but does for now. */
 /* copied from envir.c for now */
@@ -1599,19 +1598,6 @@ void attribute_hidden unpromiseArgs(SEXP pargs)
 }
 #endif
 
-static R_INLINE void FIX_CLOSURE_CALL_ARG_REFCNTS(SEXP args)
-{
-    /* it would be better not to build this arglist with CONS_NR in
-       the first place */
-    for (SEXP a = args; a  != R_NilValue; a = CDR(a)) {
-	if (! TRACKREFS(a)) {
-	    ENABLE_REFCNT(a);
-	    INCREMENT_REFCNT(CAR(a));
-	    INCREMENT_REFCNT(CDR(a));
-	}
-    }
-}
-
 /* Note: GCC will not inline execClosure because it calls setjmp */
 static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
                                    SEXP rho, SEXP arglist, SEXP op);
@@ -1640,18 +1626,12 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 
     /*  Build a list which matches the actual (unevaluated) arguments
 	to the formal paramters.  Build a new environment which
-	contains the matched pairs.  Ideally this environment sould be
-	hashed.  */
+	contains the matched pairs.  matchArgs_RC is used since the
+	result becomes part of the environment frame and so needs
+	reference couting enabled. */
 
-    actuals = matchArgs(formals, arglist, call);
+    actuals = matchArgs_RC(formals, arglist, call);
     PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
-
-    /* Turn on reference counting for the binding cells so local
-       assignments to arguments increment REFCNT values. Also make sure
-       reference to current value is counted. Instead of backpatching
-       here it would have been better not to have used CONS_NR in the
-       first place for creating this 'actuals' list. */
-    FIX_CLOSURE_CALL_ARG_REFCNTS(actuals);
 
     /*  Use the default code for unbound formals.  FIXME: It looks like
 	this code should preceed the building of the environment so that
@@ -2781,7 +2761,7 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
  */
 SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 {
-    SEXP head, tail, ev, h;
+    SEXP head, tail, ev, h, val;
 
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
@@ -2801,8 +2781,11 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	    PROTECT(h = findVar(CAR(el), rho));
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
-		    ev = CONS_NR(eval(CAR(h), rho), R_NilValue);
-		    if (head==R_NilValue) {
+		    val = eval(CAR(h), rho);
+		    if (CDR(el) != R_NilValue)
+			INCREMENT_NAMED(val);
+		    ev = CONS_NR(val, R_NilValue);
+		    if (head == R_NilValue) {
 			UNPROTECT(1); /* h */
 			PROTECT(head = ev);
 			PROTECT(h); /* put current h on top of protect stack */
@@ -2838,8 +2821,11 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	                  EncodeChar(PRINTNAME(CAR(el))));
 #endif
 	} else {
-	    ev = CONS_NR(eval(CAR(el), rho), R_NilValue);
-	    if (head==R_NilValue)
+	    val = eval(CAR(el), rho);
+	    if (CDR(el) != R_NilValue)
+		INCREMENT_NAMED(val);
+	    ev = CONS_NR(val, R_NilValue);
+	    if (head == R_NilValue)
 		PROTECT(head = ev);
 	    else
 		SETCDR(tail, ev);
@@ -2849,7 +2835,11 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 	el = CDR(el);
     }
 
-    if (head!=R_NilValue)
+    for(el = head; el != R_NilValue; el = CDR(el))
+	if (CDR(el) != R_NilValue)
+	    DECREMENT_NAMED(CAR(el));
+
+    if (head != R_NilValue)
 	UNPROTECT(1);
 
     return head;
@@ -2862,7 +2852,7 @@ SEXP attribute_hidden evalList(SEXP el, SEXP rho, SEXP call, int n)
 /* used in evalArgs, arithmetic.c, seq.c */
 SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 {
-    SEXP head, tail, ev, h;
+    SEXP head, tail, ev, h, val;
 
     head = R_NilValue;
     tail = R_NilValue; /* to prevent uninitialized variable warnings */
@@ -2882,9 +2872,12 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 	    if (TYPEOF(h) == DOTSXP || h == R_NilValue) {
 		while (h != R_NilValue) {
 		    if (CAR(h) == R_MissingArg)
-			ev = CONS_NR(R_MissingArg, R_NilValue);
+			val = R_MissingArg;
 		    else
-			ev = CONS_NR(eval(CAR(h), rho), R_NilValue);
+			val = eval(CAR(h), rho);
+		    if (CDR(el) != R_NilValue)
+			INCREMENT_NAMED(val);
+		    ev = CONS_NR(val, R_NilValue);
 		    if (head == R_NilValue) {
 			UNPROTECT(1); /* h */
 			PROTECT(head = ev);
@@ -2903,9 +2896,12 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 	else {
 	    if (CAR(el) == R_MissingArg ||
 		(isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)))
-		ev = CONS_NR(R_MissingArg, R_NilValue);
+		val = R_MissingArg;
 	    else
-		ev = CONS_NR(eval(CAR(el), rho), R_NilValue);
+		val = eval(CAR(el), rho);
+	    if (CDR(el) != R_NilValue)
+		INCREMENT_NAMED(val);
+	    ev = CONS_NR(val, R_NilValue);
 	    if (head==R_NilValue)
 		PROTECT(head = ev);
 	    else
@@ -2915,6 +2911,10 @@ SEXP attribute_hidden evalListKeepMissing(SEXP el, SEXP rho)
 	}
 	el = CDR(el);
     }
+
+    for(el = head; el != R_NilValue; el = CDR(el))
+	if (CDR(el) != R_NilValue)
+	    DECREMENT_NAMED(CAR(el));
 
     if (head!=R_NilValue)
 	UNPROTECT(1);
@@ -4185,10 +4185,6 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 		       SEXP rho)
 {
     SEXP op = getPrimitive(opsym, BUILTINSXP);
-    if (TYPEOF(op) == PROMSXP) {
-	op = forcePromise(op);
-	ENSURE_NAMEDMAX(op);
-    }
     if (isObject(x) || isObject(y)) {
 	SEXP args, ans;
 	args = CONS_NR(x, CONS_NR(y, R_NilValue));
@@ -6092,6 +6088,37 @@ Rboolean attribute_hidden R_BCVersionOK(SEXP s)
 	(version >= R_bcMinVersion && version <= R_bcVersion);
 }
 
+static R_INLINE void FIX_CLOSURE_CALL_ARG_REFCNTS(SEXP args)
+{
+    /* it would be better not to build this arglist with CONS_NR in
+       the first place */
+    for (SEXP a = args; a  != R_NilValue; a = CDR(a)) {
+	if (! TRACKREFS(a)) {
+	    ENABLE_REFCNT(a);
+	    INCREMENT_REFCNT(CAR(a));
+	    INCREMENT_REFCNT(CDR(a));
+	}
+    }
+}
+
+static R_INLINE Rboolean FIND_ON_STACK(SEXP x, R_bcstack_t *base,
+				       int skip, int crude)
+{
+    /* Check whether the value is on the stack before modifying.  If
+       'crude' is true possible existence of BCNALLOC is ignored,
+       which could result in false positives avoids checking and
+       branching. If 'skip' is true the top value on the stack is
+       ignored. LT */
+    R_bcstack_t *checktop = skip ? R_BCNodeStackTop - 1 : R_BCNodeStackTop;
+    for (R_bcstack_t *p = base; p < checktop; p++) {
+	if (crude && p->tag == RAWMEM_TAG)
+	    p += p->u.ival;
+	else if (p->u.sxpval == x && p->tag == 0)
+	    return TRUE;
+    }
+    return FALSE;
+}
+
 static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 {
   SEXP retvalue = R_NilValue, constants;
@@ -6151,6 +6178,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
   R_BCpc = &currentpc;
   R_binding_cache_t vcache = NULL;
   Rboolean smallcache = TRUE;
+  R_bcstack_t *vcache_top = NULL;
 #ifdef USE_BINDING_CACHE
   if (useCache) {
       R_len_t n = LENGTH(constants);
@@ -6163,6 +6191,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 # ifdef CACHE_ON_STACK
       /* initialize binding cache on the stack */
       vcache = R_BCNodeStackTop;
+      vcache_top = vcache + n;
       if (R_BCNodeStackTop + n > R_BCNodeStackEnd)
 	  nodeStackOverflow();
       while (n > 0) {
@@ -6174,6 +6203,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       /* allocate binding cache and protect on stack */
       vcache = allocVector(VECSXP, n);
       BCNPUSH(vcache);
+      vcache_top = R_BCNodeStackTop;
 # endif
   }
 #endif
@@ -6435,7 +6465,23 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 		   scalar of the same type as the immediate value,
 		   then we can copy the stack value into the binding
 		   value */
-		switch (s->tag) {
+
+#define MAX_ON_STACK_CHECK 63
+		/* Check whether the value is on the stack before
+		   modifying.  Limit the number of items to check to
+		   MAX_ON_STACK_CHECK; this will result in some
+		   defensive boxing. This number could be tuned; in
+		   some limited testing ncheck never went above
+		   36. Not worrying BCNALLOC stuff could result in
+		   false positives and unnecessary boxing but is
+		   probably worth it for avoiding checking and
+		   branching. LT */
+		int tag = s->tag;
+		if (R_BCNodeStackTop - vcache_top > MAX_ON_STACK_CHECK ||
+		    FIND_ON_STACK(x, vcache_top, TRUE, TRUE))
+		    tag = 0;		
+
+		switch (tag) {
 		case REALSXP: SET_SCALAR_DVAL(x, s->u.dval); NEXT();
 		case INTSXP: SET_SCALAR_IVAL(x, s->u.ival); NEXT();
 		case LGLSXP: SET_SCALAR_LVAL(x, s->u.ival); NEXT();
@@ -6735,6 +6781,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 #endif
 	    )
 	    value = EnsureLocal(symbol, rho);
+
+	if (MAYBE_REFERENCED(value) &&
+	    FIND_ON_STACK(value, vcache_top, FALSE, FALSE))
+	    value = shallow_duplicate(value);
+
 	BCNPUSH(value);
 	BCNDUP2ND();
 	/* top three stack entries are now RHS value, LHS value, RHS value */
@@ -7074,9 +7125,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 #define STACKVAL_MAYBE_SHARED(idx)				\
 	(IS_STACKVAL_BOXED(idx) &&				\
 	 MAYBE_SHARED(GETSTACK_SXPVAL_PTR(R_BCNodeStackTop + (idx))))
+#define STACKVAL_IS_ON_STACK(idx)					\
+	FIND_ON_STACK(GETSTACK_SXPVAL(idx), vcache_top, TRUE, FALSE)
 
 	if (STACKVAL_MAYBE_REFERENCED(-1) &&
-	    (STACKVAL_MAYBE_SHARED(-1) || STACKVAL_MAYBE_SHARED(-3)))
+	    (STACKVAL_MAYBE_SHARED(-1) ||
+	     STACKVAL_MAYBE_SHARED(-3) ||
+	     STACKVAL_IS_ON_STACK(-1)))
 	    GETSTACK_SXPVAL_PTR(&tmp) =
 		shallow_duplicate(GETSTACK_SXPVAL_PTR(&tmp));
 

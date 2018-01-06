@@ -8509,7 +8509,7 @@ echo "running: ${OBJCXX} -c conftest.mm ${CPPFLAGS} ${OBJCXXFLAGS}" >&5
 if ${OBJCXX} -c conftest.mm ${CPPFLAGS} ${OBJCXXFLAGS} >&5 2>&1; then
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-   rm -rf conftest conftest.* core
+   rm -Rf conftest conftest.* core
    OBJCXX=${OBJCXX}
 else
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -8551,7 +8551,7 @@ echo "running: ${CXX} -c conftest.mm ${CPPFLAGS} ${OBJCXXFLAGS}" >&5
 if ${CXX} -c conftest.mm ${CPPFLAGS} ${OBJCXXFLAGS} >&5 2>&1; then
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-   rm -rf conftest conftest.* core
+   rm -Rf conftest conftest.* core
    OBJCXX=${CXX}
 else
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -8588,7 +8588,7 @@ echo "running: ${OBJC} -c conftest.mm ${CPPFLAGS} ${OBJCXXFLAGS}" >&5
 if ${OBJC} -c conftest.mm ${CPPFLAGS} ${OBJCXXFLAGS} >&5 2>&1; then
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-   rm -rf conftest conftest.* core
+   rm -Rf conftest conftest.* core
    OBJCXX=${OBJC}
 else
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -22531,7 +22531,7 @@ $as_echo_n "checking for build C compiler... " >&6; }
       fi
     done
   fi
-  rm -rf conftest conftest.* core
+  rm -Rf conftest conftest.* core
   if test "${build_cc_works}" = no; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: none" >&5
 $as_echo "none" >&6; }
@@ -24784,7 +24784,7 @@ if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
 else
   r_cv_prog_cc_c_o_lo=no
 fi
-rm -rf conftest* TMP
+rm -Rf conftest* TMP
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $r_cv_prog_cc_c_o_lo" >&5
 $as_echo "$r_cv_prog_cc_c_o_lo" >&6; }
@@ -26101,7 +26101,7 @@ fi
 
 fi
 
-rm -rf conftest conftest.* conftestf.* core
+rm -Rf conftest conftest.* conftestf.* core
 if test -n "${r_cv_prog_f77_can_run}"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -26193,7 +26193,7 @@ fi
 
 fi
 
-rm -rf conftest conftest.* conftestf.* core
+rm -Rf conftest conftest.* conftestf.* core
 if test -n "${r_cv_prog_f77_cc_compat}"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -26283,7 +26283,7 @@ fi
 
 fi
 
-rm -rf conftest conftest.* conftestf.* core
+rm -Rf conftest conftest.* conftestf.* core
 if test -n "${r_cv_prog_f77_cc_compat_complex}"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -27484,11 +27484,23 @@ fi
     ;;
 esac
 
+## Note that you can have 32-bit builds on x86_64, using -m32
+## This was -ffloat-store on all gfortran/g77 platforms prior to 3.5.0
+## Suggestion adopted from https://gcc.gnu.org/wiki/FloatingPointMath
+## It was already the default on 32-bit macOS
 if test "${SAFE_FFLAGS+set}" != set; then
-  if test "x${ac_cv_f77_compiler_gnu}" = xyes; then
-    SAFE_FFLAGS="${FFLAGS} -ffloat-store"
+  if test "x${ac_cv_f77_compiler_gnu}" = xyes \
+       -a "x${ac_cv_sizeof_size_t}" = x4; then
+    case "${host_cpu}" in
+      i*86|x86_64)
+      SAFE_FFLAGS="${FFLAGS} -msse2 -mfpmath=sse"
+      ;;
+    *)
+      SAFE_FFLAGS="${FFLAGS}"
+      ::
+    esac
   else
-    SAFE_FFLAGS=${FFLAGS}
+    SAFE_FFLAGS="${FFLAGS}"
   fi
 fi
 
@@ -37091,7 +37103,7 @@ fi
 
 fi
 
-  rm -rf conftest conftest.* conftestf.* core
+  rm -Rf conftest conftest.* conftestf.* core
   if test -n "${r_cv_zdotu_is_usable}"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
