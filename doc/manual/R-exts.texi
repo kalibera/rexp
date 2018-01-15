@@ -911,17 +911,19 @@ All packages that are needed@footnote{This includes all packages
 directly called by @code{library} and @code{require} calls, as well as
 data obtained @emph{via} @code{data(theirdata, package = "somepkg")}
 calls: @command{R CMD check} will warn about all of these.  But there
-are subtler uses which it will not detect: e.g.@: if package A uses
+are subtler uses which it may not detect: e.g.@: if package A uses
 package B and makes use of functionality in package B which uses package
 C which package B suggests or enhances, then package C needs to be in
 the @samp{Suggests} list for package A.  Nor will undeclared uses in
 included files be reported, nor unconditional uses of packages listed
-under @samp{Enhances}.} to successfully run @code{R CMD check} on the
-package must be listed in one of @samp{Depends} or @samp{Suggests} or
-@samp{Imports}.  Packages used to run examples or tests conditionally
-(e.g.@: @emph{via} @code{if(require(@var{pkgname}))}) should be listed
-in @samp{Suggests} or @samp{Enhances}.  (This allows checkers to ensure
-that all the packages needed for a complete check are installed.)
+under @samp{Enhances}.  @command{R CMD check --as-cran} will detect more
+of the subtler uses, especially for re-building of vignettes as from
+@R{} 3.5.0.}  to successfully run @code{R CMD check} on the package must
+be listed in one of @samp{Depends} or @samp{Suggests} or @samp{Imports}.
+Packages used to run examples or tests conditionally (e.g.@: @emph{via}
+@code{if(require(@var{pkgname}))}) should be listed in @samp{Suggests}
+or @samp{Enhances}.  (This allows checkers to ensure that all the
+packages needed for a complete check are installed.)
 @end itemize
 
 @noindent
@@ -1529,16 +1531,20 @@ should only assume a POSIX-compliant @command{/bin/sh} -- see
 In particular @command{bash} extensions must not be used, and not all
 @R{} platforms have a @command{bash} command, let alone one at
 @file{/bin/bash}.  All known shells used with @R{} support the use of
-backticks, but not all support @samp{$(@var{cmd})}.}) shell script
-@file{configure} in your package which (if present) is executed by
-@code{R CMD INSTALL} before any other action is performed.  This can be
-a script created by the Autoconf mechanism, but may also be a script
-written by yourself.  Use this to detect if any nonstandard libraries
-are present such that corresponding code in the package can be disabled
-at install time rather than giving error messages when the package is
-compiled or used.  To summarize, the full power of Autoconf is available
-for your extension package (including variable substitution, searching
-for libraries, etc.).
+backticks, but not all support @samp{$(@var{cmd})}.  However, real-world
+shells are not fully POSIX-compliant and omissions and idiosyncrasies
+need to be worked around---which Autoconf will do for you.  Arithmetic
+expansion is a known issue: see
+@uref{https://www.gnu.org/@/software/@/autoconf/@/manual/autoconf.html#Portable-Shell}
+for this and others.}) shell script @file{configure} in your package
+which (if present) is executed by @code{R CMD INSTALL} before any other
+action is performed.  This can be a script created by the Autoconf
+mechanism, but may also be a script written by yourself.  Use this to
+detect if any nonstandard libraries are present such that corresponding
+code in the package can be disabled at install time rather than giving
+error messages when the package is compiled or used.  To summarize, the
+full power of Autoconf is available for your extension package
+(including variable substitution, searching for libraries, etc.).
 
 Under a Unix-alike only, an executable (Bourne shell) script
 @file{cleanup} is executed as the last thing by @code{R CMD INSTALL} if
@@ -3077,8 +3083,11 @@ installed on all platforms with suitable tools and is the usual form for
 Unix-like systems; the binary form is platform-specific, and is the more
 common distribution form for the Windows and macOS platforms.
 
-Using @command{R CMD build}, the @R{} package builder, one can build @R{}
-package tarballs from their sources (for example, for subsequent release).
+Using @command{R CMD build}, the @R{} package builder, one can build
+@R{} package tarballs from their sources (for example, for subsequent
+release).  It is recommended that packages are built for release by the
+current release version of @R{} or @samp{r-patched}, to avoid
+inadvertently picking up new features of a development version of @R{}.
 
 Prior to actually building the package in the standard gzipped tar file
 format, a few diagnostic checks and cleanups are performed.  In
@@ -4207,14 +4216,16 @@ line of the file) and not make use of GNU extensions.  (The POSIX
 specification is available at
 @uref{http://pubs.opengroup.org/@/onlinepubs/@/9699919799/@/utilities/@/make.html};
 anything not documented there should be regarded as an extension to be
-avoided.)  Commonly misused GNU extensions are conditional inclusions
-(@code{ifeq} and the like), @code{$@{shell ...@}}, @code{$@{wildcard
-...@}} and similar, and the use of @code{+=}@footnote{This was
-apparently introduced in SunOS 4, and is available elsewhere
-@emph{provided} it is surrounded by spaces.} and @code{:=}.  Also, the
-use of @code{$<} other than in implicit rules is a GNU extension, as is
-the @code{$^} macro.  Unfortunately makefiles which use GNU extensions
-often run on other platforms but do not have the intended results.
+avoided.  Further advice can be found at
+@uref{https://www.gnu.org/@/software/@/autoconf/@/manual/@/autoconf.html#Portable-Make}.                                )
+Commonly misused GNU extensions are conditional inclusions (@code{ifeq}
+and the like), @code{$@{shell ...@}}, @code{$@{wildcard ...@}} and
+similar, and the use of @code{+=}@footnote{This was apparently
+introduced in SunOS 4, and is available elsewhere @emph{provided} it is
+surrounded by spaces.} and @code{:=}.  Also, the use of @code{$<} other
+than in implicit rules is a GNU extension, as is the @code{$^} macro.
+Unfortunately makefiles which use GNU extensions often run on other
+platforms but do not have the intended results.
 
 The use of @code{$@{shell ...@}} can be avoided by using backticks, e.g.@:
 
@@ -4318,7 +4329,12 @@ C99 for C code.  One common area of problems is the @code{*printf}
 functions where Windows does not support @code{%lld}, @code{%Lf} and
 similar formats (and has its own formats such as @code{%I64d} for 64-bit
 integers).  It is very rare to need to output such types, and 64-bit
-integers can usually be converted to doubles for output.
+integers can usually be converted to doubles for output.  However, the
+C11 standard (§7.8.1) includes @code{PRIxNN} macros@footnote{These are
+optional because the corresponding types are, but must be provided if the
+types are.} in C header @file{inttypes.h} (for example @code{PRId64}) so
+the portable approach is to test for these and if not available provide
+emulations in the package.
 
 @item
 @command{R CMD check} performs some checks for non-portable
@@ -4549,10 +4565,19 @@ Make sure that any version requirement for Java code is both declared in
 the @samp{SystemRequirements} field and tested at runtime (not least as
 the Java installation when the package is installed might not be the
 same as when the package is run and will not be for binary packages).
-Java 8 (aka 1.8) is available for fewer platforms than Java 7, and Java
-9 for fewer still (at the time of writing, only @cputype{x86_64} Linux,
-macOS, 64-bit Windows and 64-bit Sparc Solaris).  A suitable test for
-packages using @CRANpkg{rJava} would be
+Java 8 is available for fewer platforms than Java 7, and Java 9 for
+fewer still (at the time of writing, only @cputype{x86_64} Linux, macOS,
+64-bit Windows and 64-bit Sparc Solaris from Oracle).
+
+When specifying a minimum Java version please use the official version
+names, which are (confusingly)
+@example
+1.1 1.2 1.3 1.4 5.0 6 7 8 9
+@end example
+@noindent
+and will in 2018 move to a year.month scheme such as @samp{18.3}.
+
+A suitable test for packages using @CRANpkg{rJava} would be something like
 @example
 .jinit()
 jv <- .jcall("java/lang/System", "S", "getProperty", "java.runtime.version")
@@ -4571,12 +4596,16 @@ Java version, often resulting in an arcane message like
 java.lang.UnsupportedClassVersionError: ... Unsupported major.minor version 52.0
 @end example
 @noindent
-Compile with something like @command{javac -target 1.6} to ensure this
-is avoided. (As from Java 8, @command{javac} defaults to compiling for
-Java 8.)  Note this also applies to packages distributing compiled Java
-code (such as @pkg{jgraph}) produced by others, so their requirements
-need to be checked (they are often not documented accurately) and
-accounted for.
+(Where @uref{https://en.wikipedia.org/@/wiki/@/Java_class_file} maps
+class-file version numbers to Java versions.)  Compile with something
+like @command{javac -target 1.6} to ensure this is avoided. (As from
+Java 8, @command{javac} defaults to compiling for Java 8.)  Note this
+also applies to packages distributing compiled Java code (such as
+@pkg{jgraph}) produced by others, so their requirements need to be
+checked (they are often not documented accurately) and accounted for.
+The class-file version can in principle be checked @emph{via}
+command-line utility @command{javap}, if necessary after extracting the
+@file{.class} files from a @file{.jar} archive.
 
 Some packages have stated a requirement on a particular JDK, but a
 package should only be requiring a JRE unless providing its own Java
@@ -10332,10 +10361,30 @@ system and so the two interworked successfully.  This was true of
 @command{g77}, but it is less true of @command{gfortran} as used in
 @command{gcc} 4 and later.  In particular, any package that makes use of
 Fortran I/O will when compiled on Windows interfere with C I/O: when the
-Fortran I/O is initialized (typically when the package is loaded) the C
-@code{stdout} and @code{stderr} are switched to LF line endings.
-(Function @code{init} in file @file{src/modules/lapack/init_win.c} shows
-how to mitigate this.)
+Fortran I/O support code is initialized (typically when the package is
+loaded) the C @code{stdout} and @code{stderr} are switched to LF line
+endings.  (Function @code{init} in file
+@file{src/modules/lapack/init_win.c} shows how to mitigate this.  In a
+package this would look something like
+@example
+#ifdef _WIN32
+# include <fcntl.h>
+#endif
+
+void R_init_mypkgname(DllInfo *dll)
+@{
+    // Native symbol registration calls
+
+#ifdef _WIN32
+    // gfortran I/O initialization sets these to _O_BINARY
+    setmode(1, _O_TEXT); /* stdout */
+    setmode(2, _O_TEXT); /* stderr */
+#endif
+@}
+@end example
+@noindent
+in the file used for native symbol registration.)
+
 
 @node Linking to other packages, Handling R objects in C, Fortran I/O, System and foreign language interfaces
 @section Linking to other packages

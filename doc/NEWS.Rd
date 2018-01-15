@@ -131,9 +131,11 @@
       \code{approxfun()} also work for long vectors.
 
       %% one item with several paragraphs
-      \item \code{deparse()} (and \code{dump()}) are more useful for S4
-      objects; \code{dput()} now using the same internal C code instead
-      of its previous imperfect workaround R code.
+      \item \code{deparse()} and \code{dump()} are more useful for S4
+      objects, \code{dput()} now using the same internal C code instead
+      of its previous imperfect workaround R code.  S4 objects now
+      typically deparse perfectly, i.e., can be recreated identically
+      from deparsed code.
 
       \code{dput()}, \code{deparse()} and \code{dump()} now print the
       \code{names()} information only once, using the more readable
@@ -145,7 +147,7 @@
       the \code{(tag = value)} syntax for atomic vectors.  On the other
       hand, without deparse options \code{"showAttributes"} and
       \code{"niceNames"}, names are no longer shown also for lists.
-      \code{as.character(list( c (one = 1)))} now includes the name, as
+      \code{as.character(list(  c (one = 1)))} now includes the name, as
       \code{as.character(list(list(one = 1)))} has always done.
 
       \code{m:n} now also deparses nicely when \eqn{m > n}.
@@ -269,6 +271,19 @@
 
       \item By default the (arbitrary) signs of the loadings from
       \code{princomp()} are chosen so the first element is non-negative.
+
+      \item If \option{--default-packages} is not used, then
+      \command{Rscript} now checks the environment variable
+      \env{R_SCRIPT_DEFAULT_PACKAGES}. If this is set, then it takes
+      precedence over \env{R_DEFAULT_PACKAGES}. If default packages are
+      not specified on the command line or by one of these environment
+      variables, then \command{Rscript} now uses the same default
+      packages as \command{R}. For now, the previous behavior of
+      dropping \pkg{methods} can be restored by setting the environment
+      variable \env{R_SCRIPT_LEGACY} to \samp{yes}.
+
+      \item When a package is found more than once, the warning from
+      \code{find.package(*, verbose=TRUE)} lists all library locations.
     }
   }
 
@@ -492,6 +507,15 @@
       \item \code{as.matrix(dd)} now works when the data frame \code{dd}
       contains a column which is a data frame or matrix, including a
       0-column matrix/d.f. .
+
+      \item \code{NAMEDMAX} has been raised to 3 to allow protection of
+      intermediate results from (usually ill-advised) assignments in
+      arguments to \code{BUILTIN} functions. Package \code{C} code using
+      \code{SET_NAMED} may need to be revised.
+
+      \item \code{mclapply(X, mc.cores)} now follows its documentation
+      and calls \code{lapply()} in case \code{mc.cores = 1} also in the
+      case \code{mc.preschedule} is false.  (\PR{17373})
     }
   }
 }
@@ -536,6 +560,15 @@
       \item \command{R CMD build} checks for GNU \command{cp} rather
       than assuming Linux has it.  (\PR{17370} says \sQuote{Alpine
 	Linux} does not.)
+
+      \item Non-UTF-8 multibyte character handling fixed more
+      permanently (\PR{16732}).
+
+      \item \code{sum(<large ints>, <stuff>)} is more consistent.
+      (\PR{17372})
+
+      \item \code{rf()} and \code{rbeta()} now also work correctly when \code{ncp}
+      is not scalar, notably when (partly) \code{NA}.  (\PR{17375})
     }
   }
 }
@@ -3086,7 +3119,7 @@
       returns class \code{"poly"} just like \code{poly()} which gets a
       new \code{simple=FALSE} option.  They now lead to correct
       \code{predict()}ions, e.g., on subsets of the original data.
-      %% see https://stat.ethz.ch/pipermail/r-devel/2015-July/071532.html
+      (\PR{16239})
 
       \item \code{rhyper(nn, <large>)} now works correctly. (\PR{16489})
 
