@@ -2021,6 +2021,7 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call, SEXP rho)
     }
 
     int len = length(s);
+    char * the_package_name = 0;
     if (len > 1) {
 	PROTECT(s);	 /* needed as per PR#15990.  call gets protected by warningcall() */
 	char *check = getenv("_R_CHECK_LENGTH_1_CONDITION_");
@@ -2040,6 +2041,7 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call, SEXP rho)
 			spkg = R_NamespaceEnvSpec(rho);
 		if (spkg != R_NilValue) {
 		    const char *pkgname = translateChar(STRING_ELT(spkg, 0));
+		    the_package_name = pkgname;
 		    if (!strcmp(check + lprefix, pkgname))
 			err = TRUE;
 		    if (!strcmp(check + lprefix, "_R_CHECK_PACKAGE_NAME_")) {
@@ -2051,9 +2053,34 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call, SEXP rho)
 		}
 	    }
 	}
-	if (err)
+	if (err) {
+      R_OutputCon = 2;
+      R_ErrorCon = 2;
+      REprintf(" ----------- FAILURE REPORT -------------- \n");
+      REprintf(" --- srcref --- \n");
+      SrcrefPrompt("", R_getCurrentSrcref());
+      REprintf("\n");
+      if (the_package_name) {
+        REprintf(" --- if/while statement is in package --- \n");
+        REprintf("%s\n", the_package_name);
+      }
+      REprintf(" --- call (currently evaluated) --- \n");
+      PrintValue(R_GlobalContext->call);
+      REprintf(" --- R stacktrace ---\n");
+      printwhere();
+      REprintf(" --- value of length: %d type: %s ---\n", length(s), type2char(TYPEOF(s)));
+      PrintValue(s);
+      REprintf(" --- function (currently evaluated)--- \n");
+      if (R_GlobalContext->callfun != NULL && TYPEOF(R_GlobalContext->callfun) == CLOSXP)
+	PrintValue(R_GlobalContext->callfun);
+      REprintf(" --- function (body) search ---\n");
+      if (R_GlobalContext->callfun != NULL && TYPEOF(R_GlobalContext->callfun) == CLOSXP)
+      findFunctionForBody(R_ClosureExpr(R_GlobalContext->callfun));
+      REprintf(" ----------- END FAILURE REPORT -------------- \n");
+      R_Suicide("the condition has length > 1 and only the first element will be used XXXXXX");
+	    /* not reached */
 	    errorcall(call, _("the condition has length > 1"));
-        else
+        } else
 	    warningcall(call,
 		    _("the condition has length > 1 and only the first element will be used"));
 	vmaxset(vmax);
