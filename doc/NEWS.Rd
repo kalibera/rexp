@@ -7,16 +7,16 @@
 
 \section{\Rlogo CHANGES IN R-devel}{
 
-  \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
-    \itemize{
-      \item The default version for \code{save()}, \code{saveRDS()},
-      \code{serialize()} and similar has been changed to \samp{3}.
-      Objects saved with version 3 are not readable by earlier versions
-      of \R.
+%%   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
+%%     \itemize{
+%%       \item The default version for \code{save()}, \code{saveRDS()},
+%%       \code{serialize()} and similar has been changed to \samp{3}.
+%%       Objects saved with version 3 are not readable by earlier versions
+%%       of \R.
 
-      This includes saved workspaces.
-    }
-  }
+%%       This includes saved workspaces.
+%%     }
+%%   }
 
   \subsection{NEW FEATURES}{
     \itemize{
@@ -152,6 +152,10 @@
 
       \code{m:n} now also deparses nicely when \eqn{m > n}.
 
+      The \code{"quoteExpressions"} option, also part of \code{"all"},
+      no longer \code{quote()}s formulas as that may not re-parse
+      identically.  (\PR{17378})
+
       \item If the option \code{setWidthOnResize} is set and \code{TRUE},
       \R run in a terminal using a recent \code{readline} library will
       set the \code{width} option when the terminal is
@@ -284,6 +288,9 @@
 
       \item When a package is found more than once, the warning from
       \code{find.package(*, verbose=TRUE)} lists all library locations.
+
+      \item POSIXt objects can now also be rounded or truncated to month
+      or year.
     }
   }
 
@@ -314,6 +321,12 @@
       test-suite-management packages available and (for the time being)
       works around a common omission of \CRANpkg{rmarkdown} from the
       \samp{VignetteBuilder} field.
+    }
+  }
+
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item By default, packages are now byte-compiled on installation.
     }
   }
 
@@ -537,6 +550,10 @@
       \item The version of LAPACK included in the sources has been
       updated to 3.8.0 (for the routines used by \R, a very minor bug-fix
       change).
+
+      \item \code{parallel::detectCores(logical = FALSE)} is ignored on
+      Linux systems, since the information is not available with
+      virtualized OSes. 
     }
   }
 
@@ -574,6 +591,8 @@
 
       \item \code{rf()} and \code{rbeta()} now also work correctly when \code{ncp}
       is not scalar, notably when (partly) \code{NA}.  (\PR{17375})
+
+      \item \code{is.na(NULL)} no longer warns.  (\PR{16107})
     }
   }
 }
