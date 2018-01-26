@@ -114,11 +114,16 @@
   only if \R was: use options \option{--html} and \option{--no-html} to
   override this.
 
-  Packages are not by default installed keeping the source formatting
-  (see the \code{keep.source} argument to \code{\link{source}}): this
-  can be enabled by the option \option{--with-keep.source} or by setting
-  environment variable \env{R_KEEP_PKG_SOURCE} to \code{yes}.
-  
+  Since \R 3.5.0, packages are by default installed keeping the source
+  formatting (see the \code{keep.source} argument to \code{\link{source}}):
+  this can be disabled by the option \option{--without-keep.source} or by
+  setting environment variable \env{R_KEEP_PKG_SOURCE} to \code{no}.
+
+  Prior to \R 3.5.0, packages were not by default installed keeping the
+  source formatting, but this could have been enabled by the option
+  \option{--without-keep.source} or by setting environment variable
+  \env{R_KEEP_PKG_SOURCE} to \code{yes}.
+
   Use \command{R CMD INSTALL --help} for concise usage information,
   including all the available options.
 }

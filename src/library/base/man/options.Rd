@@ -1,6 +1,6 @@
 % File src/library/base/man/options.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2017 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{options}
@@ -185,8 +185,8 @@ getOption(x, default = NULL)
 
     %% used by tools::makeLazyLoading
     \item{\code{keep.source.pkgs}:}{As for \code{keep.source}, used only
-      when packages are installed.  Defaults to \code{FALSE} unless the
-      environment variable \env{R_KEEP_PKG_SOURCE} is set to \code{yes}.}
+      when packages are installed.  Defaults to \code{TRUE} unless the
+      environment variable \env{R_KEEP_PKG_SOURCE} is set to \code{no}.}
 
     \item{\code{matprod}:}{a string selecting the implementation of
       the matrix products \code{\link{\%*\%}}, \code{\link{crossprod}}, and

@@ -290,9 +290,10 @@ void attribute_hidden InitOptions(void)
     v = CDR(v);
 
     p = getenv("R_KEEP_PKG_SOURCE");
-    R_KeepSource = (p && (strcmp(p, "yes") == 0)) ? 1 : 0;
+    R_KeepSource = (p && (strcmp(p, "no") == 0 || strcmp(p, "false") == 0 ||
+                   strcmp(p, "FALSE") == 0 || strcmp(p, "0") == 0)) ? 0 : 1;
 
-    SET_TAG(v, install("keep.source")); /* overridden in common.R */
+    SET_TAG(v, install("keep.source")); /* overridden in Common.R */
     SETCAR(v, ScalarLogical(R_KeepSource));
     v = CDR(v);
 

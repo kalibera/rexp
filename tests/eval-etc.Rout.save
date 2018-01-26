@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2018-01-18 r74132) -- "Unsuffered Consequences"
+R Under development (unstable) (2018-01-26 r74168) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -615,50 +615,48 @@ checking formals(.):
 as.pairlist(alist(... = ))
 __ not parse()able __: hasMissObj(.) is true 
 --=--=--=--=--
-CO: function (..., file = NULL, append = FALSE, type = c("output", 
-    "message"), split = FALSE) 
+CO: function(..., file=NULL, append=FALSE,
+                           type = c("output", "message"), split = FALSE)
 {
     args <- substitute(list(...))[-1L]
     type <- match.arg(type)
-    rval <- NULL
-    closeit <- TRUE
-    if (is.null(file)) 
+    rval <- NULL; closeit <- TRUE
+    if (is.null(file))
         file <- textConnection("rval", "w", local = TRUE)
-    else if (is.character(file)) 
-        file <- file(file, if (append) 
-            "a"
-        else "w")
+    else if (is.character(file))
+        file <- file(file, if(append) "a" else "w")
     else if (inherits(file, "connection")) {
-        if (!isOpen(file)) 
-            open(file, if (append) 
-                "a"
-            else "w")
-        else closeit <- FALSE
-    }
-    else stop("'file' must be NULL, a character string or a connection")
-    sink(file, type = type, split = split)
-    on.exit({
-        sink(type = type, split = split)
-        if (closeit) close(file)
-    })
+	if (!isOpen(file)) open(file, if(append) "a" else "w")
+	else closeit <- FALSE
+    } else
+        stop("'file' must be NULL, a character string or a connection")
+
+    sink(file, type=type, split=split)
+    ## for error recovery: all output will be lost if file=NULL
+    on.exit({sink(type=type, split=split); if(closeit) close(file)})
+
     pf <- parent.frame()
-    evalVis <- function(expr) withVisible(eval(expr, pf))
-    for (i in seq_along(args)) {
+    evalVis <- function(expr)
+        withVisible(eval(expr, pf))
+
+    for(i in seq_along(args)) {
         expr <- args[[i]]
-        tmp <- switch(mode(expr), expression = lapply(expr, evalVis), 
-            call = , name = list(evalVis(expr)), stop("bad argument"))
-        for (item in tmp) if (item$visible) 
-            print(item$value)
+        tmp <- switch(mode(expr),
+                      "expression" = lapply(expr, evalVis),
+                      "call" =, "name" =  list(evalVis(expr)),
+                       stop("bad argument"))
+        for(item in tmp)
+            if (item$visible) print(item$value)
     }
+    ## we need to close the text connection before returning 'rval'
     on.exit()
-    sink(type = type, split = split)
-    if (closeit) 
-        close(file)
-    if (is.null(rval)) 
-        invisible(NULL)
-    else rval
+    sink(type=type, split=split)
+    if(closeit) close(file)
+    if(is.null(rval)) invisible(NULL) else rval
 }
- --> checking list(*): Ok
+not identical(*, ignore.env=T), but all.equal(*,*, tol = 0) 
+ --> checking list(*): not identical(*, ignore.env=T), but all.equal(*,*, tol = 0) 
+Ok
 checking body(.):
 quote({
     args <- substitute(list(...))[-1L]
@@ -701,7 +699,9 @@ quote({
         invisible(NULL)
     else rval
 })
- --> checking list(*): Ok
+not identical(*, ignore.env=T), but all.equal(*,*, tol = 0) 
+ --> checking list(*): not identical(*, ignore.env=T), but all.equal(*,*, tol = 0) 
+Ok
 checking formals(.):
 as.pairlist(alist(... = , file = NULL, append = FALSE, type = quote(c("output", 
     "message")), split = FALSE))
@@ -1271,26 +1271,11 @@ ydata:  --> checking list(*): Ok
 ysmooth: 1:10
  --> checking list(*): Ok
 --=--=--=--=--
-Warning messages:
-1: In dput(x, control = control) : deparse may be incomplete
-2: In deparse(expr, backtick = backtick, control = control, ...) :
-  deparse may be incomplete
-3: In deparse(expr, backtick = backtick, control = control, ...) :
-  deparse may be incomplete
-4: In dput(x, control = control) : deparse may be incomplete
-5: In deparse(expr, backtick = backtick, control = control, ...) :
-  deparse may be incomplete
-6: In deparse(expr, backtick = backtick, control = control, ...) :
-  deparse may be incomplete
-7: In dput(x, control = control) : deparse may be incomplete
-8: In deparse(expr, backtick = backtick, control = control, ...) :
-  deparse may be incomplete
-9: In deparse(expr, backtick = backtick, control = control, ...) :
-  deparse may be incomplete
+There were 12 warnings (use warnings() to see them)
 > summary(warnings())
-Summary of (a total of 9) warning messages:
-6x : In dput(x, control = control) : deparse may be incomplete
-3x : In deparse(expr, backtick = backtick, control = control,  ... :
+Summary of (a total of 12) warning messages:
+8x : In dput(x, control = control) : deparse may be incomplete
+4x : In deparse(expr, backtick = backtick, control = control,  ... :
   deparse may be incomplete
 > ## "dput    may be incomplete"
 > ## "deparse may be incomplete"
@@ -1298,5 +1283,5 @@ Summary of (a total of 9) warning messages:
 > 
 > ## at the very end
 > cat('Time elapsed: ', proc.time() - .proctime00,'\n')
-Time elapsed:  1.128 0.049 1.185 0 0 
+Time elapsed:  2.951 0.089 3.083 0 0 
 > 

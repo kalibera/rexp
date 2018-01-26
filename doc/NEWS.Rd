@@ -327,6 +327,9 @@
   \subsection{PACKAGE INSTALLATION}{
     \itemize{
       \item By default, packages are now byte-compiled on installation.
+
+      \item By default, packages are now installed including source
+            formatting/source references.
     }
   }
 

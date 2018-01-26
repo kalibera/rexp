@@ -26,13 +26,13 @@ instdirs:
 mkR1:
 	@$(MKINSTALLDIRS) $(top_builddir)/library/$(pkg)/R
 	@(f=$${TMPDIR:-/tmp}/R$$$$; \
-	  if test "$(R_KEEP_PKG_SOURCE)" = "yes"; then \
+	  if test "$(R_KEEP_PKG_SOURCE)" = "no"; then \
+	    cat $(RSRC) > "$${f}"; \
+	  else \
 	    for rsrc in $(RSRC); do \
 	      $(ECHO) "#line 1 \"$${rsrc}\"" >> "$${f}"; \
 	      cat $${rsrc} >> "$${f}"; \
 	    done; \
-	  else \
-	    cat $(RSRC) > "$${f}"; \
 	  fi; \
 	  $(SHELL) $(top_srcdir)/tools/move-if-change "$${f}" all.R)
 	@if test -f $(srcdir)/NAMESPACE;  then \
@@ -45,13 +45,13 @@ mkR2:
 	@$(MKINSTALLDIRS) $(top_builddir)/library/$(pkg)/R
 	@(f=$${TMPDIR:-/tmp}/R$$$$; \
           $(ECHO) ".packageName <- \"$(pkg)\"" >  "$${f}"; \
-	  if test "$(R_KEEP_PKG_SOURCE)" = "yes"; then \
+	  if test "$(R_KEEP_PKG_SOURCE)" = "no"; then \
+		cat `LC_COLLATE=C ls $(srcdir)/R/*.R` >> "$${f}"; \
+	  else \
 		for rsrc in `LC_COLLATE=C ls $(srcdir)/R/*.R`; do \
 		  $(ECHO) "#line 1 \"$${rsrc}\"" >> "$${f}"; \
 		    cat $${rsrc} >> "$${f}"; \
 		done; \
-	  else \
-		cat `LC_COLLATE=C ls $(srcdir)/R/*.R` >> "$${f}"; \
 	  fi; \
 	  $(SHELL) $(top_srcdir)/tools/move-if-change "$${f}" all.R)
 	@rm -f $(top_builddir)/library/$(pkg)/Meta/nsInfo.rds
@@ -63,14 +63,14 @@ mkR2:
 mkRbase:
 	@$(MKINSTALLDIRS) $(top_builddir)/library/$(pkg)/R
 	@(f=$${TMPDIR:-/tmp}/R$$$$; \
-	  if test "$(R_KEEP_PKG_SOURCE)" = "yes"; then \
+	  if test "$(R_KEEP_PKG_SOURCE)" = "no"; then \
+	    cat $(RSRC) > "$${f}"; \
+	  else \
 	    $(ECHO) > "$${f}"; \
 	    for rsrc in $(RSRC); do \
 	      $(ECHO) "#line 1 \"$${rsrc}\"" >> "$${f}"; \
 	      cat $${rsrc} >> "$${f}"; \
 	    done; \
-	  else \
-	    cat $(RSRC) > "$${f}"; \
 	  fi; \
 	  f2=$${TMPDIR:-/tmp}/R2$$$$; \
 	  sed -e "s:@WHICH@:${WHICH}:" "$${f}" > "$${f2}"; \
