@@ -756,7 +756,9 @@ static SEXP R_loadMethod(SEXP def, SEXP fname, SEXP ev)
 	}
 	SEXP e, val;
 	PROTECT(e = allocVector(LANGSXP, 4));
-	SETCAR(e, R_loadMethod_name); val = CDR(e);
+	SEXP packsym = install("methods");
+	SEXP triple = install(":::");
+	SETCAR(e, lang3(triple, packsym, R_loadMethod_name)); val = CDR(e);
 	SETCAR(val, def); val = CDR(val);
 	SETCAR(val, fname); val = CDR(val);
 	SETCAR(val, ev);
