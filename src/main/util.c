@@ -67,9 +67,9 @@ Rboolean tsConform(SEXP x, SEXP y)
 	/* tspgets should enforce this, but prior to 2.4.0
 	   had INTEGER() here */
 	if(TYPEOF(x) == REALSXP && TYPEOF(y) == REALSXP)
-	    return REAL(x)[0] == REAL(x)[0] &&
-		REAL(x)[1] == REAL(x)[1] &&
-		REAL(x)[2] == REAL(x)[2];
+	    return REAL(x)[0] == REAL(y)[0] &&
+		REAL(x)[1] == REAL(y)[1] &&
+		REAL(x)[2] == REAL(y)[2];
 	/* else fall through */
     }
     return FALSE;
