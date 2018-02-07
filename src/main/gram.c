@@ -3690,8 +3690,8 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	    break;
 	case PARSE_INCOMPLETE:
 	case PARSE_ERROR:
-	    if (ParseState.keepSrcRefs) 
-	        finalizeData();
+//	    if (ParseState.keepSrcRefs) 
+//	        finalizeData();
 	    R_PPStackTop = savestack;
 	    R_FinalizeSrcRefState();	    
 	    return R_NilValue;
@@ -3709,7 +3709,7 @@ finish:
     for (n = 0 ; n < LENGTH(rval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(rval, n, CAR(t));
     if (ParseState.keepSrcRefs) {
-	finalizeData();
+//	finalizeData();
 	rval = attachSrcrefs(rval);
     }
     R_PPStackTop = savestack;    /* UNPROTECT lots! */
@@ -3855,7 +3855,7 @@ finish:
     for (n = 0 ; n < LENGTH(rval) ; n++, t = CDR(t))
 	SET_VECTOR_ELT(rval, n, CAR(t));
     if (ParseState.keepSrcRefs) {
-	finalizeData();
+//	finalizeData();
 	rval = attachSrcrefs(rval);
     }
     R_PPStackTop = savestack; /* UNPROTECT lots! */
