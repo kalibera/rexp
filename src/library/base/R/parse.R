@@ -26,7 +26,7 @@ parse <- function(file = "", n = NULL, text = NULL, prompt = "?",
 	if (missing(srcfile)) {
 	    srcfile <- "<text>"
 	    if (keep.source)
-	       srcfile <- srcfilecopy(srcfile, text)
+	       srcfile <- srcfilecopy(srcfile, "")
 	}
 	file <- stdin()
     } else {
@@ -46,7 +46,7 @@ parse <- function(file = "", n = NULL, text = NULL, prompt = "?",
             	    close(file)
             	    file <- stdin()
         	    srcfile <-
-                        srcfilecopy(filename, text, file.mtime(filename),
+                        srcfilecopy(filename, "", file.mtime(filename),
                                     isFile = TRUE)
                 } else
 		    on.exit(close(file))

@@ -83,7 +83,7 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
 	    	lines <- readLines(file, warn = FALSE)
 	    	on.exit()
 	    	close(file)
-            	srcfile <- srcfilecopy(filename, lines, file.mtime(filename)[1],
+            	srcfile <- srcfilecopy(filename, "", file.mtime(filename)[1],
             			       isFile = TRUE)
 	    } else {
             	from_file <- TRUE
@@ -105,7 +105,7 @@ function(file, local = FALSE, echo = verbose, print.eval = echo,
     	lines <- readLines(file, warn = FALSE)
         srcfile <-
             if (isTRUE(keep.source))
-                srcfilecopy(deparse(substitute(file)), lines)
+                srcfilecopy(deparse(substitute(file)), "")
             else
                 deparse(substitute(file))
     }
@@ -259,7 +259,7 @@ function(file, envir = baseenv(), chdir = FALSE,
     on.exit(options(oop))
     if (keep.source) {
     	lines <- readLines(file, warn = FALSE)
-    	srcfile <- srcfilecopy(file, lines, file.mtime(file), isFile = TRUE)
+    	srcfile <- srcfilecopy(file, "", file.mtime(file), isFile = TRUE)
     	exprs <- parse(text = lines, srcfile = srcfile, keep.source = TRUE)
     } else
     	exprs <- parse(n = -1, file = file, srcfile = NULL, keep.source = FALSE)
