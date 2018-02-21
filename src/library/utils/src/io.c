@@ -891,6 +891,7 @@ SEXP readtablehead(SEXP args)
 	    if(quote) {
 		if(data.sepchar == 0 && c == '\\') {
 		    /* all escapes should be passed through */
+		    /* fillBuffer would not copy a backslash preceding quote */
 		    buf[nbuf++] = (char) c;
 		    c = scanchar(TRUE, &data);
 		    if(c == R_EOF) {
@@ -913,9 +914,11 @@ SEXP readtablehead(SEXP args)
 			}
 		    }
 		}
-	    } else if(!skip && firstnonwhite && strchr(data.quoteset, c)) quote = c;
-	    else if (Rspace(c) || c == data.sepchar) firstnonwhite = TRUE;
-	    else firstnonwhite = FALSE;
+	    } else if(!skip && (firstnonwhite || data.sepchar != 0) && strchr(data.quoteset, c))
+		quote = c;
+	    else if (!skip && data.sepchar == 0 && Rspace(c))
+		firstnonwhite = TRUE;
+	    else if (c != ' ' && c != '\t') firstnonwhite = FALSE;
 	    /* A line is empty only if it contains nothing before
 	       EOL, EOF or a comment char.
 	       A line containing just white space is not empty if sep=","
