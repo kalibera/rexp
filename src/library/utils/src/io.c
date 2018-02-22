@@ -917,6 +917,7 @@ SEXP readtablehead(SEXP args)
 	    } else if(!skip && (firstnonwhite || data.sepchar != 0) && strchr(data.quoteset, c))
 		quote = c;
 	    else if (!skip && data.sepchar == 0 && Rspace(c))
+		/* firstnonwhite stays true within quoted section */
 		firstnonwhite = TRUE;
 	    else if (c != ' ' && c != '\t') firstnonwhite = FALSE;
 	    /* A line is empty only if it contains nothing before
