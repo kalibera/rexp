@@ -1179,6 +1179,12 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 
     if (TYPEOF(v) == type)
 	return v;
+
+    if (ALTREP(v)) {
+	ans = ALTREP_COERCE(v, type);
+	if (ans) return ans;
+    }
+
     /* code to allow classes to extend ENVSXP, SYMSXP, etc */
     if(IS_S4_OBJECT(v) && TYPEOF(v) == S4SXP) {
 	SEXP vv = R_getS4DataSlot(v, ANYSXP);
@@ -1274,6 +1280,12 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 	case RAWSXP:
 	    ans = coerceToRaw(v);	    break;
 	case STRSXP:
+	    if (ATTRIB(v) == R_NilValue)
+		switch(TYPEOF(v)) {
+		case INTSXP:
+		case REALSXP:
+		    return R_deferred_coerceToString(v, NULL);
+		}
 	    ans = coerceToString(v);	    break;
 	case EXPRSXP:
 	    ans = coerceToExpression(v);    break;
@@ -2003,9 +2015,33 @@ SEXP attribute_hidden do_isvector(SEXP call, SEXP op, SEXP args, SEXP rho)
     return (ans);
 }
 
+static R_INLINE void copyDimAndNames(SEXP x, SEXP ans)
+{
+    if (isVector(x)) {
+	/* PROTECT/UNPROTECT are probably not needed here */
+	SEXP dims, names;
+	PROTECT(dims = getAttrib(x, R_DimSymbol));
+	if (dims != R_NilValue)
+	    setAttrib(ans, R_DimSymbol, dims);
+	UNPROTECT(1);
+	if (isArray(x)) {
+	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
+	    if (names != R_NilValue)
+		setAttrib(ans, R_DimNamesSymbol, names);
+	    UNPROTECT(1);
+	}
+	else {
+	    PROTECT(names = getAttrib(x, R_NamesSymbol));
+	    if (names != R_NilValue)
+		setAttrib(ans, R_NamesSymbol, names);
+	    UNPROTECT(1);
+	}
+    }
+}
+
 SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, dims, names, x;
+    SEXP ans, x;
     R_xlen_t i, n;
 
     checkArity(op, args);
@@ -2023,14 +2059,6 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = xlength(x);
     PROTECT(ans = allocVector(LGLSXP, n));
     int *pa = LOGICAL(ans);
-    if (isVector(x)) {
-	PROTECT(dims = getAttrib(x, R_DimSymbol));
-	if (isArray(x))
-	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
-	else
-	    PROTECT(names = getAttrib(x, R_NamesSymbol));
-    }
-    else dims = names = R_NilValue;
     switch (TYPEOF(x)) {
     case LGLSXP:
        for (i = 0; i < n; i++)
@@ -2106,20 +2134,13 @@ SEXP attribute_hidden do_isna(SEXP call, SEXP op, SEXP args, SEXP rho)
 	for (i = 0; i < n; i++)
 	    pa[i] = 0;
     }
-    if (dims != R_NilValue)
-	setAttrib(ans, R_DimSymbol, dims);
-    if (names != R_NilValue) {
-	if (isArray(x))
-	    setAttrib(ans, R_DimNamesSymbol, names);
-	else
-	    setAttrib(ans, R_NamesSymbol, names);
-    }
-    if (isVector(x))
-	UNPROTECT(2);
-    UNPROTECT(1);
-    UNPROTECT(1); /*ans*/
+
+    copyDimAndNames(x, ans);
+    UNPROTECT(2); /* args, ans */
     return ans;
 }
+
+#include <R_ext/Itermacros.h>
 
 // Check if x has missing values; the anyNA.default() method
 static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -2147,30 +2168,38 @@ static Rboolean anyNA(SEXP call, SEXP op, SEXP args, SEXP env)
     switch (xT) {
     case REALSXP:
     {
-	double *xD = REAL(x);
-	for (i = 0; i < n; i++)
-	    if (ISNAN(xD[i])) return TRUE;
+	if(REAL_NO_NA(x))
+	    return FALSE;
+	ITERATE_BY_REGION(x, xD, i, nbatch, double, REAL, {
+		for (int k = 0; k < nbatch; k++)
+		    if (ISNAN(xD[k]))
+			return TRUE;
+	    });
 	break;
     }
     case INTSXP:
     {
-	int *xI = INTEGER(x);
-	for (i = 0; i < n; i++)
-	    if (xI[i] == NA_INTEGER) return TRUE;
+	if(INTEGER_NO_NA(x))
+	    return FALSE;
+	ITERATE_BY_REGION(x, xI, i, nbatch, int, INTEGER, {
+		for (int k = 0; k < nbatch; k++)
+		    if (xI[k] == NA_INTEGER)
+			return TRUE;
+	    });
 	break;
     }
     case LGLSXP:
     {
-	int *xI = LOGICAL(x);
 	for (i = 0; i < n; i++)
-	    if (xI[i] == NA_LOGICAL) return TRUE;
+	    if (LOGICAL_ELT(x, i) == NA_LOGICAL) return TRUE;
 	break;
     }
     case CPLXSXP:
     {
-	Rcomplex *xC = COMPLEX(x);
-	for (i = 0; i < n; i++)
-	    if (ISNAN(xC[i].r) || ISNAN(xC[i].i)) return TRUE;
+	for (i = 0; i < n; i++) {
+	    Rcomplex v = COMPLEX_ELT(x, i);
+	    if (ISNAN(v.r) || ISNAN(v.i)) return TRUE;
+	}
 	break;
     }
     case STRSXP:
@@ -2254,7 +2283,7 @@ SEXP attribute_hidden do_anyNA(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ans, dims, names, x;
+    SEXP ans, x;
     R_xlen_t i, n;
 
     checkArity(op, args);
@@ -2272,14 +2301,6 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
     n = xlength(x);
     PROTECT(ans = allocVector(LGLSXP, n));
     int *pa = LOGICAL(ans);
-    if (isVector(x)) {
-	PROTECT(dims = getAttrib(x, R_DimSymbol));
-	if (isArray(x))
-	    PROTECT(names = getAttrib(x, R_DimNamesSymbol));
-	else
-	    PROTECT(names = getAttrib(x, R_NamesSymbol));
-    }
-    else dims = names = R_NilValue;
     switch (TYPEOF(x)) {
     case STRSXP:
     case RAWSXP:
@@ -2303,18 +2324,8 @@ SEXP attribute_hidden do_isnan(SEXP call, SEXP op, SEXP args, SEXP rho)
 	errorcall(call, _("default method not implemented for type '%s'"),
 		  type2char(TYPEOF(x)));
     }
-    if (dims != R_NilValue)
-	setAttrib(ans, R_DimSymbol, dims);
-    if (names != R_NilValue) {
-	if (isArray(x))
-	    setAttrib(ans, R_DimNamesSymbol, names);
-	else
-	    setAttrib(ans, R_NamesSymbol, names);
-    }
-    if (isVector(x))
-	UNPROTECT(2);
-    UNPROTECT(1);
-    UNPROTECT(1); /*ans*/
+    copyDimAndNames(x, ans);
+    UNPROTECT(2); /* args, ans*/
     return ans;
 }
 

@@ -141,14 +141,20 @@ static void SET_ALTREP_CLASS(SEXP x, SEXP class)
     R_altinteger_Elt_method_t Elt;			\
     R_altinteger_Get_region_method_t Get_region;	\
     R_altinteger_Is_sorted_method_t Is_sorted;		\
-    R_altinteger_No_NA_method_t No_NA
+    R_altinteger_No_NA_method_t No_NA;			\
+    R_altinteger_Sum_method_t Sum ;			\
+    R_altinteger_Min_method_t Min;			\
+    R_altinteger_Max_method_t Max
 
 #define ALTREAL_METHODS				\
     ALTVEC_METHODS;				\
     R_altreal_Elt_method_t Elt;			\
     R_altreal_Get_region_method_t Get_region;	\
     R_altreal_Is_sorted_method_t Is_sorted;	\
-    R_altreal_No_NA_method_t No_NA
+    R_altreal_No_NA_method_t No_NA;		\
+    R_altreal_Sum_method_t Sum;			\
+    R_altreal_Min_method_t Min;			\
+    R_altreal_Max_method_t Max
 
 #define ALTSTRING_METHODS			\
     ALTVEC_METHODS;				\
@@ -436,6 +442,38 @@ int STRING_NO_NA(SEXP x)
     return ALTREP(x) ? ALTSTRING_DISPATCH(No_NA, x) : 0;
 }
 
+SEXP ALTINTEGER_SUM(SEXP x, Rboolean narm)
+{
+    return ALTINTEGER_DISPATCH(Sum, x, narm);
+}
+
+SEXP ALTINTEGER_MIN(SEXP x, Rboolean narm)
+{
+    return ALTINTEGER_DISPATCH(Min, x, narm);
+}
+
+SEXP ALTINTEGER_MAX(SEXP x, Rboolean narm)
+{
+    return ALTINTEGER_DISPATCH(Max, x, narm);
+
+}
+
+SEXP ALTREAL_SUM(SEXP x, Rboolean narm)
+{
+    return ALTREAL_DISPATCH(Sum, x, narm);
+}
+
+SEXP ALTREAL_MIN(SEXP x, Rboolean narm)
+{
+    return ALTREAL_DISPATCH(Min, x, narm);
+}
+
+SEXP ALTREAL_MAX(SEXP x, Rboolean narm)
+{
+    return ALTREAL_DISPATCH(Max, x, narm);
+
+}
+
 
 /*
  * Not yet implemented
@@ -573,6 +611,10 @@ altinteger_Get_region_default(SEXP sx, R_xlen_t i, R_xlen_t n, int *buf)
 static int altinteger_Is_sorted_default(SEXP x) { return 0; }
 static int altinteger_No_NA_default(SEXP x) { return 0; }
 
+static SEXP altinteger_Sum_default(SEXP x, Rboolean narm) { return NULL; }
+static SEXP altinteger_Min_default(SEXP x, Rboolean narm) { return NULL; }
+static SEXP altinteger_Max_default(SEXP x, Rboolean narm) { return NULL; }
+
 static double altreal_Elt_default(SEXP x, R_xlen_t i) { return REAL(x)[i]; }
 
 static R_xlen_t
@@ -587,6 +629,10 @@ altreal_Get_region_default(SEXP sx, R_xlen_t i, R_xlen_t n, double *buf)
 
 static int altreal_Is_sorted_default(SEXP x) { return 0; }
 static int altreal_No_NA_default(SEXP x) { return 0; }
+
+static SEXP altreal_Sum_default(SEXP x, Rboolean narm) { return NULL; }
+static SEXP altreal_Min_default(SEXP x, Rboolean narm) { return NULL; }
+static SEXP altreal_Max_default(SEXP x, Rboolean narm) { return NULL; }
 
 static SEXP altstring_Elt_default(SEXP x, R_xlen_t i)
 {
@@ -621,7 +667,10 @@ static altinteger_methods_t altinteger_default_methods = {
     .Elt = altinteger_Elt_default,
     .Get_region = altinteger_Get_region_default,
     .Is_sorted = altinteger_Is_sorted_default,
-    .No_NA = altinteger_No_NA_default
+    .No_NA = altinteger_No_NA_default,
+    .Sum = altinteger_Sum_default,
+    .Min = altinteger_Min_default,
+    .Max = altinteger_Max_default    
 };
 
 static altreal_methods_t altreal_default_methods = {
@@ -639,7 +688,10 @@ static altreal_methods_t altreal_default_methods = {
     .Elt = altreal_Elt_default,
     .Get_region = altreal_Get_region_default,
     .Is_sorted = altreal_Is_sorted_default,
-    .No_NA = altreal_No_NA_default
+    .No_NA = altreal_No_NA_default,
+    .Sum = altreal_Sum_default,
+    .Min = altreal_Min_default,
+    .Max = altreal_Max_default
 };
 
 
@@ -672,7 +724,7 @@ static altstring_methods_t altstring_default_methods = {
     } while (FALSE)
 
 #define MAKE_CLASS(var, type) do {				\
-	var = allocVector(RAWSXP,sizeof(type##_methods_t));	\
+	var = allocVector(RAWSXP, sizeof(type##_methods_t));	\
 	R_PreserveObject(var);					\
 	INIT_CLASS(var, type);					\
     } while (FALSE)
@@ -701,7 +753,7 @@ make_altrep_class(int type, const char *cname, const char *pname, DllInfo *dll)
 /*  Using macros like this makes it easier to add new methods, but
     makes searching for source harder. Probably a good idea on
     balance though. */
-#define DEFINE_CLASS_CONSTRUCTOR(cls, type) \
+#define DEFINE_CLASS_CONSTRUCTOR(cls, type)			\
     R_altrep_class_t R_make_##cls##_class(const char *cname,	\
 					  const char *pname,	\
 					  DllInfo *dll)		\
@@ -753,11 +805,17 @@ DEFINE_METHOD_SETTER(altinteger, Elt)
 DEFINE_METHOD_SETTER(altinteger, Get_region)
 DEFINE_METHOD_SETTER(altinteger, Is_sorted)
 DEFINE_METHOD_SETTER(altinteger, No_NA)
+DEFINE_METHOD_SETTER(altinteger, Sum)
+DEFINE_METHOD_SETTER(altinteger, Min)
+DEFINE_METHOD_SETTER(altinteger, Max)
 
 DEFINE_METHOD_SETTER(altreal, Elt)
 DEFINE_METHOD_SETTER(altreal, Get_region)
 DEFINE_METHOD_SETTER(altreal, Is_sorted)
 DEFINE_METHOD_SETTER(altreal, No_NA)
+DEFINE_METHOD_SETTER(altreal, Sum)
+DEFINE_METHOD_SETTER(altreal, Min)
+DEFINE_METHOD_SETTER(altreal, Max)
 
 DEFINE_METHOD_SETTER(altstring, Elt)
 DEFINE_METHOD_SETTER(altstring, Set_elt)
@@ -897,7 +955,7 @@ static R_INLINE R_xlen_t compact_intseq_Length(SEXP x)
 static void *compact_intseq_Dataptr(SEXP x, Rboolean writeable)
 {
     if (COMPACT_SEQ_EXPANDED(x) == R_NilValue) {
-	/* no need to re-run if expended data exists */
+	/* no need to re-run if expanded data exists */
 	PROTECT(x);
 	SEXP info = COMPACT_SEQ_INFO(x);
 	int n = COMPACT_INTSEQ_INFO_LENGTH(info);
@@ -933,19 +991,15 @@ static const void *compact_intseq_Dataptr_or_null(SEXP x)
 
 static int compact_intseq_Elt(SEXP x, R_xlen_t i)
 {
-    /* should not get here if x is already expanded */
-    CHECK_NOT_EXPANDED(x);
-
-    SEXP info = COMPACT_SEQ_INFO(x);
-    int n1 = COMPACT_INTSEQ_INFO_FIRST(info);
-    int inc = COMPACT_INTSEQ_INFO_INCR(info);
-
-    if (inc == 1)
-	return (int) (n1 + i);
-    else if (inc == -1)
-	return (int) (n1 - i);
-    else
-	error("compact sequences with increment %d not supported yet", inc);
+    SEXP ex = COMPACT_SEQ_EXPANDED(x);
+    if (ex != R_NilValue)
+	return INTEGER0(ex)[i];
+    else {
+	SEXP info = COMPACT_SEQ_INFO(x);
+	int n1 = COMPACT_INTSEQ_INFO_FIRST(info);
+	int inc = COMPACT_INTSEQ_INFO_INCR(info);
+	return n1 + inc * i;
+    }
 }
 
 static R_xlen_t
@@ -979,10 +1033,10 @@ static int compact_intseq_Is_sorted(SEXP x)
 #ifdef COMPACT_INTSEQ_MUTABLE
     /* If the vector has been expanded it may have been modified. */
     if (COMPACT_SEQ_EXPANDED(x) != R_NilValue)
-	return 0;
+	return UNKNOWN_SORTEDNESS;
 #endif
     int inc = COMPACT_INTSEQ_INFO_INCR(COMPACT_SEQ_INFO(x));
-    return inc < 0 ? -1 : 1;
+    return inc < 0 ? KNOWN_DECR : KNOWN_INCR;
 }
 
 static int compact_intseq_No_NA(SEXP x)
@@ -993,6 +1047,29 @@ static int compact_intseq_No_NA(SEXP x)
 	return FALSE;
 #endif
     return TRUE;
+}
+
+/* XXX this also appears in summary.c. move to header file?*/
+#define R_INT_MIN (1 + INT_MIN)
+
+static SEXP compact_intseq_Sum(SEXP x, Rboolean narm)
+{
+#ifdef COMPACT_INTSEQ_MUTABLE
+    /* If the vector has been expanded it may have been modified. */
+    if (COMPACT_SEQ_EXPANDED(x) != R_NilValue) 
+	return NULL;
+#endif
+    double tmp;
+    SEXP info = COMPACT_SEQ_INFO(x);
+    R_xlen_t size = COMPACT_INTSEQ_INFO_LENGTH(info);
+    R_xlen_t n1 = COMPACT_INTSEQ_INFO_FIRST(info);
+    int inc = COMPACT_INTSEQ_INFO_INCR(info);
+    tmp = (size / 2.0) * (n1 + n1 + inc * (size - 1));
+    if(tmp > INT_MAX || tmp < R_INT_MIN)
+	/**** check for overflow of exact integer range? */
+	return ScalarReal(tmp);
+    else
+	return ScalarInteger((int) tmp);
 }
 
 
@@ -1025,6 +1102,7 @@ static void InitCompactIntegerClass()
     R_set_altinteger_Get_region_method(cls, compact_intseq_Get_region);
     R_set_altinteger_Is_sorted_method(cls, compact_intseq_Is_sorted);
     R_set_altinteger_No_NA_method(cls, compact_intseq_No_NA);
+    R_set_altinteger_Sum_method(cls, compact_intseq_Sum);
 }
 
 
@@ -1153,19 +1231,15 @@ static const void *compact_realseq_Dataptr_or_null(SEXP x)
 
 static double compact_realseq_Elt(SEXP x, R_xlen_t i)
 {
-    /* should not get here if x is already expanded */
-    CHECK_NOT_EXPANDED(x);
-
-    SEXP info = COMPACT_SEQ_INFO(x);
-    double n1 = COMPACT_REALSEQ_INFO_FIRST(info);
-    double inc = COMPACT_REALSEQ_INFO_INCR(info);
-    
-    if (inc == 1)
-	return n1 + i;
-    else if (inc == -1)
-	return n1 - i;
-    else
-	error("compact sequences with increment %f not supported yet", inc);
+    SEXP ex = COMPACT_SEQ_EXPANDED(x);
+    if (ex != R_NilValue)
+	return REAL0(ex)[i];
+    else {
+	SEXP info = COMPACT_SEQ_INFO(x);
+	double n1 = COMPACT_REALSEQ_INFO_FIRST(info);
+	double inc = COMPACT_REALSEQ_INFO_INCR(info);
+	return n1 + inc * i;
+    }
 }
 
 static R_xlen_t
@@ -1199,10 +1273,10 @@ static int compact_realseq_Is_sorted(SEXP x)
 #ifdef COMPACT_REALSEQ_MUTABLE
     /* If the vector has been expanded it may have been modified. */
     if (COMPACT_SEQ_EXPANDED(x) != R_NilValue)
-	return 0;
+	return UNKNOWN_SORTEDNESS;
 #endif
     double inc = COMPACT_REALSEQ_INFO_INCR(COMPACT_SEQ_INFO(x));
-    return inc < 0 ? -1 : 1;
+    return inc < 0 ? KNOWN_DECR : KNOWN_INCR;
 }
 
 static int compact_realseq_No_NA(SEXP x)
@@ -1213,6 +1287,20 @@ static int compact_realseq_No_NA(SEXP x)
 	return FALSE;
 #endif
     return TRUE;
+}
+
+static SEXP compact_realseq_Sum(SEXP x, Rboolean narm)
+{
+#ifdef COMPACT_INTSEQ_MUTABLE
+    /* If the vector has been expanded it may have been modified. */
+    if (COMPACT_SEQ_EXPANDED(x) != R_NilValue) 
+	return NULL;
+#endif
+    SEXP info = COMPACT_SEQ_INFO(x);
+    double size = COMPACT_REALSEQ_INFO_LENGTH(info);
+    double n1 = COMPACT_REALSEQ_INFO_FIRST(info);
+    double inc = COMPACT_REALSEQ_INFO_INCR(info);
+    return ScalarReal((size / 2.0) *(n1 + n1 + inc * (size - 1)));
 }
 
 
@@ -1245,6 +1333,7 @@ static void InitCompactRealClass()
     R_set_altreal_Get_region_method(cls, compact_realseq_Get_region);
     R_set_altreal_Is_sorted_method(cls, compact_realseq_Is_sorted);
     R_set_altreal_No_NA_method(cls, compact_realseq_No_NA);
+    R_set_altreal_Sum_method(cls, compact_realseq_Sum);
 }
 
 
@@ -1444,14 +1533,14 @@ static int deferred_string_Is_sorted(SEXP x)
     SEXP state = DEFERRED_STRING_STATE(x);
     if (state == R_NilValue)
 	/* string is fully expanded and may have been modified. */
-	return 0;
+	return UNKNOWN_SORTEDNESS;
     else {
 	/* defer to the argument */
 	SEXP arg = DEFERRED_STRING_STATE_ARG(state);
 	switch(TYPEOF(arg)) {
 	case INTSXP: return INTEGER_IS_SORTED(arg);
 	case REALSXP: return REAL_IS_SORTED(arg);
-	default: return 0;
+	default: return UNKNOWN_SORTEDNESS;
 	}
     }
 }
@@ -1730,7 +1819,7 @@ static void finalize_mmap_objects()
 
 static SEXP mmap_Serialized_state(SEXP x)
 {
-    /* If serOK is false then serialize as a regular typed vector. If
+    /* If serOK is FALSE then serialize as a regular typed vector. If
        serOK is true, then serialize information to allow the mmap to
        be reconstructed. The original file name is serialized; it will
        be expanded again when unserializing, in a context where the
@@ -2060,7 +2149,7 @@ static R_altrep_class_t wrap_real_class;
 static R_altrep_class_t wrap_string_class;
 
 /* Wrapper objects are ALTREP objects designed to hold the attributes
-   of a potentially larte object and/or meta data for the object. */
+   of a potentially large object and/or meta data for the object. */
 
 #define WRAPPER_WRAPPED(x) R_altrep_data1(x)
 #define WRAPPER_SET_WRAPPED(x, v) R_set_altrep_data1(x, v)
@@ -2091,8 +2180,8 @@ static SEXP wrapper_Duplicate(SEXP x, Rboolean deep)
 {
     SEXP data = WRAPPER_WRAPPED(x);
 
-    /* For a deel copy, duplicate the data. */
-    /* For a shallow copy, mark as immutable in teh NAMED word; with
+    /* For a deep copy, duplicate the data. */
+    /* For a shallow copy, mark as immutable in the NAMED world; with
        reference counting the reference count will be incremented when
        the data is installed in the new wrapper object. */
     if (deep)
@@ -2136,7 +2225,8 @@ static R_xlen_t wrapper_Length(SEXP x)
 static void clear_meta_data(SEXP x)
 {
     SEXP meta = WRAPPER_METADATA(x);
-    for (int i = 0; i < NMETA; i++)
+    INTEGER(meta)[0] = UNKNOWN_SORTEDNESS;
+    for (int i = 1; i < NMETA; i++)
 	INTEGER(meta)[i] = 0;
 }
 
@@ -2145,7 +2235,7 @@ static void *wrapper_Dataptr(SEXP x, Rboolean writeable)
     SEXP data = WRAPPER_WRAPPED(x);
 
     /* If the data might be shared and a writeable pointer is
-       requested, then the data needst o be duplicated now. */
+       requested, then the data needs to be duplicated now. */
     if (writeable && MAYBE_SHARED(data)) {
 	PROTECT(x);
 	WRAPPER_SET_WRAPPED(x, shallow_duplicate(data));
@@ -2186,8 +2276,8 @@ R_xlen_t wrapper_integer_Get_region(SEXP x, R_xlen_t i, R_xlen_t n, int *buf)
 
 static int wrapper_integer_Is_sorted(SEXP x)
 {
-    if (WRAPPER_SORTED(x))
-	return TRUE;
+    if (WRAPPER_SORTED(x) != UNKNOWN_SORTEDNESS)
+	return WRAPPER_SORTED(x);
     else
 	/* If the  meta data bit is not set, defer to the wrapped object. */
 	return INTEGER_IS_SORTED(WRAPPER_WRAPPED(x));
@@ -2220,8 +2310,8 @@ R_xlen_t wrapper_real_Get_region(SEXP x, R_xlen_t i, R_xlen_t n, double *buf)
 
 static int wrapper_real_Is_sorted(SEXP x)
 {
-    if (WRAPPER_SORTED(x))
-	return TRUE;
+    if (WRAPPER_SORTED(x) != UNKNOWN_SORTEDNESS)
+	return WRAPPER_SORTED(x);
     else
 	/* If the  meta data bit is not set, defer to the wrapped object. */
 	return REAL_IS_SORTED(WRAPPER_WRAPPED(x));
@@ -2248,8 +2338,8 @@ static SEXP wrapper_string_Elt(SEXP x, R_xlen_t i)
 
 static int wrapper_string_Is_sorted(SEXP x)
 {
-    if (WRAPPER_SORTED(x))
-	return TRUE;
+    if (WRAPPER_SORTED(x) != UNKNOWN_SORTEDNESS)
+	return WRAPPER_SORTED(x);
     else
 	/* If the  meta data bit is not set, defer to the wrapped object. */
 	return STRING_IS_SORTED(WRAPPER_WRAPPED(x));

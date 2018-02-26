@@ -92,11 +92,11 @@ Sys.junction(from, to)
   to the limitations of the OS's corresponding system call (see
   something like \command{man 2 rename} on a Unix-alike): in particular
   in the interpretation of \sQuote{file}: most platforms will not rename
-  files across file systems.  (On Windows, \code{file.rename} can rename
-  files but not directories between volumes.)  On platforms which allow
-  directories to be renamed, typically neither or both of \code{from}
-  and \code{to} must a directory, and if \code{to} exists it must be an
-  empty directory.
+  files from one file system to another.  (On Windows,
+  \code{file.rename} can rename files but not directories across
+  volumes.)  On platforms which allow directories to be renamed,
+  typically neither or both of \code{from} and \code{to} must a
+  directory, and if \code{to} exists it must be an empty directory.
 
   \code{file.append} attempts to append the files named by its
   second argument to those named by its first.  The \R subscript
@@ -164,7 +164,9 @@ Sys.junction(from, to)
 
   There are \sQuote{junctions} (or \sQuote{junction points}),
   unfortunately without a public API: a Windows version of the Unix
-  concept of mounting one directory on another. Function
+  concept of mounting one directory on another. A junction can link
+  directories located on the same or different local volumes of the same
+  computer, but cannot link to a network drive. Function
   \code{Sys.junction} creates one or more junctions: \code{to} should
   either specify a single existing directory or a set of non-existent
   file paths of the same length as \code{from}.  (Command
@@ -192,7 +194,8 @@ Sys.junction(from, to)
   code.  This is especially important for \code{file.rename}, which has
   OS-specific restrictions (and note that the session temporary
   directory is commonly on a different file system from the working
-  directory).
+  directory): it is only portable to use \code{file.rename} to change
+  file name(s) within a single directory.
 }
 \author{
   Ross Ihaka, Brian Ripley

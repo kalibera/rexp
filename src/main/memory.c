@@ -491,7 +491,7 @@ static int NodeClassSize[NUM_SMALL_NODE_CLASSES] = { 0, 1, 2, 4, 8, 16 };
 #define NODE_GEN_IS_YOUNGER(s,g) \
   (! NODE_IS_MARKED(s) || NODE_GENERATION(s) < (g))
 #define NODE_IS_OLDER(x, y) \
-  (NODE_IS_MARKED(x) && \
+    (NODE_IS_MARKED(x) && (y) && \
    (! NODE_IS_MARKED(y) || NODE_GENERATION(x) > NODE_GENERATION(y)))
 
 static int num_old_gens_to_collect = 0;
@@ -1385,6 +1385,8 @@ void R_RunWeakRefFinalizer(SEXP w)
 	SET_READY_TO_FINALIZE(w); /* insures removal from list on next gc */
     PROTECT(key);
     PROTECT(fun);
+    int oldintrsusp = R_interrupts_suspended;
+    R_interrupts_suspended = TRUE;
     if (isCFinalizer(fun)) {
 	/* Must be a C finalizer. */
 	R_CFinalizer_t cfun = GetCFinalizer(fun);
@@ -1396,6 +1398,7 @@ void R_RunWeakRefFinalizer(SEXP w)
 	eval(e, R_GlobalEnv);
 	UNPROTECT(1);
     }
+    R_interrupts_suspended = oldintrsusp;
     UNPROTECT(2);
 }
 

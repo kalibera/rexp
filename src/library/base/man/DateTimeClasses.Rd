@@ -25,9 +25,11 @@
 \alias{[[.POSIXct}
 \alias{[.POSIXlt}
 \alias{[<-.POSIXlt}
+\alias{[[.POSIXlt}
 \alias{as.data.frame.POSIXct}
 \alias{as.data.frame.POSIXlt}
 \alias{as.list.POSIXct}
+\alias{as.list.POSIXlt}
 \alias{.leap.seconds}
 \alias{anyNA.POSIXlt}
 \alias{is.na.POSIXlt}
@@ -107,7 +109,9 @@
   they are not necessarily set.).  Note that the internal list structure
   is somewhat hidden, as many methods (including
   \code{\link{length}(x)}, \code{\link{print}()} and \code{\link{str}})
-  apply to the abstract date-time vector, as for \code{"POSIXct"}.  The
+  apply to the abstract date-time vector, as for \code{"POSIXct"}.  As
+  from \R 3.5.0, one can extract and replace \emph{single} components
+  via \code{[} indexing with two indices (see the examples).  The
   classes correspond to the POSIX/C99 constructs of \sQuote{calendar
   time} (the \code{time_t} data type) and \sQuote{local time} (or
   broken-down time, the \code{struct tm} data type), from which they
@@ -288,6 +292,8 @@ leapS <- as.POSIXlt(.leap.seconds)
 names(leapS) ; is.list(leapS)
 ## str() "too smart" -->  need unclass(.):
 utils::str(unclass(leapS), vec.len = 7)
+## Extracting *single* components of POSIXlt objects:
+leapS[1 : 5, "year"]
 }}
 \keyword{utilities}
 \keyword{chron}

@@ -1,7 +1,7 @@
 #  File src/library/base/R/datetime.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -332,7 +332,7 @@ as.double.POSIXlt <- function(x, ...) as.double(as.POSIXct(x))
 
 ## POSIXlt is not primarily a list, but primarily an abstract vector of
 ## time stamps:
-length.POSIXlt <- function(x) length(x[[1L]])
+length.POSIXlt <- function(x) length(unclass(x)[[1L]])
 
 format.POSIXlt <- function(x, format = "", usetz = FALSE, ...)
 {
@@ -409,14 +409,14 @@ print.POSIXlt <- function(x, tz = "", usetz = TRUE, ...)
 summary.POSIXct <- function(object, digits = 15L, ...)
 {
     x <- summary.default(unclass(object), digits = digits, ...)
-    if(m <- match("NA's", names(x), 0)) {
+    if(m <- match("NA's", names(x), 0L)) {
         NAs <- as.integer(x[m])
         x <- x[-m]
         attr(x, "NAs") <- NAs
     }
-    class(x) <- c("summaryDefault", "table", oldClass(object))
-    attr(x, "tzone") <- attr(object, "tzone")
-    x
+    .POSIXct(x,
+             tz = attr(object, "tzone"),
+             cl = c("summaryDefault", "table", oldClass(object)))
 }
 
 summary.POSIXlt <- function(object, digits = 15, ...)
@@ -431,7 +431,7 @@ summary.POSIXlt <- function(object, digits = 15, ...)
                          secs = x, mins = 60*x, hours = 60*60*x,
                          days = 60*60*24*x, weeks = 60*60*24*7*x))
 
-    if (nargs() == 1) return(e1)
+    if (nargs() == 1L) return(e1)
     # only valid if one of e1 and e2 is a scalar/difftime
     if(inherits(e1, "POSIXt") && inherits(e2, "POSIXt"))
         stop("binary '+' is not defined for \"POSIXt\" objects")
@@ -451,7 +451,7 @@ summary.POSIXlt <- function(object, digits = 15, ...)
                          days = 60*60*24*x, weeks = 60*60*24*7*x))
     if(!inherits(e1, "POSIXt"))
         stop("can only subtract from \"POSIXt\" objects")
-    if (nargs() == 1) stop("unary '-' is not defined for \"POSIXt\" objects")
+    if (nargs() == 1L) stop("unary '-' is not defined for \"POSIXt\" objects")
     if(inherits(e2, "POSIXt")) return(difftime(e1, e2))
     if (inherits(e2, "difftime")) e2 <- coerceTimeUnit(e2)
     if(!is.null(attr(e2, "class")))
@@ -462,7 +462,7 @@ summary.POSIXlt <- function(object, digits = 15, ...)
 
 Ops.POSIXt <- function(e1, e2)
 {
-    if (nargs() == 1)
+    if (nargs() == 1L)
         stop(gettextf("unary '%s' not defined for \"POSIXt\" objects",
                       .Generic), domain = NA)
     boolean <- switch(.Generic, "<" = , ">" = , "==" = ,
@@ -502,10 +502,7 @@ Summary.POSIXct <- function (..., na.rm)
              domain = NA)
     args <- list(...)
     tz <- do.call("check_tzones", args)
-    val <- NextMethod(.Generic)
-    class(val) <- oldClass(args[[1L]])
-    attr(val, "tzone") <- tz
-    val
+    .POSIXct(NextMethod(.Generic), tz = tz, cl = oldClass(args[[1L]]))
 }
 
 Summary.POSIXlt <- function (..., na.rm)
@@ -523,34 +520,17 @@ Summary.POSIXlt <- function (..., na.rm)
 
 `[.POSIXct` <-
 function(x, ..., drop = TRUE)
-{
-    cl <- oldClass(x)
-    val <- NextMethod("[")
-    class(val) <- cl
-    attr(val, "tzone") <- attr(x, "tzone")
-    val
-}
+    .POSIXct(NextMethod("["), attr(x, "tzone"), oldClass(x))
 
 `[[.POSIXct` <-
 function(x, ..., drop = TRUE)
-{
-    cl <- oldClass(x)
-    val <- NextMethod("[[")
-    class(val) <- cl
-    attr(val, "tzone") <- attr(x, "tzone")
-    val
-}
+    .POSIXct(NextMethod("[["), attr(x, "tzone"), oldClass(x))
 
 `[<-.POSIXct` <-
 function(x, ..., value) {
     if(!length(value)) return(x)
     value <- unclass(as.POSIXct(value))
-    cl <- oldClass(x)
-    tz <- attr(x, "tzone")
-    x <- NextMethod(.Generic)
-    class(x) <- cl
-    attr(x, "tzone") <- tz
-    x
+    .POSIXct(NextMethod(.Generic), attr(x, "tzone"), oldClass(x))
 }
 
 as.character.POSIXt <- function(x, ...) format(x, ...)
@@ -561,13 +541,15 @@ as.list.POSIXct <- function(x, ...)
 {
     nms <- names(x)
     names(x) <- NULL
-    y <- lapply(seq_along(x), function(i) x[i])
+    y <- lapply(unclass(x), .POSIXct, attr(x, "tzone"), oldClass(x))
     names(y) <- nms
     y
 }
 
-is.na.POSIXlt <- function(x) is.na(as.POSIXct(x))
-anyNA.POSIXlt <- function(x, recursive = FALSE) anyNA(as.POSIXct(x))
+is.na.POSIXlt <- function(x)
+    is.na(as.POSIXct(x))
+anyNA.POSIXlt <- function(x, recursive = FALSE)
+    anyNA(as.POSIXct(x))
 
 ## <FIXME> check the argument validity
 ## This is documented to remove the timezone
@@ -577,7 +559,6 @@ c.POSIXct <- function(..., recursive = FALSE)
 ## we need conversion to POSIXct as POSIXlt objects can be in different tz.
 c.POSIXlt <- function(..., recursive = FALSE)
     as.POSIXlt(do.call("c", lapply(list(...), as.POSIXct)))
-
 
 
 ISOdatetime <- function(year, month, day, hour, min, sec, tz = "")
@@ -654,7 +635,7 @@ as.difftime <- function(tim, format = "%X", units = "auto")
 	if (units == "auto") stop("need explicit units for numeric conversion")
         if (!(units %in% c("secs", "mins", "hours", "days", "weeks")))
 	    stop("invalid units specified")
-        structure(tim, units = units, class = "difftime")
+        .difftime(tim, units = units)
     }
 }
 
@@ -684,9 +665,8 @@ as.double.difftime <- function(x, units = "auto", ...)
 
 as.data.frame.difftime <- as.data.frame.vector
 
-format.difftime <- function(x,...) paste(format(unclass(x),...), units(x))
-
-
+format.difftime <- function(x,...)
+    paste(format(unclass(x),...), units(x))
 
 print.difftime <- function(x, digits = getOption("digits"), ...)
 {
@@ -703,18 +683,10 @@ print.difftime <- function(x, digits = getOption("digits"), ...)
 }
 
 `[.difftime` <- function(x, ..., drop = TRUE)
-{
-    cl <- oldClass(x)
-    val <- NextMethod("[")
-    class(val) <- cl
-    attr(val, "units") <- attr(x, "units")
-    val
-}
+    .difftime(NextMethod("["), attr(x, "units"), oldClass(x))
 
 diff.difftime <- function(x, ...)
-    ## assume class is preserved (it is in diff.default):
-    structure(NextMethod("diff"), units = attr(x, "units"))
-
+    .difftime(NextMethod("diff"), attr(x, "units"), oldClass(x))
 
 Ops.difftime <- function(e1, e2)
 {
@@ -724,7 +696,7 @@ Ops.difftime <- function(e1, e2)
                secs = x, mins = 60*x, hours = 60*60*x,
                days = 60*60*24*x, weeks = 60*60*24*7*x)
     }
-    if (nargs() == 1) {
+    if (nargs() == 1L) {
         switch(.Generic, "+" = {}, "-" = {e1[] <- -unclass(e1)},
                stop(gettextf("unary '%s' not defined for \"difftime\" objects",
                              .Generic), domain = NA, call. = FALSE)
@@ -742,18 +714,18 @@ Ops.difftime <- function(e1, e2)
         NextMethod(.Generic)
     } else if(.Generic == "+" || .Generic == "-") {
         if(inherits(e1, "difftime") && !inherits(e2, "difftime"))
-            return(structure(NextMethod(.Generic),
-                             units = attr(e1, "units"), class = "difftime"))
+            return(.difftime(NextMethod(.Generic),
+                             units = attr(e1, "units")))
         if(!inherits(e1, "difftime") && inherits(e2, "difftime"))
-            return(structure(NextMethod(.Generic),
-                             units = attr(e2, "units"), class = "difftime"))
+            return(.difftime(NextMethod(.Generic),
+                             units = attr(e2, "units")))
         u1 <- attr(e1, "units")
         if(attr(e2, "units") == u1) {
-            structure(NextMethod(.Generic), units=u1, class = "difftime")
+            .difftime(NextMethod(.Generic), units = u1)
         } else {
             e1 <- coerceTimeUnit(e1)
             e2 <- coerceTimeUnit(e2)
-            structure(NextMethod(.Generic), units = "secs", class = "difftime")
+            .difftime(NextMethod(.Generic), units = "secs")
         }
     } else {
         ## '*' is covered by a specific method
@@ -1155,20 +1127,27 @@ function(x, units = c("secs", "mins", "hours", "days", "months", "years"))
 
 ## ---- additions in 1.5.0 -----
 
-`[.POSIXlt` <- function(x, ..., drop = TRUE)
+`[.POSIXlt` <- function(x, i, j, drop = TRUE)
 {
-    val <- lapply(X = x, FUN = "[", ..., drop = drop)
-    attributes(val) <- attributes(x) # need to preserve timezones
-    val
+    if(missing(j)) {
+        .POSIXlt(lapply(X = unclass(x), FUN = "[", i, drop = drop),
+                 attr(x, "tzone"), oldClass(x))
+    } else {
+        unclass(x)[[j]][i]
+    }
 }
 
-`[<-.POSIXlt` <- function(x, i, value)
+`[<-.POSIXlt` <- function(x, i, j, value)
 {
     if(!length(value)) return(x)
-    value <- unclass(as.POSIXlt(value))
     cl <- oldClass(x)
     class(x) <- NULL
-    for(n in names(x)) x[[n]][i] <- value[[n]]
+    if(missing(j)) {
+        value <- unclass(as.POSIXlt(value))
+        for(n in names(x)) x[[n]][i] <- value[[n]]
+    } else {
+        x[[j]][i] <- value
+    }
     class(x) <- cl
     x
 }
@@ -1184,17 +1163,11 @@ as.data.frame.POSIXlt <- function(x, row.names = NULL, optional = FALSE, ...)
 ## ---- additions in 1.8.0 -----
 
 rep.POSIXct <- function(x, ...)
-{
-    y <- NextMethod()
-    .POSIXct(y, attr(x, "tzone"))
-}
+    .POSIXct(NextMethod(), attr(x, "tzone"), oldClass(x))
 
 rep.POSIXlt <- function(x, ...)
-{
-    y <- lapply(X = x, FUN = rep, ...)
-    attributes(y) <- attributes(x)
-    y
-}
+    .POSIXlt(lapply(X = unclass(x), FUN = rep, ...),
+             attr(x, "tzone"), oldClass(x))
 
 diff.POSIXt <- function (x, lag = 1L, differences = 1L, ...)
 {
@@ -1237,24 +1210,45 @@ is.numeric.POSIXt <- function(x) FALSE
 
 split.POSIXct <-
 function(x, f, drop = FALSE, ...)
-    lapply(split.default(as.double(x), f, drop = drop, ...), .POSIXct,
-           tz = attr(x, "tzone"))
+    lapply(split.default(as.double(x), f, drop = drop, ...),
+           .POSIXct, attr(x, "tzone"), oldClass(x))
 
 xtfrm.POSIXct <- function(x) as.numeric(x)
 xtfrm.POSIXlt <- function(x) as.double(x)  # has POSIXlt method
 xtfrm.difftime <- function(x) as.numeric(x)
 is.numeric.difftime <- function(x) FALSE
 
+## Class generators added in 2.11.0, class order changed in 2.12.0.
 
-# class generators added in 2.11.0, class order changed in 2.12.0
-.POSIXct <- function(xx, tz = NULL)
-    structure(xx, class = c("POSIXct", "POSIXt"), tzone = tz)
+## FIXME:
+## At least temporarily avoide structure() for performance reasons.
+## .POSIXct <- function(xx, tz = NULL)
+##     structure(xx, class = c("POSIXct", "POSIXt"), tzone = tz)
+.POSIXct <- function(xx, tz = NULL, cl = c("POSIXct", "POSIXt")) {
+    class(xx) <- cl
+    attr(xx, "tzone") <- tz
+    xx
+}
 
-.POSIXlt <- function(xx, tz = NULL)
-    structure(xx, class = c("POSIXlt", "POSIXt"), tzone = tz)
+## FIXME:
+## At least temporarily avoide structure() for performance reasons.
+## .POSIXlt <- function(xx, tz = NULL)
+##     structure(xx, class = c("POSIXlt", "POSIXt"), tzone = tz)
+.POSIXlt <- function(xx, tz = NULL, cl = c("POSIXlt", "POSIXt")) {
+    class(xx) <- cl
+    attr(xx, "tzone") <- tz
+    xx
+}    
 
-.difftime <- function(xx, units)
-    structure(xx, units = units, class = "difftime")
+## FIXME:
+## At least temporarily avoide structure() for performance reasons.
+## .difftime <- function(xx, units)
+##     structure(xx, units = units, class = "difftime")
+.difftime <- function(xx, units, cl = "difftime") {
+    class(xx) <- cl
+    attr(xx, "units") <- units
+    xx
+}
 
 ## ---- additions in 2.13.0 -----
 
@@ -1269,7 +1263,7 @@ function(x, value)
     x
 }
 
-## 3.1.0
+## Added in 3.1.0.
 
 OlsonNames <- function(tzdir = NULL)
 {
@@ -1313,4 +1307,20 @@ OlsonNames <- function(tzdir = NULL)
     ans <- grep("^[ABCDEFGHIJKLMNOPQRSTUVWXYZ]", x, value = TRUE)
     if(!is.null(ver)) attr(ans, "Version") <- ver
     ans
+}
+
+## Added in 3.5.0.
+
+`[[.POSIXlt` <- function(x, ..., drop = TRUE)
+    .POSIXlt(lapply(X = unclass(x), FUN = "[[", ..., drop = drop),
+             attr(x, "tzone"), oldClass(x))
+
+as.list.POSIXlt <- function(x, ...)
+{
+    nms <- names(x)
+    names(x) <- NULL
+    y <- lapply(X = do.call(Map, c(list(list), unclass(x))),
+                FUN = .POSIXlt, attr(x, "tzone"), oldClass(x))
+    names(y) <- nms
+    y
 }
