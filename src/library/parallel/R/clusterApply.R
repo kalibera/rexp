@@ -165,7 +165,7 @@ splitRows <- function(x, ncl)
 splitCols <- function(x, ncl)
     lapply(splitIndices(ncol(x), ncl), function(i) x[, i, drop=FALSE])
 
-parLapply <- function(cl = NULL, X, fun, chunk.size = NULL, ...)
+parLapply <- function(cl = NULL, X, fun, ..., chunk.size = NULL)
 {
     cl <- defaultCluster(cl)
     if (is.null(chunk.size))
@@ -181,7 +181,7 @@ parLapply <- function(cl = NULL, X, fun, chunk.size = NULL, ...)
             quote = TRUE)
 }
 
-parLapplyLB <- function(cl = NULL, X, fun, chunk.size = NULL, ...)
+parLapplyLB <- function(cl = NULL, X, fun, ..., chunk.size = NULL)
 {
     cl <- defaultCluster(cl)
     if (is.null(chunk.size))
