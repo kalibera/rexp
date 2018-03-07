@@ -287,8 +287,13 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	}
     } 
 
-    if(lookup_baseenv_after_globalenv)
-	val = findFunWithBaseEnvAfterGlobalEnv(method, ENCLOS(top));
+    if(lookup_baseenv_after_globalenv) {
+	if (top == R_GlobalEnv)
+	    top = R_BaseEnv;
+	else
+	    top = ENCLOS(top);
+	val = findFunWithBaseEnvAfterGlobalEnv(method, top);
+    }
     else
 	val = findFunInEnvRange(method, ENCLOS(top), R_EmptyEnv);
     UNPROTECT(1);
@@ -648,8 +653,8 @@ SEXP attribute_hidden do_nextmethod(SEXP call, SEXP op, SEXP args, SEXP env)
 
     PROTECT(newcall = duplicate(cptr->call));
 
-    /* eg get("print.ts")(1) */
-    if (TYPEOF(CAR(cptr->call)) == LANGSXP)
+    /* eg get("print.ts")(1) or do.call() */
+    if (TYPEOF(CAR(cptr->call)) != SYMSXP)
        error(_("'NextMethod' called from an anonymous function"));
 
     readS3VarsFromFrame(sysp, &generic, &group, &klass, &method,

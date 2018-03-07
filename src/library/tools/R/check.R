@@ -4208,7 +4208,7 @@ add_dummies <- function(dir, Log)
                              "missing links?:",
                              ## From the byte compiler's 'warn' methods
                              "^Note: possible error in",
-                             "^Note: (break|next) may be used in wrong context: no loop is visible"
+                             "^Note: (break|next) used in wrong context: no loop is visible"
                              )
                 ## Warnings spotted by gcc with
                 ##   '-Wimplicit-function-declaration'
@@ -4448,6 +4448,14 @@ add_dummies <- function(dir, Log)
                     }
                     printLog0(Log, sprintf("See %s for details.\n",
                                            sQuote(outfile)))
+                    if(any(grepl("^Note:", lines, useBytes = TRUE)))
+                        wrapLog("Information on the location(s)",
+                                "of code generating the",
+                                paste0(sQuote("Note"), "s"),
+                                "can be obtained by re-running with",
+                                "environment variable R_KEEP_PKG_SOURCE",
+                                "set to 'yes'.\n")
+
                 } else if(length(notes)) {
                     noteLog(Log, "Found the following warnings:")
                     printLog0(Log, .format_lines_with_indent(notes), "\n")

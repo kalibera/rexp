@@ -9,7 +9,7 @@ fi
 DYLIB_EXT=`${R_HOME}/bin/R CMD config DYLIB_EXT`
 tools_classpath=${R_SHARE_DIR}/java
 
-revision='$Rev: 74046 $'
+revision='$Rev: 74361 $'
 version=`set - ${revision}; echo ${2}`
 version="R Java configurator: ${R_VERSION} (r${version})
 
@@ -163,7 +163,10 @@ else
     echo "Java compiler    : ${javac_works}"
 fi
 
-## FIXME: javah is deprecated.
+## FIXME: 
+## javah is deprecated in Java 9 and removed in 2018-03 snapshots.
+## Worse, on macOS /usr/bin/javah still exists but links to a non-existent file
+##'javac -h' replaces 'javah -d' so this needs changes in e.g. rJava.
 if test -z "$JAVAH"; then
     save_IFS=$IFS; IFS=:
     for dir in ${JAVA_PATH}; do
