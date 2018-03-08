@@ -203,18 +203,48 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
     varenv <- new.env(hash = TRUE)
     envenv <- new.env(hash = TRUE)
 
+    srcfilehook <- function(e, bindings) {
+        lazy <- c("lines", "parseData")
+        bnames <- names(bindings)
+        lnames <- intersect(bnames, lazy)
+        if (length(lnames)) {
+            enames <- setdiff(bnames, lazy)
+            edata <- list(bindings = bindings[enames],
+                          enclos = parent.env(e),
+                          attributes = attributes(e),
+                          isS4 = isS4(e),
+                          locked = environmentIsLocked(e))
+            ekey <- lazyLoadDBinsertValue(edata, datafile, ascii,
+                          compress, envhook)
+            lkeys <- lapply(lnames, function(varname) {
+                lazyLoadDBinsertValue(bindings[[varname]], datafile,
+                                      ascii, compress, envhook)
+            })
+            names(lkeys) <- lnames
+            list(eagerKey = ekey, lazyKeys = lkeys)
+        }
+    }
+
     envhook <- function(e) {
         if (is.environment(e)) {
             name <- table$getname(e)
             if (is.null(name)) {
                 name <- table$insert(e)
-                data <- list(bindings = envlist(e),
-                             enclos = parent.env(e),
-                             attributes = attributes(e),
-                             isS4 = isS4(e),
-                             locked = environmentIsLocked(e))
-                key <- lazyLoadDBinsertValue(data, datafile, ascii,
-                                             compress, envhook)
+                bindings <- envlist(e)
+                key <- NULL
+
+                if (inherits(e, "srcfile"))
+                    key <- srcfilehook(e, bindings)
+
+                if (is.null(key)) {
+                    data <- list(bindings = envlist(e),
+                                 enclos = parent.env(e),
+                                 attributes = attributes(e),
+                                 isS4 = isS4(e),
+                                 locked = environmentIsLocked(e))
+                    key <- lazyLoadDBinsertValue(data, datafile, ascii,
+                                                 compress, envhook)
+                }
                 assign(name, key, envir = envenv)
             }
             name

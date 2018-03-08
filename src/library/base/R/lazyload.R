@@ -67,7 +67,8 @@ lazyLoadDBexec <- function(filebase, fun, filter)
             e <- mkenv()
             envenv[[n]] <- e           # MUST do this immediately
             key <- env[[n]]
-            data <- lazyLoadDBfetch(key, datafile, compressed, envhook)
+            ekey <- if (is.list(key)) key$eagerKey else key
+            data <- lazyLoadDBfetch(ekey, datafile, compressed, envhook)
             ## comment from r41494
             ## modified the loading of old environments, so that those
             ## serialized with parent.env NULL are loaded with the
@@ -80,6 +81,12 @@ lazyLoadDBexec <- function(filebase, fun, filter)
                 attributes(e) <- data$attributes
             if (! is.null(data$isS4) && data$isS4)
                 .Internal(setS4Object(e, TRUE, TRUE))
+
+            if (is.list(key)) {
+                expr <- quote(lazyLoadDBfetch(KEY, datafile, compressed, envhook))
+                .Internal(makeLazy(names(key$lazyKeys), key$lazyKeys, expr,
+                    environment(), e))
+            }
             if (! is.null(data$locked) && data$locked)
                 .Internal(lockEnvironment(e, FALSE))
             e
