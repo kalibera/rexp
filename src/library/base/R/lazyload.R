@@ -1,7 +1,7 @@
 #  File src/library/base/R/lazyload.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -82,10 +82,12 @@ lazyLoadDBexec <- function(filebase, fun, filter)
             if (! is.null(data$isS4) && data$isS4)
                 .Internal(setS4Object(e, TRUE, TRUE))
 
+            ## lazily loaded bindings (used e.g. for parseData and lines from
+            ## source references)
             if (is.list(key)) {
                 expr <- quote(lazyLoadDBfetch(KEY, datafile, compressed, envhook))
                 .Internal(makeLazy(names(key$lazyKeys), key$lazyKeys, expr,
-                    environment(), e))
+                    parent.env(environment()), e))
             }
             if (! is.null(data$locked) && data$locked)
                 .Internal(lockEnvironment(e, FALSE))

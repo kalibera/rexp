@@ -1,7 +1,7 @@
 #  File src/library/tools/R/makeLazyLoad.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -203,8 +203,11 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
     varenv <- new.env(hash = TRUE)
     envenv <- new.env(hash = TRUE)
 
-    srcfilehook <- function(e, bindings) {
-        lazy <- c("lines", "parseData")
+    # bindings of names from "lazy" will be serialized independently so that
+    # they can be loaded lazily, after the other bindings have already been
+    # eagerly loaded
+
+    lazyenvhook <- function(e, bindings, lazy) {
         bnames <- names(bindings)
         lnames <- intersect(bnames, lazy)
         if (length(lnames)) {
@@ -234,7 +237,7 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
                 key <- NULL
 
                 if (inherits(e, "srcfile"))
-                    key <- srcfilehook(e, bindings)
+                    key <- lazyenvhook(e, bindings, c("lines", "parseData"))
 
                 if (is.null(key)) {
                     data <- list(bindings = envlist(e),
