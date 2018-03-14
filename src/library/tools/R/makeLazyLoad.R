@@ -240,7 +240,7 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
                     key <- lazyenvhook(e, bindings, c("lines", "parseData"))
 
                 if (is.null(key)) {
-                    data <- list(bindings = envlist(e),
+                    data <- list(bindings = bindings,
                                  enclos = parent.env(e),
                                  attributes = attributes(e),
                                  isS4 = isS4(e),
