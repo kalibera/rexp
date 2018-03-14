@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2017  The R Core Team
+ *  Copyright (C) 1995--2018  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -988,20 +988,14 @@ OutComplexVec(R_outpstream_t stream, SEXP s, R_xlen_t length)
     }
 }
 
-static Rboolean dontcompile = FALSE;
-
-static void dontcompile_cleanup(void *data)
-{
-    dontcompile = (data == R_TrueValue) ? TRUE : FALSE;
-}
-
 static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 {
     int i;
     SEXP t;
 
     if (R_compile_pkgs && TYPEOF(s) == CLOSXP && TYPEOF(BODY(s)) != BCODESXP &&
-        !R_disable_bytecode && !dontcompile) {
+        !R_disable_bytecode &&
+        (!IS_S4_OBJECT(s) || !inherits(s, "refMethodDef"))) {
 
 	SEXP new_s;
 	R_compile_pkgs = FALSE;
@@ -1159,23 +1153,8 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 	case EXPRSXP:
 	    len = XLENGTH(s);
 	    WriteLENGTH(stream, s);
-	    for (R_xlen_t ix = 0; ix < len; ix++) {
-                SEXP se = VECTOR_ELT(s, ix);
-		if (R_compile_pkgs && IS_S4_OBJECT(se) &&
-		    inherits(se, "refMethodDef")) {
-
-		    RCNTXT cntxt;
-		    begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv,
-		                 R_BaseEnv, R_NilValue, R_NilValue);
-		    cntxt.cend = &dontcompile_cleanup;
-		    cntxt.cenddata = dontcompile ? R_TrueValue : R_FalseValue;
-		    dontcompile = TRUE;
-		    WriteItem(se, ref_table, stream);
-		    dontcompile = (cntxt.cenddata == R_TrueValue) ? TRUE : FALSE;
-		    endcontext(&cntxt);
-                } else
-		    WriteItem(se, ref_table, stream);
-            }
+	    for (R_xlen_t ix = 0; ix < len; ix++)
+		WriteItem(VECTOR_ELT(s, ix), ref_table, stream);
 	    break;
 	case BCODESXP:
 	    WriteBC(s, ref_table, stream);
