@@ -343,6 +343,11 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     value = findVarInFrame(mtable, install(buf));
     if(value == R_UnboundValue)
 	value = R_NilValue;
+    if(TYPEOF(value) == PROMSXP) {
+	PROTECT(value);
+	nprotect++;
+	value = eval(value, R_GlobalEnv);
+    }
     UNPROTECT(nprotect);
     return(value);
 }
@@ -802,7 +807,13 @@ static SEXP R_selectByPackage(SEXP table, SEXP classes, int nargs) {
      to do inherited calculation */
     SEXP sym = install(buf);
     vmaxset(vmax);
-    return findVarInFrame(table, sym);
+    SEXP res = findVarInFrame(table, sym);
+    if (TYPEOF(res) == PROMSXP) {
+	PROTECT(res);
+	res = eval(res, R_GlobalEnv);
+	UNPROTECT(1);
+    }
+    return res;
 }
 
 static const char *
@@ -881,6 +892,11 @@ SEXP R_getClassFromCache(SEXP class, SEXP table)
 	if (LENGTH(class) == 0) return R_NilValue;
 	SEXP package = PACKAGE_SLOT(class);
 	value = findVarInFrame(table, installTrChar(STRING_ELT(class, 0)));
+	if(TYPEOF(value) == PROMSXP) {
+	    PROTECT(value);
+	    value = eval(value, R_GlobalEnv);
+	    UNPROTECT(1);
+	}
 	if(value == R_UnboundValue)
 	    return R_NilValue;
 	else if(TYPEOF(package) == STRSXP) {
@@ -1038,6 +1054,11 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	    bufptr++;
     }
     method = findVarInFrame(mtable, install(buf));
+    if (TYPEOF(method) == PROMSXP) {
+	PROTECT(method);
+	method = eval(method, R_GlobalEnv);
+	UNPROTECT(1);
+    }
     vmaxset(vmax);
     if(DUPLICATE_CLASS_CASE(method)) {
 	PROTECT(method);

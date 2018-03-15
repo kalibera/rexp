@@ -228,6 +228,13 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
         }
     }
 
+    s4envhook <- function(e, bindings, defclass) {
+       lazy <- sapply(bindings, function(b) {
+                   isS4(b) && inherits(b, defclass)
+               })
+       lazyenvhook(e, bindings, names(bindings)[lazy])
+    }
+
     envhook <- function(e) {
         if (is.environment(e)) {
             name <- table$getname(e)
@@ -239,8 +246,18 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
                 if (inherits(e, "srcfile"))
                     key <- lazyenvhook(e, bindings, c("lines", "parseData"))
 
+                if (is.null(key) && length(bindings)) {
+                    first <- bindings[[1]]
+                    if (!missing(first) && isS4(first)) {
+                         if (inherits(first, "refMethodDef"))
+                             key <- s4envhook(e, bindings, "refMethodDef")
+                         else if (inherits(first, "MethodDefinition"))
+                             key <- s4envhook(e, bindings, "MethodDefinition")
+                    }
+                }
+
                 if (is.null(key)) {
-                    data <- list(bindings = envlist(e),
+                    data <- list(bindings = bindings,
                                  enclos = parent.env(e),
                                  attributes = attributes(e),
                                  isS4 = isS4(e),
