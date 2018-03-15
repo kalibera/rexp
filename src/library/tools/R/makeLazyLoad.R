@@ -235,6 +235,13 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
        lazyenvhook(e, bindings, names(bindings)[lazy])
     }
 
+    cloenvhook <- function(e, bindings) {
+       lazy <- sapply(bindings, function(b) {
+                   typeof(b) == "closure"
+               })
+       lazyenvhook(e, bindings, names(bindings)[lazy])
+    }
+
     envhook <- function(e) {
         if (is.environment(e)) {
             name <- table$getname(e)
@@ -254,6 +261,10 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
                          else if (inherits(first, "MethodDefinition"))
                              key <- s4envhook(e, bindings, "MethodDefinition")
                     }
+                }
+
+                if (is.null(key) && length(bindings)) {
+                    key <- cloenvhook(e, bindings)
                 }
 
                 if (is.null(key)) {
