@@ -60,6 +60,10 @@ lazyLoadDBexec <- function(filebase, fun, filter)
     compressed <- map$compressed
     list2env(map$references, env)
     envenv <- mkenv()
+    dummyload <- function(KEY) {
+      cat("ATTEMPT TO LOAD =================== ", KEY[1], KEY[2], "\n")
+      NULL
+    }
     envhook <- function(n) {
         if (existsInFrame(n, envenv))
             envenv[[n]]
@@ -84,8 +88,12 @@ lazyLoadDBexec <- function(filebase, fun, filter)
 
             ## lazily loaded bindings (used e.g. for parseData and lines from
             ## source references)
-            if (is.list(key)) {
-                expr <- quote(lazyLoadDBfetch(KEY, datafile, compressed, envhook))
+            if (FALSE && is.list(key)) {
+		sapply(names(key$lazyKeys), function(n) {
+                  cat("PREPARE", n, key$lazyKeys[[n]][1], key$lazyKeys[[n]][2], "\n")
+                })
+#                expr <- quote(lazyLoadDBfetch(KEY, datafile, compressed, envhook))
+                expr <- quote(dummyload(KEY))
                 .Internal(makeLazy(names(key$lazyKeys), key$lazyKeys, expr,
                     parent.env(environment()), e))
             }

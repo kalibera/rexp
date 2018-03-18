@@ -2987,6 +2987,8 @@ static SEXP readRawFromFile(SEXP file, SEXP key)
 
     offset = INTEGER(key)[0];
     len = INTEGER(key)[1];
+    
+//    REprintf("READ %d %d\n", offset, len);
 
     val = allocVector(RAWSXP, len);
     /* Do we have this database cached? */
