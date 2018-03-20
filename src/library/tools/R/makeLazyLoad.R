@@ -198,7 +198,9 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
 
     mapfile <- paste0(filebase, ".rdx")
     datafile <- paste0(filebase, ".rdb")
+    datafile_sref <- paste0(filebase, "_sref.rdb")
     close(file(datafile, "wb")) # truncate to zero
+    close(file(datafile_sref, "wb")) # truncate to zero
     table <- envtable()
     varenv <- new.env(hash = TRUE)
     envenv <- new.env(hash = TRUE)
@@ -219,14 +221,12 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
                           locked = environmentIsLocked(e))
             ekey <- lazyLoadDBinsertValue(edata, datafile, ascii,
                           compress, envhook)
-#            lkeys <- lapply(lnames, function(varname) {
-#                lazyLoadDBinsertValue(bindings[[varname]], datafile,
-#                                      ascii, compress, envhook)
-#            })
-#            names(lkeys) <- lnames
-#            list(eagerKey = ekey, lazyKeys = lkeys)
-             # experiment - drop lazy data
-             ekey
+            lkeys <- lapply(lnames, function(varname) {
+                lazyLoadDBinsertValue(bindings[[varname]], datafile_sref,
+                                      ascii, compress, envhook)
+            })
+            names(lkeys) <- lnames
+            list(eagerKey = ekey, lazyKeys = lkeys)
         }
     }
 

@@ -54,6 +54,7 @@ lazyLoadDBexec <- function(filebase, fun, filter)
     ##
     mapfile <- glue(filebase, "rdx", sep = ".")
     datafile <- glue(filebase, "rdb", sep = ".")
+    datafile_sref <- glue(paste0(filebase, "_sref"), "rdb", sep = ".")
     env <- mkenv()
     map <- readRDS(mapfile)
     vars <- names(map$variables)
@@ -88,12 +89,8 @@ lazyLoadDBexec <- function(filebase, fun, filter)
 
             ## lazily loaded bindings (used e.g. for parseData and lines from
             ## source references)
-            if (FALSE && is.list(key)) {
-		sapply(names(key$lazyKeys), function(n) {
-                  cat("PREPARE", n, key$lazyKeys[[n]][1], key$lazyKeys[[n]][2], "\n")
-                })
-#                expr <- quote(lazyLoadDBfetch(KEY, datafile, compressed, envhook))
-                expr <- quote(dummyload(KEY))
+            if (is.list(key)) {
+                expr <- quote(lazyLoadDBfetch(KEY, datafile_sref, compressed, envhook))
                 .Internal(makeLazy(names(key$lazyKeys), key$lazyKeys, expr,
                     parent.env(environment()), e))
             }
