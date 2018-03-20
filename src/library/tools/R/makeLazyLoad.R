@@ -219,12 +219,14 @@ makeLazyLoadDB <- function(from, filebase, compress = TRUE, ascii = FALSE,
                           locked = environmentIsLocked(e))
             ekey <- lazyLoadDBinsertValue(edata, datafile, ascii,
                           compress, envhook)
-            lkeys <- lapply(lnames, function(varname) {
-                lazyLoadDBinsertValue(bindings[[varname]], datafile,
-                                      ascii, compress, envhook)
-            })
-            names(lkeys) <- lnames
-            list(eagerKey = ekey, lazyKeys = lkeys)
+#            lkeys <- lapply(lnames, function(varname) {
+#                lazyLoadDBinsertValue(bindings[[varname]], datafile,
+#                                      ascii, compress, envhook)
+#            })
+#            names(lkeys) <- lnames
+#            list(eagerKey = ekey, lazyKeys = lkeys)
+             # experiment - drop lazy data
+             ekey
         }
     }
 
