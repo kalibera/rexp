@@ -269,10 +269,10 @@ as.POSIXlt.default <- function(x, tz = "", optional = FALSE, ...)
               domain = NA)
 }
 
+
 as.POSIXct <- function(x, tz = "", ...) UseMethod("as.POSIXct")
 
 as.POSIXct.Date <- function(x, ...) .POSIXct(unclass(x)*86400)
-
 
 ## ## Moved to package date
 ## as.POSIXct.date <- function(x, ...)
@@ -328,11 +328,17 @@ as.POSIXct.default <- function(x, tz = "", ...)
          domain = NA)
 }
 
+`length<-.POSIXct` <- function(x, value)
+    .POSIXct(NextMethod(), attr(x, "tzone"), oldClass(x))
+
 as.double.POSIXlt <- function(x, ...) as.double(as.POSIXct(x))
 
 ## POSIXlt is not primarily a list, but primarily an abstract vector of
 ## time stamps:
 length.POSIXlt <- function(x) length(unclass(x)[[1L]])
+`length<-.POSIXlt` <- function(x, value)
+    .POSIXlt(lapply(unclass(x), `length<-`, value),
+             attr(x, "tzone"), oldClass(x))
 
 format.POSIXlt <- function(x, format = "", usetz = FALSE, ...)
 {
@@ -825,10 +831,14 @@ function(..., recursive = FALSE)
     }
 }
 
+`length<-.difftime` <- 
+function(x, value)
+    .difftime(NextMethod(), attr(x, "units"), oldClass(x))
+    
 ## ----- convenience functions -----
 
 seq.POSIXt <-
-    function(from, to, by, length.out = NULL, along.with = NULL, ...)
+function(from, to, by, length.out = NULL, along.with = NULL, ...)
 {
     if (missing(from)) stop("'from' must be specified")
     if (!inherits(from, "POSIXt")) stop("'from' must be a \"POSIXt\" object")
@@ -1091,7 +1101,7 @@ function(x, units = c("secs", "mins", "hours", "days", "months", "years"))
         y[up] <- lu[up]
         y
     }
-    
+
     ## this gets the default from the generic's 2nd arg 'digits = 0' :
     units <- if(is.numeric(units) && units == 0.) "secs" else match.arg(units)
 
@@ -1238,7 +1248,7 @@ is.numeric.difftime <- function(x) FALSE
     class(xx) <- cl
     attr(xx, "tzone") <- tz
     xx
-}    
+}
 
 ## FIXME:
 ## At least temporarily avoide structure() for performance reasons.

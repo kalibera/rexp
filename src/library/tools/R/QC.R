@@ -1,7 +1,7 @@
 #  File src/library/tools/R/QC.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2017 The R Core Team
+#  Copyright (C) 1995-2018 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -81,8 +81,8 @@ conceptual_base_code <- c("c.default")
 .haveRds <- function(dir)
 {
     ## either source package or pre-2.10.0 installed package
-    if (dir.exists(file.path(dir, "man"))) return(TRUE)
-    file.exists((file.path(dir, "help", "paths.rds")))
+    dir.exists (file.path(dir, "man")) ||
+    file.exists(file.path(dir, "help", "paths.rds"))
 }
 
 ### * undoc/F/out
@@ -316,6 +316,10 @@ function(x, ...)
 
 ### * codoc
 
+##
+is_data_for_dataset <- function(e) ## trigger for data(foo) or data(foo, package="bar") and similar
+    length(e) >= 2L && e[[1L]] == quote(data) && e[[2L]] != quote(...) && length(e) <= 4L
+
 codoc <-
 function(package, dir, lib.loc = NULL,
          use.values = NULL, verbose = getOption("verbose"))
@@ -539,7 +543,7 @@ function(package, dir, lib.loc = NULL,
         ## Compare the formals of the function in the code named 'fName'
         ## and formals 'ffd' obtained from the documentation.
         ffc <- function_args_in_code[[fName]]
-        if(identical(use.values, FALSE)) {
+        if(isFALSE(use.values)) {
             ffc <- names(ffc)
             ffd <- names(ffd)
             ok <- identical(ffc, ffd)
@@ -549,7 +553,7 @@ function(package, dir, lib.loc = NULL,
             else {
                 vffc <- as.character(ffc) # values
                 vffd <- as.character(ffd) # values
-                if(!identical(use.values, TRUE)) {
+                if(!isTRUE(use.values)) {
                     ind <- nzchar(as.character(ffd))
                     vffc <- vffc[ind]
                     vffd <- vffd[ind]
@@ -602,9 +606,7 @@ function(package, dir, lib.loc = NULL,
                   sapply(exprs[ind], deparse))
             exprs <- exprs[!ind]
         }
-        ind <- vapply(exprs, function(e) (length(e) == 2L) &&
-                                         e[[1L]] == as.symbol("data"),
-                      NA, USE.NAMES=FALSE)
+        ind <- vapply(exprs, is_data_for_dataset, NA, USE.NAMES=FALSE)
         if(any(ind)) {
             data_sets <- sapply(exprs[ind],
                                 function(e) as.character(e[[2L]]))
@@ -619,7 +621,7 @@ function(package, dir, lib.loc = NULL,
         replace_exprs <- exprs[ind]
         exprs <- exprs[!ind]
         ## Ordinary functions.
-        functions <- sapply(exprs, function(e) as.character(e[[1L]]))
+        functions <- vapply(exprs, function(e) as.character(e[[1L]]), "")
         ## Catch assignments: checkDocFiles() will report these, so drop
         ## them here.
         ## And also unary/binary operators
@@ -1331,7 +1333,7 @@ function(package, dir, lib.loc = NULL)
                function(e) .Rd_deparse(.Rd_drop_comments(e)))
     ## </FIXME>
     db_usages <- lapply(db_usages, .parse_usage_as_much_as_possible)
-    ind <- as.logical(sapply(db_usages,
+    ind <- as.logical(lapply(db_usages,
                              function(x) !is.null(attr(x, "bad_lines"))))
     bad_lines <- lapply(db_usages[ind], attr, "bad_lines")
 
@@ -1359,15 +1361,11 @@ function(package, dir, lib.loc = NULL)
         ## Determine function names ('functions') and corresponding
         ## arguments ('arg_names_in_usage') in the \usage.  Note how we
         ## try to deal with data set documentation.
-        ind <- as.logical(sapply(exprs,
-                                 function(e)
-                                 ((length(e) > 1L) &&
-                                  !((length(e) == 2L)
-                                    && e[[1L]] == as.symbol("data")))))
+        ind <- as.logical( ## as.logical(lapply( * )) : more "defensive" than vapply() [?]
+            lapply(exprs, function(e) length(e) > 1L && !is_data_for_dataset(e)))
         exprs <- exprs[ind]
         ## Split out replacement function usages.
-        ind <- as.logical(sapply(exprs,
-                                 .is_call_from_replacement_function_usage))
+        ind <- as.logical(lapply(exprs, .is_call_from_replacement_function_usage))
         replace_exprs <- exprs[ind]
         exprs <- exprs[!ind]
         ## Ordinary functions.
@@ -2059,7 +2057,7 @@ function(package, dir, file, lib.loc = NULL,
             if(deparse(e[[1L]])[1L] %in% FF_funs) {
                 if(registration) check_registration(e, fr)
                 dup <- e[["DUP"]]
-                if(!is.null(dup) && !identical(dup, TRUE))
+                if(!is.null(dup) && !isTRUE(dup))
                     dup_false <<- c(dup_false, e)
                 this <- ""
                 this <- parg <- e[["PACKAGE"]]
@@ -2864,7 +2862,7 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE,
         }
 
     if(length(dir) != 1L)
-        stop("argument 'package' must be of length 1")
+        stop("The package 'dir' argument must be of length 1")
 
     ## We definitely need a valid DESCRIPTION file.
     db <- .read_description(file.path(dir, "DESCRIPTION"))
@@ -3043,6 +3041,11 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE,
         if(length(hd)) bad_depends$hdOnly <- hd
     }
 
+    ## Check RdMacros.
+    RM <- setdiff(.get_requires_from_package_db(db, "RdMacros"),
+                  c(depends, imports, suggests))
+    if(length(RM)) bad_depends$missing_rdmacros_depends <- RM
+
     class(bad_depends) <- "check_package_depends"
     bad_depends
 }
@@ -3115,10 +3118,18 @@ function(x, ...)
           c(if(length(bad) > 1L) {
                 c("Vignette dependencies not required:", .pretty_format(bad))
             } else {
-                sprintf("Vignette dependencies not required: %s", sQuote(bad))
+                sprintf("Vignette dependency not required: %s", sQuote(bad))
             },
             strwrap(gettextf("Vignette dependencies (%s entries) must be contained in the DESCRIPTION Depends/Suggests/Imports entries.",
                              "\\VignetteDepends{}")),
+            "")
+      },
+      if(length(bad <- x$missing_rdmacros_depends)) {
+          c(if(length(bad) > 1L)
+                .pretty_format2("RdMacros packages not required:", bad)
+            else
+                sprintf("RdMacros package not required: %s", sQuote(bad)),
+            strwrap("RdMacros packages must be contained in the DESCRIPTION Imports/Suggests/Depends entries."),
             "")
       },
       if(length(bad <- x$missing_namespace_depends) > 1L) {
@@ -3145,7 +3156,7 @@ function(x, ...)
             "")
       }
       )
-  }
+}
 
 ### * .check_package_description
 
@@ -3368,7 +3379,7 @@ function(x, ...)
         }
         writeLines("")
     }
-    if(identical(x$bad_vignettebuilder, TRUE)) {
+    if(isTRUE(x$bad_vignettebuilder)) {
         writeLines(c(gettext("Invalid VignetteBuilder field."),
                      strwrap(gettextf("This field must contain one or more packages (and no version requirement).")),
                      ""))
@@ -3379,10 +3390,10 @@ function(x, ...)
                      strwrap(gettextf("Packages with priorities 'base' or 'recommended' or 'defunct-base' must already be known to R.")),
                      ""))
 
-    if(identical(x$bad_Title, TRUE))
+    if(isTRUE(x$bad_Title))
         writeLines(gettext("Malformed Title field: should not end in a period."))
 
-    if(identical(x$bad_Description, TRUE))
+    if(isTRUE(x$bad_Description))
         writeLines(gettext("Malformed Description field: should contain one or more complete sentences."))
 
     xx<- x; xx$bad_Title <- xx$bad_Description <- NULL
@@ -4982,8 +4993,7 @@ function(x, ...)
                                sQuote("installed.packages")),
                       exdent = 2L),
               gettextf("See section %s in '%s'.",
-                       sQuote("Good practice"),
-                       "?.onAttach")
+                       sQuote("Good practice"), "?.onAttach")
               )
     }
     res
@@ -5398,7 +5408,7 @@ function(package, dir, lib.loc = NULL)
                     ## (BTW, what if character.only is given a value
                     ## which is an expression evaluating to TRUE?)
                     dunno <- FALSE
-                    if(identical(mc$character.only, TRUE)
+                    if(isTRUE(mc$character.only)
                        && !identical(class(pkg), "character"))
                         dunno <- TRUE
                     ## </NOTE>
@@ -5777,7 +5787,7 @@ function(x, ...)
                          sQuote(xxx)), msg)
           }
       },
-      if(identical(x$imp3self, TRUE)) {
+      if(isTRUE(x$imp3self)) {
           msg <-
               c("There are ::: calls to the package's namespace in its code.",
                 "A package almost never needs to use ::: for its own objects:")
@@ -5853,7 +5863,7 @@ function(db, files)
                         pos <- which(!is.na(pmatch(names(e),
                                                    "character.only")))
                         if(length(pos)
-                           && identical(e[[pos]], TRUE)
+                           && isTRUE(e[[pos]])
                            && !identical(class(e[[2L]]), "character"))
                             dunno <- TRUE
                         ## </NOTE>
@@ -7498,7 +7508,7 @@ function(x, ...)
                           lapply(s, paste, collapse = ", "))),
                 collapse = "\n")
       },
-      if(identical(x$foss_with_BuildVignettes, TRUE)) {
+      if(isTRUE(x$foss_with_BuildVignettes)) {
           "FOSS licence with BuildVignettes: false"
       },
       if(length(y <- x$fields)) {
@@ -7594,7 +7604,7 @@ function(x, ...)
                 collapse = "\n")
       },
       if(length(y <- x$vignette_sources_only_in_inst_doc)) {
-          if(identical(x$have_vignettes_dir, FALSE))
+          if(isFALSE(x$have_vignettes_dir))
               paste(c("Vignette sources in 'inst/doc' with no 'vignettes' directory:",
                       strwrap(paste(sQuote(y), collapse = ", "),
                               indent = 2L, exdent = 2L),
@@ -8297,8 +8307,8 @@ function(env)
 function(x)
 {
     ((length(x) == 3L)
-     && (identical(x[[1L]], as.symbol("<-")))
-     && (length(x[[2L]]) > 1L)
+     && identical(x[[1L]], quote(`<-`))
+     && (length(  x[[2L]]) > 1L)
      && is.symbol(x[[3L]]))
 }
 
