@@ -1714,6 +1714,54 @@ stopifnot(is.null(getO("foobar")))
 ## notably "killing"  parallelMap::getParallelOptions()
 
 
+## Mantel-Haenszel test in "large" case, PR#17383:
+set.seed(101)
+aTab <- table(
+    educ = factor(sample(1:3, replace=TRUE, size=n)),
+    score= factor(sample(1:5, replace=TRUE, size=n)),
+    sex  = sample(c("M","F"), replace=TRUE, size=n))
+(MT <- mantelhaen.test(aTab))
+stopifnot(all.equal(
+    lapply(MT[1:3], unname),
+    list(statistic = 7.766963, parameter = 8, p.value = 0.4565587), tol = 6e-6))
+## gave integer overflow and error in R <= 3.4.x
+
+
+## check for incorect inlining of named logicals
+foo <- compiler::cmpfun(function() c("bar" = TRUE),
+                        options = list(optimize = 3))
+stopifnot(identical(names(foo()), "bar"))
+foo <- compiler::cmpfun(function() c("bar" = FALSE),
+                        options = list(optimize = 3))
+stopifnot(identical(names(foo()), "bar"))
+## Failed after changes to use isTRUE/isFALSE instead of identical in r74403.
+
+
+## check that reverse sort is stable
+x <- sort(c(1, 1, 3))
+stopifnot(identical(sort.list(x, decreasing=TRUE), as.integer(c(3, 1, 2))))
+stopifnot(identical(order(x, decreasing=TRUE), as.integer(c(3, 1, 2))))
+## was incorrect with wrapper optimization (reported by Suharto Anggono)
+
+
+## dump() & dput() where influenced by  "deparse.max.lines" option
+op <- options(deparse.max.lines=NULL) # here
+oNam <- "simplify2array" # (base function which is not very small)
+fn <- get(oNam)
+ffn <- format(fn)
+dp.1 <- capture.output(dput(fn))
+dump(oNam, textConnection("du.1", "w"))
+stopifnot(length(ffn) > 3, identical(dp.1, ffn), identical(du.1[-1], dp.1))
+options(deparse.max.lines = 2) ## "truncate heavily"
+dp.2 <- capture.output(dput(fn))
+dump(oNam, textConnection("du.2", "w"))
+stopifnot(identical(dp.2, dp.1),
+          identical(du.2, du.1))
+options(op); rm(du.1, du.2) # connections
+writeLines(tail(dp.2))
+## dp.2 and du.2  where heavily truncated in R <= 3.4.4, ending  "  ..."
+
+
 
 ## keep at end
 rbind(last =  proc.time() - .pt,
