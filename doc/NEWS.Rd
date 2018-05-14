@@ -20,6 +20,27 @@
       perpendicular ones.
 
       These (perpendicular labels) no longer overlap, fixing bug \PR{17384}.
+
+      \item \code{removeSource()} now works not only for functions but
+      also for some language objects.
+
+      \item \code{as.call()}, \code{rep.int()}, \code{rep_len()} and
+      \code{nchar()} dispatch internally.
+
+      \item \code{is(object, class2)} looks for \code{class2} in the
+      calling namespace after looking in the namespace of
+      \code{class(object)}.
+
+      \item \code{extendrange(.., f)} with a length-2 \code{f} now
+      extends separately to the left and the right.
+
+      \item \code{lengths()} dispatches internally to S4 methods.
+
+      \item \code{download.file()} on Windows now uses \code{URLdecode()}
+      to determine the file extension, and uses binary transfer
+      (\code{mode = "wb"}) also for file extension \file{.rds}.  The
+      help page \code{?download.file} now contains the same information
+      platform independently.
     }
   }
 
@@ -38,11 +59,29 @@
       \item \code{mantelhaen.test()} no longer suffers from integer
       overflow in largish cases, thanks to Ben Bolker's \PR{17383}.
 
-      \item \code{dput()} and \code{dump()} are no longer truncating
-      when \code{options(deparse.max.lines = *)} is set.
+      \item \code{optim(*, lower = c(-Inf, -Inf))} no longer warns (and
+      switches the method), thanks to a suggestion by John Nash.
 
-      \item Calls with an S3 class are no longer evaluated when printed,
-      fixing part of \PR{17398}, thanks to a patch from Lionel Henry.
+      \item Calling \code{setGeneric("foo")} in a package no longer
+      fails when the enclosing environment of the implicit generic
+      \code{foo()} is \code{.GlobalEnv}.
+
+      \item \code{predict(fm, newdata)} is now correct also for models
+      where the formula has terms such as \code{splines::ns(..)} or
+      \code{stats::poly(..)}, fixing \PR{17414}, based on a patch from
+      Duncan Murdoch.
+
+      \item \code{untar(file("<some>.tar.gz"), *)} now gives a better
+      error message, suggesting to use \code{gzfile()} instead.
+
+      \item \code{simulate.lm(glm(*, gaussian(link = <non-default>)))}
+      has been corrected, fixing \PR{17415} thanks to Alex Courtiol.
+
+      \item \code{unlist(x)} no longer fails in some cases of nested
+      empty lists.  Reported by Steven Nydick.
+
+      \item Method dispatch uses more relevant environments when looking
+      up class definitions.
     }
   }
 
@@ -50,6 +89,28 @@
     \itemize{
       \item The C++ compiler defaults to the C++11 standard, if
       supported; otherwise to the C++98 standard.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.5.0 patched}{
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{file("stdin")} is no longer considered seekable.
+
+      \item \code{dput()} and \code{dump()} are no longer truncating
+      when \code{options(deparse.max.lines = *)} is set.
+
+      \item Calls with an S3 class are no longer evaluated when printed,
+      fixing part of \PR{17398}, thanks to a patch from Lionel Henry.
+
+      \item Allow \code{file} argument of \command{Rscript} to include space
+      even when it is first on the command line.
+
+      \item \code{callNextMethod()} uses the generic from the
+      environment of the calling method. Reported by Hervé Pagès with
+      well documented examples.
     }
   }
 }

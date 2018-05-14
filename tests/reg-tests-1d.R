@@ -810,7 +810,7 @@ stopifnot(identical(t1(pi, 2), pi), identical(t1(t1), t1),
 	  identical(t2(pi, 2), 2))
 et1 <- tryCatch(t1(), error=identity)
 if(englishMsgs)
-    stopifnot(identical("the ... list does not contain any elements",
+    stopifnot(identical("the ... list contains fewer than 1 element",
 			conditionMessage(et1)))
 ## previously gave   "'nthcdr' needs a list to CDR down"
 et0   <- tryCatch(t0(),  error=identity); (mt0   <- conditionMessage(et0))
@@ -818,7 +818,7 @@ et2.0 <- tryCatch(t2(),  error=identity); (mt2.0 <- conditionMessage(et2.0))
 et2.1 <- tryCatch(t2(1), error=identity); (mt2.1 <- conditionMessage(et2.1))
 if(englishMsgs)
     stopifnot(grepl("indexing '...' with .* index 0", mt0),
-	      identical("the ... list does not contain 2 elements", mt2.0),
+	      identical("the ... list contains fewer than 2 elements", mt2.0),
 	      identical(mt2.0, mt2.1))
 tools::assertError(t0(1))
 tools::assertError(t0(1, 2))
@@ -1761,6 +1761,49 @@ options(op); rm(du.1, du.2) # connections
 writeLines(tail(dp.2))
 ## dp.2 and du.2  where heavily truncated in R <= 3.4.4, ending  "  ..."
 
+
+## optim() with "trivial bounds"
+flb <- function(x) { p <- length(x); sum(c(1, rep(4, p-1)) * (x - c(1, x[-p])^2)^2) }
+o1 <- optim(rep(3, 5), flb)
+o2 <- optim(rep(3, 5), flb, lower = rep(-Inf, 5))
+stopifnot(all.equal(o1,o2))
+## the 2nd optim() call gave a warning and switched to "L-BFGS-B" in R <= 3.5.0
+
+
+## Check that call matching doesn't mutate input
+cl <- as.call(list(quote(x[0])))
+cl[[1]][[3]] <- 1
+v <- .Internal(match.call(function(x) NULL, cl, TRUE, .GlobalEnv))
+cl[[1]][[3]] <- 2
+stopifnot(v[[1]][[3]] == 1)
+## initial patch proposal to reduce duplicating failed on this
+
+
+## simulate.lm(<glm gaussian, non-default-link>), PR#17415
+set.seed(7); y <- rnorm(n = 1000, mean = 10, sd = sqrt(10))
+fmglm <- glm(y ~ 1, family = gaussian(link = "log"))
+dv <- apply(s <- simulate(fmglm, 99, seed=1), 2, var) - var(y)
+stopifnot(abs(dv) < 1.14, abs(mean(dv)) < .07)
+## failed in R <= 3.5.0 (had simulated variances ~ 0.1)
+
+
+## unlist() failed for nested lists of empty lists:
+isLF <- function(x) .Internal(islistfactor(x, recursive=TRUE))
+ex <- list(x0 = list()
+         , x1 = list(list())
+         , x12 = list(list(), list())
+         , x12. = list(list(), expression(list()))
+         , x2 = list(list(list(), list())) # <-- Steven Nydick's example
+         , x212 = list(list(list(), list(list())))
+         , x222 = list(list(list(list()), list(list())))
+)
+(exis <- vapply(ex, isLF, NA))
+ue <- lapply(ex, unlist)# gave errors in R <= 3.3.x  but not 3.{4.x,5.0}
+stopifnot(exprs = {
+    !any(exis)
+    identical(names(ue), names(ex))
+    vapply(ue[names(ue) != "x12."], is.null, NA)
+})
 
 
 ## keep at end

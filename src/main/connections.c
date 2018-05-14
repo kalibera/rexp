@@ -713,6 +713,7 @@ static Rboolean file_open(Rconnection con)
 	    setmode(dstdin, _O_BINARY);
 # endif
         fp = fdopen(dstdin, con->mode);
+	con->canseek = FALSE;
 #else
 	warning(_("cannot open file '%s': %s"), name,
 		"fdopen is not supported on this platform");
@@ -3816,7 +3817,7 @@ SEXP attribute_hidden do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
 	/* for a non-blocking connection, more input may
 	   have become available, so re-position */
 	if(con->canseek && !con->blocking)
-	    Rconn_seek(con, con->seek(con, -1, 1, 1), 1, 1);
+	    Rconn_seek(con, Rconn_seek(con, -1, 1, 1), 1, 1);
     }
     con->incomplete = FALSE;
     if(con->UTF8out || streql(encoding, "UTF-8")) oenc = CE_UTF8;
@@ -5374,10 +5375,28 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 		)
 		con = newclp(url, strlen(open) ? open : "r");
 	    else {
+		const char *efn = R_ExpandFileName(url);
+#ifndef Win32
+		if (!raw) {
+		    struct stat sb;
+		    int res = stat(efn, &sb);
+		    if (!res && (sb.st_mode & S_IFIFO)) {
+			raw = TRUE;
+			warning(_("using 'raw = TRUE' because '%s' is a fifo or pipe"),
+				url);
+		    } else if (!res && !(sb.st_mode & S_IFREG) &&
+			       strcmp(efn, "/dev/null"))
+			/* not setting 'raw' to FALSE because character devices may be
+			   seekable; unfortunately there is no reliable way to detect
+			   that without changing the device state */
+			warning(_("'raw = FALSE' but '%s' is not a regular file"),
+			        url);
+		}
+#endif		
 		if (!raw &&
 		    (!strlen(open) || streql(open, "r") || streql(open, "rt"))) {
 		    /* check if this is a compressed file */
-		    FILE *fp = fopen(R_ExpandFileName(url), "rb");
+		    FILE *fp = fopen(efn, "rb");
 		    char buf[7];
 		    int ztype = -1, subtype = 0, compress = 0;
 		    if (fp) {
