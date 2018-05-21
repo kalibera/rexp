@@ -21,7 +21,7 @@
 # Clean up LaTeX accents and braces
 cleanupLatex <- function(x) {
     if (!length(x)) return(x)
-    latex <- tryCatch(parseLatex(x), error = function(e)e)
+    latex <- tryCatch(parseLatex(x), error = identity)
     if (inherits(latex, "error")) {
     	x
     } else {
@@ -392,7 +392,7 @@ getBibstyle <- function(all = FALSE) {
 
 toRd.bibentry <- function(obj, style=NULL, ...) {
     obj <- sort(obj, .bibstyle=style)
-    style <- bibstyle(style)
+    style <- bibstyle(style, .default = FALSE)
     env <- new.env(hash = FALSE, parent = style)
     bib <- unclass(obj)
     result <- character(length(bib))

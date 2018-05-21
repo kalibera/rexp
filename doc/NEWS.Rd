@@ -41,6 +41,11 @@
       (\code{mode = "wb"}) also for file extension \file{.rds}.  The
       help page \code{?download.file} now contains the same information
       platform independently.
+
+      \item Setting 'C' locale for collation via environment variables
+      \env{LC_ALL} and \env{LC_COLLATE} and via a call to
+      \code{Sys.setlocale()} now takes precedence over environment variable
+      \env{R_ICU_LOCALE}.
     }
   }
 
@@ -82,6 +87,17 @@
 
       \item Method dispatch uses more relevant environments when looking
       up class definitions.
+
+      \item The documentation for \code{identify()} claimed that the
+      indices of identified points were returned in the order that the
+      points were selected, which was cow manure.  \code{identify()} now
+      has a new argument \code{order} to allow the return value to
+      include the order in which points were identified; the
+      documentation has been updated.  Reported by Richard Rowe and
+      Samuel Granjeaud. 
+
+      \item \code{order(...., decreasing=c(TRUE,FALSE)} could fail in
+      some cases. Reported from StackOverflow via Karl Nordström.
     }
   }
 
@@ -111,6 +127,8 @@
       \item \code{callNextMethod()} uses the generic from the
       environment of the calling method. Reported by Hervé Pagès with
       well documented examples.
+
+      \item Compressed file connections are marked as blocking.
     }
   }
 }
