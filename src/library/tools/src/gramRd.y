@@ -2,7 +2,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2016  The R Core Team
+ *  Copyright (C) 1997--2018  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -581,6 +581,8 @@ static SEXP xxusermacro(SEXP macro, SEXP args, YYLTYPE *lloc)
     Rprintf("xxusermacro(macro=%p, args=%p)", macro, args);
 #endif
     len = length(args)-1;
+    if (len == 1 && isNull(CADR(CADR(args))))
+	len = 0;	
     PROTECT(ans = allocVector(STRSXP, len + 1));
     value = UserMacroLookup(CHAR(STRING_ELT(macro,0)));
     if (TYPEOF(value) == STRSXP)
@@ -601,12 +603,14 @@ static SEXP xxusermacro(SEXP macro, SEXP args, YYLTYPE *lloc)
     for (c = start + strlen(start); c > start; c--) {
     	if (c > start + 1 && *(c-2) == '#' && isdigit(*(c-1))) {
     	    int which = *(c-1) - '0';
+	    if (which >= len + 1)
+		error(_("Not enough arguments passed to user macro '%s'"),
+		        CHAR(STRING_ELT(macro,0)));
     	    const char *arg = CHAR(STRING_ELT(ans, which));
     	    for (size_t ii = strlen(arg); ii > 0; ii--) xxungetc(arg[ii-1]);
     	    c--;
-    	} else {
+    	} else
     	    xxungetc(*(c-1));
-    	}
     }
     xxungetc(START_MACRO);
     
