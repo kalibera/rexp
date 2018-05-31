@@ -7,6 +7,19 @@
 
 \section{\Rlogo CHANGES IN R-devel}{
 
+   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
+    \itemize{
+      \item Serialization format version 3 becomes the default for all
+      serialization and saving of the workspace. Serialized data in format
+      3 cannot be read by versions of \R prior to version 3.5.0. 
+      Serialization format version 2 is still supported and can be selected
+      by \code{version = 2} in \code{save()}, \code{serialize()} and
+      \code{saveRDS()}. The default can also be changed back for the whole R
+      session by setting environment variables \env{R_DEFAULT_SAVE_VERSION} and
+      \env{R_DEFAULT_SERIALIZE_VERSION} to \code{2}.
+    }
+   }
+
    \subsection{NEW FEATURES}{
     \itemize{
       \item \code{Sys.setFileTime()} has been vectorized, its arguments
@@ -46,6 +59,17 @@
       \env{LC_ALL} and \env{LC_COLLATE} and via a call to
       \code{Sys.setlocale()} now takes precedence over environment variable
       \env{R_ICU_LOCALE}.
+
+      \item There is a new function, \code{nullfile()}, to give the file
+      name of the null device on the current platform.
+
+      \item There are two new options, \code{keep.parse.data} and
+      \code{keep.parse.data.pkgs}, which control whether parse data are
+      included into sources when \code{keep.source} or
+      \code{keep.source.pkgs} is \code{TRUE}.  By default,
+      \code{keep.parse.data.pkgs} is now \code{FALSE}, which changes
+      previous behavior and significantly reduces space and time overhead
+      when sources are kept when installing packages.
     }
   }
 
@@ -64,26 +88,12 @@
       \item \code{mantelhaen.test()} no longer suffers from integer
       overflow in largish cases, thanks to Ben Bolker's \PR{17383}.
 
-      \item \code{optim(*, lower = c(-Inf, -Inf))} no longer warns (and
-      switches the method), thanks to a suggestion by John Nash.
-
       \item Calling \code{setGeneric("foo")} in a package no longer
       fails when the enclosing environment of the implicit generic
       \code{foo()} is \code{.GlobalEnv}.
 
-      \item \code{predict(fm, newdata)} is now correct also for models
-      where the formula has terms such as \code{splines::ns(..)} or
-      \code{stats::poly(..)}, fixing \PR{17414}, based on a patch from
-      Duncan Murdoch.
-
       \item \code{untar(file("<some>.tar.gz"), *)} now gives a better
       error message, suggesting to use \code{gzfile()} instead.
-
-      \item \code{simulate.lm(glm(*, gaussian(link = <non-default>)))}
-      has been corrected, fixing \PR{17415} thanks to Alex Courtiol.
-
-      \item \code{unlist(x)} no longer fails in some cases of nested
-      empty lists.  Reported by Steven Nydick.
 
       \item Method dispatch uses more relevant environments when looking
       up class definitions.
@@ -94,10 +104,17 @@
       has a new argument \code{order} to allow the return value to
       include the order in which points were identified; the
       documentation has been updated.  Reported by Richard Rowe and
-      Samuel Granjeaud. 
+      Samuel Granjeaud.
 
-      \item \code{order(...., decreasing=c(TRUE,FALSE)} could fail in
+      \item \code{order(...., decreasing=c(TRUE,FALSE))} could fail in
       some cases. Reported from StackOverflow via Karl Nordström.
+
+      \item \code{deparse(x)}, \code{dput(x)} and \code{dump()} now
+      respect \code{c()}'s argument names \code{recursive} and
+      \code{use.names}, e.g., for \code{x <- setNames(0, "recursive")},
+      thanks to Suharto Anggono's \PR{17427}.
+
+      \item User macros in Rd files now accept empty arguments.
     }
   }
 
@@ -129,6 +146,23 @@
       well documented examples.
 
       \item Compressed file connections are marked as blocking.
+
+      \item \code{optim(*, lower = c(-Inf, -Inf))} no longer warns (and
+      switches the method), thanks to a suggestion by John Nash.
+
+      \item \code{predict(fm, newdata)} is now correct also for models
+      where the formula has terms such as \code{splines::ns(..)} or
+      \code{stats::poly(..)}, fixing \PR{17414}, based on a patch from
+      Duncan Murdoch.
+
+      \item \code{simulate.lm(glm(*, gaussian(link = <non-default>)))}
+      has been corrected, fixing \PR{17415} thanks to Alex Courtiol.
+
+      \item \code{unlist(x)} no longer fails in some cases of nested
+      empty lists.  Reported by Steven Nydick.
+
+      \item \code{qr.coef(qr(<all 0, w/ colnames>))} now works.
+      Reported by Kun Ren.
     }
   }
 }
