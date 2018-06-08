@@ -1410,7 +1410,7 @@ tools::assertWarning(
 ## silently gave p2 = 1.03 > 1 in R versions v, 3.1.3 <= v <= 3.4.3
 
 
-## removeSource() [for a function w/ body containing NULL]:
+## 1) removeSource() [for a function w/ body containing NULL]:
 op <- options(keep.source=TRUE)
 bod <- quote( foo(x, NULL) )
 testf  <- function(x) { }; body(testf)[[2]] <- bod
@@ -1419,8 +1419,22 @@ testfN <- removeSource(testf)
 stopifnot(identical(body(testf )[[2]], bod)
         , identical(body(testfN)[[2]], bod)
 )
-options(op)
 ## erronously changed  '(x, NULL)'  to  '(x)'  in R version <= 3.4.3
+##
+## 2) source *should* be kept:
+f <- function(x=1) { # 'x' not really needed
+    x+x + 2*x+1 # (note spaces)
+}
+stopifnot(exprs = {
+    identical(capture.output(f) -> fsrc,
+              capture.output(print(f)))
+    length(fsrc) == 3
+    grepl("(x=1)",             fsrc[1], fixed=TRUE)
+    grepl("really needed",     fsrc[1], fixed=TRUE)
+    grepl("x + 2*x+1 # (note", fsrc[2], fixed=TRUE)
+})
+options(op)
+## (was fine, but not tested in R <= 3.5.0)
 
 
 ## ar.yw(x) with missing values in x, PR#17366
@@ -1812,12 +1826,44 @@ stopifnot(exprs = {
 })
 
 
-## qr.coef(qr(<all 0, w/ colnames>)) 
+## qr.coef(qr(<all 0, w/ colnames>))
 qx <- qr(x <- matrix(0, 10, 2, dimnames = list(NULL, paste0("x", 1:2))))
 qc <- qr.coef(qx, x[,1])
 stopifnot(identical(qc, c(x1 = NA_real_, x2 = NA_real_)))
 ## qr.coef() gave  Error ...: object 'pivotted' not found | in R <= 3.5.0
 
+
+## unlist(<factor-leaves>)
+x <- list(list(v=factor("a")))
+y <- list(data.frame(v=factor("a")))
+x. <- list(list(factor("a")), list(factor(LETTERS[2:4])), factor("lol"))
+fN <- factor(LETTERS[c(2:4,30)])
+xN <- list(list(factor("a")), list(list(fN)), L=factor("lol"))
+stopifnot(exprs = {
+    .valid.factor(ux <- unlist(x))
+    identical(ux, unlist(y))
+    identical(ux, as.factor(c(v="a")))
+    .valid.factor(ux. <- unlist(x.))
+    .valid.factor(uxN <- unlist(xN))
+    identical(levels(ux.), c("a", "B", "C", "D", "lol"))
+    identical(levels      (uxN), levels(ux.))
+    identical(as.character(uxN), levels(ux.)[c(1:4,11L,5L)])
+})
+## gave invalid factor()s [if at all]
+
+
+## printCoefMat()  w/ unusual arguments
+cm <- matrix(c(9.2, 2.5, 3.6, 0.00031), 1, 4,
+            dimnames = list("beta", c("Estimate", "Std.Err", "Z value", "Pr(>z)")))
+cc <- capture.output(printCoefmat(cm))
+stopifnot(grepl(" [*]{3}$", cc[2]),
+          identical(cc, capture.output(
+                     printCoefmat(cm, right=TRUE))))
+## gave Error: 'formal argument "right" matched by multiple actual arguments'
+
+## print.noquote() w/ unusual argument -- inspite of user error, be forgiving:
+print(structure("foo bar", class="noquote"), quote=FALSE)
+## gave Error: 'formal argument "quote" matched by multiple actual arguments'
 
 
 ## keep at end

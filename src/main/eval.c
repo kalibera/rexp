@@ -1304,6 +1304,15 @@ SEXP attribute_hidden R_cmpfun1(SEXP fun)
     PROTECT(fcall = lang3(R_TripleColonSymbol, packsym, funsym));
     PROTECT(call = lang2(fcall, fun));
     val = eval(call, R_GlobalEnv);
+    if (TYPEOF(BODY(val)) != BCODESXP)
+	/* Compilation may have failed because R alocator could not malloc
+	   memory to extend the R heap, so we run GC to release some pages.
+	   This problem has been observed while byte-compiling packages on
+	   installation: serialization uses malloc to allocate buffers and
+	   fails when the compiler makes R allocator exhaust malloc memory.
+	   A more general solution might be to run the GC conditionally inside
+	   error handling. */
+	R_gc();
     UNPROTECT(2);
 
     R_Visible = old_visible;
@@ -1484,7 +1493,11 @@ static void PrintCall(SEXP call, SEXP rho)
         blines = asInteger(GetOption1(install("deparse.max.lines")));
     if(blines != NA_INTEGER && blines > 0)
 	R_BrowseLines = blines;
-    PrintValueRec(call, rho);
+
+    R_PrintData pars;
+    PrintInit(&pars, rho);
+    PrintValueRec(call, &pars);
+
     R_BrowseLines = old_bl;
 }
 

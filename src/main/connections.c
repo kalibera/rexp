@@ -288,7 +288,8 @@ static size_t buff_fill(Rconnection con) {
 
     free_len = con->buff_len - con->buff_stored_len;
     read_len = con->read(con->buff, sizeof(unsigned char), free_len, con);
-
+    if ((int)read_len < 0)
+	error("error reading from the connection");
     con->buff_stored_len += read_len;
 
     return read_len;
@@ -508,7 +509,10 @@ int dummy_fgetc(Rconnection con)
 	    }
 	    p = con->iconvbuff + con->inavail;
 	    for(i = con->inavail; i < 25; i++) {
-		c = buff_fgetc(con);
+		if (con->buff)
+		    c = buff_fgetc(con);
+		else
+		    c = con->fgetc_internal(con);
 		if(c == R_EOF){ con->EOF_signalled = TRUE; break; }
 		*p++ = (char) c;
 		con->inavail++;
@@ -754,7 +758,8 @@ static Rboolean file_open(Rconnection con)
     if(mlen >= 2 && con->mode[mlen-1] == 'b') con->text = FALSE;
     else con->text = TRUE;
     con->save = -1000;
-    set_buffer(con);
+    if (!isatty(fileno(fp)))
+	set_buffer(con);
     set_iconv(con);
 
 #ifdef HAVE_FCNTL
@@ -4098,12 +4103,6 @@ SEXP attribute_hidden do_readbin(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	if(!con->canread) error(_("cannot read from this connection"));
     }
-    if(!isRaw && con->text &&
-	(con->buff || con->nPushBack >= 0 || con->inconv))
-
-	/* could be turned into runtime error */
-	warning(_("text connection used with %s(), results may be incorrect"),
-	          "readBin");
     if(!strcmp(what, "character")) {
 	SEXP onechar;
 	PROTECT(ans = allocVector(STRSXP, n));
@@ -4367,11 +4366,6 @@ SEXP attribute_hidden do_writebin(SEXP call, SEXP op, SEXP args, SEXP env)
 	cntxt.cenddata = con;
 	if(!con->canwrite) error(_("cannot write to this connection"));
     }
-
-    if(!isRaw && con->text && con->outconv)
-	/* could be turned into runtime error */
-	warning(_("text connection used with %s(), results may be incorrect"),
-	          "writeBin");
 
     if(TYPEOF(object) == STRSXP) {
 	if(isRaw) {

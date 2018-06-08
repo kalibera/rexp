@@ -1165,7 +1165,7 @@ pairlist of the objects to be saved and serializing that single object.
 pairlist or a vector list) and assigns the elements of the object in the
 specified environment.  The header line serves two purposes in @R{}: it
 identifies the serialization format so @code{load} can switch to the
-appropriate reader code, and the linefeed allows the detection of files
+appropriate reader code, and the newline @code{\n} allows the detection of files
 which have been subjected to a non-binary transfer which re-mapped line
 endings.  It can also be thought of as a `magic number' in the sense
 used by the @command{file} program (although @R{} save files are not yet
@@ -4207,6 +4207,11 @@ It does so by putting scripts at the head of the path which print a
 message and fail.
 Default: false (but true for CRAN submission checks).
 
+@item _R_CHECK_PACKAGES_USED_IN_TESTS_USE_SUBDIRS_
+If set to a true value, also check the R code in common unit test
+subdirectories of @file{tests} for undeclared package dependencies.
+Default: false (but true for CRAN submission checks).
+
 @end vtable
 
 CRAN's submission checks use something like
@@ -4237,6 +4242,7 @@ _R_CHECK_COMPILATION_FLAGS_=TRUE
 _R_CHECK_R_DEPENDS_=warn
 _R_CHECK_SERIALIZATION_=TRUE
 _R_CHECK_R_ON_PATH_=TRUE
+_R_CHECK_PACKAGES_USED_IN_TESTS_USE_SUBDIRS_=TRUE
 @end example
 
 @noindent

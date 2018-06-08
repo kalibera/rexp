@@ -11,7 +11,7 @@
     \itemize{
       \item Serialization format version 3 becomes the default for all
       serialization and saving of the workspace. Serialized data in format
-      3 cannot be read by versions of \R prior to version 3.5.0. 
+      3 cannot be read by versions of \R prior to version 3.5.0.
       Serialization format version 2 is still supported and can be selected
       by \code{version = 2} in \code{save()}, \code{serialize()} and
       \code{saveRDS()}. The default can also be changed back for the whole R
@@ -29,10 +29,14 @@
       \item \code{axis()} gets new option \code{gap.axis = NA} for
       specifying a multiplication factor for the minimal \dQuote{gap}
       (distance) between axis labels drawn.   Its default is \code{1}
-      for labels \emph{parallel} to the axis, and \code{0.5} for
+      for labels \emph{parallel} to the axis, and \code{0.25} for
       perpendicular ones.
 
       These (perpendicular labels) no longer overlap, fixing bug \PR{17384}.
+
+      \item \code{plot.default()} gains new arguments \code{xgap.axis = NA}
+      and \code{ygap.axis = NA} to be passed to the x-- and y--
+      \code{axis(.., gap.axis=*)} calls.
 
       \item \code{removeSource()} now works not only for functions but
       also for some language objects.
@@ -70,6 +74,20 @@
       \code{keep.parse.data.pkgs} is now \code{FALSE}, which changes
       previous behavior and significantly reduces space and time overhead
       when sources are kept when installing packages.
+
+      \item In \code{rapply(x, ..)}, \code{x} can also be
+      \dQuote{list-like} and of length \eqn{\ge 2^{31}}{>= 2^{31}}.
+
+      \item \code{trimws()} gets new optional \code{whitespace}
+      argument, allowing larger definitions of \dQuote{space}, e.g.,
+      including unicode spaces as wished in \PR{17431}.
+
+      \item \code{weighted.mean()} no longer coerces the weights to a
+      double/numeric vector, since \code{sum()} now handles integer
+      overflow properly. This makes \code{weighted.mean()} more
+      polymorphic and endomorphic, but be aware that the results are no
+      longer guaranteed to be a double vector.
+
     }
   }
 
@@ -109,12 +127,41 @@
       \item \code{order(...., decreasing=c(TRUE,FALSE))} could fail in
       some cases. Reported from StackOverflow via Karl Nordström.
 
-      \item \code{deparse(x)}, \code{dput(x)} and \code{dump()} now
-      respect \code{c()}'s argument names \code{recursive} and
-      \code{use.names}, e.g., for \code{x <- setNames(0, "recursive")},
-      thanks to Suharto Anggono's \PR{17427}.
+      \item User macros in Rd files now accept empty and multi-line
+      arguments.
 
-      \item User macros in Rd files now accept empty arguments.
+      \item Changes in \code{print.*()}, thanks to Lionel Henry's
+      patches in \PR{17398}:
+      \itemize{
+	\item Printing lists, pairlists or attributes containing calls
+	with S3 class no longer evaluate those.
+
+	\item Printing S4 objects within lists and pairlists dispatches
+	with \code{show()} rather than \code{print()}, as with
+	auto-printing.
+
+	\item The indexing tags (names or \code{[[<n>]]}) of recursive
+	data structures are now printed correctly in complex cases.
+
+	\item Arguments supplied to \code{print()} are now properly
+	forwarded to print methods when printing lists, pairlists or
+	attributes containing S3 objects.
+
+	\item The print parameters are now preserved when printing S3
+	objects or deparsing symbols and calls.  Previously, printing
+	lists containing S3 objects or expressions would reset these
+	parameters.
+
+	\item Printing lists, pairlists or attributes containing
+	functions now uses \code{srcref} attributes if present.
+      }
+
+      \item Calling \code{install.packages()} with a length zero
+      \code{pkgs} argument now is a no-op (\PR{17422}).
+
+      \item \code{unlist(x)} now returns a correct \code{factor} when
+      \code{x} is a nested list with factor leaves, fixing \PR{12572}
+      and \PR{17419}.
     }
   }
 
@@ -163,6 +210,29 @@
 
       \item \code{qr.coef(qr(<all 0, w/ colnames>))} now works.
       Reported by Kun Ren.
+
+      \item The radix sort is robust to vectors with >1 billion elements
+      (but long vectors are still unsupported). Thanks to Matt Dowle for
+      the fix.
+
+      \item Terminal connections (e.g., stdin) are no longer
+      buffered. Fixes \PR{17432}.
+
+      \item \code{deparse(x)}, \code{dput(x)} and \code{dump()} now
+      respect \code{c()}'s argument names \code{recursive} and
+      \code{use.names}, e.g., for \code{x <- setNames(0, "recursive")},
+      thanks to Suharto Anggono's \PR{17427}.
+
+      \item Unbuffered connections now work with encoding conversion.
+      Reported by Stephen Berman.
+
+      \item \file{.Renviron} on Windows with \command{Rgui} is again by
+      default searched for in user documents directory when invoked via the
+      launcher icon. Reported by Jeroen Ooms.
+
+      \item \code{printCoefmat()} now also works with explicit \code{right=TRUE}.
+
+      \item \code{print.noquote()} now also works with explicit \code{quote=FALSE}.
     }
   }
 }
