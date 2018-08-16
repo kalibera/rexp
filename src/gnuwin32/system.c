@@ -996,6 +996,9 @@ int cmdlineoptions(int ac, char **av)
 	process_site_Renviron();
 	process_user_Renviron();
 	Rp->NoRenviron = TRUE;
+
+	/* allow for R_MAX_[VN]SIZE and R_[VN]SIZE in user/site Renviron */
+	R_SizeFromEnv(Rp);
     }
     env_command_line(&ac, av);
 

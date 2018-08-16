@@ -522,7 +522,7 @@ SEXP attribute_hidden NORET do_usemethod(SEXP call, SEXP op, SEXP args, SEXP env
     if(lookup_use_topenv_as_defenv == -1) {
 	lookup = getenv("_R_S3_METHOD_LOOKUP_USE_TOPENV_AS_DEFENV_");
 	lookup_use_topenv_as_defenv = 
-	    ((lookup != NULL) && StringTrue(lookup)) ? 1 : 0;
+	    ((lookup != NULL) && StringFalse(lookup)) ? 0 : 1;
     }
 
     /* get environments needed for dispatching.
@@ -1259,7 +1259,7 @@ SEXP attribute_hidden do_standardGeneric(SEXP call, SEXP op, SEXP args, SEXP env
 {
     SEXP arg, value, fdef; R_stdGen_ptr_t ptr = R_get_standardGeneric_ptr();
 
-    checkArity(op, args);
+    checkArity(op, args); /* set to -1 */
     check1arg(args, call, "f");
 
     if(!ptr) {
@@ -1269,7 +1269,6 @@ SEXP attribute_hidden do_standardGeneric(SEXP call, SEXP op, SEXP args, SEXP env
 	ptr = R_get_standardGeneric_ptr();
     }
 
-    checkArity(op, args); /* set to -1 */
     arg = CAR(args);
     if(!isValidStringF(arg))
 	errorcall(call,

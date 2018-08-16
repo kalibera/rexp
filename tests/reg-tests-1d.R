@@ -1861,9 +1861,124 @@ stopifnot(grepl(" [*]{3}$", cc[2]),
                      printCoefmat(cm, right=TRUE))))
 ## gave Error: 'formal argument "right" matched by multiple actual arguments'
 
+
 ## print.noquote() w/ unusual argument -- inspite of user error, be forgiving:
 print(structure("foo bar", class="noquote"), quote=FALSE)
 ## gave Error: 'formal argument "quote" matched by multiple actual arguments'
+
+
+## agrep(".|.", ch, fixed=FALSE)
+chvec <- c(".BCD", "yz", "AB", "wyz")
+patt <- "ABC|xyz"
+stopifnot(identical(c(list(0L[0]), rep(list(1:4), 2)),
+    lapply(0:2, function(m) agrep(patt, chvec, max.distance=m, fixed=FALSE))
+))
+## all three were empty in R <= 3.5.0
+
+
+## str(<invalid>)
+typeof(nn <- c(0xc4, 0x88, 0xa9, 0x02))
+cc <- ch <- rawToChar(as.raw(nn))
+str(ch)# worked already
+nchar(cc, type="bytes")# 4, but  nchar(cc)  gives  "invalid multibyte string"
+Encoding(cc) <- "UTF-8" # << makes it invalid for strtrim(.)!
+as.octmode(as.integer(nn))
+str(cc)
+## In R <= 3.5.0, [strtrim() & nchar()] gave invalid multibyte string at '<a9>\002"'
+
+
+## multivariate <empty model> lm():
+y <- matrix(cos(1:(7*5)), 7,5) # <- multivariate y
+lms <- list(m0 = lm(y ~ 0), m1 = lm(y ~ 1), m2 = lm(y ~ exp(y[,1]^2)))
+dcf <- sapply(lms, function(fm) dim(coef(fm)))
+stopifnot(dcf[1,] == 0:2, dcf[2,] == 5)
+## coef(lm(y ~ 0)) had 3 instead of 5 columns in R <= 3.5.1
+
+
+## confint(<mlm>)
+n <- 20
+set.seed(1234)
+datf <- local({
+    x1 <- rnorm(n)
+    x2 <- x1^2 + rnorm(n)
+    y1 <- 100*x1 + 20*x2 + rnorm(n)
+    data.frame(x1=x1, x2=x2, y1=y1, y2 = y1 + 10*x1 + 50*x2 + rnorm(n))
+})
+fitm <- lm(cbind(y1,y2) ~ x1 + x2, data=datf)
+zapsmall(CI <- confint(fitm))
+ciT <- cbind(c(-0.98031,  99.2304, 19.6859, -0.72741, 109.354, 69.4632),
+             c( 0.00984, 100.179,  20.1709,  0.60374, 110.63,  70.1152))
+dimnames(ciT) <- dimnames(CI)
+## also checking confint(*, parm=*) :
+pL <- list(c(1,3:4), rownames(CI)[c(6,2)], 1)
+ciL  <- lapply(pL, function(ii) confint(fitm, parm=ii))
+ciTL <- lapply(pL, function(ii) ciT[ii, , drop=FALSE])
+stopifnot(exprs = {
+    all.equal(ciT, CI,  tolerance = 4e-6)
+    all.equal(ciL, ciTL,tolerance = 8e-6)
+})
+## confint(<mlm>) gave an empty matrix in R <= 3.5.1
+## For an *empty* mlm :
+mlm0 <- lm(cbind(y1,y2) ~ 0, datf)
+stopifnot(identical(confint(mlm0),
+                    matrix(numeric(0), 0L, 2L, dimnames = list(NULL, c("2.5 %", "97.5 %")))))
+## failed inside vcov.mlm() because summary.lm()$cov.unscaled was NULL
+
+
+## kruskal.test(<non-numeric g>), PR#16719
+data(mtcars)
+mtcars$type <- rep(letters[1:2], c(16, 16))
+kruskal.test(mpg ~ type, mtcars)
+## gave 'Error: all group levels must be finite'
+
+
+## Multivariate lm() with matrix offset, PR#17407
+ss <- list(s1 = summary(fm1 <- lm(cbind(mpg,qsec) ~ 1, data=mtcars, offset=cbind(wt,wt*2))),
+           s2 = summary(fm2 <- lm(cbind(mpg,qsec) ~ offset(cbind(wt,wt*2)), data=mtcars)))
+## drop "call" and "terms" parts which differ; rest must match:
+ss[] <- lapply(ss, function(s) lapply(s, function(R) R[setdiff(names(R), c("call","terms"))]))
+stopifnot(all.equal(ss[["s1"]], ss[["s2"]], tolerance = 1e-15))
+## lm() calls gave error 'number of offsets is 64, should equal 32 ...' in R <= 3.5.1
+
+
+## print.data.frame(<non-small>)
+USJ   <- USJudgeRatings
+USJe6 <- USJudgeRatings[rep_len(seq_len(nrow(USJ)), 1e6),]
+op <- options(max.print=500)
+t1 <- max(0.001, system.time(r1 <- print(USJ))[[1]]) # baseline > 0
+t2 <- system.time(r2 <- print(USJe6))[[1]]
+      system.time(r3 <- print(USJe6, row.names=FALSE))
+out <- capture.output(print(USJe6, max = 600)) # max > getOption("max.print")
+stopifnot(exprs = {
+    identical(r1, USJ  )# print() must return its arg
+    identical(r2, USJe6)
+    identical(r3, USJe6)
+    print(t2 / t1) < 9 # now typically in [1,2]
+    length(out) == 52
+    grepl("CALLAHAN", out[51], fixed=TRUE)
+    identical(2L, grep("omitted", out[51:52], fixed=TRUE))
+})
+options(op); rm(USJe6)# reset
+## had t2/t1 > 4000 in R <= 3.5.1, because the whole data frame was formatted.
+
+
+## hist.default() in rare cases
+hh <- hist(seq(1e6, 2e6, by=20), plot=FALSE)
+hd <- hh$density*1e6
+stopifnot(0.999 <= hd, hd <= 1.001)
+## in R <= 3.5.1: warning 'In n * h : NAs produced by integer overflow' and then NA's
+
+
+## some things boken by sort.int optimization for sorted integer vectors
+sort.int(integer(0))  ## would segfault with barrier testing
+stopifnot(identical(sort.int(NA_integer_), integer(0)))
+
+
+## attribute handling in the fastpass was not quite right
+x <- sort.int(c(1,2))
+dim(x) <- 2
+dimnames(x) <- list(c("a", "b"))
+stopifnot(! is.null(names(sort.int(x))))
 
 
 ## keep at end

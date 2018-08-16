@@ -1,7 +1,7 @@
 
-R Under development (unstable) (2018-05-03 r74689) -- "Unsuffered Consequences"
+R Under development (unstable) (2018-08-13 r75127) -- "Unsuffered Consequences"
 Copyright (C) 2018 The R Foundation for Statistical Computing
-Platform: x86_64-pc-linux-gnu (64-bit)
+Platform: x86_64-apple-darwin17.7.0/x86_64 (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -3827,7 +3827,7 @@ sigma^2 estimated as 0.4566:  log likelihood = -101.2,  aic = 212.4
 > 
 > asOneSidedFormula("age")
 ~age
-<environment: 0x468ece0>
+<environment: 0x7fd34dd843d0>
 > asOneSidedFormula(~ age)
 ~age
 > 
@@ -4825,7 +4825,7 @@ function (V)
     r[cbind(1L:p, 1L:p)] <- 1
     r
 }
-<bytecode: 0x54c14b0>
+<bytecode: 0x7fd34cf44a38>
 <environment: namespace:stats>
 > stopifnot(all.equal(Cl, cov2cor(cov(longley))),
 +           all.equal(cor(longley, method = "kendall"),
@@ -6972,13 +6972,29 @@ function (eta)
 > gf$variance(-3:4) #- == (.)^2
 [1]  9  4  1  0  1  4  9 16
 > 
+> ## Binomial with default 'logit' link:  Check some properties visually:
+> bi <- binomial()
+> et <- seq(-10,10, by=1/8)
+> plot(et, bi$mu.eta(et), type="l")
+> ## show that mu.eta() is derivative of linkinv() :
+> lines((et[-1]+et[-length(et)])/2, col=adjustcolor("red", 1/4),
++       diff(bi$linkinv(et))/diff(et), type="l", lwd=4)
+> ## which here is the logistic density:
+> lines(et, dlogis(et), lwd=3, col=adjustcolor("blue", 1/4))
+> stopifnot(exprs = {
++   all.equal(bi$ mu.eta(et), dlogis(et))
++   all.equal(bi$linkinv(et), plogis(et) -> m)
++   all.equal(bi$linkfun(m ), qlogis(m))    #  logit(.) == qlogis(.) !
++ })
 > 
-> ## quasipoisson. compare with example(glm)
-> counts <- c(18,17,15,20,10,20,25,13,12)
-> outcome <- gl(3,1,9)
-> treatment <- gl(3,3)
-> d.AD <- data.frame(treatment, outcome, counts)
-> glm.qD93 <- glm(counts ~ outcome + treatment, family = quasipoisson())
+> ## Data from example(glm) :
+> d.AD <- data.frame(treatment = gl(3,3),
++                    outcome   = gl(3,1,9),
++                    counts    = c(18,17,15, 20,10,20, 25,13,12))
+> glm.D93 <- glm(counts ~ outcome + treatment, d.AD, family = poisson())
+> ## Quasipoisson: compare with above / example(glm) :
+> glm.qD93 <- glm(counts ~ outcome + treatment, d.AD, family = quasipoisson())
+> 
 > 
 > ## Example of user-specified link, a logit model for p^days
 > ## See Shaffer, T.  2004. Auk 121(2): 526-540.
@@ -6986,24 +7002,40 @@ function (eta)
 + {
 +     linkfun <- function(mu) qlogis(mu^(1/days))
 +     linkinv <- function(eta) plogis(eta)^days
-+     mu.eta <- function(eta) days * plogis(eta)^(days-1) * binomial()$mu_eta
++     mu.eta  <- function(eta) days * plogis(eta)^(days-1) *
++                   binomial()$mu.eta(eta)
 +     valideta <- function(eta) TRUE
 +     link <- paste0("logexp(", days, ")")
 +     structure(list(linkfun = linkfun, linkinv = linkinv,
 +                    mu.eta = mu.eta, valideta = valideta, name = link),
 +               class = "link-glm")
 + }
-> binomial(logexp(3))
+> (bil3 <- binomial(logexp(3)))
 
 Family: binomial 
 Link function: logexp(3) 
 
+> ## Don't show: 
+> stopifnot(length(bil3$mu.eta(as.double(0:5))) == 6)
+> ## End(Don't show)
 > ## in practice this would be used with a vector of 'days', in
 > ## which case use an offset of 0 in the corresponding formula
 > ## to get the null deviance right.
 > 
-> ## Binomial with identity link: often not a good idea.
-> ## Not run: binomial(link = make.link("identity"))
+> ## Binomial with identity link: often not a good idea, as both
+> ## computationally and conceptually difficult:
+> binomial(link = "identity")  ## is exactly the same as
+
+Family: binomial 
+Link function: identity 
+
+> binomial(link = make.link("identity"))
+
+Family: binomial 
+Link function: identity 
+
+> 
+> 
 > 
 > ## tests of quasi
 > x <- rnorm(100)
@@ -7405,7 +7437,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env = new.env()))
-<environment: 0x5443ae0>
+<environment: 0x7fd35084d310>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -7823,6 +7855,20 @@ Terms added sequentially (first to last)
 NULL                          8    10.5814
 outcome    2   5.4523         6     5.1291
 treatment  2   0.0000         4     5.1291
+> ## Computing AIC [in many ways]:
+> (A0 <- AIC(glm.D93))
+[1] 56.76132
+> (ll <- logLik(glm.D93))
+'log Lik.' -23.38066 (df=5)
+> A1 <- -2*c(ll) + 2*attr(ll, "df")
+> A2 <- glm.D93$family$aic(counts, mu=fitted(glm.D93), wt=1) +
++         2 * length(coef(glm.D93))
+> stopifnot(exprs = {
++   all.equal(A0, A1)
++   all.equal(A1, A2)
++   all.equal(A1, glm.D93$aic)
++ })
+> 
 > 
 > 
 > # A Gamma example, from McCullagh & Nelder (1989, pp. 300-2)
@@ -9508,12 +9554,12 @@ Call:
 
 Terms:
                    block        N        P        K      N:P      N:K      P:K
-resp 1          343.2950 189.2817   8.4017  95.2017  21.2817  33.1350   0.4817
-resp 2            2.9548   0.0223   1.3807   0.0097   2.7585   0.9724   5.5258
+yield           343.2950 189.2817   8.4017  95.2017  21.2817  33.1350   0.4817
+foo               2.9548   0.0223   1.3807   0.0097   2.7585   0.9724   5.5258
 Deg. of Freedom        5        1        1        1        1        1        1
                 Residuals
-resp 1           185.2867
-resp 2             7.8286
+yield            185.2867
+foo                7.8286
 Deg. of Freedom        12
 
 Residual standard errors: 3.929447 0.8077039
@@ -9545,8 +9591,8 @@ Stratum 1: block
 
 Terms:
                     N:P:K Residuals
-resp 1           37.00167 306.29333
-resp 2            0.06988   2.88496
+yield            37.00167 306.29333
+foo               0.06988   2.88496
 Deg. of Freedom         1         4
 
 Residual standard errors: 8.750619 0.8492579
@@ -9556,12 +9602,12 @@ Stratum 2: Within
 
 Terms:
                         N         P         K       N:P       N:K       P:K
-resp 1          189.28167   8.40167  95.20167  21.28167  33.13500   0.48167
-resp 2            0.02235   1.38066   0.00966   2.75852   0.97240   5.52584
+yield           189.28167   8.40167  95.20167  21.28167  33.13500   0.48167
+foo               0.02235   1.38066   0.00966   2.75852   0.97240   5.52584
 Deg. of Freedom         1         1         1         1         1         1
                 Residuals
-resp 1          185.28667
-resp 2            7.82863
+yield           185.28667
+foo               7.82863
 Deg. of Freedom        12
 
 Residual standard errors: 3.929447 0.8077039
@@ -12064,14 +12110,14 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<bytecode: 0x5322d70>
-<environment: 0x532fd48>
+<bytecode: 0x7fd34f9438e8>
+<environment: 0x7fd34f953aa8>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<bytecode: 0x5322c20>
-<environment: 0x532fd48>
+<bytecode: 0x7fd34f9476a8>
+<environment: 0x7fd34f953aa8>
 
 > 
 > 
@@ -14126,13 +14172,27 @@ Store  A  B  C  D  E
     5 10  9  7 13 10
     6 19 18 28 37 58
     7 10  7  6  8  7
-> quade.test(y)
+> (qTst <- quade.test(y))
 
 	Quade test
 
 data:  y
 Quade F = 3.8293, num df = 4, denom df = 24, p-value = 0.01519
 
+> 
+> ## Show equivalence of different versions of test :
+> utils::str(dy <- as.data.frame(as.table(y)))
+'data.frame':	35 obs. of  3 variables:
+ $ Store: Factor w/ 7 levels "1","2","3","4",..: 1 2 3 4 5 6 7 1 2 3 ...
+ $ Brand: Factor w/ 5 levels "A","B","C","D",..: 1 1 1 1 1 1 1 2 2 2 ...
+ $ Freq : num  5 1 16 5 10 19 10 4 3 12 ...
+> qT. <- quade.test(Freq ~ Brand|Store, data = dy)
+> qT.$data.name <- qTst$data.name
+> stopifnot(all.equal(qTst, qT., tolerance = 1e-15))
+> dys <- dy[order(dy[,"Freq"]),]
+> qTs <- quade.test(Freq ~ Brand|Store, data = dys)
+> qTs$data.name <- qTst$data.name
+> stopifnot(all.equal(qTst, qTs, tolerance = 1e-15))
 > 
 > 
 > 
@@ -16197,8 +16257,8 @@ Step function with continuity 'f'= 0.2 ,  3 knots at
 > unclass(sfun0)
 function (v) 
 .approxfun(x, y, v, method, yleft, yright, f)
-<bytecode: 0x18c67f0>
-<environment: 0x4dfdc00>
+<bytecode: 0x7fd349dc4b48>
+<environment: 0x7fd34cdb03a8>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
@@ -18523,7 +18583,7 @@ Number of Fisher Scoring iterations: 6
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  6.631 0.206 7.364 0 0 
+Time elapsed:  3.783 0.431 4.253 0 0 
 > grDevices::dev.off()
 null device 
           1 

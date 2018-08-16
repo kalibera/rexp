@@ -1449,7 +1449,7 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
          S3methods = unique(S3methods[seq_len(nS3), , drop = FALSE]) )
 } ## end{parseNamespaceFile}
 
-## unused
+## Still used inside registerS3methods().
 registerS3method <- function(genname, class, method, envir = parent.frame()) {
     addNamespaceS3method <- function(ns, generic, class, method) {
 	regs <- rbind(.getNamespaceInfo(ns, "S3methods"),
@@ -1607,15 +1607,15 @@ registerS3methods <- function(info, package, env)
         }
         ## Do not note when
         ## * There are no overwrites (left)
-        ## * Env var _R_S3_METHOD_REGISTRATION_NOTE_OVERWRITES_ is not
-        ##   set to something true (for the time being)
+        ## * Env var _R_S3_METHOD_REGISTRATION_NOTE_OVERWRITES_ is set
+        ##   to something false (for the time being) 
         ## * Env var _R_CHECK_PACKAGE_NAME_ is set to something
         ##   different than 'package'.
         ## With the last, when checking we only note overwrites from the
         ## package under check (as recorded via _R_CHECK_PACKAGE_NAME_).
         if((nr <- nrow(overwrite)) &&
-           (tolower(Sys.getenv("_R_S3_METHOD_REGISTRATION_NOTE_OVERWRITES_")) %in%
-            c("1", "yes", "true")) &&
+           is.na(match(tolower(Sys.getenv("_R_S3_METHOD_REGISTRATION_NOTE_OVERWRITES_")),
+                       c("0", "no", "false"))) &&
            (!is.na(match(Sys.getenv("_R_CHECK_PACKAGE_NAME_"),
                          c("", package))))) {
             msg <- ngettext(nr,
