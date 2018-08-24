@@ -3401,6 +3401,7 @@ void R_FinalizeSrcRefState(void)
 	    R_ReleaseObject(ParseState.data);
 	    R_ReleaseObject(ParseState.text);
 	    ParseState.data = NULL;
+	    ParseState.text = NULL;
 	} else /* Remove all the strings from the text vector so they don't take up memory, and clean up data */
 	    for (int i=0; i < ParseState.data_count; i++) {
 	    	SET_STRING_ELT(ParseState.text, i, R_BlankString);
@@ -5263,7 +5264,10 @@ static int yylex(void)
 		xxparsesave = yylloc.first_parsed;
 		SavedLval = yylval;
 		setlastloc();
-		if (yytext[0]) /* unrecord the pushed back token if not null */
+		if (ParseState.keepSrcRefs && ParseState.keepParseData &&
+		    yytext[0])
+
+		    /* unrecord the pushed back token if not null */
 		    ParseState.data_count--;
 		return '\n';
 	    }
