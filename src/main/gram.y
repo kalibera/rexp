@@ -1196,8 +1196,8 @@ void R_InitSrcRefState(void)
 attribute_hidden
 void R_FinalizeSrcRefState(void)
 {
-    UNPROTECT_PTR(ParseState.SrcFile);
-    UNPROTECT_PTR(ParseState.Original);
+    REPROTECT(ParseState.SrcFile = R_NilValue, ParseState.SrcFileProt);
+    REPROTECT(ParseState.Original = R_NilValue, ParseState.OriginalProt);
     /* Free the data, text and ids if we are restoring a previous state,
        or if they have grown too large */
     if (ParseState.data) {
