@@ -1174,6 +1174,8 @@ void R_InitSrcRefState(void)
 {
     if (busy) {
     	SrcRefState *prev = malloc(sizeof(SrcRefState));
+	if (prev == NULL)
+	    error(_("allocation of source reference state failed"));
     	PutSrcRefState(prev);
 	ParseState.prevState = prev;
 	ParseState.data = NULL;
@@ -1257,24 +1259,21 @@ static void UseSrcRefState(SrcRefState *state)
 
 static void PutSrcRefState(SrcRefState *state)
 {
-    if (state) {
-	state->keepSrcRefs = ParseState.keepSrcRefs;
-	state->keepParseData = ParseState.keepParseData;
-	state->SrcFile = ParseState.SrcFile;
-	state->Original = ParseState.Original;
-	state->SrcFileProt = ParseState.SrcFileProt;
-	state->OriginalProt = ParseState.OriginalProt;
-	state->data = ParseState.data;
-	state->text = ParseState.text;
-	state->ids = ParseState.ids;
-	state->data_count = ParseState.data_count;
-	state->xxlineno = ParseState.xxlineno;
-	state->xxcolno = ParseState.xxcolno;
-	state->xxbyteno = ParseState.xxbyteno;
-	state->xxparseno = ParseState.xxparseno;
-	state->prevState = ParseState.prevState;
-    } else 
-    	R_FinalizeSrcRefState();
+    state->keepSrcRefs = ParseState.keepSrcRefs;
+    state->keepParseData = ParseState.keepParseData;
+    state->SrcFile = ParseState.SrcFile;
+    state->Original = ParseState.Original;
+    state->SrcFileProt = ParseState.SrcFileProt;
+    state->OriginalProt = ParseState.OriginalProt;
+    state->data = ParseState.data;
+    state->text = ParseState.text;
+    state->ids = ParseState.ids;
+    state->data_count = ParseState.data_count;
+    state->xxlineno = ParseState.xxlineno;
+    state->xxcolno = ParseState.xxcolno;
+    state->xxbyteno = ParseState.xxbyteno;
+    state->xxparseno = ParseState.xxparseno;
+    state->prevState = ParseState.prevState;
 }
 
 static void ParseInit(void)
