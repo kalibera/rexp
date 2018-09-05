@@ -2,7 +2,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2017  The R Core Team
+ *  Copyright (C) 1997--2018  The R Core Team
  *  Copyright (C) 2009--2011  Romain Francois
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 #include <config.h>
 #endif
 
+#define R_USE_SIGNALS 1
 #include "IOStuff.h"		/*-> Defn.h */
 #include "Fileio.h"
 #include "Parse.h"
@@ -1166,11 +1167,18 @@ void InitParser(void)
 {
     ParseState.data = NULL;
     ParseState.ids = NULL;
+    ParseState.SrcFileProt = NA_INTEGER;
+    ParseState.OriginalProt = NA_INTEGER;
+}
+
+static void FinalizeSrcRefStateOnError(void *dummy)
+{
+    R_FinalizeSrcRefState();
 }
 
 /* This is called each time a new parse sequence begins */
 attribute_hidden
-void R_InitSrcRefState(void)
+void R_InitSrcRefState(RCNTXT* cptr)
 {
     if (busy) {
     	SrcRefState *prev = malloc(sizeof(SrcRefState));
@@ -1182,6 +1190,11 @@ void R_InitSrcRefState(void)
 	ParseState.ids = NULL;
     } else
         ParseState.prevState = NULL;
+    /* set up context _after_ PutSrcRefState */
+    begincontext(cptr, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
+                 R_NilValue, R_NilValue);
+    cptr->cend = &FinalizeSrcRefStateOnError;
+    cptr->cenddata = NULL;
     ParseState.keepSrcRefs = FALSE;
     ParseState.keepParseData = TRUE;
     ParseState.didAttach = FALSE;
@@ -1198,8 +1211,16 @@ void R_InitSrcRefState(void)
 attribute_hidden
 void R_FinalizeSrcRefState(void)
 {
-    REPROTECT(ParseState.SrcFile = R_NilValue, ParseState.SrcFileProt);
-    REPROTECT(ParseState.Original = R_NilValue, ParseState.OriginalProt);
+    if (ParseState.SrcFileProt != NA_INTEGER) {
+	UNPROTECT_PTR(ParseState.SrcFile);
+	ParseState.SrcFile = NULL;
+	ParseState.SrcFileProt = NA_INTEGER;
+    }
+    if (ParseState.OriginalProt != NA_INTEGER) {
+	UNPROTECT_PTR(ParseState.Original);
+	ParseState.Original = NULL;
+	ParseState.OriginalProt = NA_INTEGER;
+    }
     /* Free the data, text and ids if we are restoring a previous state,
        or if they have grown too large */
     if (ParseState.data) {
@@ -1226,8 +1247,6 @@ void R_FinalizeSrcRefState(void)
 	    }
 	}
     }
-    ParseState.SrcFileProt = NA_INTEGER;
-    ParseState.OriginalProt = NA_INTEGER;
     ParseState.data_count = NA_INTEGER;
     if (ParseState.prevState) {
         SrcRefState *prev = ParseState.prevState;
@@ -1361,9 +1380,10 @@ attribute_hidden
 SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
 {
     Rboolean keepSource = FALSE; 
-    int savestack;    
+    int savestack;
+    RCNTXT cntxt;
 
-    R_InitSrcRefState();
+    R_InitSrcRefState(&cntxt);
     savestack = R_PPStackTop;
     if (gencode) {
     	keepSource = asLogical(GetOption1(install("keep.source")));
@@ -1404,6 +1424,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
 	}
     }
     R_PPStackTop = savestack;
+    endcontext(&cntxt);
     R_FinalizeSrcRefState();
     return R_CurrentExpr;
 }
@@ -1420,8 +1441,9 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     int savestack;
     int i;
     SEXP t, rval;
+    RCNTXT cntxt;
 
-    R_InitSrcRefState();
+    R_InitSrcRefState(&cntxt);
     savestack = R_PPStackTop;
     
     ParseContextInit();
@@ -1453,6 +1475,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	    if (ParseState.keepSrcRefs && ParseState.keepParseData)
 	        finalizeData();
 	    R_PPStackTop = savestack;
+	    endcontext(&cntxt);
 	    R_FinalizeSrcRefState();	    
 	    return R_NilValue;
 	    break;
@@ -1474,6 +1497,7 @@ finish:
 	rval = attachSrcrefs(rval);
     }
     R_PPStackTop = savestack;    /* UNPROTECT lots! */
+    endcontext(&cntxt);
     R_FinalizeSrcRefState();
     *status = PARSE_OK;
     return rval;
@@ -1550,11 +1574,12 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     char *bufp, buf[CONSOLE_BUFFER_SIZE];
     int c, i, prompt_type = 1;
     int savestack;
+    RCNTXT cntxt;
 
     R_IoBufferWriteReset(buffer);
     buf[0] = '\0';
     bufp = buf;
-    R_InitSrcRefState();    
+    R_InitSrcRefState(&cntxt);
     savestack = R_PPStackTop;
     ParseContextInit();
     PROTECT(t = NewList());
@@ -1605,6 +1630,7 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	case PARSE_ERROR:
 	    R_IoBufferWriteReset(buffer);
 	    R_PPStackTop = savestack;
+	    endcontext(&cntxt);
 	    R_FinalizeSrcRefState();
 	    return R_NilValue;
 	    break;
@@ -1625,6 +1651,7 @@ finish:
 	rval = attachSrcrefs(rval);
     }
     R_PPStackTop = savestack; /* UNPROTECT lots! */
+    endcontext(&cntxt);
     R_FinalizeSrcRefState();    
     *status = PARSE_OK;
     return rval;
