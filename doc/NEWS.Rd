@@ -112,9 +112,10 @@
       loading the package, e.g.\sspace{}with recent Linux running under
       an address sanitizer.
 
-      \item The \code{numeric} method of \code{all.equal()} gets an
-      optional argument \code{countEQ}.  If that is true, the mean error
-      is more sensible when many entries are \bold{eq}ual.
+      \item The \code{numeric} method of \code{all.equal()} gets
+      optional arguments \code{countEQ} and \code{formatFUN}.  If
+      \code{countEQ} is true, the mean error is more sensible when many
+      entries are \bold{eq}ual.
 
       \item \code{outer(x,y, FUN = "*")} is more efficient using
       \code{tcrossprod(u,v)} instead of \code{u \%*\% t(v)}.
@@ -139,13 +140,15 @@
       \item An effort has been started to have our reference manuals,
       i.e., all help pages. show platform-independent information (rather
       than Windows or Unix-alike specifics visible only on that platform).
+      Consequently, the Windows version of \code{X11()} / \code{x11()}
+      got identical formal arguments the unix one.
 
       \item \code{sessionInfo()$running} has been factored out in a new
       variable \code{osVersion}. % precomputed at utils namespace load time
 
       \item \code{slice.index()} now also works for multi-dimensional
       margins.
-      
+
       \item \code{untar()} used with an external \command{tar} command
       assumes this supports decompression including \command{xz} and
       automagically detecting the compression type.  This has been true
@@ -154,7 +157,50 @@
       still supported \emph{via} the new argument
       \code{support_old_tars} whose default is controlled by environment
       variable \env{R_SUPPORT_OLD_TARS}.  (It looks like NetBSD and
-      OpenBSD have \sQuote{older} \command{tar} for this purpose.)
+      OpenBSD have \sQuote{older} \command{tar} commands for this
+      purpose.)
+
+      \item The new function \code{asplit()} allows to split an array or
+      matrix by its margins.
+
+      \item New functions \code{errorCondition()} and
+      \code{warningCondition()} provide a convenient way to create
+      structured error and warning objects.
+
+      \code{.Deprecated()} now signals a warning of class
+      \code{deprecatedWarning}, and \code{.Defunct()} now signals an
+      error of class \code{defunctError}.
+
+      \item Many \sQuote{package not found} errors are now signaled as
+      errors of class \code{packageNotFoundError}.
+
+      \item As an experimental feature, when \code{loadNamespace()} fails
+      because the requested package is not available the error is
+      initially signaled with a \code{retry_loadNamespace} restart
+      available. This allows a calling handler to try to install the
+      package and continue.
+
+      \item \code{S3method()} directives in \file{NAMESPACE} can now
+      also be used to perform \emph{delayed} S3 method registration.
+
+      \item Experimentally, setting environment variable
+      \env{_R_CHECK_LENGTH_1_LOGIC2_} will lead to warnings (or errors
+      if the variable is set to a \sQuote{true} value) when \code{&&} or
+      \code{||} encounter and use arguments of length more than one.
+
+      \item Added \code{"lines"} and \code{"chars"} coordinate systems
+      to \code{grconvertX()} and \code{grconvertY()}.
+
+      \item \code{getOption()} is more efficient notably for the rare
+      case when called with two arguments, from several contributors in
+      \PR{17394}.
+
+      \item In \code{.col(dim)} and \code{.row(dim)}, \code{dim} now may
+      also be an integer valued \code{"double"}.
+
+      \item \code{sQuote()} and \code{dQuote()} get an explicit \code{q}
+      argument with obvious default instead of using
+      \code{getOption("fancyQuotes")} implicitly and unconditionally.
     }
   }
 
@@ -183,12 +229,20 @@
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item Argument \code{compressed} of \code{untar()} is
-      deprecated --- it is only used for externsal \code{tar} commands
+      deprecated --- it is only used for external \code{tar} commands
       which increasingly for extraction auto-detect compression and
       ignore their \option{zjJ} flags.
+
+      \item \code{var(f)} and hence \code{sd(f)} now give an error for
+      \code{factor} arguments; they gave a warning since R 3.2.3,
+      \PR{16564}.
+
+      \item \pkg{tools}' \code{vignetteDepends()} has been deprecated
+      (it called a function deprecated since Feb 2016), partly replaced
+      by newly exported \code{vignetteInfo()}.
     }
   }
-  
+
   \subsection{BUG FIXES}{
     \itemize{
       \item \code{replayPlot(r)} now also works in the same \R session
@@ -281,15 +335,58 @@
       now shows non-large \code{df}'s to the full precision (\PR{17444}).
 
       \item \code{kruskal.test()} and \code{fligner.test()} no longer
-      erroneously insists on numeric \code{g} group arguments (\PR{16719}).
+      erroneously insist on numeric \code{g} group arguments (\PR{16719}).
 
       \item Printing a news db via the browser now does a much better
       job (\PR{17433}).
 
       \item \code{print.aov()} missed column names in the multivariate case
       due to misspelling (reported by Chris Andrews).
-D
-      ()
+
+      \item \code{axis()} now creates valid \code{at} locations also for
+      small subnormal number ranges in log scale plots.
+
+      \item \code{format.POSIXlt()} now also recycles the \code{zone}
+      and \code{gmtoff} list components to full length when needed,
+      and its internal C code detects \code{have_zone} in more cases.
+      In some cases, this changes its output to become
+      \code{format.POSIXct} compatible.
+
+      \item On Windows, \code{detectCores()} now detects processors in all
+      processor groups, not just the group \R is running in (impacts
+      particularly systems with more than 64 logical processors). Reported
+      by Arunkumar Srinivasan.
+
+      \item On Windows, \code{socketSelect} would hang with more than 64
+      sockets, and hence \code{parallel::clusterApplyLB} would hang with
+      more than 64 workers. Reported by Arunkumar Srinivasan.
+
+      \item \code{as(1L, "double")} now does coerce (\PR{17457}).
+
+      \item Buffering is disabled for \code{file()} connections to
+      irregular files (like sockets), as well as \code{fifo()} and
+      \code{pipe()} connections. Fixes \PR{17470}, reported by Chris
+      Culnane.
+
+      \item \code{lm.influence()}, \code{influence.measures()},
+      \code{rstudent()} etc now work (more) correctly for multivariate
+      models (\code{"mlm"}), thanks to (anonymous) stackoverflow remarks.
+
+      \item \code{sample.int(2.9, *, replace=TRUE)} again behaves as
+      documented and as in R < 3.0.0, namely identically to
+      \code{sample.int(2, ..)}.% consider back porting to 3.5.x !
+
+      \item \code{download.file(*, method = "curl", cacheOK = FALSE)}
+      should work now on Windows, thanks to Kevin Ushey's patch in
+      \PR{17323}.
+
+      \item Fixes to \code{convertColor()} for chromatic adaptation;
+      thanks to Brodie Gaslam \PR{17473}.
+
+      \item Using \code{\\Sexpr[stage=install]{..}} to create an
+      \file{Rd} section no longer gives a warning in \command{R CMD
+	check}; problem originally posted by Gábor Csárdi, then reported
+      as \PR{17479} with a careful patch by Duncan Murdoch.
     }
   }
 }
@@ -322,13 +419,46 @@ D
 
       \item \code{hist()} no longer integer overflows in very rare
       cases, fixing \PR{17450}.
-      
+
       \item \code{untar()} ignored a character \code{compressed}
       argument: however many external \command{tar} programs ignore
       the flags which should have been set and automagically choose the
       compression type, and if appropriate \command{gzip} or
       \command{bzip2} compression would have been chosen from the magic
       header of the tarball.
+
+      \item \code{zapsmall(x)} now works for more \dQuote{number-like} objects.
+
+      \item The tools-internal function called from \command{R CMD
+	INSTALL} now gets a \code{warnOption = 1} argument and only sets
+      \code{options(warn = warnOption)} when that increases the warning
+      level (\PR{17453}).
+
+      \item Analogously, the tools-internal function called from \command{R CMD
+	check} gets a \code{warnOption = 1} argument and uses the larger
+      of that and \code{getOption("warn")}, also allowing to be run with
+      increased warning level.
+
+      \item Parse data now have deterministic parent nodes (\PR{16041}).
+
+      \item Calling \code{match()} with length one \code{x} and POSIXlt
+      \code{table} gave a segfault (\PR{17459}).
+
+      \item Fork cluster could hang due to a race condition in cluster
+      initialization (\code{makeCluster()}).
+
+      \item \code{nextn(n)} now also works for larger \code{n} and no
+      longer loops infinitely for e.g, \code{n <- 214e7}.
+
+      \item \code{cooks.distance()} and \code{rstandard()} now work
+      correctly for multivariate models (\code{"mlm"}).
+
+      \item \code{polym()} and corresponding \code{lm()} prediction now
+      also work for a boundary "vector" case fixing \PR{17474},
+      reported by Alexandre Courtiol.
+
+      \item With a very large number of variables \code{terms()} could
+      segfault (\PR{17480}).
     }
   }
 }

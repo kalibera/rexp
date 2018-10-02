@@ -812,7 +812,8 @@ tools::assertError(`&`(FALSE))
 tools::assertError(`|`(TRUE))
 ## Did not give errors in R <= 3.2.0
 E <- tryCatch(`!`(), error = function(e)e)
-stopifnot(grepl("0 arguments .*\\<1", conditionMessage(E)))
+stopifnot(grepl("0 argument.*\\<1", conditionMessage(E)))
+##            PR#17456 :   ^^ a version that also matches in a --disable-nls configuration
 ## Gave wrong error message in R <= 3.2.0
 stopifnot(identical(!matrix(TRUE), matrix(FALSE)),
 	  identical(!matrix(FALSE), matrix(TRUE)))
@@ -1088,8 +1089,8 @@ stopifnot(identical(format(dd),
 
 ## var(x) and hence sd(x)  with factor x, PR#16564
 tools::assertError(cov(1:6, f <- gl(2,3)))# was ok already
-tools::assertWarning(var(f))
-tools::assertWarning( sd(f))
+tools::assertError(var(f))# these two give an error now (R >= 3.6.0)
+tools::assertError( sd(f))
 ## var() "worked" in R <= 3.2.2  using the underlying integer codes
 proc.time() - .pt; .pt <- proc.time()
 
@@ -1328,7 +1329,7 @@ identical(f1, rep(paste(f0, "CET"), 2))# often TRUE (but too platform dependent)
 d2$zone <- d1$zone[1] # length 1 instead of 2
 f2 <- format(d2, usetz=TRUE)## -> segfault
 f1.2 <- format(as.POSIXlt("2016-01-28 01:23:45"), format=c("%d", "%y"))# segfault
-stopifnot(identical(f2, rep(paste(f0,  tz0 ), 2)),
+stopifnot(identical(f2, format(as.POSIXct(d2), usetz=TRUE)),# not yet in R <= 3.5.x
 	  identical(f1.2, c("28", "16")))
 tims <- seq.POSIXt(as.POSIXct("2016-01-01"),
 		   as.POSIXct("2017-11-11"), by = as.difftime(pi, units="weeks"))

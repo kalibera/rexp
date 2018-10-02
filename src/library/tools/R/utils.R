@@ -498,7 +498,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 ### ** .BioC_version_associated_with_R_version
 
 .BioC_version_associated_with_R_version <-
-    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.7"))
+    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.8"))
 ## Things are more complicated from R-2.15.x with still two BioC
 ## releases a year, so we do need to set this manually.
 ## Wierdly, 3.0 is the second version (after 2.14) for the 3.1.x series.
@@ -621,10 +621,13 @@ function(x)
 .canonicalize_quotes <-
 function(txt)
 {
+    txt <- as.character(txt)
+    enc <- Encoding(txt)
     txt <- gsub(paste0("(", intToUtf8(0x2018), "|", intToUtf8(0x2019), ")"),
-                "'", txt, perl = TRUE)
+                "'", txt, perl = TRUE, useBytes = TRUE)
     txt <- gsub(paste0("(", intToUtf8(0x201c), "|", intToUtf8(0x201d), ")"),
-                "'", txt, perl = TRUE)
+                '"', txt, perl = TRUE, useBytes = TRUE)
+    Encoding(txt) <- enc
     txt
 }
 
@@ -1723,7 +1726,8 @@ function()
 ### ** .package_apply
 
 .package_apply <-
-function(packages = NULL, FUN, ...)
+function(packages = NULL, FUN, ...,
+         Ncpus = getOption("Ncpus", 1L))
 {
     ## Apply FUN and extra '...' args to all given packages.
     ## The default corresponds to all installed packages with high
@@ -1731,12 +1735,28 @@ function(packages = NULL, FUN, ...)
     if(is.null(packages))
         packages <-
             unique(utils::installed.packages(priority = "high")[ , 1L])
-    out <- lapply(packages, function(p)
-                  tryCatch(FUN(p, ...),
-                           error = function(e)
-                           noquote(paste("Error:",
-                                         conditionMessage(e)))))
+
+    one <- function(p)
+        tryCatch(FUN(p, ...),
+                 error = function(e)
+                     noquote(paste("Error:",
+                                   conditionMessage(e))))
     ## (Just don't throw the error ...)
+
+    ## Would be good to have a common wrapper ...
+    if(Ncpus > 1L) {
+        if(.Platform$OS.type != "windows") {
+            out <- parallel::mclapply(packages, one, mc.cores = Ncpus)
+        } else {
+            cl <- parallel::makeCluster(Ncpus)
+            args <- list(FUN, ...)      # Eval promises.
+            out <- parallel::parLapply(cl, packages, one)
+            parallel::stopCluster(cl)
+        }
+    } else {
+        out <- lapply(packages, one)
+    }
+    
     names(out) <- packages
     out
 }
@@ -2139,21 +2159,36 @@ function(expr)
 ### ** .unpacked_source_repository_apply
 
 .unpacked_source_repository_apply <-
-function(dir, fun, ..., pattern = "*", verbose = FALSE)
+function(dir, FUN, ..., pattern = "*", verbose = FALSE,
+         Ncpus = getOption("Ncpus", 1L))
 {
     dir <- file_path_as_absolute(dir)
 
     dfiles <- Sys.glob(file.path(dir, pattern, "DESCRIPTION"))
+    paths <- dirname(dfiles)
 
-    results <-
-        lapply(dirname(dfiles),
-               function(dir) {
-                   if(verbose)
-                       message(sprintf("processing %s", basename(dir)))
-                   fun(dir, ...)
-               })
-    names(results) <- basename(dirname(dfiles))
-    results
+    one <- function(p) {
+        if(verbose)
+            message(sprintf("processing %s", basename(p)))
+        FUN(p, ...)
+    }
+
+    ## Would be good to have a common wrapper ...
+    if(Ncpus > 1L) {
+        if(.Platform$OS.type != "windows") {
+            out <- parallel::mclapply(paths, one, mc.cores = Ncpus)
+        } else {
+            cl <- parallel::makeCluster(Ncpus)
+            args <- list(FUN, ...)      # Eval promises.
+            out <- parallel::parLapply(cl, paths, one)
+            parallel::stopCluster(cl)
+        }
+    } else {
+        out <- lapply(paths, one)
+    }
+
+    names(out) <- basename(paths)
+    out
 }
 
 ### ** .wrong_args

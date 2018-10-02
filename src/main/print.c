@@ -519,6 +519,18 @@ static void PrintGenericVector(SEXP s, R_PrintData *data)
 		       const char *ss = translateChar(STRING_ELT(names, i));
 		    */
 		    const char *ss = EncodeChar(STRING_ELT(names, i));
+#ifdef Win32
+		    /* FIXME: double translation to native encoding, in
+		         EncodeChar and translateChar; it is however necessary
+			 to call isValidName() on a string without Rgui
+			 escapes, because Rgui escapes cause a name to be
+			 regarded invalid;
+			 note also differences with printList
+		    */
+		    const char *st = ss;
+		    if (WinUTF8out)
+			st = translateChar(STRING_ELT(names, i));
+#endif
 		    if (taglen + strlen(ss) > TAGBUFLEN) {
 			if (taglen <= TAGBUFLEN)
 			    sprintf(ptag, "$...");
@@ -527,7 +539,11 @@ static void PrintGenericVector(SEXP s, R_PrintData *data)
 			   is a valid (if non-syntactic) name */
 			if (STRING_ELT(names, i) == NA_STRING)
 			    sprintf(ptag, "$<NA>");
+#ifdef Win32
+			else if( isValidName(st) )
+#else
 			else if( isValidName(ss) )
+#endif
 			    sprintf(ptag, "$%s", ss);
 			else
 			    sprintf(ptag, "$`%s`", ss);
@@ -751,7 +767,7 @@ static void PrintSpecial(SEXP s, R_PrintData *data)
 #ifdef Win32
 static void print_cleanup(void *data)
 {
-    WinUTF8out = FALSE;
+    WinUTF8out = *(Rboolean *)data;
 }
 #endif
 
@@ -766,13 +782,14 @@ void attribute_hidden PrintValueRec(SEXP s, R_PrintData *data)
 #ifdef Win32
     RCNTXT cntxt;
     Rboolean havecontext = FALSE;
+    Rboolean saveWinUTF8out = WinUTF8out;
 
     WinCheckUTF8();
-    if (WinUTF8out) {
+    if (WinUTF8out != saveWinUTF8out) {
 	begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
 	             R_NilValue, R_NilValue);
 	cntxt.cend = &print_cleanup;
-	cntxt.cenddata = NULL;
+	cntxt.cenddata = &saveWinUTF8out;
 	havecontext = TRUE;
     }
 #endif
@@ -915,7 +932,7 @@ done:
 #ifdef Win32
     if (havecontext)
 	endcontext(&cntxt);
-    print_cleanup(NULL);
+    print_cleanup(&saveWinUTF8out);
 #endif
     return; /* needed when Win32 is not defined */
 }

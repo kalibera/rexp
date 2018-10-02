@@ -3546,6 +3546,8 @@ function(aar, strict = FALSE)
                                   is.na(match("aut", e$role)),
                                   NA)))
                         out$bad_authors_at_R_field_has_no_author_roles <- TRUE
+                }
+                if(strict >= 3L) {
                     non_standard_roles <-
                         lapply(aar$role, setdiff,
                                utils:::MARC_relator_db_codes_used_with_R)
@@ -3942,6 +3944,8 @@ function(x, ...)
   , quartzFont = function(family) {}
   , quartzFonts = function(...) {}
   , quartz.options = function(..., reset = TRUE) {}
+  , quartz.save = function(file, type = "png", device = dev.cur(),
+                           dpi = 100, ...) {}
 ))
 
 .windows_only_proto_objects <- as.environment(list(
@@ -4856,10 +4860,11 @@ function(dir)
 {
     predicate <- function(e) {
         ((length(e) > 1L)
-         && (as.character(e[[1L]]) %in%
-             c("library.dynam", "library.dynam.unload"))
-         && is.character(e[[2L]])
-         && grepl("\\.(so|sl|dll)$", e[[2L]]))
+            && (length(x <- as.character(e[[1L]])) == 1L)
+            && (x %in% c("library.dynam", "library.dynam.unload"))
+            && (length(y <- e[[2L]]) == 1L)
+            && is.character(y)
+            && grepl("\\.(so|sl|dll)$", y))
     }
 
     x <- Filter(length,
@@ -5025,10 +5030,9 @@ function(file, encoding = NA)
     for(e in exprs) {
         if((length(e) > 2L) &&
 	   (is.name(x <- e[[1L]])) &&
-           (as.character(x) %in%
-            c("<-", "=")) &&
-           (as.character(y <- e[[2L]]) %in%
-            c(".First.lib", ".onAttach", ".onLoad")) &&
+           (as.character(x) %in% c("<-", "=")) &&
+           (length(y <- as.character(e[[2L]])) == 1L) &&
+           (y %in% c(".First.lib", ".onAttach", ".onLoad")) &&
 	   (is.call(z <- e[[3L]])) &&
            (as.character(z[[1L]]) == "function")) {
             new <- list(z)
@@ -5157,10 +5161,9 @@ function(file, encoding = NA)
     for(e in exprs) {
         if((length(e) > 2L) &&
 	   (is.name(x <- e[[1L]])) &&
-           (as.character(x) %in%
-            c("<-", "=")) &&
-           (as.character(y <- e[[2L]]) %in%
-            c(".Last.lib", ".onDetach")) &&
+           (as.character(x) %in% c("<-", "=")) &&
+           (length(y <- as.character(e[[2L]])) == 1L) &&
+           (y %in% c(".Last.lib", ".onDetach")) &&
 	   (is.call(z <- e[[3L]])) &&
            (as.character(z[[1L]]) == "function")) {
             new <- list(z)
@@ -5216,7 +5219,9 @@ function(dir)
 function(dir)
 {
     predicate <- function(e) {
-        if(!is.call(e) || as.character(e[[1L]]) != "assign")
+        if(!is.call(e) ||
+           (length(x <- as.character(e[[1L]])) != 1L) ||
+           (x != "assign"))
             return(FALSE)
         e <- e[as.character(e) != "..."]
         ## Capture assignments to global env unless to .Random.seed.
@@ -5260,7 +5265,8 @@ function(x, ...)
 function(dir)
 {
     predicate <- function(e)
-        as.character(e[[1L]]) == "attach"
+    ((length(x <- as.character(e[[1L]])) == 1L) &&
+     (x == "attach"))
 
     calls <- Filter(length,
                     .find_calls_in_package_code(dir, predicate,
@@ -5284,7 +5290,9 @@ function(x, ...)
 function(dir)
 {
     predicate <- function(e) {
-        if(!is.call(e) || as.character(e[[1L]]) != "data")
+        if(!is.call(e) ||
+           (length(x <- as.character(e[[1L]])) != 1L) ||
+           (x != "data"))
             return(FALSE)
         ## As data() has usage
         ##   data(..., list = character(), package = NULL, lib.loc = NULL,
@@ -6425,8 +6433,14 @@ function(dir, silent = FALSE, def_enc = FALSE, minlevel = -1)
         else def_enc <- TRUE
     } else enc <- "ASCII"
     macros <- loadPkgRdMacros(dir)
+    ## UGLY! FIXME: add (something like) 'dir' as argument to checkRd() below!
+    oenv <- Sys.getenv("_R_RD_MACROS_PACKAGE_DIR_", unset = NA)
+    on.exit(if (!is.na(oenv)) Sys.setenv("_R_RD_MACROS_PACKAGE_DIR_" = oenv) 
+    	    else Sys.unsetenv("_R_RD_MACROS_PACKAGE_DIR_"))
+    Sys.setenv("_R_RD_MACROS_PACKAGE_DIR_" = normalizePath(dir))
     owd <- setwd(file.path(dir, "man"))
-    on.exit(setwd(owd))
+    on.exit(setwd(owd), add = TRUE)
+    
     pg <- c(Sys.glob("*.Rd"), Sys.glob("*.rd"),
             Sys.glob(file.path("*", "*.Rd")),
             Sys.glob(file.path("*", "*.rd")))
@@ -6439,7 +6453,8 @@ function(dir, silent = FALSE, def_enc = FALSE, minlevel = -1)
         if(basename(f) %in% c("iconv.Rd", "showNonASCII.Rd")) def_enc <- TRUE
 	tmp <- tryCatch(suppressMessages(checkRd(f, encoding = enc,
 						 def_enc = def_enc,
-                                                 macros = macros)),
+                                                 macros = macros,
+                                                 stages = c("build", "install", "render"))),
 			error = identity)
 	if(inherits(tmp, "error")) {
 	    bad <- c(bad, f)
@@ -8525,29 +8540,29 @@ function(x)
 
 ### ** .pretty_format
 
+.strwrap22 <- function(x, collapse = " ")
+    strwrap(paste(x, collapse=collapse), indent = 2L, exdent = 2L)
+
 .pretty_format <-
-function(x)
-{
-    strwrap(paste(sQuote(x), collapse = " "),
-            indent = 2L, exdent = 2L)
-}
+function(x, collapse = " ", q = getOption("useFancyQuotes"))
+    .strwrap22(sQuote(x, q=q), collapse=collapse)
+
 .pretty_format2 <-
-function(msg, x)
+function(msg, x, collapse = ", ", useFancyQuotes = FALSE)
 {
-    xx <- strwrap(paste(sQuote(x), collapse = " "), exdent = 2L)
+    xx <- strwrap(paste(sQuote(x, q=q), collapse=collapse), exdent = 2L)
     if (length(xx) > 1L || nchar(msg) + nchar(xx) + 1L > 75L)
-        c(msg, .pretty_format(x))
+        ## trash 'xx', instead wrap w/ 'indent' :
+        c(msg, .pretty_format(x, collapse=collapse, q=q))
     else paste(msg, xx)
 }
 
 ### ** .pretty_print
 
 .pretty_print <-
-function(x)
-{
-    writeLines(strwrap(paste(x, collapse = " "),
-                       indent = 2L, exdent = 2L))
-}
+function(x, collapse = " ")
+    writeLines(.strwrap22(x, collapse=collapse))
+
 
 ### ** .strip_backticks
 
@@ -8841,6 +8856,18 @@ function(package, lib.loc = NULL)
     functions_in_code <-
         Filter(function(f) is.function(code_env[[f]]),
                objects_in_code)
+
+    ## Look only at the *additional* generics in suggests.
+    generics <-
+        setdiff(generics,
+                c(Filter(function(f) .is_S3_generic(f, code_env),
+                         functions_in_code),
+                  .get_S3_generics_as_seen_from_package(dir,
+                                                        TRUE,
+                                                        TRUE),
+                  .get_S3_group_generics(),
+                  .get_S3_primitive_generics()))
+                        
     methods_stop_list <- nonS3methods(basename(dir))
     methods <- lapply(generics,
                       function(g) {
