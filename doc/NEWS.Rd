@@ -11,7 +11,7 @@
      \itemize{
        \item Serialization format version 3 becomes the default for
        serialization and saving of the workspace (\code{save()},
-       \code{serialize()}, \code{saveRDS()}, \code{cmpfile()}).
+       \code{serialize()}, \code{saveRDS()}, \code{compiler::cmpfile()}).
        Serialized data in format 3 cannot be read by versions of \R prior
        to version 3.5.0.  Serialization format version 2 is still
        supported and can be selected by \code{version = 2} in the
@@ -127,8 +127,8 @@
       choose the \emph{kind} of \code{quantile()}s to use; wish of
       \PR{17438}.
 
-      \item Multivariate linear models, \code{lm()} now do work with
-      \emph{matrix} offsets, as suggested in \PR{17407}.
+      \item Fitting multiple linear models \emph{via} \code{lm()} does
+      work with \emph{matrix} offsets, as suggested in \PR{17407}.
 
       \item The new functions \code{mem.maxVSize()} and
       \code{mem.maxMSize()} allow the maximal size of the vector heap
@@ -141,7 +141,7 @@
       i.e., all help pages. show platform-independent information (rather
       than Windows or Unix-alike specifics visible only on that platform).
       Consequently, the Windows version of \code{X11()} / \code{x11()}
-      got identical formal arguments the unix one.
+      got identical formal arguments to the Unix one.
 
       \item \code{sessionInfo()$running} has been factored out in a new
       variable \code{osVersion}. % precomputed at utils namespace load time
@@ -160,7 +160,7 @@
       OpenBSD have \sQuote{older} \command{tar} commands for this
       purpose.)
 
-      \item The new function \code{asplit()} allows to split an array or
+      \item The new function \code{asplit()} allow splitting an array or
       matrix by its margins.
 
       \item New functions \code{errorCondition()} and
@@ -201,6 +201,9 @@
       \item \code{sQuote()} and \code{dQuote()} get an explicit \code{q}
       argument with obvious default instead of using
       \code{getOption("fancyQuotes")} implicitly and unconditionally.
+
+      \item \code{unzip()} can list archives with comments and with
+      spaces in file names even using external \command{unzip} command.
     }
   }
 
@@ -367,8 +370,8 @@
       particularly systems with more than 64 logical processors). Reported
       by Arunkumar Srinivasan.
 
-      \item On Windows, \code{socketSelect} would hang with more than 64
-      sockets, and hence \code{parallel::clusterApplyLB()} would hang
+      \item On Windows, \code{socketSelect()} would hang with more than
+      64 sockets, and hence \code{parallel::clusterApplyLB()} would hang
       with more than 64 workers.  Reported by Arunkumar Srinivasan.
 
       \item \code{as(1L, "double")} now does coerce (\PR{17457}).
@@ -402,8 +405,20 @@
 
       \item \code{split.default()} no longer relies on \code{[[<-()}, so
       it behaves as expected when splitting an object by a factor with
-      the empty string as one of its levels. Thanks to Brad Friedman for
+      the empty string as one of its levels.  Thanks to Brad Friedman for
       the report.
+
+      \item Line numbers in messages about \file{.Rd} files are now more
+      reliable, thanks to a patch from Duncan Murdoch.
+
+      \item In the \code{numeric} method for \code{all.equal()}, a
+      numeric \code{scale} argument is now checked to be positive and
+      allowed to be of length > 1 (which was working originally and with
+      a warning in recent years).
+
+      \item Deferred string conversions now record the \code{OutDec}
+      option setting when not equal to the default. Reported by Michael
+      Sannella.
     }
   }
 }
@@ -461,7 +476,7 @@
       \item Calling \code{match()} with length one \code{x} and POSIXlt
       \code{table} gave a segfault (\PR{17459}).
 
-      \item Fork cluster could hang due to a race condition in cluster
+      \item Fork clusters could hang due to a race condition in cluster
       initialization (\code{makeCluster()}).
 
       \item \code{nextn(n)} now also works for larger \code{n} and no
@@ -476,6 +491,14 @@
 
       \item With a very large number of variables \code{terms()} could
       segfault (\PR{17480}).
+
+      \item \code{cut(rep(0, 7))} now works, thanks to Joey Reid and
+      Benjamin Tyner (\PR{16802}).
+
+      \item \code{legend(*, cex = 1:2)} now works less badly.
+
+      \item \code{duplicated(<dataframe with 'f'>)} now works, too,
+      thanks to Andreas Kersting's \PR{17485}.
     }
   }
 }

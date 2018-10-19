@@ -2057,7 +2057,7 @@ stopifnot(exprs = {
 
 ## More strictness in '&&' and '||' :
 Sys.getenv("_R_CHECK_LENGTH_1_LOGIC2_", unset=NA) -> oEV
-Sys.setenv("_R_CHECK_LENGTH_1_LOGIC2_" = "foo") # only warn
+Sys.setenv("_R_CHECK_LENGTH_1_LOGIC2_" = "warn") # only warn
 tools::assertWarning(1 && 0:1)
 Sys.setenv("_R_CHECK_LENGTH_1_LOGIC2_" = TRUE) # => error (when triggered)
 tools::assertError(0 || 0:1)
@@ -2089,6 +2089,43 @@ mi <- lm.influence(f0)
 stopifnot(identical(dim(cf <- mi$coefficients), c(7L, 1L)),
           all.equal(range(cf), c(-0.0042857143, 0.0072527473)))
 ## gave an error for a few days in R-devel
+
+
+## cut(<constant 0>), PR#16802
+c0 <- cut(rep(0L, 7), breaks = 3)
+stopifnot(is.factor(c0), length(c0) == 7, length(unique(c0)) == 1)
+## cut() gave error  _'breaks' are not unique_  in R <= 3.5.1
+
+
+## need to record OutDec in deferred string conversions (reported by
+## Michael Sannella).
+op <- options(scipen=-5, OutDec=",")
+xx <- as.character(123.456)
+options(op)
+stopifnot(identical(xx, "1,23456e+02"))
+
+
+## parseRd() and Rd2HTML() with some \Sexpr{} in *.Rd:
+x <- tools::Rd_db("base")
+y <- lapply(x, function(e) tryCatch(tools::Rd2HTML(e, out = nullfile()),
+                                    error = identity))
+stopifnot(!vapply(y, inherits, NA, "error"))
+## Gave error when "running" \Sexpr{.} DateTimeClasses.Rd
+
+
+## if( "length > 1" )  buglet in plot.data.frame()
+Sys.getenv("_R_CHECK_LENGTH_1_CONDITION_", unset=NA) -> oEV
+Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = "true")
+plot(data.frame(.leap.seconds))
+if(!is.na(oEV)) Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = oEV)
+## gave Error in ... the condition has length > 1,  in R <= 3.5.1
+
+
+## duplicated(<dataframe with 'f' col>) -- PR#17485
+stopifnot(identical(which(duplicated(data.frame(f=gl(3,5), i=1:3))),
+                    c(4:5, 9:10, 14:15)))
+## gave error from do.call(Map, ..) as Map()'s first arg. is 'f'
+
 
 
 ## keep at end
