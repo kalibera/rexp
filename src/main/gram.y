@@ -567,7 +567,7 @@ static SEXP makeSrcref(YYLTYPE *lloc, SEXP srcfile)
     INTEGER(val)[7] = lloc->last_parsed;
     setAttrib(val, R_SrcfileSymbol, srcfile);
     setAttrib(val, R_ClassSymbol, mkString("srcref"));
-    UNPROTECT(1);
+    UNPROTECT(1); /* val */
     return val;
 }
 
@@ -594,7 +594,7 @@ static SEXP attachSrcrefs(SEXP val)
     }
     REPROTECT(SrcRefs = R_NilValue, srindex);
     ParseState.didAttach = TRUE;
-    UNPROTECT(2);
+    UNPROTECT(2); /* val, srval */
     return val;
 }
 
@@ -619,11 +619,11 @@ static SEXP xxnullformal()
 static SEXP xxfirstformal0(SEXP sym)
 {
     SEXP ans;
-    UNPROTECT_PTR(sym);
     if (GenerateCode)
 	PROTECT(ans = FirstArg(R_MissingArg, sym));
     else
 	PROTECT(ans = R_NilValue);
+    UNPROTECT_PTR(sym);
     return ans;
 }
 
@@ -912,7 +912,7 @@ static SEXP xxfuncall(SEXP expr, SEXP args)
 	    ans = lang1(expr);
 	else
 	    ans = LCONS(expr, CDR(args));
-	UNPROTECT(1);
+	UNPROTECT(1); /* expr */
 	PROTECT(ans);
     }
     else {
@@ -933,7 +933,7 @@ static SEXP mkString2(const char *s, size_t len, Rboolean escaped)
 
     PROTECT(t = allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharLenCE(s, (int) len, enc));
-    UNPROTECT(1);
+    UNPROTECT(1); /* t */
     return t;
 }
 
@@ -1056,6 +1056,7 @@ static SEXP TagArg(SEXP arg, SEXP tag, YYLTYPE *lloc)
 /* the pair by taking its CDR, while the CAR gives fast access to the end */
 /* of the list. */
 
+/* These functions must be called with arguments protected */
 
 /* Create a stretchy-list dotted pair */
 
@@ -1071,9 +1072,7 @@ static SEXP NewList(void)
 static SEXP GrowList(SEXP l, SEXP s)
 {
     SEXP tmp;
-    PROTECT(s);
     tmp = CONS(s, R_NilValue);
-    UNPROTECT(1);
     SETCDR(CAR(l), tmp);
     SETCAR(l, tmp);
     return l;
@@ -1082,22 +1081,17 @@ static SEXP GrowList(SEXP l, SEXP s)
 static SEXP FirstArg(SEXP s, SEXP tag)
 {
     SEXP tmp;
-    PROTECT(s);
-    PROTECT(tag);
     PROTECT(tmp = NewList());
     tmp = GrowList(tmp, s);
     SET_TAG(CAR(tmp), tag);
-    UNPROTECT(3);
+    UNPROTECT(1); /* tmp */
     return tmp;
 }
 
 static SEXP NextArg(SEXP l, SEXP s, SEXP tag)
 {
-    PROTECT(tag);
-    PROTECT(l);
     l = GrowList(l, s);
     SET_TAG(CAR(l), tag);
-    UNPROTECT(2);
     return l;
 }
 
@@ -1420,7 +1414,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
             SET_STRING_ELT(class, 0, mkChar("srcfilecopy"));
             SET_STRING_ELT(class, 1, mkChar("srcfile"));
 	    setAttrib(ParseState.Original, R_ClassSymbol, class);
-	    UNPROTECT(1);
+	    UNPROTECT(1); /* class */
 	}
     }
     R_PPStackTop = savestack;
@@ -1447,7 +1441,6 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     savestack = R_PPStackTop;
     
     ParseContextInit();
-    PROTECT(t = NewList());
 
     REPROTECT(ParseState.SrcFile = srcfile, ParseState.SrcFileProt);
     REPROTECT(ParseState.Original = srcfile, ParseState.OriginalProt);
@@ -1459,6 +1452,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	PROTECT_WITH_INDEX(SrcRefs = R_NilValue, &srindex);
     }
     
+    PROTECT(t = NewList());
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
 	ParseInit();
@@ -1467,11 +1461,15 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	case PARSE_NULL:
 	    break;
 	case PARSE_OK:
+	    PROTECT(rval);
 	    t = GrowList(t, rval);
+	    UNPROTECT(2); /* t, rval */
+	    PROTECT(t);
 	    i++;
 	    break;
 	case PARSE_INCOMPLETE:
 	case PARSE_ERROR:
+	    UNPROTECT(1); /* t */
 	    if (ParseState.keepSrcRefs && ParseState.keepParseData)
 	        finalizeData();
 	    R_PPStackTop = savestack;
@@ -1496,6 +1494,7 @@ finish:
 	    finalizeData();
 	rval = attachSrcrefs(rval);
     }
+    UNPROTECT(2); /* t, rval */
     R_PPStackTop = savestack;    /* UNPROTECT lots! */
     PROTECT(rval);
     endcontext(&cntxt);
@@ -1584,7 +1583,6 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     R_InitSrcRefState(&cntxt);
     savestack = R_PPStackTop;
     ParseContextInit();
-    PROTECT(t = NewList());
     
     GenerateCode = 1;
     iob = buffer;
@@ -1600,6 +1598,7 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	PROTECT_WITH_INDEX(SrcRefs = R_NilValue, &srindex);
     }
     
+    PROTECT(t = NewList());
     for(i = 0; ; ) {
 	if(n >= 0 && i >= n) break;
 	if (!*bufp) {
@@ -1625,11 +1624,15 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	case PARSE_NULL:
 	    break;
 	case PARSE_OK:
+	    PROTECT(rval);
 	    t = GrowList(t, rval);
+	    UNPROTECT(2); /* t, rval */
+	    PROTECT(t);
 	    i++;
 	    break;
 	case PARSE_INCOMPLETE:
 	case PARSE_ERROR:
+	    UNPROTECT(1); /* t */
 	    R_IoBufferWriteReset(buffer);
 	    R_PPStackTop = savestack;
 	    endcontext(&cntxt);
@@ -1652,6 +1655,7 @@ finish:
 	    finalizeData();
 	rval = attachSrcrefs(rval);
     }
+    UNPROTECT(2); /* t, rval */
     R_PPStackTop = savestack; /* UNPROTECT lots! */
     PROTECT(rval);
     endcontext(&cntxt);
@@ -2327,7 +2331,7 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
 #endif
     PROTECT(t = allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharCE(s, CE_UTF8));
-    UNPROTECT(1);
+    UNPROTECT(1); /* t */
     return t;
 }
 
@@ -2715,7 +2719,7 @@ static void setParseFilename(SEXP newname) {
 	SET_STRING_ELT(class, 0, mkChar("srcfilealias"));
 	SET_STRING_ELT(class, 1, mkChar("srcfile"));
 	setAttrib(ParseState.SrcFile, R_ClassSymbol, class);
-	UNPROTECT(1);
+	UNPROTECT(1); /* class */
     } else {
     	REPROTECT(ParseState.SrcFile = duplicate(newname), ParseState.SrcFileProt);
     }
@@ -3370,7 +3374,7 @@ static SEXP lengthgets2(SEXP x, int len) {
     	default:
 	    UNIMPLEMENTED_TYPE("lengthgets2", x);
     }
-    UNPROTECT(1);
+    UNPROTECT(1); /* result */
     return result;
 }
 
@@ -3491,7 +3495,7 @@ static void finalizeData( ){
     /* Put it into the srcfile environment */
     if (isEnvironment(ParseState.SrcFile)) 
     	defineVar(install("parseData"), newdata, ParseState.SrcFile);
-    UNPROTECT(4);
+    UNPROTECT(4); /* tokens, newdata, newtext, dims */
 }
 
 /**
