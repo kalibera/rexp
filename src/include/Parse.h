@@ -38,13 +38,12 @@ struct SrcRefState {
     Rboolean keepSrcRefs;	/* Whether to attach srcrefs to objects as they are parsed */
     Rboolean keepParseData;	/* Whether to attach also parse data to srcrefs */
     Rboolean didAttach;		/* Record of whether a srcref was attached */
-    SEXP SrcFile;		/* The srcfile object currently being parsed */
-    SEXP Original;		/* The underlying srcfile object */
-    PROTECT_INDEX SrcFileProt;	/* The SrcFile may change */
-    PROTECT_INDEX OriginalProt; /* ditto */
-    SEXP data;			/* Detailed info on parse */
-    SEXP text;
-    SEXP ids;
+    SEXP sexps;
+	/* SrcFile		The srcfile object currently being parsed */
+	/* Original		The underlying srcfile object */
+	/* data	(INTSXP)	Detailed info on parse */
+	/* text (STRSXP)*/
+	/* ids  (INTSXP)*/
     int data_count;
     				/* Position information about the current parse */
     int xxlineno;		/* Line number according to #line directives */
