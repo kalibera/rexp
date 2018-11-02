@@ -759,6 +759,7 @@ MACOS_SIERRA
 ALLOCA
 R_OPENMP_FFLAGS
 R_OPENMP_CFLAGS
+OPENMP_CXXFLAGS
 SHLIB_CXX17LDFLAGS
 SHLIB_CXX17LD
 CXX17PICFLAGS
@@ -816,7 +817,6 @@ SHLIB_CXXFLAGS
 CXXSTD
 FOUNDATION_LIBS
 FOUNDATION_CPPFLAGS
-OPENMP_CXXFLAGS
 OPENMP_FFLAGS
 COMPILE_FORTRAN_DOUBLE_COMPLEX_FALSE
 COMPILE_FORTRAN_DOUBLE_COMPLEX_TRUE
@@ -26442,7 +26442,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-### *** C++ compiler.
+### *** C++ compiler
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${CXX} accepts -M for generating dependencies" >&5
@@ -26491,86 +26491,7 @@ fi
 
 
 
-ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-
-  OPENMP_CXXFLAGS=
-  # Check whether --enable-openmp was given.
-if test "${enable_openmp+set}" = set; then :
-  enableval=$enable_openmp;
-fi
-
-  if test "$enable_openmp" != no; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $CXX option to support OpenMP" >&5
-$as_echo_n "checking for $CXX option to support OpenMP... " >&6; }
-if ${ac_cv_prog_cxx_openmp+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#ifndef _OPENMP
- choke me
-#endif
-#include <omp.h>
-int main () { return omp_get_num_threads (); }
-
-_ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
-  ac_cv_prog_cxx_openmp='none needed'
-else
-  ac_cv_prog_cxx_openmp='unsupported'
-	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
-                           -openmp -mp -omp -qsmp=omp -homp \
-			   -fopenmp=libomp \
-                           -Popenmp --openmp; do
-	    ac_save_CXXFLAGS=$CXXFLAGS
-	    CXXFLAGS="$CXXFLAGS $ac_option"
-	    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#ifndef _OPENMP
- choke me
-#endif
-#include <omp.h>
-int main () { return omp_get_num_threads (); }
-
-_ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
-  ac_cv_prog_cxx_openmp=$ac_option
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-	    CXXFLAGS=$ac_save_CXXFLAGS
-	    if test "$ac_cv_prog_cxx_openmp" != unsupported; then
-	      break
-	    fi
-	  done
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_prog_cxx_openmp" >&5
-$as_echo "$ac_cv_prog_cxx_openmp" >&6; }
-    case $ac_cv_prog_cxx_openmp in #(
-      "none needed" | unsupported)
-	;; #(
-      *)
-	OPENMP_CXXFLAGS=$ac_cv_prog_cxx_openmp ;;
-    esac
-  fi
-
-
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
+## OpenMP selection has to come after dialect is chosen.
 
 ### *** ObjC compiler
 
@@ -31943,6 +31864,91 @@ if test -n "${CXX}" && test -z "${CXXSTD}"; then
     CXXPICFLAGS=${CXX98PICFLAGS}
   fi
 fi
+
+## Only now can we look for the OpenMP flag
+ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+CXX_SAVE=${CXX}
+CXX="${CXX} ${CXXSTD}"
+
+  OPENMP_CXXFLAGS=
+  # Check whether --enable-openmp was given.
+if test "${enable_openmp+set}" = set; then :
+  enableval=$enable_openmp;
+fi
+
+  if test "$enable_openmp" != no; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $CXX option to support OpenMP" >&5
+$as_echo_n "checking for $CXX option to support OpenMP... " >&6; }
+if ${ac_cv_prog_cxx_openmp+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifndef _OPENMP
+ choke me
+#endif
+#include <omp.h>
+int main () { return omp_get_num_threads (); }
+
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_prog_cxx_openmp='none needed'
+else
+  ac_cv_prog_cxx_openmp='unsupported'
+	  	  	  	  	            	  	            	  	  	  	                                	  	  	  	  	  	  	  	  for ac_option in -xopenmp -fopenmp -qopenmp \
+                           -openmp -mp -omp -qsmp=omp -homp \
+			   -fopenmp=libomp \
+                           -Popenmp --openmp; do
+	    ac_save_CXXFLAGS=$CXXFLAGS
+	    CXXFLAGS="$CXXFLAGS $ac_option"
+	    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifndef _OPENMP
+ choke me
+#endif
+#include <omp.h>
+int main () { return omp_get_num_threads (); }
+
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_prog_cxx_openmp=$ac_option
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	    CXXFLAGS=$ac_save_CXXFLAGS
+	    if test "$ac_cv_prog_cxx_openmp" != unsupported; then
+	      break
+	    fi
+	  done
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_prog_cxx_openmp" >&5
+$as_echo "$ac_cv_prog_cxx_openmp" >&6; }
+    case $ac_cv_prog_cxx_openmp in #(
+      "none needed" | unsupported)
+	;; #(
+      *)
+	OPENMP_CXXFLAGS=$ac_cv_prog_cxx_openmp ;;
+    esac
+  fi
+
+
+CXX=${CXX_SAVE}
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
 
 ### OpenMP.
 
