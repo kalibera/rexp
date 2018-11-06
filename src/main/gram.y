@@ -168,12 +168,12 @@ static void setId( SEXP expr, yyltype loc){
 /* Functions used in the parsing process */
 
 static void	CheckFormalArgs(SEXP, SEXP, YYLTYPE *);
-static SEXP	FirstArg(SEXP, SEXP);
-static SEXP	GrowList(SEXP, SEXP);
+static SEXP	FirstArg(SEXP, SEXP); /* create list with one element */
+static void 	GrowList(SEXP, SEXP); /* add element to list end */
 static void	IfPush(void);
 static int	KeywordLookup(const char *);
 static SEXP	NewList(void);
-static SEXP	NextArg(SEXP, SEXP, SEXP);
+static void	NextArg(SEXP, SEXP, SEXP); /* add named element to list end */
 static SEXP	TagArg(SEXP, SEXP, YYLTYPE *);
 static int 	processLineDirective();
 
@@ -656,12 +656,13 @@ static SEXP xxaddformal0(SEXP formlist, SEXP sym, YYLTYPE *lloc)
     SEXP ans;
     if (GenerateCode) {
 	CheckFormalArgs(formlist, sym, lloc);
-	PROTECT(ans = NextArg(formlist, R_MissingArg, sym));
-    }
-    else
+	NextArg(formlist, R_MissingArg, sym);
+	ans = formlist;
+    } else {
+	UNPROTECT_PTR(formlist);
 	PROTECT(ans = R_NilValue);
+    }
     UNPROTECT_PTR(sym);
-    UNPROTECT_PTR(formlist);
     return ans;
 }
 
@@ -670,13 +671,14 @@ static SEXP xxaddformal1(SEXP formlist, SEXP sym, SEXP expr, YYLTYPE *lloc)
     SEXP ans;
     if (GenerateCode) {
 	CheckFormalArgs(formlist, sym, lloc);
-	PROTECT(ans = NextArg(formlist, expr, sym));
-    }
-    else
+	NextArg(formlist, expr, sym);
+	ans = formlist;
+    } else {
+	UNPROTECT_PTR(formlist);
 	PROTECT(ans = R_NilValue);
+    }
     UNPROTECT_PTR(expr);
     UNPROTECT_PTR(sym);
-    UNPROTECT_PTR(formlist);
     return ans;
 }
 
@@ -697,15 +699,14 @@ static SEXP xxexprlist0(void)
 
 static SEXP xxexprlist1(SEXP expr, YYLTYPE *lloc)
 {
-    SEXP ans,tmp;
+    SEXP ans;
     if (GenerateCode) {
-	PROTECT(tmp = NewList());
+	PROTECT(ans = NewList());
 	if (ParseState.keepSrcRefs) {
-	    setAttrib(tmp, R_SrcrefSymbol, SrcRefs);
+	    setAttrib(ans, R_SrcrefSymbol, SrcRefs);
 	    REPROTECT(SrcRefs = list1(makeSrcref(lloc, PS_SRCFILE)), srindex);
 	}
-	PROTECT(ans = GrowList(tmp, expr));
-	UNPROTECT_PTR(tmp);
+	GrowList(ans, expr);
     }
     else
 	PROTECT(ans = R_NilValue);
@@ -719,12 +720,13 @@ static SEXP xxexprlist2(SEXP exprlist, SEXP expr, YYLTYPE *lloc)
     if (GenerateCode) {
 	if (ParseState.keepSrcRefs)
 	    REPROTECT(SrcRefs = listAppend(SrcRefs, list1(makeSrcref(lloc, PS_SRCFILE))), srindex);
-	PROTECT(ans = GrowList(exprlist, expr));
-    }
-    else
+	GrowList(exprlist, expr);
+	ans = exprlist;
+    } else {
+	UNPROTECT_PTR(exprlist);
 	PROTECT(ans = R_NilValue);
+    }
     UNPROTECT_PTR(expr);
-    UNPROTECT_PTR(exprlist);
     return ans;
 }
 
@@ -810,12 +812,14 @@ static SEXP xxsublist1(SEXP sub)
 static SEXP xxsublist2(SEXP sublist, SEXP sub)
 {
     SEXP ans;
-    if (GenerateCode)
-	PROTECT(ans = NextArg(sublist, CAR(sub), CADR(sub)));
-    else
+    if (GenerateCode) {
+	NextArg(sublist, CAR(sub), CADR(sub));
+	ans = sublist;
+    } else {
+	UNPROTECT_PTR(sublist);
 	PROTECT(ans = R_NilValue);
+    }
     UNPROTECT_PTR(sub);
-    UNPROTECT_PTR(sublist);
     return ans;
 }
 
@@ -846,7 +850,7 @@ static SEXP xxif(SEXP ifsym, SEXP cond, SEXP expr)
 static SEXP xxifelse(SEXP ifsym, SEXP cond, SEXP ifexpr, SEXP elseexpr)
 {
     SEXP ans;
-    if( GenerateCode)
+    if (GenerateCode)
 	PROTECT(ans = lang4(ifsym, cond, ifexpr, elseexpr));
     else
 	PROTECT(ans = R_NilValue);
@@ -916,7 +920,7 @@ static SEXP xxnxtbrk(SEXP keyword)
 static SEXP xxfuncall(SEXP expr, SEXP args)
 {
     SEXP ans, sav_expr = expr;
-    if(GenerateCode) {
+    if (GenerateCode) {
 	if (isString(expr))
 	    expr = installTrChar(STRING_ELT(expr, 0));
 	PROTECT(expr);
@@ -1080,29 +1084,29 @@ static SEXP NewList(void)
 }
 
 /* Add a new element at the end of a stretchy list */
-
-static SEXP GrowList(SEXP l, SEXP s)
+static void GrowList(SEXP l, SEXP s)
 {
     SEXP tmp;
     tmp = CONS(s, R_NilValue);
     SETCDR(CAR(l), tmp);
     SETCAR(l, tmp);
-    return l;
 }
 
+/* Create a stretchy list with a single named element */
 static SEXP FirstArg(SEXP s, SEXP tag)
 {
     SEXP tmp;
     PROTECT(tmp = NewList());
-    tmp = GrowList(tmp, s);
+    GrowList(tmp, s);
     SET_TAG(CAR(tmp), tag);
     UNPROTECT(1); /* tmp */
     return tmp;
 }
 
-static SEXP NextArg(SEXP l, SEXP s, SEXP tag)
+/* Add named element to the end of a stretchy list */
+static void NextArg(SEXP l, SEXP s, SEXP tag)
 {
-    l = GrowList(l, s);
+    GrowList(l, s);
     SET_TAG(CAR(l), tag);
     return l;
 }
@@ -1461,9 +1465,8 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
 	    break;
 	case PARSE_OK:
 	    PROTECT(rval);
-	    t = GrowList(t, rval);
-	    UNPROTECT(2); /* t, rval */
-	    PROTECT(t);
+	    GrowList(t, rval);
+	    UNPROTECT(1); /* rval */
 	    i++;
 	    break;
 	case PARSE_INCOMPLETE:
@@ -1624,9 +1627,8 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
 	    break;
 	case PARSE_OK:
 	    PROTECT(rval);
-	    t = GrowList(t, rval);
-	    UNPROTECT(2); /* t, rval */
-	    PROTECT(t);
+	    GrowList(t, rval);
+	    UNPROTECT(1); /* rval */
 	    i++;
 	    break;
 	case PARSE_INCOMPLETE:
