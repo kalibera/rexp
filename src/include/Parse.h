@@ -39,6 +39,7 @@ struct SrcRefState {
     Rboolean keepParseData;	/* Whether to attach also parse data to srcrefs */
     Rboolean didAttach;		/* Record of whether a srcref was attached */
     SEXP sexps;
+	/* SrcRefs */
 	/* SrcFile		The srcfile object currently being parsed */
 	/* Original		The underlying srcfile object */
 	/* data	(INTSXP)	Detailed info on parse */

@@ -196,21 +196,21 @@ static int	xxungetc(int);
 static int	xxcharcount, xxcharsave;
 static int	xxlinesave, xxbytesave, xxcolsave, xxparsesave;
 
-#define PS_SET_SRCFILE(x)   SET_VECTOR_ELT(ParseState.sexps, 0, (x))
-#define PS_SET_ORIGINAL(x)  SET_VECTOR_ELT(ParseState.sexps, 1, (x))
-#define PS_SET_DATA(x)      SET_VECTOR_ELT(ParseState.sexps, 2, (x))
-#define PS_SET_TEXT(x)      SET_VECTOR_ELT(ParseState.sexps, 3, (x))
-#define PS_SET_IDS(x)       SET_VECTOR_ELT(ParseState.sexps, 4, (x))
+#define PS_SET_SRCREFS(x)   SET_VECTOR_ELT(ParseState.sexps, 0, (x))
+#define PS_SET_SRCFILE(x)   SET_VECTOR_ELT(ParseState.sexps, 1, (x))
+#define PS_SET_ORIGINAL(x)  SET_VECTOR_ELT(ParseState.sexps, 2, (x))
+#define PS_SET_DATA(x)      SET_VECTOR_ELT(ParseState.sexps, 3, (x))
+#define PS_SET_TEXT(x)      SET_VECTOR_ELT(ParseState.sexps, 4, (x))
+#define PS_SET_IDS(x)       SET_VECTOR_ELT(ParseState.sexps, 5, (x))
 
-#define PS_SRCFILE          VECTOR_ELT(ParseState.sexps, 0)
-#define PS_ORIGINAL         VECTOR_ELT(ParseState.sexps, 1)
-#define PS_DATA             VECTOR_ELT(ParseState.sexps, 2)
-#define PS_TEXT             VECTOR_ELT(ParseState.sexps, 3)
-#define PS_IDS              VECTOR_ELT(ParseState.sexps, 4)
+#define PS_SRCREFS          VECTOR_ELT(ParseState.sexps, 0)
+#define PS_SRCFILE          VECTOR_ELT(ParseState.sexps, 1)
+#define PS_ORIGINAL         VECTOR_ELT(ParseState.sexps, 2)
+#define PS_DATA             VECTOR_ELT(ParseState.sexps, 3)
+#define PS_TEXT             VECTOR_ELT(ParseState.sexps, 4)
+#define PS_IDS              VECTOR_ELT(ParseState.sexps, 5)
 
-static SEXP	SrcRefs;
 static SrcRefState ParseState;
-static PROTECT_INDEX srindex;
 
 #include <rlocale.h>
 #ifdef HAVE_LANGINFO_CODESET
@@ -588,7 +588,7 @@ static SEXP attachSrcrefs(SEXP val)
     SEXP srval;
 
     PROTECT(val);
-    PROTECT(srval = PairToVectorList(SrcRefs));
+    PROTECT(srval = PairToVectorList(PS_SRCREFS));
     
     setAttrib(val, R_SrcrefSymbol, srval);
     setAttrib(val, R_SrcfileSymbol, PS_SRCFILE);
@@ -604,7 +604,7 @@ static SEXP attachSrcrefs(SEXP val)
 	wholeFile.last_parsed = ParseState.xxparseno;
 	setAttrib(val, R_WholeSrcrefSymbol, makeSrcref(&wholeFile, PS_SRCFILE));
     }
-    REPROTECT(SrcRefs = R_NilValue, srindex);
+    PS_SET_SRCREFS(R_NilValue);
     ParseState.didAttach = TRUE;
     UNPROTECT(2); /* val, srval */
     return val;
@@ -614,7 +614,7 @@ static int xxvalue(SEXP v, int k, YYLTYPE *lloc)
 {
     if (k > 2) {
 	if (ParseState.keepSrcRefs)
-	    REPROTECT(SrcRefs = listAppend(SrcRefs, list1(makeSrcref(lloc, PS_SRCFILE))), srindex);
+	    PS_SET_SRCREFS(listAppend(PS_SRCREFS, list1(makeSrcref(lloc, PS_SRCFILE))));
 	UNPROTECT_PTR(v);
     }
     R_CurrentExpr = v;
@@ -688,8 +688,8 @@ static SEXP xxexprlist0(void)
     if (GenerateCode) {
 	PROTECT(ans = NewList());
 	if (ParseState.keepSrcRefs) {
-	    setAttrib(ans, R_SrcrefSymbol, SrcRefs);
-	    REPROTECT(SrcRefs = R_NilValue, srindex);
+	    setAttrib(ans, R_SrcrefSymbol, PS_SRCREFS);
+	    PS_SET_SRCREFS(R_NilValue);
 	}
     }
     else
@@ -703,8 +703,8 @@ static SEXP xxexprlist1(SEXP expr, YYLTYPE *lloc)
     if (GenerateCode) {
 	PROTECT(ans = NewList());
 	if (ParseState.keepSrcRefs) {
-	    setAttrib(ans, R_SrcrefSymbol, SrcRefs);
-	    REPROTECT(SrcRefs = list1(makeSrcref(lloc, PS_SRCFILE)), srindex);
+	    setAttrib(ans, R_SrcrefSymbol, PS_SRCREFS);
+	    PS_SET_SRCREFS(list1(makeSrcref(lloc, PS_SRCFILE)));
 	}
 	GrowList(ans, expr);
     }
@@ -719,7 +719,8 @@ static SEXP xxexprlist2(SEXP exprlist, SEXP expr, YYLTYPE *lloc)
     SEXP ans;
     if (GenerateCode) {
 	if (ParseState.keepSrcRefs)
-	    REPROTECT(SrcRefs = listAppend(SrcRefs, list1(makeSrcref(lloc, PS_SRCFILE))), srindex);
+	    PS_SET_SRCREFS(listAppend(PS_SRCREFS,
+	                   list1(makeSrcref(lloc, PS_SRCFILE))));
 	GrowList(exprlist, expr);
 	ans = exprlist;
     } else {
@@ -1034,12 +1035,13 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 	SETCAR(a2, a1);
 	if (ParseState.keepSrcRefs) {
 	    PROTECT(prevSrcrefs = getAttrib(a2, R_SrcrefSymbol));
-	    REPROTECT(SrcRefs = CONS(makeSrcref(lloc, PS_SRCFILE), SrcRefs), srindex);
-	    PROTECT(ans = attachSrcrefs(a2));
-	    REPROTECT(SrcRefs = prevSrcrefs, srindex);
+	    PS_SET_SRCREFS(CONS(makeSrcref(lloc, PS_SRCFILE), PS_SRCREFS));
+	    ans = attachSrcrefs(a2);
+	    UNPROTECT(1); /* prevSrcrefs */
+	    PS_SET_SRCREFS(prevSrcrefs);
 	    /* SrcRefs got NAMED by being an attribute... */
-	    SET_NAMED(SrcRefs, 0);
-	    UNPROTECT_PTR(prevSrcrefs);
+	    SET_NAMED(PS_SRCREFS, 0); /* FIXME: still needed? */
+	    PROTECT(ans);
 	}
 	else
 	    PROTECT(ans = a2);
@@ -1108,7 +1110,6 @@ static void NextArg(SEXP l, SEXP s, SEXP tag)
 {
     GrowList(l, s);
     SET_TAG(CAR(l), tag);
-    return l;
 }
 
 
@@ -1175,7 +1176,7 @@ static void UseSrcRefState(SrcRefState *state);
 attribute_hidden
 void InitParser(void)
 {
-    ParseState.sexps = allocVector(VECSXP, 5);
+    ParseState.sexps = allocVector(VECSXP, 6);
     R_PreserveObject(ParseState.sexps);
     /* never released in an R session */
     PS_SET_DATA(R_NilValue);
@@ -1200,7 +1201,7 @@ void R_InitSrcRefState(RCNTXT* cptr)
 	    error(_("allocation of source reference state failed"));
     	PutSrcRefState(prev);
 	ParseState.prevState = prev;
-	ParseState.sexps = allocVector(VECSXP, 5);
+	ParseState.sexps = allocVector(VECSXP, 6);
 	R_PreserveObject(ParseState.sexps);
 	PS_SET_DATA(R_NilValue);
 	PS_SET_TEXT(R_NilValue);
@@ -1390,7 +1391,7 @@ SEXP R_Parse1Buffer(IoBuffer *buffer, int gencode, ParseStatus *status)
 		asLogical(GetOption1(install("keep.parse.data")));
 	    PS_SET_SRCFILE(NewEnvironment(R_NilValue, R_NilValue, R_EmptyEnv));
 	    PS_SET_ORIGINAL(PS_SRCFILE);
-	    PROTECT_WITH_INDEX(SrcRefs = R_NilValue, &srindex);
+	    PS_SET_SRCREFS(R_NilValue);
 	}
     }
     ParseInit();
@@ -1452,7 +1453,7 @@ static SEXP R_Parse(int n, ParseStatus *status, SEXP srcfile)
     	ParseState.keepSrcRefs = TRUE;
 	ParseState.keepParseData =
 	    asLogical(GetOption1(install("keep.parse.data")));
-	PROTECT_WITH_INDEX(SrcRefs = R_NilValue, &srindex);
+	PS_SET_SRCREFS(R_NilValue);
     }
     
     PROTECT(t = NewList());
@@ -1597,7 +1598,7 @@ SEXP R_ParseBuffer(IoBuffer *buffer, int n, ParseStatus *status, SEXP prompt,
     	ParseState.keepSrcRefs = TRUE;
 	ParseState.keepParseData =
 	    asLogical(GetOption1(install("keep.parse.data")));
-	PROTECT_WITH_INDEX(SrcRefs = R_NilValue, &srindex);
+	PS_SET_SRCREFS(R_NilValue);
     }
     
     PROTECT(t = NewList());
