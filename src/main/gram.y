@@ -215,8 +215,38 @@ static SrcRefState ParseState;
 #define PS_IDS              VECTOR_ELT(ParseState.sexps, 5)
 #define PS_SVS              VECTOR_ELT(ParseState.sexps, 6)
 
+/* Memory protection in the parser
+
+   The generated code of the parser keeps semantic values (SEXPs) on its
+   semantic values stack. Values are added to the stack during shift and
+   reduce operations and are removed during reduce operations or error
+   handling. Values are created by the lexer before they are added to the
+   stack. Values are also held in a local SEXP variable once removed from
+   the stack but still needed. The stack is automatically expanded on demand.
+
+   For memory protection, it would be natural to have that stack on the R heap
+   and to use PROTECT/UNPROTECT to protect values in local SEXP variables.
+   Unfortunately, bison does not seem to be customizable enough to allow this.
+
+   Hence, semantic values, when created by the lexer or reduce operations, are
+   placed on parser state precious multi-set via PRESERVE_SV. They are removed
+   from the multi-set in reduce operations using RELEASE_SV, because by design
+   of the bison parsers such values are subsequently removed from the stack.
+   They are also automatically removed when the parsing finshes, including
+   parser error (also on R error, via the context on-end action).
+
+   Previously semantic values were protected via PROTECT/UNPROTECT_PTR with
+   similar semantics but using protect stack shared with PROTECT/UNPROTECT.
+   Using a separate precious multi-set is safe even with interleaving of the
+   two protection schemes.
+*/
+
 static R_xlen_t nPreserved = 0;
 
+/* Add the given semantic value (SEXP) to the precious multi-set of the
+   current parser state.  The set is specific to each parsing and is
+   automatically cleared when the parse operation finishes or fails.
+   Values in the set are protected implicitly from garbage collection. */
 static void PRESERVE_SV(SEXP x) {
     if (x == R_NilValue || isSymbol(x))
 	return; /* no need to preserve */
@@ -237,6 +267,8 @@ static void PRESERVE_SV(SEXP x) {
     SET_VECTOR_ELT(store, nPreserved++, x);
 }
 
+/* Remove (one instance of) the semantic value from the current parser state
+   precious multi-set. */
 static void RELEASE_SV(SEXP x) {
     if (x == R_NilValue || isSymbol(x))
 	return; /* not preserved */
@@ -255,6 +287,8 @@ static void RELEASE_SV(SEXP x) {
     /* not preserved */
 }
 
+/* Clear the precious multi-set of semantic values int the current
+   parser state. */
 static void clearSvs() {
     SEXP store = PS_SVS;
     if (store == R_NilValue)
