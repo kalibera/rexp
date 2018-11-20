@@ -2107,10 +2107,15 @@ stopifnot(identical(xx, "1,23456e+02"))
 
 ## parseRd() and Rd2HTML() with some \Sexpr{} in *.Rd:
 x <- tools::Rd_db("base")
-y <- lapply(x, function(e) tryCatch(tools::Rd2HTML(e, out = nullfile()),
-                                    error = identity))
-stopifnot(!vapply(y, inherits, NA, "error"))
-## Gave error when "running" \Sexpr{.} DateTimeClasses.Rd
+## Now check that \Sexpr{}  "installed" correctly:
+of <- textConnection("DThtml", "w")
+tools::Rd2HTML(x$DateTimeClasses.Rd, out = of, stages = "install"); close(of)
+(iLeap <- grep("leap seconds", DThtml)[[1]])
+stopifnot(exprs = {
+        grepl("[0-9]+ days",     DThtml[iLeap+ 1])
+    any(grepl("20[1-9][0-9]-01", DThtml[iLeap+ 2:4]))
+})
+
 
 
 ## if( "length > 1" )  buglet in plot.data.frame()
@@ -2191,6 +2196,75 @@ tools::assertWarning(
  (fzw7 <- formatC(x3, width=7, zero.print="< 0.001"))
 for(fz in list(fz1, fz1., fzw7)) stopifnot(identical(grepl("<", fz), x3 == 0))
 ## fz1, fzw7 gave error (for 2 bugs) in R <= 3.5.x
+
+
+## Attempting to modify an object in a locked binding could succeed
+## before signaling an error:
+foo <- function() {
+    zero <- 0           ## to fool constant folding
+    x <- 1 + zero       ## value of 'x' has one reference
+    lockBinding("x", environment())
+    tryCatch(x[1] <- 2, ## would modify the value, then signal an error
+             error = identity)
+    stopifnot(identical(x, 1))
+}
+foo()
+
+
+## formalArgs()  should conform to names(formals()) also in looking up fun: PR#17499
+by <- function(a, b, c) "Bye!" # Overwrites base::by, as an example
+foo <- function() {
+  f1 <- function(a, ...) {}
+  list(nf = names(formals("f1")),
+       fA = formalArgs   ("f1"))
+}
+stopifnot(exprs = {
+    identical(names(formals("by")), letters[1:3])
+    identical(formalArgs   ("by") , letters[1:3])
+    { r <- foo(); identical(r$nf, r$fA) }
+})
+## gave "wrong" result and error in R <= 3.5.x
+
+
+
+## Subassigning multiple new data.frame columns (with specified row), PR#15362, 17504
+z0 <- z1 <- data.frame(a=1, s=1)
+z0[2, c("a","r","e")] <- data.frame(a=1, r=8, e=9)
+z1[2, "r"] <- data.frame(r=8)
+x <- x0 <- data.frame(a=1:3, s=1:3)
+x[2, 3:4] <- data.frame(r=8, e=9)
+stopifnot(exprs = {
+    identical(z0, data.frame(a = c(1, 1), s = c(1, NA), r = c(NA, 8), e = c(NA, 9)))
+    identical(z1, data.frame(a = c(1,NA), s = c(1, NA), r = c(NA, 8)))
+    identical(x, cbind(x0,
+                       data.frame(r = c(NA, 8, NA), e = c(NA, 9, NA))))
+})
+d0 <- d1 <- d2 <- d3 <- d4 <- d5 <- d6 <- d7 <- data.frame(n=1:4)
+##
+d0[, 2] <- c2 <- 5:8
+d0[, 3] <- c3 <- 9:12
+d1[, 2:3] <- list(c2, c3)
+d2[  2:3] <- list(c2, c3)
+d3[TRUE, 2] <- c2 ; d3[TRUE, 3] <- c3
+d4[TRUE, 2:3] <- list(c2, c3)
+d5[1:4,  2:3] <- list(c2, c3)
+d6[TRUE, 1:2] <- list(c2, c3)
+d7[    , 1:2] <- list(c2, c3)
+stopifnot(exprs = {
+    identical(d0, d1)
+    identical(d0, d2)
+    identical(d0, d3)
+    identical(d0, d4)
+    identical(d0, d5)
+    ##
+    identical(d6, d7)
+    identical(d6, structure(list(n = c2, V2 = c3),
+                            row.names = c(NA, -4L), class = "data.frame"))
+})
+## d4, d5 --> 'Error in `*tmp*`[[j]] : subscript out of bounds'
+## d6     --> 'Error in x[[j]] <- `*vtmp*` :
+##				more elements supplied than there are to replace
+## in R <= 3.5.1
 
 
 

@@ -737,9 +737,21 @@ SEXP R_compact_intrange(R_xlen_t n1, R_xlen_t n2);
 SEXP R_deferred_coerceToString(SEXP v, SEXP info);
 SEXP R_virtrep_vec(SEXP, SEXP);
 SEXP R_tryWrap(SEXP);
+SEXP R_tryUnwrap(SEXP);
 
 #ifdef LONG_VECTOR_SUPPORT
     R_len_t NORET R_BadLongVector(SEXP, const char *, int);
+#endif
+
+/* checking for mis-use of multi-threading */
+#ifdef TESTING_WRITE_BARRIER
+# define THREADCHECK
+#endif
+#ifdef THREADCHECK
+void R_check_thread(const char *s);
+# define R_CHECK_THREAD R_check_thread(__func__)
+#else
+# define R_CHECK_THREAD do {} while (0)
 #endif
 
 /* List Access Functions */
@@ -1667,12 +1679,11 @@ void SET_REAL_ELT(SEXP x, R_xlen_t i, double v);
 	if(R_CStackLimit != (uintptr_t)(-1) && usage > ((intptr_t) R_CStackLimit)) \
 	    R_SignalCStackOverflow(usage);				\
     } while (FALSE)
+#endif
 
 void R_BadValueInRCode(SEXP value, SEXP call, SEXP rho, const char *rawmsg,
         const char *errmsg, const char *warnmsg, const char *varname,
         Rboolean warnByDefault);
-
-#endif
 
 #ifdef __cplusplus
 }

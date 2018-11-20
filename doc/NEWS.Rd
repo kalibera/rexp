@@ -196,7 +196,7 @@
       \PR{17394}.
 
       \item In \code{.col(dim)} and \code{.row(dim)}, \code{dim} now may
-      also be an integer valued \code{"double"}.
+      also be an integer-valued \code{"double"}.
 
       \item \code{sQuote()} and \code{dQuote()} get an explicit \code{q}
       argument with obvious default instead of using
@@ -208,17 +208,25 @@
       \item Command line completion has a new setting
       \code{rc.settings(dots = FALSE)} to remove \code{...} from the
       list of possible function arguments.
-      
+
       \item \code{library()} no longer checks packages with compiled
       code match \samp{R.version$platform}.  \code{loadNamespace()}
       never has, and increasingly the \sQuote{canonical name} does not
       reflect the important characteristics of compiled code.
       %% E.g. 32/64-bit compiler settings
 
-      \item For atomic vectors that are large enough the functions
-      \code{drop}, \code{structure}, \code{unclass}, and \code{unname}
-      now avoid duplicating their data by returning \code{ALTREP}
-      wrapper objects with adjusted attributes.
+      \item The primitive functions \code{drop()} and \code{unclass()}
+      now avoid duplicating their data for atomic vectors that are large
+      enough by returning \code{ALTREP} wrapper objects with adjusted
+      attributes.  R-level assignments to change attributes will also
+      use wrapper objects to avoid duplicating data for larger atomic
+      vectors. R functions like \code{structure()} and \code{unname()}
+      will therefore not duplicate data in these settings.  Generic
+      vectors as produced by \code{list()} are not yet covered by this
+      optimization but may be in due course.
+
+      \item In \code{formals()}, \code{envir} becomes an optional
+      argument instead of being hardwired.
     }
   }
 
@@ -273,6 +281,9 @@
 
   \subsection{BUG FIXES}{
     \itemize{
+      \item \code{drop1.glm} miscalculated the score test (\code{test="Rao"})
+      when the model contained an offset.
+
       \item \code{replayPlot(r)} now also works in the same \R session
       when \code{r} has been \dQuote{reproduced} from serialization,
       typically after saving to and reading from an RDS file.
@@ -404,10 +415,6 @@
       documented and as in R < 3.0.0, namely identically to
       \code{sample.int(2, ..)}.% consider back porting to 3.5.x !
 
-      \item \code{download.file(*, method = "curl", cacheOK = FALSE)}
-      should work now on Windows, thanks to Kevin Ushey's patch in
-      \PR{17323}.
-
       \item Fixes to \code{convertColor()} for chromatic adaptation;
       thanks to Brodie Gaslam \PR{17473}.
 
@@ -447,6 +454,12 @@
       \item Calls like \code{formatC(*, zero.print = "< 0.001")} no
       longer give an error and are further improved via new optional
       argument \code{replace.zero}.  Reported by David Hugh-Jones.
+
+      \item \code{formalArgs("<fn>")} now finds the same function as
+      \code{formals(*)}, fixing Emil Bode's \PR{17499}.
+
+      \item The methods package better handles duplicated class names
+      across packages.
     }
   }
 }
@@ -523,16 +536,27 @@
       \item \code{cut(rep(0, 7))} now works, thanks to Joey Reid and
       Benjamin Tyner (\PR{16802}).
 
-      \item \code{legend(*, cex = 1:2)} now works less badly.
+      \item \code{download.file(*, method = "curl", cacheOK = FALSE)}
+      should work now on Windows, thanks to Kevin Ushey's patch in
+      \PR{17323}.
 
       \item \code{duplicated(<dataframe with 'f'>)} now works, too,
       thanks to Andreas Kersting's \PR{17485}; ditto for
       \code{anyDuplicated()}.
 
+      \item \code{legend(*, cex = 1:2)} now works less badly.
+
       \item The \code{print()} method for \code{POSIXct} and
       \code{POSIXlt} now correctly obeys \code{getOption("max.print")},
       fixing a long-standing typo, and it also gets a corresponding
       optional \code{max} argument.
+
+      \item Unserialization of raw vectors serialized in ASCII
+      representation now works correctly.
+
+      \item \code{<data frame>[TRUE, <new>] <- list(c1, c2)} now works
+      correctly, thanks to Suharto Anggono's \PR{15362} and Emil Bode's
+      patch in \PR{17504}.
     }
   }
 }

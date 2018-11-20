@@ -333,6 +333,7 @@ static R_INLINE void *ALTVEC_DATAPTR_EX(SEXP x, Rboolean writeable)
     /**** move GC disabling into methods? */
     if (R_in_gc)
 	error("cannot get ALTVEC DATAPTR during GC");
+    R_CHECK_THREAD;
     int enabled = R_GCEnabled;
     R_GCEnabled = FALSE;
 
@@ -493,6 +494,7 @@ SEXP /*attribute_hidden*/ ALTSTRING_ELT(SEXP x, R_xlen_t i)
     /**** move GC disabling into method? */
     if (R_in_gc)
 	error("cannot get ALTSTRING_ELT during GC");
+    R_CHECK_THREAD;
     int enabled = R_GCEnabled;
     R_GCEnabled = FALSE;
 
@@ -506,7 +508,8 @@ void attribute_hidden ALTSTRING_SET_ELT(SEXP x, R_xlen_t i, SEXP v)
 {
     /**** move GC disabling into method? */
     if (R_in_gc)
-	error("cannot get ALTSTRING_ELT during GC");
+	error("cannot set ALTSTRING_ELT during GC");
+    R_CHECK_THREAD;
     int enabled = R_GCEnabled;
     R_GCEnabled = FALSE;
 
@@ -1058,3 +1061,19 @@ Rboolean R_altrep_inherits(SEXP x, R_altrep_class_t class)
 {
     return ALTREP(x) && ALTREP_CLASS(x) == R_SEXP(class);
 }
+
+SEXP attribute_hidden do_altrep_class(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    checkArity(op, args);
+    SEXP x = CAR(args);
+    if (ALTREP(x)) {
+	SEXP info = ALTREP_SERIALIZED_CLASS(x);
+	SEXP val = allocVector(STRSXP, 2);
+	SET_STRING_ELT(val, 0, PRINTNAME(ALTREP_SERIALIZED_CLASS_CLSSYM(info)));
+	SET_STRING_ELT(val, 1, PRINTNAME(ALTREP_SERIALIZED_CLASS_PKGSYM(info)));
+	return val;
+    }
+    else
+	return R_NilValue;
+}
+
