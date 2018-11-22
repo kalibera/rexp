@@ -3439,6 +3439,124 @@ void R_ReleaseObject(SEXP object)
     R_PreciousList =  RecursiveRelease(object, R_PreciousList);
 }
 
+/* This code is similar to R_PreserveObject/R_ReleasObject, but objects are
+   kept in a given multi-set, which needs to be protected by other means. When
+   protected via PROTECT, the multi-set is automatically cleared on long jump,
+   thus preventing memory leaks. These functions are intended for use in
+   generated bison parsers, when one cannot customize the parser enough to
+   produce code using PROTECT/UNPROTECT for the semantic values. */
+
+/* Multi-set is a CONS(store, npreserved) with TAG()==initialSize
+     when store==R_NilValue,
+         npreserved == 0 and initialSize will be used on allocation
+     when store is a VECSXP,
+         npreserved is a scalar integer holding the number of preserved
+         elements; preserved elements are in VECSXP from the beginning,
+         followed by R_NilValue elements
+*/
+
+/* Create new multi-set for protecting objects. */
+SEXP R_NewPreciousMSet(int initialSize)
+{
+    SEXP npreserved, mset;
+
+    /* npreserved is modified in place */
+    npreserved = allocVector(INTSXP, 1);
+    SET_INTEGER_ELT(npreserved, 0, 0);
+    PROTECT(mset = CONS(R_NilValue, npreserved));
+    SET_TAG(mset, ScalarInteger(initialSize));
+    UNPROTECT(1); /* mset */
+    return mset;
+}
+
+static void checkMSet(SEXP mset)
+{
+    SEXP store = CAR(mset);
+    SEXP npreserved = CDR(mset);
+    SEXP isize = TAG(mset);
+    if (MAYBE_REFERENCED(mset) ||
+	((store != R_NilValue) && 
+	    (TYPEOF(store) != VECSXP || MAYBE_REFERENCED(store))) ||
+	(TYPEOF(npreserved) != INTSXP || LENGTH(npreserved) != 1 ||
+	    MAYBE_REFERENCED(npreserved)) ||
+	(TYPEOF(isize) != INTSXP || LENGTH(npreserved) != 1))
+
+	error("Invalid mset");
+}
+
+/* Add object to multi-set. The object will be protected as long as the
+   multi-set is protected. */
+void R_PreserveInMSet(SEXP x, SEXP mset)
+{
+    if (x == R_NilValue || isSymbol(x))
+	return; /* no need to preserve */
+    PROTECT(x);
+    checkMSet(mset);
+    SEXP store = CAR(mset);
+    int *n = INTEGER(CDR(mset));
+    if (store == R_NilValue) {
+	R_xlen_t newsize = INTEGER_ELT(TAG(mset), 0);
+	if (newsize <= 0)
+	    newsize = 4; /* default minimum size */
+	store = PROTECT(allocVector(VECSXP, newsize));
+	SETCAR(mset, store);
+    }		
+    if (*n == XLENGTH(store)) {
+	R_xlen_t oldsize = XLENGTH(store);
+	R_xlen_t newsize = 2 * oldsize;
+	if (newsize >= INT_MAX)
+	    error("Multi-set overflow");
+	SEXP newstore = PROTECT(allocVector(VECSXP, newsize));
+	for(R_xlen_t i = 0; i < oldsize; i++)
+	    SET_VECTOR_ELT(newstore, i, VECTOR_ELT(store, i));
+	SETCAR(mset, newstore);
+	store = newstore;
+	UNPROTECT(1); /* newstore */
+    }
+    UNPROTECT(1); /* x */
+    SET_VECTOR_ELT(store, (*n)++, x);
+}
+
+/* Remove (one instance of) the object from the multi-set. If there is another
+   instance of the object in the multi-set, it will still be protected. */
+void R_ReleaseFromMSet(SEXP x, SEXP mset)
+{
+    if (x == R_NilValue || isSymbol(x))
+	return; /* not preserved */
+    checkMSet(mset);
+    SEXP store = CAR(mset);
+    if (store == R_NilValue)
+	return; /* not preserved */
+    int *n = INTEGER(CDR(mset));
+    for(R_xlen_t i = (*n) - 1; i >= 0; i--) {
+	if (VECTOR_ELT(store, i) == x) {
+	    for(;i < (*n) - 1; i++)
+		SET_VECTOR_ELT(store, i, VECTOR_ELT(store, i + 1));
+	    SET_VECTOR_ELT(store, i, R_NilValue);
+	    (*n)--;
+	    return;
+	}
+    }
+    /* not preserved */
+}
+
+/* Release all objects from the multi-set, but the multi-set can be used for
+   preserving more objects. */
+void R_ReleaseMSet(SEXP mset, int keepSize)
+{
+    checkMSet(mset);
+    SEXP store = CAR(mset);
+    if (store == R_NilValue)
+	return; /* already empty */
+    int *n = INTEGER(CDR(mset));
+    if (XLENGTH(store) <= keepSize) {
+	/* just free the entries */
+	for(R_xlen_t i = 0; i < *n; i++)
+	    SET_VECTOR_ELT(store, i, R_NilValue);
+	*n = 0;
+    } else 
+	SETCAR(mset, R_NilValue);
+}
 
 /* External Pointer Objects */
 SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
