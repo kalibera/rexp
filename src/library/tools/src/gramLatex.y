@@ -120,7 +120,7 @@ struct ParseState {
     SEXP	xxVerbatimList;/* A STRSXP containing all the verbatim environment names */
 
     SEXP     SrcFile;  /* parseLatex will *always* supply a srcfile */
-    SEXP mset; /* Precious mset for parser semantic values */ 
+    SEXP mset; /* precious mset for protecting parser semantic values */
     ParseState *prevState;
 };
 
@@ -190,7 +190,7 @@ Item:		TEXT				{ $$ = xxtag($1, TEXT, &@$); }
 	
 environment:	BEGIN '{' TEXT '}' { xxSetInVerbEnv($3); } 
                 Items END '{' TEXT '}' 	{ $$ = xxenv($3, $6, $9, &@$);
-                                                  RELEASE_SV($1); RELEASE_SV($7); } 
+                                                  RELEASE_SV($1); RELEASE_SV($7); }
 
 math:		'$' nonMath '$'			{ $$ = xxmath($2, &@$); }
 
@@ -208,7 +208,7 @@ static SEXP xxnewlist(SEXP item)
     PRESERVE_SV(ans = NewList());
     if (item) {
 	GrowList(ans, item);
-    	RELEASE_SV(item);
+	RELEASE_SV(item);
     }
 #if DEBUGVALS
     Rprintf(" result: %p is length %d\n", ans, length(ans));
@@ -240,13 +240,13 @@ static SEXP xxenv(SEXP begin, SEXP body, SEXP end, YYLTYPE *lloc)
     RELEASE_SV(begin);
     if (!isNull(body)) {
 	SET_VECTOR_ELT(ans, 1, PairToVectorList(CDR(body)));
-    	RELEASE_SV(body);	
+	RELEASE_SV(body);
     }
     /* FIXME:  check that begin and end match */
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, parseState.SrcFile));
     setAttrib(ans, R_LatexTagSymbol, mkString("ENVIRONMENT"));
     if (!isNull(end)) 
-    	RELEASE_SV(end);
+	RELEASE_SV(end);
 #if DEBUGVALS
     Rprintf(" result: %p\n", ans);    
 #endif
@@ -305,15 +305,15 @@ static void xxSetInVerbEnv(SEXP envname)
     char buffer[256];
     if (VerbatimLookup(CHAR(STRING_ELT(envname, 0)))) {
     	snprintf(buffer, sizeof(buffer), "\\end{%s}", CHAR(STRING_ELT(envname, 0)));
-    	PRESERVE_SV(parseState.xxInVerbEnv = ScalarString(mkChar(buffer)));
+	PRESERVE_SV(parseState.xxInVerbEnv = ScalarString(mkChar(buffer)));
     } else parseState.xxInVerbEnv = NULL;
 }
 
 static void xxsavevalue(SEXP items, YYLTYPE *lloc)
 {
     if (items) {
-    	PRESERVE_SV(parseState.Value = PairToVectorList(CDR(items)));
-    	RELEASE_SV(items);
+	PRESERVE_SV(parseState.Value = PairToVectorList(CDR(items)));
+	RELEASE_SV(items);
     } else {
     	PRESERVE_SV(parseState.Value = allocVector(VECSXP, 1));
     	SET_VECTOR_ELT(parseState.Value, 0, ScalarString(mkChar("")));
@@ -511,7 +511,8 @@ static SEXP ParseLatex(ParseStatus *status, SEXP srcfile)
     
     parseState.SrcFile = srcfile;
 
-    PROTECT(parseState.mset = R_NewPreciousMSet(50));
+//    PROTECT(parseState.mset = R_NewPreciousMSet(50));
+    PROTECT(parseState.mset = R_NewPreciousMSet(1));
     
     npush = 0;
     
@@ -729,7 +730,7 @@ static int token(void)
         yylloc.last_line = 0;
         yylloc.last_column = 0;
         yylloc.last_byte = 0;
-    	PRESERVE_SV(yylval = mkString(""));
+	PRESERVE_SV(yylval = mkString(""));
         c = parseState.xxinitvalue;
     	parseState.xxinitvalue = 0;
     	return(c);
@@ -862,7 +863,7 @@ static int mkVerbEnv()
     if ( !CHAR(STRING_ELT(parseState.xxInVerbEnv, 0))[matched] ) {
     	for (i = matched-1; i >= 0; i--) 
     	    xxungetc(*(--bp));    	    
-    	RELEASE_SV(parseState.xxInVerbEnv);
+	RELEASE_SV(parseState.xxInVerbEnv);
     	parseState.xxInVerbEnv = NULL;
     }
     	    

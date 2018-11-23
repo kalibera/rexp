@@ -62,7 +62,7 @@
 
 
 /* Copy the first part of user declarations.  */
-#line 1 "gramLatex.y" /* yacc.c:339  */
+
 
 /*
  *  R : A Computer Language for Statistical Data Analysis
@@ -185,7 +185,7 @@ struct ParseState {
     SEXP	xxVerbatimList;/* A STRSXP containing all the verbatim environment names */
 
     SEXP     SrcFile;  /* parseLatex will *always* supply a srcfile */
-    SEXP mset; /* Precious mset for parser semantic values */ 
+    SEXP mset; /* precious mset for protecting parser semantic values */
     ParseState *prevState;
 };
 
@@ -217,7 +217,7 @@ static SEXP R_LatexTagSymbol = NULL;
 #define YYSTYPE		SEXP
 
 
-#line 221 "gramLatex.tab.c" /* yacc.c:339  */
+
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -259,6 +259,15 @@ extern int yydebug;
     VERB = 265
   };
 #endif
+/* Tokens.  */
+#define END_OF_INPUT 258
+#define ERROR 259
+#define MACRO 260
+#define TEXT 261
+#define COMMENT 262
+#define BEGIN 263
+#define END 264
+#define VERB 265
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -290,7 +299,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 294 "gramLatex.tab.c" /* yacc.c:358  */
+
 
 #ifdef short
 # undef short
@@ -1206,33 +1215,33 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
   switch (yytype)
     {
           case 5: /* MACRO  */
-#line 167 "gramLatex.y" /* yacc.c:1257  */
+
       { RELEASE_SV(((*yyvaluep))); }
-#line 1212 "gramLatex.tab.c" /* yacc.c:1257  */
+
         break;
 
     case 6: /* TEXT  */
-#line 167 "gramLatex.y" /* yacc.c:1257  */
+
       { RELEASE_SV(((*yyvaluep))); }
-#line 1218 "gramLatex.tab.c" /* yacc.c:1257  */
+
         break;
 
     case 7: /* COMMENT  */
-#line 167 "gramLatex.y" /* yacc.c:1257  */
+
       { RELEASE_SV(((*yyvaluep))); }
-#line 1224 "gramLatex.tab.c" /* yacc.c:1257  */
+
         break;
 
     case 8: /* BEGIN  */
-#line 167 "gramLatex.y" /* yacc.c:1257  */
+
       { RELEASE_SV(((*yyvaluep))); }
-#line 1230 "gramLatex.tab.c" /* yacc.c:1257  */
+
         break;
 
     case 9: /* END  */
-#line 167 "gramLatex.y" /* yacc.c:1257  */
+
       { RELEASE_SV(((*yyvaluep))); }
-#line 1236 "gramLatex.tab.c" /* yacc.c:1257  */
+
         break;
 
 
@@ -1518,128 +1527,128 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 171 "gramLatex.y" /* yacc.c:1646  */
+
     { xxsavevalue((yyvsp[-1]), &(yyloc)); YYACCEPT; }
-#line 1524 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 3:
-#line 172 "gramLatex.y" /* yacc.c:1646  */
+
     { xxsavevalue(NULL, &(yyloc)); YYACCEPT; }
-#line 1530 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 4:
-#line 173 "gramLatex.y" /* yacc.c:1646  */
+
     { PRESERVE_SV(parseState.Value = R_NilValue);  YYABORT; }
-#line 1536 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 5:
-#line 176 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxnewlist((yyvsp[0])); }
-#line 1542 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 6:
-#line 177 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxnewlist((yyvsp[0])); }
-#line 1548 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 7:
-#line 178 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxlist((yyvsp[-1]), (yyvsp[0])); }
-#line 1554 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 8:
-#line 179 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxlist((yyvsp[-1]), (yyvsp[0])); }
-#line 1560 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 9:
-#line 181 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxnewlist((yyvsp[0])); }
-#line 1566 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 10:
-#line 182 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxlist((yyvsp[-1]), (yyvsp[0])); }
-#line 1572 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 11:
-#line 184 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxtag((yyvsp[0]), TEXT, &(yyloc)); }
-#line 1578 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 12:
-#line 185 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxtag((yyvsp[0]), COMMENT, &(yyloc)); }
-#line 1584 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 13:
-#line 186 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxtag((yyvsp[0]), MACRO, &(yyloc)); }
-#line 1590 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 14:
-#line 187 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxtag((yyvsp[0]), VERB, &(yyloc)); }
-#line 1596 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 15:
-#line 188 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = (yyvsp[0]); }
-#line 1602 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 16:
-#line 189 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = (yyvsp[0]); }
-#line 1608 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 17:
-#line 191 "gramLatex.y" /* yacc.c:1646  */
+
     { xxSetInVerbEnv((yyvsp[-1])); }
-#line 1614 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 18:
-#line 192 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxenv((yyvsp[-7]), (yyvsp[-4]), (yyvsp[-1]), &(yyloc));
                                                   RELEASE_SV((yyvsp[-9])); RELEASE_SV((yyvsp[-3])); }
-#line 1621 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 19:
-#line 195 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxmath((yyvsp[-1]), &(yyloc)); }
-#line 1627 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 20:
-#line 197 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxblock((yyvsp[-1]), &(yyloc)); }
-#line 1633 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
   case 21:
-#line 198 "gramLatex.y" /* yacc.c:1646  */
+
     { (yyval) = xxblock(NULL, &(yyloc)); }
-#line 1639 "gramLatex.tab.c" /* yacc.c:1646  */
+
     break;
 
 
-#line 1643 "gramLatex.tab.c" /* yacc.c:1646  */
+
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1874,7 +1883,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 200 "gramLatex.y" /* yacc.c:1906  */
+
 
 
 static SEXP xxnewlist(SEXP item)
@@ -1886,7 +1895,7 @@ static SEXP xxnewlist(SEXP item)
     PRESERVE_SV(ans = NewList());
     if (item) {
 	GrowList(ans, item);
-    	RELEASE_SV(item);
+	RELEASE_SV(item);
     }
 #if DEBUGVALS
     Rprintf(" result: %p is length %d\n", ans, length(ans));
@@ -1918,13 +1927,13 @@ static SEXP xxenv(SEXP begin, SEXP body, SEXP end, YYLTYPE *lloc)
     RELEASE_SV(begin);
     if (!isNull(body)) {
 	SET_VECTOR_ELT(ans, 1, PairToVectorList(CDR(body)));
-    	RELEASE_SV(body);	
+	RELEASE_SV(body);
     }
     /* FIXME:  check that begin and end match */
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, parseState.SrcFile));
     setAttrib(ans, R_LatexTagSymbol, mkString("ENVIRONMENT"));
     if (!isNull(end)) 
-    	RELEASE_SV(end);
+	RELEASE_SV(end);
 #if DEBUGVALS
     Rprintf(" result: %p\n", ans);    
 #endif
@@ -1983,15 +1992,15 @@ static void xxSetInVerbEnv(SEXP envname)
     char buffer[256];
     if (VerbatimLookup(CHAR(STRING_ELT(envname, 0)))) {
     	snprintf(buffer, sizeof(buffer), "\\end{%s}", CHAR(STRING_ELT(envname, 0)));
-    	PRESERVE_SV(parseState.xxInVerbEnv = ScalarString(mkChar(buffer)));
+	PRESERVE_SV(parseState.xxInVerbEnv = ScalarString(mkChar(buffer)));
     } else parseState.xxInVerbEnv = NULL;
 }
 
 static void xxsavevalue(SEXP items, YYLTYPE *lloc)
 {
     if (items) {
-    	PRESERVE_SV(parseState.Value = PairToVectorList(CDR(items)));
-    	RELEASE_SV(items);
+	PRESERVE_SV(parseState.Value = PairToVectorList(CDR(items)));
+	RELEASE_SV(items);
     } else {
     	PRESERVE_SV(parseState.Value = allocVector(VECSXP, 1));
     	SET_VECTOR_ELT(parseState.Value, 0, ScalarString(mkChar("")));
@@ -2189,7 +2198,8 @@ static SEXP ParseLatex(ParseStatus *status, SEXP srcfile)
     
     parseState.SrcFile = srcfile;
 
-    PROTECT(parseState.mset = R_NewPreciousMSet(50));
+//    PROTECT(parseState.mset = R_NewPreciousMSet(50));
+    PROTECT(parseState.mset = R_NewPreciousMSet(1));
     
     npush = 0;
     
@@ -2407,7 +2417,7 @@ static int token(void)
         yylloc.last_line = 0;
         yylloc.last_column = 0;
         yylloc.last_byte = 0;
-    	PRESERVE_SV(yylval = mkString(""));
+	PRESERVE_SV(yylval = mkString(""));
         c = parseState.xxinitvalue;
     	parseState.xxinitvalue = 0;
     	return(c);
@@ -2540,7 +2550,7 @@ static int mkVerbEnv()
     if ( !CHAR(STRING_ELT(parseState.xxInVerbEnv, 0))[matched] ) {
     	for (i = matched-1; i >= 0; i--) 
     	    xxungetc(*(--bp));    	    
-    	RELEASE_SV(parseState.xxInVerbEnv);
+	RELEASE_SV(parseState.xxInVerbEnv);
     	parseState.xxInVerbEnv = NULL;
     }
     	    

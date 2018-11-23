@@ -130,7 +130,7 @@ struct ParseState {
     SEXP	Value;
     int	xxinitvalue;
     SEXP	xxMacroList;/* A hashed environment containing all the standard and user-defined macro names */
-    SEXP mset; /* Precious mset for parser semantic values */
+    SEXP mset; /* Precious mset for protecting parser semantic values */
     ParseState *prevState;
 };
 
@@ -241,7 +241,7 @@ Section:	VSECTIONHEADER VerbatimArg	{ $$ = xxmarkup($1, $2, STATIC, &@$); }
 	|	SECTIONHEADER  LatexArg  	{ $$ = xxmarkup($1, $2, STATIC, &@$); }
 	|	LISTSECTION    Item2Arg		{ $$ = xxmarkup($1, $2, STATIC, &@$); }
 	|	SECTIONHEADER2 LatexArg LatexArg2 { $$ = xxmarkup2($1, $2, $3, 2, STATIC, &@$); }
-	|	IFDEF IfDefTarget SectionList ENDIF { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); RELEASE_SV($4); } 
+	|	IFDEF IfDefTarget SectionList ENDIF { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); RELEASE_SV($4); }
 	|	IFDEF IfDefTarget SectionList error { $$ = xxmarkup2($1, $2, $3, 2, HAS_IFDEF, &@$); }
 	|	SEXPR       goOption RLikeArg2   { $$ = xxmarkup($1, $3, HAS_SEXPR, &@$); xxpopMode($2); }
 	|	SEXPR       goOption Option RLikeArg2 { $$ = xxOptionmarkup($1, $3, $4, HAS_SEXPR, &@$); xxpopMode($2); }
@@ -435,7 +435,7 @@ static SEXP xxnewlist(SEXP item)
     	int flag = getDynamicFlag(item);
 	GrowList(ans, item);
     	setDynamicFlag(ans, flag);
-    	RELEASE_SV(item);
+	RELEASE_SV(item);
     }
 #if DEBUGVALS
     Rprintf(" result: %p is length %d\n", ans, length(ans));
@@ -514,7 +514,7 @@ static SEXP xxmarkup(SEXP header, SEXP body, int flag, YYLTYPE *lloc)
     else {
         flag |= getDynamicFlag(body);
 	PRESERVE_SV(ans = PairToVectorList(CDR(body)));
-    	RELEASE_SV(body);	
+	RELEASE_SV(body);
     }
     if (isNull(header))
 	setAttrib(ans, R_RdTagSymbol, mkString("LIST"));
@@ -571,7 +571,7 @@ static SEXP xxnewcommand(SEXP cmd, SEXP name, SEXP defn, YYLTYPE *lloc)
     PRESERVE_SV(ans);
     RELEASE_SV(cmd);
     RELEASE_SV(name);
-    RELEASE_SV(defn); 
+    RELEASE_SV(defn);
     return ans;
 }
 
@@ -690,7 +690,7 @@ static SEXP xxOptionmarkup(SEXP header, SEXP option, SEXP body, int flag, YYLTYP
 #endif
     flag |= getDynamicFlag(body);
     PRESERVE_SV(ans = PairToVectorList(CDR(body)));
-    RELEASE_SV(body);	
+    RELEASE_SV(body);
     setAttrib(ans, R_RdTagSymbol, header);
     RELEASE_SV(header);
     flag |= getDynamicFlag(option);
@@ -715,7 +715,7 @@ static SEXP xxmarkup2(SEXP header, SEXP body1, SEXP body2, int argcount, int fla
     if (!isNull(body1)) {
     	int flag1 = getDynamicFlag(body1);
     	SET_VECTOR_ELT(ans, 0, PairToVectorList(CDR(body1)));
-    	RELEASE_SV(body1);
+	RELEASE_SV(body1);
     	setDynamicFlag(VECTOR_ELT(ans, 0), flag1);
     	flag |= flag1;
     }
@@ -724,12 +724,12 @@ static SEXP xxmarkup2(SEXP header, SEXP body1, SEXP body2, int argcount, int fla
 	if (argcount < 2) error("internal error: inconsistent argument count");
 	flag2 = getDynamicFlag(body2);
     	SET_VECTOR_ELT(ans, 1, PairToVectorList(CDR(body2)));    
-    	RELEASE_SV(body2);
+	RELEASE_SV(body2);
     	setDynamicFlag(VECTOR_ELT(ans, 1), flag2);
     	flag |= flag2;
     }
     setAttrib(ans, R_RdTagSymbol, header);
-    RELEASE_SV(header);    
+    RELEASE_SV(header);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     setDynamicFlag(ans, flag);
 #if DEBUGVALS
@@ -749,7 +749,7 @@ static SEXP xxmarkup3(SEXP header, SEXP body1, SEXP body2, SEXP body3, int flag,
     if (!isNull(body1)) {
     	int flag1 = getDynamicFlag(body1);
     	SET_VECTOR_ELT(ans, 0, PairToVectorList(CDR(body1)));
-    	RELEASE_SV(body1);
+	RELEASE_SV(body1);
     	setDynamicFlag(VECTOR_ELT(ans, 0), flag1);
     	flag |= flag1;
     }
@@ -757,7 +757,7 @@ static SEXP xxmarkup3(SEXP header, SEXP body1, SEXP body2, SEXP body3, int flag,
     	int flag2;
 	flag2 = getDynamicFlag(body2);
     	SET_VECTOR_ELT(ans, 1, PairToVectorList(CDR(body2)));    
-    	RELEASE_SV(body2);
+	RELEASE_SV(body2);
     	setDynamicFlag(VECTOR_ELT(ans, 1), flag2);
     	flag |= flag2;
     }
@@ -770,7 +770,7 @@ static SEXP xxmarkup3(SEXP header, SEXP body1, SEXP body2, SEXP body3, int flag,
     	flag |= flag3;
     }    
     setAttrib(ans, R_RdTagSymbol, header);
-    RELEASE_SV(header);    
+    RELEASE_SV(header);
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, SrcFile));
     setDynamicFlag(ans, flag);
 #if DEBUGVALS
@@ -1021,7 +1021,8 @@ static SEXP ParseRd(ParseStatus *status, SEXP srcfile, Rboolean fragment, SEXP m
 	
     PROTECT(macros);
     PROTECT(parseState.xxMacroList = R_NewHashedEnv(macros, ScalarInteger(0)));
-    PROTECT(parseState.mset = R_NewPreciousMSet(50));
+//    PROTECT(parseState.mset = R_NewPreciousMSet(50));
+    PROTECT(parseState.mset = R_NewPreciousMSet(1));
     
     parseState.Value = R_NilValue;
     
@@ -1242,10 +1243,10 @@ static SEXP InstallKeywords()
     num = sizeof(keywords)/sizeof(keywords[0]);
     PROTECT(result = R_NewHashedEnv(R_EmptyEnv, ScalarInteger(num)));
     for (i = 0; keywords[i].name; i++) {
-        PROTECT(name = install(keywords[i].name));
+        name = install(keywords[i].name);
         PROTECT(val = ScalarInteger(keywords[i].token));
     	defineVar(name, val, result);
-	UNPROTECT(2); /* name, val */
+	UNPROTECT(1); /* val */
     }
     UNPROTECT(1); /* result */
     return result;
@@ -1435,7 +1436,7 @@ static int token(void)
         yylloc.last_line = 0;
         yylloc.last_column = 0;
         yylloc.last_byte = 0;
-    	PRESERVE_SV(yylval = mkString(""));
+	PRESERVE_SV(yylval = mkString(""));
         c = parseState.xxinitvalue;
     	parseState.xxinitvalue = 0;
     	return(c);

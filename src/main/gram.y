@@ -248,15 +248,12 @@ static SrcRefState ParseState;
    two protection schemes.
 */
 
-/* Add the given semantic value (SEXP) to the precious multi-set of the
-   current parser state.  The set is specific to each parsing and is
-   automatically cleared when the parse operation finishes or fails.
-   Values in the set are protected implicitly from garbage collection. */
-
-#define INIT_SVS()     PS_SET_SVS(R_NewPreciousMSet(200))
+// #define INIT_SVS()     PS_SET_SVS(R_NewPreciousMSet(200))
+#define INIT_SVS()     PS_SET_SVS(R_NewPreciousMSet(1))
 #define PRESERVE_SV(x) R_PreserveInMSet((x), PS_SVS)
 #define RELEASE_SV(x)  R_ReleaseFromMSet((x), PS_SVS)
-#define CLEAR_SVS()    R_ReleaseMSet(PS_SVS, 500)
+//#define CLEAR_SVS()    R_ReleaseMSet(PS_SVS, 500)
+#define CLEAR_SVS()    R_ReleaseMSet(PS_SVS, 1)
 
 #include <rlocale.h>
 #ifdef HAVE_LANGINFO_CODESET
