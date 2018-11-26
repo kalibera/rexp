@@ -688,15 +688,17 @@ static void yyerror(const char *s)
 		ParseErrorFilename, yylloc.first_line, ParseErrorMsg);
 }
 
-#define TEXT_PUSH(c) do {                  \
-	size_t nc = bp - stext;       \
+#define TEXT_PUSH(c) do {                   \
+	size_t nc = bp - stext;             \
 	if (nc >= nstext - 1) {             \
 	    char *old = stext;              \
+	    SEXP st1;                       \
             nstext *= 2;                    \
-	    stext = malloc(nstext);         \
-	    if(!stext) error(_("unable to allocate buffer for long string at line %d"), parseState.xxlineno);\
+	    PROTECT(st1 = allocVector(RAWSXP, nstext)); \
+	    stext = (char *)RAW(st1);       \
 	    memmove(stext, old, nc);        \
-	    if(old != st0) free(old);	    \
+	    REPROTECT(st1, sti);	    \
+	    UNPROTECT(1); /* st1 */         \
 	    bp = stext+nc; }		    \
 	*bp++ = ((char)c);		    \
 } while(0)
@@ -760,7 +762,9 @@ static int mkText(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
-    
+    PROTECT_INDEX sti;
+
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     while(1) {
     	switch (c) {
     	case '\\': 
@@ -777,7 +781,7 @@ static int mkText(int c)
 stop:
     xxungetc(c);
     PRESERVE_SV(yylval = mkString2(stext,  bp - stext));
-    if(stext != st0) free(stext);
+    UNPROTECT(1); /* release stext */
     return TEXT;
 }
 
@@ -786,7 +790,9 @@ static int mkComment(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
     
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     do TEXT_PUSH(c);
     while ((c = xxgetc()) != '\n' && c != R_EOF);
     
@@ -794,7 +800,7 @@ static int mkComment(int c)
     else TEXT_PUSH(c);
     
     PRESERVE_SV(yylval = mkString2(stext,  bp - stext));
-    if(stext != st0) free(stext);    
+    UNPROTECT(1); /* release stext */
     return COMMENT;
 }
 
@@ -803,8 +809,10 @@ static int mkMarkup(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
     int retval = 0;
     
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     TEXT_PUSH(c);
     while (isalpha((c = xxgetc()))) TEXT_PUSH(c);
     
@@ -823,7 +831,7 @@ static int mkMarkup(int c)
     }
     if (retval != VERB)
 	PRESERVE_SV(yylval = mkString(stext));
-    if(stext != st0) free(stext);
+    UNPROTECT(1); /* release stext */
     return retval;
 }
 
@@ -832,15 +840,17 @@ static int mkVerb(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
     int delim = c;   
     
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     TEXT_PUSH('\\'); TEXT_PUSH('v'); TEXT_PUSH('e'); TEXT_PUSH('r'); TEXT_PUSH('b');
     TEXT_PUSH(c);
     while ((c = xxgetc()) != delim) TEXT_PUSH(c);
     TEXT_PUSH(c);
     
     PRESERVE_SV(yylval = mkString2(stext, bp - stext));
-    if(stext != st0) free(stext);
+    UNPROTECT(1); /* release stext */
     return VERB;  
 }
 
@@ -849,9 +859,11 @@ static int mkVerbEnv()
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
     int matched = 0, i;
     int c;
-    
+
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     while ((c = xxgetc()) != R_EOF && CHAR(STRING_ELT(parseState.xxInVerbEnv, 0))[matched]) {
     	TEXT_PUSH(c);
     	if (c == CHAR(STRING_ELT(parseState.xxInVerbEnv, 0))[matched])
@@ -867,7 +879,7 @@ static int mkVerbEnv()
     }
     	    
     PRESERVE_SV(yylval = mkString2(stext, bp - stext));
-    if (stext != st0) free(stext);
+    UNPROTECT(1); /* release stext */
     return VERB;
 }
 

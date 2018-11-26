@@ -3563,7 +3563,10 @@ static SEXP ParseRd(ParseStatus *status, SEXP srcfile, Rboolean fragment, SEXP m
     RELEASE_SV(parseState.Value);
     UNPROTECT(3); /* macros, parseState.xxMacroList, parseState.mset */
     
-    if (pushbase != pushback) free(pushbase);
+    if (pushbase != pushback) {
+	free(pushbase);
+	pushbase = NULL;
+    }
     
     return parseState.Value;
 }
@@ -4334,6 +4337,10 @@ static void parse_cleanup(void *data)
 {
     Rconnection con = data;
     if(con && con->isopen) con->close(con);
+    if (pushbase && pushbase != pushback) {
+	free(pushbase);
+	pushbase = NULL;
+    }
     PopState();
 }
 
