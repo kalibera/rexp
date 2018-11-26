@@ -313,12 +313,10 @@ static SrcRefState ParseState;
    two protection schemes.
 */
 
-// #define INIT_SVS()     PS_SET_SVS(R_NewPreciousMSet(200))
-#define INIT_SVS()     PS_SET_SVS(R_NewPreciousMSet(1))
+#define INIT_SVS()     PS_SET_SVS(R_NewPreciousMSet(200))
 #define PRESERVE_SV(x) R_PreserveInMSet((x), PS_SVS)
 #define RELEASE_SV(x)  R_ReleaseFromMSet((x), PS_SVS)
-//#define CLEAR_SVS()    R_ReleaseMSet(PS_SVS, 500)
-#define CLEAR_SVS()    R_ReleaseMSet(PS_SVS, 1)
+#define CLEAR_SVS()    R_ReleaseMSet(PS_SVS, 500)
 
 #include <rlocale.h>
 #ifdef HAVE_LANGINFO_CODESET
@@ -491,55 +489,6 @@ extern int yydebug;
     UPLUS = 305
   };
 #endif
-/* Tokens.  */
-#define END_OF_INPUT 258
-#define ERROR 259
-#define STR_CONST 260
-#define NUM_CONST 261
-#define NULL_CONST 262
-#define SYMBOL 263
-#define FUNCTION 264
-#define INCOMPLETE_STRING 265
-#define LEFT_ASSIGN 266
-#define EQ_ASSIGN 267
-#define RIGHT_ASSIGN 268
-#define LBB 269
-#define FOR 270
-#define IN 271
-#define IF 272
-#define ELSE 273
-#define WHILE 274
-#define NEXT 275
-#define BREAK 276
-#define REPEAT 277
-#define GT 278
-#define GE 279
-#define LT 280
-#define LE 281
-#define EQ 282
-#define NE 283
-#define AND 284
-#define OR 285
-#define AND2 286
-#define OR2 287
-#define NS_GET 288
-#define NS_GET_INT 289
-#define COMMENT 290
-#define LINE_DIRECTIVE 291
-#define SYMBOL_FORMALS 292
-#define EQ_FORMALS 293
-#define EQ_SUB 294
-#define SYMBOL_SUB 295
-#define SYMBOL_FUNCTION_CALL 296
-#define SYMBOL_PACKAGE 297
-#define SLOT 298
-#define LOW 299
-#define TILDE 300
-#define UNOT 301
-#define NOT 302
-#define SPECIAL 303
-#define UMINUS 304
-#define UPLUS 305
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -875,16 +824,16 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   391,   391,   392,   393,   394,   395,   398,   399,   402,
-     405,   406,   407,   408,   410,   411,   413,   414,   415,   416,
-     417,   419,   420,   421,   422,   423,   424,   425,   426,   427,
-     428,   429,   430,   431,   432,   433,   434,   435,   436,   437,
-     438,   440,   441,   442,   444,   445,   446,   447,   448,   449,
-     450,   451,   452,   453,   454,   455,   456,   457,   458,   459,
-     460,   461,   462,   463,   464,   465,   469,   472,   475,   479,
-     480,   481,   482,   483,   484,   487,   488,   491,   492,   493,
-     494,   495,   496,   497,   498,   501,   502,   503,   504,   505,
-     509
+       0,   389,   389,   390,   391,   392,   393,   396,   397,   400,
+     403,   404,   405,   406,   408,   409,   411,   412,   413,   414,
+     415,   417,   418,   419,   420,   421,   422,   423,   424,   425,
+     426,   427,   428,   429,   430,   431,   432,   433,   434,   435,
+     436,   438,   439,   440,   442,   443,   444,   445,   446,   447,
+     448,   449,   450,   451,   452,   453,   454,   455,   456,   457,
+     458,   459,   460,   461,   462,   463,   467,   470,   473,   477,
+     478,   479,   480,   481,   482,   485,   486,   489,   490,   491,
+     492,   493,   494,   495,   496,   499,   500,   501,   502,   503,
+     507
 };
 #endif
 

@@ -248,12 +248,10 @@ static SrcRefState ParseState;
    two protection schemes.
 */
 
-// #define INIT_SVS()     PS_SET_SVS(R_NewPreciousMSet(200))
-#define INIT_SVS()     PS_SET_SVS(R_NewPreciousMSet(1))
+#define INIT_SVS()     PS_SET_SVS(R_NewPreciousMSet(200))
 #define PRESERVE_SV(x) R_PreserveInMSet((x), PS_SVS)
 #define RELEASE_SV(x)  R_ReleaseFromMSet((x), PS_SVS)
-//#define CLEAR_SVS()    R_ReleaseMSet(PS_SVS, 500)
-#define CLEAR_SVS()    R_ReleaseMSet(PS_SVS, 1)
+#define CLEAR_SVS()    R_ReleaseMSet(PS_SVS, 500)
 
 #include <rlocale.h>
 #ifdef HAVE_LANGINFO_CODESET

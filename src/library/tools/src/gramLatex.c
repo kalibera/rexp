@@ -259,15 +259,6 @@ extern int yydebug;
     VERB = 265
   };
 #endif
-/* Tokens.  */
-#define END_OF_INPUT 258
-#define ERROR 259
-#define MACRO 260
-#define TEXT 261
-#define COMMENT 262
-#define BEGIN 263
-#define END 264
-#define VERB 265
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -1966,7 +1957,7 @@ static SEXP xxblock(SEXP body, YYLTYPE *lloc)
         PRESERVE_SV(ans = allocVector(VECSXP, 0));
     else {
 	PRESERVE_SV(ans = PairToVectorList(CDR(body)));
-    	RELEASE_SV(body);	
+	RELEASE_SV(body);
     }
     setAttrib(ans, R_SrcrefSymbol, makeSrcref(lloc, parseState.SrcFile));
     setAttrib(ans, R_LatexTagSymbol, mkString("BLOCK"));
@@ -2002,7 +1993,7 @@ static void xxsavevalue(SEXP items, YYLTYPE *lloc)
 	PRESERVE_SV(parseState.Value = PairToVectorList(CDR(items)));
 	RELEASE_SV(items);
     } else {
-    	PRESERVE_SV(parseState.Value = allocVector(VECSXP, 1));
+	PRESERVE_SV(parseState.Value = allocVector(VECSXP, 1));
     	SET_VECTOR_ELT(parseState.Value, 0, ScalarString(mkChar("")));
 	setAttrib(VECTOR_ELT(parseState.Value, 0), R_LatexTagSymbol, mkString("TEXT"));
     }	
@@ -2198,8 +2189,7 @@ static SEXP ParseLatex(ParseStatus *status, SEXP srcfile)
     
     parseState.SrcFile = srcfile;
 
-//    PROTECT(parseState.mset = R_NewPreciousMSet(50));
-    PROTECT(parseState.mset = R_NewPreciousMSet(1));
+    PROTECT(parseState.mset = R_NewPreciousMSet(50));
     
     npush = 0;
     

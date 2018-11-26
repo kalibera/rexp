@@ -3563,7 +3563,7 @@ void R_ReleaseMSet(SEXP mset, int keepSize)
 	/* just free the entries */
 	for(R_xlen_t i = 0; i < *n; i++)
 	    SET_VECTOR_ELT(store, i, R_NilValue);
-    } else 
+    } else
 	SETCAR(mset, R_NilValue);
     *n = 0;
 }

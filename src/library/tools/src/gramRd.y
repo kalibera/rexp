@@ -765,7 +765,7 @@ static SEXP xxmarkup3(SEXP header, SEXP body1, SEXP body2, SEXP body3, int flag,
     	int flag3;
 	flag3 = getDynamicFlag(body3);
     	SET_VECTOR_ELT(ans, 2, PairToVectorList(CDR(body3)));    
-    	RELEASE_SV(body3);
+	RELEASE_SV(body3);
     	setDynamicFlag(VECTOR_ELT(ans, 2), flag3);
     	flag |= flag3;
     }    
@@ -1021,8 +1021,7 @@ static SEXP ParseRd(ParseStatus *status, SEXP srcfile, Rboolean fragment, SEXP m
 	
     PROTECT(macros);
     PROTECT(parseState.xxMacroList = R_NewHashedEnv(macros, ScalarInteger(0)));
-//    PROTECT(parseState.mset = R_NewPreciousMSet(50));
-    PROTECT(parseState.mset = R_NewPreciousMSet(1));
+    PROTECT(parseState.mset = R_NewPreciousMSet(50));
     
     parseState.Value = R_NilValue;
     
