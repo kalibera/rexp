@@ -1788,10 +1788,13 @@ static int yylex(void)
     return tok;
 }
 
-static void con_cleanup(void *data)
+static void PopState();
+
+static void parse_cleanup(void *data)
 {
     Rconnection con = data;
-    if(con->isopen) con->close(con);
+    if(con && con->isopen) con->close(con);
+    PopState();
 }
 
 static void PutState(ParseState *state) {
@@ -1834,13 +1837,19 @@ static void UseState(ParseState *state) {
     parseState.prevState = state->prevState;
 }
 
-static void PushState() {
+static void PushState(RCNTXT *cptr) {
     if (busy) {
     	ParseState *prev = malloc(sizeof(ParseState));
+	if (prev == NULL)
+	    error(_("allocation of parse state failed"));
     	PutState(prev);
     	parseState.prevState = prev;
     } else 
-        parseState.prevState = NULL;  
+        parseState.prevState = NULL;
+    begincontext(cptr, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
+                 R_NilValue, R_NilValue);
+    cptr->cend = &parse_cleanup;
+    cptr->cenddata = NULL; /* no connection */
     busy = TRUE;
 }
 
@@ -1878,7 +1887,7 @@ SEXP parseRd(SEXP call, SEXP op, SEXP args, SEXP env)
     R_ParseError = 0;
     R_ParseErrorMsg[0] = '\0';
     
-    PushState();
+    PushState(&cntxt);
 
     ifile = asInteger(CAR(args));                       args = CDR(args);
 
@@ -1903,21 +1912,23 @@ SEXP parseRd(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(!wasopen) {
 	    if(!con->open(con)) error(_("cannot open the connection"));
 	    /* Set up a context which will close the connection on error */
-	    begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
-			 R_NilValue, R_NilValue);
-	    cntxt.cend = &con_cleanup;
 	    cntxt.cenddata = con;
 	}
 	if(!con->canread) error(_("cannot read from this connection"));
-	s = R_ParseRd(con, &status, source, fragment, macros);
-	if(!wasopen) endcontext(&cntxt);
+	PROTECT(s = R_ParseRd(con, &status, source, fragment, macros));
+	if(!wasopen) {
+	    cntxt.cenddata = NULL;
+	    con->close(con);
+	}
+	if (status != PARSE_OK)
+	    parseError(call, R_ParseError);
+	endcontext(&cntxt);
 	PopState();
-	if (status != PARSE_OK) parseError(call, R_ParseError);
+	UNPROTECT(1); /* s */
     }
-    else {
-      PopState();
+    else
       error(_("invalid Rd file"));
-    }
+
     return s;
 }
 
@@ -1933,6 +1944,7 @@ SEXP deparseRd(SEXP e, SEXP state)
     const char *c;
     char *outbuf, *out, lookahead;
     Rboolean escape;
+    RCNTXT cntxt;
 
     if(!isString(e) || LENGTH(e) != 1) 
     	error(_("'deparseRd' only supports deparsing character elements"));
@@ -1940,7 +1952,7 @@ SEXP deparseRd(SEXP e, SEXP state)
     
     if(!isInteger(state) || LENGTH(state) != 5) error(_("bad state"));
     
-    PushState();
+    PushState(&cntxt);
     
     parseState.xxbraceDepth = INTEGER(state)[0];
     parseState.xxinRString = INTEGER(state)[1];
@@ -1949,10 +1961,9 @@ SEXP deparseRd(SEXP e, SEXP state)
     quoteBraces = INTEGER(state)[4];
     
     if (parseState.xxmode != LATEXLIKE && parseState.xxmode != RLIKE && parseState.xxmode != VERBATIM && parseState.xxmode != COMMENTMODE 
-     && parseState.xxmode != INOPTION  && parseState.xxmode != UNKNOWNMODE) {
-        PopState();
-    	error(_("bad text mode %d in 'deparseRd'"), parseState.xxmode);
-    }
+     && parseState.xxmode != INOPTION  && parseState.xxmode != UNKNOWNMODE)
+
+	error(_("bad text mode %d in 'deparseRd'"), parseState.xxmode);
     
     for (c = CHAR(e), outlen=0; *c; c++) {
     	outlen++;
@@ -2017,7 +2028,8 @@ SEXP deparseRd(SEXP e, SEXP state)
     statevals = INTEGER( VECTOR_ELT(result, 1) );
     statevals[0] = parseState.xxbraceDepth;
     statevals[1] = parseState.xxinRString;
-    
+
+    endcontext(&cntxt);
     PopState();
     
     UNPROTECT(1); /* result */
