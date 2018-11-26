@@ -885,13 +885,26 @@ static int yylex(void)
     return tok;
 }
 
-static void PushState() {
+static void PopState();
+
+static void parse_cleanup(void *data)
+{
+    PopState();
+}
+
+static void PushState(RCNTXT *cptr) {
     if (busy) {
     	ParseState *prev = malloc(sizeof(ParseState));
+	if (prev == NULL)
+	    error(_("allocation of parse state failed"));
     	PutState(prev);
     	parseState.prevState = prev;
     } else 
-        parseState.prevState = NULL;  
+        parseState.prevState = NULL;
+    begincontext(cptr, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
+                 R_NilValue, R_NilValue);
+    cptr->cend = &parse_cleanup;
+    cptr->cenddata = NULL;
     busy = TRUE;
 }
 
@@ -912,6 +925,8 @@ static void PopState() {
 
 SEXP parseLatex(SEXP call, SEXP op, SEXP args, SEXP env)
 {
+    RCNTXT cntxt;
+
     args = CDR(args);
 
     SEXP s = R_NilValue, source, text;
@@ -924,7 +939,7 @@ SEXP parseLatex(SEXP call, SEXP op, SEXP args, SEXP env)
     R_ParseError = 0;
     R_ParseErrorMsg[0] = '\0';
     
-    PushState();
+    PushState(&cntxt);
 
     text = CAR(args);		                        args = CDR(args);
 
@@ -934,10 +949,12 @@ SEXP parseLatex(SEXP call, SEXP op, SEXP args, SEXP env)
     parseState.xxDebugTokens = asInteger(CAR(args));	args = CDR(args);
     parseState.xxVerbatimList = CAR(args); 		args = CDR(args);
 
-    s = R_ParseLatex(text, &status, source);
+    PROTECT(s = R_ParseLatex(text, &status, source));
     
+    endcontext(&cntxt);
     PopState();
     	
     if (status != PARSE_OK) parseError(call, R_ParseError);
+    UNPROTECT(1); /* s */
     return s;
 }
