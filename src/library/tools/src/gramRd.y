@@ -1393,15 +1393,17 @@ static void yyerror(const char *s)
     }
 }
 
-#define TEXT_PUSH(c) do {                  \
-	size_t nc = bp - stext;       \
+#define TEXT_PUSH(c) do {                   \
+	size_t nc = bp - stext;             \
 	if (nc >= nstext - 1) {             \
 	    char *old = stext;              \
+	    SEXP st1;                       \
             nstext *= 2;                    \
-	    stext = malloc(nstext);         \
-	    if(!stext) error(_("unable to allocate buffer for long string at line %d"), parseState.xxlineno);\
+	    PROTECT(st1 = allocVector(RAWSXP, nstext)); \
+	    stext = (char *)RAW(st1);       \
 	    memmove(stext, old, nc);        \
-	    if(old != st0) free(old);	    \
+	    REPROTECT(st1, sti);	    \
+	    UNPROTECT(1); /* st1 */	    \
 	    bp = stext+nc; }		    \
 	*bp++ = ((char) c);		    \
 } while(0)
@@ -1501,7 +1503,9 @@ static int mkText(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0, lookahead;
+    PROTECT_INDEX sti;
     
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     while(1) {
     	switch (c) {
     	case '\\': 
@@ -1529,7 +1533,7 @@ static int mkText(int c)
 stop:
     if (c != '\n') xxungetc(c); /* newline causes a break, but we keep it */
     PRESERVE_SV(yylval = mkString2(stext, bp - stext));
-    if(stext != st0) free(stext);
+    UNPROTECT(1); /* release stext */
     return TEXT;
 }
 
@@ -1538,14 +1542,16 @@ static int mkComment(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
     
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     do TEXT_PUSH(c);
     while ((c = xxgetc()) != '\n' && c != R_EOF);
     
     xxungetc(c);
     
     PRESERVE_SV(yylval = mkString2(stext, bp - stext));
-    if(stext != st0) free(stext);    
+    UNPROTECT(1); /* release stext */
     return COMMENT;
 }
 
@@ -1554,7 +1560,9 @@ static int mkCode(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
     
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     /* Avoid double counting initial braces */
     if (c == LBRACE && !parseState.xxinRString) parseState.xxbraceDepth--;
     if (c == RBRACE && !parseState.xxinRString) parseState.xxbraceDepth++; 
@@ -1647,7 +1655,7 @@ static int mkCode(int c)
     }
     if (c != '\n') xxungetc(c);
     PRESERVE_SV(yylval = mkString2(stext, bp - stext));
-    if(stext != st0) free(stext);
+    UNPROTECT(1); /* release stext */
     return RCODE; 
 }
 
@@ -1656,8 +1664,10 @@ static int mkMarkup(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
     int retval = 0, attempt = 0;
     
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     TEXT_PUSH(c);
     while (isalnum((c = xxgetc()))) TEXT_PUSH(c);
     
@@ -1686,7 +1696,7 @@ static int mkMarkup(int c)
         }
     }
     PRESERVE_SV(yylval = mkString2(stext, bp - stext - 1));
-    if(stext != st0) free(stext);
+    UNPROTECT(1); /* release stext */
     xxungetc(c);
     return retval;
 }
@@ -1696,8 +1706,10 @@ static int mkIfdef(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
     int retval;
     
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     TEXT_PUSH(c);
     while (isalpha((c = xxgetc())) && bp - stext <= DIRECTIVE_LEN) TEXT_PUSH(c);
     TEXT_PUSH('\0');
@@ -1730,7 +1742,7 @@ static int mkIfdef(int c)
 	}
 	break;
     }
-    if(stext != st0) free(stext);
+    UNPROTECT(1); /* release stext */
     return retval;
 }
 
@@ -1739,7 +1751,9 @@ static int mkVerb(int c)
     char st0[INITBUFSIZE];
     unsigned int nstext = INITBUFSIZE;
     char *stext = st0, *bp = st0;
+    PROTECT_INDEX sti;
     
+    PROTECT_WITH_INDEX(R_NilValue, &sti);
     /* Avoid double counting initial braces */
     if (c == LBRACE) parseState.xxbraceDepth--;
     if (c == RBRACE) parseState.xxbraceDepth++;     
@@ -1769,7 +1783,7 @@ static int mkVerb(int c)
     };
     if (c != '\n') xxungetc(c);
     PRESERVE_SV(yylval = mkString2(stext, bp - stext));
-    if(stext != st0) free(stext);
+    UNPROTECT(1); /* release stext */
     return VERB;  
 }
 
