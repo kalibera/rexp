@@ -171,6 +171,11 @@ static void setId( SEXP expr, yyltype loc){
 static void	CheckFormalArgs(SEXP, SEXP, YYLTYPE *);
 static SEXP	FirstArg(SEXP, SEXP); /* create list with one element */
 static void 	GrowList(SEXP, SEXP); /* add element to list end */
+static void	SetSingleSrcRef(SEXP);
+static void	AppendToSrcRefs(SEXP);
+static void	PrependToSrcRefs(SEXP);
+static SEXP	EmptyOrSListToVectorList(SEXP);
+
 static void	IfPush(void);
 static int	KeywordLookup(const char *);
 static SEXP	NewList(void);
@@ -634,12 +639,11 @@ static SEXP makeSrcref(YYLTYPE *lloc, SEXP srcfile)
     return val;
 }
 
-static SEXP attachSrcrefs(SEXP val)
+static void attachSrcrefs(SEXP val)
 {
     SEXP srval;
 
-    PROTECT(val);
-    PROTECT(srval = PairToVectorList(PS_SRCREFS));
+    PROTECT(srval = EmptyOrSListToVectorList(PS_SRCREFS));
     
     setAttrib(val, R_SrcrefSymbol, srval);
     setAttrib(val, R_SrcfileSymbol, PS_SRCFILE);
@@ -657,15 +661,17 @@ static SEXP attachSrcrefs(SEXP val)
     }
     PS_SET_SRCREFS(R_NilValue);
     ParseState.didAttach = TRUE;
-    UNPROTECT(2); /* val, srval */
-    return val;
+    UNPROTECT(1); /* srval */
 }
 
 static int xxvalue(SEXP v, int k, YYLTYPE *lloc)
 {
     if (k > 2) {
-	if (ParseState.keepSrcRefs)
-	    PS_SET_SRCREFS(listAppend(PS_SRCREFS, list1(makeSrcref(lloc, PS_SRCFILE))));
+	if (ParseState.keepSrcRefs) {
+	    SEXP s = PROTECT(makeSrcref(lloc, PS_SRCFILE));
+	    AppendToSrcRefs(s);
+	    UNPROTECT(1); /* s */
+	}
 	RELEASE_SV(v);
     }
     R_CurrentExpr = v;
@@ -755,7 +761,9 @@ static SEXP xxexprlist1(SEXP expr, YYLTYPE *lloc)
 	PRESERVE_SV(ans = NewList());
 	if (ParseState.keepSrcRefs) {
 	    setAttrib(ans, R_SrcrefSymbol, PS_SRCREFS);
-	    PS_SET_SRCREFS(list1(makeSrcref(lloc, PS_SRCFILE)));
+	    SEXP s = PROTECT(makeSrcref(lloc, PS_SRCFILE));
+	    SetSingleSrcRef(s);
+	    UNPROTECT(1); /* s */
 	}
 	GrowList(ans, expr);
     }
@@ -769,9 +777,11 @@ static SEXP xxexprlist2(SEXP exprlist, SEXP expr, YYLTYPE *lloc)
 {
     SEXP ans;
     if (GenerateCode) {
-	if (ParseState.keepSrcRefs)
-	    PS_SET_SRCREFS(listAppend(PS_SRCREFS,
-	                   list1(makeSrcref(lloc, PS_SRCFILE))));
+	if (ParseState.keepSrcRefs) {
+	    SEXP s = PROTECT(makeSrcref(lloc, PS_SRCFILE));
+	    AppendToSrcRefs(s);
+	    UNPROTECT(1); /* s */
+	}
 	GrowList(exprlist, expr);
 	ans = exprlist;
     } else {
@@ -1084,16 +1094,15 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 	SETCAR(a2, a1);
 	if (ParseState.keepSrcRefs) {
 	    PROTECT(prevSrcrefs = getAttrib(a2, R_SrcrefSymbol));
-	    PS_SET_SRCREFS(CONS(makeSrcref(lloc, PS_SRCFILE), PS_SRCREFS));
-	    ans = attachSrcrefs(a2);
-	    UNPROTECT(1); /* prevSrcrefs */
+	    SEXP s = PROTECT(makeSrcref(lloc, PS_SRCFILE));
+	    PrependToSrcRefs(s);
+	    attachSrcrefs(a2);
+	    UNPROTECT(2); /* prevSrcrefs, s */
 	    PS_SET_SRCREFS(prevSrcrefs);
 	    /* SrcRefs got NAMED by being an attribute... */
-	    SET_NAMED(PS_SRCREFS, 0); /* FIXME: still needed? */
-	    PRESERVE_SV(ans);
+	    /* SET_NAMED(PS_SRCREFS, 0); ?? still needed ?? */
 	}
-	else
-	    PRESERVE_SV(ans = a2);
+	PRESERVE_SV(ans = a2);
     }
     else
 	PRESERVE_SV(ans = R_NilValue);
@@ -1126,7 +1135,6 @@ static SEXP TagArg(SEXP arg, SEXP tag, YYLTYPE *lloc)
 /* These functions must be called with arguments protected */
 
 /* Create a stretchy-list dotted pair */
-
 static SEXP NewList(void)
 {
     SEXP s = CONS(R_NilValue, R_NilValue);
@@ -1161,7 +1169,45 @@ static void NextArg(SEXP l, SEXP s, SEXP tag)
     SET_TAG(CAR(l), tag);
 }
 
+static void SetSingleSrcRef(SEXP r)
+{
+    SEXP l;
 
+    PROTECT(l = NewList());
+    GrowList(l, r);
+    PS_SET_SRCREFS(l);
+    UNPROTECT(1); /* l */
+}
+
+static void AppendToSrcRefs(SEXP r)
+{
+    SEXP l = PS_SRCREFS;
+    if (l == R_NilValue)
+	SetSingleSrcRef(r);
+    else
+	GrowList(l, r);
+}
+
+static void PrependToSrcRefs(SEXP r)
+{
+    SEXP l = PS_SRCREFS;
+    if (l == R_NilValue)
+	SetSingleSrcRef(r);
+    else if (CDR(l) == R_NilValue)
+	/* adding to empty stretchy list */
+	GrowList(l, r);
+    else {
+	SEXP tmp = CONS(r, CDR(l));
+	SETCDR(l, tmp);
+    }
+}
+
+static SEXP EmptyOrSListToVectorList(SEXP l) {
+    if (l == R_NilValue)
+	return PairToVectorList(l);
+    else
+	return PairToVectorList(CDR(l));
+}
 
 /*--------------------------------------------------------------------------*/
 
@@ -1537,7 +1583,7 @@ finish:
     if (ParseState.keepSrcRefs) {
 	if (ParseState.keepParseData)
 	    finalizeData();
-	rval = attachSrcrefs(rval);
+	attachSrcrefs(rval);
     }
     UNPROTECT(2); /* t, rval */
     PROTECT(rval);
@@ -1693,7 +1739,7 @@ finish:
     if (ParseState.keepSrcRefs) {
 	if (ParseState.keepParseData)
 	    finalizeData();
-	rval = attachSrcrefs(rval);
+	attachSrcrefs(rval);
     }
     UNPROTECT(2); /* t, rval */
     PROTECT(rval);
