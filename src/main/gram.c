@@ -3301,9 +3301,9 @@ static SEXP xxexprlist(SEXP a1, YYLTYPE *lloc, SEXP a2)
 	    PrependToSrcRefs(s);
 	    attachSrcrefs(a2);
 	    UNPROTECT(2); /* prevSrcrefs, s */
-	    PS_SET_SRCREFS(prevSrcrefs);
 	    /* SrcRefs got NAMED by being an attribute... */
-	    /* SET_NAMED(PS_SRCREFS, 0); ?? still needed ?? */
+	    SET_NAMED(prevSrcrefs, 0);
+	    PS_SET_SRCREFS(prevSrcrefs);
 	}
 	PRESERVE_SV(ans = a2);
     }
