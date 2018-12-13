@@ -1046,6 +1046,7 @@ myM <- setClass("myMatrix", contains="matrix")
 T <- rbind(1:2, c=2, "a+"=10, myM(4:1,2), deparse.level=0)
 stopifnot(identical(rownames(T), c("", "c", "a+", "", "")))
 ## rownames(.) wrongly were NULL in R <= 3.4.1
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## qr.coef(qr(X, LAPACK=TRUE)) when X has column names, etc
@@ -1903,6 +1904,7 @@ lms <- list(m0 = lm(y ~ 0), m1 = lm(y ~ 1), m2 = lm(y ~ exp(y[,1]^2)))
 dcf <- sapply(lms, function(fm) dim(coef(fm)))
 stopifnot(dcf[1,] == 0:2, dcf[2,] == 5)
 ## coef(lm(y ~ 0)) had 3 instead of 5 columns in R <= 3.5.1
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## confint(<mlm>)
@@ -2265,6 +2267,162 @@ stopifnot(exprs = {
 ## d6     --> 'Error in x[[j]] <- `*vtmp*` :
 ##				more elements supplied than there are to replace
 ## in R <= 3.5.1
+
+
+## str() now even works with invalid objects:
+moS <- mo <- findMethods("isSymmetric")
+attr(mo, "arguments") <- NULL
+validObject(mo, TRUE)# shows what's wrong
+tools::assertError(capture.output( mo ))
+op <- options(warn = 1)# warning:
+str(mo, max.level = 2)
+options(op)# revert
+## in R <= 3.5.x, str() gave error instead of the warning
+
+
+## seq.default() w/ integer overflow in border cases: -- PR#17497, Suharto Anggono
+stopifnot(is.integer(iMax <- .Machine$integer.max), iMax == 2^31-1,
+          is.integer(iM2 <- iMax-1L), # = 2^31 - 2
+          (t30 <- 1073741824L) == 2^30 ,
+          is.integer(i3t30 <- c(-t30, 0L, t30)))
+for(seq in c(seq, seq.int)) # seq() -> seq.default() to behave as seq.int() :
+  stopifnot(exprs = {
+    seq(iM2, length=2L) == iM2:(iM2+1L) # overflow warning and NA
+    seq(iM2, length=3L) == iM2:(iM2+2 ) # Error in if (from == to) ....
+              seq(-t30, t30, length=3) == i3t30 # overflow warning and NA
+    ## Next two ok for the "seq.cumsum-patch" (for "seq.double-patch", give "double"):
+    identical(seq(-t30, t30, length=3L),  i3t30)# Error in if(is.integer(del <- to - from)
+    identical(seq(-t30, t30, t30)      ,  i3t30)# Error .. invalid '(to-from)/by'+NA warn.
+  })
+## each of these gave integer overflows  errors  or  NA's + warning in  R <= 3.5.x
+
+
+## seq.int(*, by=<int.>, length = n) for non-integer 'from' or 'to'
+stopifnot(exprs = {
+    identical(seq.int(from = 1.5, by = 2, length = 3),
+              s <- seq(from = 1.5, by = 2, length = 3))
+    s == c(1.5, 3.5, 5.5)
+    identical(seq.int(to = -0.1, by = -2, length = 2),
+              s <- seq(to = -0.1, by = -2, length = 2))
+    all.equal(s, c(1.9, -0.1))
+    identical(seq.int(to = pi, by = 0, length = 1), pi)
+})
+## returned integer sequences in all R versions <= 3.5.1
+
+
+## Check for modififation of arguments
+## Issue originally reported by Lukas Stadler
+x <- 1+0
+stopifnot(x + (x[] <- 2) == 3)
+f <- compiler::cmpfun(function(x) { x <- x + 0; x + (x[] <- 2) })
+stopifnot(f(1) == 3)
+
+x <- 1+0
+stopifnot(log(x, x[] <- 2) == 0)
+f <- compiler::cmpfun(function(x) { x <- x + 0; log(x, x[] <- 2)})
+stopifnot(f(1) == 0)
+
+f <- function() x + (x[] <<- 2)
+x <- 1 + 0; stopifnot(f() == 3)
+fc <- compiler::cmpfun(f)
+x <- 1 + 0; stopifnot(fc() == 3)
+
+f <- function() x[{x[2] <<- 3; 1}] <<- 2
+fc <- compiler::cmpfun(f)
+x <- c(1,2); f(); stopifnot(x[2] == 2)
+x <- c(1,2); fc(); stopifnot(x[2] == 2)
+
+x <- 1+0
+stopifnot(c(x, x[] <- 2)[[1]] == 1)
+f <- compiler::cmpfun(function(x) { x <- x + 0; c(x, x[] <- 2)})
+stopifnot(f(1)[[1]] == 1)
+
+x <- c(1,2)
+x[{x[2] <- 3; 1}] <- 2
+stopifnot(x[2] == 2)
+f <- compiler::cmpfun(function(a,b) { x <- c(a, b); x[{x[2] <- 3; 1}] <- 2; x})
+f(1, 2)
+stopifnot(f(1, 2) == 2)
+
+m <- matrix(1:4, 2)
+i <- (1:2) + 0
+stopifnot(m[i, {i[] <- 2; 1}][1] == 1)
+f <- compiler::cmpfun(function(i) { i <- i + 0; m[i, {i[] <- 2; 1}]})
+stopifnot(f(1:2)[1] == 1)
+
+m <- matrix(1:4, 2)
+eval(compiler::compile(quote(m[1,1])))
+stopifnot(max(.Internal(named(m)), .Internal(refcnt(m))) == 1)
+
+ma <- .Internal(address(m))
+eval(compiler::compile(quote(m[1,1] <- 2L)))
+stopifnot(identical(.Internal(address(m)), ma))
+
+a <- array(1:8, rep(2, 3))
+eval(compiler::compile(quote(a[1,1,1])))
+stopifnot(max(.Internal(named(a)), .Internal(refcnt(a))) == 1)
+
+aa <- .Internal(address(a))
+eval(compiler::compile(quote(a[1,1,1] <- 2L)))
+stopifnot(identical(.Internal(address(a)), aa))
+
+m <- matrix(1:4, 2)
+i <- (1:2) + 0
+stopifnot(m[i, {i[] <- 2; 1}][1] == 1)
+f <- compiler::cmpfun(function(i) { i <- i + 0; m[i, {i[] <- 2; 1}]})
+stopifnot(f(1:2)[1] == 1)
+
+a <- array(1:8, rep(2, 3))
+i <- (1:2) + 0
+stopifnot(a[i, {i[] <- 2; 1}, 1][1] == 1)
+f <- compiler::cmpfun(function(i) { i <- i + 0; a[i, {i[] <- 2; 1}, 1]})
+stopifnot(f(1:2)[1] == 1)
+
+i <- (1:2) + 0
+stopifnot(a[i, {i[] <- 2; 1}, 1][1] == 1)
+f <- compiler::cmpfun(function(i) { i <- i + 0; a[1, i, {i[] <- 2; 1}]})
+stopifnot(f(1:2)[1] == 1)
+
+x <- 1 + 0
+stopifnot(identical(rep(x, {x[] <- 2; 2}), rep(1, 2)))
+x <- 1 + 0
+v <- eval(compiler::compile(quote(rep(x, {x[] <- 2; 2}))))
+stopifnot(identical(v, rep(1, 2)))
+
+x <- 1 + 0
+stopifnot(round(x, {x[] <- 2; 0}) == 1)
+x <- 1 + 0
+v <- eval(compiler::compile(quote(round(x, {x[] <- 2; 0}))))
+stopifnot(v == 1)
+
+f <- function() {
+    x <- numeric(1)
+    y <- 0
+    rm("y")
+    makeActiveBinding("y", function() { x[] <<- 1; 0}, environment())
+    x + y
+}
+stopifnot(f() == 0)
+stopifnot(compiler::cmpfun(f)() == 0)
+
+f <- function(y = {x[] <- 1; 0}) { x <- numeric(1); x + y }
+stopifnot(f() == 0)
+stopifnot(compiler::cmpfun(f)() == 0)
+
+
+## This failed under REFCNT:
+for (i in 1:2) { if (i == 1) { x <- i; rm(i) }}
+stopifnot(x == 1)
+
+
+## gamma & lgamma should not warn for correct limit cases:
+stopifnot(exprs = {
+    lgamma(0:-10) == Inf
+    gamma(-180.5) == 0
+    gamma(c(200,Inf)) == Inf
+    lgamma(c(10^(306:310), Inf)) == Inf
+})
+## had  "Warning message:  value out of range in 'lgamma' "  for ever
 
 
 

@@ -1774,6 +1774,13 @@ if(FALSE) {
 
     OBJ_EXT <- ".o" # all currrent compilers, but not some on Windows
 
+    ## The order of inclusion of Makefiles on a Unix-alike is
+    ## package's src/Makevars
+    ## etc/Makeconf
+    ## site Makevars
+    ## share/make/shlib.mk
+    ## user Makevars
+    ## and similarly elsewhere
     objs <- character()
     shlib <- ""
     site <- Sys.getenv("R_MAKEVARS_SITE", NA_character_)
@@ -2000,10 +2007,7 @@ if(FALSE) {
     }
 
     makeargs <- paste0("SHLIB=", shQuote(shlib))
-    if (with_f9x) {
-        makeargs <- c("SHLIB_LDFLAGS='$(SHLIB_FCLDFLAGS)'",
-                      "SHLIB_LD='$(SHLIB_FCLD)'", makeargs)
-    } else if (with_cxx) {
+    if (with_cxx) {
         makeargs <- if (use_cxx17)
             c("CXX='$(CXX17) $(CXX17STD)'",
               "CXXFLAGS='$(CXX17FLAGS)'",
@@ -2033,8 +2037,8 @@ if(FALSE) {
               "SHLIB_LD='$(SHLIB_CXXLD)'", makeargs)
     }
     if (with_objc) shlib_libadd <- c(shlib_libadd, "$(OBJC_LIBS)")
-    if (with_f77) shlib_libadd <- c(shlib_libadd, "$(FLIBS)")
-    if (with_f9x) shlib_libadd <- c(shlib_libadd, "$(FCLIBS)")
+    if (with_f77 || with_f9x)
+        shlib_libadd <- c(shlib_libadd, "$(FLIBS) $(FCLIBS_XTRA)")
 
     if (length(pkg_libs))
         makeargs <- c(makeargs,
@@ -2042,6 +2046,9 @@ if(FALSE) {
     if (length(shlib_libadd))
         makeargs <- c(makeargs,
                       paste0("SHLIB_LIBADD='", p1(shlib_libadd), "'"))
+    if (with_f9x && file.exists("Makevars") &&
+        length(grep("^\\s*PKG_FCFLAGS", lines, perl = TRUE, useBytes = TRUE)))
+        makeargs <- c(makeargs, "P_FCFLAGS='$(PKG_FCFLAGS)'")
 
     if (WINDOWS && debug) makeargs <- c(makeargs, "DEBUG=T")
     ## TCLBIN is needed for tkrplot and tcltk2
