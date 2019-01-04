@@ -2238,13 +2238,18 @@ add_dummies <- function(dir, Log)
         ## Check for non-ASCII characters in 'data'
         if (!is_base_pkg && R_check_ascii_data && dir.exists("data")) {
             checkingLog(Log, "data for non-ASCII characters")
-            out <- R_runR0("tools:::.check_package_datasets('.')", R_opts2)
+            out <- R_runR0("tools:::.check_package_datasets('.')",
+                           R_opts2, elibs)
             out <- filtergrep("Loading required package", out)
             out <- filtergrep("Warning: changing locked binding", out, fixed = TRUE)
-           if (length(out)) {
+            if (length(out)) {
                 bad <- startsWith(out, "Warning:")
-                if(any(bad)) warningLog(Log) else noteLog(Log)
+                bad2 <-  any(grepl("(unable to find required package|there is no package called)", out))
+                if(any(bad) || bad2) warningLog(Log) else noteLog(Log)
                 printLog0(Log, .format_lines_with_indent(out), "\n")
+                if(bad2)
+                     printLog0(Log,
+                               "  The dataset(s) may use package(s) not declared in the DESCRIPTION file.\n")
             } else resultLog(Log, "OK")
         }
 
@@ -2595,29 +2600,40 @@ add_dummies <- function(dir, Log)
 
         ## Check C/C++/Fortran sources/headers for CRLF line endings.
         ## <FIXME>
-        ## Does ISO C really require LF line endings?  (Reference?)
-        ## We know that some versions of Solaris cc and f77/f95
-        ## will not accept CRLF or CR line endings.
-        ## (Sun Studio 12 definitely objects to CR in both C and Fortran).
+        ## Does ISO C really require LF line endings?
+        ## (ISO C does not comment on OSes ....)
+        ## Solaris compilers still do, with a warning but no longer an error.
         ## </FIXME>
-        if(dir.exists("src")) {
+        if(dir.exists("src") || dir.exists("inst/include")) {
             checkingLog(Log, "line endings in C/C++/Fortran sources/headers")
             ## pattern is "([cfh]|cc|cpp)"
-            files <- dir("src", pattern = "\\.([cfh]|cc|cpp)$",
+            files <- dir("src", pattern = "\\.([cfh]|cc|cpp|hpp)$",
                          full.names = TRUE, recursive = TRUE)
             ## exclude dirs starting src/win, e.g for tiff
             files <- filtergrep("^src/[Ww]in", files)
+            files2 <- dir("inst/include", pattern = "\\.([cfh]|cc|cpp|hpp)$",
+                          full.names = TRUE, recursive = TRUE)
             bad_files <- character()
-            for(f in files) {
+            no_eol <- character()
+            for(f in c(files, files2)) {
                 contents <- readChar(f, file.size(f), useBytes = TRUE)
                 if (grepl("\r", contents, fixed = TRUE, useBytes = TRUE))
                     bad_files <- c(bad_files, f)
+                else if (nzchar(contents) &&  ## allow empty dummy files
+                         !grepl("\n$", contents, useBytes = TRUE))
+                    no_eol <- c(no_eol, f)
             }
+            if (length(bad_files) || length(no_eol)) noteLog(Log, "")
+            else resultLog(Log, "OK")
             if (length(bad_files)) {
-                warningLog(Log, "Found the following sources/headers with CR or CRLF line endings:")
+                printLog(Log, "Found the following sources/headers with CR or CRLF line endings:\n")
                 printLog0(Log, .format_lines_with_indent(bad_files), "\n")
                 printLog(Log, "Some Unix compilers require LF line endings.\n")
-            } else resultLog(Log, "OK")
+            } else if (length(no_eol)) {
+                printLog(Log, "Found the following sources/headers not terminated with a newline:\n")
+                printLog0(Log, .format_lines_with_indent(no_eol), "\n")
+                printLog(Log, "Some compilers warn on such files.\n")
+            }
         }
 
         ## Check src/Make* for LF line endings, as Sun make does not accept CRLF
@@ -4076,8 +4092,20 @@ add_dummies <- function(dir, Log)
                 Sys.setenv(MAKEFLAGS="")
                 ## we could use clean = FALSE, but that would not be
                 ## testing what R CMD build uses.
-                Rcmd <- paste0(opWarn_string, "\nlibrary(tools)\nbuildVignettes(dir = '",
-                               file.path(pkgoutdir, "vign_test", pkgname0), "')")
+                Rcmd <-
+                    if (!config_val_to_logical(Sys.getenv("_R_CHECK_BUILD_VIGNETTES_SEPARATELY_", "TRUE")))
+                        sprintf("%s\ntools::buildVignettes(dir = '%s')",
+                                opWarn_string,
+                                file.path(pkgoutdir, "vign_test", pkgname0))
+                    else {
+                        ## serialize elibs to avoid quotation hell
+                        tf <- tempfile(fileext = ".rds")
+                        saveRDS(c(jitstr, elibs), tf)
+                        sprintf("%s\ntools:::buildVignettes(dir = '%s', ser_elibs = '%s')",
+                                opWarn_string,
+                                file.path(pkgoutdir, "vign_test", pkgname0),
+                                tf)
+                    }
                 tlim <- get_timeout(Sys.getenv("_R_CHECK_BUILD_VIGNETTES_ELAPSED_TIMEOUT_",
                                     Sys.getenv("_R_CHECK_ELAPSED_TIMEOUT_")))
                 t1 <- proc.time()
@@ -4086,21 +4114,26 @@ add_dummies <- function(dir, Log)
                                   stdout = outfile, stderr = outfile,
                                   timeout = tlim)
                 t2 <- proc.time()
+                print_time(t1, t2, Log)
                 out <- readLines(outfile, warn = FALSE)
                 if(R_check_suppress_RandR_message)
                     out <- filtergrep('^Xlib: *extension "RANDR" missing on display',
                                       out, useBytes = TRUE)
                 warns <- grep("^Warning: file .* is not portable",
                               out, value = TRUE, useBytes = TRUE)
-                print_time(t1, t2, Log)
                 if (status) {
                     keep <- as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_",
                                                   "25"))
                     if(skip_run_maybe || !ran) warningLog(Log) else noteLog(Log)
-                    if(keep > 0) out <- utils::tail(out, keep)
-                    printLog0(Log,
-                              paste(c("Error in re-building vignettes:",
-                                      "  ...", out, "", ""), collapse = "\n"))
+                    if(keep > 0  && length(out) < keep) {
+                        out <- utils::tail(out, keep)
+                        printLog0(Log,
+                                  paste(c("Error(s) in re-building vignettes:",
+                                          "  ...", out, "", ""), collapse = "\n"))
+                    } else
+                        printLog0(Log,
+                                  paste(c("Error(s) in re-building vignettes:",
+                                          out, "", ""), collapse = "\n"))
                 } else if(nw <- length(warns)) {
                     if(skip_run_maybe || !ran) warningLog(Log) else noteLog(Log)
                     msg <- ngettext(nw,

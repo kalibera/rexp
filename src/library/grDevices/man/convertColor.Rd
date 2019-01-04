@@ -1,6 +1,6 @@
 % File src/library/grDevices/man/convertColor.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2013 R Core Team
+% Copyright 1995-2018 R Core Team
 % Distributed under GPL 2 or later
 
 \name{convertColor}
@@ -53,8 +53,11 @@ convertColor(color, from, to, from.ref.white, to.ref.white,
   standard CIE illuminants supported are \code{B}, \code{C}, \code{E} and
   \code{D55}.  RGB colour spaces are defined relative to a particular
   reference white, and can be only approximately translated to other
-  reference whites.  The Bradford chromatic adaptation algorithm is used
-  for this.
+  reference whites.  The von Kries chromatic adaptation algorithm is used
+  for this.  Prior to R 3.6, color conversions involving color spaces
+  created with \code{\link{make.rgb}} were carried out assuming a \code{D65}
+  illuminant, irrespective of the actual illuminant used in the creation of the
+  color space.  This affected the built-in \code{"CIE RGB"} color space.
 
   The RGB color spaces are specific to a particular class of display.
   An RGB space cannot represent all colors, and the \code{clip} option
@@ -82,8 +85,8 @@ convertColor(color, from, to, from.ref.white, to.ref.white,
 }
 \examples{
 ## The displayable colors from four planes of Lab space
-ab <- expand.grid(a = (-10:15)*10,
-                  b = (-15:10)*10)
+ab <- as.matrix(expand.grid(a = (-10:15)*10,
+                            b = (-15:10)*10))
 require(graphics); require(stats) # for na.omit
 par(mfrow = c(2, 2), mar = .1+c(3, 3, 3, .5), mgp = c(2,  .8,  0))
 

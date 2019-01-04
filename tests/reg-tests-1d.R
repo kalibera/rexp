@@ -2425,6 +2425,35 @@ stopifnot(exprs = {
 ## had  "Warning message:  value out of range in 'lgamma' "  for ever
 
 
+## sub() with non-ASCII replacement failed to set encodings (PR#17509):
+x <- c("a", "b")
+x <- sub("a", "\u00e4", x)
+stopifnot(Encoding(x)[1L] == "UTF-8")
+x <- sub("b", "\u00f6", x)
+stopifnot(Encoding(x)[2L] == "UTF-8")
+## [1] has been "unknown" in R <= 3.5.x
+
+
+## formula(model.frame()) -- R-devel report by Bill Dunlap
+d <- data.frame(A = log(1:6), B = LETTERS[1:6], C = 1/(1:6), D = letters[6:1], Y = 1:6)
+m0 <- model.frame(Y ~ A*B, data=d)
+stopifnot(exprs = {
+    DF2formula(m0) == (Y ~ A+B) # the previous formula(.) behavior
+       formula(m0) == (Y ~ A*B)
+})
+## formula(.)  gave  Y ~ A + B  in R <= 3.5.x
+
+
+## These used to fail (PR17514) in a NAMED build but not with REFCNT:
+L <- matrix(list( c(0) ), 2, 1)
+L[[2]][1] <- 11
+stopifnot(L[[1]] == 0)
+L <- matrix(list( c(0) ), 2, 1, byrow = TRUE)
+L[[2]][1] <- 11
+stopifnot(L[[1]] == 0)
+
+
+
 
 ## keep at end
 rbind(last =  proc.time() - .pt,
