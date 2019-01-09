@@ -2452,11 +2452,15 @@ L <- matrix(list( c(0) ), 2, 1, byrow = TRUE)
 L[[2]][1] <- 11
 stopifnot(L[[1]] == 0)
 
+## NA treatment in some file utilities
+
 tools::assertError(normalizePath(c(NA_character_,getwd()),mustWork=TRUE))
 tools::assertWarning(normalizePath(c(NA_character_,getwd()),mustWork=NA))
 stopifnot(
     identical(normalizePath(c(NA_character_,getwd()),mustWork=FALSE)[1], NA_character_)
 )
+
+stopifnot(identical(unname(file.access(NA_character_)), -1L))
 
 ## keep at end
 rbind(last =  proc.time() - .pt,
