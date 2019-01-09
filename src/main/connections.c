@@ -5318,7 +5318,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     // --------- description
     scmd = CAR(args);
-    if(!isString(scmd) || LENGTH(scmd) != 1)
+    if(!isString(scmd) || LENGTH(scmd) != 1 || STRING_ELT(scmd, 0) == NA_STRING)
 	error(_("invalid '%s' argument"), "description");
     if(LENGTH(scmd) > 1)
 	warning(_("only first element of 'description' argument used"));

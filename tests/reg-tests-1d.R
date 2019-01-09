@@ -2461,6 +2461,8 @@ stopifnot(
 )
 
 stopifnot(identical(unname(file.access(NA_character_)), -1L))
+tools::assertError(file.edit(NA_character_))
+tools::assertError(file(NA_character_))
 
 ## keep at end
 rbind(last =  proc.time() - .pt,
