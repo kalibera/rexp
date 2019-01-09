@@ -1419,7 +1419,8 @@ SEXP attribute_hidden do_fifo(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
     sfile = CAR(args);
-    if(!isString(sfile) || LENGTH(sfile) != 1)
+    if(!isString(sfile) || LENGTH(sfile) != 1 ||
+       STRING_ELT(sfile, 0) == NA_STRING)
 	error(_("invalid '%s' argument"), "description");
     if(length(sfile) > 1)
 	warning(_("only first element of 'description' argument used"));
