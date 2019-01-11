@@ -443,13 +443,20 @@ static void waitForJob(pinfo *pi, DWORD timeoutMillis, int* timedout)
     DWORD beforeMillis;
     JOBOBJECT_BASIC_ACCOUNTING_INFORMATION jbai;
     LPOVERLAPPED overlapped; /* not used */
+    DWORD pollMillis;
 
     if (timeoutMillis)
 	beforeMillis = timeGetTime();
 
+    pollMillis = 0;
     for(;;) {
 	ret = GetQueuedCompletionStatus(pi->port, &code, &key,
-					&overlapped, 100);
+					&overlapped, pollMillis);
+	if (pollMillis == 0)
+	    pollMillis = 1;
+	else if (pollMillis < 100)
+	    pollMillis *= 2;
+
 	if (ret && code == JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO &&
 	    (HANDLE)key == pi->job)
 	    break;
