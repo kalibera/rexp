@@ -248,7 +248,8 @@ static void pcreate(const char* cmd, cetype_t enc,
 
        In addition, we try to be easy on applications coded to rely on that
        they do not run in a job, when running in old Windows that do not
-       support nested jobs.
+       support nested jobs. With nested jobs support, it might make sense
+       to not breakaway to better support nested R processes.
     */
 
     /* Creating the process with CREATE_BREAKAWAY_FROM_JOB is safe when
