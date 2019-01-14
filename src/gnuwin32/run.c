@@ -229,12 +229,37 @@ static void pcreate(const char* cmd, cetype_t enc,
 	}
     }
 
+    /* Originally, the external process has been waited for only using
+       waitForSingleObject, but that has been proven unreliable: sometimes
+       the output file would still be opened (and hence locked) by some
+       child process after waitForSingleObject would finish. This has been
+       observed also while running tests and particularly when building
+       vignettes, resulting in spurious "Permission denied" errors.
+
+       This has been happening almost surely due to a child process not
+       waiting for its own children to finish, which has been reported
+       to happen with Linux utilities ported to Windows as used for tests
+       in Haskell/GHC. Inspired by Haskell process and a blog post about
+       waiting for a process tree to finish, we now use job objects to
+       wait also for process trees with this issue:
+
+	https://github.com/haskell/process
+	https://blogs.msdn.microsoft.com/oldnewthing/20130405-00/?p=4743
+
+       In addition, we try to be easy on applications coded to rely on that
+       they do not run in a job, when running in old Windows that do not
+       support nested jobs.
+    */
+
     /* Creating the process with CREATE_BREAKAWAY_FROM_JOB is safe when
-       the process is not in any job or when it is in a job that allows it. */
+       the process is not in any job or when it is in a job that allows it.
+       The documentation does not say what would happen if we set the flag,
+       but run in a job that does not allow it, so better don't. */
     breakaway = FALSE;
     if (IsProcessInJob(GetCurrentProcess(), NULL, &inJob) && inJob) {
 	/* The documentation does not say that it would be ok to use
-	   QueryInformationJobObject when the process is not in the job. */
+	   QueryInformationJobObject when the process is not in the job,
+	   so we have better tested that upfront. */
 	ZeroMemory(&jeli, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
 	ret = QueryInformationJobObject(
 		NULL,
@@ -272,6 +297,7 @@ static void pcreate(const char* cmd, cetype_t enc,
 	}
     }
     if (job) {
+	ZeroMemory(&cport, sizeof(JOBOBJECT_ASSOCIATE_COMPLETION_PORT));
 	cport.CompletionKey = job; /* use job handle as key */
 	cport.CompletionPort = port;
 	ret = SetInformationJobObject(
@@ -288,7 +314,7 @@ static void pcreate(const char* cmd, cetype_t enc,
 
     flags = 0;
     if (job)
-	flags |= CREATE_SUSPENDED;
+	flags |= CREATE_SUSPENDED; /* assign to job before it runs */
     if (newconsole && (visible == 1))
 	flags |= CREATE_NEW_CONSOLE;
     if (job && breakaway)
@@ -307,8 +333,8 @@ static void pcreate(const char* cmd, cetype_t enc,
     if (ret && job) {
 	/* process was created as suspended */
 	if (!AssignProcessToJobObject(job, pi->pi.hProcess)) {
-	    /* will fail when breakaway is not possible and running on Windows
-	       without support for nested jobs */
+	    /* will fail running on Windows without support for nested jobs,
+	       when running in a job that does not allow breakaway */
 	    CloseHandle(job);
 	    CloseHandle(port);
 	    job = NULL;
@@ -443,32 +469,35 @@ static void waitForJob(pinfo *pi, DWORD timeoutMillis, int* timedout)
     DWORD beforeMillis;
     JOBOBJECT_BASIC_ACCOUNTING_INFORMATION jbai;
     LPOVERLAPPED overlapped; /* not used */
-    DWORD pollMillis;
+    DWORD queryMillis;
 
     if (timeoutMillis)
 	beforeMillis = timeGetTime();
 
-    pollMillis = 0;
+    queryMillis = 0;
     for(;;) {
 	ret = GetQueuedCompletionStatus(pi->port, &code, &key,
-					&overlapped, pollMillis);
-	if (pollMillis == 0)
-	    pollMillis = 1;
-	else if (pollMillis < 100)
-	    pollMillis *= 2;
-
+					&overlapped, queryMillis);
 	if (ret && code == JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO &&
 	    (HANDLE)key == pi->job)
 	    break;
 
-	if (timeoutMillis && timeGetTime() - beforeMillis >= timeoutMillis) {
+	/* start with short query timeouts because notifications often get lost,
+	   this is essentially polling */
+
+	if (queryMillis == 0)
+	    queryMillis = 1;
+	else if (queryMillis < 100)
+	    queryMillis *= 2;
+
+	if (timeoutMillis && (timeGetTime() - beforeMillis >= timeoutMillis)) {
 	    if (timedout)
 		*timedout = 1;
 	    break;
 	}
 
 	/* Check also explicitly because notifications are documented to get
-	   lost (and they do). */
+	   lost and they often do. */
 	ZeroMemory(&jbai, sizeof(JOBOBJECT_BASIC_ACCOUNTING_INFORMATION));
 	ret = QueryInformationJobObject(
 		pi->job,
