@@ -1,7 +1,7 @@
 #  File src/library/tools/R/check.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2018 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -2690,7 +2690,8 @@ add_dummies <- function(dir, Log)
                 contents <- filtergrep("^ *#", contents)
                 ## Things like $(SUBDIRS:=.a)
                 contents <- filtergrep("[$][(].+:=.+[)]", contents)
-                if (any(grepl("([+]=|:=|[$][(]wildcard|[$][(]shell|[$][(]eval|[$][(]call|[$][(]patsubst|^ifeq|^ifneq|^ifdef|^ifndef|^endif)", contents)))
+                if (any(grepl("([+]=|:=|[$][(]wildcard|[$][(]shell|[$][(]eval|[$][(]call|[$][(]patsubst|^ifeq|^ifneq|^ifdef|^ifndef|^endifi|[.]NOTPARALLEL)",
+                              contents)))
                     bad_files <- c(bad_files, f)
             }
             SysReq <- desc["SystemRequirements"]
@@ -2704,7 +2705,7 @@ add_dummies <- function(dir, Log)
                     printLog0(Log, .format_lines_with_indent(bad_files), "\n")
                     wrapLog("Portable Makefiles do not use GNU extensions",
                             "such as +=, :=, $(shell), $(wildcard),",
-                            "ifeq ... endif.",
+                            "ifeq ... endif, .NOTPARALLEL",
                             "See section 'Writing portable packages'",
                             "in the 'Writing R Extensions' manual.\n")
                 }
@@ -4099,7 +4100,8 @@ add_dummies <- function(dir, Log)
                                 file.path(pkgoutdir, "vign_test", pkgname0))
                     else {
                         ## serialize elibs to avoid quotation hell
-                        tf <- tempfile(fileext = ".rds")
+                        tf <- gsub("\\", "/", tempfile(fileext = ".rds"),
+                                   fixed=TRUE)
                         saveRDS(c(jitstr, elibs), tf)
                         sprintf("%s\ntools:::buildVignettes(dir = '%s', ser_elibs = '%s')",
                                 opWarn_string,
@@ -4529,7 +4531,9 @@ add_dummies <- function(dir, Log)
                              "missing links?:",
                              ## From the byte compiler's 'warn' methods
                              "^Note: possible error in",
-                             "^Note: (break|next) used in wrong context: no loop is visible"
+                             "^Note: (break|next) used in wrong context: no loop is visible",
+                             ## Warnings about S4 classes
+                             "^  The prototype for class.*undefined slot"
                              )
                 ## Warnings spotted by gcc with
                 ##   '-Wimplicit-function-declaration'

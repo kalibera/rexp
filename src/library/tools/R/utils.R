@@ -1,7 +1,7 @@
 #  File src/library/tools/R/utils.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2018 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -566,7 +566,7 @@ function()
 
 ### ** .R_copyright_msg
 
-.R_copyright_msg <- 
+.R_copyright_msg <-
 function(year)
     sprintf("Copyright (C) %s-%s The R Core Team.",
             year, R.version$year)
@@ -1654,10 +1654,12 @@ nonS3methods <- function(package)
              ncdf = c("open.ncdf", "close.ncdf",
                       "dim.create.ncdf", "dim.def.ncdf",
                       "dim.inq.ncdf", "dim.same.ncdf"),
+             plyr = c("rbind.fill", "rbind.fill.matrix"),
              quadprog = c("solve.QP", "solve.QP.compact"),
              reposTools = "update.packages2",
              reshape = "all.vars.character",
              rgeos = "scale.poly",
+             rowr = "cbind.fill",
              sac = "cumsum.test",
              sfsmisc = "cumsum.test",
              sm = "print.graph",
@@ -1756,7 +1758,7 @@ function(packages = NULL, FUN, ...,
     } else {
         out <- lapply(packages, one)
     }
-    
+
     names(out) <- packages
     out
 }

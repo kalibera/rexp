@@ -67,7 +67,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2018  The R Core Team
+ *  Copyright (C) 1997--2019  The R Core Team
  *  Copyright (C) 2009--2011  Romain Francois
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -211,6 +211,8 @@ static void setId( SEXP expr, yyltype loc){
 	} else	{							\
 	  (Current).first_line   = (Current).last_line   =		\
 	    YYRHSLOC (Rhs, 0).last_line;				\
+	  (Current).first_parsed   = (Current).last_parsed   =		\
+	    YYRHSLOC (Rhs, 0).last_parsed;				\
 	  (Current).first_column = YYRHSLOC (Rhs, 0).last_column;	\
 	  (Current).last_column = (Current).first_column - 1;		\
 	  (Current).first_byte = YYRHSLOC (Rhs, 0).last_byte;		\
@@ -890,16 +892,16 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   406,   406,   407,   408,   409,   410,   413,   414,   417,
-     420,   421,   422,   423,   425,   426,   428,   429,   430,   431,
-     432,   434,   435,   436,   437,   438,   439,   440,   441,   442,
-     443,   444,   445,   446,   447,   448,   449,   450,   451,   452,
-     453,   455,   456,   457,   459,   460,   461,   462,   463,   464,
-     465,   466,   467,   468,   469,   470,   471,   472,   473,   474,
-     475,   476,   477,   478,   479,   480,   484,   487,   490,   494,
-     495,   496,   497,   498,   499,   502,   503,   506,   507,   508,
-     509,   510,   511,   512,   513,   516,   517,   518,   519,   520,
-     524
+       0,   408,   408,   409,   410,   411,   412,   415,   416,   419,
+     422,   423,   424,   425,   427,   428,   430,   431,   432,   433,
+     434,   436,   437,   438,   439,   440,   441,   442,   443,   444,
+     445,   446,   447,   448,   449,   450,   451,   452,   453,   454,
+     455,   457,   458,   459,   461,   462,   463,   464,   465,   466,
+     467,   468,   469,   470,   471,   472,   473,   474,   475,   476,
+     477,   478,   479,   480,   481,   482,   486,   489,   492,   496,
+     497,   498,   499,   500,   501,   504,   505,   508,   509,   510,
+     511,   512,   513,   514,   515,   518,   519,   520,   521,   522,
+     526
 };
 #endif
 

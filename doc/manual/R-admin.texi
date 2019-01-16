@@ -4039,9 +4039,11 @@ ln -s /usr/lib64/atlas/libtatlas.so.3 @var{R_HOME}/lib/libRblas.so
 can be used with its distributed ATLAS libraries.  (If you have the
 @samp{-devel} RPMS installed you can omit the @code{.0}/@code{.3}.)
 
-Note that rebuilding or symlinking @file{libRblas.so} will not suffice
+Note that rebuilding or symlinking @file{libRblas.so} may not suffice
 if the intention is to use a modified LAPACK contained in an external
-BLAS: the latter could even cause conflicts.
+BLAS: the latter could even cause conflicts.  However, on Fedora where
+the OpenBLAS distribution contains a copy of LAPACK, it is the latter
+which is used.
 
 
 @node LAPACK, Caveats, BLAS, Linear algebra
@@ -5413,8 +5415,9 @@ FC=f95
 FFLAGS=-O
 CXX=CC
 CXXSTD="-std=c++11 -library=stdcpp,CrunG3"
-CXX98=CC
-CXX98STD=-library=stlport4
+CXX98STD="-compat=g -library=stdcpp,CrunG3"
+CXX11STD="-std=c++11 -library=stdcpp,CrunG3"
+CXX14STD="-std=c++14 -library=stdcpp,CrunG3"
 CXXFLAGS=-O
 R_LD_LIBRARY_PATH="/opt/developerstudio12.6/lib:/usr/local/lib:/opt/csw/lib"
 @end example
@@ -5455,7 +5458,7 @@ The Oracle compilers provide several implementations of the C++
 standards which select both the set of headers and a C++ runtime
 library.  One of those is selected by the @option{-library} flag, which
 as it is needed for both compiling and linking is best specified as part
-of the compiler or standard.  Current @R{} expects as C++11 compiler,
+of the compiler or standard.  Current @R{} expects a C++11 compiler,
 for which the choice given above is the only possibility.  For C++98
 there are several with
 

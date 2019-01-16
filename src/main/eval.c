@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2018	The R Core Team.
+ *  Copyright (C) 1998--2019	The R Core Team.
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -4971,7 +4971,10 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	    DECLNK_stack(stack_base, R_BCNodeStackTop);
 	    UNPROTECT(1);
 	}
-	else value = pv;
+	else {
+	        ENSURE_NAMEDMAX(pv);
+		value = pv;
+	}
     } else ENSURE_NAMED(value); /* should not really be needed - LT */
     return value;
 }
