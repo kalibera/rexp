@@ -665,6 +665,17 @@ if(FALSE) {
             dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
         }
 
+        real_instdir <- instdir
+        real_lib <- lib
+        real_rpackagedir <- Sys.getenv("R_PACKAGE_DIR")
+        if (nzchar(lockdir)) {
+            instdir <- file.path(lockdir, "00new", pkgname)
+            Sys.setenv(R_PACKAGE_DIR = instdir)
+            dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
+            # FIXME handle error
+            lib <- file.path(lockdir, "00new")
+        }
+
         if (preclean) run_clean()
 
         if (use_configure) {
@@ -1275,6 +1286,20 @@ if(FALSE) {
                 if(length(attr(out, "status")))
                     errmsg("loading failed") # does not return
             }
+        }
+        if (nzchar(lockdir)) {
+            if (WINDOWS) {
+                file.copy(instdir, dirname(real_instdir), recursive = TRUE,
+                          copy.date = TRUE)
+                unlink(instdir, recursive = TRUE)
+            } else {
+                owd <- setwd(startdir)
+                system(paste("mv", shQuote(instdir), shQuote(dirname(real_instdir))))
+                setwd(owd)
+            }
+            instdir <- real_instdir
+            lib <- real_lib
+            Sys.setenv(R_PACKAGE_DIR = real_rpackagedir)
         }
     }
 
