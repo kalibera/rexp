@@ -665,15 +665,22 @@ if(FALSE) {
             dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
         }
 
-        real_instdir <- instdir
-        real_lib <- lib
-        real_rpackagedir <- Sys.getenv("R_PACKAGE_DIR")
         if (nzchar(lockdir)) {
+            real_instdir <- instdir
+            real_lib <- lib
+            real_rpackagedir <- Sys.getenv("R_PACKAGE_DIR")
+            real_rlibs <- Sys.getenv("R_LIBS")
+            real_libpaths <- .libPaths()
+
             instdir <- file.path(lockdir, "00new", pkgname)
             Sys.setenv(R_PACKAGE_DIR = instdir)
             dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
             # FIXME handle error
             lib <- file.path(lockdir, "00new")
+
+            rlibs <- if (nzchar(real_rlibs)) paste(lib, real_rlibs, sep = .Platform$path.sep) else lib
+            Sys.setenv(R_LIBS = rlibs)
+            .libPaths(c(lib, real_libpaths))
         }
 
         if (preclean) run_clean()
@@ -1300,6 +1307,8 @@ if(FALSE) {
             instdir <- real_instdir
             lib <- real_lib
             Sys.setenv(R_PACKAGE_DIR = real_rpackagedir)
+            Sys.setenv(R_LIBS = real_rlibs)
+	    .libPaths(real_libpaths)
         }
     }
 
