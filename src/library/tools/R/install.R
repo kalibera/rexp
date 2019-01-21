@@ -675,7 +675,7 @@ if(FALSE) {
             instdir <- file.path(lockdir, "00new", pkgname)
             Sys.setenv(R_PACKAGE_DIR = instdir)
             dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
-            # FIXME handle error
+            # FIXME handle errors
             lib <- file.path(lockdir, "00new")
 
             rlibs <- if (nzchar(real_rlibs)) paste(lib, real_rlibs, sep = .Platform$path.sep) else lib
@@ -1300,6 +1300,34 @@ if(FALSE) {
                           copy.date = TRUE)
                 unlink(instdir, recursive = TRUE)
             } else {
+                ## convert Rpaths
+                ## FIXME: add macOS version
+                if (nzchar(Sys.which("chrpath"))) {
+                    starsmsg(stars, "converting absolute paths to libraries")
+
+                    slibs <- list.files(instdir, pattern = "*\\.so$", recursive=TRUE,
+                                    all.files=TRUE, full.names=TRUE)
+                    are_shared <- sapply(slibs,
+                           function(l) grepl(system(paste("file", l), intern=TRUE),
+                                             pattern="shared"))
+                    slibs <- slibs[are_shared]
+
+                    for(l in slibs) {
+                        rpath <- grep(suppressWarnings(system(paste("chrpath", l),
+                                                              intern=TRUE)),
+                                      pattern=".*PATH=", value=TRUE)
+                        rpath <- gsub(rpath, pattern=".*PATH=", replacement="")
+                        old_rpath <- rpath
+                        rpath <- gsub(rpath, pattern=instdir, replacement="\\\\$ORIGIN/..")
+                        if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
+                            ## FIXME: maybe suppress chrpath output here
+                            if (suppressWarnings(system(paste("chrpath", "-r", rpath, l),
+                                                              intern=FALSE, )) == 0)
+                                cat("Converted rpath in", l, "from", old_rpath,
+                                    "to", rpath, "\n")
+                        }
+                    }
+                }
                 owd <- setwd(startdir)
                 system(paste("mv", shQuote(instdir), shQuote(dirname(real_instdir))))
                 setwd(owd)
