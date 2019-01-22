@@ -1307,10 +1307,12 @@ if(FALSE) {
 
                     slibs <- list.files(instdir, pattern = "*\\.so$", recursive=TRUE,
                                     all.files=TRUE, full.names=TRUE)
-                    are_shared <- sapply(slibs,
+                    if (length(slibs)) {
+                        are_shared <- sapply(slibs,
                            function(l) grepl(system(paste("file", l), intern=TRUE),
                                              pattern="shared"))
-                    slibs <- slibs[are_shared]
+                        slibs <- slibs[are_shared]
+                    }
 
                     for(l in slibs) {
                         rpath <- grep(suppressWarnings(system(paste("chrpath", l),
