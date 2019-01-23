@@ -637,6 +637,21 @@ function(package = NULL, quiet = FALSE)
     unlist(searchpaths[pos], use.names = FALSE)
 }
 
+is.locked.pkgdir <- function(pkgdir) {
+    ## package may be locked during parallel installation
+    pkg <- basename(pkgdir)
+    locked <- file.exists(file.path(dirname(pkgdir), paste0("00LOCK-", pkg)))
+    if (locked) {
+        install_dir <- Sys.getenv("R_PACKAGE_DIR")
+        if (nzchar(install_dir) &&
+            identical(normalizePath(pkgdir, "/", FALSE),
+                      normalizePath(install_dir, "/", FALSE))
+            )
+            locked <- FALSE
+    }
+    locked
+}
+
 ## As from 2.9.0 ignore versioned installs
 find.package <-
 function(package = NULL, lib.loc = NULL, quiet = FALSE,
@@ -685,8 +700,11 @@ function(package = NULL, lib.loc = NULL, quiet = FALSE,
             db <- lapply(paths, function(p) {
                 ## Note that this is sometimes used for source
                 ## packages, e.g. by promptPackage from package.skeleton
-                pfile <- file.path(p, "Meta", "package.rds")
-                info <- if(file.exists(pfile))
+                info <- if (is.locked.pkgdir(p))
+                    c(Package = NA, Version = NA) # need dimnames below
+                else if(file.exists(
+                            pfile <- file.path(p, "Meta", "package.rds")
+                        ))
                     ## this must have these fields to get installed
                     readRDS(pfile)$DESCRIPTION[c("Package", "Version")]
                 else {

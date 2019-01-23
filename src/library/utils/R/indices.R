@@ -43,11 +43,13 @@ packageDescription <-
 
     if(pkgpath == "") {
         libs <- if(is.null(lib.loc)) .libPaths() else lib.loc
-        for(lib in libs)
-            if(file.access(file.path(lib, pkg), 5) == 0L) {
+        for(lib in libs) {
+            p <- file.path(lib, pkg)
+            if(file.access(p, 5) == 0L && !is.locked.pkgdir(p)) {
                 pkgpath <- file.path(lib, pkg)
                 break
             }
+        }
     }
 
     if(pkgpath == "") {
