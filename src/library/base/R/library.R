@@ -637,7 +637,7 @@ function(package = NULL, quiet = FALSE)
     unlist(searchpaths[pos], use.names = FALSE)
 }
 
-is.locked.pkgdir <- function(pkgdir) {
+pkgdir.is.locked <- function(pkgdir) {
     ## package may be locked during parallel installation
     pkg <- basename(pkgdir)
     locked <- file.exists(file.path(dirname(pkgdir), paste0("00LOCK-", pkg)))
@@ -700,7 +700,7 @@ function(package = NULL, lib.loc = NULL, quiet = FALSE,
             db <- lapply(paths, function(p) {
                 ## Note that this is sometimes used for source
                 ## packages, e.g. by promptPackage from package.skeleton
-                info <- if (is.locked.pkgdir(p))
+                info <- if (pkgdir.is.locked(p))
                     c(Package = NA, Version = NA) # need dimnames below
                 else if(file.exists(
                             pfile <- file.path(p, "Meta", "package.rds")

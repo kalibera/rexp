@@ -45,7 +45,7 @@ packageDescription <-
         libs <- if(is.null(lib.loc)) .libPaths() else lib.loc
         for(lib in libs) {
             p <- file.path(lib, pkg)
-            if(file.access(p, 5) == 0L && !is.locked.pkgdir(p)) {
+            if(file.access(p, 5) == 0L && !pkgdir.is.locked(p)) {
                 pkgpath <- file.path(lib, pkg)
                 break
             }

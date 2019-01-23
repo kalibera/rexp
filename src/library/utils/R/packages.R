@@ -590,7 +590,7 @@ new.packages <- function(lib.loc = NULL, repos = getOption("repos"),
     ret <- matrix(NA_character_, length(pkgs), 2L+length(fields))
     for(i in seq_along(pkgs)) {
         pkgpath <- file.path(lib, pkgs[i])
-        if(file.access(pkgpath, 5L) || is.locked.pkgdir(pkgpath)) next
+        if(file.access(pkgpath, 5L) || pkgdir.is.locked(pkgpath)) next
         if (file.exists(file <- file.path(pkgpath, "Meta", "package.rds"))) {
             ## this is vulnerable to installs going on in parallel
             md <- try(readRDS(file))
