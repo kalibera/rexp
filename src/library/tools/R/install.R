@@ -1253,9 +1253,9 @@ if(FALSE) {
 
         if (clean) run_clean()
 
-        if (test_load) {
+        do_test_load <- function() {
             ## Do this in a separate R process, in case it crashes R.
-	    starsmsg(stars, "testing if installed package can be loaded")
+
             ## FIXME: maybe the quoting as 'lib' is not quite good enough
             ## On a Unix-alike this calls system(input=)
             ## and that uses a temporary file and redirection.
@@ -1294,6 +1294,15 @@ if(FALSE) {
                     errmsg("loading failed") # does not return
             }
         }
+
+        if (test_load) {
+            if (nzchar(lockdir))
+	        starsmsg(stars, "testing if installed package can be loaded from temporary location")
+            else
+	        starsmsg(stars, "testing if installed package can be loaded")
+            do_test_load()
+        }
+
         if (nzchar(lockdir)) {
             if (WINDOWS) {
                 file.copy(instdir, dirname(real_instdir), recursive = TRUE,
@@ -1339,6 +1348,11 @@ if(FALSE) {
             Sys.setenv(R_PACKAGE_DIR = real_rpackagedir)
             Sys.setenv(R_LIBS = real_rlibs)
 	    .libPaths(real_libpaths)
+
+            if (test_load) {
+                starsmsg(stars, "testing if installed package can be loaded from final location")
+                do_test_load()
+            }
         }
     }
 
