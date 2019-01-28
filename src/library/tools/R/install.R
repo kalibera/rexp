@@ -637,6 +637,7 @@ if(FALSE) {
                    rpidx <- grep("cmd LC_RPATH$", out)
                    if (length(rpidx)) {
                        paths <- gsub("^[ \t]*path ", "", out[rpidx+1])
+                       paths <- gsub("(.*) \\(offset .*", "\\1", paths)
                        old_paths <- paths
                        paths <- gsub(instdir, "@loader_path/..", paths)
                        if (length(paths) && !identical(old_paths, paths))
