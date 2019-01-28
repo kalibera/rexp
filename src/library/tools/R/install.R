@@ -613,20 +613,21 @@ if(FALSE) {
                                  paths)
                    old_paths <- paths
                    paths <- gsub(instdir, "@loader_path/..", paths)
-                   if (length(paths) && !identical(old_paths, paths))
-                       for(i in seq_along(paths)) {
-                           cmd <- paste("install_name_tool -change",
+                   changed <- paths != old_paths
+                   paths <- paths[changed]
+                   old_paths <- old_paths[changed]
+                   for(i in seq_along(paths)) {
+                       cmd <- paste("install_name_tool -change",
                                         old_paths[i], paths[i], l)
-                           message(cmd)
-                           ret <- suppressWarnings(
-                               system(cmd, intern=FALSE, ignore.stderr=TRUE,
-                                      ignore.stdout=TRUE))
-                           if (ret == 0)
-                               ## FIXME: install_name tool may not signal an
-                               ## error
-                               message("fixed library path ", old_paths[i],
-                                       "\n")
-                       }
+                       message(cmd)
+                       ret <- suppressWarnings(
+                           system(cmd, intern=FALSE, ignore.stderr=TRUE,
+                                  ignore.stdout=TRUE))
+                       if (ret == 0)
+                           ## FIXME: install_name tool may not signal an
+                           ## error
+                           message("fixed library path ", old_paths[i], "\n")
+                   }
 
                    ## change rpath entries
                    out <- suppressWarnings(
@@ -639,15 +640,18 @@ if(FALSE) {
                        paths <- gsub("^[ \t]*path ", "", out[rpidx+1])
                        paths <- gsub("(.*) \\(offset .*", "\\1", paths)
                        old_paths <- paths
+                    
                        paths <- gsub(instdir, "@loader_path/..", paths)
-                       if (length(paths) && !identical(old_paths, paths))
-                           for(i in seq_along(paths)) {
-                               cmd <- paste("install_name_tool -rpath",
+                       changed <- paths != old_paths
+                       paths <- paths[changed]
+                       old_paths <- old_paths[changed]
+                       for(i in seq_along(paths)) {
+                           cmd <- paste("install_name_tool -rpath",
                                             old_paths[i], paths[i], l)
-                               message(cmd)
-                               ret <- suppressWarnings(
-                                   system(cmd, intern=FALSE, ignore.stderr=TRUE,
-                                          ignore.stdout=TRUE))
+                           message(cmd)
+                           ret <- suppressWarnings(
+                               system(cmd, intern=FALSE, ignore.stderr=TRUE,
+                                      ignore.stdout=TRUE))
                            if (ret == 0)
                                message("fixed rpath ", old_paths[i], "\n")
                        }
