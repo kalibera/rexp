@@ -559,6 +559,101 @@ if(FALSE) {
             } else return(TRUE)
         }
 
+        ## Patch hardcoded paths in shared libraries so that the libraries
+        ## can be moved to a different directory. Not used on WINDOWS.
+        patch_rpaths <- function()
+        {
+            have_chrpath <- nzchar(Sys.which("chrpath"))
+            have_xcode <- nzchar(Sys.which("otool")) &&
+                          nzchar(Sys.which("install_name_tool"))
+            if (!have_chrpath && !have_xcode)
+                return()
+
+            starsmsg(stars, "checking absolute paths to dynamic libraries")
+            slibs <- list.files(instdir, recursive=TRUE, all.files=TRUE,
+                                full.names=TRUE)
+            slibs <- grep("(\\.sl$)|(\\.so$)|(\\.dylib$)|(\\.dll$)", slibs,
+                          value=TRUE)
+            if (!length(slibs))
+                return()
+
+            are_shared <- sapply(slibs,
+                function(l) grepl("shared", system(paste("file", l),
+                                  intern=TRUE, ignore.stderr=TRUE)))
+            slibs <- slibs[are_shared]
+            if (have_chrpath)
+                for(l in slibs) {
+                    out <- suppressWarnings(
+                        system(paste("chrpath", l),
+                               intern=TRUE, ignore.stderr=TRUE))
+                    rpath <- grep(".*PATH=", out, value=TRUE)
+                    rpath <- gsub(".*PATH=", "", rpath)
+                    old_rpath <- rpath
+                    rpath <- gsub(instdir, "\\\\$ORIGIN/..", rpath)
+                    if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
+                        cmd <- paste("chrpath", "-r", rpath, l)
+                        message(cmd)
+                        ret <- suppressWarnings(
+                            system(cmd,
+                                   intern=FALSE, ignore.stderr=TRUE,
+                                   ignore.stdout=TRUE))
+                        if (ret == 0)
+                            message("fixed rpath ", old_rpath, "\n")
+                        }
+                    }
+           else
+               ## macOS only
+               for (l in slibs) {
+                   ## change paths to other libraries
+                   out <- suppressWarnings(
+                       system(paste("otool -L", l),
+                              intern=TRUE, ignore.stderr=TRUE))
+                   paths <- grep("\\(compatibility", out, value=TRUE)
+                   paths <- gsub("^[ \t]*(.*) \\(compatibility.*", "\\1",
+                                 paths)
+                   old_paths <- paths
+                   paths <- gsub(instdir, "@loader_path/..", paths)
+                   if (length(paths) && !identical(old_paths, paths))
+                       for(i in seq_along(paths)) {
+                           cmd <- paste("install_name_tool -change",
+                                        old_paths[i], paths[i], l)
+                           message(cmd)
+                           ret <- suppressWarnings(
+                               system(cmd, intern=FALSE, ignore.stderr=TRUE,
+                                      ignore.stdout=TRUE))
+                           if (ret == 0)
+                               ## FIXME: install_name tool may not signal an
+                               ## error
+                               message("fixed library path ", old_paths[i],
+                                       "\n")
+                       }
+
+                   ## change rpath entries
+                   out <- suppressWarnings(
+                       system(paste("otool -l", l),
+                              intern=TRUE, ignore.stderr=TRUE))
+                   out <- grep("(^[ \t]*cmd )|(^[ \t]*path )", out,
+                               value=TRUE)
+                   rpidx <- grep("cmd LC_RPATH$", out)
+                   if (length(rpidx)) {
+                       paths <- gsub("^[ \t]*path ", "", out[rpidx+1])
+                       old_paths <- paths
+                       paths <- gsub(instdir, "@loader_path/..", paths)
+                       if (length(paths) && !identical(old_paths, paths))
+                           for(i in seq_along(paths)) {
+                               cmd <- paste("install_name_tool -rpath",
+                                            old_paths[i], paths[i], l)
+                               message(cmd)
+                               ret <- suppressWarnings(
+                                   system(cmd, intern=FALSE, ignore.stderr=TRUE,
+                                          ignore.stdout=TRUE))
+                           if (ret == 0)
+                               message("fixed rpath ", old_paths[i], "\n")
+                       }
+
+                   }
+               }
+        }
         ## Make the destination directories available to the developer's
         ## installation scripts (e.g. configure)
         Sys.setenv(R_LIBRARY_DIR = lib)
@@ -1309,36 +1404,8 @@ if(FALSE) {
                           copy.date = TRUE)
                 unlink(instdir, recursive = TRUE)
             } else {
-                ## convert Rpaths
-                ## FIXME: add macOS version
-                if (nzchar(Sys.which("chrpath"))) {
-                    starsmsg(stars, "converting absolute paths to libraries")
+                patch_rpaths()
 
-                    slibs <- list.files(instdir, pattern = "*\\.so$", recursive=TRUE,
-                                    all.files=TRUE, full.names=TRUE)
-                    if (length(slibs)) {
-                        are_shared <- sapply(slibs,
-                           function(l) grepl(system(paste("file", l), intern=TRUE),
-                                             pattern="shared"))
-                        slibs <- slibs[are_shared]
-                    }
-
-                    for(l in slibs) {
-                        rpath <- grep(suppressWarnings(system(paste("chrpath", l),
-                                                              intern=TRUE)),
-                                      pattern=".*PATH=", value=TRUE)
-                        rpath <- gsub(rpath, pattern=".*PATH=", replacement="")
-                        old_rpath <- rpath
-                        rpath <- gsub(rpath, pattern=instdir, replacement="\\\\$ORIGIN/..")
-                        if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
-                            ## FIXME: maybe suppress chrpath output here
-                            if (suppressWarnings(system(paste("chrpath", "-r", rpath, l),
-                                                              intern=FALSE, )) == 0)
-                                cat("Converted rpath in", l, "from", old_rpath,
-                                    "to", rpath, "\n")
-                        }
-                    }
-                }
                 owd <- setwd(startdir)
                 system(paste("mv", shQuote(instdir), shQuote(dirname(real_instdir))))
                 setwd(owd)
