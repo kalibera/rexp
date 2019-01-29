@@ -1,7 +1,7 @@
 #  File src/library/tools/R/install.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2018 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 # NB: also copyright dates in Usages.
 #
@@ -579,85 +579,80 @@ if(FALSE) {
 
             are_shared <- sapply(slibs,
                 function(l) grepl("shared", system(paste("file", l),
-                                  intern=TRUE, ignore.stderr=TRUE)))
+                                  intern=TRUE)))
             slibs <- slibs[are_shared]
+            hardcoded_paths <- FALSE
             if (have_chrpath)
                 for(l in slibs) {
                     out <- suppressWarnings(
-                        system(paste("chrpath", l),
-                               intern=TRUE, ignore.stderr=TRUE))
+                        system(paste("chrpath", l), intern=TRUE))
                     rpath <- grep(".*PATH=", out, value=TRUE)
                     rpath <- gsub(".*PATH=", "", rpath)
                     old_rpath <- rpath
                     rpath <- gsub(instdir, "\\\\$ORIGIN/..", rpath)
                     if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
+                        hardcoded_paths <- TRUE
                         cmd <- paste("chrpath", "-r", rpath, l)
                         message(cmd)
-                        ret <- suppressWarnings(
-                            system(cmd,
-                                   intern=FALSE, ignore.stderr=TRUE,
-                                   ignore.stdout=TRUE))
+                        ret <- suppressWarnings(system(cmd))
                         if (ret == 0)
-                            message("fixed rpath ", old_rpath, "\n")
-                        }
+                            message("fixed rpath ", old_rpath)
+                     }
+                }
+            else
+                ## macOS only
+                for (l in slibs) {
+                    ## change paths to other libraries
+                    out <- suppressWarnings(
+                        system(paste("otool -L", l), intern=TRUE))
+                    paths <- grep("\\(compatibility", out, value=TRUE)
+                    paths <- gsub("^[ \t]*(.*) \\(compatibility.*", "\\1",
+                                  paths)
+                    old_paths <- paths
+                    paths <- gsub(instdir, "@loader_path/..", paths)
+                    changed <- paths != old_paths
+                    paths <- paths[changed]
+                    old_paths <- old_paths[changed]
+                    for(i in seq_along(paths)) {
+                        hardcoded_paths <- TRUE
+                        cmd <- paste("install_name_tool -change",
+                                         old_paths[i], paths[i], l)
+                        message(cmd)
+                        ret <- suppressWarnings(system(cmd, intern=FALSE))
+                        if (ret == 0)
+                            ## FIXME: install_name tool may not signal an
+                            ## error
+                            message("fixed library path ", old_paths[i])
                     }
-           else
-               ## macOS only
-               for (l in slibs) {
-                   ## change paths to other libraries
-                   out <- suppressWarnings(
-                       system(paste("otool -L", l),
-                              intern=TRUE, ignore.stderr=TRUE))
-                   paths <- grep("\\(compatibility", out, value=TRUE)
-                   paths <- gsub("^[ \t]*(.*) \\(compatibility.*", "\\1",
-                                 paths)
-                   old_paths <- paths
-                   paths <- gsub(instdir, "@loader_path/..", paths)
-                   changed <- paths != old_paths
-                   paths <- paths[changed]
-                   old_paths <- old_paths[changed]
-                   for(i in seq_along(paths)) {
-                       cmd <- paste("install_name_tool -change",
-                                        old_paths[i], paths[i], l)
-                       message(cmd)
-                       ret <- suppressWarnings(
-                           system(cmd, intern=FALSE, ignore.stderr=TRUE,
-                                  ignore.stdout=TRUE))
-                       if (ret == 0)
-                           ## FIXME: install_name tool may not signal an
-                           ## error
-                           message("fixed library path ", old_paths[i], "\n")
-                   }
 
-                   ## change rpath entries
-                   out <- suppressWarnings(
-                       system(paste("otool -l", l),
-                              intern=TRUE, ignore.stderr=TRUE))
-                   out <- grep("(^[ \t]*cmd )|(^[ \t]*path )", out,
-                               value=TRUE)
-                   rpidx <- grep("cmd LC_RPATH$", out)
-                   if (length(rpidx)) {
-                       paths <- gsub("^[ \t]*path ", "", out[rpidx+1])
-                       paths <- gsub("(.*) \\(offset .*", "\\1", paths)
-                       old_paths <- paths
-                    
-                       paths <- gsub(instdir, "@loader_path/..", paths)
-                       changed <- paths != old_paths
-                       paths <- paths[changed]
-                       old_paths <- old_paths[changed]
-                       for(i in seq_along(paths)) {
-                           cmd <- paste("install_name_tool -rpath",
-                                            old_paths[i], paths[i], l)
-                           message(cmd)
-                           ret <- suppressWarnings(
-                               system(cmd, intern=FALSE, ignore.stderr=TRUE,
-                                      ignore.stdout=TRUE))
-                           if (ret == 0)
-                               message("fixed rpath ", old_paths[i], "\n")
-                       }
+                    ## change rpath entries
+                    out <- suppressWarnings(
+                        system(paste("otool -l", l), intern=TRUE))
+                    out <- grep("(^[ \t]*cmd )|(^[ \t]*path )", out,
+                                value=TRUE)
+                    rpidx <- grep("cmd LC_RPATH$", out)
+                    if (length(rpidx)) {
+                        paths <- gsub("^[ \t]*path ", "", out[rpidx+1])
+                        paths <- gsub("(.*) \\(offset .*", "\\1", paths)
+                        old_paths <- paths
+                        paths <- gsub(instdir, "@loader_path/..", paths)
+                        changed <- paths != old_paths
+                        paths <- paths[changed]
+                        old_paths <- old_paths[changed]
+                        for(i in seq_along(paths)) {
+                            hardcoded_paths <- TRUE
+                            cmd <- paste("install_name_tool -rpath",
+                                             old_paths[i], paths[i], l)
+                            message(cmd)
+                            ret <- suppressWarnings(system(cmd))
+                            if (ret == 0)
+                                message("fixed rpath ", old_paths[i])
+                        }
 
-                   }
-               }
+                    }
+                }
+            if (hardcoded_paths)
+                message("WARNING: hardcoded paths to installation directory should be avoided")
         }
         ## Make the destination directories available to the developer's
         ## installation scripts (e.g. configure)
@@ -766,21 +761,23 @@ if(FALSE) {
         }
 
         if (nzchar(lockdir)) {
-            real_instdir <- instdir
-            real_lib <- lib
-            real_rpackagedir <- Sys.getenv("R_PACKAGE_DIR")
-            real_rlibs <- Sys.getenv("R_LIBS")
-            real_libpaths <- .libPaths()
+            final_instdir <- instdir
+            final_lib <- lib
+            final_rpackagedir <- Sys.getenv("R_PACKAGE_DIR")
+            final_rlibs <- Sys.getenv("R_LIBS")
+            final_libpaths <- .libPaths()
 
             instdir <- file.path(lockdir, "00new", pkgname)
             Sys.setenv(R_PACKAGE_DIR = instdir)
             dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
-            # FIXME handle errors
             lib <- file.path(lockdir, "00new")
 
-            rlibs <- if (nzchar(real_rlibs)) paste(lib, real_rlibs, sep = .Platform$path.sep) else lib
+            rlibs <- if (nzchar(final_rlibs))
+                         paste(lib, final_rlibs, sep = .Platform$path.sep)
+                     else
+                         lib
             Sys.setenv(R_LIBS = rlibs)
-            .libPaths(c(lib, real_libpaths))
+            .libPaths(c(lib, final_libpaths))
         }
 
         if (preclean) run_clean()
@@ -1405,21 +1402,21 @@ if(FALSE) {
 
         if (nzchar(lockdir)) {
             if (WINDOWS) {
-                file.copy(instdir, dirname(real_instdir), recursive = TRUE,
+                file.copy(instdir, dirname(final_instdir), recursive = TRUE,
                           copy.date = TRUE)
                 unlink(instdir, recursive = TRUE)
             } else {
                 patch_rpaths()
 
                 owd <- setwd(startdir)
-                system(paste("mv", shQuote(instdir), shQuote(dirname(real_instdir))))
+                system(paste("mv", shQuote(instdir), shQuote(dirname(final_instdir))))
                 setwd(owd)
             }
-            instdir <- real_instdir
-            lib <- real_lib
-            Sys.setenv(R_PACKAGE_DIR = real_rpackagedir)
-            Sys.setenv(R_LIBS = real_rlibs)
-	    .libPaths(real_libpaths)
+            instdir <- final_instdir
+            lib <- final_lib
+            Sys.setenv(R_PACKAGE_DIR = final_rpackagedir)
+            Sys.setenv(R_LIBS = final_rlibs)
+	    .libPaths(final_libpaths)
 
             if (test_load) {
                 starsmsg(stars, "testing if installed package can be loaded from final location")
