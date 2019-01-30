@@ -1251,37 +1251,47 @@ if(FALSE) {
                 starsmsg(stars,
                          "byte-compile and prepare package for lazy loading")
                 ## need to disable JIT
-                Sys.setenv(R_ENABLE_JIT = 0L)
-                compiler::enableJIT(0)
-                compiler::compilePKGS(1L)
-                compiler::setCompilerOptions(suppressAll = FALSE)
-                compiler::setCompilerOptions(suppressUndefined = TRUE)
-                compiler::setCompilerOptions(suppressNoSuperAssignVar = TRUE)
-            } else
+                cmd <- c("Sys.setenv(R_ENABLE_JIT = 0L)",
+		    "compiler::enableJIT(0)",
+                    "compiler::compilePKGS(1L)",
+                    "compiler::setCompilerOptions(suppressAll = FALSE)",
+                    "compiler::setCompilerOptions(suppressUndefined = TRUE)",
+                    "compiler::setCompilerOptions(suppressNoSuperAssignVar = TRUE);")
+            } else {
                 starsmsg(stars, "preparing package for lazy loading")
+                cmd <- ""
+            }
             keep.source <-
                 parse_description_field(desc, "KeepSource",
                                         default = keep.source)
 	    ## Something above, e.g. lazydata,  might have loaded the namespace
-	    if (isNamespaceLoaded(pkg_name))
-		unloadNamespace(pkg_name)
+            cmd <- append(cmd,
+                paste0("if (isNamespaceLoaded(\"",pkg_name, "\"))",
+                           " unloadNamespace(\"", pkg_name, "\")"))
             deps_only <-
                 config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_", "FALSE"))
             if(deps_only) {
                 env <- setRlibs(LinkingTo = TRUE)
                 libs0 <- .libPaths()
 		env <- sub("^.*=", "", env[1L])
-                .libPaths(c(lib0, env))
-            } else libs0 <- NULL
-	    res <- try({
-                suppressPackageStartupMessages(.getRequiredPackages(quietly = TRUE))
-                makeLazyLoading(pkg_name, lib, keep.source = keep.source,
-                                keep.parse.data = keep.parse.data)
-            })
-            if (BC) compiler::compilePKGS(0L)
-	    if (inherits(res, "try-error"))
+                cmd <- append(cmd, paste0(".libPaths(\"", c(lib0, env), "\")"))
+            } else
+                env <- ""
+            cmd <- append(cmd,
+                "suppressPackageStartupMessages(.getRequiredPackages(quietly = TRUE))")
+            cmd <- append(cmd,
+                paste0("tools:::makeLazyLoading(\"", pkg_name, "\", ",
+                                                    "\"", lib, "\", ",
+                                "keep.source = ", keep.source, ", ",
+                        "keep.parse.data = ", keep.parse.data, ")"))
+            opts <- paste(if(deps_only) "--vanilla" else "--no-save",
+                          "--slave")
+            cmd <- paste(cmd, collapse="\n")
+            out <- R_runR(cmd, opts, env = env)
+            if(length(out))
+                cat(paste(c(out, ""), collapse = "\n"))
+            if(length(attr(out, "status")))
 		pkgerrmsg("lazy loading failed", pkg_name)
-            if (!is.null(libs0)) .libPaths(libs0)
 	}
 
 	if (install_help) {
