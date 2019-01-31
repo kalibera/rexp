@@ -212,6 +212,8 @@ if(FALSE) {
             "			use (or not) 'keep.parse.data' for R code",
             "      --byte-compile	byte-compile R code",
             "      --no-byte-compile	do not byte-compile R code",
+            "      --staged-install	install to temporary and move to target directory",
+            "      --no-staged-install	install directly to target directory",
             "      --no-test-load	skip test of loading installed package",
             "      --no-clean-on-error	do not remove installed package on error",
             "      --merge-multiarch	multi-arch by merging (from a single tarball only)",
@@ -253,7 +255,7 @@ if(FALSE) {
         full
     }
 
-    ## used for LazyData, KeepSource, ByteCompile, Biarch
+    ## used for LazyData, KeepSource, ByteCompile, Biarch, StagedInstall
     parse_description_field <- function(desc, field, default)
 	str_parse_logic(desc[field], default = default,
 			otherwise = quote(
@@ -596,7 +598,7 @@ if(FALSE) {
                         message(cmd)
                         ret <- suppressWarnings(system(cmd))
                         if (ret == 0)
-                            message("fixed rpath ", old_rpath)
+                            message("NOTE: fixed rpath ", old_rpath)
                      }
                 }
             else
@@ -622,7 +624,7 @@ if(FALSE) {
                         if (ret == 0)
                             ## FIXME: install_name tool may not signal an
                             ## error
-                            message("fixed library path ", old_paths[i])
+                            message("NOTE: fixed library path ", old_paths[i])
                     }
 
                     ## change rpath entries
@@ -646,7 +648,7 @@ if(FALSE) {
                             message(cmd)
                             ret <- suppressWarnings(system(cmd))
                             if (ret == 0)
-                                message("fixed rpath ", old_paths[i])
+                                message("NOTE: fixed rpath ", old_paths[i])
                         }
 
                     }
@@ -760,7 +762,12 @@ if(FALSE) {
             dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
         }
 
-        if (nzchar(lockdir)) {
+        pkg_staged_install <- staged_install
+        if (is.na(pkg_staged_install))
+            pkg_staged_install <-
+                parse_description_field(desc, "StagedInstall", default = TRUE)
+
+        if (pkg_staged_install) {
             final_instdir <- instdir
             final_lib <- lib
             final_rpackagedir <- Sys.getenv("R_PACKAGE_DIR")
@@ -1252,8 +1259,8 @@ if(FALSE) {
                          "byte-compile and prepare package for lazy loading")
                 ## need to disable JIT
                 cmd <- c("Sys.setenv(R_ENABLE_JIT = 0L)",
-		    "compiler::enableJIT(0)",
-                    "compiler::compilePKGS(1L)",
+		    "invisible(compiler::enableJIT(0))",
+                    "invisible(compiler::compilePKGS(1L))",
                     "compiler::setCompilerOptions(suppressAll = FALSE)",
                     "compiler::setCompilerOptions(suppressUndefined = TRUE)",
                     "compiler::setCompilerOptions(suppressNoSuperAssignVar = TRUE);")
@@ -1403,14 +1410,14 @@ if(FALSE) {
         }
 
         if (test_load) {
-            if (nzchar(lockdir))
+            if (pkg_staged_install)
 	        starsmsg(stars, "testing if installed package can be loaded from temporary location")
             else
 	        starsmsg(stars, "testing if installed package can be loaded")
             do_test_load()
         }
 
-        if (nzchar(lockdir)) {
+        if (pkg_staged_install) {
             if (WINDOWS) {
                 file.copy(instdir, dirname(final_instdir), recursive = TRUE,
                           copy.date = TRUE)
@@ -1463,6 +1470,7 @@ if(FALSE) {
 ##    lazy <- TRUE
     lazy_data <- FALSE
     byte_compile <- NA # means take from DESCRIPTION file.
+    staged_install <- NA # means take from DESCRIPTION file.
     ## Next is not very useful unless R CMD INSTALL reads a startup file
     lock <- getOption("install.lock", NA) # set for overall or per-package
     pkglock <- FALSE  # set for per-package locking
@@ -1611,6 +1619,10 @@ if(FALSE) {
             byte_compile <- TRUE
         } else if (a == "--no-byte-compile") {
             byte_compile <- FALSE
+        } else if (a == "--staged-install") {
+            staged_install <- TRUE
+        } else if (a == "--no-staged-install") {
+            staged_install <- FALSE
         } else if (a == "--dsym") {
             dsym <- TRUE
         } else if (substr(a, 1, 18) == "--built-timestamp=") {
@@ -1827,6 +1839,8 @@ if(FALSE) {
         lockdir <- file.path(lib, "00LOCK")
         mk_lockdir(lockdir)
     }
+    if (!identical(staged_install, FALSE) && !lock)
+        stop("staged install is only possible with locking")
 
     if  ((tar_up || zip_up) && fake)
         stop("building a fake installation is disallowed")
