@@ -765,8 +765,15 @@ if(FALSE) {
         pkg_staged_install <- staged_install
         if (is.na(pkg_staged_install))
             pkg_staged_install <-
-                parse_description_field(desc, "StagedInstall", default = TRUE)
-
+                parse_description_field(desc, "StagedInstall", default = FALSE)
+        # environment variable intended as temporary
+        rsi <- Sys.getenv("R_STAGED_INSTALL")
+        rsi <- switch(rsi,
+                      "TRUE"=, "true"=, "True"=, "yes"=, "Yes"= 1,
+                      "FALSE"=,"false"=,"False"=, "no"=, "No" = 0,
+                      as.numeric(rsi))
+        if (!is.na(rsi))
+            pkg_staged_install <- (rsi > 0)
         if (pkg_staged_install) {
             final_instdir <- instdir
             final_lib <- lib
