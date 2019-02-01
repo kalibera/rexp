@@ -685,6 +685,7 @@ if(FALSE) {
                     }
                     out <- suppressWarnings(
                         system(paste("otool -l", l), intern=TRUE))
+                    out <- tail(out, -1) # first line is l (includes instdir)
                     if (sum(grepl(instdir, out)))
                         failed_fix <- TRUE
                 }
