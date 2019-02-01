@@ -565,13 +565,7 @@ if(FALSE) {
         ## can be moved to a different directory. Not used on WINDOWS.
         patch_rpaths <- function()
         {
-            have_chrpath <- nzchar(Sys.which("chrpath"))
-            have_xcode <- nzchar(Sys.which("otool")) &&
-                          nzchar(Sys.which("install_name_tool"))
-            if (!have_chrpath && !have_xcode)
-                return()
-
-            starsmsg(stars, "checking absolute paths to dynamic libraries")
+            starsmsg(stars, "checking absolute paths in dynamic libraries")
             slibs <- list.files(instdir, recursive=TRUE, all.files=TRUE,
                                 full.names=TRUE)
             slibs <- grep("(\\.sl$)|(\\.so$)|(\\.dylib$)|(\\.dll$)", slibs,
@@ -583,11 +577,38 @@ if(FALSE) {
                 function(l) grepl("shared", system(paste("file", l),
                                   intern=TRUE)))
             slibs <- slibs[are_shared]
+            if (!length(slibs))
+                return()
+
+            have_ldd <- nzchar(Sys.which("ldd"))
+            have_chrpath <- nzchar(Sys.which("chrpath"))
+            have_clt <- nzchar(Sys.which("otool")) &&
+                        nzchar(Sys.which("install_name_tool"))
+            if (!have_chrpath && !have_clt) {
+                if (have_ldd) {
+                    # probably Linux or Solaris without chrpath, just detect
+                    # hardcoded paths using ldd and report
+                    for(l in slibs) {
+                        out <- suppressWarnings(
+                            system(paste("ldd", l), intern=TRUE))
+                        if (sum(grepl(instdir, out)))
+                            errmsg("absolute paths in library ", l,
+                                   " include temporary installation directory,",
+                                   " please report and use --no-staged-install")
+                    }
+                }
+                return()
+            }
+
             hardcoded_paths <- FALSE
+            failed_fix <- FALSE
             if (have_chrpath)
                 for(l in slibs) {
                     out <- suppressWarnings(
                         system(paste("chrpath", l), intern=TRUE))
+
+                    # when multiple rpaths are present, there is a single
+                    # RUNPATH= line with the paths separated by :
                     rpath <- grep(".*PATH=", out, value=TRUE)
                     rpath <- gsub(".*PATH=", "", rpath)
                     old_rpath <- rpath
@@ -600,6 +621,12 @@ if(FALSE) {
                         if (ret == 0)
                             message("NOTE: fixed rpath ", old_rpath)
                      }
+                    out <- suppressWarnings(
+                        system(paste("chrpath", l), intern=TRUE))
+                    rpath <- grep(".*PATH=", out, value=TRUE)
+                    rpath <- gsub(".*PATH=", "", rpath)
+                    if (sum(grepl(instdir, rpath)))
+                        failed_fix <- TRUE
                 }
             else
                 ## macOS only
@@ -622,10 +649,14 @@ if(FALSE) {
                         message(cmd)
                         ret <- suppressWarnings(system(cmd, intern=FALSE))
                         if (ret == 0)
-                            ## FIXME: install_name tool may not signal an
-                            ## error
+                            ## NOTE: install_name doe not signal an error in
+                            ## some cases
                             message("NOTE: fixed library path ", old_paths[i])
                     }
+                    out <- suppressWarnings(
+                        system(paste("otool -L", l), intern=TRUE))
+                    if (sum(grepl(instdir, out)))
+                        failed_fix <- TRUE
 
                     ## change rpath entries
                     out <- suppressWarnings(
@@ -650,11 +681,16 @@ if(FALSE) {
                             if (ret == 0)
                                 message("NOTE: fixed rpath ", old_paths[i])
                         }
-
                     }
+                    out <- suppressWarnings(
+                        system(paste("otool -l", l), intern=TRUE))
+                    if (sum(grepl(instdir, out)))
+                        failed_fix <- TRUE
                 }
             if (hardcoded_paths)
-                message("WARNING: hardcoded paths to installation directory should be avoided")
+                message("WARNING: shared objects with hard-coded temporary installation paths")
+            if (failed_fix)
+                errmsg("some hard-coded temporary paths could not be fixed")
         }
         ## Make the destination directories available to the developer's
         ## installation scripts (e.g. configure)
