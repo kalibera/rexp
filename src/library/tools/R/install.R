@@ -1374,13 +1374,15 @@ if(FALSE) {
 
         if (clean) run_clean()
 
-        do_test_load <- function() {
+        do_test_load <- function(extra_cmd = NULL) {
             ## Do this in a separate R process, in case it crashes R.
 
             ## FIXME: maybe the quoting as 'lib' is not quite good enough
             ## On a Unix-alike this calls system(input=)
             ## and that uses a temporary file and redirection.
             cmd <- paste0("tools:::.test_load_package('", pkg_name, "', ", quote_path(lib), ")")
+            if (!is.null(extra_cmd))
+              cmd <- paste0(cmd, "\n", extra_cmd)
             ## R_LIBS was set already, but Rprofile/Renviron may change it
             ## R_runR is in check.R
             deps_only <-
@@ -1418,7 +1420,8 @@ if(FALSE) {
 
         if (test_load) {
             if (pkg_staged_install)
-	        starsmsg(stars, "testing if installed package can be loaded from temporary location")
+	        starsmsg(stars,
+                    "testing if installed package can be loaded from temporary location")
             else
 	        starsmsg(stars, "testing if installed package can be loaded")
             do_test_load()
@@ -1443,8 +1446,27 @@ if(FALSE) {
 	    .libPaths(final_libpaths)
 
             if (test_load) {
-                starsmsg(stars, "testing if installed package can be loaded from final location")
-                do_test_load()
+                starsmsg(stars,
+                    "testing if installed package can be loaded from final location")
+
+                # The test for hard-coded installation path is done together
+                # with test loading to save time. The test is intentionally
+                # run on a loaded package, to allow for paths to be fixed in
+                # .onLoad and loadNamespace().
+
+                serf <- tempfile()
+                cmd <- paste0("f <- file(\"", serf, "\", \"wb\")")
+                cmd <- append(cmd, paste0("invisible(serialize(",
+                    "as.list(getNamespace(\"", pkgname, "\"), all.names=TRUE), f))"))
+                cmd <- append(cmd, "close(f)")
+                do_test_load(extra_cmd = paste(cmd, collapse = "\n"))
+                starsmsg(stars,
+                    "testing if installed package keeps record of temporary installation path")
+                r <- readBin(serf, "raw", n=file.size(serf))
+                unlink(serf)
+                if (length(grepRaw("00new", r, fixed=TRUE, all=FALSE,
+                                   value=FALSE)))
+                    errmsg("hard-coded installation path, please report to package maintainer and use --no-staged-install")
             }
         }
     }
