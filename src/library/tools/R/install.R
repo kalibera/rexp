@@ -655,6 +655,7 @@ if(FALSE) {
                     }
                     out <- suppressWarnings(
                         system(paste("otool -L", l), intern=TRUE))
+                    out <- grep("\\(compatibility", out, value=TRUE)
                     if (sum(grepl(instdir, out)))
                         failed_fix <- TRUE
 
