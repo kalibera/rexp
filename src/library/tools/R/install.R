@@ -583,6 +583,7 @@ if(FALSE) {
             uname <- system("uname -a", intern = TRUE)
             os <- sub(" .*", "", uname)
             have_chrpath <- nzchar(Sys.which("chrpath"))
+            have_patchelf <- nzchar(Sys.which("patchelf"))
             have_readelf <- nzchar(Sys.which("readelf"))
             have_macos_clt <- nzchar(Sys.which("otool")) &&
                               nzchar(Sys.which("install_name_tool")) &&
@@ -623,7 +624,7 @@ if(FALSE) {
                         system(paste("elfedit -re dyn:value", l), intern=TRUE))
                     out <- grep("^[ \t]*\\[", out, value=TRUE)
                     paths <- gsub(re, "\\4", out)
-                    if (sum(grepl(instdir, paths, fixed=TRUE)))
+                    if (any(grepl(instdir, paths, fixed=TRUE)))
                         failed_fix <- TRUE
                 }
             } else if (have_macos_clt) {
@@ -655,7 +656,7 @@ if(FALSE) {
                     out <- suppressWarnings(
                         system(paste("otool -L", l), intern=TRUE))
                     out <- grep("\\(compatibility", out, value=TRUE)
-                    if (sum(grepl(instdir, out, fixed=TRUE)))
+                    if (any(grepl(instdir, out, fixed=TRUE)))
                         failed_fix <- TRUE
 
                     ## change rpath entries
@@ -686,8 +687,60 @@ if(FALSE) {
                     out <- suppressWarnings(
                         system(paste("otool -l", l), intern=TRUE))
                     out <- tail(out, -1) # first line is l (includes instdir)
-                    if (sum(grepl(instdir, out, fixed=TRUE)))
+                    if (any(grepl(instdir, out, fixed=TRUE)))
                         failed_fix <- TRUE
+                }
+            } else if (have_patchelf) {
+                ## probably Linux
+                for(l in slibs) {
+                    # fix rpath
+                    rpath <- suppressWarnings(
+                        system(paste("patchelf --print-rpath", l),
+                               intern=TRUE))
+                    old_rpath <- rpath
+                    rpath <- gsub(instdir, "\\$ORIGIN/..", rpath,
+                                  fixed=TRUE)
+                    if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
+                        hardcoded_paths <- TRUE
+                        cmd <- paste("patchelf", "--set-rpath", rpath, l)
+                        message(cmd)
+                        ret <- suppressWarnings(system(cmd))
+                        if (ret == 0)
+                            message("NOTE: fixed rpath ", old_rpath)
+                        rpath <- suppressWarnings(
+                            system(paste("patchelf --print-rpath", l),
+                                   intern=TRUE))
+                        if (any(grepl(instdir, rpath, fixed=TRUE)))
+                            failed_fix <- TRUE
+                    }
+                    # fix DT_NEEDED
+                    if (have_readelf) {
+                        out <- suppressWarnings(
+                            system(paste("readelf -d", l), intern=TRUE))
+                        re0 <- "^0x.*\\(NEEDED\\).*Shared library: \\[.*\\]"
+                        out <- grep(re0, out, value=TRUE)
+                        re <- "^0x[0-9]+[ \t]+\\(NEEDED\\)[ \t]+Shared library:[ \t]*\\[(.*)\\]"
+                        paths <- gsub(re, "\\1", out)
+                        old_paths <- paths
+                        paths <- gsub(instdir, "\\$ORIGIN/..", paths,
+                                      fixed=TRUE)
+                        changed <- paths != old_paths
+                        paths <- paths[changed]
+                        old_paths <- old_paths[changed]
+                        for(i in seq_along(paths)) {
+                            cmd <- paste("patchelf --replace-needed",
+                                         old_paths[i], paths[i])
+                            message(cmd)
+                            ret <- suppressWarnings(system(cmd))
+                            if (ret == 0)
+                                message("NOTE: fixed library path ", old_paths[i])
+                        }
+                        out <- suppressWarnings(
+                            system(paste("readelf -d", l), intern=TRUE))
+                        out <- grep(re0, out, value=TRUE)
+                        if (any(grepl(instdir, out, fixed=TRUE)))
+                            failed_fix <- TRUE
+                    }
                 }
             } else if (have_chrpath) {
                 ## Linux (possibly Solaris, but there elfedit should be
@@ -710,13 +763,13 @@ if(FALSE) {
                         ret <- suppressWarnings(system(cmd))
                         if (ret == 0)
                             message("NOTE: fixed rpath ", old_rpath)
+                        out <- suppressWarnings(
+                            system(paste("chrpath", l), intern=TRUE))
+                        rpath <- grep(".*PATH=", out, value=TRUE)
+                        rpath <- gsub(".*PATH=", "", rpath)
+                        if (any(grepl(instdir, rpath, fixed=TRUE)))
+                            failed_fix <- TRUE
                     }
-                    out <- suppressWarnings(
-                        system(paste("chrpath", l), intern=TRUE))
-                    rpath <- grep(".*PATH=", out, value=TRUE)
-                    rpath <- gsub(".*PATH=", "", rpath)
-                    if (sum(grepl(instdir, rpath, fixed=TRUE)))
-                        failed_fix <- TRUE
                 }
             }
             if (hardcoded_paths)
@@ -732,7 +785,7 @@ if(FALSE) {
                     out <- suppressWarnings(
                         system(paste("readelf -d", l), intern=TRUE))
                     out <- grep("^0x", out, value=TRUE)
-                    if (sum(grepl(instdir, out, fixed=TRUE)))
+                    if (any(grepl(instdir, out, fixed=TRUE)))
                         errmsg("absolute paths in library ", l,
                                " include temporary installation directory,",
                                " please report and use --no-staged-install")
