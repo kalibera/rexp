@@ -600,12 +600,12 @@ if(FALSE) {
                 for (l in slibs) {
                     out <- suppressWarnings(
                         system(paste("elfedit -re dyn:value", l), intern=TRUE))
-                    out <- grep("^[ \t]*\\[", out, value=TRUE)
-                    re <- "^[ \t]*([0-9]*)[ \t]+(.*)[ \t]+(.*)[ \t]*(.*)"
+                    out <- grep("^[ \t]*\\[[0-9]+\\]", out, value=TRUE)
+                    re <- "^[ \t]*\\[([0-9]+)\\][ \t]+([^ \t]+)[ \t]+([^ \t]+)[ \t]*(.*)"
                     paths <- gsub(re, "\\4", out)
                     idxs <- gsub(re, "\\1", out)
                     old_paths <- paths
-                    paths <- gsub(instdir, "\\\\$ORIGIN/..", paths,
+                    paths <- gsub(instdir, "\\$ORIGIN/..", paths,
                                   fixed=TRUE)
                     changed <- paths != old_paths
                     paths <- paths[changed]
