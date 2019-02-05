@@ -605,7 +605,8 @@ if(FALSE) {
                     paths <- gsub(re, "\\4", out)
                     idxs <- gsub(re, "\\1", out)
                     old_paths <- paths
-                    paths <- gsub(instdir, "\\$ORIGIN/..", paths,
+                    # "\\$ORIGIN/.."
+                    paths <- gsub(instdir, final_instdir, paths,
                                   fixed=TRUE)
                     changed <- paths != old_paths
                     paths <- paths[changed]
@@ -637,7 +638,8 @@ if(FALSE) {
                     paths <- gsub("^[ \t]*(.*) \\(compatibility.*", "\\1",
                                   paths)
                     old_paths <- paths
-                    paths <- gsub(instdir, "@loader_path/..", paths,
+                    # "@loader_path/.."
+                    paths <- gsub(instdir, final_instdir, paths,
                                   fixed=TRUE)
                     changed <- paths != old_paths
                     paths <- paths[changed]
@@ -669,7 +671,8 @@ if(FALSE) {
                         paths <- gsub("^[ \t]*path ", "", out[rpidx+1])
                         paths <- gsub("(.*) \\(offset .*", "\\1", paths)
                         old_paths <- paths
-                        paths <- gsub(instdir, "@loader_path/..", paths,
+                        # "@loader_path/.."
+                        paths <- gsub(instdir, final_instdir, paths,
                                                fixed=TRUE)
                         changed <- paths != old_paths
                         paths <- paths[changed]
@@ -698,7 +701,8 @@ if(FALSE) {
                         system(paste("patchelf --print-rpath", l),
                                intern=TRUE))
                     old_rpath <- rpath
-                    rpath <- gsub(instdir, "\\$ORIGIN/..", rpath,
+                    # "\\$ORIGIN/.."
+                    rpath <- gsub(instdir, final_instdir, rpath,
                                   fixed=TRUE)
                     if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
                         hardcoded_paths <- TRUE
@@ -722,7 +726,8 @@ if(FALSE) {
                         re <- "^[ \t]*0x[0-9]+[ \t]+\\(NEEDED\\)[ \t]+Shared library:[ \t]*\\[(.*)\\]"
                         paths <- gsub(re, "\\1", out)
                         old_paths <- paths
-                        paths <- gsub(instdir, "\\$ORIGIN/..", paths,
+                        # "\\$ORIGIN/.."
+                        paths <- gsub(instdir, final_instdir, paths,
                                       fixed=TRUE)
                         changed <- paths != old_paths
                         paths <- paths[changed]
@@ -754,7 +759,8 @@ if(FALSE) {
                     rpath <- grep(".*PATH=", out, value=TRUE)
                     rpath <- gsub(".*PATH=", "", rpath)
                     old_rpath <- rpath
-                    rpath <- gsub(instdir, "\\$ORIGIN/..", rpath,
+                    # "\\$ORIGIN/.."
+                    rpath <- gsub(instdir, final_instdir, rpath,
                                   fixed=TRUE)
                     if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
                         hardcoded_paths <- TRUE
