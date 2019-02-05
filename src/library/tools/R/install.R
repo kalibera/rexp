@@ -717,9 +717,9 @@ if(FALSE) {
                     if (have_readelf) {
                         out <- suppressWarnings(
                             system(paste("readelf -d", l), intern=TRUE))
-                        re0 <- "^0x.*\\(NEEDED\\).*Shared library: \\[.*\\]"
+                        re0 <- "0x.*\\(NEEDED\\).*Shared library:"
                         out <- grep(re0, out, value=TRUE)
-                        re <- "^0x[0-9]+[ \t]+\\(NEEDED\\)[ \t]+Shared library:[ \t]*\\[(.*)\\]"
+                        re <- "^[ \t]*0x[0-9]+[ \t]+\\(NEEDED\\)[ \t]+Shared library:[ \t]*\\[(.*)\\]"
                         paths <- gsub(re, "\\1", out)
                         old_paths <- paths
                         paths <- gsub(instdir, "\\$ORIGIN/..", paths,
@@ -729,7 +729,7 @@ if(FALSE) {
                         old_paths <- old_paths[changed]
                         for(i in seq_along(paths)) {
                             cmd <- paste("patchelf --replace-needed",
-                                         old_paths[i], paths[i])
+                                         old_paths[i], paths[i], l)
                             message(cmd)
                             ret <- suppressWarnings(system(cmd))
                             if (ret == 0)
@@ -784,7 +784,7 @@ if(FALSE) {
                 for(l in slibs) {
                     out <- suppressWarnings(
                         system(paste("readelf -d", l), intern=TRUE))
-                    out <- grep("^0x", out, value=TRUE)
+                    out <- grep("^[ \t]*0x", out, value=TRUE)
                     if (any(grepl(instdir, out, fixed=TRUE)))
                         errmsg("absolute paths in library ", l,
                                " include temporary installation directory,",
