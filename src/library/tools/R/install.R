@@ -1428,6 +1428,11 @@ if(FALSE) {
                 config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_", "FALSE"))
             env <- if (deps_only) setRlibs(LinkingTo = TRUE, quote = TRUE)
                    else ""
+
+            ## needed for some packages (AnnotationDbi) that install other
+            ## packages during their tests (otherwise system profile fails
+            ## because it cannot find the tests startup file)
+            env <- paste(env, "R_TESTS=")
             cmd <- append(cmd,
                 "suppressPackageStartupMessages(.getRequiredPackages(quietly = TRUE))")
             cmd <- append(cmd,
@@ -1525,6 +1530,7 @@ if(FALSE) {
             deps_only <-
                 config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_", "FALSE"))
             env <- if (deps_only) setRlibs(lib0, self = TRUE, quote = TRUE) else ""
+            ## FIXME: clear R_TESTS?
             tlim <- get_timeout(Sys.getenv("_R_INSTALL_TEST_LOAD_ELAPSED_TIMEOUT_"))
             if (length(test_archs) > 1L) {
                 msgs <- character()
