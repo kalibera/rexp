@@ -1426,13 +1426,8 @@ if(FALSE) {
                            " unloadNamespace(\"", pkg_name, "\")"))
             deps_only <-
                 config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_", "FALSE"))
-            if(deps_only) {
-                env <- setRlibs(LinkingTo = TRUE)
-                libs0 <- .libPaths()
-		env <- sub("^.*=", "", env[1L])
-                cmd <- append(cmd, paste0(".libPaths(\"", c(lib0, env), "\")"))
-            } else
-                env <- ""
+            env <- if (deps_only) setRlibs(LinkingTo = TRUE, quote = TRUE)
+                   else ""
             cmd <- append(cmd,
                 "suppressPackageStartupMessages(.getRequiredPackages(quietly = TRUE))")
             cmd <- append(cmd,
