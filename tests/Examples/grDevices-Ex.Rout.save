@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2019-01-01 r75936) -- "Unsuffered Consequences"
+R Under development (unstable) (2019-01-24 r76008) -- "Unsuffered Consequences"
 Copyright (C) 2019 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -1770,8 +1770,8 @@ detaching ‘package:grid’
 > ### ** Examples
 > 
 > ## The displayable colors from four planes of Lab space
-> ab <- as.matrix(expand.grid(a = (-10:15)*10,
-+                             b = (-15:10)*10))
+> ab <- expand.grid(a = (-10:15)*10,
++                   b = (-15:10)*10)
 > require(graphics); require(stats) # for na.omit
 > par(mfrow = c(2, 2), mar = .1+c(3, 3, 3, .5), mgp = c(2,  .8,  0))
 > 
@@ -4017,7 +4017,7 @@ $zlab
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  10.51 0.271 10.823 0 0 
+Time elapsed:  10.57 0.277 10.899 0 0 
 > grDevices::dev.off()
 null device 
           1 

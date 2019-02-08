@@ -1244,6 +1244,7 @@ function()
                "Priority",
                "RdMacros",
                "Suggests",
+               "StagedInstall",
                "SysDataCompression",
                "SystemRequirements",
                "Title",
@@ -1638,6 +1639,7 @@ nonS3methods <- function(package)
              equivalence = "sign.boot",
              fields = c("qr.q2ty", "qr.yq2"),
              gbm = c("pretty.gbm.tree", "quantile.rug"),
+             genetics = "diseq.ci",
              gpclib = "scale.poly",
              grDevices = "boxplot.stats",
              graphics = c("close.screen", "plot.design", "plot.new",
@@ -1671,7 +1673,8 @@ nonS3methods <- function(package)
              stremo = "sigma.hat",
              supclust = c("sign.change", "sign.flip"),
              tensorA = "chol.tensor",
-             utils = c("close.socket", "flush.console", "update.packages")
+             utils = c("close.socket", "flush.console", "update.packages"),
+             wavelets = "plot.dwt.multiple"
              )
     if(is.null(package)) return(unlist(stopList))
     thisPkg <- stopList[[package]]

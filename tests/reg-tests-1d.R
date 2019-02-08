@@ -2295,6 +2295,8 @@ for(seq in c(seq, seq.int)) # seq() -> seq.default() to behave as seq.int() :
     identical(seq(-t30, t30, t30)      ,  i3t30)# Error .. invalid '(to-from)/by'+NA warn.
   })
 ## each of these gave integer overflows  errors  or  NA's + warning in  R <= 3.5.x
+stopifnot(identical(7:10, seq.default(7L, along.with = 4:1) ))
+## errored for almost a day after r76062
 
 
 ## seq.int(*, by=<int.>, length = n) for non-integer 'from' or 'to'
@@ -2496,6 +2498,25 @@ f2 <- function(form) eval(quote(d), envir = environment(form))
 rf <- f(data.frame(x=1, f="b")) ## gave error inside f2() in R-devel
 stopifnot(identical(rf, 4))
 ## as after 75911 a wrong parent.frame() was used.
+
+
+## format(.) when there's no method gives better message:
+ee <- tryCatch(format(.Internal(bodyCode(ls))), error=identity)
+stopifnot(exprs = {
+    conditionCall(ee)[[1]] == quote(format.default)
+    grepl("no format() method", conditionMessage(ee), fixed=TRUE)
+})
+## signalled from long .Internal(...) call + "must be atomic" in R <= 3.5.x
+
+
+## writeLines(readLines(F), F)  -- PR#17528
+tf <- tempfile("writeL_test")
+writeLines("1\n2\n3", tf)
+c123 <- paste(1:3)
+stopifnot(identical(readLines(tf), c123))
+writeLines(readLines(tf), tf)
+stopifnot(identical(readLines(tf), c123))
+## writeLines had opened the output for writing before readLines() read it
 
 
 

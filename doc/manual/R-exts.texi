@@ -555,10 +555,16 @@ byte-compile.  Prior to @R{} 3.5.0, the default was not to, but
 recommended packages were already byte-compiled.  This can be overridden by
 installing with flag @option{--no-byte-compile}.
 
+@c DESCRIPTION field StagedInstall
+The @samp{StagedInstall} logical field controls if packge installation
+is `staged', that is done to a temporary location and moved to the final
+location when successfullly completed.  This was introduced in @R{}
+3.6.0; it is currently optional but expected to become the default
+before release.  It can be overridden by installing with flag
+@option{--no-staged-installl}.
+
 @c DESCRIPTION field ZipData
-The @samp{ZipData} logical field was used to control whether the automatic
-Windows build would zip up the data directory or not prior to @R{}
-2.13.0: it is now ignored.
+The @samp{ZipData} logical field has been ignored since @R{} 2.13.0.
 
 @c DESCRIPTION field Biarch
 The @samp{Biarch} logical field is used on Windows to select the
@@ -2173,8 +2179,7 @@ partially supported, not that which is fully implemented.}  to say what
 version of OpenMP is supported: version 3.1 (and much of 4.0) is
 supported by recent versions of the Linux, Windows and Solaris
 platforms, but portable packages cannot assume that end users have
-recent versions.@footnote{People do use older versions of OSes such as
-Debian Wheezy which has GCC 4.4.}  Apple builds of @command{clang}
+recent versions.  Apple builds of @command{clang}
 on macOS currently have no OpenMP support, but @acronym{CRAN} binary
 packages are built with a @command{clang}-based toolchain which supports
 OpenMP.  @uref{http://www.openmp.org/@/resources/@/openmp-compilers-tools}
@@ -2213,10 +2218,11 @@ first level.  The correctness of the detected number of `CPUs' and the
 assumption that the @R{} process is entitled to use them all are both
 dubious assumptions.  The best way to limit resources is to limit the
 overall number of threads available to OpenMP in the @R{} process: this
-can be done @emph{via} environment variable @env{OMP_THREAD_LIMIT}, where
-implemented.@footnote{Which it was at the time of writing with GCC,
-Oracle, Intel and Clang compilers.}  Alternatively, the
-number of threads per region can be limited by the environment variable
+can be done @emph{via} environment variable @env{OMP_THREAD_LIMIT},
+where implemented.@footnote{Which it was at the time of writing with
+GCC, Oracle, Intel and Clang compilers.  The count may include the
+thread running the main process.}  Alternatively, the number of threads
+per region can be limited by the environment variable
 @env{OMP_NUM_THREADS} or API call @code{omp_set_num_threads}, or,
 better, for the regions in your code as part of their
 specification. E.g.@: @R{} uses
@@ -2225,6 +2231,12 @@ specification. E.g.@: @R{} uses
 @end example
 @noindent
 That way you only control your own code and not that of other OpenMP users.
+
+Note that setting environment variables to control OpenMP is
+implementation-dependent and may need to be done outside the @R{}
+process or before any use of OpenMP (which might be by another process
+or @R{} itself).   Also, implementation-specific variables such as
+@env{KMP_THREAD_LIMIT} might take precedence.
 
 @node Using pthreads, Compiling in sub-directories, OpenMP support, Using Makevars
 @subsubsection Using pthreads
@@ -4460,24 +4472,27 @@ platform not tested by the package maintainer.  (@command{R CMD check}
 can optionally report on unsafe flags which were used.)
 
 @item
-Do be very careful with passing arguments between @R{}, C and
-Fortran code.  In particular, @code{long} in C will be 32-bit
-on some @R{} platforms (including 64-bit Windows), but 64-bit on most
-modern Unix and Linux platforms.  It is rather unlikely that the use of
-@code{long} in C code has been thought through: if you need a longer
-type than @code{int} you should use a configure test for a C99/C++11
-type such as @code{int_fast64_t} (and failing that, @code{long long}
-@footnote{but note that @code{long long} is not a standard C++98 type,
-and C++ compilers set up for strict checking will reject it.}) and
-typedef your own type to be @code{long} or @code{long long}, or use
-another suitable type (such as @code{size_t}).
+Do be very careful with passing arguments between @R{}, C and Fortran
+code.  In particular, @code{long} in C will be 32-bit on some @R{}
+platforms (including 64-bit Windows), but 64-bit on most modern Unix and
+Linux platforms.  It is rather unlikely that the use of @code{long} in C
+code has been thought through: if you need a longer type than @code{int}
+you should use a configure test for a C99/C++11 type such as
+@code{int_fast64_t} (and failing that, @code{long long}@footnote{but
+note that @code{long long} is not a standard C++98 type, and C++
+compilers for earlier versions of @R{} set up for strict C++98
+conformance will reject it.  C++11 (the default since @R{} 3.6.0)
+includes @code{long long}.}) and typedef your own type, or use another
+suitable type (such as @code{size_t}).
+@c https://en.cppreference.com/w/cpp/language/types claims long long is
+@c >= 64-bit, but that is not obvious in the standard.
 
 It is not safe to assume that @code{long} and pointer types are the same
 size, and they are not on 64-bit Windows.  If you need to convert
 pointers to and from integers use the C99/C++11 integer types
-@code{intptr_t} and @code{uintptr_t} (which are defined in the header
-@code{<stdint.h>} and are not required to be implemented by the C99
-standard but are used in C code by @R{} itself).
+@code{intptr_t} and @code{uintptr_t} (in the headers @code{<stdint.h>}
+and @code{cstdint}: they are not required to be implemented by the
+standards but are used in C code by @R{} itself).
 
 Note that @code{integer} in Fortran corresponds to @code{int} in C on
 all @R{} platforms.
@@ -8768,17 +8783,17 @@ included in @env{MAIN_LDFLAGS}.
 This sanitizer can be combined with the Address Sanitizer by
 @option{-fsanitize=undefined,address} (where both are supported).
 
-Finer control of what is checked can be achieved by other options: for
-@command{clang} see
-@uref{https://clang.llvm.org/@/docs/@/UsersManual.html#controlling-code-generation}.@footnote{or
-the user manual for your version of @command{clang}, e.g.@: (the paths
-have differed for some versions)
-@uref{http://llvm.org/@/releases/@/6.0.0/@/tools/@/clang/@/docs/@/UsersManual.html}.}
-The current set for @command{clang} is (on a single line):
+Finer control of what is checked can be achieved by other options.
+
+For @command{clang} see
+@uref{https://clang.llvm.org/@/docs/@/UndefinedBehaviorSanitizer.html#ubsan-checks}.
+The current set is (on a single line):
 @example
--fsanitize=alignment,bool,bounds,enum,float-cast-overflow,
-float-divide-by-zero,function,integer-divide-by-zero,nonnull-attribute,
-null,object-size,pointer-overflow,return,returns-nonnull-attribute,shift,
+-fsanitize=alignment,bool,bounds,builtin,enum,float-cast-overflow,
+float-divide-by-zero,function,implicit-unsigned-integer-truncation,
+implicit-signed-integer-truncation,implicit-integer-sign-change,
+integer-divide-by-zero,nonnull-attribute,null,object-size,
+pointer-overflow,return,returns-nonnull-attribute,shift,
 signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound,vptr
 @end example
 
@@ -8803,11 +8818,11 @@ Option @code{float-divide-by-zero} is undesirable for use with @R{}
 which allow such divisions as part of @acronym{IEC}@tie{}60559
 arithmetic.
 
-See
+For GCC see
 @uref{https://gcc.gnu.org/@/onlinedocs/@/gcc/@/Instrumentation-Options.html}
 (or the manual for your version of GCC, installed or @emph{via}
 @uref{https://gcc.gnu.org/@/onlinedocs/}: look for `Program
-Instrumentation Options') for the options supported by GCC: 6 and 7 support
+Instrumentation Options') for the options supported by GCC: 6 and 7 supported
 @example
 -fsanitize=alignment,bool,bounds,enum,integer-divide-by-zero,
 nonnull-attribute,null,object-size,return,returns-nonnull-attribute,
@@ -8821,12 +8836,8 @@ bound-strict,float-cast-overflow,float-divide-by-zero
 @end example
 @noindent
 where @code{float-divide-by-zero} is not desirable for @R{} uses and
-@code{bounds-strict} is an extension of @code{bounds}.
-@c At the time of writing the @code{object-size}
-@c and @code{vptr} checks produced many warnings on GCC's own C++ headers,
-@c so should be disabled.
-
-From GCC 8 @code{signed-integer-overflow} is no longer a default part of
+@code{bounds-strict} is an extension of @code{bounds}. From GCC 8
+@code{signed-integer-overflow} is no longer a default part of
 @option{-fsanitize=undefined}, but can be specified separately.  It adds
 options @option{-fsanitize=pointer-overflow} and
 @option{-fsanitize=builtin}.
@@ -8839,9 +8850,14 @@ Other useful flags include
 @noindent
 which causes the first report to be fatal (it always is for the
 @code{unreachable} and @code{return} suboptions).  For more detailed
-information on where the runtime error occurs, @R{} can be run under a
-debugger with a breakpoint set before the sanitizer report is produced:
-for @command{gdb} or @command{lldb} you could use
+information on where the runtime error occurs, using 
+
+@example
+setenv UBSAN_OPTIONS 'print_stacktrace=1' 
+@end example
+@noindent will include a traceback in the report.  Beyond that, @R{} can
+be run under a debugger with a breakpoint set before the sanitizer
+report is produced: for @command{gdb} or @command{lldb} you could use
 @example
 break __ubsan_handle_float_cast_overflow
 break __ubsan_handle_float_cast_overflow_abort

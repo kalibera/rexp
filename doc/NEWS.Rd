@@ -232,40 +232,51 @@
       \code{x}, \code{str(x)} now gives a warning and subsequently still
       shows most parts of \code{x}, e.g., when slots are missing.
 
-      \item New pointer protection C functions \code{R_PreserveInMSet} and
-      \code{R_ReleaseFromMSet} have been introduced to replace
-      \code{UNPROTECT_PTR}, which is not safe to mix with \code{UNPROTECT}
-      (and with \code{PROTECT_WITH_INDEX}). Intended for use in parsers
-      only.
-
       \item \code{gamma(x)} and \code{lgamma(x)} no longer warn when
       correctly returning \code{Inf} or underflowing to zero.  This
       helps maximum likelihood and similar computations.
 
-      \item \code{convertColor()} is now vectorized, so a whole lot
-      faster for converting many colours at once.  New \code{vectorized}
-      argument to \code{colorConverter()} ensures that non-vectorized
-      colour converters still work.  Thanks to Brodie Gaslam.
+      \item \code{convertColor()} is now vectorized, so a lot faster for
+      converting many colours at once.  The new argument
+      \code{vectorized} to \code{colorConverter()} ensures that
+      non-vectorized colour converters still work.  (Thanks to Brodie
+      Gaslam.)
 
       \item \code{download.file()} and \code{url()} get new argument
       \code{headers} for custom HTTP headers, e.g., allowing to perform
       basic http authentication, thanks to a patch contributed by Gábor
       Csárdi.
 
-      \item File-based connection functions \code{file()}, \code{gzfile()},
-      \code{bzfile()}, \code{xzfile()} now signal an error when used on a
-      directory.
+      \item File-based connection functions \code{file()},
+      \code{gzfile()}, \code{bzfile()} and \code{xzfile()} now signal an
+      error when used on a directory.
 
-      \item For \code{approx()}, \code{splinefun()}, etc, a new setting
-      \code{ties = c("ordered", <fun>)} allows to skip the sorting and
-      still treat ties.
+      \item For \code{approx()}, \code{splinefun()} \emph{etc}, a new
+      setting \code{ties = c("ordered", <fun>)} allows skipping the
+      sorting and still treat ties.
+
+      \item \code{format(x)} gives a more user friendly error message in
+      the case where no method is defined. Additionally, a minimal method
+      is provided in \code{format.default(x)} when \code{isS4(x)} is true.
+
+      \item \code{which(x)} now also works when \code{x} is a long vector,
+      thanks to Suharto Anggono's \PR{17201}.
+
+      \item \code{seq.default()} is more careful to return an \code{integer}
+      (as opposed to \code{double}) stored result when its arguments are
+      large and/or objects; see comment #9 of Suharto Anggono's \PR{17497}.
+
+      \item The \code{plot} method for \code{lm} and \code{glm} fits,
+      \code{plot.lm()}, gets a new option \code{iter.smooth} with a
+      default of \code{0} for binomial fits, no longer downweighting when
+      smoothing the residuals.
     }
   }
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
-      \item The C++ compiler defaults to the C++11 standard if
-      supported, otherwise to the C++98 standard.
+      \item The C++ compiler options selected default to the C++11
+      standard if supported, otherwise to the C++98 standard.
 
       \item Visibility macros such as \samp{C_VISIBILITY} can now be
       user-set (including to empty), e.g.\sspace{}in \file{config.site}.
@@ -279,19 +290,17 @@
       \command{gfortran} is now the first choice for \samp{F77}, not
       \command{f95}.
 
-      \item Macros \samp{FFLAGS} and \samp{FCFLAGS} remain distinct to
-      allow for a compiler which needs a flag to select free- or
-      fixed-form Fortran (most use the source-file extension to choose:
-      \file{.f} is fixed-form and \file{.f90} and \file{.f95} are
-      free-form).
+      Macros \samp{FFLAGS} and \samp{FCFLAGS} remain distinct to allow
+      for a compiler which needs a flag to select free- or fixed-form
+      Fortran (most use the source-file extension to choose: \file{.f}
+      is fixed-form and \file{.f90} and \file{.f95} are free-form).
 
       If only one of them is set, its value is used for both.
 
       \item The special-casing of \samp{CFLAGS}, \samp{CXXFLAGS} and
       \samp{FFLAGS} for Intel compilers on Linux has been removed: we do
       not have recent experience but the generic defaults now chosen are
-      the same as those previously special-cased for \samp{x86_64} on
-      Intel.
+      the same as those previously special-cased for \samp{x86_64}.Z
 
       If necessary, override the defaults on the \command{configure}
       command line or in file \file{config.site}.
@@ -311,6 +320,20 @@
 
   \subsection{PACKAGE INSTALLATION}{
     \itemize{
+      \item Source package installation can be \sQuote{staged}: this is
+      currently optional but intended to become the default before
+      release.  In a staged install the package is installed into a
+      temporary location under the final library directory and moved
+      into place once the installation is complete.  The benefit is that
+      partially-installed packages are hidden from the view of other \R
+      sessions.
+      
+      The overall default is set by environment variable
+      \env{R_INSTALL_STAGED}.  \command{R CMD INSTALL} has new options
+      \option{--staged-install} and \option{--no-staged-install}, and
+      packages can use the \samp{StagedInstall} field in their
+      \file{DESCRIPTION} file to opt in or (more likely) out.
+
       \item The interpretation of source code with extension \file{.f}
       is changing.  Previously this denoted FORTRAN 77 code, but current
       compilers no longer have a FORTRAN 77 mode and interpret it as
@@ -373,8 +396,9 @@
 
       \item \command{R CMD check} now tries re-building all vignettes
       rather than stopping at the first error: whilst doing so it adds
-      \sQuote{bookmarks} to the log.  By default (see \sQuote{R
-	Internals}) it re-builds each vignette in a separate process.
+      \sQuote{bookmarks} to the log.  By default (see the \sQuote{R
+      Internals} manual) it re-builds each vignette in a separate
+      process.
 
       It now checks for duplicated vignette titles (also known as
       \sQuote{index entries}): they are used as hyperlinks on
@@ -384,6 +408,12 @@
 
   \subsection{C-LEVEL FACILITIES}{
     \itemize{
+      \item New pointer protection C functions \code{R_PreserveInMSet} and
+      \code{R_ReleaseFromMSet} have been introduced to replace
+      \code{UNPROTECT_PTR}, which is not safe to mix with \code{UNPROTECT}
+      (and with \code{PROTECT_WITH_INDEX}). Intended for use in parsers
+      only.
+
       \item \code{NAMEDMAX} has been raised to 7 to allow further
       protection of intermediate results from (usually ill-advised)
       assignments in arguments to \code{BUILTIN} functions. Properly
@@ -393,6 +423,10 @@
 
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
+      \item \code{$.data.frame} had become an expensive version of
+      the default method, so has been removed. (Thanks to Radford Neal
+      for picking this up and Duncan Murdoch for providing a patch.)
+
       \item Argument \code{compressed} of \code{untar()} is
       deprecated --- it is only used for external \code{tar} commands
       which increasingly for extraction auto-detect compression and
@@ -402,9 +436,9 @@
       \code{factor} arguments; they gave a deprecation warning since \R
       3.2.3, \PR{16564}.
 
-      \item \pkg{tools}' \code{vignetteDepends()} has been deprecated
-      (it called a function deprecated since Feb 2016), partly replaced
-      by newly exported \code{vignetteInfo()}.
+      \item Package \pkg{tools}' \code{vignetteDepends()} has been
+      deprecated (it called a function deprecated since Feb 2016), being
+      partly replaced by newly exported \code{vignetteInfo()}.
 
       \item The \command{f77_f2c} script has been removed: it
       no longer sufficed to compile the \file{.f} files in \R.
@@ -531,10 +565,10 @@
       In some cases, this changes its output to become compatible with
       \code{format.POSIXct()}.
 
-      \item On Windows, \code{detectCores()} now detects processors in all
-      processor groups, not just the group \R is running in (impacts
-      particularly systems with more than 64 logical processors). Reported
-      by Arunkumar Srinivasan.
+      \item On Windows, \code{detectCores()} in package \pkg{parallel}
+      now detects processors in all processor groups, not just the group
+      \R is running in (impacts particularly systems with more than 64
+      logical processors).  Reported by Arunkumar Srinivasan.
 
       \item On Windows, \code{socketSelect()} would hang with more than
       64 sockets, and hence \code{parallel::clusterApplyLB()} would hang
@@ -593,8 +627,8 @@
       \item \code{methods::formalArgs("<fn>")} now finds the same
       function as \code{formals("<fn>")}, fixing Emil Bode's \PR{17499}.
 
-      \item The methods package better handles duplicated class names
-      across packages.
+      \item The \pkg{methods} package better handles duplicated class
+      names across packages.
 
       \item The default method of \code{seq()} now avoids integer
       overflow, thanks to the report and "cumsum" patch of Suharto
@@ -628,8 +662,17 @@
       \item \code{strtoi("", base)} now gives \code{NA} on all platforms,
       following its documentation.  Reported by Michael Chirico.
 
-      \item Prototype elements are now checked to match the slots of the
-      class. Reported by Bill Dunlap.
+      \item In the definition of an S4 class, prototype elements are now
+      checked to match the slots of the class.  Reported by Bill Dunlap.
+
+      \item From \code{setClassUnion()}, if environment variable
+      \env{_R_METHODS_SHOW_CHECKSUBCLASSES} is set
+      to true, the internal \code{.checkSubclasses()} utility prints
+      debugging info to see if it is used at all after the \pkg{methods}
+      package has been built.  On the other hand, setting
+      \env{_R_METHODS_DONT_CHECKSUBCLASSES} to true, replaces
+      \code{.checkSubclasses()} by a no-op, experimentally, as it may be
+      unneeded (after \pkg{methods} building).
     }
   }
 }
@@ -649,6 +692,16 @@
       \item New macro \samp{F_VISIBILITY} as an alternative to
       \samp{F77_VISIBILITY}.  This will become the preferred form in
       \R 3.6.0.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{writeLines(readLines(fnam), fnam)} now works as expected,
+      thanks to Peter Meissner's \PR{17528}.
+
+      \item \code{setClassUnion()} no longer warns, but uses \code{message()}
+      for now, when encountering \dQuote{non local} subclasses of class members.
     }
   }
 }
