@@ -909,7 +909,7 @@ if(FALSE) {
         pkg_staged_install <- staged_install
         if (is.na(pkg_staged_install))
             pkg_staged_install <-
-                parse_description_field(desc, "StagedInstall", default = FALSE)
+                parse_description_field(desc, "StagedInstall", default = TRUE)
         # environment variable intended as temporary
         rsi <- Sys.getenv("R_INSTALL_STAGED")
         if (!nzchar(rsi))
