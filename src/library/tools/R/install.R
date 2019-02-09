@@ -65,7 +65,7 @@ if(FALSE) {
 
     ## Need these here in case of an early error, e.g. missing etc/Makeconf
     tmpdir <- ""
-    clean_on_error <- TRUE
+    clean_on_error <- FALSE
 
     do_exit <-
 	if(no.q)
