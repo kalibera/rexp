@@ -236,6 +236,7 @@ static void curlCommon(CURL *hnd, int redirect, int verify)
 	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYHOST, 0L);
 	curl_easy_setopt(hnd, CURLOPT_SSL_VERIFYPEER, 0L);
     }
+#if 0
     // for consistency, but all utils:::makeUserAgent does is look up an option.
     SEXP sMakeUserAgent = install("makeUserAgent");
     SEXP agentFun = PROTECT(lang2(sMakeUserAgent, ScalarLogical(0)));
@@ -246,6 +247,24 @@ static void curlCommon(CURL *hnd, int redirect, int verify)
     if(TYPEOF(sua) != NILSXP)
 	curl_easy_setopt(hnd, CURLOPT_USERAGENT, CHAR(STRING_ELT(sua, 0)));
     UNPROTECT(2);
+#else
+    int Default = 1;
+    SEXP sua = GetOption1(install("HTTPUserAgent")); // set in utils startup
+    if (TYPEOF(sua) == STRSXP && LENGTH(sua) == 1 ) {
+	const char *p = CHAR(STRING_ELT(sua, 0));
+	if (p[0] && p[1] && p[2] && p[0] == 'R' && p[1] == ' ' && p[2] == '(') {
+	} else {
+	    Default = 0;
+	    curl_easy_setopt(hnd, CURLOPT_USERAGENT, p);
+	}
+    }
+    if (Default) {
+	char buf[20];
+	curl_version_info_data *d = curl_version_info(CURLVERSION_NOW);
+	snprintf(buf, 20, "libcurl/%s", d->version);
+	curl_easy_setopt(hnd, CURLOPT_USERAGENT, buf);
+    }
+#endif
     int timeout0 = asInteger(GetOption1(install("timeout")));
     long timeout = timeout0 = NA_INTEGER ? 0 : 1000L * timeout0;
     curl_easy_setopt(hnd, CURLOPT_CONNECTTIMEOUT_MS, timeout);
@@ -659,12 +678,12 @@ in_do_curlDownload(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     n_err += curlMultiCheckerrs(mhnd);
 
+    long status = 0L;
     for (int i = 0; i < nurls; i++) {
 	if (out[i]) {
 	    fclose(out[i]);
 	    double dl;
 	    curl_easy_getinfo(hnd[i], CURLINFO_SIZE_DOWNLOAD, &dl);
-	    long status;
 	    curl_easy_getinfo(hnd[i], CURLINFO_RESPONSE_CODE, &status);
 	    // should we do something about incomplete transfers?
 	    if (status != 200 && dl == 0. && strchr(mode, 'w'))
@@ -673,10 +692,6 @@ in_do_curlDownload(SEXP call, SEXP op, SEXP args, SEXP rho)
 	curl_multi_remove_handle(mhnd, hnd[i]);
 	curl_easy_cleanup(hnd[i]);
     }
-    // This can show an invalid read: can it be improved?
-    long status = 0L;
-    if(nurls == 1)
-	curl_easy_getinfo(hnd[0], CURLINFO_RESPONSE_CODE, &status);
     curl_multi_cleanup(mhnd);
     curl_slist_free_all(headers);
 

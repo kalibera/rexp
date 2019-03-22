@@ -23,6 +23,16 @@
 	 CMD build} are in serialization format version 2, and resave by
        default produces files in serialization format version 2 (unless
        the original is already in format version 3).
+
+       \item The default method for generating from a discrete uniform
+       distribution (used in \code{sample()}, for instance) has been
+       changed. This addresses the fact, pointed out by Ottoboni and
+       Stark, that the previous method made \code{sample()} noticeably
+       non-uniform on large populations.  See \PR{17494} for a
+       discussion. The previous method can be requested using
+       \code{RNGkind()} or \code{RNGversion()} if necessary for
+       reproduction of old results.  Thanks to Duncan Murdoch for
+       contributing the patch and Gabe Becker for further assistance.
      }
   }
 
@@ -264,14 +274,52 @@
       may return a double result, breaking the previous guarantee of an
       integer result.
 
-      \item \code{seq.default()} is more careful to return an \code{integer}
-      (as opposed to \code{double}) stored result when its arguments are
-      large and/or objects; see comment #9 of Suharto Anggono's \PR{17497}.
+      \item \code{seq.default()} is more careful to return an
+      \code{integer} (as opposed to \code{double}) result when its
+      arguments are large and/or classed objects; see comment #9 of
+      Suharto Anggono's \PR{17497}.
 
       \item The \code{plot()} method for \code{lm} and \code{glm} fits,
-      \code{plot.lm()}, gets a new option \code{iter.smooth} with a
-      default of \code{0} for binomial fits, no longer downweighting when
-      smoothing the residuals.
+      \code{plot.lm()}, gains a new option \code{iter.smooth} with a
+      default of \code{0} for binomial fits, no longer down-weighting
+      when smoothing the residuals.
+
+      \item \code{zip()} passes its list of files \emph{via} standard
+      input to the external command when too long for the command line
+      (on some platforms).
+
+      \item \code{data()} gains an \code{overwrite} argument.
+
+      \item \code{t.test()} now also returns the standard error (in
+      list component \code{stderr}).
+
+      \item \code{model.matrix(*, contrasts.arg = CC)} now warns about
+      invalid \code{contrasts.arg}s.
+
+      \item Performance of \code{substr()} and \code{substring()} has been
+      improved.
+
+      \item \code{stopifnot()} has been simplified thanks to Suharto
+      Anggono's proposals to become considerably faster for cheap
+      expressions.
+
+      \item The default \sQuote{user agent} has been changed when
+      accessing \samp{http://} and \samp{https://} sites using
+      \samp{libcurl}.  (A site was found which caused \samp{libcurl} to
+      infinite-loop with the previous default.)
+
+      \item \code{sessionInfo()} now also contains \code{RNGkind()} and
+      prints it when it differs from the default; based on a proposal and
+      patch by Gabe Becker in \PR{17535}.
+      Also, \code{RNGversion(getRversion())} works directly.
+
+      \item \code{library()} and \code{require()} now allow more control
+      over handling search path conflicts when packages are
+      attached. The policy is controlled by the new
+      \code{conflicts.policy} option.
+
+      \item \code{barplot()} gets a formula method, thanks to a patch
+      proposal by Arni Magnusson in \PR{17521}.
     }
   }
 
@@ -322,19 +370,21 @@
 
   \subsection{PACKAGE INSTALLATION}{
     \itemize{
-      \item Source package installation can be \sQuote{staged}: this is
-      currently optional but intended to become the default before
-      release.  In a staged install the package is installed into a
-      temporary location under the final library directory and moved
-      into place once the installation is complete.  The benefit is that
-      partially-installed packages are hidden from the view of other \R
-      sessions.
-      
+      \item Source package installation is by default \sQuote{staged}:
+      the package is installed into a temporary location under the final
+      library directory and moved into place once the installation is
+      complete.  The benefit is that partially-installed packages are
+      hidden from other \R sessions.
+
       The overall default is set by environment variable
       \env{R_INSTALL_STAGED}.  \command{R CMD INSTALL} has new options
       \option{--staged-install} and \option{--no-staged-install}, and
       packages can use the \samp{StagedInstall} field in their
-      \file{DESCRIPTION} file to opt out.
+      \file{DESCRIPTION} file to opt out.  (That opt-out is a temporary
+      measure which may be withdrawn in future.)
+
+      Staged installation requires either \option{--pkglock} or
+      \option{--lock}, one of which is used by default.
 
       \item The interpretation of source code with extension \file{.f}
       is changing.  Previously this denoted FORTRAN 77 code, but current
@@ -346,7 +396,7 @@
       Legal FORTRAN 77 code is also legal fixed-form Fortran 9x; however
       this change legitimizes the use of later features, in particular
       to replace features marked \sQuote{obsolescent} in Fortran 95
-      which \command{gfortran} 8.x has started to warn about.
+      which \command{gfortran} 8.x warns about.
 
       \item Packages containing files in the \file{src} directory with
       extensions \file{.f90} or \file{.f95} are now linked using the C
@@ -405,6 +455,15 @@
       It now checks for duplicated vignette titles (also known as
       \sQuote{index entries}): they are used as hyperlinks on
       \acronym{CRAN} package pages and so do need to be unique.
+
+      \item \command{R CMD check} has more comprehensive checks on the
+      \file{data} directory and the functioning of \code{data()} in a
+      package.
+
+      \item \command{R CMD check} now checks
+      \command{autoconf}-generated \file{configure} files have their
+      corresponding source files, including optionally attempting to
+      regenerate them on platforms with \command{autoconf}.
     }
   }
 
@@ -451,7 +510,7 @@
       \item Make macros \samp{F77}, \samp{FCPIFCPLAGS} and
       \samp{SHLIB_OPENMP_FCFLAGS} are deprecated in favour of \samp{FC},
       \samp{FPICFLAGS} and \samp{SHLIB_OPENMP_FFLAGS} respectively.
-      
+
       \item \code{$.data.frame} had become an expensive version of
       the default method, so has been removed. (Thanks to Radford Neal
       for picking this up and to Duncan Murdoch for providing a patch.)
@@ -664,22 +723,40 @@
       \item \code{strtoi("", base)} now gives \code{NA} on all platforms,
       following its documentation.  Reported by Michael Chirico.
 
-      \item In the definition of an S4 class, prototype elements are now
-      checked to match the slots of the class.  Reported by Bill Dunlap.
+      \item In the definition of an S4 class, prototype elements are
+      checked against the slots of the class, with giving a prototype
+      for an undefined slot now being an error.  (Reported by Bill
+      Dunlap.)
 
       \item From \code{setClassUnion()}, if environment variable
       \env{_R_METHODS_SHOW_CHECKSUBCLASSES} is set
       to true, the internal \code{.checkSubclasses()} utility prints
-      debugging info to see if it is used at all after the \pkg{methods}
-      package has been built.  On the other hand, setting
-      \env{_R_METHODS_DONT_CHECKSUBCLASSES} to true, replaces
-      \code{.checkSubclasses()} by a no-op, experimentally, as it may be
-      unneeded (after \pkg{methods} building).
+      debugging info to see where it is used.
+
+      \item \code{max.col(m)} with an \code{m} of zero columns now
+      returns integer \code{NA} (instead of \code{1}).
+
+      \item \code{axTicks()} no longer returns small \dQuote{almost zero}
+      numbers (in exponential format) instead of zero, fixing Ilario
+      Gelmetti's \PR{17534}.
+
+      \item \code{isSymmetric(matrix(0, dimnames=list("A","b")))} is
+      \code{FALSE} again, as always documented.
+
+      \item The \code{cairo_pdf} graphics device (and other Cairo-based
+      devices) now clip correctly to the right and bottom border.
+
+      There was an off-by-one-pixel bug, reported by Lee Kelvin.
+
+      \item \code{as.roman(3) <= 2:4} and all other comparisons now work,
+      as do group \code{"Summary"} function calls such as
+      \code{max(as.roman(sample(20)))} and \code{as.roman(NA)}.  (Parly reported
+      by Bill Dunlap in \PR{17542}.)
     }
   }
 }
 
-\section{\Rlogo CHANGES IN R 3.5.2 patched}{
+\section{\Rlogo CHANGES IN R 3.5.3}{
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
@@ -704,6 +781,8 @@
 
       \item \code{setClassUnion()} no longer warns, but uses \code{message()}
       for now, when encountering \dQuote{non local} subclasses of class members.
+
+      \item \code{stopifnot(exprs = T)} no longer fails.
     }
   }
 }
@@ -1209,7 +1288,7 @@
       avoid having the \command{R} process killed when macOS over-commits
       memory.
 
-      \item \code{sum(x)} and \code{sum(x1,x2,..,x<N>)} with many or
+      \item \code{sum(x)} and \code{sum(x1, x2, .., x<N>)} with many or
       long logical or integer vectors no longer overflows (and returns
       \code{NA} with a warning), but returns \code{double} numbers in
       such cases.
@@ -3283,7 +3362,7 @@
       variable \env{R_INTERACTIVE_DEVICE}.
 
       \item On Unix-like platforms which support the \command{getline} C
-      library function, \code{system(*,intern = TRUE)} no longer
+      library function, \code{system(*, intern = TRUE)} no longer
       truncates (output) lines longer than 8192 characters, thanks to
       Karl Millar. (\PR{16544})
 
@@ -3348,7 +3427,7 @@
 
       \item New string utilities \code{startsWith(x, prefix)} and
       \code{endsWith(x, suffix)}.  Also provide speedups for some
-      \code{grepl("^...",*)} uses (related to proposals in \PR{16490}).
+      \code{grepl("^...", *)} uses (related to proposals in \PR{16490}).
 
       \item Reference class finalizers run at exit, as well as on
       garbage collection.
@@ -3692,7 +3771,7 @@
     \itemize{
       \item \code{format.POSIXlt()} behaved incorrectly in \R 3.2.4.
       E.g.\sspace{}the output of
-      \code{format(as.POSIXlt(paste0(1940:2000,"-01-01"), tz = "CET"),
+      \code{format(as.POSIXlt(paste0(1940:2000, "-01-01"), tz = "CET"),
 	usetz = TRUE)} ended in two \code{"CEST"} time formats.
     }
   }

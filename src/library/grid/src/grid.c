@@ -1097,8 +1097,9 @@ SEXP L_convert(SEXP x, SEXP whatfrom,
     SEXP answer;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     int TOunit, FROMaxis, TOaxis;
@@ -1118,10 +1119,11 @@ SEXP L_convert(SEXP x, SEXP whatfrom,
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     nx = unitLength(x);
     PROTECT(answer = allocVector(REALSXP, nx));
     for (i=0; i<nx; i++) {
-        gcontextFromgpar(currentgp, i, &gc, dd);
+        updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
         TOunit = INTEGER(unitto)[i % LENGTH(unitto)];
         FROMaxis = INTEGER(whatfrom)[0];
         TOaxis = INTEGER(whatto)[0];
@@ -1924,9 +1926,10 @@ SEXP L_lines(SEXP x, SEXP y, SEXP index, SEXP arrow)
     double xold, yold;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     const void *vmax;
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     /* Get the current device 
@@ -1938,6 +1941,7 @@ SEXP L_lines(SEXP x, SEXP y, SEXP index, SEXP arrow)
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     GEMode(1, dd);
     /* 
      * Number of lines 
@@ -1945,7 +1949,7 @@ SEXP L_lines(SEXP x, SEXP y, SEXP index, SEXP arrow)
     nl = LENGTH(index);
     for (j=0; j<nl; j++) {
 	SEXP indices = VECTOR_ELT(index, j);
-	gcontextFromgpar(currentgp, j, &gc, dd);
+        updateGContext(currentgp, j, &gc, dd, gpIsScalar, &gcCache);
 	/* 
 	 * Number of vertices
 	 *
@@ -2021,8 +2025,9 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
     double *xx, *yy, *ss;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     SEXP tracePts = R_NilValue;
@@ -2041,7 +2046,7 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
-    gcontextFromgpar(currentgp, 0, &gc, dd);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     /* 
      * Number of xsplines
      */
@@ -2052,7 +2057,7 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
 	const void *vmax;
 	SEXP indices = VECTOR_ELT(index, i);
 	SEXP points;
-	gcontextFromgpar(currentgp, i, &gc, dd);
+	updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	/* 
 	 * Number of vertices
 	 *
@@ -2247,8 +2252,9 @@ SEXP L_segments(SEXP x0, SEXP y0, SEXP x1, SEXP y1, SEXP arrow)
     int i, nx0, ny0, nx1, ny1, maxn;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     /* Get the current device 
@@ -2260,6 +2266,7 @@ SEXP L_segments(SEXP x0, SEXP y0, SEXP x1, SEXP y1, SEXP arrow)
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     maxn = nx0 = unitLength(x0); 
     ny0 = unitLength(y0);
     nx1 = unitLength(x1);
@@ -2276,7 +2283,7 @@ SEXP L_segments(SEXP x0, SEXP y0, SEXP x1, SEXP y1, SEXP arrow)
     GEMode(1, dd);
     for (i=0; i<maxn; i++) {
 	double xx0, yy0, xx1, yy1;
-	gcontextFromgpar(currentgp, i, &gc, dd);
+    updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	transformLocn(x0, y0, i, vpc, &gc, 
 		      vpWidthCM, vpHeightCM,
 		      dd, transform, &xx0, &yy0);
@@ -2461,8 +2468,9 @@ SEXP L_polygon(SEXP x, SEXP y, SEXP index)
     double xold, yold;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     /* Get the current device 
@@ -2474,6 +2482,7 @@ SEXP L_polygon(SEXP x, SEXP y, SEXP index)
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     GEMode(1, dd);
     /* 
      * Number of polygons 
@@ -2482,7 +2491,7 @@ SEXP L_polygon(SEXP x, SEXP y, SEXP index)
     for (i=0; i<np; i++) {
 	const void *vmax;
 	SEXP indices = VECTOR_ELT(index, i);
-	gcontextFromgpar(currentgp, i, &gc, dd);
+	updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	/* 
 	 * Number of vertices
 	 *
@@ -2534,8 +2543,9 @@ static SEXP gridCircle(SEXP x, SEXP y, SEXP r,
     double xx, yy, rr1, rr2, rr = 0.0 /* -Wall */;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     SEXP result = R_NilValue;
@@ -2553,6 +2563,7 @@ static SEXP gridCircle(SEXP x, SEXP y, SEXP r,
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     nx = unitLength(x); 
     ny = unitLength(y);
     nr = unitLength(r);
@@ -2565,7 +2576,7 @@ static SEXP gridCircle(SEXP x, SEXP y, SEXP r,
     }
     ncirc = 0;
     for (i=0; i<nx; i++) {
-	gcontextFromgpar(currentgp, i, &gc, dd);
+        updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	/*
 	 * If drawing, convert to INCHES on device
 	 * If just calculating bounds, convert to INCHES within current vp
@@ -2679,9 +2690,10 @@ static SEXP gridRect(SEXP x, SEXP y, SEXP w, SEXP h,
     double xx, yy, ww, hh;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     int i, ny, nw, nh, maxn, nrect;
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     SEXP result = R_NilValue;
@@ -2699,6 +2711,7 @@ static SEXP gridRect(SEXP x, SEXP y, SEXP w, SEXP h,
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     maxn = unitLength(x); 
     ny = unitLength(y); 
     nw = unitLength(w); 
@@ -2714,7 +2727,7 @@ static SEXP gridRect(SEXP x, SEXP y, SEXP w, SEXP h,
     }
     nrect = 0;
     for (i=0; i<maxn; i++) {
-	gcontextFromgpar(currentgp, i, &gc, dd);
+        updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	/*
 	 * If drawing, convert to INCHES on device
 	 * If just calculating bounds, convert to INCHES within current vp
@@ -2911,8 +2924,9 @@ SEXP L_path(SEXP x, SEXP y, SEXP index, SEXP rule)
     const void *vmax;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     /* Get the current device 
@@ -2924,6 +2938,7 @@ SEXP L_path(SEXP x, SEXP y, SEXP index, SEXP rule)
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     GEMode(1, dd);
     /*
      * Iterate over all paths
@@ -2967,7 +2982,7 @@ SEXP L_path(SEXP x, SEXP y, SEXP index, SEXP rule)
                 k++;
             }
     	}
-    	gcontextFromgpar(currentgp, h, &gc, dd);
+    	updateGContext(currentgp, h, &gc, dd, gpIsScalar, &gcCache);
     	GEPath(xx, yy, npoly, nper, INTEGER(rule)[0], &gc, dd);
     	vmaxset(vmax);
     }
@@ -2987,8 +3002,9 @@ SEXP L_raster(SEXP raster, SEXP x, SEXP y, SEXP w, SEXP h,
     double xx, yy, ww, hh;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     SEXP dim;
@@ -3002,6 +3018,7 @@ SEXP L_raster(SEXP raster, SEXP x, SEXP y, SEXP w, SEXP h,
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     /* Convert the raster matrix to R internal colours */
     n = LENGTH(raster);
     if (n <= 0) {
@@ -3031,7 +3048,7 @@ SEXP L_raster(SEXP raster, SEXP x, SEXP y, SEXP w, SEXP h,
 	maxn = nh;
     GEMode(1, dd);
     for (i=0; i<maxn; i++) {
-        gcontextFromgpar(currentgp, i, &gc, dd);
+        updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
         transformLocn(x, y, i, vpc, &gc,
                       vpWidthCM, vpHeightCM,
                       dd,
@@ -3153,8 +3170,9 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
     double *xx, *yy;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP txt, result = R_NilValue;
     double edgex, edgey;
@@ -3181,6 +3199,7 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     nx = unitLength(x); 
     ny = unitLength(y);
     if (ny > nx) 
@@ -3189,7 +3208,7 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
     xx = (double *) R_alloc(nx, sizeof(double));
     yy = (double *) R_alloc(nx, sizeof(double));
     for (i=0; i<nx; i++) {
-	gcontextFromgpar(currentgp, i, &gc, dd);
+        updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	/*
 	 * If drawing, convert to INCHES on device
 	 * If just calculating bounds, convert to INCHES within current vp
@@ -3234,7 +3253,7 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
 	}
 	for (i=0; i<nx; i++) {
 	    int doDrawing = 1;
-	    gcontextFromgpar(currentgp, i, &gc, dd);
+	    updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	    /* 
 	     * Generate bounding boxes when checking for overlap
 	     * or sizing text
@@ -3266,7 +3285,7 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
 		xx[i] = toDeviceX(xx[i], GE_INCHES, dd);
 		yy[i] = toDeviceY(yy[i], GE_INCHES, dd);
 		if (R_FINITE(xx[i]) && R_FINITE(yy[i])) {
-		    gcontextFromgpar(currentgp, i, &gc, dd);
+		    updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 		    if (isExpression(txt))
 			GEMathText(xx[i], yy[i],
 				   VECTOR_ELT(txt, i % LENGTH(txt)),
@@ -3395,15 +3414,18 @@ SEXP L_textBounds(SEXP label, SEXP x, SEXP y,
 
 SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
 {
-    int i, nx, npch;
+    int i, nx, npch, nss;
     /*    double *xx, *yy;*/
-    double *xx, *yy;
+    double *xx, *yy, *ss;
+    int *ps;
+    int pType;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
     double symbolSize;
     const void *vmax;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     /* Get the current device 
@@ -3415,14 +3437,23 @@ SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     nx = unitLength(x); 
     npch = LENGTH(pch);
+    /*
+     * Need to take vector gpar elements into account that may affect unit size 
+     * calculations
+     */
+    nss = unitLength(size) * LENGTH(VECTOR_ELT(currentgp, GP_FONTSIZE)) * 
+        LENGTH(VECTOR_ELT(currentgp, GP_CEX)) * 
+        LENGTH(VECTOR_ELT(currentgp, GP_LINEHEIGHT));
+    nss = nss > nx ? nx : nss;
     /* Convert the x and y values to CM locations */
     vmax = vmaxget();
     xx = (double *) R_alloc(nx, sizeof(double));
     yy = (double *) R_alloc(nx, sizeof(double));
     for (i=0; i<nx; i++) {
-	gcontextFromgpar(currentgp, i, &gc, dd);
+	updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	transformLocn(x, y, i, vpc, &gc,
 		      vpWidthCM, vpHeightCM,
 		      dd,
@@ -3433,6 +3464,36 @@ SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
 	xx[i] = toDeviceX(xx[i], GE_INCHES, dd);
 	yy[i] = toDeviceY(yy[i], GE_INCHES, dd);
     }
+    ss = (double *) R_alloc(nss, sizeof(double));
+    for (i=0; i < nss; i++) {
+        updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
+        ss[i] = transformWidthtoINCHES(size, i, vpc, &gc,
+                                       vpWidthCM, vpHeightCM, dd);
+        ss[i] = toDeviceWidth(ss[i], GE_INCHES, dd);
+    }
+    ps = (int *) R_alloc(npch, sizeof(int));
+    if (isString(pch)) pType = 0;
+    else if (isInteger(pch)) pType = 1;
+    else if (isReal(pch)) pType = 2;
+    else pType = 3;
+    for (i=0; i < npch; i++) {
+        switch (pType) {
+        case 0:
+            /* 
+             * FIXME:
+             * Resolve any differences between this and FixupPch()
+             * in plot.c ? 
+             */
+            ps[i] = GEstring_to_pch(STRING_ELT(pch, i));
+            break;
+        case 1:
+            ps[i] = INTEGER(pch)[i];
+            break;
+        case 2:
+            ps[i] = R_FINITE(REAL(pch)[i]) ? (int) REAL(pch)[i] : NA_INTEGER;
+            break;
+        }
+    }
     GEMode(1, dd);
     for (i=0; i<nx; i++)
 	if (R_FINITE(xx[i]) && R_FINITE(yy[i])) {
@@ -3440,36 +3501,23 @@ SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
 	     * rotations !!!
 	     */
 	    int ipch = NA_INTEGER /* -Wall */;
-	    gcontextFromgpar(currentgp, i, &gc, dd);
-	    symbolSize = transformWidthtoINCHES(size, i, vpc, &gc,
-						vpWidthCM, vpHeightCM, dd);
-	    /* The graphics engine only takes device coordinates
-	     */
-	    symbolSize = toDeviceWidth(symbolSize, GE_INCHES, dd);
+	    updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
+	    symbolSize = ss[i % nss];
 	    if (R_FINITE(symbolSize)) {
-                /* 
-                 * FIXME:
-                 * Resolve any differences between this and FixupPch()
-                 * in plot.c ? 
-                 */
-	        if (isString(pch)) {
-		    ipch = GEstring_to_pch(STRING_ELT(pch, i % npch));
-		} else if (isInteger(pch)) {
-		    ipch = INTEGER(pch)[i % npch];
-		} else if (isReal(pch)) {
-		    ipch = R_FINITE(REAL(pch)[i % npch]) ? 
-			(int) REAL(pch)[i % npch] : NA_INTEGER;
-		} else error(_("invalid plotting symbol"));
-		/*
-		 * special case for pch = "."
-		 */
-		if (ipch == 46) symbolSize = gpCex(currentgp, i);
-                /*
-                 * FIXME: 
-                 * For character-based symbols, we need to modify
-                 * gc->cex so that the FONT size corresponds to
-                 * the specified symbolSize.
-                 */
+	        if (pType == 3) {
+	            error(_("invalid plotting symbol"));
+	        }
+	        ipch = ps[i % npch];
+	        /*
+	         * special case for pch = "."
+	         */
+	        if (ipch == 46) symbolSize = gpCex(currentgp, i);
+            /*
+             * FIXME: 
+             * For character-based symbols, we need to modify
+             * gc->cex so that the FONT size corresponds to
+             * the specified symbolSize.
+             */
 	        GESymbol(xx[i], yy[i], ipch, symbolSize, &gc, dd);
 	    }
 	}
@@ -3645,8 +3693,9 @@ SEXP L_locnBounds(SEXP x, SEXP y, SEXP theta)
     double *xx, *yy;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     SEXP result = R_NilValue;
@@ -3665,6 +3714,7 @@ SEXP L_locnBounds(SEXP x, SEXP y, SEXP theta)
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     nx = unitLength(x); 
     ny = unitLength(y);
     if (ny > nx) 
@@ -3675,7 +3725,7 @@ SEXP L_locnBounds(SEXP x, SEXP y, SEXP theta)
 	xx = (double *) R_alloc(nx, sizeof(double));
 	yy = (double *) R_alloc(nx, sizeof(double));
 	for (i=0; i<nx; i++) {
-	    gcontextFromgpar(currentgp, i, &gc, dd);
+	    updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	    xx[i] = transformXtoINCHES(x, i, vpc, &gc,
 				       vpWidthCM, vpHeightCM, 
 				       dd);
@@ -3729,8 +3779,9 @@ SEXP L_stringMetric(SEXP label)
     int i, n;
     double vpWidthCM, vpHeightCM;
     double rotationAngle;
+    int gpIsScalar[15] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     LViewportContext vpc;
-    R_GE_gcontext gc;
+    R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
     SEXP txt;
@@ -3749,6 +3800,7 @@ SEXP L_stringMetric(SEXP label)
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
+    initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     /* The label can be a string or an expression: is protected.
      */
     txt = label;
@@ -3764,7 +3816,7 @@ SEXP L_stringMetric(SEXP label)
     PROTECT(width = allocVector(REALSXP, n));
     if (n > 0) {
 	for (i=0; i<n; i++) {
-	    gcontextFromgpar(currentgp, i, &gc, dd);
+	    updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
             if (isExpression(txt))
                 GEExpressionMetric(VECTOR_ELT(txt, i % LENGTH(txt)), &gc, 
                                    &asc, &dsc, &wid,

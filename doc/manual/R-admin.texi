@@ -3479,19 +3479,19 @@ The bitmapped graphics devices @code{jpeg()}, @code{png()} and
 @code{tiff()} need the appropriate headers and libraries installed:
 @code{jpeg} (version 6b or later, or @code{libjpeg-turbo}) or
 @code{libpng} (version 1.2.7 or later) and @code{zlib} or @code{libtiff}
-(any recent version -- 3.9.[4-7] and 4.0.[2-10] have been tested)
-respectively.  They also need support for either @code{X11} or
-@code{cairo} (see above).  Should support for these devices @strong{not}
-be required or broken system libraries need to be avoided there are
-@command{configure} options @option{--without-libpng},
-@option{--without-jpeglib} and @option{--without-libtiff}.  For most
-system installations the TIFF libraries will require JPEG libraries to
-be present and perhaps linked explicitly, so @option{--without-jpeglib}
-may also disable the @code{tiff()} device.  The @code{tiff()} devices
-only require a basic build of @code{libtiff} (not even JPEG support is
-needed).  Recent versions allow several other libraries to be linked
-into @code{libtiff} such as @code{lzma}, @code{jbig} and @code{jpeg12},
-and these may need also to be present.
+(versions 4.0.[5-10] have been tested) respectively.
+@command{pkg-config} is used if available and so needs the appropriate
+@file{.pc} file (which requires @code{libtiff} version 4.0.x and is not
+available on all platforms for @code{jpeg} before version 9c).  They
+also need support for either @code{X11} or @code{cairo} (see above).
+Should support for these devices @strong{not} be required or broken
+system libraries need to be avoided there are @command{configure}
+options @option{--without-libpng}, @option{--without-jpeglib} and
+@option{--without-libtiff}.  The TIFF library has many optional features
+such as @code{jpeg}, @code{libz}, @code{lzma}, @code{jbig} and
+@code{jpeg12}, none of which is required for the @code{tiff()} devices
+but may need to be present to link the library (usually only an issue
+for static linking).
 
 Option @option{--with-system-tre} is also available: it needs a recent
 version of TRE. (The latest (2016) sources are in the @command{git}
@@ -4943,7 +4943,7 @@ fresh OS installation, running e.g.@: @command{make} in a terminal will
 offer the installation of the command-line tools.  If you have installed
 Xcode, this provides the command-line tools.  The tools will need to be
 reinstalled when macOS is upgraded, as upgrading partially removes
-them.)  As from macOS 10.14 (`Mojave') an additional step is needed to
+them.)  For macOS 10.14 (`Mojave') an additional step is needed to
 install the headers to @file{/usr/include}: from a Terminal run
 @c https://developer.apple.com/documentation/xcode_release_notes/xcode_10_release_notes
 @example
@@ -4956,6 +4956,13 @@ Alternatively, change the include path @emph{via}
 @example
 CPPFLAGS="-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include"
 @end example
+@noindent
+Which is said to be going to be needed for future versions of macOS.
+(The location of the SDK, which could change, can be found by running
+@command{xcrun -show-sdk-path}.  It is likely that the compilers
+included in the Command Line Tools will find the headers under the SDK
+without this additional step, but other versions of @command{clang} will
+not.)
 
 You need GNU @code{readline}.  That and other binary components are
 available from @uref{https://r.research.att.com/libs}: you will need
@@ -5044,9 +5051,9 @@ Current @acronym{CRAN} binary distributions use the build of
 Other recent distributions of @command{clang} are often available from
 @uref{http://llvm.org/releases/}: for example at the time of
 writing@footnote{It is unstated what the minimum OS requirement is for
-these: the distribution of 5.0.0 required Sierra or later.} of 6.0.1 and
-7.0.0.  In particular, all of these include support for OpenMP which
-Apple builds of @command{clang} do not.  Suppose one of these
+these: the distribution of 5.0.0 required Sierra or later.} of 6.0.1,
+7.0.0 and 8.0.0.  In particular, all of these include support for OpenMP
+which Apple builds of @command{clang} do not.  Suppose one of these
 distributions is installed under @file{/usr/local/clang6}.  Then @R{}
 could be configured by something like
 @example

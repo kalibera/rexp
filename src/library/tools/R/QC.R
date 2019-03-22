@@ -768,7 +768,7 @@ function(x, ...)
         for(fname in names(functions_in_usages_not_in_code)) {
             writeLines(gettextf("Functions or methods with usage in documentation object '%s' but not in code:",
                                 fname))
-            .pretty_print(unique(functions_in_usages_not_in_code[[fname]]))
+            .pretty_print(sQuote(unique(functions_in_usages_not_in_code[[fname]])))
             writeLines("")
         }
     }
@@ -779,7 +779,7 @@ function(x, ...)
         for(fname in names(data_sets_in_usages_not_in_code)) {
             writeLines(gettextf("Data with usage in documentation object '%s' but not in code:",
                                 fname))
-            .pretty_print(unique(data_sets_in_usages_not_in_code[[fname]]))
+            .pretty_print(sQuote(unique(data_sets_in_usages_not_in_code[[fname]])))
             writeLines("")
         }
     }
@@ -1388,7 +1388,7 @@ function(package, dir, lib.loc = NULL)
         ## (Note that as.character(sapply(exprs, "[[", 1L)) does not do
         ## what we want due to backquotifying.)
         arg_names_in_usage <-
-            unlist(sapply(exprs,
+            unlist(lapply(exprs,
                           function(e) .arg_names_from_call(e[-1L])))
         ## Replacement functions.
         if(length(replace_exprs)) {
@@ -1399,7 +1399,7 @@ function(package, dir, lib.loc = NULL)
             functions <- c(functions, replace_funs)
             arg_names_in_usage <-
                 c(arg_names_in_usage,
-                  unlist(sapply(replace_exprs,
+                  unlist(lapply(replace_exprs,
                                 function(e)
                                 c(.arg_names_from_call(e[[2L]][-1L]),
                                   .arg_names_from_call(e[[3L]])))))
@@ -2553,7 +2553,7 @@ function(x, ...)
 
     report_S3_methods_not_registered <-
         config_val_to_logical(Sys.getenv("_R_CHECK_S3_METHODS_NOT_REGISTERED_",
-                                         "FALSE"))
+                                         "TRUE"))
 
     c(as.character(unlist(lapply(x, .fmt))),
       if(report_S3_methods_not_registered &&
@@ -2658,6 +2658,11 @@ function(package, dir, lib.loc = NULL)
 
     replace_funs <-
         c(replace_funs, grep("<-", objects_in_code, value = TRUE))
+    ## Drop %xxx% binops.
+    ## Spotted by Hugh Parsonage <hugh.parsonage@gmail.com>.
+    replace_funs <-
+        replace_funs[!(startsWith(replace_funs, "%") &
+                       endsWith(replace_funs, "%"))]
 
     .check_last_formal_arg <- function(f) {
         arg_names <- names(formals(f))
@@ -2957,7 +2962,7 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE,
             if(length(reqs[m]))
                 bad_depends$required_but_stub <- reqs[m]
             ## now check versions
-            have_ver <- unlist(lapply(lreqs, function(x) length(x) == 3L))
+            have_ver <- vapply(lreqs, function(x) length(x) == 3L, NA)
             lreqs3 <- lreqs[have_ver]
             if(length(lreqs3)) {
                 bad <- character()
@@ -3561,8 +3566,9 @@ function(aar, strict = FALSE)
                         out$authors_at_R_field_has_persons_with_nonstandard_roles <-
                             sprintf("%s: %s",
                                     format(aar[ind]),
-                                    sapply(non_standard_roles[ind], paste,
-                                           collapse = ", "))
+                                    vapply(non_standard_roles[ind], paste,
+                                           collapse = ", ",
+                                           FUN.VALUE = ""))
                     }
                 }
             }
@@ -3898,6 +3904,26 @@ function(dir, makevars = c("Makevars.in", "Makevars"))
                   structure(list(bad), names = names[i]))
     }
 
+    ## The above does not know about GNU extensions like
+    ## target.o: PKG_CXXFLAGS = -mavx
+    ## so grep files directly.
+    for (f in paths) {
+        lines <- readLines(f, warn = FALSE)
+        pflags_re2 <- sprintf(".*[.o]: +PKG_(%s)FLAGS *=",
+                              paste(prefixes, collapse = "|"))
+        lines <- grep(pflags_re2, lines, value = TRUE)
+        lines <- sub(pflags_re2, "", lines)
+        flags <- strsplit(lines, "[[:space:]]+")
+        bad <- character()
+        for(i in seq_along(lines))
+            bad <- c(bad, grep(bad_flags_regexp, flags[[i]], value = TRUE))
+
+        if(length(bad))
+            bad_flags$p2flags <-
+                c(bad_flags$p2flags,
+                  structure(list(bad), names = file.path("src", basename(f))))
+    }
+
     bad_flags
 }
 
@@ -3912,8 +3938,17 @@ function(x, ...)
         as.character(unlist(s))
     }
 
+    .fmt2 <- function(x) {
+        s <- Map(c,
+                 gettextf("Non-portable flags in file '%s':",
+                          names(x)),
+                 sprintf("  %s", lapply(x, paste, collapse = " ")))
+        as.character(unlist(s))
+    }
+
     c(character(),
       if(length(bad <- x$pflags)) .fmt(bad),
+      if(length(bad <- x$p2flags)) .fmt2(bad),
       if(length(bad <- x$uflags)) {
           c(gettextf("Variables overriding user/site settings:"),
             sprintf("  %s", bad))
@@ -4499,7 +4534,20 @@ function(x, ...)
       })
 }
 
-### * .check_package_datasets
+### * .check_package_datasets2
+
+.check_package_datasets2 <-
+function(fileName, pkgname)
+{
+    oldSearch <- search()
+    dataEnv <- new.env(hash = TRUE);
+    utils::data(list = fileName, package = pkgname, envir = dataEnv);
+    if (!length((ls(dataEnv)))) message("No dataset created in 'envir'")
+    if (!identical(search(), oldSearch)) message("Search path was changed")
+    invisible(NULL)
+}
+
+### * .check_package_compact_datasets
 
 .check_package_compact_datasets <-
 function(pkgDir, thorough = FALSE)
@@ -4585,6 +4633,8 @@ function(x, ...)
     }
     invisible(x)
 }
+
+### * .check_package_compact_sysdata
 
 .check_package_compact_sysdata <-
 function(pkgDir, thorough = FALSE)
@@ -6460,10 +6510,11 @@ function(cfile, dir = NULL)
         writeLines(strwrap(sprintf("entry %d (%s): missing required field(s) %s",
                                    pos,
                                    db$Entry[pos],
-                                   sapply(bad[pos],
+                                   vapply(bad[pos],
                                           function(s)
                                           paste(sQuote(s),
-                                                collapse = ", "))),
+                                                collapse = ", "),
+                                          "")),
                            indent = 0L, exdent = 2L))
     }
 }
@@ -7902,7 +7953,7 @@ function(x, ...)
       if(length(y <- x$R_files_non_ASCII)) {
           paste(c("No package encoding and non-ASCII characters in the following R files:",
                   paste0("  ", names(y), "\n    ",
-                         sapply(y, paste, collapse = "\n    "),
+                         vapply(y, paste, "", collapse = "\n    "),
                          collapse = "\n")),
                 collapse = "\n")
       },
@@ -8258,7 +8309,7 @@ function(x)
     else
         which(names(y) == "")
     if(length(ind)) {
-        names(y)[ind] <- sapply(y[ind], paste, collapse = " ")
+        names(y)[ind] <- vapply(y[ind], paste, "", collapse = " ")
         y[ind] <- rep.int(list(alist(irrelevant = )[[1L]]), length(ind))
     }
     y
