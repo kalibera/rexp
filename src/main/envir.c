@@ -4066,6 +4066,12 @@ void do_write_cache()
 
 SEXP topenv(SEXP target, SEXP envir) {
     SEXP env = envir;
+    if (target == R_EmptyEnv) {
+      R_Suicide("XXXXXX target is emptyenv");
+    }
+    if (envir == R_EmptyEnv) {
+      R_Suicide("XXXXXX envir is emptyenv");
+    }
     while (env != R_EmptyEnv) {
 	if (env == target || env == R_GlobalEnv ||
 	    env == R_BaseEnv || env == R_BaseNamespace ||
@@ -4076,6 +4082,7 @@ SEXP topenv(SEXP target, SEXP envir) {
 	    env = ENCLOS(env);
 	}
     }
+    R_Suicide("XXXXXX fallback to globalenv");
     return R_GlobalEnv;
 }
 

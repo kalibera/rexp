@@ -370,7 +370,6 @@ void attribute_hidden InitOptions(void)
     R_PCRE_limit_recursion = NA_LOGICAL;
     SETCAR(v, ScalarLogical(R_PCRE_limit_recursion));
     v = CDR(v);
-    
     /* options set here should be included into mandatory[] in do_options */
 
 #ifdef HAVE_RL_COMPLETION_MATCHES
@@ -496,11 +495,11 @@ SEXP attribute_hidden do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    SET_STRING_ELT(names, i, namei);
 
 	    if (argi == R_NilValue) {
-		/* handle option removal separately to simplify value checking
-		   for know options below; mandatory means not allowed to be
-		   removed once set. */
+		/* Handle option removal separately to simplify value checking
+		   for known options below; mandatory means not allowed to be
+		   removed once set, but not all have to be set at startup. */
 		const char *mandatory[] = {"prompt", "continue", "expressions",
-		  "width", "deparse.cutoff", "digits", "echo", "verbose", 
+		  "width", "deparse.cutoff", "digits", "echo", "verbose",
 		  "check.bounds", "keep.source", "keep.source.pkgs",
 		  "keep.parse.data", "keep.parse.data.pkgs", "warning.length",
 		  "nwarnings", "OutDec", "browserNLdisabled", "CBoundsCheck",
