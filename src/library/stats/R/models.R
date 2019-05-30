@@ -29,9 +29,9 @@ formula.default <- function (x = NULL, env = parent.frame(), ...)
     else {
         form <- switch(mode(x),
                        NULL = structure(list(), class = "formula"),
-                       character = formula(
-                           eval(parse(text = x, keep.source = FALSE)[[1L]])),
-                       call = eval(x), stop("invalid formula"))
+                       character = eval(str2expression(x)), # ever used?  formula.character!
+                       call = eval(x),
+                       stop("invalid formula"))
         environment(form) <- env
         form
     }
@@ -45,17 +45,14 @@ formula.terms <- function(x, ...) {
 }
 
 DF2formula <- function(x, env = parent.frame()) {
-    nm <- unlist(lapply(names(x), as.name))
-    if (length(nm) > 1L) {
-        rhs <- nm[-1L]
-        lhs <- nm[1L]
-    } else if (length(nm) == 1L) {
-        rhs <- nm[1L]
-        lhs <- NULL
-    } else stop("cannot create a formula from a zero-column data frame")
-    ff <- parse(text = paste(lhs, paste(rhs, collapse = "+"), sep = "~"),
-                keep.source = FALSE)
-    ff <- eval(ff)
+    nm <- lapply(names(x), as.name)
+    mkRHS <- function(nms) Reduce(function(x, y) call("+", x, y), nms)
+    ff <- if (length(nm) > 1L)
+              call("~", nm[[1L]], mkRHS(nm[-1L]))
+          else if (length(nm) == 1L)
+              call("~", nm[[1L]])
+          else stop("cannot create a formula from a zero-column data frame")
+    class(ff) <- "formula" # was ff <- eval(ff)
     environment(ff) <- env
     ff
 }
@@ -67,9 +64,50 @@ formula.data.frame <- function (x, ...)
     else DF2formula(x, parent.frame())
 }
 
+## Future version {w/o .Deprecated etc}:
 formula.character <- function(x, env = parent.frame(), ...)
 {
-    ff <- formula(eval(parse(text=x, keep.source = FALSE)[[1L]]))
+    ff <- str2lang(x)
+    if(!(is.call(ff) && is.symbol(c. <- ff[[1L]]) && c. == quote(`~`)))
+        stop(gettextf("invalid formula: %s", deparse2(x)), domain=NA)
+    class(ff) <- "formula"
+    environment(ff) <- env
+    ff
+}
+
+## Active version helping to move towards future version:
+formula.character <- function(x, env = parent.frame(), ...)
+{
+    ff <- if(length(x) > 1L) {
+              .Deprecated(msg=
+ "Using formula(x) is deprecated when x is a character vector of length > 1.
+  Consider formula(paste(x, collapse = \" \")) instead.")
+              str2expression(x)[[1L]]
+          } else {
+              str2lang(x)
+          }
+    if(!is.call(ff))
+        stop(gettextf("invalid formula %s: not a call", deparse2(x)), domain=NA)
+    ## else
+    if(is.symbol(c. <- ff[[1L]]) && c. == quote(`~`)) {
+        ## perfect
+    } else {
+        if(is.symbol(c.)) { ## back compatibility
+            ff <- if(c. == quote(`=`)) {
+                      .Deprecated(msg = gettextf(
+				"invalid formula %s: assignment is deprecated",
+				deparse2(x)))
+                      ff[[3L]] # RHS of "v = <form>" (pkgs 'GeNetIt', 'KMgene')
+                  } else if(c. == quote(`(`) || c. == quote(`{`)) {
+                      .Deprecated(msg = gettextf(
+			"invalid formula %s: extraneous call to `%s` is deprecated",
+			deparse2(x), as.character(c.)))
+                      eval(ff)
+                  }
+        } else
+            stop(gettextf("invalid formula %s", deparse2(x)), domain=NA)
+    }
+    class(ff) <- "formula"
     environment(ff) <- env
     ff
 }
@@ -148,22 +186,38 @@ delete.response <- function (termobj)
     termobj
 }
 
-reformulate <- function (termlabels, response=NULL, intercept = TRUE)
+reformulate <- function (termlabels, response=NULL, intercept = TRUE, env = parent.frame())
 {
+    ## an extension of formula.character()
     if(!is.character(termlabels) || !length(termlabels))
         stop("'termlabels' must be a character vector of length at least one")
-    has.resp <- !is.null(response)
-    termtext <- paste(if(has.resp) "response", "~",
-		      paste(termlabels, collapse = "+"),
-		      collapse = "")
+    termtext <- paste(termlabels, collapse = "+")
     if(!intercept) termtext <- paste(termtext, "- 1")
-    ## basically formula.character() :
-    rval <- eval(parse(text = termtext, keep.source = FALSE)[[1L]])
-    if(has.resp) rval[[2L]] <-
-        if(is.character(response)) as.symbol(response) else response
-    ## response can be a symbol or call as  Surv(ftime, case)
-    environment(rval) <- parent.frame()
-    rval
+    terms <- str2lang(termtext)
+    fexpr <-
+	if(is.null(response))
+	    call("~", terms)
+	else
+	    call("~",
+		 ## response can be a symbol or call as  Surv(ftime, case)
+		 if(is.character(response))
+                     tryCatch(str2lang(response),
+                              error = function(e) {
+                                  sc <- sys.calls()
+                                  sc1 <- lapply(sc, `[[`, 1L)
+                                  isF <- function(cl) is.symbol(cl) && cl == quote(reformulate)
+                                  reformCall <- sc[[match(TRUE, vapply(sc1, isF, NA))]]
+                                  warning(warningCondition(message = paste(sprintf(
+		"Unparseable 'response' \"%s\"; use is deprecated.  Use as.name(.) or `..`!",
+									response),
+						conditionMessage(e), sep="\n"),
+                                      class = c("reformulate", "deprecatedWarning"),
+                                      call = reformCall)) # , domain=NA
+                                  as.symbol(response)
+                              })
+                 else response,
+		 terms)
+    formula(fexpr, env)
 }
 
 drop.terms <- function(termobj, dropx = NULL, keep.response = FALSE)
@@ -175,20 +229,20 @@ drop.terms <- function(termobj, dropx = NULL, keep.response = FALSE)
             stop(gettextf("'termobj' must be a object of class %s",
                           dQuote("terms")),
                  domain = NA)
-	newformula <- reformulate(attr(termobj, "term.labels")[-dropx],
-				  if (keep.response) termobj[[2L]],
-                                  attr(termobj, "intercept"))
-        environment(newformula) <- environment(termobj)
+	newformula <-
+	    reformulate(attr(termobj, "term.labels")[-dropx],
+			response = if(keep.response) termobj[[2L]],
+			intercept = attr(termobj, "intercept"),
+			env = environment(termobj))
 	result <- terms(newformula, specials=names(attr(termobj, "specials")))
 
 	# Edit the optional attributes
 
 	response <- attr(termobj, "response")
-	if (response && !keep.response)
-	    # we have a response in termobj, but not in the result
-	    dropOpt <- c(response, dropx + length(response))
-	else
-	    dropOpt <- dropx + max(response)
+	dropOpt <- if(response && !keep.response) # we have a response in termobj, but not in the result
+		       c(response, dropx + length(response))
+		   else
+		       dropx + max(response)
 
 	if (!is.null(predvars <- attr(termobj, "predvars"))) {
 	    # predvars is a language expression giving a list of
@@ -211,8 +265,7 @@ drop.terms <- function(termobj, dropx = NULL, keep.response = FALSE)
     resp <- if (attr(termobj, "response")) termobj[[2L]]
     newformula <- attr(termobj, "term.labels")[i]
     if (length(newformula) == 0L) newformula <- "1"
-    newformula <- reformulate(newformula, resp, attr(termobj, "intercept"))
-    environment(newformula) <- environment(termobj)
+    newformula <- reformulate(newformula, resp, attr(termobj, "intercept"), environment(termobj))
     result <- terms(newformula, specials = names(attr(termobj, "specials")))
 
     # Edit the optional attributes
@@ -343,7 +396,8 @@ offset <- function(object) object
     ## when called from predict.nls, vars not match.
     new <- vapply(m, .MFclass, "")
     new <- new[names(new) %in% names(cl)]
-     if(length(new) == 0L) return()
+    if(length(new) == 0L) return(invisible())
+    ## else
     old <- cl[names(new)]
     if(!ordNotOK) {
         old[old == "ordered"] <- "factor"
@@ -368,6 +422,7 @@ offset <- function(object) object
                  paste(sQuote(names(old)[wrong]), collapse=", ")),
                  call. = FALSE, domain = NA)
     }
+    else invisible()
 }
 
 ##' Model Frame Class
@@ -717,8 +772,7 @@ get_all_vars <- function(formula, data = NULL, ...)
     env <- environment(formula)
     rownames <- .row_names_info(data, 0L) #attr(data, "row.names")
     varnames <- all.vars(formula)
-    inp <- parse(text = paste0("list(", paste(varnames, collapse = ","), ")"),
-                 keep.source = FALSE) # ->  expression( list(v1, v2, ..) )
+    inp <- str2lang(paste0("list(", paste(varnames, collapse = ","), ")"))
     variables <- eval(inp, data, env)
     if(is.null(rownames) && (resp <- attr(formula, "response")) > 0) {
         ## see if we can get rownames from the response

@@ -48,8 +48,15 @@ static void R_wfixslash(wchar_t *s);
 
 extern "C" {
 #endif
+
+#if defined FC_LEN_T
+# include <stddef.h>
+void F77_SYMBOL(rwarnc)(char *msg, int *nchar, FC_LEN_T msg_len);
+void NORET F77_SYMBOL(rexitc)(char *msg, int *nchar, FC_LEN_T msg_len);
+#else
 void F77_SYMBOL(rwarnc)(char *msg, int *nchar);
 void NORET F77_SYMBOL(rexitc)(char *msg, int *nchar);
+#endif
 
 #ifdef __cplusplus
 }
@@ -1058,6 +1065,13 @@ const char *getTZinfo(void)
 #endif // not Win32
 
 
+#ifdef Win32
+static void encode_cleanup(void *data)
+{
+    WinUTF8out = TRUE;
+}
+#endif
+
 /* encodeString(x, w, quote, justify) */
 SEXP attribute_hidden do_encodeString(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -1102,6 +1116,20 @@ SEXP attribute_hidden do_encodeString(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(quote) w +=2; /* for surrounding quotes */
     }
     PROTECT(ans = duplicate(x));
+#ifdef Win32
+    RCNTXT cntxt;
+    Rboolean havecontext = FALSE;
+    /* do_encodeString is not printing, but returning a string, it therefore
+       must not produce Rgui escapes (do_encodeString may get called as part
+       of print dispatch with WinUTF8out being already set to TRUE). */
+    if (WinUTF8out) {
+	begincontext(&cntxt, CTXT_CCODE, R_NilValue, R_BaseEnv, R_BaseEnv,
+	             R_NilValue, R_NilValue);
+	cntxt.cend = &encode_cleanup;
+	havecontext = TRUE;
+	WinUTF8out = FALSE;
+    }
+#endif
     for(i = 0; i < len; i++) {
 	s = STRING_ELT(x, i);
 	if(na || s != NA_STRING) {
@@ -1116,6 +1144,12 @@ SEXP attribute_hidden do_encodeString(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	}
     }
+#ifdef Win32
+    if (havecontext) {
+	encode_cleanup(NULL);
+	endcontext(&cntxt);
+    }
+#endif
     UNPROTECT(1);
     return ans;
 }
@@ -1577,7 +1611,11 @@ void R_fixbackslash(char *s)
 }
 #endif
 
+#if defined FC_LEN_T
+void NORET F77_SYMBOL(rexitc)(char *msg, int *nchar, FC_LEN_T msg_len)
+#else
 void NORET F77_SYMBOL(rexitc)(char *msg, int *nchar)
+#endif
 {
     int nc = *nchar;
     char buf[256];
@@ -1590,7 +1628,11 @@ void NORET F77_SYMBOL(rexitc)(char *msg, int *nchar)
     error("%s", buf);
 }
 
+#if defined FC_LEN_T
+void F77_SYMBOL(rwarnc)(char *msg, int *nchar, FC_LEN_T msg_len)
+#else
 void F77_SYMBOL(rwarnc)(char *msg, int *nchar)
+#endif
 {
     int nc = *nchar;
     char buf[256];

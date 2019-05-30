@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997-2018  The R Core Team
- *  Copyright (C) 2003-2018  The R Foundation
+ *  Copyright (C) 1997-2019  The R Core Team
+ *  Copyright (C) 2003-2019  The R Foundation
  *  Copyright (C) 1995,1996  Robert Gentleman, Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 /* interval at which to check interrupts */
 #define NINTERRUPT 10000000
 
+#include <Parse.h>
 #include <Defn.h> /*-- Maybe modularize into own Coerce.h ..*/
 #include <Internal.h>
 #include <float.h> /* for DBL_DIG */
@@ -968,14 +969,12 @@ static SEXP coerceToPairList(SEXP v)
 /* Coerce a pairlist to the given type */
 static SEXP coercePairList(SEXP v, SEXPTYPE type)
 {
-    int i, n=0;
-    SEXP rval= R_NilValue, vp, names;
-
     /* Hmm, this is also called to LANGSXP, and coerceVector already
        did the check of TYPEOF(v) == type */
     if(type == LISTSXP) return v;/* IS pairlist */
 
-    names = v;
+    int i;
+    SEXP rval= R_NilValue, vp;
     if (type == EXPRSXP) {
 	PROTECT(rval = allocVector(type, 1));
 	SET_VECTOR_ELT(rval, 0, v);
@@ -983,7 +982,7 @@ static SEXP coercePairList(SEXP v, SEXPTYPE type)
 	return rval;
     }
     else if (type == STRSXP) {
-	n = length(v);
+	int n = length(v);
 	PROTECT(rval = allocVector(type, n));
 	for (vp = v, i = 0; vp != R_NilValue; vp = CDR(vp), i++) {
 	    if (isString(CAR(vp)) && length(CAR(vp)) == 1)
@@ -997,7 +996,7 @@ static SEXP coercePairList(SEXP v, SEXPTYPE type)
 	return rval;
     }
     else if (isVectorizable(v)) {
-	n = length(v);
+	int n = length(v);
 	PROTECT(rval = allocVector(type, n));
 	switch (type) {
 	case LGLSXP:
@@ -1035,8 +1034,9 @@ static SEXP coercePairList(SEXP v, SEXPTYPE type)
 	    i = 1;
 
     if (i) {
+	int n = length(v);
+	SEXP names = allocVector(STRSXP, n);
 	i = 0;
-	names = allocVector(STRSXP, n);
 	for (vp = v; vp != R_NilValue; vp = CDR(vp), i++)
 	    if (TAG(vp) != R_NilValue)
 		SET_STRING_ELT(names, i, PRINTNAME(TAG(vp)));
@@ -1358,13 +1358,12 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
     /* -> as.vector(..) or as.XXX(.) : coerce 'u' to 'type' : */
     /* code assumes u is protected */
 
-    SEXP v;
     if (type == CLOSXP) {
 	return asFunction(u);
     }
     else if (isVector(u) || isList(u) || isLanguage(u)
 	     || (isSymbol(u) && type == EXPRSXP)) {
-	v = u;
+	SEXP v;
 	if (type != ANYSXP && TYPEOF(u) != type) v = coerceVector(u, type);
 	else v = u;
 
@@ -1384,7 +1383,7 @@ static SEXP ascommon(SEXP call, SEXP u, SEXPTYPE type)
     else if (isSymbol(u) && type == SYMSXP)
 	return u;
     else if (isSymbol(u) && type == VECSXP) {
-	v = allocVector(VECSXP, 1);
+	SEXP v = allocVector(VECSXP, 1);
 	SET_VECTOR_ELT(v, 0, u);
 	return v;
     }
@@ -1607,15 +1606,45 @@ SEXP attribute_hidden do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
+/* primitive,
+ * op = 0 : str2lang(s)
+ * op = 1 : str2expression(text) */
+SEXP attribute_hidden do_str2lang(SEXP call, SEXP op, SEXP args, SEXP rho) {
+    checkArity(op, args);
+    // check1arg(args, call, "s");
+    args = CAR(args);
+    if(TYPEOF(args) != STRSXP)
+	errorcall(call, _("argument must be character"));
+
+    Rboolean to_lang = !PRIMVAL(op); // op = 0: character *string* to call-like
+    if(to_lang) {
+	if(LENGTH(args) != 1)
+	    errorcall(call, _("argument must be a character string"));
+    // basically parse(text = "...."), for str2lang() '[[1]]' :
+    } else // str2expression()
+	if(!LENGTH(args))
+	    return(allocVector(EXPRSXP, 0));
+
+    ParseStatus status;
+    SEXP srcfile = PROTECT(mkString("<text>"));
+    SEXP ans = PROTECT(R_ParseVector(args, -1, &status, srcfile));
+    if (status != PARSE_OK) parseError(call, R_ParseError);
+    if(to_lang) {
+	if(LENGTH(ans) != 1) // never? happens
+	    errorcall(call, _("parsing result not of length one, but %d"), LENGTH(ans));
+	ans = VECTOR_ELT(ans, 0);
+    }
+    UNPROTECT(2);
+    return ans;
+}
+
 /* primitive */
 SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP ap, ans, names;
-    int i, n;
-
     checkArity(op, args);
     check1arg(args, call, "x");
 
+    SEXP ans;
     if (DispatchOrEval(call, op, "as.call", args, rho, &ans, 0, 1))
 	return(ans);
 
@@ -1625,12 +1654,13 @@ SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	ans = args;
 	break;
     case VECSXP:
-    case EXPRSXP:
-	if(0 == (n = length(args)))
+    case EXPRSXP: {
+	int n = length(args);
+	if(n == 0)
 	    errorcall(call, _("invalid length 0 argument"));
-	PROTECT(names = getAttrib(args, R_NamesSymbol));
+	SEXP names = PROTECT(getAttrib(args, R_NamesSymbol)), ap;
 	PROTECT(ap = ans = allocList(n));
-	for (i = 0; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 	    SETCAR(ap, VECTOR_ELT(args, i));
 	    if (names != R_NilValue && !StringBlank(STRING_ELT(names, i)))
 		SET_TAG(ap, installTrChar(STRING_ELT(names, i)));
@@ -1638,11 +1668,12 @@ SEXP attribute_hidden do_ascall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	UNPROTECT(2); /* ap, names */
 	break;
+    }
     case LISTSXP:
 	ans = duplicate(args);
 	break;
     case STRSXP:
-	errorcall(call, _("as.call(<character string>)  not yet implemented"));
+	errorcall(call, _("as.call(<character>) not feasible; consider str2lang(<char.>)"));
 	break;
     default:
 	errorcall(call, _("invalid argument list"));

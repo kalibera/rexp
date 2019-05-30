@@ -1046,6 +1046,70 @@ fi
 AC_SUBST(HAVE_FORTRAN_DOUBLE_COMPLEX)
 ])# R_PROG_FC_CC_COMPAT_COMPLEX
 
+## R_PROG_FC_CHAR_LEN_T
+## --------------------
+## Check whether the Fortran CHARACTER lengths are passed as size_t
+## NB: they may not actually be size_t, but we don't care about
+## signedness and on most 64-bit platforms a 32-bit type will be
+## passed in a 64-bit register or stack slot.
+##
+## (It is docuemnted that for gfortran < 8, int is used.)
+AC_DEFUN([R_PROG_FC_CHAR_LEN_T],
+[AC_CACHE_VAL([r_cv_prog_fc_char_len_t],
+[cat > conftestf.f <<EOF
+      subroutine testit()
+      external xerbla
+      call xerbla('abcde', -10)
+      end
+EOF
+${FC} ${FFLAGS} -c conftestf.f 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
+[cat > conftest.c <<EOF
+/* A C function calling a Fortran subroutine which calls xerbla
+   written in C, emulating how R calls BLAS/LAPACK routines */
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include "confdefs.h"
+#ifdef HAVE_F77_UNDERSCORE
+# define F77_SYMBOL(x)   x ## _
+#else
+# define F77_SYMBOL(x)   x
+#endif
+
+extern void F77_SYMBOL(testit)();
+
+void F77_SYMBOL(xerbla)(const char *srname, int *info, 
+			const size_t srname_len)
+{
+    printf ("char len %lu\n",  srname_len);
+    if (srname_len != 5) exit(-1);
+    if (strncmp(srname, "abcde", 5)) exit(-2);
+    if (*info != -10) exit(-3);
+}
+
+int main()
+{
+    F77_SYMBOL(testit)();
+    return 0;
+}
+EOF]
+if ${CC} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD; then
+  if ${CC} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
+       conftest.${ac_objext} conftestf.${ac_objext} ${FLIBS} \
+       1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
+  then
+    ## redirect error messages to config.log
+    output=`./conftest${ac_exeext} 2>&AS_MESSAGE_LOG_FD`
+    if test ${?} = 0; then
+      r_cv_prog_fc_char_len_t=size_t
+    fi
+  fi
+fi
+])
+rm -Rf conftest conftest.* conftestf.* core
+])# R_PROG_FC_CHAR_LEN_T
+
+
 ## Unused but perhaps useful
 ## R_PROG_FC_FLAG(FLAG, [ACTION-IF-TRUE])
 ## ---------------------------------------
@@ -4300,6 +4364,67 @@ else
     AC_MSG_RESULT([no])
 fi
 ])# R_PTHREAD
+
+
+## R_CSTACK_DIRECTION
+## -----------------
+## Moved to configure as LTO may defeat runtime strategy.
+AC_DEFUN([R_CSTACK_DIRECTION],
+[AC_MSG_CHECKING([for C stack direction])
+AC_CACHE_VAL([r_cv_cstack_direction],
+[cat > conftest1.c <<EOF
+#include <stdint.h>
+uintptr_t dummy_ii(void)
+{
+    int ii;
+
+    /* This is intended to return a local address. We could just return
+       (uintptr_t) &ii, but doing it indirectly through ii_addr avoids
+       a compiler warning (-Wno-return-local-addr would do as well).
+    */
+    volatile uintptr_t ii_addr = (uintptr_t) &ii;
+    return ii_addr;
+}
+EOF
+cat > conftest.c <<EOF
+#include <stdio.h>
+#include <stdint.h>
+extern uintptr_t dummy_ii(void);
+
+int main(int ac, char **av)
+{
+    int i;
+    uintptr_t ii = dummy_ii();
+    /* 1 is downwards */
+    return ((uintptr_t)&i > ii) ? 1 : -1;
+}
+EOF
+dnl Allow this to be overruled in config.site
+if test "x${R_C_STACK_DIRECTION}" != "x"; then
+ r_cv_cstack_direction=${R_C_STACK_DIRECTION}
+else
+if ${CC} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
+      conftest.c conftest1.c \
+      1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
+  then
+    ## redirect error messages to config.log
+    output=`./conftest${ac_exeext} 2>&AS_MESSAGE_LOG_FD`
+    if test ${?} = 1; then
+      r_cv_cstack_direction=down
+    elif test ${?} = 1; then
+      r_cv_cstack_direction=up
+    fi
+fi
+fi
+])
+rm -Rf conftest conftest?.* core
+if test -n "${r_cv_cstack_direction}"; then
+  AC_MSG_RESULT(${r_cv_cstack_direction})
+else
+  AC_MSG_RESULT([don't know (assume down)])
+  r_cv_cstack_direction=down
+fi
+])# R_CSTACK_DIRECTION
 
 ### Local variables: ***
 ### mode: outline-minor ***

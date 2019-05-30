@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2019-03-21 r76255) -- "Unsuffered Consequences"
+R Under development (unstable) (2019-05-20 r76550) -- "Unsuffered Consequences"
 Copyright (C) 2019 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -3074,6 +3074,7 @@ Deg. of Freedom        12
 
 Residual standard error: 3.929447
 Estimated effects are balanced
+> ## IGNORE_RDIFF_BEGIN
 > summary(npk.aovE)
 
 Error: block
@@ -3092,6 +3093,7 @@ P:K        1   0.48    0.48   0.031 0.86275
 Residuals 12 185.29   15.44                   
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+> ## IGNORE_RDIFF_END
 > options(op)  # reset to previous
 > 
 > 
@@ -3129,18 +3131,125 @@ Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’
 > plot(approxfun(x, y, rule = 2:1), 0, 11,
 +      col = "tomato", add = TRUE, lty = 3, lwd = 2)
 > 
+> ### Treatment of 'NA's -- are kept if  na.rm=FALSE :
+> 
+> xn <- 1:4
+> yn <- c(1,NA,3:4)
+> xout <- (1:9)/2
+> ## Default behavior (na.rm = TRUE): NA's omitted; extrapolation gives NA
+> data.frame(approx(xn,yn, xout))
+    x   y
+1 0.5  NA
+2 1.0 1.0
+3 1.5 1.5
+4 2.0 2.0
+5 2.5 2.5
+6 3.0 3.0
+7 3.5 3.5
+8 4.0 4.0
+9 4.5  NA
+> data.frame(approx(xn,yn, xout, rule = 2))# -> *constant* extrapolation
+    x   y
+1 0.5 1.0
+2 1.0 1.0
+3 1.5 1.5
+4 2.0 2.0
+5 2.5 2.5
+6 3.0 3.0
+7 3.5 3.5
+8 4.0 4.0
+9 4.5 4.0
+> ## New (2019-2020)  na.rm = FALSE: NA's are "kept"
+> data.frame(approx(xn,yn, xout, na.rm=FALSE, rule = 2))
+    x   y
+1 0.5 1.0
+2 1.0 1.0
+3 1.5  NA
+4 2.0  NA
+5 2.5  NA
+6 3.0 3.0
+7 3.5 3.5
+8 4.0 4.0
+9 4.5 4.0
+> data.frame(approx(xn,yn, xout, na.rm=FALSE, rule = 2, method="constant"))
+    x  y
+1 0.5  1
+2 1.0  1
+3 1.5  1
+4 2.0 NA
+5 2.5 NA
+6 3.0  3
+7 3.5  3
+8 4.0  4
+9 4.5  4
+> 
+> ## NA's in x[] are not allowed:
+> stopifnot(inherits( try( approx(yn,yn, na.rm=FALSE) ), "try-error"))
+Error in approx(yn, yn, na.rm = FALSE) : 
+  approx(x,y, .., na.rm=FALSE): NA values in x are not allowed
+> 
+> ## Give a nice overview of all possibilities  rule * method * na.rm :
+> ##             -----------------------------  ====   ======   =====
+> ## extrapolations "N":= NA;   "C":= Constant :
+> rules <- list(N=1, C=2, NC=1:2, CN=2:1)
+> methods <- c("constant","linear")
+> ry <- sapply(rules, function(R) {
++        sapply(methods, function(M)
++         sapply(setNames(,c(TRUE,FALSE)), function(na.)
++                  approx(xn, yn, xout=xout, method=M, rule=R, na.rm=na.)$y),
++         simplify="array")
++    }, simplify="array")
+> names(dimnames(ry)) <- c("x = ", "na.rm", "method", "rule")
+> dimnames(ry)[[1]] <- format(xout)
+> ftable(aperm(ry, 4:1)) # --> (4 * 2 * 2) x length(xout)  =  16 x 9 matrix
+                    x =  0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5
+rule method   na.rm                                         
+N    constant TRUE        NA 1.0 1.0 1.0 1.0 3.0 3.0 4.0  NA
+              FALSE       NA 1.0 1.0  NA  NA 3.0 3.0 4.0  NA
+     linear   TRUE        NA 1.0 1.5 2.0 2.5 3.0 3.5 4.0  NA
+              FALSE       NA 1.0  NA  NA  NA 3.0 3.5 4.0  NA
+C    constant TRUE       1.0 1.0 1.0 1.0 1.0 3.0 3.0 4.0 4.0
+              FALSE      1.0 1.0 1.0  NA  NA 3.0 3.0 4.0 4.0
+     linear   TRUE       1.0 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.0
+              FALSE      1.0 1.0  NA  NA  NA 3.0 3.5 4.0 4.0
+NC   constant TRUE        NA 1.0 1.0 1.0 1.0 3.0 3.0 4.0 4.0
+              FALSE       NA 1.0 1.0  NA  NA 3.0 3.0 4.0 4.0
+     linear   TRUE        NA 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.0
+              FALSE       NA 1.0  NA  NA  NA 3.0 3.5 4.0 4.0
+CN   constant TRUE       1.0 1.0 1.0 1.0 1.0 3.0 3.0 4.0  NA
+              FALSE      1.0 1.0 1.0  NA  NA 3.0 3.0 4.0  NA
+     linear   TRUE       1.0 1.0 1.5 2.0 2.5 3.0 3.5 4.0  NA
+              FALSE      1.0 1.0  NA  NA  NA 3.0 3.5 4.0  NA
+> ## Don't show: 
+> stopifnot(exprs = {
++  identical(unname(ry),
++    array(c(NA, 1, 1,   1, 1, 3, 3, 4, NA,      NA, 1,  1, NA, NA, 3, 3, 4, NA,
++            NA, 1, 1.5, 2, 2.5, 3, 3.5, 4, NA,  NA, 1, NA, NA, NA, 3, 3.5, 4, NA,
++             1, 1, 1,   1, 1, 3, 3, 4, 4,        1, 1,  1, NA, NA, 3, 3, 4, 4,
++             1, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4,    1, 1, NA, NA, NA, 3, 3.5, 4, 4,
++            NA, 1, 1,   1, 1, 3, 3, 4, 4,       NA, 1,  1, NA, NA, 3, 3, 4, 4,
++            NA, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4,   NA, 1, NA, NA, NA, 3, 3.5, 4, 4,
++             1, 1, 1,   1, 1, 3, 3, 4, NA,       1, 1,  1, NA, NA, 3, 3, 4, NA,
++             1, 1, 1.5, 2, 2.5, 3, 3.5, 4, NA,   1, 1, NA, NA, NA, 3, 3.5, 4, NA),
++          dim = c(9L, 2L, 2L, 4L)))
++  identical(approxfun(xn,yn, method="constant", rule=2, na.rm=FALSE)(xout),
++             as.vector(ry[,"FALSE", "constant","C"]))
++  identical(approxfun(xn,yn, method="linear", rule=2:1, na.rm=FALSE)(xout),
++             as.vector(ry[,"FALSE", "linear", "CN"]))
++ })
+> ## End(Don't show)
+> 
 > ## Show treatment of 'ties' :
 > 
 > x <- c(2,2:4,4,4,5,5,7,7,7)
 > y <- c(1:6, 5:4, 3:1)
 > (amy <- approx(x, y, xout = x)$y) # warning, can be avoided by specifying 'ties=':
-Warning in regularize.values(x, y, ties, missing(ties)) :
+Warning in regularize.values(x, y, ties, missing(ties), na.rm = na.rm) :
   collapsing to unique 'x' values
  [1] 1.5 1.5 3.0 5.0 5.0 5.0 4.5 4.5 2.0 2.0 2.0
 > op <- options(warn=2) # warnings would be error
 > stopifnot(identical(amy, approx(x, y, xout = x, ties=mean)$y))
-> options(op) # revert
-> (ay  <- approx(x, y, xout = x, ties = "ordered")$y)
+> (ay <- approx(x, y, xout = x, ties = "ordered")$y)
  [1] 2 2 3 6 6 6 4 4 1 1 1
 > stopifnot(amy == c(1.5,1.5, 3, 5,5,5, 4.5,4.5, 2,2,2),
 +           ay  == c(2, 2,    3, 6,6,6, 4, 4,    1,1,1))
@@ -3148,7 +3257,7 @@ Warning in regularize.values(x, y, ties, missing(ties)) :
  [1] 1 1 3 4 4 4 4 4 1 1 1
 > approx(x, y, xout = x, ties = max)$y
  [1] 2 2 3 6 6 6 5 5 3 3 3
-> 
+> options(op) # revert 'warn'ing level
 > 
 > 
 > 
@@ -3833,7 +3942,7 @@ sigma^2 estimated as 0.4566:  log likelihood = -101.2,  aic = 212.4
 > 
 > asOneSidedFormula("age")
 ~age
-<environment: 0x4d77f68>
+<environment: 0x5706d28>
 > asOneSidedFormula(~ age)
 ~age
 > 
@@ -4174,6 +4283,45 @@ I(x^3) -0.73        0.93 -0.99
 > case.names(lmxy, full = TRUE)      # includes the 0-weight case
  [1] "O.1"  "O.2"  "O.3"  "O.4"  "O.5"  "O.6"  "O.7"  "O.8"  "O.9"  "O.10"
 [11] "O.11" "O.12" "O.13" "O.14" "O.15" "O.16" "O.17" "O.18" "O.19" "O.20"
+> 
+> 
+> 
+> cleanEx()
+> nameEx("checkMFClasses")
+> ### * checkMFClasses
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: .checkMFClasses
+> ### Title: Functions to Check the Type of Variables passed to Model Frames
+> ### Aliases: .checkMFClasses .MFclass .getXlevels
+> ### Keywords: utilities
+> 
+> ### ** Examples
+> 
+> sapply(warpbreaks, .MFclass) # "numeric" plus 2 x "factor"
+   breaks      wool   tension 
+"numeric"  "factor"  "factor" 
+> sapply(iris,       .MFclass) # 4 x "numeric" plus "factor"
+Sepal.Length  Sepal.Width Petal.Length  Petal.Width      Species 
+   "numeric"    "numeric"    "numeric"    "numeric"     "factor" 
+> 
+> mf <- model.frame(Sepal.Width ~ Species,      iris)
+> mc <- model.frame(Sepal.Width ~ Sepal.Length, iris)
+> 
+> .checkMFClasses("numeric", mc) # nothing else
+> .checkMFClasses(c("numeric", "factor"), mf)
+> 
+> ## simple .getXlevels() cases :
+> (xl <- .getXlevels(terms(mf), mf)) # a list with one entry " $ Species" with 3 levels:
+$Species
+[1] "setosa"     "versicolor" "virginica" 
+
+> stopifnot(exprs = {
++   identical(xl$Species, levels(iris$Species))
++   identical(.getXlevels(terms(mc), mc), xl[0]) # a empty named list, as no factors
++   is.null(.getXlevels(terms(x~x), list(x=1)))
++ })
 > 
 > 
 > 
@@ -4831,7 +4979,7 @@ function (V)
     r[cbind(1L:p, 1L:p)] <- 1
     r
 }
-<bytecode: 0x5826e58>
+<bytecode: 0x6443ff0>
 <environment: namespace:stats>
 > stopifnot(all.equal(Cl, cov2cor(cov(longley))),
 +           all.equal(cor(longley, method = "kendall"),
@@ -5357,6 +5505,15 @@ surv(ft, case) ~ a + b * f
 > ## using non-syntactic names:
 > reformulate(c("`P/E`", "`% Growth`"), response = as.name("+-"))
 `+-` ~ `P/E` + `% Growth`
+> 
+> x <- c("a name", "another name")
+> try( reformulate(x) ) # -> Error ..... unexpected symbol
+Error in str2lang(termtext) : <text>:1:3: unexpected symbol
+1: a name
+      ^
+> ## rather backquote the strings in x :
+> reformulate(sprintf("`%s`", x))
+~`a name` + `another name`
 > 
 > stopifnot(identical(      ~ var, reformulate("var")),
 +           identical(~ a + b + c, reformulate(letters[1:3])),
@@ -6559,11 +6716,12 @@ and	9 plateau levels (y) with summary
 > 
 > ## Advanced: What's inside the function closure?
 > ls(environment(Fn12))
-[1] "f"      "method" "nobs"   "x"      "y"      "yleft"  "yright"
-> ##[1] "f"  "method"  "n"  "x"  "y"  "yleft"  "yright"
+[1] "f"      "method" "na.rm"  "nobs"   "x"      "y"      "yleft"  "yright"
+> ## "f"     "method" "na.rm"  "nobs"   "x"     "y"    "yleft"  "yright"
 > utils::ls.str(environment(Fn12))
 f :  num 0
 method :  int 2
+na.rm :  logi TRUE
 nobs :  int 12
 x :  num [1:8] -2.2 -2 -0.6 0 0.1 0.6 0.8 0.9
 y :  num [1:8] 0.0833 0.1667 0.3333 0.5 0.5833 ...
@@ -6636,6 +6794,7 @@ Empirical CDF:	  10 unique values with summary
 > 
 > old <- getOption("contrasts")
 > options(contrasts = c("contr.helmert", "contr.poly"))
+> ## IGNORE_RDIFF_BEGIN
 > (fit <- aov(Yield ~ A*B*C + Error(Block), data = aovdat))
 
 Call:
@@ -6665,6 +6824,7 @@ Deg. of Freedom         1        17
 
 Residual standard error: 17.86103
 Estimated effects are balanced
+> ## IGNORE_RDIFF_END
 > eff.aovlist(fit)
        A B C  A:B  A:C  B:C A:B:C
 Block  0 0 0 0.25 0.25 0.25  0.25
@@ -6966,7 +7126,7 @@ List of 12
  $ dev.resids:function (y, mu, wt)  
  $ aic       :function (y, n, mu, wt, dev)  
  $ mu.eta    :function (eta)  
- $ initialize:  expression({  if (any(y <= 0))  stop("non-positive values not allowed for the 'gamma' family")  n <- rep.int(1, n| __truncated__
+ $ initialize:  expression({  if (any(y <= 0))  stop("non-positive values not allowed for the 'Gamma' family")  n <- rep.int(1, n| __truncated__
  $ validmu   :function (mu)  
  $ valideta  :function (eta)  
  $ simulate  :function (object, nsim)  
@@ -7443,7 +7603,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env = new.env()))
-<environment: 0x6c7c0a0>
+<environment: 0x5f27058>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -12137,14 +12297,14 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<bytecode: 0x4b42a90>
-<environment: 0x4b2a5e8>
+<bytecode: 0x51af170>
+<environment: 0x51b9a40>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<bytecode: 0x4b42be0>
-<environment: 0x4b2a5e8>
+<bytecode: 0x51af020>
+<environment: 0x51b9a40>
 
 > 
 > 
@@ -13709,6 +13869,7 @@ Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’
 > # get the profile for the fitted model: default level is too extreme
 > pr1 <- profile(fm1, alpha = 0.05)
 > # profiled values for the two parameters
+> ## IGNORE_RDIFF_BEGIN
 > pr1$A
        tau par.vals.A par.vals.lrc
 1  -3.0873   13.59751      0.14033
@@ -13739,6 +13900,7 @@ Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’
 11  2.1335  16.086803     0.234850
 12  2.6052  15.638807     0.485009
 13  3.0276  15.265409     0.779458
+> ## IGNORE_RDIFF_END
 > # see also example(plot.profile.nls)
 > ## Don't show: 
 > options(od)
@@ -15323,68 +15485,20 @@ Contrast 1 Contrast 2 Contrast 3
 > 
 > 
 > ## multi-stratum example where efficiencies play a role
-> utils::example(eff.aovlist)
-
-eff.vl> ## An example from Yates (1932),
-eff.vl> ## a 2^3 design in 2 blocks replicated 4 times
-eff.vl> 
-eff.vl> Block <- gl(8, 4)
-
-eff.vl> A <- factor(c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,
-eff.vl+               0,1,0,1,0,1,0,1,0,1,0,1))
-
-eff.vl> B <- factor(c(0,0,1,1,0,0,1,1,0,1,0,1,1,0,1,0,0,0,1,1,
-eff.vl+               0,0,1,1,0,0,1,1,0,0,1,1))
-
-eff.vl> C <- factor(c(0,1,1,0,1,0,0,1,0,0,1,1,0,0,1,1,0,1,0,1,
-eff.vl+               1,0,1,0,0,0,1,1,1,1,0,0))
-
-eff.vl> Yield <- c(101, 373, 398, 291, 312, 106, 265, 450, 106, 306, 324, 449,
-eff.vl+            272, 89, 407, 338, 87, 324, 279, 471, 323, 128, 423, 334,
-eff.vl+            131, 103, 445, 437, 324, 361, 302, 272)
-
-eff.vl> aovdat <- data.frame(Block, A, B, C, Yield)
-
-eff.vl> old <- getOption("contrasts")
-
-eff.vl> options(contrasts = c("contr.helmert", "contr.poly"))
-
-eff.vl> (fit <- aov(Yield ~ A*B*C + Error(Block), data = aovdat))
-
-Call:
-aov(formula = Yield ~ A * B * C + Error(Block), data = aovdat)
-
-Grand Mean: 291.5938
-
-Stratum 1: Block
-
-Terms:
-                      A:B       A:C       B:C     A:B:C Residuals
-Sum of Squares   780.1250  276.1250 2556.1250  112.5000  774.0938
-Deg. of Freedom         1         1         1         1         3
-
-Residual standard error: 16.06335
-Estimated effects are balanced
-
-Stratum 2: Within
-
-Terms:
-                        A         B         C       A:B       A:C       B:C
-Sum of Squares    3465.28 161170.03 278817.78     28.17   1802.67  11528.17
-Deg. of Freedom         1         1         1         1         1         1
-                    A:B:C Residuals
-Sum of Squares      45.37   5423.28
-Deg. of Freedom         1        17
-
-Residual standard error: 17.86103
-Estimated effects are balanced
-
-eff.vl> eff.aovlist(fit)
-       A B C  A:B  A:C  B:C A:B:C
-Block  0 0 0 0.25 0.25 0.25  0.25
-Within 1 1 1 0.75 0.75 0.75  0.75
-
-eff.vl> options(contrasts = old)
+> ## An example from Yates (1932),
+> ## a 2^3 design in 2 blocks replicated 4 times
+> 
+> Block <- gl(8, 4)
+> A <- factor(c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,
++               0,1,0,1,0,1,0,1,0,1,0,1))
+> B <- factor(c(0,0,1,1,0,0,1,1,0,1,0,1,1,0,1,0,0,0,1,1,
++               0,0,1,1,0,0,1,1,0,0,1,1))
+> C <- factor(c(0,1,1,0,1,0,0,1,0,0,1,1,0,0,1,1,0,1,0,1,
++               1,0,1,0,0,0,1,1,1,1,0,0))
+> Yield <- c(101, 373, 398, 291, 312, 106, 265, 450, 106, 306, 324, 449,
++            272, 89, 407, 338, 87, 324, 279, 471, 323, 128, 423, 334,
++            131, 103, 445, 437, 324, 361, 302, 272)
+> aovdat <- data.frame(Block, A, B, C, Yield)
 > fit <- aov(Yield ~ A + B * C + Error(Block), data = aovdat)
 > cont1 <- c(-1, 1)[A]/32  # Helmert contrasts
 > cont2 <- c(-1, 1)[B] * c(-1, 1)[C]/32
@@ -16312,13 +16426,13 @@ Step function with continuity 'f'= 0.2 ,  3 knots at
 > ## look at the internal structure:
 > unclass(sfun0)
 function (v) 
-.approxfun(x, y, v, method, yleft, yright, f)
-<bytecode: 0x6a3d668>
-<environment: 0x5de6fe8>
+.approxfun(x, y, v, method, yleft, yright, f, na.rm)
+<bytecode: 0x47f2f58>
+<environment: 0x60f6dd8>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
-[1] "f"      "method" "x"      "y"      "yleft"  "yright"
+[1] "f"      "method" "na.rm"  "x"      "y"      "yleft"  "yright"
 > 
 > x0 <- seq(0.5, 3.5, by = 0.25)
 > rbind(x = x0, f.f0 = sfun0(x0), f.f02 = sfun.2(x0),
@@ -18639,7 +18753,7 @@ Number of Fisher Scoring iterations: 6
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  6.562 0.21 6.806 0 0 
+Time elapsed:  6.395 0.195 6.657 0 0 
 > grDevices::dev.off()
 null device 
           1 

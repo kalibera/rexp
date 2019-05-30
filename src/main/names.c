@@ -480,7 +480,7 @@ FUNTAB R_FunTab[] =
 {"sample2",	do_sample2,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"RNGkind",	do_RNGkind,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"set.seed",	do_setseed,	0,	111,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"set.seed",	do_setseed,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* Data Summaries */
 /* these four are group generic and so need to eval args */
@@ -521,6 +521,8 @@ FUNTAB R_FunTab[] =
 {"format.info",	do_formatinfo,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"cat",		do_cat,		0,	111,	6,	{PP_FUNCALL, PREC_FN,	0}},
 {"do.call",	do_docall,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	0}},
+{"str2lang",	do_str2lang,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"str2expression", do_str2lang, 1,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 
 /* String Manipulation */
 

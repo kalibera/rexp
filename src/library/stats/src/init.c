@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2001-2017   The R Core Team.
+ *  Copyright (C) 2001-2019   The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -119,8 +119,8 @@ static const R_CallMethodDef CallEntries[] = {
     CALLDEF(ksmooth, 5),
     CALLDEF(SplineCoef, 3),
     CALLDEF(SplineEval, 2),
-    CALLDEF(Approx, 7),
-    CALLDEF(ApproxTest, 4),
+    CALLDEF(Approx, 8),
+    CALLDEF(ApproxTest, 5),
     CALLDEF(LogLin, 7),
     CALLDEF(pAnsari, 3),
     CALLDEF(qAnsari, 3),
@@ -270,7 +270,7 @@ static const R_FortranMethodDef FortEntries[] = {
     {"rbart",  (DL_FUNC) &F77_NAME(rbart),  20},
     {"bvalus", (DL_FUNC) &F77_NAME(bvalus),  7},
     {"supsmu", (DL_FUNC) &F77_NAME(supsmu), 10},
-    {"hclust", (DL_FUNC) &F77_NAME(hclust), 11},
+    {"hclust", (DL_FUNC) &F77_NAME(hclust), 10},
     {"hcass2", (DL_FUNC) &F77_NAME(hcass2),  6},
     {"kmns",   (DL_FUNC) &F77_NAME(kmns),   17},
     {"eureka", (DL_FUNC) &F77_NAME(eureka),  6},

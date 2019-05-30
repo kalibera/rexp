@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2000-2018	The R Core Team.
+ *  Copyright (C) 2000-2019	The R Core Team.
  *  Copyright (C) 1995-1998	Robert Gentleman and Ross Ihaka.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -1017,7 +1017,12 @@ void attribute_hidden PrintValueEnv(SEXP s, SEXP env)
 
     R_PrintData data;
     PrintInit(&data, env);
-    PrintDispatch(s, &data);
+    if (isFunction(s))
+	/* printed via print() -> print.function() in order to allow user-defined
+	   print.function() methods to also work in auto-printing: */
+        PrintObject(s, &data);
+    else
+        PrintDispatch(s, &data);
 
     UNPROTECT(1);
 }
@@ -1050,78 +1055,109 @@ void attribute_hidden CustomPrintValue(SEXP s, SEXP env)
 
 
 /* xxxpr are mostly for S compatibility (as mentioned in V&R).
-   The actual interfaces are now in xxxpr.f
+   The Fortran interfaces are in xxxpr.f and call these.
+    They are always called with *nchar >= 0.
  */
 
-attribute_hidden
-int F77_NAME(dblep0) (const char *label, int *nchar, double *data, int *ndata)
-{
-    int k, nc = *nchar;
+#ifdef FC_LEN_T
+# include <stddef.h>
+#endif
 
-    if(nc < 0) nc = (int) strlen(label);
+attribute_hidden
+#ifdef FC_LEN_T
+void F77_NAME(dblep0) (const char *label, int *nchar, double *data, int *ndata,
+		       const FC_LEN_T label_len)
+#else
+void F77_NAME(dblep0) (const char *label, int *nchar, double *data, int *ndata)
+#endif
+{
+    int nc = *nchar;
     if(nc > 255) {
 	warning(_("invalid character length in 'dblepr'"));
 	nc = 0;
     } else if(nc > 0) {
-	for (k = 0; k < nc; k++)
+	for (int k = 0; k < nc; k++)
 	    Rprintf("%c", label[k]);
 	Rprintf("\n");
     }
     if(*ndata > 0) printRealVector(data, *ndata, 1);
-    return(0);
 }
 
 attribute_hidden
-int F77_NAME(intpr0) (const char *label, int *nchar, int *data, int *ndata)
+#ifdef FC_LEN_T
+void F77_NAME(intpr0) (const char *label, int *nchar, int *data, int *ndata,
+		       const FC_LEN_T label_len)
+#else
+void F77_NAME(intpr0) (const char *label, int *nchar, int *data, int *ndata)
+#endif
 {
-    int k, nc = *nchar;
+    int nc = *nchar;
 
-    if(nc < 0) nc = (int) strlen(label);
     if(nc > 255) {
 	warning(_("invalid character length in 'intpr'"));
 	nc = 0;
     } else if(nc > 0) {
-	for (k = 0; k < nc; k++)
+	for (int k = 0; k < nc; k++)
 	    Rprintf("%c", label[k]);
 	Rprintf("\n");
     }
     if(*ndata > 0) printIntegerVector(data, *ndata, 1);
-    return(0);
 }
 
 attribute_hidden
-int F77_NAME(realp0) (const char *label, int *nchar, float *data, int *ndata)
+#ifdef FC_LEN_T
+void F77_NAME(realp0) (const char *label, int *nchar, float *data, int *ndata,
+		      const FC_LEN_T label_len)
+#else
+void F77_NAME(realp0) (const char *label, int *nchar, float *data, int *ndata)
+#endif
 {
-    int k, nc = *nchar, nd = *ndata;
+    int nc = *nchar, nd = *ndata;
     double *ddata;
 
-    if(nc < 0) nc = (int) strlen(label);
     if(nc > 255) {
 	warning(_("invalid character length in 'realpr'"));
 	nc = 0;
     }
     else if(nc > 0) {
-	for (k = 0; k < nc; k++)
+	for (int k = 0; k < nc; k++)
 	    Rprintf("%c", label[k]);
 	Rprintf("\n");
     }
     if(nd > 0) {
 	ddata = (double *) malloc(nd*sizeof(double));
 	if(!ddata) error(_("memory allocation error in 'realpr'"));
-	for (k = 0; k < nd; k++) ddata[k] = (double) data[k];
+	for (int k = 0; k < nd; k++) ddata[k] = (double) data[k];
 	printRealVector(ddata, nd, 1);
 	free(ddata);
     }
-    return(0);
 }
 
 /* Fortran-callable error routine for lapack */
 
+#ifdef FC_LEN_T
+void NORET F77_NAME(xerbla)(const char *srname, int *info, 
+			    const FC_LEN_T srname_len)
+#else
 void NORET F77_NAME(xerbla)(const char *srname, int *info)
+#endif
 {
-   /* srname is not null-terminated.  It should be 6 characters. */
+   /* srname is not null-terminated.  It will be 6 characters for
+      mainstream BLAS/LAPACK routines (for those with < 6 the name
+      is right space-padded), and > 6 for recentish additions from
+      LAPACK, 7 for a few used with R ). */
+#ifdef FC_LEN_T
+    char buf[21];
+    // Precaution for incorrectly passed length type
+    int len = (srname_len > 20) ? (int)srname_len : 20;
+    strncpy(buf, srname, len);
+    buf[len] = '\0';
+#else
+    // This version will truncate to 6 chars and left space-pads
+    // for fewer than 6 (at least with gfortran and Solaris).
     char buf[7];
     strncpy(buf, srname, 6);
     buf[6] = '\0';
+#endif
     error(_("BLAS/LAPACK routine '%6s' gave error code %d"), buf, -(*info));
 }

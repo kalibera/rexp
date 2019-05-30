@@ -641,6 +641,10 @@ installation directories can be seen in the status message that is
 displayed at the end of @command{configure}.  The installation may need
 to be done by the owner of @file{@var{prefix}}, often a root account.
 
+There is the option of using @command{make install-strip} (@pxref{Debugging
+Symbols}).
+
+
 You can install into another directory tree by using
 
 @example
@@ -648,8 +652,8 @@ make prefix=/path/to/here install
 @end example
 
 @noindent
-at least with @acronym{GNU} or Solaris @command{make} (but not some
-older Unix makes).
+at least with @acronym{GNU} @command{make} (but not some other Unix
+makes).
 
 More precise control is available at configure time via options: see
 @command{configure --help} for details.  (However, most of the `Fine
@@ -939,11 +943,40 @@ environment variable @env{TZ}.
 
 
 @menu
+* Debugging Symbols::           
 * OpenMP Support::              
 * C++ Support::                 
+* Link-Time Optimization::      
 @end menu
 
-@node OpenMP Support, C++ Support, Other Options, Other Options
+@node Debugging Symbols, OpenMP Support, Other Options, Other Options
+@subsection Debugging Symbols
+
+By default, @command{configure} adds a flag (usually @option{-g}) to the
+compilation flags for C, Fortran and CXX sources.  This will slow down
+compilation and increase object sizes of both @R{} and packages, so it
+may be a good idea to change those flags (set @samp{CFLAGS} etc in
+@file{config.site} before configuring, or edit files @file{Makeconf}
+and @file{etc/Makeconf} between running @command{configure} and
+@command{make}).
+
+Having debugging symbols available is useful both when running @R{} under a
+debugger (e.g., @command{R -d gdb}) and when using sanitizers and
+@command{valgrind}, all things intended for experts.
+
+Debugging symbols (and some others) can be `stripped' on installation by
+using
+@example
+make install-strip
+@end example
+@noindent
+How well this is supported depends on the platform: it works best on
+those using GNU @code{binutils}.  On @cputype{x86_64} Linux a typical
+reduction in overall size was from 92MB to 66MB.   On macOS debugging
+symbols are not by default included in @file{.dylib} and @file{.so}
+files, so there is negligible difference.
+
+@node OpenMP Support, C++ Support, Debugging Symbols, Other Options
 @subsection OpenMP Support
 
 By default @command{configure} searches for suitable flags@footnote{for
@@ -980,7 +1013,7 @@ OpenMP program, which is not the same as compiling a shared object and
 loading it into the C program of @R{}'s executable.  Note that
 overridden values are not tested.
 
-@node C++ Support,  , OpenMP Support, Other Options
+@node C++ Support, Link-Time Optimization, OpenMP Support, Other Options
 @subsection C++ Support
 
 C++ is not used by @R{} itself, but support is provided for installing
@@ -1080,6 +1113,37 @@ Extensions' manual.  Prior to @R{} 3.6.0 the default C++ standard was
 that of the compiler used: currently it is C++11 if supported by the
 compiler: this can be overridden by setting @samp{CXXSTD} when @R{} is
 configured, for example to @samp{-std=gnu++14}.
+
+@node Link-Time Optimization,  , C++ Support, Other Options
+@subsection Link-Time Optimization
+
+There is support for using link-time optimization (LTO) if the toolchain
+supports it: configure with flag @option{--enable-lto}.
+
+Whether toolchains support LTO is often unclear: all of the C compiler,
+the Fortran compiler and linker have to support it, and support it by
+the same mechanism (so mixing compiler families may not work and a
+non-system linker may be needed).  It has been tested recently on Linux
+with @command{gcc}/@command{gfortran} 8.x: that needed setting
+@example
+AR=gcc-ar
+RANLIB=gcc-ranlib
+@end example
+@noindent
+(e.g.@: in @file{config.site}).  For non-system compilers or if those
+wrappers have not been installed one may need something like
+@example
+AR="ar --plugin=/path/to/liblto_plugin.so"
+RANLIB="ranlib --plugin=/path/to/liblto_plugin.so
+@end example
+
+When LTO is enabled it is used for compiled code in packages (including
+the recommended packages) unless the flag @option{--enable-lto=R} is
+used.  With sufficient diagnostic flags (e.g.@: @option{-Wall} in GCC)
+this can flag inconsistencies between source files in a package.
+
+LTO support was added in 2011 for @command{gcc} 4.5.x on Linux but was
+little used before 2019.
 
 @node Testing a Unix-alike Installation,  , Other Options, Installing R under Unix-alikes
 @section Testing an Installation
@@ -1756,7 +1820,7 @@ OS X'. Click on that, then download the file
 and later (El Capitan, Sierra, High Sierra, Mojave, @dots{}).
 
 Installers for R-patched and R-devel are usually available from
-@uref{https://r.research.att.com}.  (Some of these packages are
+@uref{https://mac.R-project.org}.  (Some of these packages are
 unsigned: to install those Control/right/two-finger click, select
 @samp{Open with} and @samp{Installer}.)
 
@@ -1938,7 +2002,7 @@ A version of @R{} can be run directly from the command-line as e.g.@:
 @noindent
 However, @Rapp{} will always run the `current' version, that is the last
 installed version.  A small utility, @command{Rswitch.app} (available at
-@url{https://r.research.att.com/#other}), can be used to change the
+@url{https://mac.R-project.org/#other}), can be used to change the
 `current' version.  This is of limited use as @Rapp{} is compiled
 against a particular version of @R{} and will likely crash if switched
 to an earlier version.  This may allow you to install a development
@@ -1957,7 +2021,11 @@ expects a stack size of at least 8MB and to be able to open at least 256
 file descriptors.  (Any modern OS should have default limits at least as
 large as these, but apparently NetBSD may not.  Use the shell command
 @command{ulimit} (@command{sh}/@command{bash}) or @command{limit}
-(@command{csh}/@command{tcsh}) to check.)
+(@command{csh}/@command{tcsh}) to check.)  For some
+compilers@footnote{The Oracle compilers on Solaris (where the issue is
+parsing very complex @R{} expressions) and pre-releases of GCC 9 on
+Linux.} and packages a larger stack size has been needed: 20-25MB has
+sufficed to date.
 
 @R{} makes use of a number of environment variables, the default values
 of many of which are set in file @file{@var{R_HOME}/etc/Renviron} (there
@@ -2322,9 +2390,9 @@ of @acronym{CRAN} and Bioconductor packages.
 A few of the binary packages need other software to be installed on your
 system.  In particular packages using Gtk+ (@CRANpkg{RGtk2},
 @CRANpkg{cairoDevice} and those that depend on them) need the GTK
-framework installed from @uref{https://r.research.att.com/libs/}: the
+framework installed from @uref{https://mac.R-project.org/libs/}: the
 appropriate version at the time of writing was
-@uref{https://r.research.att.com/@/libs/@/GTK_2.24.17-X11.pkg}
+@uref{https://mac.R-project.org/@/libs/@/GTK_2.24.17-X11.pkg}
 
 The default compilers specified are shown in file
 @file{/Library/Frameworks/@/R.framework/@/Resources/etc/Makeconf}.  At
@@ -2373,7 +2441,7 @@ without the corresponding headers (not even in Xcode nor the Command
 Line Tools): they are often rather old versions.  If installing packages
 from source using them it is usually easiest to install a
 statically-linked up-to-date copy of the Open Source package from its
-sources or from @uref{https://r.research.att.com/libs}.  But sometimes
+sources or from @uref{https://mac.R-project.org/libs}.  But sometimes
 it is desirable/necessary to use Apple's dynamically linked library, in
 which case appropriate headers could be extracted from the
 sources@footnote{Note that capitalization and version may differ from
@@ -3255,7 +3323,8 @@ Fortran}).  Your C compiler should be
 @acronym{IEEE}@tie{}754}, POSIX 1003.1 and C99-compliant.@footnote{Note
 that C11 compilers need not be C99-compliant: @R{} requires support for
 @code{double complex} and variable-length arrays which are optional in
-C11 but is mandatory in C99.}  @R{} tries to choose suitable
+C11 but are mandatory in C99.  C18 (also known as C17) is a `bugfix
+release' of C11, clarifying the standard.} @R{} tries to choose suitable
 flags@footnote{Examples are @option{-std=gnu99}, @option{-std=c99} and
 @option{-c99}.} for the C compilers it knows about, but you may have to
 set @code{CC} or @code{CFLAGS} suitably.  For versions of @command{gcc}
@@ -4952,7 +5021,8 @@ sudo installer -pkg \
 -target /
 @end example
 @noindent
-Alternatively, change the include path @emph{via}
+(This will need to be re-run if the OS decides to update the Command
+Line Tools.)  Alternatively, change the include path @emph{via}
 @example
 CPPFLAGS="-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include"
 @end example
@@ -4960,12 +5030,13 @@ CPPFLAGS="-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/inclu
 Which is said to be going to be needed for future versions of macOS.
 (The location of the SDK, which could change, can be found by running
 @command{xcrun -show-sdk-path}.  It is likely that the compilers
-included in the Command Line Tools will find the headers under the SDK
-without this additional step, but other versions of @command{clang} will
-not.)
+included in the Command Line Tools and those at
+@uref{https://cran.r-project.org/@/bin/@/macosx/@/tools} will find the
+headers under the SDK without this additional step, but other versions
+of @command{clang} will not.)
 
 You need GNU @code{readline}.  That and other binary components are
-available from @uref{https://r.research.att.com/libs}: you will need
+available from @uref{https://mac.R-project.org/libs}: you will need
 @code{pcre} and @code{xz} (for @code{libzma}) as recent macOS versions
 provide libraries but not headers for these (and the system @code{pcre}
 is too old at 8.02 for versions up to Sierra, although High Sierra had
@@ -5046,34 +5117,32 @@ FLIBS = -L/usr/local/gfortran/lib/gcc/x86_64-apple-darwin18/8.2.0
 (with lines broken here for legibility).
 
 Current @acronym{CRAN} binary distributions use the build of
-@command{clang} 6.0.0 contained in
-@uref{https://cran.r-project.org/@/bin/@/macosx/@/tools/@/clang-6.0.0.pkg}.
-Other recent distributions of @command{clang} are often available from
-@uref{http://llvm.org/releases/}: for example at the time of
-writing@footnote{It is unstated what the minimum OS requirement is for
-these: the distribution of 5.0.0 required Sierra or later.} of 6.0.1,
-7.0.0 and 8.0.0.  In particular, all of these include support for OpenMP
-which Apple builds of @command{clang} do not.  Suppose one of these
-distributions is installed under @file{/usr/local/clang6}.  Then @R{}
-could be configured by something like
+@command{clang} 8.0.0 contained in
+@uref{https://cran.r-project.org/@/bin/@/macosx/@/tools/@/clang-8.0.0.pkg}.
+Other recent distributions of @command{clang} are available from
+@uref{http://llvm.org/releases/} (on which the above are based).  In
+particular, all of these include support for OpenMP which Apple builds
+of @command{clang} do not.  Suppose one of these distributions is
+installed under @file{/usr/local/clang8}.  Then @R{} could be configured
+by something like
 @example
 ./configure --x-includes=/opt/X11/include --x-libraries=/opt/X11/lib \
 PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib/pkgconfig \
-DYLD_FALLBACK_LIBRARY_PATH=/usr/local/clang6/lib:/usr/local/lib
+DYLD_FALLBACK_LIBRARY_PATH=/usr/local/clang8/lib:/usr/local/lib
 @end example
 @noindent
 with @file{config.site} containing
 @example
-CC=/usr/local/clang6/bin/clang
+CC=/usr/local/clang8/bin/clang
 OBJC=$CC
 FC=/usr/local/gfortran/bin/gfortran
-CXX=/usr/local/clang6/bin/clang++
-LDFLAGS="-L/usr/local/clang6/lib -L/usr/local/lib"
-R_LD_LIBRARY_PATH=/usr/local/clang6/lib:/usr/local/lib
+CXX=/usr/local/clang8/bin/clang++
+LDFLAGS="-L/usr/local/clang8/lib -L/usr/local/lib"
+R_LD_LIBRARY_PATH=/usr/local/clang8/lib:/usr/local/lib
 @end example
 @noindent
 The care to specify library paths is to ensure that the OpenMP runtime
-library, here @file{/usr/local/clang6/lib/libomp.dylib}, is found when
+library, here @file{/usr/local/clang8/lib/libomp.dylib}, is found when
 needed.  If this works, you should see the line
 @example
 checking whether OpenMP SIMD reduction is supported... yes
@@ -5084,7 +5153,7 @@ to be set to find the latest version of the C++ run-time libraries
 rather than the system ones.
 
 Pre-compiled versions of many of the @ref{Useful libraries and programs}
-are available from @uref{https://r.research.att.com/libs/}.  You will
+are available from @uref{https://mac.R-project.org/libs/}.  You will
 most likely want at least @code{jpeg} and @code{tiff}.  The
 @code{pkg-config} utility is not provided by Apple and used for the
 installation from source of many packages: it will also be used if
@@ -5142,7 +5211,7 @@ The @TeX{} implementation used by the developers is MacTeX
 (@uref{https://www.tug.org/mactex/}): the full installation is about
 5GB, but a smaller version (`Basic TeX') is available at
 @uref{https://www.tug.org/mactex/morepackages.html} to which you will
-need to add some packages, e.g.@: for the 2018 version we needed to
+need to add some packages, e.g.@: for the 2019 version we needed to
 add@footnote{E.g.@: @emph{via} @command{tlmgr install cm-super helvetic
 inconsolata texinfo} .}  @pkg{cm-super}, @pkg{helvetic},
 @pkg{inconsolata} and @pkg{texinfo} which brought this to about 310MB.
@@ -5175,7 +5244,7 @@ install a distribution of Tcl/Tk.  There are two alternatives.  If you
 use @Rapp{} you will want to use X11-based Tcl/Tk (as used on other
 Unix-alikes), which is installed as part of the CRAN binary for @R{} and
 available as separate @code{tcl} and @code{tk} components from
-@uref{https://r.research.att.com/libs/}.  This may need
+@uref{https://mac.R-project.org/libs/}.  This may need
 @command{configure} options
 @example
 -with-tcltk=/usr/local/lib
@@ -5375,6 +5444,7 @@ A large selection of Open Source software can be installed from
 @uref{https://www.opencsw.org}, by default installed under
 @file{/opt/csw}.  Solaris 10 ships with @code{bzlib} version 1.0.6
 (sufficient) but @code{zlib} version 1.2.3 (too old): OpenCSW has 1.2.8.
+(Note from 2019: updating of OpenCSW has slowed or stopped.)
 
 At least when compiling with Oracle compilers, Solaris uses far more
 stack space than other platforms.  This makes it desirable to build PCRE
@@ -5628,11 +5698,11 @@ developers.)
 @node Cygwin, New platforms, OpenBSD, Platform notes
 @section Cygwin
 
-The 32-bit version has never worked well enough to pass @R{}'s
-@command{make check}, and residual support from earlier experiments was
-removed in @R{} 3.3.0.
+The 32-bit version never worked well enough to pass @R{}'s @command{make
+check}, and residual support from earlier experiments was removed in
+@R{} 3.3.0.
 
-The 64-bit version is completely unsupported.
+The 64-bit version was never unsupported.
 
 @node New platforms,  , Cygwin, Platform notes
 @section New platforms

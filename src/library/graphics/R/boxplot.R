@@ -1,7 +1,7 @@
 #  File src/library/graphics/R/boxplot.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2018 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -93,18 +93,22 @@ boxplot.matrix <- function(x, use.cols = TRUE, ...)
 
 boxplot.formula <-
     function(formula, data = NULL, ..., subset, na.action = NULL,
-             xlab = paste(names(mf)[-response], collapse = " : "),
-             ylab = names(mf)[ response],
-             add = FALSE, ann = !add,
+             xlab = mklab(y_var = horizontal),
+             ylab = mklab(y_var =!horizontal),
+             add = FALSE, ann = !add, horizontal = FALSE,
 	     drop = FALSE, sep = ".", lex.order = FALSE)
 {
     if(missing(formula) || (length(formula) != 3L))
 	stop("'formula' missing or incorrect")
+    if(missing(xlab) || missing(ylab))
+        mklab <- function(y_var)
+            if(y_var)  names(mf)[ response]
+            else paste(names(mf)[-response], collapse = " : ")
     m <- match.call(expand.dots = FALSE)
     if(is.matrix(eval(m$data, parent.frame())))
 	m$data <- as.data.frame(data)
     m$... <- m$drop <- m$sep <- m$lex.order <- NULL
-    m$xlab <- m$ylab  <- m$add <- m$ann <- NULL
+    m$xlab <- m$ylab  <- m$add <- m$ann <- m$horizontal <- NULL
     m$na.action <- na.action # force use of default for this method
     ## need stats:: for non-standard evaluation
     m[[1L]] <- quote(stats::model.frame.default)
@@ -112,7 +116,7 @@ boxplot.formula <-
     response <- attr(attr(mf, "terms"), "response")
     boxplot(split(mf[[response]], mf[-response],
 		  drop = drop, sep = sep, lex.order = lex.order),
-	    xlab = xlab, ylab = ylab, add = add, ann = ann,
+	    xlab = xlab, ylab = ylab, add = add, ann = ann, horizontal = horizontal,
 	    ...)
 }
 
@@ -122,10 +126,20 @@ bxp <- function(z, notch = FALSE, width = NULL, varwidth = FALSE,
                 ann = TRUE,
 		add = FALSE, at = NULL, show.names = NULL, ...)
 {
-    pars <- c(list(...), pars)
-    ## this could give duplicates, so ensure first mentioned wins.
-    pars <- pars[unique(names(pars))]
-
+    pars <- as.list(pars)
+    if(...length()) { ## ensure '...' takes precedence over 'pars' and does not have duplicates
+	nmsA <- names(args <- list(...))
+	if(anyDuplicated(nmsA)) {
+	    iD <- duplicated(nmsA)
+	    warning(sprintf(ngettext(sum(iD),
+				     "Duplicated argument %s is disregarded",
+				     "Duplicated arguments %s are disregarded"),
+			    sub("^list\\((.*)\\)", "\\1", deparse(args[iD]))),
+		    domain = NA)
+	    nmsA <- names(args <- args[!iD])
+	}
+	pars[nmsA] <- args
+    }
     bplt <- function(x, wid, stats, out, conf, notch, xlog, i)
     {
 	## Draw single box plot

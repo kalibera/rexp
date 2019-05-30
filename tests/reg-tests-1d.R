@@ -837,17 +837,18 @@ tools::assertError(t0(1, 2))
 
 ## stopifnot(e1, e2, ...) .. evaluating expressions sequentially
 one <- 1
-try(stopifnot(3 < 4:5, 5:6 >= 5, 6:8 <= 7, one <- 2))
-stopifnot(identical(one, 1))
+try(stopifnot(3 < 4:5, 5:6 >= 5, 6:8 <= 7, one <<- 2))
+stopifnot(identical(one, 1)) # i.e., 'one <<- 2' was *not* evaluated
 ## all the expressions were evaluated in R <= 3.4.x
-(et <- tryCatch(stopifnot(0 < 1:10, is.numeric(..vaporware..)),
+(et <- tryCatch(stopifnot(0 < 1:10, is.numeric(..vaporware..), stop("FOO!")),
                 error=identity))
 stopifnot(exprs = {
     inherits(et, "simpleError")
-    is.null(conditionCall(et)) ## || at least should *not* contain 'stopifnot'
+    ## no condition call, or at least should *not* contain 'stopifnot':
+    !grepl("^stopifnot", deparse(conditionCall(et), width.cutoff=500))
     grepl("'..vaporware..'", conditionMessage(et))
 })
-## call was the full 'stopifnot(..)' in R < 3.5.0; then  'is.numeric(..)', now empty
+## call was the full 'stopifnot(..)' in R < 3.5.0 ...
 
 
 ## path.expand shouldn't translate to local encoding PR#17120
@@ -962,16 +963,12 @@ stopifnot(exprs = {
 
 ## write.csv did not signal an error if the disk was full PR#17243
 if (file.access("/dev/full", mode = 2) == 0) { # Not on all systems...
+    cat("Using  /dev/full  checking write errors... ")
     # Large writes should fail mid-write
-    stopifnot(inherits(tryCatch(write.table(data.frame(x=1:1000000),
-                                            file = "/dev/full"),
-                                error = identity),
-                       "error"))
+    tools::assertError(write.table(data.frame(x=1:1000000), file = "/dev/full"))
     # Small writes should fail on closing
-    stopifnot(inherits(tryCatch(write.table(data.frame(x=1),
-                                                file = "/dev/full"),
-                                    warning = identity),
-                       "warning"))
+    tools::assertWarning(write.table(data.frame(x=1), file = "/dev/full"))
+    cat("[Ok]\n")
 }
 ## Silently failed up to 3.4.1
 
@@ -1114,9 +1111,10 @@ pL  <- vapply(fLrg, function(f)length(pretty(c(-f,f), n = 100,  min.n = 1)), 1L)
 pL
 pL3 <- vapply(fLrg, function(f)length(pretty(c(-f,f), n = 10^3, min.n = 1)), 1L)
 pL3
-stopifnot(71 <= pL, pL <= 141, 81 <= pL[-7], # not on Win-64: pL[-15] <= 121,
+stopifnot(71 <= pL, pL <= 141, # 81 <= pL[-7], # not on Win-64: pL[-15] <= 121,
           701 <= pL3, pL3 <= 1401) # <= 1201 usually
 ## in R < 3.5.0, both had values as low as 17
+## without long doubles, min(pl[-7]) is 71.
 
 
 ### Several returnValue() fixes (r 73111) --------------------------
@@ -1750,7 +1748,7 @@ stopifnot(is.null(getO("foobar")))
 
 
 ## Mantel-Haenszel test in "large" case, PR#17383:
-set.seed(101); n = 500000
+set.seed(101); n <- 500000
 aTab <- table(
     educ = factor(sample(1:3, replace=TRUE, size=n)),
     score= factor(sample(1:5, replace=TRUE, size=n)),
@@ -2017,6 +2015,7 @@ stopifnot(! is.null(names(sort.int(x))))
 d <- as.POSIXlt("2018-01-01")
 match(0, d)
 ## Gave a segfault in R < 3.6.0.
+proc.time() - .pt; .pt <- proc.time()
 
 
 ## as(1L, "double") - PR#17457
@@ -2273,15 +2272,18 @@ stopifnot(exprs = {
 ## in R <= 3.5.1
 
 
-## str() now even works with invalid objects:
+## str() now even works with invalid S4  objects:
+## this needs Matrix loaded to be an S4 generic
+if(requireNamespace('Matrix', lib.loc = .Library)) {
 moS <- mo <- findMethods("isSymmetric")
 attr(mo, "arguments") <- NULL
-validObject(mo, TRUE)# shows what's wrong
+print(validObject(mo, TRUE)) # shows what's wrong
 tools::assertError(capture.output( mo ))
 op <- options(warn = 1)# warning:
 str(mo, max.level = 2)
 options(op)# revert
 ## in R <= 3.5.x, str() gave error instead of the warning
+}
 
 
 ## seq.default() w/ integer overflow in border cases: -- PR#17497, Suharto Anggono
@@ -2574,6 +2576,174 @@ stopifnot(exprs = {
       isSymmetric(matrix(,0,0, dimnames=list(NULL, NULL)))
       isSymmetric(matrix(,0,0))
 })
+
+
+## bxp() did not signal anything about duplicate actual arguments:
+set.seed(3); bx.p <- boxplot(split(rt(100, 4), gl(5, 20)), plot=FALSE)
+tools::assertWarning(bxp(bx.p, ylab = "Y LAB", ylab = "two"), verbose=TRUE)
+w <- tryCatch(bxp(bx.p, ylab = "Y LAB", ylab = "two", xlab = "i", xlab = "INDEX"),
+              warning = conditionMessage)
+stopifnot(is.character(w), grepl('ylab = "two"', w), grepl('xlab = "INDEX"', w))
+
+
+## reformulate() bug  PR#17359
+(form <- reformulate(c("u", "log(x)"), response = "log(y)"))
+stopifnot(identical(form, log(y) ~ u + log(x)))
+## had *symbol*  `log(y)`  instead of call in R <= 3.5.1
+newf <- function(terms, resp)
+    list(e   = environment(),
+         form= reformulate(terms, resp))
+ef <- newf("x", "log(y)")
+stopifnot( identical(ef$e, environment(ef$form)),
+	  !identical(ef$e, .GlobalEnv),
+	  identical(format(ef$form), "log(y) ~ x"))
+## Back compatibility + deprecation warning:
+notC <- "Model[no 4]"
+form <- `Model[no 4]` ~ .
+f1 <- function(p) reformulate(".", notC)
+f2 <- function(e) f1(e)
+stopifnot(exprs = {
+    identical(form, suppressWarnings(reformulate(".", notC))) # << will STOP working!
+    identical(form, reformulate(".", as.name(notC)))
+    identical(form, reformulate(".", paste0("`", notC, "`")))
+    inherits(tt <- tryCatch(reformulate(".", notC), warning=identity),
+             "deprecatedWarning")
+    inherits(tt, "warning")
+    conditionCall(tt)[[1]] == quote(reformulate)
+    inherits(t1 <- tryCatch(f1(pi), warning=identity), "deprecatedWarning")
+    inherits(t2 <- tryCatch(f2(27), warning=identity), "deprecatedWarning")
+    all.equal(t1, tt) # including call 'reformulate(..)'
+    all.equal(t2, tt)
+})
+writeLines(conditionMessage(tt))
+
+
+## stopifnot() now works *nicely* with expression object (with 'exprs' name):
+ee <- expression(exprs=all.equal(pi, 3.1415927), 2 < 2, stop("foo!"))
+te <- tryCatch(stopifnot(exprs = ee), error=identity)
+stopifnot(conditionMessage(te) == "2 < 2 is not TRUE")
+## conditionMessage(te) was  "ee are not all TRUE" in R 3.5.x
+##
+## Empty 'exprs' should work in almost all cases:
+stopifnot()
+stopifnot(exprs = {})
+e0 <- expression()
+stopifnot(exprs = e0)
+do.call(stopifnot, list(exprs = expression()))
+do.call(stopifnot, list(exprs = e0))
+## the last three failed in R 3.5.x
+
+
+## as.matrix.data.frame() w/ character result and logical column, PR#17548
+cx <- as.character(x <- c(TRUE, NA, FALSE))
+stopifnot(exprs = {
+    identical(cx, as.matrix(data.frame(x, y="chr"))[,"x"])
+    identical(x, as.logical(cx))
+})
+
+
+## Failed to work after r76382--8:
+tools::assertError(formula("3"), verbose=TRUE)
+stopifnot(exprs = {
+    ## New formula(<character>) specs:
+    ## These give deprecation warnings:
+    is.list(op <- options(warn = 1))
+    identical(formula("ran = ~ 1|G"), ~ 1 | G)
+    identical(formula(c("~", "foo")), ~ foo )
+    identical(formula("({y ~ x})"), y ~ x)
+    identical(formula("{ ~ x }"),   ~ x)
+  TRUE || { ## all these "bugs" not yet in R <= 3.6.0
+    identical(formula(c("y", "~", "x +    (1 | G)")), y ~ x + (1 | G))
+    identical(formula(c("y", "~", "x +", "(1 | G)")), y ~ x + (1 | G))
+  }## not yet
+    identical(formula(c("~",    "x","+    (1 | G)")), ~x) ## NOT YET:   ~ x + (1 | G))
+    is.list(options(op))
+})
+tools::assertWarning(formula("ran= ~ 1|G"),"deprecatedWarning", verbose=TRUE)
+tools::assertWarning(formula(c("~", "x")), "deprecatedWarning", verbose=TRUE)
+tools::assertWarning(formula("({y ~ x})"), "deprecatedWarning", verbose=TRUE)
+tools::assertWarning(formula("{ ~ x }"),   "deprecatedWarning", verbose=TRUE)
+
+
+## str2expression(<empty>) :
+stopifnot(identical(str2expression(character()), expression()))
+
+
+## quasi(*, variance = list()) - should not deparse(); PR#17560
+## like quasipoisson() :
+devRes <- function(y, mu, wt) { 2 * wt * (y * log(ifelse(y == 0, 1, y/mu)) - (y-mu)) }
+init <- expression({
+    if(any(y < 0)) stop("y < 0")
+    n <- rep.int(1, nobs)
+    mustart <- y + 0.1
+})
+myquasi <- quasi(link = "log",
+                 variance = list(name = "my quasi Poisson",
+                     varfun  = function(mu) mu,
+                     validmu = function(mu) all(is.finite(mu)) && all(mu > 0),
+                     dev.resids = devRes,
+                     initialize = init))
+x  <- runif(100, min=0, max=1)
+y  <- rpois(100, lambda=1)
+fq1 <- glm(y ~ x, family = myquasi)
+fqP <- glm(y ~ x, family = quasipoisson)
+str(keep <- setdiff(names(fq1), c("family", "call")))
+identNoE <- function(x,y, ...) identical(x,y, ignore.environment=TRUE, ...)
+stopifnot(exprs = {
+    all.equal(fq1[keep], fqP[keep])
+    ## quasi() failed badly "switch(vtemp, ... EXPR must be a length 1 vector" in R <= 3.6.0
+    identNoE(quasi(var = mu),        quasi(variance = "mu"))
+    identNoE(quasi(var = mu(1-mu)),  quasi(variance = "mu(1- mu)"))# both failed in R <= 3.6.0
+    identNoE(quasi(var = mu^3),      quasi(variance = "mu ^ 3"))   #  2nd failed in R <= 3.6.0
+    is.character(msg <- tryCatch(quasi(variance = "log(mu)"), error=conditionMessage)) &&
+        grepl("variance.*log\\(mu\\).* invalid", msg) ## R <= 3.6.0: 'variance' "NA" is invalid
+})
+
+
+## rbind.data.frame() should *not* drop NA level of factors -- PR#17562
+fcts <- function(N=8, k=3) addNA(factor(sample.int(k, N, replace=TRUE), levels=1:k))
+set.seed(7) # <- leads to some  "0 counts" [more interesting: they are kept]
+dfa <- data.frame(x=fcts())
+dfb <- data.frame(x=fcts()) ; rbind(table(dfa), table(dfb))
+dfy <- data.frame(y=fcts())
+yN <- c(1:3, NA_character_, 5:8)
+dfay  <- cbind(dfa, dfy)
+dfby  <- cbind(dfa, data.frame(y = yN))
+dfaby <- rbind(dfay, dfby)
+stopifnot(exprs = {
+    identical(levels(dfa$x), c(1:3, NA_character_) -> full_lev)
+    identical(levels(dfb$x),  full_lev)
+    identical(levels(dfay$x), full_lev) # cbind() does work
+    identical(levels(dfay$y), full_lev)
+    identical(levels(dfby$x), full_lev)
+    identical(levels(dfby$y), as.character((1:8)[-4]) -> levN) # no NA levels
+    identical(levels(rbind(dfa, dfb)$x), full_lev) # <== not in  R <= 3.6.0
+    identical(levels(dfaby$x),           full_lev)
+    identical(levels(dfaby$y),               levN) # failed in c76513
+    identical(lapply(rbind(dfay, dfby, factor.exclude = NA), levels),
+	      list(x = as.character(1:3), y = levN))
+    identical(lapply(rbind(dfay, dfby, factor.exclude=NULL), levels),
+	      list(x = full_lev, y = yN))
+})
+
+## rbind.data.frame() should work in all cases with "matrix-columns":
+m <- matrix(1:12, 3) ## m.N := [m]atrix with (row)[N]ames :
+m.N <- m ; rownames(m.N) <- letters [1:3]
+## data frames with these matrices as *column*s:
+dfm   <- data.frame(c = 1:3, m = I(m))
+dfm.N <- data.frame(c = 1:3, m = I(m.N))
+(mNm <- rbind(m.N, m))
+dfmmN <- rbind(dfm, dfm.N)
+dfmNm <- rbind(dfm.N, dfm)
+stopifnot(exprs = {
+    identical(     dim(dfmNm), c(6L, 2L))
+    identical(dimnames(dfmNm), list(c(letters[1:3],1:3), c("c","m")))
+    is.matrix(m. <- dfmNm[,"m"])
+    identical(dim(m.), c(6L, 4L))
+    identical(dfmNm, dfmmN[c(4:6, 1:3), ])
+    identical(unname(mNm), unname(m.))
+})
+## The last rbind() had failed since at least R 2.0.0
 
 
 

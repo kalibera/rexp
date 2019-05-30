@@ -82,7 +82,8 @@ if(FALSE) { # object.size() itself is taking a lot of time!
     os <- structure(19327353184, class = "object_size")
     print(os, units = "GB") # 18
 }
-if(exists("res")) rm(res); gc() # for the next step
+if(exists("res")) rm(res)
+gc(reset = TRUE) # for the next step
 
 ### Testing PR#17992  c() / unlist() name creation for large vectors
 ## Part 2 (https://bugs.r-project.org/bugzilla/show_bug.cgi?id=17292#c4):
@@ -99,7 +100,8 @@ str(res) # is fast!
 ## - attr(*, "names")= chr [1:2147483648] "a.b" "a.b" "a.b" "a.b" ...
 gc() # back to ~ 18.4 GB
 rm(res)
-}); gc() # for the next step
+})
+gc(reset = TRUE) # for the next step
 
 ## Large string's encodeString() -- PR#15885
 if(availableGB > 4) system.time(local(withAutoprint({
@@ -119,7 +121,8 @@ if(availableGB > 6) system.time(withAutoprint({
     head(r) ; length(r) # was only 21 in  R < 3.5.0
     stopifnot(all.equal(length(r), 400000001, tol = 0.1))
 })) ## 4.8--5.5 sec.
-rm(r); gc()
+rm(r)
+gc()
 
 n <- 4e4 # << for quick testing, comment next line
 n <- 2.2e9
@@ -127,8 +130,8 @@ n <- 2.2e9
 if(availableGB > 60) withAutoprint({
     n/.Machine$integer.max  # 1.024 ==> need  long vectors!
     ii <- seq_len(n)          #   user  system elapsed  [seq_len() fast: ALTREP "compact"]
-    system.time(ii <- ii + 0) #
-    system.time(i2 <- ii[-n]) # 14.267  23.532  37.918 (slow!)
+    system.time(ii <- ii + 0) #  6.726  17.558  24.450 (slow!, seen faster)
+    system.time(i2 <- ii[-n]) # 14.267  23.532  37.918 (slow!, seen slower: el.= 51)
     ##
     ## NB: keep n, i, i2 for "below"
 })
@@ -151,7 +154,8 @@ if(availableGB > 99) withAutoprint({
 	length(ap1$x) == 50
 	all.equal(ap1$y, sin(pi*ap1$x), tol= 1e-9)
     })
-    rm(ap1); gc() ## keep x,y,n,i2 --> max used: 92322 Mb
+    rm(ap1) # keep x,y,n,i2
+    gc()     # --> max used: 92322 Mb
 })
 
 ## which() and ifelse() working for long vectors
@@ -230,9 +234,9 @@ if(availableGB > 12) withAutoprint({
     stopifnot(is.integer(x31),
               identical(S,   2^62),
               identical(S.4, 2^64))
-    system.time(x32 <- c(x31, x31)) # 14 sec  and 16 GB
+    system.time(x32 <- c(x31, x31)) # 13 user | 20.8 elapsed  (and 16 GB)
     rm(x31)# now,  sum vvv  will switch to use irsum() [double accumulator]
-    system.time(S.2 <- sum(x32))
+    system.time(S.2 <- sum(x32)) # 8 sec
     stopifnot(S.2 == 2^63)
     rm(x32)
 })
@@ -241,13 +245,31 @@ if(availableGB > 12) withAutoprint({
 ## seq() remaining integer: (PR 17497, comment #9)
 if(availableGB > 16) withAutoprint({
     i <- as.integer(2^30)
-    system.time(i2.31 <- seq(-i, by=1L, length=2*i+1)) # 30.6 sec elapsed
+    system.time(i2.31 <- seq(-i, by=1L, length=2*i+1)) # 11.1 user | 19.2 elapsed
     object.size(i2.31) # 8'589'934'648 bytes [ was 17.17 GB in R <= 3.5.x ]
     stopifnot(is.integer(i2.31),  i2.31[1] == -i,  i2.31[length(i2.31)] == i)
+
+    ## pmax(), pmin() with long vectors, PR 17533
+    if(availableGB > 24) withAutoprint({
+        system.time(i2.31 <- pmin(i2.31, 0L)) # 7.2 sec user | 11.2 elapsed
+        str(i2.31)
+        system.time(stopifnot(i2.31[(i+1):length(i2.31)] == 0)) # 16.7 user | 28.0 elapsed
+    })
 })
 
 
+## match(<long character>, *)  PR#17552
+if(availableGB > 44) withAutoprint({ ## seen 40 G ('RES')
+    system.time(m <- match(rep("a", 2^31), "a")) # 34.7 sec user (55 elapsed)
+    stopifnot(all(m == 1L))
+    rm(m)
+    system.time({x <- character(2^31); x[26:1] <- letters }) # 1.6 user | 9.4 elapsed
+    system.time(m <- match(x, "a"))# 18.2 user | 51.6 elapsed
+    head(m, 30)
+    system.time(stopifnot(m[26] == 1L, is.na(m[-26])))
+    rm(x, m)
+})
+
 
 gc() # NB the "max used"
-
-proc.time() # total
+proc.time() # total  [ ~ 40 minutes in full case, 2019-04-12]

@@ -6,6 +6,125 @@
 \encoding{UTF-8}
 
 \section{\Rlogo CHANGES IN R-devel}{
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{assertError()} and \code{assertWarning()} (in package
+      \pkg{tools}) can now check for \emph{specific} error or warning
+      classes \emph{via} the new optional second argument \code{classes}
+      (which is not back compatible with previous use of an unnamed second
+      argument.)
+
+      \item \code{Df2formula()}, the utility for the data frame method of
+      \code{formula()}, now works without parsing and explicit evaluation,
+      starting from Suharto Anggono's suggestion in \PR{17555}.
+
+      \item \code{approxfun()} and \code{approx()} gain a new argument
+      \code{na.rm} defaulting to true.  If set to false, missing
+      \code{y} values now propagate into the interpolated values.
+
+      \item Long vectors are now supported in \code{for()} loops.
+    }
+  }
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item Make macro \samp{F77_VISIBILITY} has been removed
+      and replaced by \samp{F_VISIBILITY}.
+
+      \item Make macros \samp{F77}, \samp{FCPIFCPLAGS} and
+      \samp{SHLIB_OPENMP_FCFLAGS} have been removed and replaced by
+      \samp{FC}, \samp{FPICFLAGS} and \samp{SHLIB_OPENMP_FFLAGS}
+      respectively.  (Most \command{make} programs will set \samp{F77}
+      to the value of \samp{FC}, which is set for package compilation.
+      But portable code should not rely on this.)
+
+      \item \command{R CMD config} no longer knows about the
+      unused settings \samp{F77} and \samp{FCPIFCPLAGS}.
+    }
+  }
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item Detection of the C stack direction has been moved from
+      run-time to \command{configure}: this is safer with LTO builds and
+      allows the detection to be overridden -- see file \file{config.site}.
+
+      \item User-set \samp{DEFS} (e.g., in \file{config.site} is now
+      used for compiling packages (including base packages).
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{formula(x)} with \code{length(x) > 1} character vectors,
+      is deprecated now.  Such use has been rare, and has \sQuote{worked}
+      as expected in some cases only.  In other cases, wrong \code{x} have
+      silently been truncated, not detecting previous errors.
+
+      \item Long-standing issue where the X11 device could lose events
+      shortly after startup has been addressed \PR{16702}.
+
+      \item \code{rbind.data.frame()} no longer drops \code{<NA>} levels
+      from factor columns by default, \PR{17562}.
+
+      \item \code{available.packages()} and hence \code{install.packages()}
+      now pass their \code{...} to \code{download.file()}, fulfilling the
+      wish of \PR{17532}.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.6.0 patched}{
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item The use of a character vector with \code{.Fortran()} is
+      formally deprecated and gives a non-portability warning.  (It has
+      long been strongly discouraged in \sQuote{Writing R Extensions}.)
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item On Windows, GUI package installation via \code{menuInstallPkgs()}
+      works again, thanks to Len Weil's and Duncan Murdoch's \PR{17556}.
+
+      \item \command{R CMD check} on \code{data()} fixing \PR{17558}
+      thanks to Duncan Murdoch.
+
+      \item \code{quasi(*, variance = list(..))} now works more
+      efficiently, and should work in all cases fixing \PR{17560}.
+      Further, \code{quasi(var = mu(1-mu))} and \code{quasi(var = "mu ^ 3")}
+      now work, and \code{quasi(variance = "log(mu)")} now gives a correct
+      error message.
+
+      \item Creation of lazy loading database during package installation is
+      again robust to Rprofile changing the current working directory
+      (\PR{17559}).
+
+      \item \code{boxplot(y ~ f, horizontal=TRUE)} now produces correct x-
+      and y-labels.
+
+      \item \code{rbind.data.frame()} allows to keep \code{<NA>} levels
+      from factor columns (\PR{17562}) via new option \code{factor.exclude}.
+
+      Additionally, it works in one more case with matrix-columns which
+      had been reported on 2017-01-16 by Krzysztof Banas.
+
+      \item Correct messaging in C++ pragma checks in \pkg{tools} code for
+      \command{R CMD check}, fixing \PR{17566} thanks to Xavier Robin.
+
+      \item{print()}ing and auto-printing no longer differs for
+      \code{function}s with a user defined \code{print.function}, thanks to
+      Bill Dunlap's report.
+
+      \item [On Windows only], \code{writeClipboard(.., format = <n>)} now
+      does correctly pass \code{format} to the underlying C code, thanks to
+      a bug report (with patch) by Jenny Brian.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.6.0}{
 
    \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
      \itemize{
@@ -26,13 +145,16 @@
 
        \item The default method for generating from a discrete uniform
        distribution (used in \code{sample()}, for instance) has been
-       changed. This addresses the fact, pointed out by Ottoboni and
+       changed.  This addresses the fact, pointed out by Ottoboni and
        Stark, that the previous method made \code{sample()} noticeably
        non-uniform on large populations.  See \PR{17494} for a
-       discussion. The previous method can be requested using
+       discussion.  The previous method can be requested using
        \code{RNGkind()} or \code{RNGversion()} if necessary for
        reproduction of old results.  Thanks to Duncan Murdoch for
        contributing the patch and Gabe Becker for further assistance.
+
+       The output of \code{RNGkind()} has been changed to also return the
+       \sQuote{kind} used by \code{sample()}.
      }
   }
 
@@ -320,12 +442,43 @@
 
       \item \code{barplot()} gets a formula method, thanks to a patch
       proposal by Arni Magnusson in \PR{17521}.
+
+      \item \code{pmax()} and \code{pmin(x)} now also work for long
+      vectors, thanks to Suharto Anggono's \PR{17533}.
+
+      \item \code{bxp()} now warns when omitting duplicated arguments.
+
+      \item New \code{hcl.colors()} function to provide wide range of
+      HCL-based colour palettes with much better perceptual properties
+      than the existing RGB/HSV-based palettes like \code{rainbow()}.
+
+      Also a new \code{hcl.pals()} function to list available palette
+      names for \code{hcl.colors()}.
+
+      Contributed by Achim Zeileis.
+
+      \item The default colours for \code{image()} and
+      \code{filled.contour()} are now based on \code{hcl.colors()}.
+
+      \item The palette-generating functions \code{rainbow()},
+      \code{gray.colors()}, etc.\sspace{}get a new \code{rev} argument
+      to facilitate reversing the order of colors.
+
+      \item New \code{str2lang()} and \code{str2expression()} as streamlined
+      versions of \code{parse(text=., keep.source=FALSE)} allow to abstract
+      typical call constructions, e.g., in \code{formula} manipulations.
+      (Somewhat experimental) % << TO DO
+
+      \item Add \code{update_PACKAGES()} for incrementally updating a
+      package repository index, instead of rebuilding the index from
+      scratch. Thanks to Gabe Becker in \PR{17544} for the patch, based
+      on part of his \pkg{switchr} package.
     }
   }
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
-      \item The  options selected  for the C++ compiler default to the
+      \item The options selected for the C++ compiler default to the
       C++11 standard if supported, otherwise to the C++98 standard.
 
       \item Visibility macros such as \samp{C_VISIBILITY} can now be
@@ -365,6 +518,8 @@
 
       \item The \command{configure} macro \samp{MAKEINFO} has been
       updated to \samp{TEXI2ANY}.
+
+      \item Support for \command{make install-strip} has been enhanced.
     }
   }
 
@@ -395,8 +550,9 @@
 
       Legal FORTRAN 77 code is also legal fixed-form Fortran 9x; however
       this change legitimizes the use of later features, in particular
-      to replace features marked \sQuote{obsolescent} in Fortran 95
-      which \command{gfortran} 8.x warns about.
+      to replace features marked \sQuote{obsolescent} in Fortran 90 and
+      \sQuote{deleted} in Fortran 2018 which \command{gfortran} 8.x and
+      later warn about.
 
       \item Packages containing files in the \file{src} directory with
       extensions \file{.f90} or \file{.f95} are now linked using the C
@@ -417,7 +573,24 @@
       \file{src/Makevars.win}).
 
       \item The make macro \samp{F_VISIBILITY} is now preferred for
-      both fixed-form and free-form Fortran.
+      both fixed-form and free-form Fortran, for use in
+      \file{src/Makevars} and similar.
+
+      \item \command{R CMD INSTALL} gains a new option \option{--strip}
+      which (where supported) strips installed shared object(s): this
+      can also be achieved by setting the environment variable
+      \env{_R_SHLIB_STRIP_} to a true value.
+
+      The new option \option{--strip-lib} attempts stripping of
+      static and shared libraries installed under \file{lib}.
+
+      These are most useful on platforms using GNU \code{binutils} (such
+      as Linux) and compiling with \option{-g} flags.
+
+      \item There is more support for installing UTF-8-encoded packages
+      in a strict Latin-1 locale (and probably for other Latin locales):
+      non-ASCII comments in \R code (and \file{NAMESPACE} files) are
+      worked around better.
     }
   }
 
@@ -463,7 +636,13 @@
       \item \command{R CMD check} now checks
       \command{autoconf}-generated \file{configure} files have their
       corresponding source files, including optionally attempting to
-      regenerate them on platforms with \command{autoconf}.
+      regenerate them on platforms with \command{autoreconf}.
+
+      \item \command{R CMD build} has a new option
+      \option{--compression} to select the compression used for the tarball.
+
+      \item \command{R CMD build} now removes \file{src/*.mod} files on
+      all platforms.
     }
   }
 
@@ -479,6 +658,11 @@
       protection of intermediate results from (usually ill-advised)
       assignments in arguments to \code{BUILTIN} functions. Properly
       written package code should not be affected.
+
+      \item \code{R_unif_index} is now considered to be part of the C API.
+
+      \item \code{R_GetCurrentEnv()} allows C code to retrieve the current
+      environment.
     }
   }
 
@@ -750,8 +934,33 @@
 
       \item \code{as.roman(3) <= 2:4} and all other comparisons now work,
       as do group \code{"Summary"} function calls such as
-      \code{max(as.roman(sample(20)))} and \code{as.roman(NA)}.  (Parly reported
-      by Bill Dunlap in \PR{17542}.)
+      \code{max(as.roman(sample(20)))} and \code{as.roman(NA)}.
+      (Partly reported by Bill Dunlap in \PR{17542}.)
+
+      \item \code{reformulate("x", response = "sin(y)")} no longer produces
+      extra back quotes, \PR{17359}, and gains new optional argument
+      \code{env}.
+
+      \item When reading console input from \file{stdin} with re-encoding
+      (\command{R --encoding=enc < input}) the code on a Unix-alike now
+      ensures that each converted input line is terminated with a
+      newline even if re-encoding fails.
+
+      \item \code{as.matrix.data.frame()} now produces better strings from
+      logicals, thanks to \PR{17548} from Gabe Becker.
+
+      \item The S4 generic signature of \code{rowSums()},
+      \code{rowMeans()}, \code{colSums()} and \code{colMeans()} is
+      restricted to \code{"x"}.
+
+      \item \code{match(x, tab)} now works for long \emph{character}
+      vectors \code{x}, thanks to \PR{17552} by Andreas Kersting.
+
+      \item Class unions are unloaded when their namespace is
+      unloaded (\PR{17531}, adapted from a patch by Brodie Gaslam).
+
+      \item \code{selectMethod()} is robust to ANY-truncation of method
+      signatures (thanks to Herve Pages for the report).
     }
   }
 }
