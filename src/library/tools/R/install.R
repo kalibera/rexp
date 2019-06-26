@@ -285,9 +285,11 @@ if(FALSE) {
             pkg_name <- basename(pkg)
             pkg_name <- sub("\\.zip$", "", pkg_name)
             pkg_name <- sub("_[0-9.-]+$", "", pkg_name)
+            reuse_lockdir <- lock && !pkglock
             if (pkglock)
                 lock <- "pkglock"
-            utils:::unpackPkgZip(pkg, pkg_name, lib, libs_only, lock)
+            utils:::unpackPkgZip(pkg, pkg_name, lib, libs_only, lock,
+                                 reuse_lockdir = reuse_lockdir)
             return()
         }
 
@@ -969,6 +971,9 @@ if(FALSE) {
                     file.copy(instdir, lockdir, recursive = TRUE,
                               copy.date = TRUE)
             } else if (more_than_libs) unlink(instdir, recursive = TRUE)
+            if (more_than_libs && dir.exists(instdir))
+                # On Windows, a DLL cannot be unlinked if in use
+                errmsg("cannot remove earlier installation, is it in use?")
             dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
         }
 

@@ -18,7 +18,7 @@
 
 ## Unexported helper
 unpackPkgZip <- function(pkg, pkgname, lib, libs_only = FALSE,
-                         lock = FALSE, quiet = FALSE)
+                         lock = FALSE, quiet = FALSE, reuse_lockdir = FALSE)
 {
     .zip.unpack <- function(zipname, dest)
     {
@@ -104,11 +104,13 @@ unpackPkgZip <- function(pkg, pkgname, lib, libs_only = FALSE,
 	    lockdir <- if(identical(lock, "pkglock"))
                 file.path(lib, paste0("00LOCK-", pkgname))
             else file.path(lib, "00LOCK")
-	    if (file.exists(lockdir)) {
-                stop(gettextf("ERROR: failed to lock directory %s for modifying\nTry removing %s",
-                              sQuote(lib), sQuote(lockdir)), domain = NA)
-	    }
-	    dir.create(lockdir, recursive = TRUE)
+            if (!reuse_lockdir) {
+  	        if (file.exists(lockdir)) {
+                    stop(gettextf("ERROR: failed to lock directory %s for modifying\nTry removing %s",
+                                  sQuote(lib), sQuote(lockdir)), domain = NA)
+	        }
+	        dir.create(lockdir, recursive = TRUE)
+            }
 	    if (!dir.exists(lockdir))
                 stop(gettextf("ERROR: failed to create lock directory %s",
                               sQuote(lockdir)), domain = NA)
@@ -126,7 +128,12 @@ unpackPkgZip <- function(pkg, pkgname, lib, libs_only = FALSE,
         	}, add=TRUE)
         	restorePrevious <- FALSE
             }
-	    on.exit(unlink(lockdir, recursive = TRUE), add=TRUE)
+            on.exit({
+                ldel <- if (reuse_lockdir) 
+                            file.path(lockdir, pkgname)
+                        else lockdir
+                unlink(ldel, recursive = TRUE)
+            }, add=TRUE)
         }
 
         if(libs_only) {
@@ -202,28 +209,12 @@ unpackPkgZip <- function(pkg, pkgname, lib, libs_only = FALSE,
              contriburl = contrib.url(repos),
              method, available = NULL, destdir = NULL,
              dependencies = FALSE, libs_only = FALSE,
-             lock = getOption("install.lock", FALSE), quiet = FALSE, ...)
+             lock = getOption("install.lock", TRUE), quiet = FALSE, ...)
 {
     if(!length(pkgs)) return(invisible())
-    ## look for package in use.
     pkgnames <- basename(pkgs)
     pkgnames <- sub("\\.zip$", "", pkgnames)
     pkgnames <- sub("_[0-9.-]+$", "", pkgnames)
-    ## there is no guarantee we have got the package name right:
-    ## foo.zip might contain package bar or Foo or FOO or ....
-    ## but we can't tell without trying to unpack it.
-    inuse <- search()
-    inuse <- sub("^package:", "", inuse[grep("^package:", inuse)])
-    inuse <- pkgnames %in% inuse
-    if(any(inuse)) {
-        warning(sprintf(ngettext(sum(inuse),
-                "package %s is in use and will not be installed",
-                "packages %s are in use and will not be installed"),
-                        paste(sQuote(pkgnames[inuse]), collapse=", ")),
-                call. = FALSE, domain = NA, immediate. = TRUE)
-        pkgs <- pkgs[!inuse]
-        pkgnames <- pkgnames[!inuse]
-    }
 
     if(is.null(contriburl)) {
         for(i in seq_along(pkgs)) {

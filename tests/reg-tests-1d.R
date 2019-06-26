@@ -2619,19 +2619,31 @@ writeLines(conditionMessage(tt))
 
 
 ## stopifnot() now works *nicely* with expression object (with 'exprs' name):
-ee <- expression(exprs=all.equal(pi, 3.1415927), 2 < 2, stop("foo!"))
-te <- tryCatch(stopifnot(exprs = ee), error=identity)
+ee <- expression(xpr=all.equal(pi, 3.1415927), 2 < 2, stop("foo!"))
+te <- tryCatch(stopifnot(exprObject = ee), error=identity)
 stopifnot(conditionMessage(te) == "2 < 2 is not TRUE")
 ## conditionMessage(te) was  "ee are not all TRUE" in R 3.5.x
+t2 <- tryCatch(stopifnot(exprs = { T }, exprObject = ee), error=identity)
+t3 <- tryCatch(stopifnot(TRUE, 2 < 3,   exprObject = ee), error=identity)
+f <- function(ex) stopifnot(exprObject = ex)
+t4 <- tryCatch(f(ee), error=identity)
+stopifnot(grepl("one of 'exprs', 'exprObject' ", conditionMessage(t2)),
+          conditionMessage(t2) == conditionMessage(t3),
+          conditionMessage(t4) == conditionMessage(te)
+          )
+(function(e) stopifnot(exprObject = e))(expression(1 < 2, 2 <= 2:4))
+## the latter (with 'exprs = e') gave  Error in eval(exprs) : object 'e' not found
+
+
 ##
 ## Empty 'exprs' should work in almost all cases:
 stopifnot()
 stopifnot(exprs = {})
 e0 <- expression()
-stopifnot(exprs = e0)
-do.call(stopifnot, list(exprs = expression()))
-do.call(stopifnot, list(exprs = e0))
-## the last three failed in R 3.5.x
+stopifnot(exprObject = e0)
+do.call(stopifnot, list(exprObject = expression()))
+do.call(stopifnot, list(exprObject = e0))
+## the last three (w 'exprs = ')  failed in R 3.5.x
 
 
 ## as.matrix.data.frame() w/ character result and logical column, PR#17548
@@ -2709,19 +2721,41 @@ dfy <- data.frame(y=fcts())
 yN <- c(1:3, NA_character_, 5:8)
 dfay  <- cbind(dfa, dfy)
 dfby  <- cbind(dfa, data.frame(y = yN))
-dfaby <- rbind(dfay, dfby)
-stopifnot(exprs = {
+dfcy  <- dfa; dfcy$y <- yN # y: a <char> column
+## dNay := drop unused levels from dfay incl NA
+dNay <- dfay; dNay[] <- lapply(dfay, factor)
+str(dfay) # both (x, y) have NA level
+str(dfby) # (x: yes / y: no) NA level
+str(dNay) # both: no NA level
+stopifnot(exprs = { ## "trivial" (non rbind-related) assertions :
     identical(levels(dfa$x), c(1:3, NA_character_) -> full_lev)
     identical(levels(dfb$x),  full_lev)
     identical(levels(dfay$x), full_lev) # cbind() does work
     identical(levels(dfay$y), full_lev)
     identical(levels(dfby$x), full_lev)
+    is.character(dfcy$y)
+	   anyNA(dfcy$y)
     identical(levels(dfby$y), as.character((1:8)[-4]) -> levN) # no NA levels
+    identical(lapply(dNay, levels),
+              list(x = c("2","3"), y = levN[1:3])) # no NA levels
+})
+dfaby <- rbind(dfay, dfby)
+dNaby <- rbind(dNay, dfby)
+dfacy <- rbind(dfay, dfcy)
+dfcay <- rbind(dfcy, dfay) # 1st arg col. is char => rbind() keeps char
+stopifnot(exprs = {
     identical(levels(rbind(dfa, dfb)$x), full_lev) # <== not in  R <= 3.6.0
     identical(levels(dfaby$x),           full_lev)
-    identical(levels(dfaby$y),               levN) # failed in c76513
+    identical(levels(dfaby$y),                 yN) # failed a while
+    identical(levels(dNaby$y),               levN) #  (ditto)
+    identical(dfacy, dfaby)
+    is.character(dfcay$y)
+	   anyNA(dfcay$y)
+    identical(dfacy$x, dfcay$x)
+    identical(lapply(rbind(dfby, dfay), levels),
+              list(x = full_lev, y = c(levN, NA)))
     identical(lapply(rbind(dfay, dfby, factor.exclude = NA), levels),
-	      list(x = as.character(1:3), y = levN))
+              list(x = as.character(1:3), y = levN))
     identical(lapply(rbind(dfay, dfby, factor.exclude=NULL), levels),
 	      list(x = full_lev, y = yN))
 })
@@ -2744,6 +2778,35 @@ stopifnot(exprs = {
     identical(unname(mNm), unname(m.))
 })
 ## The last rbind() had failed since at least R 2.0.0
+
+
+## as.data.frame.array(<1D array>) -- PR#17570
+str(x2 <- as.data.frame(array(1:2)))
+stopifnot(identical(x2[[1]], 1:2))
+## still was "array" in R <= 3.6.0
+
+
+## vcov(<quasi>, dispersion = *) -- PR#17571
+counts <- c(18,17,15,20,10,20,25,13,12)
+treatment <- gl(3,3)
+outcome <- gl(3,1,9)
+## Poisson and Quasipoisson
+ poisfit <- glm(counts ~ outcome + treatment, family = poisson())
+qpoisfit <- glm(counts ~ outcome + treatment, family = quasipoisson())
+spois     <- summary( poisfit)
+sqpois    <- summary(qpoisfit)
+sqpois.d1 <- summary(qpoisfit, dispersion=1)
+SE1 <- sqrt(diag(V <- vcov(poisfit)))
+stopifnot(exprs = { ## Same variances and same as V
+    all.equal(vcov(spois), V)
+    all.equal(vcov(qpoisfit, dispersion=1), V) ## << was wrong
+    all.equal(vcov(sqpois.d1), V)
+    all.equal(spois    $coefficients[,"Std. Error"], SE1)
+    all.equal(sqpois.d1$coefficients[,"Std. Error"], SE1)
+    all.equal(sqpois   $coefficients[,"Std. Error"],
+              sqrt(sqpois$dispersion) * SE1)
+})
+## vcov(. , dispersion=*) was wrong on R versions 3.5.0 -- 3.6.0
 
 
 

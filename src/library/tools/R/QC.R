@@ -7321,17 +7321,24 @@ function(dir, localOnly = FALSE)
             urls <- udb$URL
             parts <- parse_URI_reference(urls)
             ind <- (parts[, "scheme"] %in% c("", "file"))
-            fpaths <- parts[ind, "path"]
+            fpaths1 <- fpaths0 <- parts[ind, "path"]
+            ## Allow for
+            ##   /doc/html /demo /library
+            ## which are handled by the http server, and remap ../doc to
+            ## ../inst/doc (even though such relative paths in Rd files
+            ## will generally not work or the pdf refmans).
+            fpaths1[grepl("^(/doc/html|/demo|/library)", fpaths1)] <- ""
+            fpaths1 <- sub("^../doc", "../inst/doc", fpaths1)
             parents <- udb[ind, "Parent"]
             ppaths <- dirname(parents)
             pos <- which(!file.exists(file.path(ifelse(nzchar(ppaths),
                                                        file.path(dir,
                                                                  ppaths),
                                                        dir),
-                                                fpaths)))
+                                                fpaths1)))
             if(length(pos))
                 out$bad_file_URIs <-
-                    cbind(fpaths[pos], parents[pos])
+                    cbind(fpaths0[pos], parents[pos])
         }
     }
 
@@ -9129,15 +9136,25 @@ function(package, lib.loc = NULL)
 
     if(length(package) != 1L)
         stop("argument 'package' must be of length 1")
+
+    if(package == "base") return()
+    
     dir <- find.package(package, lib.loc)
-    if(!dir.exists(file.path(dir, "R"))) return
+    if(!dir.exists(file.path(dir, "R"))) return()
+    
     db <- .read_description(file.path(dir, "DESCRIPTION"))
     suggests <- unname(.get_requires_from_package_db(db, "Suggests"))
+    if(!length(suggests)) return()
 
-    if(!length(suggests)) return
+    reg <- parseNamespaceFile(package, dirname(dir))$S3methods
+    reg <- reg[!is.na(reg[, 4L]), , drop = FALSE]
+    if(length(reg))
+        out$reg <- cbind(Package = reg[, 4L],
+                         Generic = reg[, 1L],
+                         Class = reg[, 2L],
+                         Method = reg[, 3L])
 
-    if(basename(package) != "base")
-        .load_package_quietly(package, dirname(dir))
+    .load_package_quietly(package, dirname(dir))
     ok <- vapply(suggests, requireNamespace, quietly = TRUE,
                  FUN.VALUE = NA)
     out$bad <- suggests[!ok]
@@ -9201,6 +9218,15 @@ function(x, ...)
                     format(c("Package", mat[, 1L])),
                     format(c("Generic", mat[, 2L])),
                     format(c("Method", mat[, 3L])))
+            )
+      },
+      if(length(reg <- x$reg)) {
+          c("S3 methods using delayed registration:",
+            sprintf("  %s %s %s %s",
+                    format(c("Package", reg[, 1L])),
+                    format(c("Generic", reg[, 2L])),
+                    format(c("Class", reg[, 3L])),
+                    format(c("Method", reg[, 4L])))
             )
       })
 }

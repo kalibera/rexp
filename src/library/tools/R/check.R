@@ -4123,6 +4123,26 @@ add_dummies <- function(dir, Log)
             }
         }
 
+        if(R_check_vignette_titles) {
+            bad_vignettes <- character()
+            for(v in vigns$docs) {
+                if(trimws(vignetteInfo(v)$title == "Vignette Title"))
+                    bad_vignettes <- c(bad_vignettes, v)
+            }
+            if(nb <- length(bad_vignettes)) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                msg <- ngettext(nb,
+                                "Package vignette with placeholder title 'Vignette Title':\n",
+                                "Package vignettes with placeholder title 'Vignette Title':\n",
+                                domain = NA)
+                wrapLog(msg)
+                printLog0(Log,
+                          .format_lines_with_indent(sQuote(basename(bad_vignettes))),
+                          "\n")
+            }
+        }
+
         if (!any) resultLog(Log, "OK")
 
         if (do_install && do_vignettes) {
@@ -4815,7 +4835,8 @@ add_dummies <- function(dir, Log)
                              ## new in gcc 8
                              ": warning: .* \\[-Wcatch-value=\\]",
                              # warns on code deprecated in C++11
-                            ## Fatal, not warning, for clang and Solaris ODS
+                             ": warning: .* \\[-Wlto-type-mismatch\\]",
+                             ## Fatal, not warning, for clang and Solaris ODS
                              ": warning: .* with a value, in function returning void"
                             )
 
@@ -5826,6 +5847,12 @@ add_dummies <- function(dir, Log)
                                          "FALSE"))
     R_check_serialization <-
         config_val_to_logical(Sys.getenv("_R_CHECK_SERIALIZATION_", "FALSE"))
+    R_check_things_in_check_dir <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_THINGS_IN_CHECK_DIR_",
+                                         "FALSE"))
+    R_check_vignette_titles <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_VIGNETTE_TITLES_",
+                                         "FALSE"))
 
     if (!nzchar(check_subdirs)) check_subdirs <- R_check_subdirs_strict
 
@@ -5863,7 +5890,7 @@ add_dummies <- function(dir, Log)
         Sys.setenv("_R_CHECK_FUTURE_FILE_TIMESTAMPS_" = "TRUE")
         Sys.setenv("_R_CHECK_RD_CONTENTS_KEYWORDS_" = "TRUE")
         Sys.setenv("_R_CHECK_LENGTH_1_LOGIC2_" =
-                       "package:_R_CHECK_PACKAGE_NAME_,abort,verbose")
+                       "package:_R_CHECK_PACKAGE_NAME_,verbose")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
@@ -5878,6 +5905,8 @@ add_dummies <- function(dir, Log)
         R_check_toplevel_files <- TRUE
         R_check_vignettes_skip_run_maybe <- TRUE
         R_check_serialization <- TRUE
+        R_check_things_in_check_dir <- TRUE
+        R_check_vignette_titles <- TRUE
     } else {
         ## do it this way so that INSTALL produces symbols.rds
         ## when called from check but not in general.
@@ -6275,6 +6304,41 @@ add_dummies <- function(dir, Log)
                 }
             }
         }
+
+        if(R_check_things_in_check_dir) {
+            checkingLog(Log,
+                        "for non-standard things in the check directory")
+            things <-
+                setdiff(list.files(pkgoutdir, all.files = TRUE,
+                                   include.dirs = TRUE, no.. = TRUE),
+                        c("00check.log",
+                          "00install.out",
+                          "00package.dcf",
+                          "00_pkg_src",
+                          pkgname,
+                          sprintf("%s-Ex.%s",
+                                  pkgname,
+                                  c("R", "Rout", "pdf", "timings")),
+                          sprintf("%s-manual.%s",
+                                  pkgname,
+                                  c("log", "pdf")),
+                          "Rdlatex.log",
+                          "R_check_bin",
+                          "build_vignettes.log",
+                          "tests", "vign_test"))
+            ## Examples calling dev.new() give files Rplots*.pdf,
+            ## building vignettes give *.log files: be nice ...
+            things <- things[!grepl("^Rplots.*[.]pdf$|[.]log$", things)]
+            if(length(things)) {
+                noteLog(Log)
+                msg <- c("Found the following files/directories:",
+                         strwrap(paste(sQuote(things), collapse = " "),
+                                 indent = 2L, exdent = 2L))
+                printLog0(Log, paste(msg, collapse = "\n"), "\n")
+            } else
+                resultLog(Log, "OK")
+        }
+
         summaryLog(Log)
 
         if(config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_STATUS_SUMMARY_",

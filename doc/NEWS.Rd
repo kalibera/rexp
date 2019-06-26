@@ -22,7 +22,8 @@
       \code{na.rm} defaulting to true.  If set to false, missing
       \code{y} values now propagate into the interpolated values.
 
-      \item Long vectors are now supported in \code{for()} loops.
+      \item Long vectors are now supported as the \code{seq} argument of
+      a \code{for()} loop.
     }
   }
 
@@ -49,8 +50,29 @@
       run-time to \command{configure}: this is safer with LTO builds and
       allows the detection to be overridden -- see file \file{config.site}.
 
-      \item User-set \samp{DEFS} (e.g., in \file{config.site} is now
+      \item User-set \samp{DEFS} (e.g., in \file{config.site}) is now
       used for compiling packages (including base packages).
+
+      \item There is a new variant option \option{--enable-lto=check}
+      for checking consistency of BLAS/LAPACK/LINPACK calls --- see
+      \sQuote{Writing R Extensions}.
+    }
+  }
+
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item Header \file{Rconfig.h} contains the value of
+	\code{FC_LEN_T} deduced at installation which is used by the
+	prototypes in headers \file{BLAS.h} and \file{Lapack.h} but to
+	avoid extensive breakage this is only exposed when
+	\code{USE_FC_LEN_T} is defined.
+
+	If a package's C/C++ calls to BLAS/LAPACK allow for the
+	\sQuote{hidden} arguments use by most Fortran compilers to pass
+	the lengths of Fortran character arguments, define
+	\code{USE_FC_LEN_T} and include \file{Rconfig.h} (possibly
+	\emph{via} \file{R.h}) before including \file{BLAS.h} or
+	\file{Lapack.h}.
     }
   }
 
@@ -68,13 +90,34 @@
       from factor columns by default, \PR{17562}.
 
       \item \code{available.packages()} and hence \code{install.packages()}
-      now pass their \code{...} to \code{download.file()}, fulfilling the
-      wish of \PR{17532}.
+      now pass their \code{...} argument to \code{download.file()},
+      fulfilling the wish of \PR{17532}.
+
+      \item \code{stopifnot()} gets new argument \code{exprObject} to allow
+      an \R object of class \code{expression} (or other \sQuote{language})
+      to work more consistently, thanks to suggestions by Suharto Anggono.
     }
   }
 }
 
 \section{\Rlogo CHANGES IN R 3.6.0 patched}{
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item The default detection of the shell variable \code{libNN} is
+      overridden for derivatives of Debian Linux, some of which have
+      started to have a \file{/usr/lib64} directory.
+      (E.g.\sspace{}Ubuntu 19.04.)  As before, it can be specified in
+      \file{config.site}.
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD config} knows the values of \code{AR} and
+      \code{RANLIB}, often set for LTO builds.
+    }
+  }
+
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item The use of a character vector with \code{.Fortran()} is
@@ -117,9 +160,36 @@
       \code{function}s with a user defined \code{print.function}, thanks to
       Bill Dunlap's report.
 
-      \item [On Windows only], \code{writeClipboard(.., format = <n>)} now
+      \item On Windows, \code{writeClipboard(.., format = <n>)} now
       does correctly pass \code{format} to the underlying C code, thanks to
-      a bug report (with patch) by Jenny Brian.
+      a bug report (with patch) by Jenny Bryan.
+
+      \item \code{as.data.frame()} treats 1D arrays the same as vectors,
+      \PR{17570}.
+
+      \item \code{runmed(x, *)} when \code{x} contains missing values
+      now works for \code{algorithm="Stuetzle"}, also based on
+      \code{smoothEnds(y)} working with NA's, and no longer segfaults
+      for the \code{"Turlach"} algorithm; reported by Hilmar Berger.
+
+      \item \code{vcov(glm(<quasi>), dispersion = *)} works correctly
+      again, fixing \PR{17571} thanks to Pavel Krivitsky.
+
+      \item \command{R CMD INSTALL} of binary packages on Windows now
+      works also with per-directory locking.
+
+      \item \command{R CMD INSTALL} and \code{install.packages()} on Windows
+      are now more robust against a locked file in an earlier installation
+      of the package to be installed.  The default value of option
+      \code{install.lock} on Windows has been changed to \code{TRUE}.
+
+      \item On Unix alikes (when \command{readline} is active), only
+      expand tilde (\code{~}) file names starting with a tilde, instead of
+      almost all tildes.
+
+      \item In R documentation (\file{*.Rd}) files, \samp{\item [..]} is no
+      longer treated specially when rendered in LaTeX and hence pdf, but
+      rather shows the brackets in all cases.
     }
   }
 }

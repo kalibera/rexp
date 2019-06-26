@@ -256,7 +256,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   installing from a repository or tarballs, although it will be a little
   slower.)
 
-  When installing a binary package, \code{install.packages} will abort
+  When installing a package on Windows, \code{install.packages} will abort
   the install if it detects that the package is already installed and is
   currently in use.  In some circumstances (e.g., multiple instances of
   \R running at the same time and sharing a library) it will not detect a
@@ -288,11 +288,13 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   \option{--no-lock}.
   % and also options(install.lock = FALSE) in an \R startup file.
 
-  For a macOS or Windows binary install, no locking is done by
-  default.  Setting argument \code{lock} to \code{TRUE} (it defaults to
-  the value of \code{\link{getOption}("install.lock", FALSE)}) will use
-  per-directory locking as described for source installs: if the value
-  is \code{"pkglock"} per-package locking will be used.
+  For a macOS binary install, no locking is done by default.  Setting
+  argument \code{lock} to \code{TRUE} (it defaults to the value of
+  \code{\link{getOption}("install.lock", FALSE)}) will use per-directory
+  locking as described for source installs.  For Windows binary install,
+  per-directory locking is used by default (\code{lock} defaults to the
+  value of \code{\link{getOption}("install.lock", TRUE)}).  If the value is
+  \code{"pkglock"} per-package locking will be used.
 
   If package locking is used on Windows with \code{libs_only = TRUE} and
   the installation fails, the package will be restored to its previous

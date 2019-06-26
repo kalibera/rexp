@@ -142,7 +142,8 @@ case "${host_os}" in
     ## Allow for ppc64le (Debian calls ppc64el), powerpc64le ...
     case "${host_cpu}" in
       x86_64|mips64|ppc64*|powerpc64*|sparc64|s390x)
-        if test -d /usr/lib64; then
+        ## Debian/Ubuntu has "lib64", but the primary location is "lib"
+        if test -d /usr/lib64 && test ! -f /etc/debian_version; then
           libnn=lib64
 	fi
       ;;
@@ -338,6 +339,8 @@ elif  test "x${want_lto}" = xcheck; then
   ## use for maintainer checking.
   LTO=-flto
   LTOALL=-flto
+  LIBR0="-L\"\$(R_HOME)/lib\$(R_ARCH)\""
+  LIBR1="${LIBR1} -lLinpack"
 elif  test "x${want_lto}" != xno; then
   AC_MSG_WARN([Unknown value --enable-lto=${enableval}])
 fi
@@ -794,8 +797,8 @@ if test "${use_readline}" = yes; then
   if test "${use_readline}" = no; then
     AC_MSG_ERROR([--with-readline=yes (default) and headers/libs are not available])
   else
-    ## the NetBSD emulation supplied by macOS does not have this
-    AC_CHECK_FUNCS(history_truncate_file)
+    ## the NetBSD emulation supplied by macOS does not have these
+    AC_CHECK_FUNCS(history_truncate_file tilde_expand_word)
     ## rl_completion_matches is >= 4.2.
     ## rl_resize_terminal is >= 4.0 ane we use it only for >= 6.3.
     ## rl_callback_sigcleanup is in pre-releases for 7.0, not yet used.

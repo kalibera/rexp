@@ -1,8 +1,9 @@
-/* Copyright (C) 1995   Berwin A. Turlach <berwin@alphasun.anu.edu.au>
+/*
+ * Copyright (C) 2012-2019  The R Core Team
+ * Copyright (C) 2003 ff.   The R Foundation
  * Copyright (C) 2000-2 Martin Maechler <maechler@stat.math.ethz.ch>
- * Copyright (C) 2003   The R Foundation
- * Copyright (C) 2012-2016   The R Core Team
-
+ * Copyright (C) 1995   Berwin A. Turlach <berwin@alphasun.anu.edu.au>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -19,10 +20,8 @@
  */
 
 /* These routines implement a running median smoother according to the
- * algorithm described in Haerdle und Steiger (1995).
- *
- * A tech-report of that paper is available under
- * ftp://amadeus.wiwi.hu-berlin.de/pub/papers/sfb/sfb1994/dpsfb940015.ps.Z
+ * algorithm described in Haerdle und Steiger (1995),
+ *			  DOI:10.2307/2986349 , see ../man/runmed.Rd
  *
  * The current implementation does not use any global variables!
  */
@@ -349,7 +348,7 @@ runmedint(R_xlen_t n, int k, int k2, const double *data, double *median,
 	for(R_xlen_t i = n-k2; i < n; median[i] = data[i], i++);
 }/* runmedint() */
 
-/* This is the function called from R or S: */
+// Main function called from runmed() in ./Srunmed.c :
 static void Trunmed(R_xlen_t n,/* = length(data) */
 		    int k,/* is odd <= n */
 		    const double *data,
