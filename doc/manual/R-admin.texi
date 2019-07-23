@@ -1013,6 +1013,11 @@ OpenMP program, which is not the same as compiling a shared object and
 loading it into the C program of @R{}'s executable.  Note that
 overridden values are not tested.
 
+Note the mixing compiler families may not work even if both support
+OpenMP: for example where @command{gfortran} 9.x is used for Fortran, it
+can generate calls to @code{libgomp} which are not in the OpenMP runtime
+used by @command{clang} or @command{clang++} (at least up to version 8).
+
 @node C++ Support, Link-Time Optimization, OpenMP Support, Other Options
 @subsection C++ Support
 
@@ -1123,8 +1128,10 @@ supports it: configure with flag @option{--enable-lto}.
 Whether toolchains support LTO is often unclear: all of the C compiler,
 the Fortran compiler and linker have to support it, and support it by
 the same mechanism (so mixing compiler families may not work and a
-non-system linker may be needed).  It has been tested recently on Linux
-with @command{gcc}/@command{gfortran} 8.x and 9.x: that needed setting
+non-system linker such as @command{gold}@footnote{Nowadays part of GNU
+@code{binutils} and used by LLVM to support LTO.} may be needed).  It
+has been tested recently on Linux with @command{gcc}/@command{gfortran}
+8.x and 9.x: that needed setting
 @example
 AR=gcc-ar
 RANLIB=gcc-ranlib
@@ -1137,9 +1144,11 @@ AR="ar --plugin=/path/to/liblto_plugin.so"
 RANLIB="ranlib --plugin=/path/to/liblto_plugin.so
 @end example
 @noindent
-Unfortunately this may be accepted but silently do nothing if some of
-the toolchain does not support LTO: that happens on macOS (at the time
-of writing).
+amd it may be needed to set @code{NM} similarly.
+
+Unfortunately @option{--enable-lto} may be accepted but silently do
+nothing if some of the toolchain does not support LTO: that happens on
+macOS (at the time of writing).
 
 When LTO is enabled it is used for compiled code in packages (including
 the recommended packages) unless the flag @option{--enable-lto=R} is
@@ -1154,20 +1163,35 @@ and in any packages installed using the build.  (This is unlikely to
 work in conjunction with non-default options for BLAS and LAPACK, and
 `linking' against these libraries may be very slow.  Note that the
 static libraries may need to be re-compiled for even a minor update to
-the compiler.)  Further, it checks consistency of LINPACK calls from
-package to @R{}.
+the compiler.)  It also checks consistency of LINPACK calls from
+package to @R{}.  @strong{NB:} as its name suggests, this option is
+intended only for checking installation of @R{} and packages: it
+includes these library routines (those called directly and all they
+depend on) in each package.
+
+Under some circumstances and for a few packages, the PIC flags have
+needed overriding on Linux with GCC 9: e.g@: in @file{config.site}:
+@example
+CPICFLAGS=-fPIC
+CXXPICFLAGS=-fPIC
+CXX98PICFLAGS=-fPIC
+CXX11PICFLAGS=-fPIC
+CXX14PICFLAGS=-fPIC
+CXX17PICFLAGS=-fPIC
+FPICFLAGS=-fPIC
+@end example
 
 LTO support was added in 2011 for @command{gcc} 4.5.x on Linux but was
 little used before 2019.
 
-With @command{gcc}/@command{gfortran} 9.x@footnote{and probably 8.4 and
-later when released.} this will flag inconsistencies in calls to
-Fortran subroutines/functions, both between Fortran source files and
-between Fortran and C/C++.  @command{gfortran} 9.x can help
-understanding these by extracting C prototypes from Fortran source files
-with its @option{-fc-prototypes-external} option, e.g.@: that (at the
-time of writing) Fortran @code{LOGICAL} corresponds to
-@code{int_least32_t *}.
+With @command{gcc}/@command{gfortran} 9.x@footnote{probably also 8.4 and
+later when released.} this will flag inconsistencies in calls to Fortran
+subroutines/functions, both between Fortran source files and between
+Fortran and C/C++.  @command{gfortran} 9.x@footnote{since 2019-05-09,
+just after the release of version 9.1.}  can help understanding these by
+extracting C prototypes from Fortran source files with its
+@option{-fc-prototypes-external} option, e.g.@: that (at the time of
+writing) Fortran @code{LOGICAL} corresponds to @code{int_least32_t *}.
 
 @node Testing a Unix-alike Installation,  , Other Options, Installing R under Unix-alikes
 @section Testing an Installation
@@ -2047,9 +2071,8 @@ large as these, but apparently NetBSD may not.  Use the shell command
 @command{ulimit} (@command{sh}/@command{bash}) or @command{limit}
 (@command{csh}/@command{tcsh}) to check.)  For some
 compilers@footnote{The Oracle compilers on Solaris (where the issue is
-parsing very complex @R{} expressions) and pre-releases of GCC 9 on
-Linux.} and packages a larger stack size has been needed: 20-25MB has
-sufficed to date.
+parsing very complex @R{} expressions) and GCC 9 on Linux.} and packages
+a larger stack size has been needed: 20-25MB has sufficed to date.
 
 @R{} makes use of a number of environment variables, the default values
 of many of which are set in file @file{@var{R_HOME}/etc/Renviron} (there
@@ -3882,6 +3905,11 @@ single-threaded ones): this can lead to hard-to-track-down incorrect
 results or segfaults.
 @c Seen for OpenBLAS 3.2 in 2018.
 
+@strong{NOTE:} BLAS libraries built with @command{gfortran}@tie{}9 (and
+future versions 8.4, 7.5 and later) require calls from C/C++ to handle
+`hidden' character lengths --- @R{} itself does so but many packages do
+not and some segfault. (This applies also to external LAPACK libraries.)
+
 @menu
 * ATLAS::                       
 * OpenBLAS::                    
@@ -4015,9 +4043,9 @@ has been the use of double-complex routines.} and Windows, but when
 these have been tried they did not work with the default compilers used
 for @R{} on those platforms.
 
-The MKL interface has changed several times and may change again: the
-following examples have been used with versions 10.3 to 2019.1, for GCC
-compilers on @cputype{x86_64}.
+The MKL interface has changed several times but has been stable in
+recent years: the following examples have been used with versions 10.3
+to 2019.4, for GCC compilers on @cputype{x86_64}.
 
 To use a sequential version of MKL we used
 
@@ -4034,7 +4062,7 @@ copy of LAPACK (often older than the current version) as well as
 @acronym{BLAS} (@pxref{LAPACK}), although this can be omitted.
 
 Threaded MKL may be used by replacing the line defining the variable
-@code{MKL} by (for version 2019.1)
+@code{MKL} by
 
 @example
 MKL="-L$@{MKL_LIB_PATH@} -lmkl_gf_lp64 -lmkl_core \
@@ -4046,12 +4074,8 @@ The default number of threads will be chosen by the OpenMP software, but
 can be controlled by setting @code{OMP_NUM_THREADS} or
 @code{MKL_NUM_THREADS}, and in recent versions seems to default to a
 sensible value for sole use of the machine.  (Parallel MKL has not
-always passed @command{make check-all}, but did with MKL 2019.1.)
+always passed @command{make check-all}, but did with MKL 2019.4.)
 
-@c Note though that as with all non-reference LAPACK/BLAS, using MKL trades
-@c numerical accuracy for speed.  When tested in January 2018, 23 CRAN
-@c packages failed their checks with serial MKL and 43 with multi-threaded
-@c MKL.
 
 @c https://stat.ethz.ch/pipermail/r-devel/2015-September/071717.html
 It was reported in 2015 that
@@ -5917,7 +5941,8 @@ install @LaTeX{} packages on first use.
 
 To make the installer package (@file{@value{RWVERSION}-win.exe}) we
 currently require the Unicode version of Inno Setup 5.3.7 or later from
-@uref{http://jrsoftware.org/}. This is @emph{not} included in
+@uref{http://jrsoftware.org/} (starting from 6.0, Inno Setup provides only
+one version, which supports Unicode). This is @emph{not} included in
 @file{Rtools*.exe}.
 
 Copy file @file{src/gnuwin32/MkRules.dist} to

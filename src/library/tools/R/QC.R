@@ -423,10 +423,13 @@ function(package, dir, lib.loc = NULL,
 
     ## Find the data sets to work on.
     data_dir <- file.path(dir, "data")
-    data_sets_in_code <- if(dir.exists(data_dir))
-        names(.try_quietly(list_data_in_pkg(package_name, dataDir = data_dir)))
-    else
-        character()
+    if(dir.exists(data_dir)) {
+        data_sets_in_code_variables <-
+            .try_quietly(list_data_in_pkg(package_name,
+                                          dataDir = data_dir))
+        data_sets_in_code <- names(data_sets_in_code_variables)
+    } else
+        data_sets_in_code <- data_sets_in_code_variables <- character()
 
     ## Find the function objects to work on.
     functions_in_code <-
@@ -590,9 +593,21 @@ function(package, dir, lib.loc = NULL,
     data_sets_in_usages <- character()
     functions_in_usages_not_in_code <- list()
     data_sets_in_usages_not_in_code <- list()
+    variables_in_usages_not_in_code <- list()
     objects_in_other_platforms <- names(compatibilityEnv())
     objects_as_in <- c(objects_in_code_or_namespace,
                        objects_in_other_platforms)
+
+    if(missing(package) && str_parse_logic(meta["LazyData"], FALSE))
+        objects_as_in <-
+            c(objects_as_in,
+              unlist(data_sets_in_code_variables, use.names = FALSE))
+    if(is_base) {
+        objects_as_in <-
+            c(objects_as_in,
+              c("NA", "NULL", "Inf", "NaN", "TRUE", "FALSE",
+                ".Autoloaded"))
+    }
 
     for(docObj in db_names) {
         exprs <- db_usages[[docObj]]
@@ -600,13 +615,18 @@ function(package, dir, lib.loc = NULL,
 
         ## Get variable names and data set usages first, mostly for
         ## curiosity.
-        ind <- ! vapply(exprs, is.call, NA)
+        ind <- vapply(exprs, is.name, NA)
         if(any(ind)) {
-            variables_in_usages <-
-                c(variables_in_usages,
-                  sapply(exprs[ind], deparse))
+            variables <- sapply(exprs[ind], deparse)
+            variables_in_usages <- c(variables_in_usages, variables)
+            variables <- setdiff(variables, objects_as_in)
+            if(length(variables))
+                variables_in_usages_not_in_code[[docObj]] <- variables
             exprs <- exprs[!ind]
         }
+
+        exprs <- exprs[vapply(exprs, is.call, NA)]
+
         ind <- vapply(exprs, is_data_for_dataset, NA, USE.NAMES=FALSE)
         if(any(ind)) {
             data_sets <- sapply(exprs[ind],
@@ -737,7 +757,7 @@ function(package, dir, lib.loc = NULL,
             c(functions_missing_from_usages,
               setdiff(objects_in_code_not_in_usages,
                       c(functions_in_code, data_sets_in_code)))
-        }
+                                       }
 
     attr(bad_doc_objects, "objects_in_code_not_in_usages") <-
         objects_in_code_not_in_usages
@@ -749,6 +769,11 @@ function(package, dir, lib.loc = NULL,
         function_args_in_code
     attr(bad_doc_objects, "data_sets_in_usages_not_in_code") <-
         data_sets_in_usages_not_in_code
+    if(config_val_to_logical(Sys.getenv("_R_CHECK_CODOC_VARIABLES_IN_USAGES_",
+                                        "FALSE"))) {
+        attr(bad_doc_objects, "variables_in_usages_not_in_code") <-
+            variables_in_usages_not_in_code
+    }
     attr(bad_doc_objects, "objects_missing_from_usages") <-
         objects_missing_from_usages
     attr(bad_doc_objects, "functions_missing_from_usages") <-
@@ -784,6 +809,17 @@ function(x, ...)
         }
     }
 
+    variables_in_usages_not_in_code <-
+        attr(x, "variables_in_usages_not_in_code")
+    if(length(variables_in_usages_not_in_code)) {
+        for(fname in names(variables_in_usages_not_in_code)) {
+            writeLines(gettextf("Variables with usage in documentation object '%s' but not in code:",
+                                fname))
+            .pretty_print(sQuote(unique(variables_in_usages_not_in_code[[fname]])))
+            writeLines("")
+        }
+    }
+    
     ## In general, functions in the code which only have an \alias but
     ## no \usage entry are not necessarily a problem---they might be
     ## mentioned in other parts of the Rd object documenting them, or be
@@ -3998,6 +4034,7 @@ function(x, ...)
   , choose.files = function(default = "", caption = "Select files", multi = TRUE,
                             filters = Filters, index = nrow(Filters)) {
       Filters <- NULL }
+  , Filters = NULL
   , close.winProgressBar = function(con, ...) {}
   , DLL.version = function(path) {}
   , getClipboardFormats = function(numeric = FALSE) {}
@@ -7228,6 +7265,25 @@ function(dir, localOnly = FALSE)
         }
     }
 
+    ## Check DESCRIPTION placeholders
+    placeholders <-
+        c(if(!is.na(x <- tolower(meta["Title"])) &&
+             startsWith(x, "what the package does"))
+              x,
+          if(!is.na(x <- meta["Author"]) &&
+             (x == "Who wrote it"))
+              x,
+          if(!is.na(x <- meta["Maintainer"]) &&
+             (startsWith(x, "Who to complain to") ||
+              startsWith(x, "The package maintainer")))
+              x,
+          if(!is.na(x <- tolower(meta["Description"])) &&
+             (startsWith(x, "what the package does") ||
+              startsWith(x, "more about what it does")))
+              x)
+    if(length(placeholders))
+        out$placeholders <- placeholders
+
     ## Are there non-ASCII characters in the R source code without a
     ## package encoding in DESCRIPTION?
     ## Note that checking always runs .check_package_ASCII_code() which
@@ -7322,14 +7378,34 @@ function(dir, localOnly = FALSE)
             parts <- parse_URI_reference(urls)
             ind <- (parts[, "scheme"] %in% c("", "file"))
             fpaths1 <- fpaths0 <- parts[ind, "path"]
-            ## Allow for
-            ##   /doc/html /demo /library
-            ## which are handled by the http server, and remap ../doc to
-            ## ../inst/doc (even though such relative paths in Rd files
-            ## will generally not work or the pdf refmans).
-            fpaths1[grepl("^(/doc/html|/demo|/library)", fpaths1)] <- ""
-            fpaths1 <- sub("^../doc", "../inst/doc", fpaths1)
             parents <- udb[ind, "Parent"]
+            ## Help files, vignettes (and more) can be accessed via the
+            ## dynamic HTML help system.  This employs an internal HTTP
+            ## server which handles
+            ##   /doc/html /demo /library
+            ## and relative paths from help system components resolving
+            ## to such. 
+            ## (Note that these will not work in general, e.g. for the
+            ## pdf refmans.)
+            if(any(ind <- (startsWith(fpaths0, "../") &
+                           grepl("^(inst/doc|man|demo)", parents)))) {
+                ## Vignettes have document root
+                ##   /library/<pkg>/doc
+                ## Help pages have
+                ##   /library/<pkg>/html
+                foo <- rep.int("/library/<pkg>/<sub>", sum(ind))
+                bar <- fpaths0[ind]
+                while(length(pos <- which(startsWith(bar, "../")))) {
+                    foo[pos] <- dirname(foo[pos])
+                    bar[pos] <- substring(bar[pos], 4L)
+                }
+                fpaths1[ind] <- foo
+            }
+            fpaths1[grepl("^(/doc/html|/demo|/library)", fpaths1)] <- ""
+            fpaths1[(fpaths1 == "index.html") &
+                    startsWith(parents, "inst/doc")] <- ""
+            ## (Of course, one could verify that the special cased paths
+            ## really exist.)
             ppaths <- dirname(parents)
             pos <- which(!file.exists(file.path(ifelse(nzchar(ppaths),
                                                        file.path(dir,
@@ -8102,6 +8178,15 @@ function(x, ...)
                 "The Date field is over a month old."
             })),
       if(length(y <- x$build_time_stamp_msg)) y,
+      if(length(y <- x$placeholders)) {
+          paste(c("DESCRIPTION fields with placeholder content:",
+                  paste0("  ",
+                         unlist(strsplit(formatDL(y,
+                                                  style = "list",
+                                                  indent = 2L),
+                                         "\n", fixed = TRUE)))),
+                collapse = "\n")
+      },
       if(length(y <- x$size_of_tarball))
           paste("Size of tarball:", y, "bytes"),
       fmt(c(if(length(y <- x$Rd_keywords_or_concepts_with_Rd_markup))

@@ -6,6 +6,7 @@
 \encoding{UTF-8}
 
 \section{\Rlogo CHANGES IN R-devel}{
+
   \subsection{NEW FEATURES}{
     \itemize{
       \item \code{assertError()} and \code{assertWarning()} (in package
@@ -46,33 +47,12 @@
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
-      \item Detection of the C stack direction has been moved from
-      run-time to \command{configure}: this is safer with LTO builds and
-      allows the detection to be overridden -- see file \file{config.site}.
-
       \item User-set \samp{DEFS} (e.g., in \file{config.site}) is now
       used for compiling packages (including base packages).
 
       \item There is a new variant option \option{--enable-lto=check}
       for checking consistency of BLAS/LAPACK/LINPACK calls --- see
       \sQuote{Writing R Extensions}.
-    }
-  }
-
-  \subsection{PACKAGE INSTALLATION}{
-    \itemize{
-      \item Header \file{Rconfig.h} contains the value of
-	\code{FC_LEN_T} deduced at installation which is used by the
-	prototypes in headers \file{BLAS.h} and \file{Lapack.h} but to
-	avoid extensive breakage this is only exposed when
-	\code{USE_FC_LEN_T} is defined.
-
-	If a package's C/C++ calls to BLAS/LAPACK allow for the
-	\sQuote{hidden} arguments use by most Fortran compilers to pass
-	the lengths of Fortran character arguments, define
-	\code{USE_FC_LEN_T} and include \file{Rconfig.h} (possibly
-	\emph{via} \file{R.h}) before including \file{BLAS.h} or
-	\file{Lapack.h}.
     }
   }
 
@@ -91,7 +71,9 @@
 
       \item \code{available.packages()} and hence \code{install.packages()}
       now pass their \code{...} argument to \code{download.file()},
-      fulfilling the wish of \PR{17532}.
+      fulfilling the wish of \PR{17532}; subsequently,
+      \code{available.packages()} gets new argument \code{quiet}, solving
+      \PR{17573}.
 
       \item \code{stopifnot()} gets new argument \code{exprObject} to allow
       an \R object of class \code{expression} (or other \sQuote{language})
@@ -100,7 +82,73 @@
   }
 }
 
-\section{\Rlogo CHANGES IN R 3.6.0 patched}{
+\section{\Rlogo CHANGES IN R 3.6.1 patched}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{runmed(x, *)} gets new option \code{na.action}
+      determining \emph{how} to handle \code{NaN} or \code{NA} in \code{x}.
+    }
+  }
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item Detection of the C stack direction has been moved from
+      run-time to \command{configure}: this is safer with LTO builds and
+      allows the detection to be overridden -- see file
+      \file{config.site}.
+    }
+  }
+
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item Header \file{Rconfig.h} contains the value of
+	\code{FC_LEN_T} deduced at installation which is used by the
+	prototypes in headers \file{BLAS.h} and \file{Lapack.h} but to
+	avoid extensive breakage this is only exposed when
+	\code{USE_FC_LEN_T} is defined.
+
+	If a package's C/C++ calls to BLAS/LAPACK allow for the
+	\sQuote{hidden} arguments used by most Fortran compilers to pass
+	the lengths of Fortran character arguments, define
+	\code{USE_FC_LEN_T} and include \file{Rconfig.h} (possibly
+	\emph{via} \file{R.h}) before including \file{BLAS.h} or
+	\file{Lapack.h}.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{runmed(x, *)} when \code{x} contains missing values
+      now works consistently for both \code{algorithm="Stuetzle"} and
+      \code{"Turlach"}, and no longer segfaults for \code{"Turlach"}, as
+      reported by Hilmar Berger.
+
+      \item \code{conformMethod()} now correctly works in cases containing
+      a \dQuote{\code{&&} logic} bug, reported by Henrik Bengtsson.  It now
+      creates methods with \code{"missing"} entries in the signature.
+      Consequently, \code{rematchDefinition()} is amended to use
+      appropriate \code{.local()} calls with named arguments where needed.
+
+      \item \code{apply(diag(3), 2:3, mean)} now gives a helpful error message.
+
+      \item \code{dgamma(x, shape, log=TRUE)} now longer overflows
+      to \code{Inf} for shape < 1 and very small \code{x}, fixing
+      \PR{17577}, reported by Jonathan Rougier.
+
+      \item Buffer overflow in building error messages fixed. Reported
+      by Benjamin Tremblay.
+
+      \item \code{options(str = .)} is correctly initialized at
+      package \pkg{utils} load time, now.  A consequence is that
+      \code{str()} in scripts now is more consistent to interactive use,
+      e.g., when displaying function(**) argument lists.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.6.1}{
+
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
       \item The default detection of the shell variable \code{libNN} is
@@ -167,10 +215,9 @@
       \item \code{as.data.frame()} treats 1D arrays the same as vectors,
       \PR{17570}.
 
-      \item \code{runmed(x, *)} when \code{x} contains missing values
-      now works for \code{algorithm="Stuetzle"}, also based on
-      \code{smoothEnds(y)} working with NA's, and no longer segfaults
-      for the \code{"Turlach"} algorithm; reported by Hilmar Berger.
+      \item Improvements in \code{smoothEnds(x, *)} working with
+      \code{NA}s (towards \code{runmed()} working in that case, in the next
+      version of R).
 
       \item \code{vcov(glm(<quasi>), dispersion = *)} works correctly
       again, fixing \PR{17571} thanks to Pavel Krivitsky.

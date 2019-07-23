@@ -2159,10 +2159,11 @@ optional libraries.
 
 Some care is needed when compilers are from different families which may
 use different OpenMP runtimes (e.g.@: @command{clang} @emph{vs} GCC
-including @command{gfortran}, although it is currently possible to use
-the @command{clang} runtime with GCC but not @emph{vice versa}).  For a
-package with fixed-form Fortran code using OpenMP the appropriate lines
-are
+including @command{gfortran}, although it is often possible to use the
+@command{clang} runtime with GCC but not @emph{vice versa}: however
+@command{gfortran} 9.x may generate calls not in the @command{clang}
+runtime).  For a package with Fortran code using OpenMP the appropriate
+lines are
 
 @example
 PKG_FFLAGS = $(SHLIB_OPENMP_FFLAGS)
@@ -2170,12 +2171,8 @@ PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
 @end example
 
 @noindent
-as the C compiler will be used to link the package code (and there is no
-guarantee that this will work everywhere).  Packages which include C++
-code should use @code{SHLIB_OPENMP_CXXFLAGS} in @code{PKG_LIBS}. (As
-from @R{} 3.6.0 this applies also to free-form Fortran code, where
-@code{SHLIB_OPENMP_FFLAGS} should be used in @code{PKG_FFLAGS} or
-@code{PKG_FCFLAGS}.)
+as the C compiler will be used to link the package code (and there are
+platforms on which this does not work.
 
 It is not portable to use OpenMP with more than one of C, C++ and
 Fortran in a single package since it is not uncommon that the compilers
@@ -2784,7 +2781,7 @@ The webpage
 @uref{http://en.cppreference.com/@/w/@/cpp/@/compiler_support} gives
 some information on which compilers are known to support recent C++
 features.  Note that @command{g++} 4.9.x (as used for @R{} on Windows at
-the time of writing) has only partial C++14 support, and the flag to
+least up to 3.6.x) has only partial C++14 support, and the flag to
 obtain that support is not included in the default Windows build of @R{}
 --- one could try something like
 
@@ -8691,7 +8688,7 @@ Recent versions return symbolic addresses for the location of the error
 provided @command{llvm-symbolizer}@footnote{part of the LLVM project and
 in distributed in @code{llvm} RPMs and @code{.deb}s on Linux.  It is not
 currently shipped by Apple.} is on the path: if it is available but not
-on the path or has been renamed@footnote{as Ubuntu is said to do.}, one
+on the path or has been renamed@footnote{as Ubuntu has been said to do.}, one
 can use an environment variable, e.g.@:
 
 @example
@@ -8755,9 +8752,10 @@ break __asan_report_error
 (See
 @uref{https://code.google.com/@/p/@/address-sanitizer/@/wiki@//AddressSanitizer#gdb}.)
 
-Recent versions@footnote{including @command{gcc} 7.1 and @command{clang}
-4.0.0: for @command{gcc} it is implied by @option{-fsanitize=address}.}
-added the flag @option{-fsanitize-address-use-after-scope}: see
+More recent versions@footnote{including @command{gcc} 7.1 and
+@command{clang} 4.0.0: for @command{gcc} it is implied by
+@option{-fsanitize=address}.}  added the flag
+@option{-fsanitize-address-use-after-scope}: see
 @uref{https://github.com/@/google/@/sanitizers/@/wiki/@/AddressSanitizerUseAfterScope}.
 
 One of the checks done by ASAN is that @code{malloc/free} and in C++
@@ -8770,6 +8768,11 @@ example, X11/GL libraries on Linux, seen when checking package
 environment variable @env{RGL_USE_NULL=true}.} are not consistent.  The
 check can be suppressed by including @samp{alloc_dealloc_mismatch=0} in
 @env{ASAN_OPTIONS}.
+
+ASAN also checks system calls and sometimes reports can refer to
+problems in the system software and not the package nor @R{}.  A couple
+of reports have been of `heap-use-after-free' errors in the X11
+libraries called from Tcl/Tk.
 
 @menu
 * Using Leak Sanitizer::        
@@ -9312,6 +9315,7 @@ configured with @option{--enable-lto=check}.
 
 Further examples:
 
+@c package assist 3.1.4
 @example
 rkpk2.f:77:5: warning: type of 'dstup' does not match original declaration [-Wlto-type-mismatch]
       *info, wk)
@@ -9322,6 +9326,7 @@ rkpk1.f:2565:5: note: 'dstup' was previously declared here
 @noindent
 where the fourteenth argument @code{dum} was missing in the call.
 
+@c package gss 2.1-9
 @example
 reg.f:78:33: warning: type of 'dqrdc' does not match original declaration [-Wlto-type-mismatch]
        call dqrdc (sr, nobs, nobs, nnull, wk, dum, dum, 0)
@@ -9333,6 +9338,28 @@ dstup.f:20: note: 'dqrdc' was previously declared here
 array and @code{work} is a double precision one so @code{dum} cannot
 match both.  (If @option{--emable-lto=check} had been used the
 comparison would have been with the definition in @R{}.)
+
+For Fortran files all in the package, most inconsistencies can be
+detected by concatenating the Fortran files and compiling the result,
+sometimes with clearer diagnostics than provided by LTO.  For our last
+two examples this gives
+
+@example
+all.f:2966:72:
+
+      *info, work1)
+                                                                        1
+Warning: Missing actual argument for argument ‘dum’ at (1)
+@end example
+@noindent
+and
+@example
+all.f:1663:72:
+
+      *ipvtwk), wk(ikwk), wk(iwork1), wk(iwork2), info)
+                                                                        1
+Warning: Type mismatch in argument ‘jpvt’ at (1); passed REAL(8) to INTEGER(4)
+@end example
 
 @node System and foreign language interfaces, The R API, Debugging, Top
 @chapter System and foreign language interfaces
@@ -10116,10 +10143,10 @@ void F77_NAME(supsmu)(int *n, double *x, double *y,
 @end example
 
 @noindent
-@command{gfortran} 9.2@footnote{This was added just after release as
-9.1.} and later can help generate such prototypes with its flag
-@option{-fc-prototypes-external} (although one will need to replace the
-hard-coded trailing underscore with the @code{F77_NAME} macro).
+@command{gfortran} 9.2@footnote{This was added on 2019-05-09, just after
+release as 9.1.} and later can help generate such prototypes with its
+flag @option{-fc-prototypes-external} (although one will need to replace
+the hard-coded trailing underscore with the @code{F77_NAME} macro).
 
 One can get away with inaccurate argument lists in the declarations: it
 is easy to specify the arguments for @code{.Call} (all @code{SEXP}) and
@@ -13327,7 +13354,7 @@ with version 9 but backported to versions 7 and 8.
 
 Suppose we want a function to report a message from Fortran to @R{}'s
 console (one could use @code{intpr} with dummy data, but it might be the
-basis of a custom reporting function.  Suppose the equivalent in Fortran
+basis of a custom reporting function).  Suppose the equivalent in Fortran
 would be
 @example
       subroutine rmsg(msg)
@@ -13336,8 +13363,9 @@ would be
       end
 @end example
 @noindent
-in file @file{rmsg.f}. Using @command{gfortran} 9.2 and later we can
-extract the C view by
+in file @file{rmsg.f}. Using @command{gfortran} 9.2 and
+later@footnote{or 9.1-patched since 2019-05-09.} we can extract the C
+view by
 @example
 gfortran -c -fc-prototypes-external rmsg.f
 @end example
@@ -13350,6 +13378,27 @@ void rmsg_ (char *msg, size_t msg_len);
 (where @code{size_t} applies to version 8 and later).  We could re-write
 that portably in C as
 @example
+#define USE_FC_LEN_T
+#include <Rconfig.h> // included by R.h, so define USE_FC_LEN_T early
+
+void F77_NAME(rmsg)(char *msg, FC_LEN_T msg_len)
+@{
+    char cmsg[msg_len+1];
+    strncpy(cmsg, msg, msg_len);
+    cmsg[msg_len] = '\0'; // nul-terminate the string, to be sure
+    // do something with 'cmsg' 
+@}
+@end example
+@noindent
+in code depending on @code{R(>= 3.6.2)}.  For earlier versions of @R{} we
+could just assume that @code{msg} is nul-terminated (not guaranteed, but
+people have been getting away with it for many years), so the complete C
+side might be
+@example
+#define USE_FC_LEN_T
+#include <Rconfig.h>
+
+#ifdef FC_LEN_T
 void F77_NAME(rmsg)(char *msg, FC_LEN_T msg_len)
 @{
     char cmsg[msg_len+1];
@@ -13357,28 +13406,35 @@ void F77_NAME(rmsg)(char *msg, FC_LEN_T msg_len)
     cmsg[msg_len] = '\0';
     // do something with 'cmsg' 
 @}
+#else
+void F77_NAME(rmsg)(char *msg)
+@{
+    // do something with 'msg' 
+@}
+#endif
 @end example
+
 
 An alternative is to use Fortran 2003 features@footnote{These started to
 be implemented in compilers @emph{ca} 2007, e.g.@: in @command{gfortran}
 4.3.} to set up the Fortran routine to pass a C-compatible character
 string.  We could use something like
 @example
-module cfuncs
-  use iso_c_binding, only: c_char, c_null_char
-  interface
-    subroutine cmsg(msg) bind(C, name = 'cmsg')
-      use iso_c_binding, only: c_char
-      character(kind = c_char):: msg(*)
-    end subroutine cmsg
-  end interface
-end module
+      module cfuncs
+        use iso_c_binding, only: c_char, c_null_char
+        interface
+          subroutine cmsg(msg) bind(C, name = 'cmsg')
+            use iso_c_binding, only: c_char
+            character(kind = c_char):: msg(*)
+          end subroutine cmsg
+        end interface
+      end module
 
-subroutine rmsg(msg)
-  use cfuncs
-  character(*) msg
-  call cmsg(msg//c_null_char) ! need to concatenate a null terminator
-end subroutine rmsg
+      subroutine rmsg(msg)
+        use cfuncs
+        character(*) msg
+        call cmsg(msg//c_null_char) ! need to concatenate a nul terminator
+      end subroutine rmsg
 @end example
 @noindent
 where the C side is simply
@@ -13392,7 +13448,7 @@ void cmsg(const char *msg)
 Passing a variable-length string from C to Fortran is trickier, but
 @uref{https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-bind}
 provides a recipe.  However, all the uses in BLAS and LAPACK are of a
-single character, and for this we can write a wrapper in Fortran
+single character, and for these we can write a wrapper in Fortran
 along the lines of
 @example
       subroutine c_dgemm(transa, transb, m, n, k, alpha,
@@ -13401,8 +13457,7 @@ along the lines of
         use iso_c_binding, only : c_char, c_int, c_double
         character(c_char):: transa, transb
         integer(c_int):: m, n, k, lda, ldb, ldc
-        real(c_double):: alpha, beta, a(lda, *), b(ldb, *)
-        real(c_double):: c(ldc, *)
+        real(c_double):: alpha, beta, a(lda,*), b(ldb,*), c(ldc,*)
         call dgemm(transa, transb, m, n, k, alpha,
      +             a, lda, b, ldb, beta, c, ldc)
       end subroutine c_dgemm
@@ -13410,6 +13465,7 @@ along the lines of
 @noindent
 which is then called from C with declaration
 @example
+void
 Cdgemm(const char *transa, const char *transb, const int *m,
        const int *n, const int *k, const double *alpha,
        const double *a, const int *lda, const double *b, const int *ldb,

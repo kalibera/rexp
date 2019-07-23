@@ -1031,7 +1031,7 @@ stopifnot(exprs = {
     identical(NC(xE(1e-3)), c(Sturges = 4, Scott = 2, FD =  855))
 })
 ## for these, nclass.FD() had "exploded" in R <= 3.4.1
-## Extremely large diff(range(.)) :
+## Extremely large diff(range(.)) : NB: this gives a UBSAN warning
 XXL <- c(1:9, c(-1,1)*1e300)
 stopifnot(nclass.scott(XXL) == 1)
 ## gave 0 in R <= 3.4.1
@@ -2720,7 +2720,7 @@ dfb <- data.frame(x=fcts()) ; rbind(table(dfa), table(dfb))
 dfy <- data.frame(y=fcts())
 yN <- c(1:3, NA_character_, 5:8)
 dfay  <- cbind(dfa, dfy)
-dfby  <- cbind(dfa, data.frame(y = yN))
+dfby  <- cbind(dfa, data.frame(y = yN, stringsAsFactors = TRUE))
 dfcy  <- dfa; dfcy$y <- yN # y: a <char> column
 ## dNay := drop unused levels from dfay incl NA
 dNay <- dfay; dNay[] <- lapply(dfay, factor)
@@ -2808,6 +2808,155 @@ stopifnot(exprs = { ## Same variances and same as V
 })
 ## vcov(. , dispersion=*) was wrong on R versions 3.5.0 -- 3.6.0
 
+
+## runmed(<x_with_NA>, "Turlach") still seg.faults in 3.6.0 {reported by Hilmar Berger}
+dd1 <- c(rep(NaN,82), rep(-1, 144), rep(1, 74))
+xT1 <-  runmed(dd1, 21, algorithm="T", print.level=1)# gave seg.fault
+xS1 <-  runmed(dd1, 21, algorithm="S", print.level=1)
+if(FALSE)
+cbind(dd1, xT1, xS1)
+nN <- !is.na(xT1)
+stopifnot(xT1[nN] == c(rep(-1, 154), rep(1, 74)))
+dd2 <- c(rep(-1, 144), rep(1, 74), rep(NaN,82))
+xS2 <- runmed(dd2, 21, algorithm = "Stuetzle", print.level=1)
+xT2 <- runmed(dd2, 21, algorithm = "Turlach" , print.level=1)
+if(FALSE)
+cbind(dd2, xS2, xT2) # here, "St" and "Tu" are "the same"
+nN <- !is.na(xT2)
+stopifnot(exprs = { ## both NA|NaN and non-NA are the same:
+    identical(xT2[nN], xS2[nN])
+    identical(is.na(xS2) , !nN)
+    { i <- 1:(144+74); xT2[i] == dd2[i] }
+})
+## close to *minimal* repr.example:
+x5 <- c(NA,NA, 1:3/4)
+rS <- runmed(x5, k= 3, algorithm = "St", print.level=3)
+rT <- runmed(x5, k= 3, algorithm = "Tu", print.level=3)
+stopifnot(exprs = {
+    identical(rS, rT)
+    rT == c(1,1,1:3)/4
+})
+## a bit larger:
+x14 <- c(NA,NA,NA,NA, 1:10/4)
+rS14 <- runmed(x14, k = 7, algorithm="S", print.level=2)
+rT14 <- runmed(x14, k = 7, algorithm="T", print.level=2)
+## cbind(x14, rT14, rS14)
+(naActs <- eval(formals(runmed)$na.action)); names(naActs) <- naActs
+allT14 <- lapply(naActs, function(naA)
+    tryCatch(runmed(x14, k = 7, algorithm="T", na.action=naA, print.level=2),
+             error=identity, warning=identity))
+rTo14 <- runmed(na.omit(x14), k=7, algorithm="T")
+stopifnot(exprs = {
+    identical(  rT14, rS14)
+    identical(c(rT14), c(NaN,NaN, .5, .5, .5, .75, x14[-(1:6)]))
+    identical(  rT14, allT14$"+Big_alternate")
+    (allT14$"-Big_alternate" >= rT14)[-(1:2)] # slightly surprisingly
+    identical(allT14$na.omit[-(1:4)], c(rTo14))
+    inherits(Tfail <- allT14$fail, "error")
+    !englishMsgs || grepl("^runmed\\(.*: .*NA.*x\\[1\\]", Tfail$message)
+})
+
+
+## conformMethod()  "&& logic" bug, by Henrik Bengtsson on R-devel list, 2019-06-22
+setClass("tilingFSet", slots = c(x = "numeric"))
+if(!is.null(getGeneric("oligoFn"))) removeGeneric("oligoFn")
+setGeneric("oligoFn",
+           function(object, subset, target, value) { standardGeneric("oligoFn") })
+Sys.setenv("_R_CHECK_LENGTH_1_LOGIC2_" = "true")
+if(getRversion() <= "3.6")## to run this with R 3.6.0, 3.5.3, ..
+    Sys.unsetenv("_R_CHECK_LENGTH_1_LOGIC2_")
+setMethod("oligoFn", signature(object = "tilingFSet", value="array"),	## Method _1_
+          function(object, value) { list(object=object, value=value) })
+setMethod("oligoFn", signature(object = "matrix", target="array"),	## Method _2_
+          function(object, target) list(object=object, target=target))
+setMethod("oligoFn", signature(object = "matrix", subset="integer"),	## Method _3_
+          function(object, subset) list(object=object, subset=subset))	#   *no* Note
+setMethod("oligoFn", signature(object = "matrix"),			## Method _4_
+          function(object) list(object=object))				#   *no* Note
+setMethod("oligoFn", signature(subset = "integer"),			## Method _5_
+          function(subset) list(subset=subset))
+setMethod("oligoFn", signature(target = "matrix"),			## Method _6_
+          function(target) list(target=target))
+setMethod("oligoFn", signature(value = "array"),			## Method _7_
+          function(value) list(value=value))
+setMethod("oligoFn", signature(subset = "integer", target = "matrix"),  ## Method _8_
+          function(subset, target) list(subset=subset, target=target))
+setMethod("oligoFn", signature(subset = "integer", value = "array"),	## Method _9_
+          function(subset, value) list(subset=subset, value=value))
+setMethod("oligoFn", signature(target = "matrix", value = "array"),	## Method _10_
+          function(target, value) list(target=target, value=value))
+##
+showMethods("oligoFn", include=TRUE) # F.Y.I.:  in R 3.6.0 and earlier: contains "ANY" everywhere
+##=========            ------------
+stopifnot(exprs = {
+    is.function(mm <- getMethod("oligoFn",
+                                signature(object="tilingFSet",
+                                          subset="missing", target="missing",
+                                          value="array")))
+    inherits(mm, "MethodDefinition")
+    identical(
+        sort(names(getMethodsForDispatch(oligoFn))) # sort(.) the same for "all" locales
+        ## Now,  "ANY" only appear "at the end" .. otherwise have "missing"
+      , c("matrix#ANY#ANY#ANY",
+          "matrix#integer#ANY#ANY",
+          "matrix#missing#array#ANY",
+          "missing#integer#ANY#ANY",
+          "missing#integer#matrix#ANY",
+          "missing#integer#missing#array",
+          "missing#missing#matrix#ANY",
+          "missing#missing#matrix#array",
+          "missing#missing#missing#array",
+          "tilingFSet#missing#missing#array"))
+})
+## Testing all 10 methods:
+r1 <- oligoFn(object=new("tilingFSet"), value=array(2))
+r2 <- oligoFn(object=diag(2),          target=array(42))
+## These 2 work fine in all versions of R: Here the "ANY" remain at the end:
+r3 <- oligoFn(object=diag(2),          subset=1:3)
+r4 <- oligoFn(object=diag(2))
+## All these do *not* specify 'object' --> Error in R <= 3.6.x {argument ... is missing}
+r5 <- oligoFn(subset = 1:5)
+r6 <- oligoFn(target = cbind(7))
+r7 <- oligoFn(value = array(47))
+r8 <- oligoFn(subset = -1:1, target = diag(3))
+r9 <- oligoFn(subset = 2:6,  value = array(7))
+r10<- oligoFn(target = cbind(1,2), value = array(1,1:3))
+## in R <= 3.6.0, e.g., the first  setMethod(..)  gave
+## Error in omittedSig && (signature[omittedSig] != "missing") :
+##   'length(x) = 4 > 1' in coercion to 'logical(1)'
+
+
+## apply(., MARGIN) when MARGIN is outside length(dim(.)):
+a <- tryCatch(apply(diag(3), 2:3, mean), error=identity)
+stopifnot(exprs = {
+    inherits(a, "error")
+    conditionCall(a)[[1]] == quote(`apply`)
+    !englishMsgs || !grepl("missing", (Msg <- conditionMessage(a)), fixed=TRUE)
+    !englishMsgs || grepl("MARGIN", Msg, fixed=TRUE)
+})
+
+
+## cbind() of data frames with no columns lost names -- PR#17584
+stopifnot(identical(names(cbind(data.frame())),
+                    character()))
+stopifnot(identical(names(cbind(data.frame(), data.frame())),
+                    character()))
+## names() came out as NULL instead of character().
+
+
+## NUL inserted incorrectly in adist trafos attribute -- PR#17579
+s <- c("kitten", "sitting", "hi")
+ad <- adist(s, counts = TRUE)
+adc <- attr(ad, "counts")
+adt <- attr(ad, "trafos")
+## Follow analysis in the bug report: in the diagonal, we should have
+## only matches for each character in the given string.
+stopifnot(all(nchar(diag(adt)) == nchar(s)))
+## The del/ins/sub counts should agree with the numbers of D/I/S
+## occurrences in the trafos.
+stopifnot(all(nchar(gsub("[^D]", "", adt)) == adc[, , "del"]))
+stopifnot(all(nchar(gsub("[^I]", "", adt)) == adc[, , "ins"]))
+stopifnot(all(nchar(gsub("[^S]", "", adt)) == adc[, , "sub"]))
 
 
 ## keep at end
