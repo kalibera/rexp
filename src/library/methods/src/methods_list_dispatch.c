@@ -235,8 +235,11 @@ SEXP R_quick_method_check(SEXP args, SEXP mlist, SEXP fdef)
 	return R_NilValue;
     while(!isNull(args) && !isNull(methods)) {
 	object = CAR(args); args = CDR(args);
-	if(TYPEOF(object) == PROMSXP)
+	if(TYPEOF(object) == PROMSXP) {
+	    fprintf(stderr, "\nPROMISE 1\n");
+	    R_Suicide("******* PROMISE 1 ***********\n");
 	    object = eval(object, Methods_Namespace);
+        }
 	class = CHAR(STRING_ELT(R_data_class(object, TRUE), 0));
 	value = R_element_named(methods, class);
 	if(isNull(value) || isFunction(value)){
@@ -297,8 +300,11 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     nargs = 0;
     while(!isNull(args) && nargs < nsig) {
 	object = CAR(args); args = CDR(args);
-	if(TYPEOF(object) == PROMSXP)
+	if(TYPEOF(object) == PROMSXP) {
+	    fprintf(stderr, "\nPROMISE 2\n");
+	    R_Suicide("******* PROMISE 2 ***********\n");	    
 	    object = eval(object, Methods_Namespace);
+	}
 	if(object == R_MissingArg)
 	    class = "missing";
 	else
