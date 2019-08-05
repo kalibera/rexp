@@ -236,6 +236,8 @@ SEXP R_quick_method_check(SEXP args, SEXP mlist, SEXP fdef)
     while(!isNull(args) && !isNull(methods)) {
 	object = CAR(args); args = CDR(args);
 	if(TYPEOF(object) == PROMSXP)
+	    /* not observed during tests, but promises in principle could come
+	       from DispatchOrEval/R_possible_dispatch */
 	    object = eval(object, Methods_Namespace);
 	class = CHAR(STRING_ELT(R_data_class(object, TRUE), 0));
 	value = R_element_named(methods, class);
@@ -251,7 +253,7 @@ SEXP R_quick_method_check(SEXP args, SEXP mlist, SEXP fdef)
 
 SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
 {
-    /* Match the list of (evaluated) args to the methods table. */
+    /* Match the list of (possibly promised) args to the methods table. */
     static SEXP  R_allmtable = NULL, R_siglength;
     SEXP object, value, mtable;
     const char *class; int nsig, nargs;
