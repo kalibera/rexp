@@ -131,6 +131,12 @@ if(FALSE) {
     quote_path <- function(path, quote = "'")
     	paste0(quote, gsub("\\", "\\\\", path, fixed=TRUE), quote)
 
+    # Escape backslashes in a replacement string for gsub etc.
+    # To be used when the replacement is a path name which may include
+    # backslashes, e.g. with UNC paths on Windows.
+    quote_replacement <- function(r)
+        paste0(gsub("\\", "\\\\", r, fixed=TRUE))
+
     on.exit(do_exit_on_error())
     WINDOWS <- .Platform$OS.type == "windows"
 
@@ -637,7 +643,8 @@ if(FALSE) {
                     idxs <- gsub(re, "\\1", out)
                     old_paths <- paths
                     # "\\$ORIGIN/.."
-                    paths <- gsub(instdir, final_instdir, paths, fixed = TRUE)
+                    paths <- gsub(instdir, quote_replacement(final_instdir),
+                                  paths, fixed = TRUE)
                     changed <- paths != old_paths
                     paths <- paths[changed]
                     old_paths <- old_paths[changed]
@@ -672,8 +679,8 @@ if(FALSE) {
                         grepl(instdir, oldid, fixed = TRUE)) {
 
                         hardcoded_paths <- TRUE
-                        newid <- gsub(instdir, final_instdir, oldid,
-                                      fixed = TRUE)
+                        newid <- gsub(instdir, quote_replacement(final_instdir),
+                                      oldid, fixed = TRUE)
                         cmd <- paste("install_name_tool -id", shQuote(newid),
                                      shQuote(l))
                         message(cmd)
@@ -693,8 +700,8 @@ if(FALSE) {
                                   paths)
                     old_paths <- paths
                     # "@loader_path/.."
-                    paths <- gsub(instdir, final_instdir, paths,
-                                  fixed = TRUE)
+                    paths <- gsub(instdir, quote_replacement(final_instdir),
+                                  paths, fixed = TRUE)
                     changed <- paths != old_paths
                     paths <- paths[changed]
                     old_paths <- old_paths[changed]
@@ -728,8 +735,8 @@ if(FALSE) {
                         paths <- gsub("(.*) \\(offset .*", "\\1", paths)
                         old_paths <- paths
                         # "@loader_path/.."
-                        paths <- gsub(instdir, final_instdir, paths,
-                                               fixed = TRUE)
+                        paths <- gsub(instdir, quote_replacement(final_instdir),
+                                      paths, fixed = TRUE)
                         changed <- paths != old_paths
                         paths <- paths[changed]
                         old_paths <- old_paths[changed]
@@ -763,8 +770,8 @@ if(FALSE) {
                                intern = TRUE))
                     old_rpath <- rpath
                     # "\\$ORIGIN/.."
-                    rpath <- gsub(instdir, final_instdir, rpath,
-                                  fixed = TRUE)
+                    rpath <- gsub(instdir, quote_replacement(final_instdir),
+                                  rpath, fixed = TRUE)
                     if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
                         hardcoded_paths <- TRUE
                         cmd <- paste("patchelf", "--set-rpath",
@@ -789,8 +796,8 @@ if(FALSE) {
                         paths <- gsub(re, "\\1", out)
                         old_paths <- paths
                         # "\\$ORIGIN/.."
-                        paths <- gsub(instdir, final_instdir, paths,
-                                      fixed = TRUE)
+                        paths <- gsub(instdir, quote_replacement(final_instdir),
+                                      paths, fixed = TRUE)
                         changed <- paths != old_paths
                         paths <- paths[changed]
                         old_paths <- old_paths[changed]
@@ -825,7 +832,8 @@ if(FALSE) {
                     rpath <- gsub(".*PATH=", "", rpath)
                     old_rpath <- rpath
                     # "\\$ORIGIN/.."
-                    rpath <- gsub(instdir, final_instdir, rpath, fixed = TRUE)
+                    rpath <- gsub(instdir, quote_replacement(final_instdir),
+                                  rpath, fixed = TRUE)
                     if (length(rpath) && nzchar(rpath) && old_rpath != rpath) {
                         hardcoded_paths <- TRUE
                         cmd <- paste("chrpath", "-r", shQuote(rpath),
@@ -867,7 +875,8 @@ if(FALSE) {
                     }
                 }
             }
-        }
+        } # patch_rpaths()
+
         ## Make the destination directories available to the developer's
         ## installation scripts (e.g. configure)
         Sys.setenv(R_LIBRARY_DIR = lib)
@@ -1094,7 +1103,7 @@ if(FALSE) {
                                           target, sQuote(pkgname)),
                                  call. = FALSE, domain = NA)
                     }
-                    clink_cppflags <- paste(paste0('-I"', paths, '/include"'),
+                    clink_cppflags <- paste(paste0("-I'", paths, "/include'"),
                                             collapse = " ")
                     Sys.setenv(CLINK_CPPFLAGS = clink_cppflags)
                 }
@@ -1431,7 +1440,7 @@ if(FALSE) {
             } else character()
             for(e in ignore)
                 i_dirs <- filtergrep(e, i_dirs, perl = TRUE, ignore.case = TRUE)
-            lapply(gsub("^inst", instdir, i_dirs),
+            lapply(gsub("^inst", quote_replacement(instdir), i_dirs),
                    function(p) dir.create(p, FALSE, TRUE)) # be paranoid
             i_files <- list.files("inst", all.files = TRUE,
                                   full.names = TRUE, recursive = TRUE)
@@ -1447,7 +1456,7 @@ if(FALSE) {
                 i_files <- filtergrep("inst/doc/.*[.](png|jpg|jpeg|gif|ps|eps)$",
                                       i_files, perl = TRUE, ignore.case = TRUE)
             i_files <- i_files %w/o% "Makefile"
-            i2_files <- gsub("^inst", instdir, i_files)
+            i2_files <- gsub("^inst", quote_replacement(instdir), i_files)
             file.copy(i_files, i2_files)
             if (!WINDOWS) {
                 ## make executable if the source file was (for owner)
@@ -1526,7 +1535,7 @@ if(FALSE) {
                 set.install.dir <- ""
             cmd <- append(cmd,
                 paste0("tools:::makeLazyLoading(\"", pkg_name, "\", ",
-                                                    "\"", lib, "\", ",
+                                              quote_path(lib), ", ",
                                 "keep.source = ", keep.source, ", ",
                         "keep.parse.data = ", keep.parse.data,
                                               set.install.dir, ")"))
@@ -1577,8 +1586,20 @@ if(FALSE) {
 	## pkg indices: this also tangles the vignettes (if installed)
 	if (install_inst || install_demo || install_help) {
 	    starsmsg(stars, "building package indices")
-	    res <- try(.install_package_indices(".", instdir))
-	    if (inherits(res, "try-error"))
+            ## FIXME: add custom runR function
+            deps_only <-
+                config_val_to_logical(Sys.getenv("_R_CHECK_INSTALL_DEPENDS_", "FALSE"))
+            env <- if (deps_only) setRlibs(LinkingTo = TRUE, quote = TRUE)
+                   else ""
+            cmd <- c("tools:::.install_package_indices(\".\",",
+                     quote_path(instdir), ")")
+            cmd <- paste(cmd, collapse="\n")
+            opts <- paste(if(deps_only) "--vanilla" else "--no-save",
+                          "--slave")
+            out <- R_runR(cmd, opts, env = env)
+            if(length(out))
+                cat(paste(c(out, ""), collapse = "\n"))
+            if (length(attr(out, "status")))
 		errmsg("installing package indices failed")
             if(dir.exists("vignettes")) {
                 starsmsg(stars, "installing vignettes")
@@ -1664,10 +1685,15 @@ if(FALSE) {
             if (WINDOWS) {
                 unlink(final_instdir, recursive = TRUE) # needed for file.rename
                 if (!file.rename(instdir, final_instdir)) {
-                    message("WARNING: moving package to final location failed, copying instead")
-                    file.copy(instdir, dirname(final_instdir), recursive = TRUE,
-                              copy.date = TRUE)
-                    unlink(instdir, recursive = TRUE)
+                    if (dir.exists(instdir) && !dir.exists(final_instdir)) {
+                        message("WARNING: moving package to final location failed, copying instead")
+                        ret <- file.copy(instdir, dirname(final_instdir),
+                                         recursive = TRUE, copy.date = TRUE)
+                        if (any(!ret))
+                            errmsg("   copying to final location failed")
+                        unlink(instdir, recursive = TRUE)
+                    } else
+                        errmsg("   moving to final location failed")
                 }
             } else {
                 patch_rpaths()
@@ -1738,7 +1764,7 @@ if(FALSE) {
                 starsmsg(stars, "stripping dynamic library under lib")
             system(paste(c(strip_cmd, shQuote(so_s)), collapse = " "))
         }
-    }
+    } ## do_install_source
 
     options(showErrorCalls = FALSE)
     pkgs <- character()

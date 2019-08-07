@@ -2,6 +2,7 @@
 
 pdf("reg-tests-1d.pdf", encoding = "ISOLatin1.enc")
 .pt <- proc.time()
+tryCid <- function(expr) tryCatch(expr, error = identity)
 
 ## body() / formals() notably the replacement versions
 x <- NULL; tools::assertWarning(   body(x) <-    body(mean))	# to be error
@@ -103,7 +104,7 @@ stopifnot(exprs = {
 
 ## deparse of formals of a function
 fun <- function(a=1,b){}
-frmls <- tryCatch(eval(parse(text=deparse(formals(fun)))), error = identity)
+frmls <- tryCid(eval(parse(text=deparse(formals(fun)))))
 stopifnot(identical(frmls, formals(fun)))
 
 
@@ -818,14 +819,14 @@ t1 <- function(...) ..1
 t2 <- function(...) ..2
 stopifnot(identical(t1(pi, 2), pi), identical(t1(t1), t1),
 	  identical(t2(pi, 2), 2))
-et1 <- tryCatch(t1(), error=identity)
+et1 <- tryCid(t1())
 if(englishMsgs)
     stopifnot(identical("the ... list contains fewer than 1 element",
 			conditionMessage(et1)))
 ## previously gave   "'nthcdr' needs a list to CDR down"
-et0   <- tryCatch(t0(),  error=identity); (mt0   <- conditionMessage(et0))
-et2.0 <- tryCatch(t2(),  error=identity); (mt2.0 <- conditionMessage(et2.0))
-et2.1 <- tryCatch(t2(1), error=identity); (mt2.1 <- conditionMessage(et2.1))
+et0   <- tryCid(t0()) ; (mt0   <- conditionMessage(et0))
+et2.0 <- tryCid(t2()) ; (mt2.0 <- conditionMessage(et2.0))
+et2.1 <- tryCid(t2(1)); (mt2.1 <- conditionMessage(et2.1))
 if(englishMsgs)
     stopifnot(grepl("indexing '...' with .* index 0", mt0),
 	      identical("the ... list contains fewer than 2 elements", mt2.0),
@@ -840,8 +841,7 @@ one <- 1
 try(stopifnot(3 < 4:5, 5:6 >= 5, 6:8 <= 7, one <<- 2))
 stopifnot(identical(one, 1)) # i.e., 'one <<- 2' was *not* evaluated
 ## all the expressions were evaluated in R <= 3.4.x
-(et <- tryCatch(stopifnot(0 < 1:10, is.numeric(..vaporware..), stop("FOO!")),
-                error=identity))
+(et <- tryCid(stopifnot(0 < 1:10, is.numeric(..vaporware..), stop("FOO!"))))
 stopifnot(exprs = {
     inherits(et, "simpleError")
     ## no condition call, or at least should *not* contain 'stopifnot':
@@ -1057,8 +1057,8 @@ y <- c(2,3,5,7); yc <- as.complex(y)
 q.Li <- qr(X);              cfLi <- qr.coef(q.Li, y)
 q.LA <- qr(X, LAPACK=TRUE); cfLA <- qr.coef(q.LA, y)
 q.Cx <- qr(X + 0i);         cfCx <- qr.coef(q.Cx, y)
-e1 <- tryCatch(qr.coef(q.Li, y[-4]), error=identity); e1
-e2 <- tryCatch(qr.coef(q.LA, y[-4]), error=identity)
+e1 <- tryCid(qr.coef(q.Li, y[-4])); e1
+e2 <- tryCid(qr.coef(q.LA, y[-4]))
 stopifnot(exprs = {
     all.equal(cfLi,    cfLA , tol = 1e-14)# 6.376e-16 (64b Lx)
     all.equal(cfLi, Re(cfCx), tol = 1e-14)#  (ditto)
@@ -2210,7 +2210,7 @@ foo <- function() {
     x <- 1 + zero       ## value of 'x' has one reference
     lockBinding("x", environment())
     tryCatch(x[1] <- 2, ## would modify the value, then signal an error
-             error = identity)
+             error = function(e) NULL)
     stopifnot(identical(x, 1))
 }
 foo()
@@ -2507,7 +2507,7 @@ stopifnot(identical(rf, 4))
 
 
 ## format(.) when there's no method gives better message:
-ee <- tryCatch(format(.Internal(bodyCode(ls))), error=identity)
+ee <- tryCid(format(.Internal(bodyCode(ls))))
 stopifnot(exprs = {
     conditionCall(ee)[[1]] == quote(format.default)
     grepl("no format() method", conditionMessage(ee), fixed=TRUE)
@@ -2620,13 +2620,13 @@ writeLines(conditionMessage(tt))
 
 ## stopifnot() now works *nicely* with expression object (with 'exprs' name):
 ee <- expression(xpr=all.equal(pi, 3.1415927), 2 < 2, stop("foo!"))
-te <- tryCatch(stopifnot(exprObject = ee), error=identity)
+te <- tryCid(stopifnot(exprObject = ee))
 stopifnot(conditionMessage(te) == "2 < 2 is not TRUE")
 ## conditionMessage(te) was  "ee are not all TRUE" in R 3.5.x
-t2 <- tryCatch(stopifnot(exprs = { T }, exprObject = ee), error=identity)
-t3 <- tryCatch(stopifnot(TRUE, 2 < 3,   exprObject = ee), error=identity)
+t2 <- tryCid(stopifnot(exprs = { T }, exprObject = ee))
+t3 <- tryCid(stopifnot(TRUE, 2 < 3,   exprObject = ee))
 f <- function(ex) stopifnot(exprObject = ex)
-t4 <- tryCatch(f(ee), error=identity)
+t4 <- tryCid(f(ee))
 stopifnot(grepl("one of 'exprs', 'exprObject' ", conditionMessage(t2)),
           conditionMessage(t2) == conditionMessage(t3),
           conditionMessage(t4) == conditionMessage(te)
@@ -2927,7 +2927,7 @@ r10<- oligoFn(target = cbind(1,2), value = array(1,1:3))
 
 
 ## apply(., MARGIN) when MARGIN is outside length(dim(.)):
-a <- tryCatch(apply(diag(3), 2:3, mean), error=identity)
+a <- tryCid(apply(diag(3), 2:3, mean))
 stopifnot(exprs = {
     inherits(a, "error")
     conditionCall(a)[[1]] == quote(`apply`)
@@ -2951,12 +2951,42 @@ adc <- attr(ad, "counts")
 adt <- attr(ad, "trafos")
 ## Follow analysis in the bug report: in the diagonal, we should have
 ## only matches for each character in the given string.
-stopifnot(all(nchar(diag(adt)) == nchar(s)))
-## The del/ins/sub counts should agree with the numbers of D/I/S
-## occurrences in the trafos.
-stopifnot(all(nchar(gsub("[^D]", "", adt)) == adc[, , "del"]))
-stopifnot(all(nchar(gsub("[^I]", "", adt)) == adc[, , "ins"]))
-stopifnot(all(nchar(gsub("[^S]", "", adt)) == adc[, , "sub"]))
+stopifnot(exprs = {
+    nchar(diag(adt)) == nchar(s)
+    ## The del/ins/sub counts should agree with the numbers of D/I/S
+    ## occurrences in the trafos.
+    nchar(gsub("[^D]", "", adt)) == adc[, , "del"]
+    nchar(gsub("[^I]", "", adt)) == adc[, , "ins"]
+    nchar(gsub("[^S]", "", adt)) == adc[, , "sub"]
+})
+
+## list2env preserves values semantics
+v <- list(x=c(1)) # << subtlety!
+e <- list2env(v)
+with(e, x[[1]] <- 42)
+v
+stopifnot(identical(v$x,1))
+
+
+## misleading error message when coercing language object to atomic, etc:
+e <- tryCid(as.double(quote(foo(1))))
+stopifnot(inherits(e, "error"), grepl("'language'", e$message, fixed=TRUE))
+## had 'pairlist' in R <= 3.6.1
+
+
+## print(ls.str(<environment with error object with "missing" in message text>))
+msg <- "arguments in the signature are missing"
+e1 <- new.env(hash=FALSE)
+e1$Err <- structure(list(message = msg, call = quote(foo(bar))),
+                    class = c("simpleError", "error", "condition"))
+writeLines(prE <- capture.output(ls.str(e1)))
+## was "Err: <missing>" in R <= 3.6.1
+stopifnot(exprs = { length(prE) >= 3
+    grepl("List of 2", prE[[1]], fixed=TRUE)
+    grepl(msg,         prE[[2]], fixed=TRUE)
+    grepl("call.* foo\\(bar\\)", prE[[3]])
+})
+
 
 
 ## keep at end

@@ -584,9 +584,11 @@ packages that provide an engine for building vignettes.  These may
 include the current package, or ones listed in @samp{Depends},
 @samp{Suggests} or @samp{Imports}. The @pkg{utils} package is always
 implicitly appended.  See @ref{Non-Sweave vignettes} for details.  Note
-that if, for example, the vignette `engine' is @samp{knitr::rmarkdown}
-this field needs to declare both @CRANpkg{knitr} and
-@CRANpkg{rmarkdown}.
+that if, for example, a vignette has engine @samp{knitr::rmarkdown},
+then @CRANpkg{knitr} provides the engine but both @pkg{knitr} and
+@CRANpkg{rmarkdown} are needed for using it, so both these packages need
+to be at least suggested (as @pkg{rmarkdown} is only suggested by
+@pkg{knitr}, and hence not available automatically along with it).
 
 @c DESCRIPTION field Encoding
 If the @file{DESCRIPTION} file is not entirely in @acronym{ASCII} it
@@ -900,7 +902,7 @@ A package should be listed in only one of these fields.
 @item
 Packages whose namespace only is needed to load the package using
 @code{library(@var{pkgname})} should be listed in the @samp{Imports} field
-and not in the @samp{Depends} field.  Packages listed in @code{imports}
+and not in the @samp{Depends} field.  Packages listed in @code{import}
 or @code{importFrom} directives in the @file{NAMESPACE} file should
 almost always be in @samp{Imports} and not @samp{Depends}.
 @item
@@ -5299,7 +5301,7 @@ as @code{CS}, @code{DS}, @code{ES}, @code{FS}, @code{GS} and @code{SS}
 @code{EBP}, @code{EBX}, @code{ECX}, @code{EDI},@code{EDX}, @code{EFL},
 @code{EIP}, @code{ESI} and @code{ESP} .}) defined on i586/x64 Solaris in
 @file{<sys/regset.h>} and often included indirectly by @file{<stdlib.h>}
-and other core headers.  Further examples are @code{ERR},
+and other core headers.  Further examples are @code{ERR}, @code{VERSION},
 @code{LITTLE_ENDIAN}, @code{zero} and @code{I} (which is defined in
 Solaris' @file{<complex.h>} as a compiler intrinsic for the imaginary
 unit).  Some of these can be avoided by defining @code{_POSIX_C_SOURCE}
@@ -13472,6 +13474,23 @@ Cdgemm(const char *transa, const char *transb, const int *m,
        const double *beta, double *c, const int *ldc);
 @end example
 
+@noindent
+Alternatively, do as @R{} does as from version 3.6.1-patched and pass
+the character length(s) from C to Fortran. A portable way to do this is
+@example
+// before any R headers
+#define USE_FC_LEN_T
+#include <Rconfig.h>
+#include <R_ext/BLAS.h>
+#ifndef FCONE
+# define FCONE
+#endif
+...
+        F77_CALL(dgemm)("N", "T", &nrx, &ncy, &ncx, &one, x, 
+                        &nrx, y, &nry, &zero, z, &nrx FCONE FCONE);
+@end example
+@noindent
+(Note there is no comma before or between the @code{FCONE} invocations.)
 
 @node Numerical analysis subroutines, Optimization, Calling C from Fortran and vice versa, The R API
 @section Numerical analysis subroutines

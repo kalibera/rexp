@@ -25,6 +25,16 @@
 
       \item Long vectors are now supported as the \code{seq} argument of
       a \code{for()} loop.
+
+      \item \code{str(x)} gets a new \code{deparse.lines} option with a
+      default to speed it up when \code{x} is a large \code{call} object.
+
+      \item The internal traceback object produced when an error is
+      signalled (\code{.Traceback}), now contains the \code{call}s rather
+      than the \emph{\code{deparse()}d} calls, deferring the deparsing to
+      the user level functions \code{.traceback()} and \code{traceback()},
+      fulfilling the wish of \PR{17580}, reported (incl. patch proposal)
+      by Brodie Gaslam.
     }
   }
 
@@ -143,6 +153,15 @@
       package \pkg{utils} load time, now.  A consequence is that
       \code{str()} in scripts now is more consistent to interactive use,
       e.g., when displaying function(**) argument lists.
+
+      \item \code{as.numeric(<call>)} now gives correct error message.
+
+      \item Printing \code{ls.str()} no longer wrongly shows
+      \code{"<missing>"} in rare cases.
+
+      \item Auto-printing S4 objects no longer duplicates the object,
+      for faster speed and reduced memory consumption. Reported by Aaron
+      Lun.
     }
   }
 }
