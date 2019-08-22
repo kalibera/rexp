@@ -734,8 +734,7 @@ make install-pdf
 @noindent
 Once again, it is optional to specify @code{prefix}, @code{libdir} or
 @code{rhome} (the PDF manuals are installed under the @R{} home
-directory).  (@command{make install-info} needs @command{Perl} installed
-if there is no command @command{install-info} on the system.)
+directory).  
 
 More precise control is possible.  For info, the setting used is that of
 @code{infodir} (default @file{@var{prefix}/info}, set by configure
@@ -1030,11 +1029,6 @@ CXXFLAGS
 CXXPICFLAGS
 CXXSTD
 
-CXX98
-CXX98STD
-CXX98FLAGS
-CXX98PICFLAGS
-
 CXX11
 CXX11STD
 CXX11FLAGS
@@ -1174,7 +1168,6 @@ needed overriding on Linux with GCC 9: e.g@: in @file{config.site}:
 @example
 CPICFLAGS=-fPIC
 CXXPICFLAGS=-fPIC
-CXX98PICFLAGS=-fPIC
 CXX11PICFLAGS=-fPIC
 CXX14PICFLAGS=-fPIC
 CXX17PICFLAGS=-fPIC
@@ -1187,11 +1180,11 @@ little used before 2019.
 With @command{gcc}/@command{gfortran} 9.x@footnote{probably also 8.4 and
 later when released.} this will flag inconsistencies in calls to Fortran
 subroutines/functions, both between Fortran source files and between
-Fortran and C/C++.  @command{gfortran} 9.x@footnote{since 2019-05-09,
-just after the release of version 9.1.}  can help understanding these by
-extracting C prototypes from Fortran source files with its
-@option{-fc-prototypes-external} option, e.g.@: that (at the time of
-writing) Fortran @code{LOGICAL} corresponds to @code{int_least32_t *}.
+Fortran and C/C++.  @command{gfortran} 9.2@footnote{or 9.1-patched since
+2019-05-09.} can help understanding these by extracting C prototypes
+from Fortran source files with its @option{-fc-prototypes-external}
+option, e.g.@: that (at the time of writing) Fortran @code{LOGICAL}
+corresponds to @code{int_least32_t *}.
 
 @node Testing a Unix-alike Installation,  , Other Options, Installing R under Unix-alikes
 @section Testing an Installation
@@ -3500,8 +3493,8 @@ make PDF versions of the manuals you will also need file
 @pkg{texinfo} distribution but is often made part of the @TeX{} package
 in re-distributions) as well as
 @command{texi2dvi}.@footnote{@command{texi2dvi} is normally a shell
-script.  Some versions (including that from @pkg{texinfo} 5.2 and 6.0)
-need to be run under @command{bash} rather than a Bourne shell,
+script.  Some versions (including those from @pkg{texinfo} 5.2 and
+6.0-6.6) need to be run under @command{bash} rather than a Bourne shell,
 especially on Solaris. Some of the issues which have been observed with
 broken versions of @command{texi2dvi} can be circumvented by setting the
 environment variable @env{R_TEXI2DVICMD} to the value @code{emulation}.}
@@ -4539,11 +4532,13 @@ is to search for
 @command{gfortran}, @command{g95}, @command{xlf95} @command{f95},
 @command{fort}, @command{ifort}, @command{ifc}, @command{efc},
 @command{pgfortran}, @command{pgf95} @command{lf95}, @command{ftn},
-@command{nagfor},
-@command{xlf90}, @command{f90}, @command{pgf90}, @command{pghpf},
-@command{epcf90}.
-(Note that these are searched for by name, without checking the standard
-of Fortran they support.)
+@command{nagfor}, @command{xlf90}, @command{f90}, @command{pgf90},
+@command{pghpf}, @command{epcf90}.  (Note that these are searched for by
+name, without checking the standard of Fortran they support.)  The
+command and flags used should support fixed-form Fortran with extension
+@file{.f}: in the unusual case that a specific flag is needed for
+free-form Fortran with extension @file{.f90} or @file{.f95}, this can be
+specified as part of @code{FCFLAGS}.
 
 The search mechanism can be changed using the configure variable
 @code{FC} which specifies the command that runs the Fortran compiler.
@@ -4555,7 +4550,7 @@ specify its full path.
 
 If your Fortran libraries are in slightly peculiar places, you should
 @enindex LD_LIBRARY_PATH
-also look at @env{LD_LIBRARY_PATH} or your system's equivalent to make
+also look at @env{LD_LIBRARY_PATH} (or your system's equivalent) to make
 sure that all libraries are on this path.
 
 Note that only Fortran compilers which convert identifiers to lower case
@@ -4959,6 +4954,23 @@ this might still be needed if a @cputype{ix86} CPU is encountered
 without SSE2 support.  Note that it is a @emph{replacement} for
 @samp{FFLAGS}, so should include all the flags in that macro (except
 perhaps the optimization level).
+
+Additional compilation flags can be specified for added safety/security
+checks.  For example Fedora 30 adds
+
+@example
+-Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS
+-Fexceptions -fstack-protector-strong -fasynchronous-unwind-tables
+-fstack-clash-protection -fcf-protection
+@end example
+
+@noindent
+to all the C, C++ and Fortran compiler flags (even though
+@code{_GLIBCXX_ASSERTIONS} is only for C++ in current GCC and
+@code{glibc} and none of these are documented for @code{gfortran}).
+Use of @code{_GLIBCXX_ASSERTIONS} will link @code{abort} and
+@code{printf} into almost all C++ code, and @command{R CMD check
+--as-cran} will warn.
 
 @menu
 * Clang::                       
@@ -5566,7 +5578,6 @@ FC=f95
 FFLAGS=-O
 CXX=CC
 CXXSTD="-std=c++11 -library=stdcpp,CrunG3"
-CXX98STD="-compat=g -library=stdcpp,CrunG3"
 CXX11STD="-std=c++11 -library=stdcpp,CrunG3"
 CXX14STD="-std=c++14 -library=stdcpp,CrunG3"
 CXXFLAGS=-O
@@ -5609,26 +5620,10 @@ The Oracle compilers provide several implementations of the C++
 standards which select both the set of headers and a C++ runtime
 library.  One of those is selected by the @option{-library} flag, which
 as it is needed for both compiling and linking is best specified as part
-of the compiler or standard.  Current @R{} expects a C++11 compiler,
-for which the choice given above is the only possibility.  For C++98
-there are several with
-
-@example
-CXX98=CC
-CXX98STD="-compat=g -library=stdcpp,CrunG3"
-@end example
-
-@noindent
-being the most compatible with C++11 compilation.  Another possibility
-(commonly used for earlier versions of @R{}) would be
-
-@example
-CXX98="CC -library=stlport4"
-@end example
-
-@noindent
-Although version 12.5 accepts the flag @option{-std=c++14}, it did not
-pass @command{configure}'s conformance tests: version 12.6 did.
+of the compiler or standard.  Current @R{} expects a C++11 compiler, for
+which the choice given above is the only possibility.  Although version
+12.5 accepted the flag @option{-std=c++14}, it did not pass
+@command{configure}'s conformance tests: version 12.6 does.
 
 
 @cindex BLAS library

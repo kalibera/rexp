@@ -57,7 +57,8 @@ c     remaining vertices
          j=i-1
          do 6 k=1,d
             v(i,k)=v(1+mod(j,2)*(vc-1),k)
-            j=DBLE(j)/2.D0
+c    Integer division would do here
+            j=INT(DBLE(j)/2.D0)
     6    continue
     5 continue
       return
@@ -465,13 +466,13 @@ c     smooth
     6    continue
       end if
       call ehg139(v,nvmax,nv,n,d,nf,f,x,pi,psi,y,rw,trl,kernel,k,dist,
-     +     dist,eta,b,d,w,diagl,vval2,nc,vc,a,xi,lo,hi,c,vhit,rcond,
+     +     dist,eta,b,d,w,diagl,vval2,nc,vc,a,xi,lo,hi,c,rcond,
      +     sing,dd,tdeg,cdeg,lq,lf,setlf,vval)
       return
       end
 
-      subroutine ehg133(n,d,vc,nvmax,nc,ncmax,a,c,hi,lo,v,vval,xi,m,z,s)
-      integer           n,d,vc,nvmax,nc,ncmax, m
+      subroutine ehg133(d,vc,nvmax,ncmax,a,c,hi,lo,v,vval,xi,m,z,s)
+      integer           d,vc,nvmax,ncmax, m
       integer           a(ncmax),c(vc,ncmax),hi(ncmax),lo(ncmax)
       double precision v(nvmax,d),vval(0:d,nvmax),xi(ncmax),z(m,d),s(m)
 c Var
@@ -520,7 +521,7 @@ c     coef, d, deg, del
 
       if(deg.eq.0) dk=1
       if(deg.eq.1) dk=d+1
-      if(deg.eq.2) dk=dble((d+2)*(d+1))/2.d0
+      if(deg.eq.2) dk=int(dble((d+2)*(d+1))/2.d0)
       corx=dsqrt(k/dble(n))
       z=(dsqrt(k/trl)-corx)/(1-corx)
       if(nsing .eq. 0 .and. 1 .lt. z)   call ehg184('Chernobyl! trL<k',t
@@ -818,21 +819,21 @@ c           bottom of while loop
       integer d,dka,dkb,tau
       double precision alpha,f,trl,trla,trlb
       external ehg197
-      call ehg197(1,tau,d,f,dka,trla)
-      call ehg197(2,tau,d,f,dkb,trlb)
+      call ehg197(1,d,f,dka,trla)
+      call ehg197(2,d,f,dkb,trlb)
       alpha=dble(tau-dka)/dble(dkb-dka)
       trl=(1-alpha)*trla+alpha*trlb
       return
       end
 
-      subroutine ehg197(deg,tau,d,f,dk,trl)
-      integer deg,tau,d,dk
+      subroutine ehg197(deg,d,f,dk,trl)
+      integer deg,d,dk
       double precision f, trl
 
       double precision g1
       dk = 0
       if(deg.eq.1) dk=d+1
-      if(deg.eq.2) dk=dble((d+2)*(d+1))/2.d0
+      if(deg.eq.2) dk=int(dble((d+2)*(d+1))/2.d0)
       g1 = (-0.08125d0*d+0.13d0)*d+1.05d0
       trl = dk*(1+max(0.d0,(g1-f)/f))
       return
@@ -925,7 +926,7 @@ c     tensor
          if(.not.i2)then
             call ehg182(122)
          end if
-         lg=DBLE(lg)/2.D0
+         lg=int(DBLE(lg)/2.D0)
          do 8 ig=1,lg
 c           Hermite basis
             phi0=(1-h)**2*(1+2*h)
@@ -1202,7 +1203,7 @@ c        Hermite basis
 
       integer function ifloor(x)
       DOUBLE PRECISION x
-      ifloor=x
+      ifloor=int(x)
       if(ifloor.gt.x) ifloor=ifloor-1
       end
 
@@ -1335,13 +1336,13 @@ c              ( U sup T Q sup T ) W $
 c called from lowesb() ... compute fit ..?..?...
 c somewhat similar to ehg136
       subroutine ehg139(v,nvmax,nv,n,d,nf,f,x,pi,psi,y,rw,trl,kernel,k,
-     +     dist,phi,eta,b,od,w,diagl,vval2,ncmax,vc,a,xi,lo,hi,c,vhit,
+     +     dist,phi,eta,b,od,w,diagl,vval2,ncmax,vc,a,xi,lo,hi,c,
      +     rcond,sing,dd,tdeg,cdeg,lq,lf,setlf,s)
       logical setlf
       integer identi,d,dd,i,i2,i3,i5,i6,ii,ileaf,info,j,k,kernel,
      +     l,n,ncmax,nf,nleaf,nv,nvmax,od,sing,tdeg,vc
       integer lq(nvmax,nf),a(ncmax),c(vc,ncmax),cdeg(8),hi(ncmax),
-     +     leaf(256),lo(ncmax),pi(n),psi(n),vhit(nvmax)
+     +     leaf(256),lo(ncmax),pi(n),psi(n)
       DOUBLE PRECISION f,i1,i4,i7,rcond,scale,term,tol,trl
       DOUBLE PRECISION lf(0:d,nvmax,nf),sigma(15),u(15,15),e(15,15),
      +     b(nf,k),diagl(n),dist(n),eta(nf),DGAMMA(15),q(8),qraux(15),
@@ -1392,11 +1393,11 @@ c           invert $psi$
             do 11 i5=1,d
                z(i5)=v(l,i5)
    11       continue
-            call ehg137(z,vhit(l),leaf,nleaf,d,nv,nvmax,ncmax,a,xi,
+            call ehg137(z,leaf,nleaf,d,ncmax,a,xi,
      +           lo,hi)
             do 12 ileaf=1,nleaf
                do 13 ii=lo(leaf(ileaf)),hi(leaf(ileaf))
-                  i=phi(pi(ii))
+                  i=int(phi(pi(ii)))
                   if(i.ne.0)then
                      if(.not.(psi(i).eq.pi(ii)))then
                         call ehg182(194)
@@ -1495,9 +1496,8 @@ c           $Lf sub {:,l,:} = V SIGMA sup {+} U sup T Q sup T W$
       return
       end
 
-      subroutine lowesb(xx,yy,ww,diagl,infl,iv,liv,lv,wv)
+      subroutine lowesb(xx,yy,ww,diagl,infl,iv,wv)
       integer infl
-      integer liv, lv
       integer iv(*)
       DOUBLE PRECISION xx(*),yy(*),ww(*),diagl(*),wv(*)
 c Var
@@ -1580,7 +1580,7 @@ c     version -> versio
             i1=d+1
          else
             if(ideg.eq.2)then
-               i1=dble((d+2)*(d+1))/2.d0
+               i1=int(dble((d+2)*(d+1))/2.d0)
             end if
          end if
       end if
@@ -1646,8 +1646,8 @@ c     initialize permutation
       return
       end
 
-      subroutine lowese(iv,liv,lv,wv,m,z,s)
-      integer liv,lv,m
+      subroutine lowese(iv,wv,m,z,s)
+      integer m
       integer iv(*)
       double precision s(m),wv(*),z(m,1)
 
@@ -1659,14 +1659,14 @@ c     initialize permutation
       if(.not.(iv(28).eq.173))then
          call ehg182(173)
       end if
-      call ehg133(iv(3),iv(2),iv(4),iv(14),iv(5),iv(17),iv(iv(7)),iv(iv(
+      call ehg133(iv(2),iv(4),iv(14),iv(17),iv(iv(7)),iv(iv(
      +8)),iv(iv(9)),iv(iv(10)),wv(iv(11)),wv(iv(13)),wv(iv(12)),m,z,s)
       return
       end
 
 c "direct" (non-"interpolate") fit aka predict() :
-      subroutine lowesf(xx,yy,ww,iv,liv,lv,wv,m,z,l,ihat,s)
-      integer liv,lv,m,ihat
+      subroutine lowesf(xx,yy,ww,iv,wv,m,z,l,ihat,s)
+      integer m,ihat
 c     m = number of x values at which to evaluate
       integer iv(*)
       double precision xx(*),yy(*),ww(*),wv(*),z(m,1),l(m,*),s(m)
@@ -1697,8 +1697,8 @@ c              w,     rcond,sing,    dd,    tdeg,cdeg,  s)
       return
       end
 
-      subroutine lowesl(iv,liv,lv,wv,m,z,l)
-      integer liv,lv,m
+      subroutine lowesl(iv,wv,m,z,l)
+      integer m
       integer iv(*)
       double precision l(m,*),wv(*),z(m,1)
 
@@ -1719,8 +1719,8 @@ c              w,     rcond,sing,    dd,    tdeg,cdeg,  s)
       return
       end
 
-      subroutine lowesr(yy,iv,liv,lv,wv)
-      integer liv,lv
+c  Not used
+      subroutine lowesr(yy,iv,wv)
       integer iv(*)
       DOUBLE PRECISION yy(*),wv(*)
 
@@ -1891,7 +1891,7 @@ c     top of while loop
          if(.not.leaf)then
             call ehg129(l,u,dd,x,pi,n,sigma)
             k=IDAMAX(dd,sigma,1)
-            m=DBLE(l+u)/2.D0
+            m=int(DBLE(l+u)/2.D0)
             call ehg106(l,u,m,1,x(1,k),pi,n)
 
 c           all ties go with hi son
@@ -1982,8 +1982,8 @@ c     initialize  d1mach(2) === DBL_MAX:
       end
 
 c {called only from ehg127}  purpose...?...
-      subroutine ehg137(z,kappa,leaf,nleaf,d,nv,nvmax,ncmax,a,xi,lo,hi)
-      integer kappa,d,nv,nvmax,ncmax,nleaf
+      subroutine ehg137(z,leaf,nleaf,d,ncmax,a,xi,lo,hi)
+      integer d,nleaf
       integer leaf(256),a(ncmax),hi(ncmax),lo(ncmax),pstack(20)
       DOUBLE PRECISION z(d),xi(ncmax)
 

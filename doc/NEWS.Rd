@@ -13,9 +13,9 @@
       \pkg{tools}) can now check for \emph{specific} error or warning
       classes \emph{via} the new optional second argument \code{classes}
       (which is not back compatible with previous use of an unnamed second
-      argument.)
+      argument).
 
-      \item \code{Df2formula()}, the utility for the data frame method of
+      \item \code{DF2formula()}, the utility for the data frame method of
       \code{formula()}, now works without parsing and explicit evaluation,
       starting from Suharto Anggono's suggestion in \PR{17555}.
 
@@ -30,11 +30,51 @@
       default to speed it up when \code{x} is a large \code{call} object.
 
       \item The internal traceback object produced when an error is
-      signalled (\code{.Traceback}), now contains the \code{call}s rather
-      than the \emph{\code{deparse()}d} calls, deferring the deparsing to
-      the user level functions \code{.traceback()} and \code{traceback()},
-      fulfilling the wish of \PR{17580}, reported (incl. patch proposal)
-      by Brodie Gaslam.
+      signalled (\code{.Traceback}), now contains the \code{call}s
+      rather than the \emph{\code{deparse()}d} calls, deferring the
+      deparsing to the user-level functions \code{.traceback()} and
+      \code{traceback()}, fulfilling the wish of \PR{17580}, reported
+      (incl.\sspace{}patch proposal) by Brodie Gaslam.
+
+      \item \code{data.matrix()} now converts character columns to
+      factors and from this to integers.
+
+      \item \code{package.skeleton()} now explicitly lists all exports
+      in the \file{NAMESPACE} file.
+
+      \item New function \code{.S3method()} to register S3 methods in R
+      scripts.
+      
+      \item \code{file.path()} has some support for file paths not in
+      the session encoding, e.g.\sspace{}with UTF-8 inputs in a
+      non-UTF-8 locale the output is marked as UTF-8.
+
+      \item Most functions with file-path inputs will give an explicit
+      error if a file-path input in a marked encoding cannot be
+      translated (to the native encoding or in some cases on Windows to
+      UTF-8), rather than translate to a different file path using
+      escapes.  Some (such as \code{dir.exists()}, \code{file.exists()},
+      \code{file.access()}, \code{file.info()}, \code{list.files},
+      \code{normalizePath()} and \code{path.expand()}) treat this like
+      any other non-existent file, often with a warning.
+
+      \item (Windows) \command{Rterm} now works also when invoked from
+      MSYS2 terminals.  Line editing is possible when \command{winpty}
+      is installed.
+
+      \item New function \code{list2DF()} for creating data frames from
+      lists of variables.
+
+      \item \code{iconv()} has a new option \code{sub = "Unicode"} to
+      translate UTF-8 input invalid in the \samp{to} encoding using
+      \samp{<U+xxxx>} escapes.
+
+      \item There is a new help document accessed by
+      \code{help("file path encoding")}
+      detailing how file paths with marked encodings are handled.
+
+      \item There is a new function \code{infoRDS()} providing information
+      about serialization format of a serialized object.
     }
   }
 
@@ -51,7 +91,17 @@
       But portable code should not rely on this.)
 
       \item \command{R CMD config} no longer knows about the
-      unused settings \samp{F77} and \samp{FCPIFCPLAGS}.
+      unused settings \samp{F77} and \samp{FCPIFCPLAGS}, nor
+      \samp{CXX98} and similar.
+    }
+  }
+
+  \subsection{C-LEVEL FACILITIES}{
+    \itemize{
+      \item \code{installChar} is now remapped in \file{Rinternals.h} to
+      \code{installTrChar}, of which it has been a wrapper since
+      \R\sspace{}3.6.0.  Neither are part of the API, but packages using
+      \code{installChar} can replace it if they depend on \samp{R >= 3.6.2}.
     }
   }
 
@@ -63,6 +113,9 @@
       \item There is a new variant option \option{--enable-lto=check}
       for checking consistency of BLAS/LAPACK/LINPACK calls --- see
       \sQuote{Writing R Extensions}.
+      
+      \item A C++ compiler default is set only if the C++11 standard is
+      supported: it no longer falls back to C++98.
     }
   }
 
@@ -88,6 +141,10 @@
       \item \code{stopifnot()} gets new argument \code{exprObject} to allow
       an \R object of class \code{expression} (or other \sQuote{language})
       to work more consistently, thanks to suggestions by Suharto Anggono.
+
+      \item \code{format.default(*, scientific = FALSE)} now corresponds to
+      a practically most extreme \code{options(scipen = n)} setting rather
+      than arbitrary \code{n = 100}.
     }
   }
 }
@@ -110,6 +167,14 @@
     }
   }
 
+  \subsection{C-LEVEL FACILITIES}{
+    \itemize{
+      \item \code{installTrChar} (which is nowadays is wrapped by
+      \code{installChar}) is defined in \file{Rinternals.h}.  (Neither
+      are part of the API.)
+    }
+  }
+
   \subsection{PACKAGE INSTALLATION}{
     \itemize{
       \item Header \file{Rconfig.h} contains the value of
@@ -127,6 +192,13 @@
     }
   }
 
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item Support for specifying C++98 in package installation is
+      deprecated.
+    }
+  }
+
   \subsection{BUG FIXES}{
     \itemize{
       \item \code{runmed(x, *)} when \code{x} contains missing values
@@ -134,7 +206,7 @@
       \code{"Turlach"}, and no longer segfaults for \code{"Turlach"}, as
       reported by Hilmar Berger.
 
-      \item \code{conformMethod()} now correctly works in cases containing
+      \item \code{conformMethod()} now works correctly in cases containing
       a \dQuote{\code{&&} logic} bug, reported by Henrik Bengtsson.  It now
       creates methods with \code{"missing"} entries in the signature.
       Consequently, \code{rematchDefinition()} is amended to use

@@ -2988,6 +2988,37 @@ stopifnot(exprs = { length(prE) >= 3
 })
 
 
+.M <- .Machine
+str(.M[grep("^sizeof", names(.M))]) ## also differentiate long-double..
+b64 <- .M$sizeof.pointer == 8
+arch <- Sys.info()[["machine"]]
+onWindows <- .Platform$OS.type == "windows"
+if(!(onWindows && arch == "x86")) {
+## PR#17577 - dgamma(x, shape)  for shape < 1 (=> +Inf at x=0) and very small x
+stopifnot(exprs = {
+    all.equal(dgamma(2^-1027, shape = .99 , log=TRUE), 7.1127667376, tol=1e-10)
+    all.equal(dgamma(2^-1031, shape = 1e-2, log=TRUE), 702.8889158,  tol=1e-10)
+    all.equal(dgamma(2^-1048, shape = 1e-7, log=TRUE), 710.30007699, tol=1e-10)
+    all.equal(dgamma(2^-1048, shape = 1e-7, scale = 1e-315, log=TRUE),
+              709.96858768, tol=1e-10)
+})
+## all gave Inf in R <= 3.6.1
+} else cat("PR#17577 bug fix not checked, as it may not work on this platform\n")
+
+
+## format(x, scientific = FALSE)  for large x
+xMAX <- .Machine$double.xmax
+ch <- format(xMAX, scientific = 400) # << scientific as 'scipen'
+op <- options(digits=1, scipen = 303)
+co <- capture.output(cat(xMAX))
+options(op)# back to normal
+stopifnot(exprs = {
+    nchar(ch) == 309
+    identical(ch, co)
+    ch == format(xMAX, scientific=FALSE)
+})## format(*, scientific=FALSE) was "not obeyed" in R <= 3.6.1
+
+
 
 ## keep at end
 rbind(last =  proc.time() - .pt,

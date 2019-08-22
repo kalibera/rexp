@@ -506,10 +506,10 @@ data.frame <-
 	    vnames[[i]] <- namesi
 	} else if (fix.empty.names && no.vn[[i]]) {
 	    tmpname <- deparse(object[[i]], nlines = 1L)[1L]
-	    if(substr(tmpname, 1L, 2L) == "I(") { ## from 'I(*)', only keep '*':
+	    if(startsWith(tmpname, "I(") && endsWith(tmpname, ")")) {
+                ## from 'I(*)', only keep '*':
 		ntmpn <- nchar(tmpname, "c")
-		if(substr(tmpname, ntmpn, ntmpn) == ")")
-		    tmpname <- substr(tmpname, 3L, ntmpn - 1L)
+                tmpname <- substr(tmpname, 3L, ntmpn - 1L)
 	    }
 	    vnames[[i]] <- tmpname
 	} ## else vnames[[i]] are not changed
@@ -1289,9 +1289,7 @@ rbind.data.frame <- function(..., deparse.level = 1, make.row.names = TRUE,
     }
     n <- length(allargs)
     if(n == 0L)
-	return(structure(list(),
-			 class = "data.frame",
-			 row.names = integer()))
+	return(list2DF())
     nms <- names(allargs)
     if(is.null(nms))
 	nms <- character(n)
@@ -1413,8 +1411,7 @@ rbind.data.frame <- function(..., deparse.level = 1, make.row.names = TRUE,
     if(nvar == 0L)
 	nvar <- max(lengths(allargs)) # only vector args
     if(nvar == 0L)
-	return(structure(list(), class = "data.frame",
-			 row.names = integer()))
+	return(list2DF())
     pseq <- seq_len(nvar)
     if(is.null(value)) { # this happens if there has been no data frame
 	value <- list()
@@ -1701,4 +1698,23 @@ Summary.data.frame <- function(..., na.rm)
         x
     })
     do.call(.Generic, c(args, na.rm=na.rm))
+}
+
+list2DF <-
+function(x = list(), nrow = NULL)
+{
+    stopifnot(is.list(x), is.null(nrow) || nrow >= 0L)
+    if(n <- length(x)) {
+        if(is.null(nrow))
+            nrow <- max(lengths(x), 0L)
+        x <- lapply(x, rep_len, nrow)
+    } else {
+        if(is.null(nrow))
+            nrow <- 0L
+    }
+    if(is.null(names(x)))
+        names(x) <- character(n)
+    class(x) <- "data.frame"
+    attr(x, "row.names") <- .set_row_names(nrow)
+    x
 }

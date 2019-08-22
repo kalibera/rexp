@@ -951,8 +951,15 @@ int cmdlineoptions(int ac, char **av)
 	    Rp->ReadConsole = ThreadedReadConsole;
 	    InThreadReadConsole = CharReadConsole;
 	} else if (R_is_redirection_tty(0) && R_is_redirection_tty(1)) {
-	    /* FIXME: support readline to allow line editing
-	              support Ctrl-C */
+	    /* Note it is not currently possible to use line editing with Msys2
+	       terminals such as mintty, because we cannot disable buffering in
+	       the terminal. One can only do that from applications linked
+	       against the Cygwin runtime, but R is linked against Msvcrt
+	       via Mingw and using multiple runtimes is not possible.
+
+	       Msys2/cygwin is handled in AppMain() by re-executing using
+	       winpty. This branch is taken when winpty is not available.
+	    */
 	    Rp->R_Interactive = TRUE;
 	    Rp->ReadConsole = ThreadedReadConsole;
 	    InThreadReadConsole = FileReadConsole;

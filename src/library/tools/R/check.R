@@ -2340,7 +2340,7 @@ add_dummies <- function(dir, Log)
                     ## foo: bar ...
                     ## where bar ... and standalone foo are object names
                     dl <- readLines(sv, warn = FALSE)
-                    if (any(bad <- !grepl("^[^ :]*($|: +[[:alpha:].])", dl))) {
+                    if (any(bad <- !grepl("^[^ :]+($|: +[[:alpha:].])", dl))) {
                         warn <- TRUE
                         msgs <- c(msgs,
                                   sprintf("File %s contains malformed line(s):\n",
@@ -2384,8 +2384,27 @@ add_dummies <- function(dir, Log)
                                 warn <- TRUE
                             msgs <- c(msgs,
                                      sprintf('Output for data("%s", package = "%s"):\n', f, pkgname),
-                                     paste(c(paste0("  ",out), ""),
+                                     paste(c(paste0("  ", out), ""),
                                            collapse = "\n"))
+                        }
+                    }
+                    check_datalist <-
+                        Sys.getenv("_R_CHECK_DATALIST_", "FALSE")
+                    check_datalist <-
+                        config_val_to_logical(check_datalist)
+                    if(check_datalist && !warn) {
+                        ## If there was a problem loading the datasets,
+                        ## we cannot reliably check whether 'datalist'
+                        ## is up-to-date.
+                        cmd <- sprintf("tools:::.check_package_datalist(\"%s\", \"%s\")",
+
+                                       pkgname, libdir)
+                        out <- R_runR(cmd, R_opts2)
+                        if(length(out)) {
+                            msgs <- c(msgs,
+                                      c("File 'data/datalist' is out-of-date:\n",
+                                        paste0("  ", out, "\n"),
+                                        "Please re-create using tools::add_datalist(force = TRUE).\n"))
                         }
                     }
                 }
@@ -4843,10 +4862,19 @@ add_dummies <- function(dir, Log)
                              ": warning: .* with a value, in function returning void"
                             )
 
+                ## warning most seen with -D_FORTIFY_SOURCE
+                warn_re <- c(warn_re,
+                             ": warning: .* \\[-Wunused-result\\]", # also clang
+                             ": warning: .* \\[-Warray-bounds\\]",
+                             ": warning: .* \\[-Wrestrict\\]"
+                             )
+
                 ## clang warnings
                 warn_re <- c(warn_re,
                              ": warning: .* GNU extension",
                              ": warning: .* \\[-Wdeprecated-register\\]",
+                             ## skip some of these below
+                             ": warning: .* \\[-Wdeprecated-declarations\\]",
                              ": warning: .* \\[-Wformat-extra-args\\]", # also gcc
                              ": warning: .* \\[-Wformat-security\\]",
                              ": warning: .* \\[-Wheader-guard\\]",
@@ -4862,7 +4890,6 @@ add_dummies <- function(dir, Log)
                              ": warning: format string contains '[\\]0'",
                              ": warning: .* \\[-Wc[+][+]11-long-long\\]",
                              ": warning: empty macro arguments are a C99 feature",
-                             ": warning: .* \\[-Wunused-result\\]",  # also gcc
                              ## for non-portable flags (seen in sub-Makefiles)
                              "warning: .* \\[-Wunknown-warning-option\\]"
                              )
@@ -4889,6 +4916,10 @@ add_dummies <- function(dir, Log)
 
                 ## and gfortran 9 warnings about F2018
                 ex_re <- "^Warning: Fortran 2018 deleted feature:"
+                lines <- filtergrep(ex_re, lines, useBytes = TRUE)
+
+                ## and deprecated declarations in Eigen and boost
+                ex_re <- "(include/Eigen|include/boost|boost/smart_ptr).* warning: .* \\[-Wdeprecated-declarations\\]"
                 lines <- filtergrep(ex_re, lines, useBytes = TRUE)
 
                 ## Ignore install-time readLines() warnings about
@@ -5895,6 +5926,7 @@ add_dummies <- function(dir, Log)
         Sys.setenv("_R_CHECK_LENGTH_1_LOGIC2_" =
                        "package:_R_CHECK_PACKAGE_NAME_,verbose")
         Sys.setenv("_R_CHECK_CODOC_VARIABLES_IN_USAGES_" = "TRUE")
+        Sys.setenv("_R_CHECK_DATALIST_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
