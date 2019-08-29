@@ -539,8 +539,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 	} else if (perl_opt) {
 	    pcre *re_pcre;
 	    pcre_extra *re_pe = NULL;
-	    int erroffset, ovector[30];
-	    const char *errorptr;
+	    int ovector[30];
 	    int options = 0;
 
 	    if (use_UTF8) options = PCRE_UTF8;
@@ -1015,8 +1014,7 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (fixed_opt) ;
     else if (perl_opt) {
-	int cflags = 0, erroffset;
-	const char *errorptr;
+	int cflags = 0;
 	Rboolean pcre_st = R_PCRE_study == -2 ?  FALSE : n >= R_PCRE_study;
 	if (igcase_opt) cflags |= PCRE_CASELESS;
 	if (!useBytes && use_UTF8) cflags |= PCRE_UTF8;
@@ -1773,8 +1771,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (!patlen) error(_("zero-length pattern"));
 	replen = strlen(srep);
     } else if (perl_opt) {
-	int cflags = 0, erroffset;
-	const char *errorptr;
+	int cflags = 0;
 	Rboolean pcre_st = R_PCRE_study == -2 ?  FALSE : n >= R_PCRE_study;
 	if (use_UTF8) cflags |= PCRE_UTF8;
 	if (igcase_opt) cflags |= PCRE_CASELESS;
@@ -2579,8 +2576,7 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if (fixed_opt) ;
     else if (perl_opt) {
-	int cflags = 0, erroffset;
-	const char *errorptr;
+	int cflags = 0;
 	Rboolean pcre_st = R_PCRE_study == -2 ?  FALSE : n >= R_PCRE_study;
 	if (igcase_opt) cflags |= PCRE_CASELESS;
 	if (!useBytes && use_UTF8) cflags |= PCRE_UTF8;
