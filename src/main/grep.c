@@ -245,12 +245,15 @@ set_pcre_recursion_limit(pcre_extra **re_pe_ptr, const long limit)
 }
 
 static void prepare_pcre(const char *pattern, int options, SEXP subject,
-                         const unsigned char **tables, pcre **re,
-                         pcre_extra **re_extra)
+                         Rboolean always_study, const unsigned char **tables,
+                         pcre **re, pcre_extra **re_extra)
 {
     int erroffset;
     const char *errorptr;
     Rboolean use_limit = FALSE;
+    R_xlen_t len = XLENGTH(subject);
+    Rboolean pcre_st = always_study ||
+                       (R_PCRE_study == -2 ? FALSE : len >= R_PCRE_study);
 
     if (!*tables)
 	// PCRE docs say this is not needed, but it is on Windows
@@ -263,18 +266,18 @@ static void prepare_pcre(const char *pattern, int options, SEXP subject,
 	/* in R 3.6 and earlier strsplit reported "invalid split pattern" */
 	error(_("invalid regular expression '%s'"), pattern);
     }
-    *re_extra = pcre_study(*re, R_PCRE_use_JIT ? PCRE_STUDY_JIT_COMPILE : 0,
-                           &errorptr);
-    if (errorptr)
-	warning(_("PCRE pattern study error\n\t'%s'\n"), errorptr);
-    else if (R_PCRE_use_JIT)
-	setup_jit(*re_extra);
-
+    if (pcre_st) {
+	*re_extra = pcre_study(*re,
+	                       R_PCRE_use_JIT ? PCRE_STUDY_JIT_COMPILE : 0,
+	                       &errorptr);
+	if (errorptr)
+	    warning(_("PCRE pattern study error\n\t'%s'\n"), errorptr);
+	else if (R_PCRE_use_JIT)
+	    setup_jit(*re_extra);
+    }
     if (R_PCRE_limit_recursion == NA_LOGICAL) {
 	// use recursion limit only on long strings
 	R_xlen_t i;
-	R_xlen_t len = XLENGTH(subject);
-
 	for (i = 0 ; i < len ; i++)
 	    if (strlen(CHAR(STRING_ELT(subject, i))) >= 1000) {
 		use_limit = TRUE;
@@ -282,7 +285,6 @@ static void prepare_pcre(const char *pattern, int options, SEXP subject,
 	    }
     } else if (R_PCRE_limit_recursion)
 	use_limit = TRUE;
-
     if (use_limit)
 	set_pcre_recursion_limit(re_extra, R_pcre_max_recursions());
 }
@@ -554,7 +556,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		if (mbcslocale && !mbcsValid(split))
 		    error(_("'split' string %d is invalid in this locale"), itok+1);
 	    }
-	    prepare_pcre(split, options, x, &tables, &re_pcre, &re_pe);
+	    prepare_pcre(split, options, x, TRUE, &tables, &re_pcre, &re_pe);
 	    vmax2 = vmaxget();
 	    for (i = itok; i < len; i += tlen) {
 		SEXP t;
@@ -1015,10 +1017,9 @@ SEXP attribute_hidden do_grep(SEXP call, SEXP op, SEXP args, SEXP env)
     if (fixed_opt) ;
     else if (perl_opt) {
 	int cflags = 0;
-	Rboolean pcre_st = R_PCRE_study == -2 ?  FALSE : n >= R_PCRE_study;
 	if (igcase_opt) cflags |= PCRE_CASELESS;
 	if (!useBytes && use_UTF8) cflags |= PCRE_UTF8;
-	prepare_pcre(spat, cflags, text, &tables, &re_pcre, &re_pe);
+	prepare_pcre(spat, cflags, text, FALSE, &tables, &re_pcre, &re_pe);
     } else {
 	int cflags = REG_NOSUB | REG_EXTENDED;
 	if (igcase_opt) cflags |= REG_ICASE;
@@ -1772,10 +1773,9 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	replen = strlen(srep);
     } else if (perl_opt) {
 	int cflags = 0;
-	Rboolean pcre_st = R_PCRE_study == -2 ?  FALSE : n >= R_PCRE_study;
 	if (use_UTF8) cflags |= PCRE_UTF8;
 	if (igcase_opt) cflags |= PCRE_CASELESS;
-	prepare_pcre(spat, cflags, text, &tables, &re_pcre, &re_pe);
+	prepare_pcre(spat, cflags, text, FALSE, &tables, &re_pcre, &re_pe);
 	replen = strlen(srep);
     } else {
 	int cflags = REG_EXTENDED;
@@ -2577,10 +2577,9 @@ SEXP attribute_hidden do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
     if (fixed_opt) ;
     else if (perl_opt) {
 	int cflags = 0;
-	Rboolean pcre_st = R_PCRE_study == -2 ?  FALSE : n >= R_PCRE_study;
 	if (igcase_opt) cflags |= PCRE_CASELESS;
 	if (!useBytes && use_UTF8) cflags |= PCRE_UTF8;
-	prepare_pcre(spat, cflags, text, &tables, &re_pcre, &re_pe);
+	prepare_pcre(spat, cflags, text, FALSE, &tables, &re_pcre, &re_pe);
 
 	/* also extract info for named groups */
 	pcre_fullinfo(re_pcre, re_pe, PCRE_INFO_NAMECOUNT, &name_count);
