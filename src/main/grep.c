@@ -223,68 +223,27 @@ static void R_pcre_exec_error(int rc, R_xlen_t i)
 }
 #endif
 
-/* returns value is allocated on R_alloc stack */
-static const char *to_native_pcre(const char *str, Rboolean use_UTF8) {
+/* returns value allocated on R_alloc stack */
+static const char *to_native(const char *str, Rboolean use_UTF8)
+{
     return use_UTF8 ? reEnc(str, CE_UTF8, CE_NATIVE, 1) : str;
 }
 
-#ifdef HAVE_PCRE2
-static void
-R_pcre2_prepare(const char *pattern, SEXP subject, Rboolean use_UTF8,
-                Rboolean caseless, pcre2_code **re,
-                pcre2_match_context **mcontext)
+static Rboolean use_recursion_limit(SEXP subject)
 {
-    int errcode;
-    PCRE2_SIZE erroffset;
-    uint32_t options = 0;
-
-    if (use_UTF8)
-	options |= PCRE2_UTF | PCRE2_NO_UTF_CHECK;
-    if (caseless)
-	options |= PCRE2_CASELESS;
-
-    *re = pcre2_compile((PCRE2_SPTR) pattern, PCRE2_ZERO_TERMINATED, options,
-                         &errcode, &erroffset, NULL);
-    if (!*re) {
-	/* not managing R_alloc stack because this ends in error */
-	char buf[256];
-	pcre2_get_error_message(errcode, (PCRE2_UCHAR *)buf, sizeof(buf));
-	warning(_("PCRE pattern compilation error\n\t'%s'\n\tat '%s'\n"), buf,
-	        to_native_pcre(pattern + erroffset, use_UTF8));
-	error(_("invalid regular expression '%s'"),
-	      to_native_pcre(pattern, use_UTF8));
-    }
-    *mcontext = pcre2_match_context_create(NULL);
-    if (R_PCRE_use_JIT) {
-	int rc = pcre2_jit_compile(*re, 0);
-	if (rc) {
-	    fprintf(stderr, "rc is %d\n", rc);
-	    char buf[256];
-	    pcre2_get_error_message(rc, (PCRE2_UCHAR *)buf, sizeof(buf));
-	    warning(_("PCRE JIT compilation error\n\t'%s'"), buf);
-	}
-	setup_jit(*mcontext);
-    }
-}
-#else /* ! HAVE_PCRE2 */
-static void
-set_pcre_recursion_limit(pcre_extra **re_pe_ptr, const long limit)
-{
-    if (limit >= 0) {
-	pcre_extra *re_pe = *re_pe_ptr;
-	if (!re_pe) {
-	    // this will be freed by pcre_free_study so cannot use Calloc
-	    re_pe = (pcre_extra *) calloc(1, sizeof(pcre_extra));
-	    if (!re_pe) {
-		warning("allocation failure in set_pcre_recursion_limit");
-		return;
+    Rboolean use_limit = FALSE;
+    if (R_PCRE_limit_recursion == NA_LOGICAL) {
+	// use recursion limit only on long strings
+	R_xlen_t i;
+	R_xlen_t len = XLENGTH(subject);
+	for (i = 0 ; i < len ; i++)
+	    if (strlen(CHAR(STRING_ELT(subject, i))) >= 1000) {
+		use_limit = TRUE;
+		break;
 	    }
-	    re_pe->flags = PCRE_EXTRA_MATCH_LIMIT_RECURSION;
-	    *re_pe_ptr = re_pe;
-	} else
-	    re_pe->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
-	re_pe->match_limit_recursion = (unsigned long) limit;
-    }
+    } else if (R_PCRE_limit_recursion)
+	use_limit = TRUE;
+    return use_limit;
 }
 
 static long R_pcre_max_recursions()
@@ -329,6 +288,67 @@ static long R_pcre_max_recursions()
     return (long) ((ans <= LONG_MAX) ? ans : -1L);
 }
 
+#ifdef HAVE_PCRE2
+static void
+R_pcre2_prepare(const char *pattern, SEXP subject, Rboolean use_UTF8,
+                Rboolean caseless, pcre2_code **re,
+                pcre2_match_context **mcontext)
+{
+    int errcode;
+    PCRE2_SIZE erroffset;
+    uint32_t options = 0;
+
+    if (use_UTF8)
+	options |= PCRE2_UTF | PCRE2_NO_UTF_CHECK;
+    if (caseless)
+	options |= PCRE2_CASELESS;
+
+    *re = pcre2_compile((PCRE2_SPTR) pattern, PCRE2_ZERO_TERMINATED, options,
+                         &errcode, &erroffset, NULL);
+    if (!*re) {
+	/* not managing R_alloc stack because this ends in error */
+	char buf[256];
+	pcre2_get_error_message(errcode, (PCRE2_UCHAR *)buf, sizeof(buf));
+	warning(_("PCRE pattern compilation error\n\t'%s'\n\tat '%s'\n"), buf,
+	        to_native(pattern + erroffset, use_UTF8));
+	error(_("invalid regular expression '%s'"),
+	      to_native(pattern, use_UTF8));
+    }
+    *mcontext = pcre2_match_context_create(NULL);
+    if (R_PCRE_use_JIT) {
+	int rc = pcre2_jit_compile(*re, 0);
+	if (rc) {
+	    fprintf(stderr, "rc is %d\n", rc);
+	    char buf[256];
+	    pcre2_get_error_message(rc, (PCRE2_UCHAR *)buf, sizeof(buf));
+	    warning(_("PCRE JIT compilation error\n\t'%s'"), buf);
+	}
+	setup_jit(*mcontext);
+    } else if (use_recursion_limit(subject))
+	/* only makes sense for PCRE2 < 10.30 */
+	pcre2_set_depth_limit(*mcontext, (uint32_t) R_pcre_max_recursions());
+}
+#else /* ! HAVE_PCRE2 */
+static void
+set_pcre_recursion_limit(pcre_extra **re_pe_ptr, const long limit)
+{
+    if (limit >= 0) {
+	pcre_extra *re_pe = *re_pe_ptr;
+	if (!re_pe) {
+	    // this will be freed by pcre_free_study so cannot use Calloc
+	    re_pe = (pcre_extra *) calloc(1, sizeof(pcre_extra));
+	    if (!re_pe) {
+		warning("allocation failure in set_pcre_recursion_limit");
+		return;
+	    }
+	    re_pe->flags = PCRE_EXTRA_MATCH_LIMIT_RECURSION;
+	    *re_pe_ptr = re_pe;
+	} else
+	    re_pe->flags |= PCRE_EXTRA_MATCH_LIMIT_RECURSION;
+	re_pe->match_limit_recursion = (unsigned long) limit;
+    }
+}
+
 static void
 R_pcre_prepare(const char *pattern, SEXP subject, Rboolean use_UTF8,
                Rboolean caseless, Rboolean always_study,
@@ -352,11 +372,11 @@ R_pcre_prepare(const char *pattern, SEXP subject, Rboolean use_UTF8,
     *re = pcre_compile(pattern, options, &errorptr, &erroffset, *tables);
     if (!*re) {
 	if (errorptr)
-	    /* FIXME: re-encode error messages and pattern? */
 	    warning(_("PCRE pattern compilation error\n\t'%s'\n\tat '%s'\n"),
-	            errorptr, pattern + erroffset);
+	            errorptr, to_native(pattern + erroffset, use_UTF8));
 	/* in R 3.6 and earlier strsplit reported "invalid split pattern" */
-	error(_("invalid regular expression '%s'"), pattern);
+	error(_("invalid regular expression '%s'"),
+	      to_native(pattern, use_UTF8));
     }
     if (pcre_st) {
 	*re_extra = pcre_study(*re,
@@ -367,17 +387,8 @@ R_pcre_prepare(const char *pattern, SEXP subject, Rboolean use_UTF8,
 	else if (R_PCRE_use_JIT)
 	    setup_jit(*re_extra);
     }
-    if (R_PCRE_limit_recursion == NA_LOGICAL) {
-	// use recursion limit only on long strings
-	R_xlen_t i;
-	for (i = 0 ; i < len ; i++)
-	    if (strlen(CHAR(STRING_ELT(subject, i))) >= 1000) {
-		use_limit = TRUE;
-		break;
-	    }
-    } else if (R_PCRE_limit_recursion)
-	use_limit = TRUE;
-    if (use_limit)
+    /* FIXME: do not set recursion limit when JIT compilation succeeded? */
+    if (use_recursion_limit(subject))
 	set_pcre_recursion_limit(re_extra, R_pcre_max_recursions());
 }
 #endif
