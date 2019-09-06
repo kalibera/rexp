@@ -118,7 +118,7 @@ static int jit_stack_size()
 #ifdef HAVE_PCRE2
 static void setup_jit(pcre2_match_context *mcontext)
 {
-    if (!jit_stack) 
+    if (!jit_stack)
 	jit_stack = pcre2_jit_stack_create(32*1024, jit_stack_size(), NULL);
     if (jit_stack)
 	pcre2_jit_stack_assign(mcontext, NULL, jit_stack);
@@ -126,7 +126,7 @@ static void setup_jit(pcre2_match_context *mcontext)
 #else
 static void setup_jit(pcre_extra *re_pe)
 {
-    if (!jit_stack) 
+    if (!jit_stack)
 	jit_stack = pcre_jit_stack_alloc(32*1024, jit_stack_size());
     if (jit_stack)
 	pcre_assign_jit_stack(re_pe, NULL, jit_stack);
@@ -242,7 +242,7 @@ R_pcre2_prepare(const char *pattern, SEXP subject, Rboolean use_UTF8,
 	options |= PCRE2_UTF | PCRE2_NO_UTF_CHECK;
     if (caseless)
 	options |= PCRE2_CASELESS;
-    
+
     *re = pcre2_compile((PCRE2_SPTR) pattern, PCRE2_ZERO_TERMINATED, options,
                          &errcode, &erroffset, NULL);
     if (!*re) {
@@ -659,7 +659,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 	    pcre_extra *re_pe = NULL;
 	    int ovecsize = 30;
 	    int ovector[ovecsize];
-	    
+
 	    R_pcre_prepare(split, x, use_UTF8, FALSE, TRUE, &tables, &re_pcre,
 	                 &re_pe);
 #endif
@@ -699,7 +699,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		    while((rc = pcre2_match(re, (PCRE2_SPTR) bufp,
 		                            PCRE2_ZERO_TERMINATED,
 					    0, 0, mdata, mcontext)) >= 0) {
-			ovector = pcre2_get_ovector_pointer(mdata); 
+			ovector = pcre2_get_ovector_pointer(mdata);
 #else
 		    while((rc = pcre_exec(re_pcre, re_pe, bufp,
 					  (int) strlen(bufp),
@@ -1703,7 +1703,7 @@ char *R_pcre_string_adj(char *target, const char *orig, const char *repl,
 #endif
 {
     uint64_t i, nb;
-    int k; 
+    int k;
     const char *p = repl;
     char *t = target, c;
     Rboolean upper = FALSE, lower = FALSE;
@@ -2055,7 +2055,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef HAVE_PCRE2
 	   /* PCRE2 has also pcre2_substitute */
 	   while ((ncap = pcre2_match(re, (PCRE2_SPTR) s, (PCRE2_SIZE) ns,
-	                              (PCRE2_SIZE) offset, eflag, mdata, 
+	                              (PCRE2_SIZE) offset, eflag, mdata,
 	                              mcontext)) >= 0 ) {
 
 	       ovector = pcre2_get_ovector_pointer(mdata);
