@@ -1706,11 +1706,11 @@ static int count_subs(const char *repl)
 #ifdef HAVE_PCRE2
 static
 char *R_pcre_string_adj(char *target, const char *orig, const char *repl,
-		      PCRE2_SIZE *ovec, Rboolean use_UTF8)
+		      PCRE2_SIZE *ovec, Rboolean use_UTF8, int ncap)
 #else
 static
 char *R_pcre_string_adj(char *target, const char *orig, const char *repl,
-		      int *ovec, Rboolean use_UTF8)
+		      int *ovec, Rboolean use_UTF8, int ncap)
 #endif
 {
     uint64_t i, nb;
@@ -1723,6 +1723,15 @@ char *R_pcre_string_adj(char *target, const char *orig, const char *repl,
 	if (*p == '\\') {
 	    if ('1' <= p[1] && p[1] <= '9') {
 		k = p[1] - '0';
+		if (k >= ncap) {
+		    /* back-reference to a group that has not been captured,
+		       treat it as an empty string; the special case is needed
+		       for PCRE2, but not for PCRE where the length of the
+		       matched group will appear to be zero because ovector
+		       is zeroed */
+		    p += 2;
+		    continue;
+		}
 		/* Here we need to work in chars */
 		nb = ovec[2*k+1] - ovec[2*k];
 		/* unused patterns will have nb == 0, both offsets -1 with PCRE
@@ -2045,8 +2054,9 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	   int eflag;
 	   int ovecsize = 30;
 	   int ovector[ovecsize];
-	   /* zero for unknown patterns; is this needed? offsets of unused
-	      groups are set to -1, in PCRE2 to PCRE2_UNSET */
+	   /* zero for unknown patterns; this is done to make sure that back
+              references to unset groups return an empty string, but it is
+	      not needed anymore as ncap is being checked due to PCRE2 */
 	   memset(ovector, 0, ovecsize*sizeof(int));
 #endif
 	   ns = (int) strlen(s);
@@ -2079,7 +2089,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	       nmatch++;
 	       for (j = offset; j < ovector[0]; j++) *u++ = s[j];
 	       if (last_end == -1 /* for PCRE2 */ || ovector[1] > last_end) {
-		   u = R_pcre_string_adj(u, s, srep, ovector, use_UTF8);
+		   u = R_pcre_string_adj(u, s, srep, ovector, use_UTF8, ncap);
 		   last_end = ovector[1];
 	       }
 	       offset = ovector[1];
