@@ -289,7 +289,15 @@
   byte, including a newline, but its use is warned against.  In UTF-8
   mode, \samp{\\R} matches any Unicode newline character (not just CR),
   and \samp{\\X} matches any number of Unicode characters that form an
-  extended Unicode sequence.
+  extended Unicode sequence. \samp{\\X}, \samp{\\R} and \samp{\\B} cannot be
+  used inside a character class (with PCRE1, they are treated as characters
+  \samp{X}, \samp{R} and \samp{B}; with PCRE2 they cause an error).
+
+  A hyphen (minus) inside a character class is treated as a range, unless it
+  is first or last character in the class definition.  It can be quoted to
+  represent the hypen literal (\samp{\\-}).  PCRE1 allows an unquoted hyphen
+  at some other locations inside a character class where it cannot represent
+  a valid range, but PCRE2 reports an error in such cases.
 
   In UTF-8 mode, some Unicode properties may be supported via
   \samp{\p{xx}} and \samp{\P{xx}} which match characters with and
