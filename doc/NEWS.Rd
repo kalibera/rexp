@@ -6,15 +6,16 @@
 \encoding{UTF-8}
 
 \section{\Rlogo CHANGES IN R-devel}{
+
   \subsection{NEW FEATURES}{
     \itemize{
       \item \code{assertError()} and \code{assertWarning()} (in package
       \pkg{tools}) can now check for \emph{specific} error or warning
       classes \emph{via} the new optional second argument \code{classes}
       (which is not back compatible with previous use of an unnamed second
-      argument.)
+      argument).
 
-      \item \code{Df2formula()}, the utility for the data frame method of
+      \item \code{DF2formula()}, the utility for the data frame method of
       \code{formula()}, now works without parsing and explicit evaluation,
       starting from Suharto Anggono's suggestion in \PR{17555}.
 
@@ -22,7 +23,58 @@
       \code{na.rm} defaulting to true.  If set to false, missing
       \code{y} values now propagate into the interpolated values.
 
-      \item Long vectors are now supported in \code{for()} loops.
+      \item Long vectors are now supported as the \code{seq} argument of
+      a \code{for()} loop.
+
+      \item \code{str(x)} gets a new \code{deparse.lines} option with a
+      default to speed it up when \code{x} is a large \code{call} object.
+
+      \item The internal traceback object produced when an error is
+      signalled (\code{.Traceback}), now contains the \code{call}s
+      rather than the \emph{\code{deparse()}d} calls, deferring the
+      deparsing to the user-level functions \code{.traceback()} and
+      \code{traceback()}, fulfilling the wish of \PR{17580}, reported
+      (incl.\sspace{}patch proposal) by Brodie Gaslam.
+
+      \item \code{data.matrix()} now converts character columns to
+      factors and from this to integers.
+
+      \item \code{package.skeleton()} now explicitly lists all exports
+      in the \file{NAMESPACE} file.
+
+      \item New function \code{.S3method()} to register S3 methods in R
+      scripts.
+      
+      \item \code{file.path()} has some support for file paths not in
+      the session encoding, e.g.\sspace{}with UTF-8 inputs in a
+      non-UTF-8 locale the output is marked as UTF-8.
+
+      \item Most functions with file-path inputs will give an explicit
+      error if a file-path input in a marked encoding cannot be
+      translated (to the native encoding or in some cases on Windows to
+      UTF-8), rather than translate to a different file path using
+      escapes.  Some (such as \code{dir.exists()}, \code{file.exists()},
+      \code{file.access()}, \code{file.info()}, \code{list.files},
+      \code{normalizePath()} and \code{path.expand()}) treat this like
+      any other non-existent file, often with a warning.
+
+      \item (Windows) \command{Rterm} now works also when invoked from
+      MSYS2 terminals.  Line editing is possible when \command{winpty}
+      is installed.
+
+      \item New function \code{list2DF()} for creating data frames from
+      lists of variables.
+
+      \item \code{iconv()} has a new option \code{sub = "Unicode"} to
+      translate UTF-8 input invalid in the \samp{to} encoding using
+      \samp{<U+xxxx>} escapes.
+
+      \item There is a new help document accessed by
+      \code{help("file path encoding")}
+      detailing how file paths with marked encodings are handled.
+
+      \item There is a new function \code{infoRDS()} providing information
+      about serialization format of a serialized object.
     }
   }
 
@@ -39,18 +91,31 @@
       But portable code should not rely on this.)
 
       \item \command{R CMD config} no longer knows about the
-      unused settings \samp{F77} and \samp{FCPIFCPLAGS}.
+      unused settings \samp{F77} and \samp{FCPIFCPLAGS}, nor
+      \samp{CXX98} and similar.
+    }
+  }
+
+  \subsection{C-LEVEL FACILITIES}{
+    \itemize{
+      \item \code{installChar} is now remapped in \file{Rinternals.h} to
+      \code{installTrChar}, of which it has been a wrapper since
+      \R\sspace{}3.6.0.  Neither are part of the API, but packages using
+      \code{installChar} can replace it if they depend on \samp{R >= 3.6.2}.
     }
   }
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
-      \item Detection of the C stack direction has been moved from
-      run-time to \command{configure}: this is safer with LTO builds and
-      allows the detection to be overridden -- see file \file{config.site}.
-
-      \item User-set \samp{DEFS} (e.g., in \file{config.site} is now
+      \item User-set \samp{DEFS} (e.g., in \file{config.site}) is now
       used for compiling packages (including base packages).
+
+      \item There is a new variant option \option{--enable-lto=check}
+      for checking consistency of BLAS/LAPACK/LINPACK calls --- see
+      \sQuote{Writing R Extensions}.
+      
+      \item A C++ compiler default is set only if the C++11 standard is
+      supported: it no longer falls back to C++98.
     }
   }
 
@@ -68,13 +133,130 @@
       from factor columns by default, \PR{17562}.
 
       \item \code{available.packages()} and hence \code{install.packages()}
-      now pass their \code{...} to \code{download.file()}, fulfilling the
-      wish of \PR{17532}.
+      now pass their \code{...} argument to \code{download.file()},
+      fulfilling the wish of \PR{17532}; subsequently,
+      \code{available.packages()} gets new argument \code{quiet}, solving
+      \PR{17573}.
+
+      \item \code{stopifnot()} gets new argument \code{exprObject} to allow
+      an \R object of class \code{expression} (or other \sQuote{language})
+      to work more consistently, thanks to suggestions by Suharto Anggono.
+
+      \item \code{format.default(*, scientific = FALSE)} now corresponds to
+      a practically most extreme \code{options(scipen = n)} setting rather
+      than arbitrary \code{n = 100}.
     }
   }
 }
 
-\section{\Rlogo CHANGES IN R 3.6.0 patched}{
+\section{\Rlogo CHANGES IN R 3.6.1 patched}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{runmed(x, *)} gets new option \code{na.action}
+      determining \emph{how} to handle \code{NaN} or \code{NA} in \code{x}.
+    }
+  }
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item Detection of the C stack direction has been moved from
+      run-time to \command{configure}: this is safer with LTO builds and
+      allows the detection to be overridden -- see file
+      \file{config.site}.
+    }
+  }
+
+  \subsection{C-LEVEL FACILITIES}{
+    \itemize{
+      \item \code{installTrChar} (which is nowadays is wrapped by
+      \code{installChar}) is defined in \file{Rinternals.h}.  (Neither
+      are part of the API.)
+    }
+  }
+
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item Header \file{Rconfig.h} contains the value of
+	\code{FC_LEN_T} deduced at installation which is used by the
+	prototypes in headers \file{BLAS.h} and \file{Lapack.h} but to
+	avoid extensive breakage this is only exposed when
+	\code{USE_FC_LEN_T} is defined.
+
+	If a package's C/C++ calls to BLAS/LAPACK allow for the
+	\sQuote{hidden} arguments used by most Fortran compilers to pass
+	the lengths of Fortran character arguments, define
+	\code{USE_FC_LEN_T} and include \file{Rconfig.h} (possibly
+	\emph{via} \file{R.h}) before including \file{BLAS.h} or
+	\file{Lapack.h}.
+    }
+  }
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item Support for specifying C++98 in package installation is
+      deprecated.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{runmed(x, *)} when \code{x} contains missing values
+      now works consistently for both \code{algorithm="Stuetzle"} and
+      \code{"Turlach"}, and no longer segfaults for \code{"Turlach"}, as
+      reported by Hilmar Berger.
+
+      \item \code{conformMethod()} now works correctly in cases containing
+      a \dQuote{\code{&&} logic} bug, reported by Henrik Bengtsson.  It now
+      creates methods with \code{"missing"} entries in the signature.
+      Consequently, \code{rematchDefinition()} is amended to use
+      appropriate \code{.local()} calls with named arguments where needed.
+
+      \item \code{apply(diag(3), 2:3, mean)} now gives a helpful error message.
+
+      \item \code{dgamma(x, shape, log=TRUE)} now longer overflows
+      to \code{Inf} for shape < 1 and very small \code{x}, fixing
+      \PR{17577}, reported by Jonathan Rougier.
+
+      \item Buffer overflow in building error messages fixed. Reported
+      by Benjamin Tremblay.
+
+      \item \code{options(str = .)} is correctly initialized at
+      package \pkg{utils} load time, now.  A consequence is that
+      \code{str()} in scripts now is more consistent to interactive use,
+      e.g., when displaying function(**) argument lists.
+
+      \item \code{as.numeric(<call>)} now gives correct error message.
+
+      \item Printing \code{ls.str()} no longer wrongly shows
+      \code{"<missing>"} in rare cases.
+
+      \item Auto-printing S4 objects no longer duplicates the object,
+      for faster speed and reduced memory consumption. Reported by Aaron
+      Lun.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 3.6.1}{
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item The default detection of the shell variable \code{libNN} is
+      overridden for derivatives of Debian Linux, some of which have
+      started to have a \file{/usr/lib64} directory.
+      (E.g.\sspace{}Ubuntu 19.04.)  As before, it can be specified in
+      \file{config.site}.
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD config} knows the values of \code{AR} and
+      \code{RANLIB}, often set for LTO builds.
+    }
+  }
+
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item The use of a character vector with \code{.Fortran()} is
@@ -117,9 +299,35 @@
       \code{function}s with a user defined \code{print.function}, thanks to
       Bill Dunlap's report.
 
-      \item [On Windows only], \code{writeClipboard(.., format = <n>)} now
+      \item On Windows, \code{writeClipboard(.., format = <n>)} now
       does correctly pass \code{format} to the underlying C code, thanks to
-      a bug report (with patch) by Jenny Brian.
+      a bug report (with patch) by Jenny Bryan.
+
+      \item \code{as.data.frame()} treats 1D arrays the same as vectors,
+      \PR{17570}.
+
+      \item Improvements in \code{smoothEnds(x, *)} working with
+      \code{NA}s (towards \code{runmed()} working in that case, in the next
+      version of R).
+
+      \item \code{vcov(glm(<quasi>), dispersion = *)} works correctly
+      again, fixing \PR{17571} thanks to Pavel Krivitsky.
+
+      \item \command{R CMD INSTALL} of binary packages on Windows now
+      works also with per-directory locking.
+
+      \item \command{R CMD INSTALL} and \code{install.packages()} on Windows
+      are now more robust against a locked file in an earlier installation
+      of the package to be installed.  The default value of option
+      \code{install.lock} on Windows has been changed to \code{TRUE}.
+
+      \item On Unix alikes (when \command{readline} is active), only
+      expand tilde (\code{~}) file names starting with a tilde, instead of
+      almost all tildes.
+
+      \item In R documentation (\file{*.Rd}) files, \samp{\item [..]} is no
+      longer treated specially when rendered in LaTeX and hence pdf, but
+      rather shows the brackets in all cases.
     }
   }
 }

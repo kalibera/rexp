@@ -2,6 +2,7 @@
 
 pdf("reg-tests-1d.pdf", encoding = "ISOLatin1.enc")
 .pt <- proc.time()
+tryCid <- function(expr) tryCatch(expr, error = identity)
 
 ## body() / formals() notably the replacement versions
 x <- NULL; tools::assertWarning(   body(x) <-    body(mean))	# to be error
@@ -103,7 +104,7 @@ stopifnot(exprs = {
 
 ## deparse of formals of a function
 fun <- function(a=1,b){}
-frmls <- tryCatch(eval(parse(text=deparse(formals(fun)))), error = identity)
+frmls <- tryCid(eval(parse(text=deparse(formals(fun)))))
 stopifnot(identical(frmls, formals(fun)))
 
 
@@ -818,14 +819,14 @@ t1 <- function(...) ..1
 t2 <- function(...) ..2
 stopifnot(identical(t1(pi, 2), pi), identical(t1(t1), t1),
 	  identical(t2(pi, 2), 2))
-et1 <- tryCatch(t1(), error=identity)
+et1 <- tryCid(t1())
 if(englishMsgs)
     stopifnot(identical("the ... list contains fewer than 1 element",
 			conditionMessage(et1)))
 ## previously gave   "'nthcdr' needs a list to CDR down"
-et0   <- tryCatch(t0(),  error=identity); (mt0   <- conditionMessage(et0))
-et2.0 <- tryCatch(t2(),  error=identity); (mt2.0 <- conditionMessage(et2.0))
-et2.1 <- tryCatch(t2(1), error=identity); (mt2.1 <- conditionMessage(et2.1))
+et0   <- tryCid(t0()) ; (mt0   <- conditionMessage(et0))
+et2.0 <- tryCid(t2()) ; (mt2.0 <- conditionMessage(et2.0))
+et2.1 <- tryCid(t2(1)); (mt2.1 <- conditionMessage(et2.1))
 if(englishMsgs)
     stopifnot(grepl("indexing '...' with .* index 0", mt0),
 	      identical("the ... list contains fewer than 2 elements", mt2.0),
@@ -840,8 +841,7 @@ one <- 1
 try(stopifnot(3 < 4:5, 5:6 >= 5, 6:8 <= 7, one <<- 2))
 stopifnot(identical(one, 1)) # i.e., 'one <<- 2' was *not* evaluated
 ## all the expressions were evaluated in R <= 3.4.x
-(et <- tryCatch(stopifnot(0 < 1:10, is.numeric(..vaporware..), stop("FOO!")),
-                error=identity))
+(et <- tryCid(stopifnot(0 < 1:10, is.numeric(..vaporware..), stop("FOO!"))))
 stopifnot(exprs = {
     inherits(et, "simpleError")
     ## no condition call, or at least should *not* contain 'stopifnot':
@@ -1031,7 +1031,7 @@ stopifnot(exprs = {
     identical(NC(xE(1e-3)), c(Sturges = 4, Scott = 2, FD =  855))
 })
 ## for these, nclass.FD() had "exploded" in R <= 3.4.1
-## Extremely large diff(range(.)) :
+## Extremely large diff(range(.)) : NB: this gives a UBSAN warning
 XXL <- c(1:9, c(-1,1)*1e300)
 stopifnot(nclass.scott(XXL) == 1)
 ## gave 0 in R <= 3.4.1
@@ -1057,8 +1057,8 @@ y <- c(2,3,5,7); yc <- as.complex(y)
 q.Li <- qr(X);              cfLi <- qr.coef(q.Li, y)
 q.LA <- qr(X, LAPACK=TRUE); cfLA <- qr.coef(q.LA, y)
 q.Cx <- qr(X + 0i);         cfCx <- qr.coef(q.Cx, y)
-e1 <- tryCatch(qr.coef(q.Li, y[-4]), error=identity); e1
-e2 <- tryCatch(qr.coef(q.LA, y[-4]), error=identity)
+e1 <- tryCid(qr.coef(q.Li, y[-4])); e1
+e2 <- tryCid(qr.coef(q.LA, y[-4]))
 stopifnot(exprs = {
     all.equal(cfLi,    cfLA , tol = 1e-14)# 6.376e-16 (64b Lx)
     all.equal(cfLi, Re(cfCx), tol = 1e-14)#  (ditto)
@@ -2210,7 +2210,7 @@ foo <- function() {
     x <- 1 + zero       ## value of 'x' has one reference
     lockBinding("x", environment())
     tryCatch(x[1] <- 2, ## would modify the value, then signal an error
-             error = identity)
+             error = function(e) NULL)
     stopifnot(identical(x, 1))
 }
 foo()
@@ -2507,7 +2507,7 @@ stopifnot(identical(rf, 4))
 
 
 ## format(.) when there's no method gives better message:
-ee <- tryCatch(format(.Internal(bodyCode(ls))), error=identity)
+ee <- tryCid(format(.Internal(bodyCode(ls))))
 stopifnot(exprs = {
     conditionCall(ee)[[1]] == quote(format.default)
     grepl("no format() method", conditionMessage(ee), fixed=TRUE)
@@ -2619,19 +2619,31 @@ writeLines(conditionMessage(tt))
 
 
 ## stopifnot() now works *nicely* with expression object (with 'exprs' name):
-ee <- expression(exprs=all.equal(pi, 3.1415927), 2 < 2, stop("foo!"))
-te <- tryCatch(stopifnot(exprs = ee), error=identity)
+ee <- expression(xpr=all.equal(pi, 3.1415927), 2 < 2, stop("foo!"))
+te <- tryCid(stopifnot(exprObject = ee))
 stopifnot(conditionMessage(te) == "2 < 2 is not TRUE")
 ## conditionMessage(te) was  "ee are not all TRUE" in R 3.5.x
+t2 <- tryCid(stopifnot(exprs = { T }, exprObject = ee))
+t3 <- tryCid(stopifnot(TRUE, 2 < 3,   exprObject = ee))
+f <- function(ex) stopifnot(exprObject = ex)
+t4 <- tryCid(f(ee))
+stopifnot(grepl("one of 'exprs', 'exprObject' ", conditionMessage(t2)),
+          conditionMessage(t2) == conditionMessage(t3),
+          conditionMessage(t4) == conditionMessage(te)
+          )
+(function(e) stopifnot(exprObject = e))(expression(1 < 2, 2 <= 2:4))
+## the latter (with 'exprs = e') gave  Error in eval(exprs) : object 'e' not found
+
+
 ##
 ## Empty 'exprs' should work in almost all cases:
 stopifnot()
 stopifnot(exprs = {})
 e0 <- expression()
-stopifnot(exprs = e0)
-do.call(stopifnot, list(exprs = expression()))
-do.call(stopifnot, list(exprs = e0))
-## the last three failed in R 3.5.x
+stopifnot(exprObject = e0)
+do.call(stopifnot, list(exprObject = expression()))
+do.call(stopifnot, list(exprObject = e0))
+## the last three (w 'exprs = ')  failed in R 3.5.x
 
 
 ## as.matrix.data.frame() w/ character result and logical column, PR#17548
@@ -2708,20 +2720,42 @@ dfb <- data.frame(x=fcts()) ; rbind(table(dfa), table(dfb))
 dfy <- data.frame(y=fcts())
 yN <- c(1:3, NA_character_, 5:8)
 dfay  <- cbind(dfa, dfy)
-dfby  <- cbind(dfa, data.frame(y = yN))
-dfaby <- rbind(dfay, dfby)
-stopifnot(exprs = {
+dfby  <- cbind(dfa, data.frame(y = yN, stringsAsFactors = TRUE))
+dfcy  <- dfa; dfcy$y <- yN # y: a <char> column
+## dNay := drop unused levels from dfay incl NA
+dNay <- dfay; dNay[] <- lapply(dfay, factor)
+str(dfay) # both (x, y) have NA level
+str(dfby) # (x: yes / y: no) NA level
+str(dNay) # both: no NA level
+stopifnot(exprs = { ## "trivial" (non rbind-related) assertions :
     identical(levels(dfa$x), c(1:3, NA_character_) -> full_lev)
     identical(levels(dfb$x),  full_lev)
     identical(levels(dfay$x), full_lev) # cbind() does work
     identical(levels(dfay$y), full_lev)
     identical(levels(dfby$x), full_lev)
+    is.character(dfcy$y)
+	   anyNA(dfcy$y)
     identical(levels(dfby$y), as.character((1:8)[-4]) -> levN) # no NA levels
+    identical(lapply(dNay, levels),
+              list(x = c("2","3"), y = levN[1:3])) # no NA levels
+})
+dfaby <- rbind(dfay, dfby)
+dNaby <- rbind(dNay, dfby)
+dfacy <- rbind(dfay, dfcy)
+dfcay <- rbind(dfcy, dfay) # 1st arg col. is char => rbind() keeps char
+stopifnot(exprs = {
     identical(levels(rbind(dfa, dfb)$x), full_lev) # <== not in  R <= 3.6.0
     identical(levels(dfaby$x),           full_lev)
-    identical(levels(dfaby$y),               levN) # failed in c76513
+    identical(levels(dfaby$y),                 yN) # failed a while
+    identical(levels(dNaby$y),               levN) #  (ditto)
+    identical(dfacy, dfaby)
+    is.character(dfcay$y)
+	   anyNA(dfcay$y)
+    identical(dfacy$x, dfcay$x)
+    identical(lapply(rbind(dfby, dfay), levels),
+              list(x = full_lev, y = c(levN, NA)))
     identical(lapply(rbind(dfay, dfby, factor.exclude = NA), levels),
-	      list(x = as.character(1:3), y = levN))
+              list(x = as.character(1:3), y = levN))
     identical(lapply(rbind(dfay, dfby, factor.exclude=NULL), levels),
 	      list(x = full_lev, y = yN))
 })
@@ -2744,6 +2778,245 @@ stopifnot(exprs = {
     identical(unname(mNm), unname(m.))
 })
 ## The last rbind() had failed since at least R 2.0.0
+
+
+## as.data.frame.array(<1D array>) -- PR#17570
+str(x2 <- as.data.frame(array(1:2)))
+stopifnot(identical(x2[[1]], 1:2))
+## still was "array" in R <= 3.6.0
+
+
+## vcov(<quasi>, dispersion = *) -- PR#17571
+counts <- c(18,17,15,20,10,20,25,13,12)
+treatment <- gl(3,3)
+outcome <- gl(3,1,9)
+## Poisson and Quasipoisson
+ poisfit <- glm(counts ~ outcome + treatment, family = poisson())
+qpoisfit <- glm(counts ~ outcome + treatment, family = quasipoisson())
+spois     <- summary( poisfit)
+sqpois    <- summary(qpoisfit)
+sqpois.d1 <- summary(qpoisfit, dispersion=1)
+SE1 <- sqrt(diag(V <- vcov(poisfit)))
+stopifnot(exprs = { ## Same variances and same as V
+    all.equal(vcov(spois), V)
+    all.equal(vcov(qpoisfit, dispersion=1), V) ## << was wrong
+    all.equal(vcov(sqpois.d1), V)
+    all.equal(spois    $coefficients[,"Std. Error"], SE1)
+    all.equal(sqpois.d1$coefficients[,"Std. Error"], SE1)
+    all.equal(sqpois   $coefficients[,"Std. Error"],
+              sqrt(sqpois$dispersion) * SE1)
+})
+## vcov(. , dispersion=*) was wrong on R versions 3.5.0 -- 3.6.0
+
+
+## runmed(<x_with_NA>, "Turlach") still seg.faults in 3.6.0 {reported by Hilmar Berger}
+dd1 <- c(rep(NaN,82), rep(-1, 144), rep(1, 74))
+xT1 <-  runmed(dd1, 21, algorithm="T", print.level=1)# gave seg.fault
+xS1 <-  runmed(dd1, 21, algorithm="S", print.level=1)
+if(FALSE)
+cbind(dd1, xT1, xS1)
+nN <- !is.na(xT1)
+stopifnot(xT1[nN] == c(rep(-1, 154), rep(1, 74)))
+dd2 <- c(rep(-1, 144), rep(1, 74), rep(NaN,82))
+xS2 <- runmed(dd2, 21, algorithm = "Stuetzle", print.level=1)
+xT2 <- runmed(dd2, 21, algorithm = "Turlach" , print.level=1)
+if(FALSE)
+cbind(dd2, xS2, xT2) # here, "St" and "Tu" are "the same"
+nN <- !is.na(xT2)
+stopifnot(exprs = { ## both NA|NaN and non-NA are the same:
+    identical(xT2[nN], xS2[nN])
+    identical(is.na(xS2) , !nN)
+    { i <- 1:(144+74); xT2[i] == dd2[i] }
+})
+## close to *minimal* repr.example:
+x5 <- c(NA,NA, 1:3/4)
+rS <- runmed(x5, k= 3, algorithm = "St", print.level=3)
+rT <- runmed(x5, k= 3, algorithm = "Tu", print.level=3)
+stopifnot(exprs = {
+    identical(rS, rT)
+    rT == c(1,1,1:3)/4
+})
+## a bit larger:
+x14 <- c(NA,NA,NA,NA, 1:10/4)
+rS14 <- runmed(x14, k = 7, algorithm="S", print.level=2)
+rT14 <- runmed(x14, k = 7, algorithm="T", print.level=2)
+## cbind(x14, rT14, rS14)
+(naActs <- eval(formals(runmed)$na.action)); names(naActs) <- naActs
+allT14 <- lapply(naActs, function(naA)
+    tryCatch(runmed(x14, k = 7, algorithm="T", na.action=naA, print.level=2),
+             error=identity, warning=identity))
+rTo14 <- runmed(na.omit(x14), k=7, algorithm="T")
+stopifnot(exprs = {
+    identical(  rT14, rS14)
+    identical(c(rT14), c(NaN,NaN, .5, .5, .5, .75, x14[-(1:6)]))
+    identical(  rT14, allT14$"+Big_alternate")
+    (allT14$"-Big_alternate" >= rT14)[-(1:2)] # slightly surprisingly
+    identical(allT14$na.omit[-(1:4)], c(rTo14))
+    inherits(Tfail <- allT14$fail, "error")
+    !englishMsgs || grepl("^runmed\\(.*: .*NA.*x\\[1\\]", Tfail$message)
+})
+
+
+## conformMethod()  "&& logic" bug, by Henrik Bengtsson on R-devel list, 2019-06-22
+setClass("tilingFSet", slots = c(x = "numeric"))
+if(!is.null(getGeneric("oligoFn"))) removeGeneric("oligoFn")
+setGeneric("oligoFn",
+           function(object, subset, target, value) { standardGeneric("oligoFn") })
+Sys.setenv("_R_CHECK_LENGTH_1_LOGIC2_" = "true")
+if(getRversion() <= "3.6")## to run this with R 3.6.0, 3.5.3, ..
+    Sys.unsetenv("_R_CHECK_LENGTH_1_LOGIC2_")
+setMethod("oligoFn", signature(object = "tilingFSet", value="array"),	## Method _1_
+          function(object, value) { list(object=object, value=value) })
+setMethod("oligoFn", signature(object = "matrix", target="array"),	## Method _2_
+          function(object, target) list(object=object, target=target))
+setMethod("oligoFn", signature(object = "matrix", subset="integer"),	## Method _3_
+          function(object, subset) list(object=object, subset=subset))	#   *no* Note
+setMethod("oligoFn", signature(object = "matrix"),			## Method _4_
+          function(object) list(object=object))				#   *no* Note
+setMethod("oligoFn", signature(subset = "integer"),			## Method _5_
+          function(subset) list(subset=subset))
+setMethod("oligoFn", signature(target = "matrix"),			## Method _6_
+          function(target) list(target=target))
+setMethod("oligoFn", signature(value = "array"),			## Method _7_
+          function(value) list(value=value))
+setMethod("oligoFn", signature(subset = "integer", target = "matrix"),  ## Method _8_
+          function(subset, target) list(subset=subset, target=target))
+setMethod("oligoFn", signature(subset = "integer", value = "array"),	## Method _9_
+          function(subset, value) list(subset=subset, value=value))
+setMethod("oligoFn", signature(target = "matrix", value = "array"),	## Method _10_
+          function(target, value) list(target=target, value=value))
+##
+showMethods("oligoFn", include=TRUE) # F.Y.I.:  in R 3.6.0 and earlier: contains "ANY" everywhere
+##=========            ------------
+stopifnot(exprs = {
+    is.function(mm <- getMethod("oligoFn",
+                                signature(object="tilingFSet",
+                                          subset="missing", target="missing",
+                                          value="array")))
+    inherits(mm, "MethodDefinition")
+    identical(
+        sort(names(getMethodsForDispatch(oligoFn))) # sort(.) the same for "all" locales
+        ## Now,  "ANY" only appear "at the end" .. otherwise have "missing"
+      , c("matrix#ANY#ANY#ANY",
+          "matrix#integer#ANY#ANY",
+          "matrix#missing#array#ANY",
+          "missing#integer#ANY#ANY",
+          "missing#integer#matrix#ANY",
+          "missing#integer#missing#array",
+          "missing#missing#matrix#ANY",
+          "missing#missing#matrix#array",
+          "missing#missing#missing#array",
+          "tilingFSet#missing#missing#array"))
+})
+## Testing all 10 methods:
+r1 <- oligoFn(object=new("tilingFSet"), value=array(2))
+r2 <- oligoFn(object=diag(2),          target=array(42))
+## These 2 work fine in all versions of R: Here the "ANY" remain at the end:
+r3 <- oligoFn(object=diag(2),          subset=1:3)
+r4 <- oligoFn(object=diag(2))
+## All these do *not* specify 'object' --> Error in R <= 3.6.x {argument ... is missing}
+r5 <- oligoFn(subset = 1:5)
+r6 <- oligoFn(target = cbind(7))
+r7 <- oligoFn(value = array(47))
+r8 <- oligoFn(subset = -1:1, target = diag(3))
+r9 <- oligoFn(subset = 2:6,  value = array(7))
+r10<- oligoFn(target = cbind(1,2), value = array(1,1:3))
+## in R <= 3.6.0, e.g., the first  setMethod(..)  gave
+## Error in omittedSig && (signature[omittedSig] != "missing") :
+##   'length(x) = 4 > 1' in coercion to 'logical(1)'
+
+
+## apply(., MARGIN) when MARGIN is outside length(dim(.)):
+a <- tryCid(apply(diag(3), 2:3, mean))
+stopifnot(exprs = {
+    inherits(a, "error")
+    conditionCall(a)[[1]] == quote(`apply`)
+    !englishMsgs || !grepl("missing", (Msg <- conditionMessage(a)), fixed=TRUE)
+    !englishMsgs || grepl("MARGIN", Msg, fixed=TRUE)
+})
+
+
+## cbind() of data frames with no columns lost names -- PR#17584
+stopifnot(identical(names(cbind(data.frame())),
+                    character()))
+stopifnot(identical(names(cbind(data.frame(), data.frame())),
+                    character()))
+## names() came out as NULL instead of character().
+
+
+## NUL inserted incorrectly in adist trafos attribute -- PR#17579
+s <- c("kitten", "sitting", "hi")
+ad <- adist(s, counts = TRUE)
+adc <- attr(ad, "counts")
+adt <- attr(ad, "trafos")
+## Follow analysis in the bug report: in the diagonal, we should have
+## only matches for each character in the given string.
+stopifnot(exprs = {
+    nchar(diag(adt)) == nchar(s)
+    ## The del/ins/sub counts should agree with the numbers of D/I/S
+    ## occurrences in the trafos.
+    nchar(gsub("[^D]", "", adt)) == adc[, , "del"]
+    nchar(gsub("[^I]", "", adt)) == adc[, , "ins"]
+    nchar(gsub("[^S]", "", adt)) == adc[, , "sub"]
+})
+
+## list2env preserves values semantics
+v <- list(x=c(1)) # << subtlety!
+e <- list2env(v)
+with(e, x[[1]] <- 42)
+v
+stopifnot(identical(v$x,1))
+
+
+## misleading error message when coercing language object to atomic, etc:
+e <- tryCid(as.double(quote(foo(1))))
+stopifnot(inherits(e, "error"), grepl("'language'", e$message, fixed=TRUE))
+## had 'pairlist' in R <= 3.6.1
+
+
+## print(ls.str(<environment with error object with "missing" in message text>))
+msg <- "arguments in the signature are missing"
+e1 <- new.env(hash=FALSE)
+e1$Err <- structure(list(message = msg, call = quote(foo(bar))),
+                    class = c("simpleError", "error", "condition"))
+writeLines(prE <- capture.output(ls.str(e1)))
+## was "Err: <missing>" in R <= 3.6.1
+stopifnot(exprs = { length(prE) >= 3
+    grepl("List of 2", prE[[1]], fixed=TRUE)
+    grepl(msg,         prE[[2]], fixed=TRUE)
+    grepl("call.* foo\\(bar\\)", prE[[3]])
+})
+
+
+.M <- .Machine
+str(.M[grep("^sizeof", names(.M))]) ## also differentiate long-double..
+b64 <- .M$sizeof.pointer == 8
+arch <- Sys.info()[["machine"]]
+onWindows <- .Platform$OS.type == "windows"
+if(!(onWindows && arch == "x86")) {
+## PR#17577 - dgamma(x, shape)  for shape < 1 (=> +Inf at x=0) and very small x
+stopifnot(exprs = {
+    all.equal(dgamma(2^-1027, shape = .99 , log=TRUE), 7.1127667376, tol=1e-10)
+    all.equal(dgamma(2^-1031, shape = 1e-2, log=TRUE), 702.8889158,  tol=1e-10)
+    all.equal(dgamma(2^-1048, shape = 1e-7, log=TRUE), 710.30007699, tol=1e-10)
+    all.equal(dgamma(2^-1048, shape = 1e-7, scale = 1e-315, log=TRUE),
+              709.96858768, tol=1e-10)
+})
+## all gave Inf in R <= 3.6.1
+} else cat("PR#17577 bug fix not checked, as it may not work on this platform\n")
+
+
+## format(x, scientific = FALSE)  for large x
+xMAX <- .Machine$double.xmax
+ch <- format(xMAX, scientific = 400) # << scientific as 'scipen'
+op <- options(digits=1, scipen = 303)
+co <- capture.output(cat(xMAX))
+options(op)# back to normal
+stopifnot(exprs = {
+    nchar(ch) == 309
+    identical(ch, co)
+    ch == format(xMAX, scientific=FALSE)
+})## format(*, scientific=FALSE) was "not obeyed" in R <= 3.6.1
 
 
 

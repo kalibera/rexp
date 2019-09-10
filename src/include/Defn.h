@@ -80,6 +80,11 @@ Rcomplex Rf_ComplexFromReal(double, int*);
 #include <Rinternals.h>		/*-> Arith.h, Boolean.h, Complex.h, Error.h,
 				  Memory.h, PrtUtil.h, Utils.h */
 #undef CALLED_FROM_DEFN_H
+
+const char * Rf_translateCharFP(SEXP);
+const char * Rf_translateCharFP2(SEXP);
+const char * Rf_trCharUTF8(SEXP);
+
 extern0 SEXP	R_CommentSymbol;    /* "comment" */
 extern0 SEXP	R_DotEnvSymbol;     /* ".Environment" */
 extern0 SEXP	R_ExactSymbol;	    /* "exact" */
@@ -777,6 +782,7 @@ LibExtern Rboolean mbcslocale  INI_as(FALSE);  /* is this a MBCS locale? */
 extern0   Rboolean latin1locale INI_as(FALSE); /* is this a Latin-1 locale? */
 #ifdef Win32
 LibExtern unsigned int localeCP  INI_as(1252); /* the locale's codepage */
+LibExtern unsigned int systemCP  INI_as(437);  /* the ANSI codepage, GetACP */
 extern0   Rboolean WinUTF8out  INI_as(FALSE);  /* Use UTF-8 for output */
 extern0   void WinCheckUTF8(void);
 #endif
@@ -944,7 +950,7 @@ extern0 int R_PCRE_limit_recursion;
 # define IntegerFromString	Rf_IntegerFromString
 # define internalTypeCheck	Rf_internalTypeCheck
 # define isValidName		Rf_isValidName
-# define installTrChar		Rf_installTrChar
+//# define installTrChar		Rf_installTrChar
 # define ItemName		Rf_ItemName
 # define jump_to_toplevel	Rf_jump_to_toplevel
 # define KillAllDevices		Rf_KillAllDevices
@@ -1009,6 +1015,9 @@ extern0 int R_PCRE_limit_recursion;
 # define strmat2intmat		Rf_strmat2intmat
 # define substituteList		Rf_substituteList
 # define TimeToSeed		Rf_TimeToSeed
+# define translateCharFP	Rf_translateCharFP
+# define translateCharFP2	Rf_translateCharFP2
+# define trCharUTF8      	Rf_trCharUTF8
 # define tspgets		Rf_tspgets
 # define type2symbol		Rf_type2symbol
 # define unbindVar		Rf_unbindVar
@@ -1294,7 +1303,8 @@ SEXP ItemName(SEXP, R_xlen_t);
 void NORET errorcall_cpy(SEXP, const char *, ...);
 void NORET ErrorMessage(SEXP, int, ...);
 void WarningMessage(SEXP, R_WARNING, ...);
-SEXP R_GetTraceback(int);
+SEXP R_GetTraceback(int);    // including deparse()ing
+SEXP R_GetTracebackOnly(int);// no        deparse()ing
 
 R_size_t R_GetMaxVSize(void);
 void R_SetMaxVSize(R_size_t);

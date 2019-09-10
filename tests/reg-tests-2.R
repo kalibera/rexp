@@ -1740,7 +1740,7 @@ f <- function(...) browser()
 do.call(f, mtcars)
 c
 
-options(error = expression(NULL))
+op <- c(op, options(error = expression(NULL)))
 f <- function(...) stop()
 do.call(f, mtcars)
 traceback()
@@ -2614,8 +2614,9 @@ is.unsorted(data.frame(x=3:4, y=1:2))
 
 library("methods")# (not needed here)
 assertError <- tools::assertError
-assertError( getMethod(ls, "bar", fdef=ls), verbose=TRUE)
-assertError( getMethod(show, "bar"), verbose=TRUE)
+assertErrorV <- function(expr) assertError(expr, verbose=TRUE)
+assertErrorV( getMethod(ls, "bar", fdef=ls) )
+assertErrorV( getMethod(show, "bar") )
 ## R < 2.15.1 gave
 ##   cannot coerce type 'closure' to vector of type 'character'
 
@@ -3066,11 +3067,11 @@ sprintf("%d", c(1,NA))
 sprintf("%d", c(NA,1))
 ##
 ## these should fail
-sprintf("%d", 1.1)
-sprintf("%d", c(1.1,1))
-sprintf("%d", c(1,1.1))
-sprintf("%d", NaN)
-sprintf("%d", c(1,NaN))
+assertErrorV( sprintf("%d", 1.1) )
+assertErrorV( sprintf("%d", c(1.1,1)) )
+assertErrorV( sprintf("%d", c(1,1.1)) )
+assertErrorV( sprintf("%d", NaN) )
+assertErrorV( sprintf("%d", c(1,NaN)) )
 
 
 ## formatting of named raws:
@@ -3113,8 +3114,8 @@ stopifnot(exprs = {
 stopifnot(exprs = 2 == 2)
 try(stopifnot(exprs = 1 > 2))
 ## passing an expression object:
-stopifnot(exprs = expression(2 == 2, pi < 4))
-tryCatch(stopifnot(exprs = expression(
+stopifnot(exprObject = expression(2 == 2, pi < 4))
+tryCatch(stopifnot(exprObject = expression(
                        2 == 2,
                        { cat("\n Kilroy again .."); TRUE },
                        pi < 4,

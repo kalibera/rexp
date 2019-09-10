@@ -697,8 +697,13 @@ inRbuildignore <- function(files, pkgdir) {
             if(dep$version >= package_version(ver)) return()
         }
 
-        on.exit(Sys.setlocale("LC_CTYPE", Sys.getlocale("LC_CTYPE")))
-        Sys.setlocale("LC_CTYPE", "C")
+        ## <FIXME>
+        ## This should no longer be necessary?
+        ## <COMMENT>
+        ## on.exit(Sys.setlocale("LC_CTYPE", Sys.getlocale("LC_CTYPE")))
+        ## Sys.setlocale("LC_CTYPE", "C")
+        ## </COMMENT>
+        ## </FIXME>
 
         flatten <- function(x) {
             if(length(x) == 3L)
@@ -1085,8 +1090,9 @@ inRbuildignore <- function(files, pkgdir) {
                recursive = TRUE)
 
         ## work on 'data' directory if present
-        if(dir.exists(file.path(pkgname, "data")) ||
-           file_test("-f", file.path(pkgname, "R", "sysdata.rda"))) {
+        if(!str_parse_logic(desc["LazyData"], FALSE) &&
+           (dir.exists(file.path(pkgname, "data")) ||
+            file_test("-f", file.path(pkgname, "R", "sysdata.rda")))) {
             messageLog(Log, "looking to see if a 'data/datalist' file should be added")
             ## in some cases data() needs the package installed as
             ## there are links to the package's namespace

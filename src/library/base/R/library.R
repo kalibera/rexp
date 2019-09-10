@@ -163,7 +163,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
         }
     }
 
-    ## FIXME: ./attach.R 's attach() has *very* similar checkConflicts(), keep in sync
+    ## NB: ./attach.R 's attach() has similar checkConflicts() [simpler at the end], keep in sync!
     checkConflicts <- function(package, pkgname, pkgpath, nogenerics, env)
     {
         dont.mind <- c("last.dump", "last.warning", ".Last.value",
@@ -726,7 +726,7 @@ function(all.available = FALSE, lib.loc = NULL)
         return(unique(ans))
     } ## else
     s <- search()
-    invisible(.rmpkg(s[substr(s, 1L, 8L) == "package:"]))
+    invisible(.rmpkg(s[startsWith(s, "package:")]))
 }
 
 path.package <-

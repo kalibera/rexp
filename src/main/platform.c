@@ -50,6 +50,35 @@
 
 # include <errno.h>
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h> /* for symlink, getpid */
+#endif
+
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+
+#ifdef Win32
+/* Mingw-w64 defines this to be 0x0502 */
+#ifndef _WIN32_WINNT
+# define _WIN32_WINNT 0x0500 /* for CreateHardLink */
+#endif
+#include <windows.h>
+typedef BOOLEAN (WINAPI *PCSL)(LPWSTR, LPWSTR, DWORD);
+static PCSL pCSL = NULL;
+const char *formatError(DWORD res);  /* extra.c */
+/* Windows does not have link(), but it does have CreateHardLink() on NTFS */
+#undef HAVE_LINK
+#define HAVE_LINK 1
+/* Windows does not have symlink(), but >= Vista does have
+   CreateSymbolicLink() on NTFS */
+#undef HAVE_SYMLINK
+#define HAVE_SYMLINK 1
+#endif
+
 /* Machine Constants */
 
 static void
@@ -269,6 +298,7 @@ void attribute_hidden R_check_locale(void)
 	    snprintf(native_enc, R_CODESET_MAX, "CP%d", localeCP);
 	    native_enc[R_CODESET_MAX] = 0;
 	}
+	systemCP = GetACP();
     }
 #endif
 #if defined(SUPPORT_UTF8_WIN32) /* never at present */
@@ -341,17 +371,17 @@ SEXP attribute_hidden do_fileshow(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef Win32
 	    f[i] = acopy_string(reEnc(CHAR(el), getCharCE(el), CE_UTF8, 1));
 #else
-	    f[i] = acopy_string(translateChar(el));
+	    f[i] = acopy_string(translateCharFP(el));
 #endif
 	else
 	    error(_("invalid filename specification"));
 	if (STRING_ELT(hd, i) != NA_STRING)
-	    h[i] = acopy_string(translateChar(STRING_ELT(hd, i)));
+	    h[i] = acopy_string(translateCharFP(STRING_ELT(hd, i)));
 	else
 	    error(_("invalid '%s' argument"), "headers");
     }
     if (isValidStringF(tl))
-	t = acopy_string(translateChar(STRING_ELT(tl, 0)));
+	t = acopy_string(translateCharFP(STRING_ELT(tl, 0)));
     else
 	t = "";
     if (isValidStringF(pg)) {
@@ -483,6 +513,7 @@ SEXP attribute_hidden do_filecreate(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    LOGICAL(ans)[i] = 1;
 	    fclose(fp);
 	} else if (show) {
+	    // translateChar will translate the file, using escapes
 	    warning(_("cannot create file '%s', reason '%s'"),
 		    translateChar(STRING_ELT(fn, i)), strerror(errno));
 	}
@@ -507,7 +538,7 @@ SEXP attribute_hidden do_fileremove(SEXP call, SEXP op, SEXP args, SEXP rho)
 #ifdef Win32
 		(_wremove(filenameToWchar(STRING_ELT(f, i), TRUE)) == 0);
 #else
-		(remove(R_ExpandFileName(translateChar(STRING_ELT(f, i)))) == 0);
+		(remove(R_ExpandFileName(translateCharFP(STRING_ELT(f, i)))) == 0);
 #endif
 	    if(!LOGICAL(ans)[i])
 		warning(_("cannot remove file '%s', reason '%s'"),
@@ -517,35 +548,6 @@ SEXP attribute_hidden do_fileremove(SEXP call, SEXP op, SEXP args, SEXP rho)
     UNPROTECT(1);
     return ans;
 }
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h> /* for symlink, getpid */
-#endif
-
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_STAT_H
-# include <sys/stat.h>
-#endif
-
-#ifdef Win32
-/* Mingw-w64 defines this to be 0x0502 */
-#ifndef _WIN32_WINNT
-# define _WIN32_WINNT 0x0500 /* for CreateHardLink */
-#endif
-#include <windows.h>
-typedef BOOLEAN (WINAPI *PCSL)(LPWSTR, LPWSTR, DWORD);
-static PCSL pCSL = NULL;
-const char *formatError(DWORD res);  /* extra.c */
-/* Windows does not have link(), but it does have CreateHardLink() on NTFS */
-#undef HAVE_LINK
-#define HAVE_LINK 1
-/* Windows does not have symlink(), but >= Vista does have
-   CreateSymbolicLink() on NTFS */
-#undef HAVE_SYMLINK
-#define HAVE_SYMLINK 1
-#endif
 
 /* the Win32 stuff here is not ready for release:
 
@@ -613,18 +615,20 @@ SEXP attribute_hidden do_filesymlink(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
 	    char from[PATH_MAX], to[PATH_MAX];
 	    const char *p;
-	    p = R_ExpandFileName(translateChar(STRING_ELT(f1, i%n1)));
+	    p = R_ExpandFileName(translateCharFP(STRING_ELT(f1, i%n1)));
 	    if (strlen(p) >= PATH_MAX - 1) {
 		LOGICAL(ans)[i] = 0;
 		continue;
 	    }
 	    strcpy(from, p);
-	    p = R_ExpandFileName(translateChar(STRING_ELT(f2, i%n2)));
+
+	    p = R_ExpandFileName(translateCharFP(STRING_ELT(f2, i%n2)));
 	    if (strlen(p) >= PATH_MAX - 1) {
 		LOGICAL(ans)[i] = 0;
 		continue;
 	    }
 	    strcpy(to, p);
+
 	    /* Rprintf("linking %s to %s\n", from, to); */
 	    LOGICAL(ans)[i] = symlink(from, to) == 0;
 	    if(!LOGICAL(ans)[i])
@@ -685,18 +689,20 @@ SEXP attribute_hidden do_filelink(SEXP call, SEXP op, SEXP args, SEXP rho)
 #else
 	    char from[PATH_MAX], to[PATH_MAX];
 	    const char *p;
-	    p = R_ExpandFileName(translateChar(STRING_ELT(f1, i%n1)));
+	    p = R_ExpandFileName(translateCharFP(STRING_ELT(f1, i%n1)));
 	    if (strlen(p) >= PATH_MAX - 1) {
 		LOGICAL(ans)[i] = 0;
 		continue;
 	    }
 	    strcpy(from, p);
-	    p = R_ExpandFileName(translateChar(STRING_ELT(f2, i%n2)));
+
+	    p = R_ExpandFileName(translateCharFP(STRING_ELT(f2, i%n2)));
 	    if (strlen(p) >= PATH_MAX - 1) {
 		LOGICAL(ans)[i] = 0;
 		continue;
 	    }
 	    strcpy(to, p);
+
 	    LOGICAL(ans)[i] = link(from, to) == 0;
 	    if(!LOGICAL(ans)[i]) {
 		warning(_("cannot link '%s' to '%s', reason '%s'"),
@@ -722,13 +728,13 @@ SEXP attribute_hidden do_filerename(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP f1, f2, ans;
     int i, n1, n2;
+    int res;
 #ifdef Win32
     wchar_t from[PATH_MAX], to[PATH_MAX];
     const wchar_t *w;
 #else
     char from[PATH_MAX], to[PATH_MAX];
     const char *p;
-    int res;
 #endif
 
     checkArity(op, args);
@@ -757,13 +763,18 @@ SEXP attribute_hidden do_filerename(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (wcslen(w) >= PATH_MAX - 1)
 	    error(_("expanded 'to' name too long"));
 	wcsncpy(to, w, PATH_MAX - 1);
-	LOGICAL(ans)[i] = (Rwin_wrename(from, to) == 0);
+	res = Rwin_wrename(from, to);
+	if(res) {
+	    warning(_("cannot rename file '%ls' to '%ls', reason '%s'"),
+		    from, to, formatError(GetLastError()));
+	}
+	LOGICAL(ans)[i] = (res == 0);
 #else
-	p = R_ExpandFileName(translateChar(STRING_ELT(f1, i)));
+	p = R_ExpandFileName(translateCharFP(STRING_ELT(f1, i)));
 	if (strlen(p) >= PATH_MAX - 1)
 	    error(_("expanded 'from' name too long"));
 	strncpy(from, p, PATH_MAX - 1);
-	p = R_ExpandFileName(translateChar(STRING_ELT(f2, i)));
+	p = R_ExpandFileName(translateCharFP(STRING_ELT(f2, i)));
 	if (strlen(p) >= PATH_MAX - 1)
 	    error(_("expanded 'to' name too long"));
 	strncpy(to, p, PATH_MAX - 1);
@@ -880,14 +891,15 @@ SEXP attribute_hidden do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 		*(p-1) != L':') *p = 0;
 	}
 #else
-	const char *efn = R_ExpandFileName(translateChar(STRING_ELT(fn, i)));
+	const char *p = translateCharFP2(STRING_ELT(fn, i));
+	const char *efn = p ? R_ExpandFileName(p) : p;
 #endif
 	if (STRING_ELT(fn, i) != NA_STRING &&
 #ifdef Win32
 	    _wstati64(wfn, &sb)
 #else
 	    /* Target not link */
-	    stat(efn, &sb)
+	    p && stat(efn, &sb)
 #endif
 	    == 0) {
 	    REAL(fsize)[i] = (double) sb.st_size;
@@ -1058,20 +1070,18 @@ SEXP attribute_hidden do_direxists(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (len > 1 && (*p == L'/' || *p == L'\\') &&
 		*(p-1) != L':') *p = 0;
 	}
-#else
-	const char *efn = R_ExpandFileName(translateChar(STRING_ELT(fn, i)));
-#endif
-	if (STRING_ELT(fn, i) != NA_STRING &&
-#ifdef Win32
-	    _wstati64(wfn, &sb)
-#else
-	    /* Target not link */
-	    stat(efn, &sb)
-#endif
-	    == 0) {
+	if (STRING_ELT(fn, i) != NA_STRING && _wstati64(wfn, &sb) == 0) {
 	    LOGICAL(ans)[i] = (sb.st_mode & S_IFDIR) > 0;
 
 	} else LOGICAL(ans)[i] = 0;
+#else
+	const char *p = translateCharFP2(STRING_ELT(fn, i));
+	if (p && STRING_ELT(fn, i) != NA_STRING &&
+	    /* Target not link */
+	    stat(R_ExpandFileName(p), &sb) == 0) {
+	    LOGICAL(ans)[i] = (sb.st_mode & S_IFDIR) > 0;
+	} else LOGICAL(ans)[i] = 0;
+#endif
     }
     // copy names?
     UNPROTECT(1);
@@ -1238,7 +1248,9 @@ SEXP attribute_hidden do_listfiles(SEXP call, SEXP op, SEXP args, SEXP rho)
     int count = 0;
     for (int i = 0; i < LENGTH(d) ; i++) {
 	if (STRING_ELT(d, i) == NA_STRING) continue;
-	const char *dnp = R_ExpandFileName(translateChar(STRING_ELT(d, i)));
+	const char *p = translateCharFP2(STRING_ELT(d, i));
+	if (!p) continue;
+	const char *dnp = R_ExpandFileName(p);
 	list_files(dnp, fullnames ? dnp : NULL, &count, &ans, allfiles,
 		   recursive, pattern ? &reg : NULL, &countmax, idx,
 		   idirs, /* allowdots = */ !nodots);
@@ -1314,27 +1326,27 @@ static void list_dirs(const char *dnp, const char *nm,
 
 SEXP attribute_hidden do_listdirs(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    PROTECT_INDEX idx;
-    SEXP d, ans;
-    int fullnames, count, i, recursive;
-    const char *dnp;
     int countmax = 128;
 
     checkArity(op, args);
-    d = CAR(args); args = CDR(args);
+    SEXP d = CAR(args); args = CDR(args);
     if (!isString(d)) error(_("invalid '%s' argument"), "directory");
-    fullnames = asLogical(CAR(args)); args = CDR(args);
+    int fullnames = asLogical(CAR(args)); args = CDR(args);
     if (fullnames == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "full.names");
-    recursive = asLogical(CAR(args)); args = CDR(args);
+    int recursive = asLogical(CAR(args)); args = CDR(args);
     if (recursive == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "recursive");
 
+    PROTECT_INDEX idx;
+    SEXP ans;
     PROTECT_WITH_INDEX(ans = allocVector(STRSXP, countmax), &idx);
-    count = 0;
-    for (i = 0; i < LENGTH(d) ; i++) {
+    int count = 0;
+    for (int i = 0; i < LENGTH(d) ; i++) {
 	if (STRING_ELT(d, i) == NA_STRING) continue;
-	dnp = R_ExpandFileName(translateChar(STRING_ELT(d, i)));
+	const char *p = translateCharFP2(STRING_ELT(d, i)); 
+	if (!p) continue;
+	const char *dnp = R_ExpandFileName(p);
 	list_dirs(dnp, "", fullnames, &count, &ans, &countmax, idx, recursive);
     }
     REPROTECT(ans = lengthgets(ans, count), idx);
@@ -1381,7 +1393,9 @@ SEXP attribute_hidden do_fileexists(SEXP call, SEXP op, SEXP args, SEXP rho)
 		LOGICAL(ans)[i] =
 		    R_WFileExists(filenameToWchar(STRING_ELT(file, i), TRUE));
 #else
-	    LOGICAL(ans)[i] = R_FileExists(translateChar(STRING_ELT(file, i)));
+	    // returns NULL if not translatable
+	    const char *p = translateCharFP2(STRING_ELT(file, i));
+	    LOGICAL(ans)[i] = p && R_FileExists(p);
 #endif
 	} else LOGICAL(ans)[i] = FALSE;
     }
@@ -1435,12 +1449,12 @@ SEXP attribute_hidden do_fileaccess(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(INTSXP, n));
     for (i = 0; i < n; i++)
 	if (STRING_ELT(fn, i) != NA_STRING) {
-	    INTEGER(ans)[i] =
 #ifdef Win32
+	    INTEGER(ans)[i] =
 		winAccessW(filenameToWchar(STRING_ELT(fn, i), TRUE), modemask);
 #else
-		access(R_ExpandFileName(translateChar(STRING_ELT(fn, i))),
-		       modemask);
+	    const char *p = translateCharFP2(STRING_ELT(fn, i));
+	    INTEGER(ans)[i] = p ? access(R_ExpandFileName(p), modemask): -1;
 #endif
 	} else INTEGER(ans)[i] = -1; /* treat NA as non-existent file */
     UNPROTECT(1);
@@ -1924,15 +1938,18 @@ SEXP attribute_hidden do_pathexpand(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
 	SEXP tmp = STRING_ELT(fn, i);
-	if (tmp != NA_STRING) {
 #ifndef Win32
-	    tmp = markKnown(R_ExpandFileName(translateChar(tmp)), tmp);
+	const char *p = translateCharFP2(tmp);
+	if (p && tmp != NA_STRING)
+	    tmp = markKnown(R_ExpandFileName(p), tmp);
 #else
-/* Windows can have files and home directories that aren't representable in the native encoding (e.g. latin1), so
-   we need to translate everything to UTF8.  */
-	    tmp = mkCharCE(R_ExpandFileNameUTF8(translateCharUTF8(tmp)), CE_UTF8);
+/* Windows can have files and home directories that aren't representable 
+   in the native encoding (e.g. latin1), so we need to translate
+   everything to UTF8.
+*/
+	if (tmp != NA_STRING)
+	    tmp = mkCharCE(R_ExpandFileNameUTF8(trCharUTF8(tmp)), CE_UTF8);
 #endif
-	}
 	SET_STRING_ELT(ans, i, tmp);
     }
     UNPROTECT(1);
@@ -2174,7 +2191,7 @@ SEXP attribute_hidden do_dircreate(SEXP call, SEXP op, SEXP args, SEXP env)
     if (recursive == NA_LOGICAL) recursive = 0;
     mode = asInteger(CADDDR(args));
     if (mode == NA_LOGICAL) mode = 0777;
-    strcpy(dir, R_ExpandFileName(translateChar(STRING_ELT(path, 0))));
+    strcpy(dir, R_ExpandFileName(translateCharFP(STRING_ELT(path, 0))));
     /* remove trailing slashes */
     p = dir + strlen(dir) - 1;
     while (*p == '/' && strlen(dir) > 1) *p-- = '\0';
@@ -2697,7 +2714,7 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	dates = asLogical(CAR(args));
 	if (dates == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "copy.dates");
-	const char* q = R_ExpandFileName(translateChar(STRING_ELT(to, 0)));
+	const char* q = R_ExpandFileName(translateCharFP(STRING_ELT(to, 0)));
 	if(strlen(q) > PATH_MAX - 2) // allow for '/' and terminator
 	    error(_("invalid '%s' argument"), "to");
 	strncpy(dir, q, PATH_MAX);
@@ -2707,7 +2724,7 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	for (i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
 		strncpy(from,
-			R_ExpandFileName(translateChar(STRING_ELT(fn, i))),
+			R_ExpandFileName(translateCharFP(STRING_ELT(fn, i))),
 			PATH_MAX - 1);
 		from[PATH_MAX - 1] = '\0';
 		size_t ll = strlen(from);
@@ -2740,7 +2757,7 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_l10n_info(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 #ifdef Win32
-    int len = 4;
+    int len = 5;
 #else
     int len = 3;
 #endif
@@ -2757,6 +2774,8 @@ SEXP attribute_hidden do_l10n_info(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef Win32
     SET_STRING_ELT(names, 3, mkChar("codepage"));
     SET_VECTOR_ELT(ans, 3, ScalarInteger(localeCP));
+    SET_STRING_ELT(names, 4, mkChar("system.codepage"));
+    SET_VECTOR_ELT(ans, 4, ScalarInteger(systemCP));
 #endif
     setAttrib(ans, R_NamesSymbol, names);
     UNPROTECT(2);
@@ -2804,7 +2823,7 @@ SEXP attribute_hidden do_syschmod(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef Win32
 	    res = _wchmod(filenameToWchar(STRING_ELT(paths, i), TRUE), mode);
 #else
-	    res = chmod(R_ExpandFileName(translateChar(STRING_ELT(paths, i))),
+	    res = chmod(R_ExpandFileName(translateCharFP(STRING_ELT(paths, i))),
 			mode);
 #endif
 	} else res = 1;
@@ -2867,16 +2886,17 @@ SEXP attribute_hidden do_readlink(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef HAVE_READLINK
     char buf[PATH_MAX+1];
     for (int i = 0; i < n; i++) {
-	memset(buf, 0, PATH_MAX+1);
-	ssize_t res = 
-	    readlink(R_ExpandFileName(translateChar(STRING_ELT(paths, i))),
-		     buf, PATH_MAX);
-	if (res == PATH_MAX) {
-	    SET_STRING_ELT(ans, i, mkChar(buf));
-	    warning("possible truncation of value for element %d", i + 1);
-	} else if (res >= 0) SET_STRING_ELT(ans, i, mkChar(buf));
-	else if (errno == EINVAL) SET_STRING_ELT(ans, i, mkChar(""));
-	else SET_STRING_ELT(ans, i,  NA_STRING);
+	const char *p = translateCharFP2(STRING_ELT(paths, i));
+	if (p) {
+	    memset(buf, 0, PATH_MAX+1);
+	    ssize_t res = readlink(R_ExpandFileName(p), buf, PATH_MAX);
+	    if (res == PATH_MAX) {
+		SET_STRING_ELT(ans, i, mkChar(buf));
+		warning("possible truncation of value for element %d", i + 1);
+	    } else if (res >= 0) SET_STRING_ELT(ans, i, mkChar(buf));
+	    else if (errno == EINVAL) SET_STRING_ELT(ans, i, mkChar(""));
+	    else SET_STRING_ELT(ans, i,  NA_STRING);
+	} else SET_STRING_ELT(ans, i,  NA_STRING);
     }
 #endif
     UNPROTECT(1);
@@ -2960,7 +2980,7 @@ do_setFileTime(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(LGLSXP, n));
     vmax = vmaxget();
     for(R_xlen_t i = 0; i < n; i++) {
-	fn = translateChar(STRING_ELT(paths, i));
+	fn = translateCharFP(STRING_ELT(paths, i));
 	ftime = REAL(times)[i % m];
 	#ifdef Win32
 	    res = winSetFileTime(fn, ftime);
@@ -2986,7 +3006,7 @@ do_setFileTime(SEXP call, SEXP op, SEXP args, SEXP rho)
 	#endif
 	LOGICAL(ans)[i] = (res == 0) ? FALSE : TRUE;
 	fn = NULL;
-	vmaxset(vmax); // throws away result of translateChar
+	vmaxset(vmax); // throws away result of translateCharFP
     }
     UNPROTECT(2); /* times, ans */
     return ans;
@@ -3180,6 +3200,9 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     Dl_info dl_info1, dl_info2;
 
+    /* these calls to dladdr() convert a function pointer to an object
+       pointer, which is not allowed by ISO C, but there is no compliant
+       alternative to using dladdr() */
     if (!dladdr((void *)do_eSoftVersion, &dl_info1)) ok = FALSE;
     if (!dladdr((void *)dladdr, &dl_info2)) ok = FALSE;
 

@@ -490,13 +490,14 @@ typedef void rl_vcpfunc_t (char *);
 #  define NEED_INT_HANDLER
 # endif
 
+#if defined(HAVE_LIBREADLINE) && defined(HAVE_TILDE_EXPAND_WORD)
 attribute_hidden
 char *R_ExpandFileName_readline(const char *s, char *buff)
 {
 #if defined(__APPLE__)
-    char *s2 = tilde_expand((char *)s);
+    char *s2 = tilde_expand_word((char *)s);
 #else
-    char *s2 = tilde_expand(s);
+    char *s2 = tilde_expand_word(s);
 #endif
 
     strncpy(buff, s2, PATH_MAX);
@@ -504,7 +505,7 @@ char *R_ExpandFileName_readline(const char *s, char *buff)
     free(s2);
     return buff;
 }
-
+#endif
 
 # ifdef HAVE_READLINE_HISTORY_H
 #  include <readline/history.h>
@@ -1355,7 +1356,7 @@ void attribute_hidden Rstd_loadhistory(SEXP call, SEXP op, SEXP args, SEXP env)
     sfile = CAR(args);
     if (!isString(sfile) || LENGTH(sfile) < 1)
 	errorcall(call, _("invalid '%s' argument"), "file");
-    p = R_ExpandFileName(translateChar(STRING_ELT(sfile, 0)));
+    p = R_ExpandFileName(translateCharFP(STRING_ELT(sfile, 0)));
     if(strlen(p) > PATH_MAX - 1)
 	errorcall(call, _("'file' argument is too long"));
     strcpy(file, p);
@@ -1378,7 +1379,7 @@ void attribute_hidden Rstd_savehistory(SEXP call, SEXP op, SEXP args, SEXP env)
     sfile = CAR(args);
     if (!isString(sfile) || LENGTH(sfile) < 1)
 	errorcall(call, _("invalid '%s' argument"), "file");
-    p = R_ExpandFileName(translateChar(STRING_ELT(sfile, 0)));
+    p = R_ExpandFileName(translateCharFP(STRING_ELT(sfile, 0)));
     if(strlen(p) > PATH_MAX - 1)
 	errorcall(call, _("'file' argument is too long"));
     strcpy(file, p);

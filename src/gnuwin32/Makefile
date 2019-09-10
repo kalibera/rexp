@@ -42,9 +42,9 @@ rpackages:
 
 
 cairodevices:
-ifneq "$(CAIRO_HOME)" ""
+ifneq "$(USE_CAIRO)" ""
 	@$(MK) -C ../library/grDevices/src/cairo -f Makefile.win all \
-	  WIN=$(WIN) CAIRO_HOME=$(CAIRO_HOME)
+	  WIN=$(WIN) CAIRO_LIBS=$(CAIRO_LIBS) CAIRO_CPPFLAGS=$(CAIRO_CPPFLAGS)
 endif
 
 ifeq ($(wildcard MkRules?local),MkRules.local)
@@ -56,7 +56,8 @@ MkRules: MkRules.rules
 endif
 
 CFLAGS = -O3 -Wall -pedantic $(EOPTS)
-FFLAGS = -O3 $(EOPTS)
+FFLAGS = -O3 $(EOPTS) $(GF7OPTS)
+
 ifdef DEBUG
  CFLAGS += $(G_FLAG)
  FFLAGS += $(G_FLAG)
@@ -228,7 +229,7 @@ htmldocs:
 #                          ===== BLAS ======
 
 Rblas:
-	@$(MK) -C ../extra/blas -f Makefile.win FFLAGS='$(FFLAGS)'
+	@$(MK) -C ../extra/blas -f Makefile.win FFLAGS='-O2 $(EOPTS)'
 
 Rblas-clean:
 	@$(MK) -C ../extra/blas -f Makefile.win clean

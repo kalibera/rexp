@@ -2340,7 +2340,7 @@ add_dummies <- function(dir, Log)
                     ## foo: bar ...
                     ## where bar ... and standalone foo are object names
                     dl <- readLines(sv, warn = FALSE)
-                    if (any(bad <- !grepl("^[^ :]*($|: +[[:alpha:].])", dl))) {
+                    if (any(bad <- !grepl("^[^ :]+($|: +[[:alpha:].])", dl))) {
                         warn <- TRUE
                         msgs <- c(msgs,
                                   sprintf("File %s contains malformed line(s):\n",
@@ -2384,8 +2384,27 @@ add_dummies <- function(dir, Log)
                                 warn <- TRUE
                             msgs <- c(msgs,
                                      sprintf('Output for data("%s", package = "%s"):\n', f, pkgname),
-                                     paste(c(paste0("  ",out), ""),
+                                     paste(c(paste0("  ", out), ""),
                                            collapse = "\n"))
+                        }
+                    }
+                    check_datalist <-
+                        Sys.getenv("_R_CHECK_DATALIST_", "FALSE")
+                    check_datalist <-
+                        config_val_to_logical(check_datalist)
+                    if(check_datalist && !warn) {
+                        ## If there was a problem loading the datasets,
+                        ## we cannot reliably check whether 'datalist'
+                        ## is up-to-date.
+                        cmd <- sprintf("tools:::.check_package_datalist(\"%s\", \"%s\")",
+
+                                       pkgname, libdir)
+                        out <- R_runR(cmd, R_opts2)
+                        if(length(out)) {
+                            msgs <- c(msgs,
+                                      c("File 'data/datalist' is out-of-date:\n",
+                                        paste0("  ", out, "\n"),
+                                        "Please re-create using tools::add_datalist(force = TRUE).\n"))
                         }
                     }
                 }
@@ -2933,10 +2952,10 @@ add_dummies <- function(dir, Log)
             any <- msg <- character()
             for (m in makefiles) {
                 lines <- readLines(m, warn = FALSE)
-                have_c <- length(dir('src', patt = "[.]c$", recursive = TRUE)) > 0L
-                have_cxx <- length(dir('src', patt = "[.](cc|cpp)$", recursive = TRUE)) > 0L
-                have_f <- length(dir('src', patt = "[.]f$", recursive = TRUE)) > 0L
-                have_f9x <- length(dir('src', patt = "[.]f9[05]$", recursive = TRUE)) > 0L
+                have_c <- length(dir('src', pattern = "[.]c$", recursive = TRUE)) > 0L
+                have_cxx <- length(dir('src', pattern = "[.](cc|cpp)$", recursive = TRUE)) > 0L
+                have_f <- length(dir('src', pattern = "[.]f$", recursive = TRUE)) > 0L
+                have_f9x <- length(dir('src', pattern = "[.]f9[05]$", recursive = TRUE)) > 0L
                 for (f in c("C", "CXX", "F", "FC", "CPP"))  {
                     this <- paste0(f, "FLAGS")
                     this2 <- paste0("PKG_", this)
@@ -2987,10 +3006,10 @@ add_dummies <- function(dir, Log)
                 anyInLIBS <- any(grepl("SHLIB_OPENMP_", lines[c1], useBytes = TRUE))
 
                 ## Now see what sort of files we have
-                have_c <- length(dir('src', patt = "[.]c$", recursive = TRUE)) > 0L
-                have_cxx <- length(dir('src', patt = "[.](cc|cpp)$", recursive = TRUE)) > 0L
-                have_f <- length(dir('src', patt = "[.]f$", recursive = TRUE)) > 0L
-                have_f9x <- length(dir('src', patt = "[.]f9[05]$", recursive = TRUE)) > 0L
+                have_c <- length(dir('src', pattern = "[.]c$", recursive = TRUE)) > 0L
+                have_cxx <- length(dir('src', pattern = "[.](cc|cpp)$", recursive = TRUE)) > 0L
+                have_f <- length(dir('src', pattern = "[.]f$", recursive = TRUE)) > 0L
+                have_f9x <- length(dir('src', pattern = "[.]f9[05]$", recursive = TRUE)) > 0L
                 used <- character()
                 for (f in c("C", "CXX", "F", "FC"))  {
                     this <- this2 <- paste0(f, "FLAGS")
@@ -3249,6 +3268,9 @@ add_dummies <- function(dir, Log)
             if (file.exists(instlog) && dir.exists('src')) {
                 checkingLog(Log, "compilation flags used")
                 lines <- readLines(instlog, warn = FALSE)
+                ## skip stuff before building libs
+                ll <- grep("^[*][*][*] libs", lines, useBytes = TRUE)
+                if (length(ll)) lines <- lines(-1:ll[1L])
                 poss <- grep(" -[Wmf]", lines,  useBytes = TRUE, value = TRUE)
                 ## compilation lines start at the left margin,
                 ## and are not configure/echo lines
@@ -4123,6 +4145,26 @@ add_dummies <- function(dir, Log)
             }
         }
 
+        if(R_check_vignette_titles) {
+            bad_vignettes <- character()
+            for(v in vigns$docs) {
+                if(trimws(vignetteInfo(v)$title == "Vignette Title"))
+                    bad_vignettes <- c(bad_vignettes, v)
+            }
+            if(nb <- length(bad_vignettes)) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                msg <- ngettext(nb,
+                                "Package vignette with placeholder title 'Vignette Title':\n",
+                                "Package vignettes with placeholder title 'Vignette Title':\n",
+                                domain = NA)
+                wrapLog(msg)
+                printLog0(Log,
+                          .format_lines_with_indent(sQuote(basename(bad_vignettes))),
+                          "\n")
+            }
+        }
+
         if (!any) resultLog(Log, "OK")
 
         if (do_install && do_vignettes) {
@@ -4815,14 +4857,24 @@ add_dummies <- function(dir, Log)
                              ## new in gcc 8
                              ": warning: .* \\[-Wcatch-value=\\]",
                              # warns on code deprecated in C++11
-                            ## Fatal, not warning, for clang and Solaris ODS
+                             ": warning: .* \\[-Wlto-type-mismatch\\]",
+                             ## Fatal, not warning, for clang and Solaris ODS
                              ": warning: .* with a value, in function returning void"
                             )
+
+                ## warning most seen with -D_FORTIFY_SOURCE
+                warn_re <- c(warn_re,
+                             ": warning: .* \\[-Wunused-result\\]", # also clang
+                             ": warning: .* \\[-Warray-bounds\\]",
+                             ": warning: .* \\[-Wrestrict\\]"
+                             )
 
                 ## clang warnings
                 warn_re <- c(warn_re,
                              ": warning: .* GNU extension",
                              ": warning: .* \\[-Wdeprecated-register\\]",
+                             ## skip some of these below
+                             ": warning: .* \\[-Wdeprecated-declarations\\]",
                              ": warning: .* \\[-Wformat-extra-args\\]", # also gcc
                              ": warning: .* \\[-Wformat-security\\]",
                              ": warning: .* \\[-Wheader-guard\\]",
@@ -4838,7 +4890,6 @@ add_dummies <- function(dir, Log)
                              ": warning: format string contains '[\\]0'",
                              ": warning: .* \\[-Wc[+][+]11-long-long\\]",
                              ": warning: empty macro arguments are a C99 feature",
-                             ": warning: .* \\[-Wunused-result\\]",  # also gcc
                              ## for non-portable flags (seen in sub-Makefiles)
                              "warning: .* \\[-Wunknown-warning-option\\]"
                              )
@@ -4865,6 +4916,10 @@ add_dummies <- function(dir, Log)
 
                 ## and gfortran 9 warnings about F2018
                 ex_re <- "^Warning: Fortran 2018 deleted feature:"
+                lines <- filtergrep(ex_re, lines, useBytes = TRUE)
+
+                ## and deprecated declarations in Eigen and boost
+                ex_re <- "(include/Eigen|include/boost|boost/smart_ptr).* warning: .* \\[-Wdeprecated-declarations\\]"
                 lines <- filtergrep(ex_re, lines, useBytes = TRUE)
 
                 ## Ignore install-time readLines() warnings about
@@ -5826,6 +5881,12 @@ add_dummies <- function(dir, Log)
                                          "FALSE"))
     R_check_serialization <-
         config_val_to_logical(Sys.getenv("_R_CHECK_SERIALIZATION_", "FALSE"))
+    R_check_things_in_check_dir <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_THINGS_IN_CHECK_DIR_",
+                                         "FALSE"))
+    R_check_vignette_titles <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_VIGNETTE_TITLES_",
+                                         "FALSE"))
 
     if (!nzchar(check_subdirs)) check_subdirs <- R_check_subdirs_strict
 
@@ -5863,7 +5924,9 @@ add_dummies <- function(dir, Log)
         Sys.setenv("_R_CHECK_FUTURE_FILE_TIMESTAMPS_" = "TRUE")
         Sys.setenv("_R_CHECK_RD_CONTENTS_KEYWORDS_" = "TRUE")
         Sys.setenv("_R_CHECK_LENGTH_1_LOGIC2_" =
-                       "package:_R_CHECK_PACKAGE_NAME_,abort,verbose")
+                       "package:_R_CHECK_PACKAGE_NAME_,verbose")
+        Sys.setenv("_R_CHECK_CODOC_VARIABLES_IN_USAGES_" = "TRUE")
+        Sys.setenv("_R_CHECK_DATALIST_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
@@ -5878,6 +5941,8 @@ add_dummies <- function(dir, Log)
         R_check_toplevel_files <- TRUE
         R_check_vignettes_skip_run_maybe <- TRUE
         R_check_serialization <- TRUE
+        R_check_things_in_check_dir <- TRUE
+        R_check_vignette_titles <- TRUE
     } else {
         ## do it this way so that INSTALL produces symbols.rds
         ## when called from check but not in general.
@@ -6275,6 +6340,41 @@ add_dummies <- function(dir, Log)
                 }
             }
         }
+
+        if(R_check_things_in_check_dir) {
+            checkingLog(Log,
+                        "for non-standard things in the check directory")
+            things <-
+                setdiff(list.files(pkgoutdir, all.files = TRUE,
+                                   include.dirs = TRUE, no.. = TRUE),
+                        c("00check.log",
+                          "00install.out",
+                          "00package.dcf",
+                          "00_pkg_src",
+                          pkgname,
+                          sprintf("%s-Ex.%s",
+                                  pkgname,
+                                  c("R", "Rout", "pdf", "timings")),
+                          sprintf("%s-manual.%s",
+                                  pkgname,
+                                  c("log", "pdf")),
+                          "Rdlatex.log",
+                          "R_check_bin",
+                          "build_vignettes.log",
+                          "tests", "vign_test"))
+            ## Examples calling dev.new() give files Rplots*.pdf,
+            ## building vignettes give *.log files: be nice ...
+            things <- things[!grepl("^Rplots.*[.]pdf$|[.]log$", things)]
+            if(length(things)) {
+                noteLog(Log)
+                msg <- c("Found the following files/directories:",
+                         strwrap(paste(sQuote(things), collapse = " "),
+                                 indent = 2L, exdent = 2L))
+                printLog0(Log, paste(msg, collapse = "\n"), "\n")
+            } else
+                resultLog(Log, "OK")
+        }
+
         summaryLog(Log)
 
         if(config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_STATUS_SUMMARY_",

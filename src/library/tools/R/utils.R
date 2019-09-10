@@ -503,7 +503,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 ### ** .BioC_version_associated_with_R_version
 
 .BioC_version_associated_with_R_version <-
-    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.9"))
+    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.10"))
 ## Things are more complicated from R-2.15.x with still two BioC
 ## releases a year, so we do need to set this manually.
 ## Wierdly, 3.0 is the second version (after 2.14) for the 3.1.x series.
@@ -586,7 +586,7 @@ function() {
                                        package = "tools"))
     path <- attr(fetchRdDB(filebase, "QC"), "Rdfile")
     ## We could use 5 dirname() calls, but perhaps more easily:
-    substring(path, 1L, nchar(path) - 28L)
+    substr(path, 1L, nchar(path) - 28L)
 }
 
 ## Unfortunately,
@@ -921,16 +921,29 @@ function(package, lib.loc = NULL)
     path <- system.file(package = package, lib.loc = lib.loc)
     if(!nzchar(path)) return(NULL)
     if(package == "base") {
+        len <- nrow(.S3_methods_table)
         return(data.frame(generic = .S3_methods_table[, 1L],
-                          home = rep_len("base",
-                                         nrow(.S3_methods_table)),
+                          home = rep_len("base", len),
                           class = .S3_methods_table[, 2L],
+                          delayed = rep_len(FALSE, len),
                           stringsAsFactors = FALSE))
     }
     lib.loc <- dirname(path)
     nsinfo <- parseNamespaceFile(package, lib.loc)
     S3methods <- nsinfo$S3methods
     if(!length(S3methods)) return(NULL)
+    tab <- NULL
+    ind <- is.na(S3methods[, 4L])
+    if(!all(ind)) {
+        ## Delayed registrations can be handled directly.
+        pos <- which(!ind)
+        tab <- data.frame(generic = S3methods[pos, 1L],
+                          home = S3methods[pos, 4L],
+                          class = S3methods[pos, 2L],
+                          delayed = rep_len(TRUE, length(pos)),
+                          stringsAsFactors = FALSE)
+        S3methods <- S3methods[ind, , drop = FALSE]
+    }
     generic <- S3methods[, 1L]
     nsenv <- loadNamespace(package, lib.loc)
     ## Possibly speed things up by only looking up the unique generics.
@@ -948,7 +961,10 @@ function(package, lib.loc = NULL)
     homes[!ind] <- "base"
     home <- homes[match(generic, generics)]
     class <- S3methods[, 2L]
-    data.frame(generic, home, class, stringsAsFactors = FALSE)
+    delayed <- rep_len(FALSE, length(class))
+    rbind(data.frame(generic, home, class, delayed,
+                     stringsAsFactors = FALSE),
+          tab)
 }
 
 ### ** .get_package_metadata
@@ -2291,9 +2307,9 @@ function(text)
     titleCase1 <- function(x) {
         ## A quote might be prepended.
         do1 <- function(x) {
-            x1 <- substring(x, 1L, 1L)
+            x1 <- substr(x, 1L, 1L)
             if(nchar(x) >= 3L && x1 %in% c("'", '"'))
-                paste0(x1, toupper(substring(x, 2L, 2L)),
+                paste0(x1, toupper(substr(x, 2L, 2L)),
                        tolower(substring(x, 3L)))
             else paste0(toupper(x1), tolower(substring(x, 2L)))
         }
@@ -2341,11 +2357,11 @@ function(...)
 str_parse_logic <-
 function(ch, default = TRUE, otherwise = default, n = 1L)
 {
-    if (is.na(ch)) default
-    else switch(ch,
-                "yes"=, "Yes" =, "true" =, "True" =, "TRUE" = TRUE,
-                "no" =, "No" =, "false" =, "False" =, "FALSE" = FALSE,
-                eval.parent(otherwise, n=n))
+    if(is.na(ch)) default
+    else switch(tolower(ch),
+                "1" =, "yes" =, "true" = TRUE,
+                "0" =, "no" =, "false" = FALSE,
+                eval.parent(otherwise, n = n))
 }
 
 ### ** str_parse

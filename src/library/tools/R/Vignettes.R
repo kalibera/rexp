@@ -182,11 +182,17 @@ function(package, dir, lib.loc = NULL,
             })
         }
         if(weave) {
-            browser()
             setwd(startdir) # in case a vignette changes the working dir then errored out
             .eval_with_capture({
                 result$weave[[file]] <- tryCatch({
-                    engine$weave(path, quiet = TRUE, encoding = enc)
+                    if((engine$package == "knitr") &&
+                       (startsWith(engine$name, "rmarkdown")))
+                        engine$weave(path, quiet = TRUE,
+                                     encoding = enc,
+                                     output_dir = startdir)
+                    else
+                        engine$weave(path, quiet = TRUE,
+                                     encoding = enc)
                     setwd(startdir)
                     find_vignette_product(name, by = "weave", engine = engine)
                 }, error = identity)
@@ -300,25 +306,24 @@ function(package, dir, lib.loc = NULL,
     result
 }
 
-print.checkVignettes <-
+format.checkVignettes <-
 function(x, ...)
 {
-    mycat <- function(y, title) {
-        if(length(y)){
-            cat("\n", title, "\n\n", sep = "")
-            for(k in seq_along(y)) {
-                cat("File", names(y)[k], ":\n")
-                cat(as.character(y[[k]]), "\n")
-            }
+    myfmt <- function(y, title) {
+        if(length(y)) {
+            paste(c(paste0("\n", title, "\n"),
+                    unlist(Map(c,
+                               paste0("File ", names(y), ":"),
+                               lapply(y, as.character)),
+                           use.names = FALSE)),
+                  collapse = "\n")
         }
     }
-
-    mycat(x$tangle, "*** Tangle Errors ***")
-    mycat(x$source, "*** Source Errors ***")
-    mycat(x$weave,  "*** Weave Errors ***")
-    mycat(x$latex,  "*** PDFLaTeX Errors ***")
-
-    invisible(x)
+    c(character(),
+      myfmt(x$tangle, "*** Tangle Errors ***"),
+      myfmt(x$source, "*** Source Errors ***"),
+      myfmt(x$weave,  "*** Weave Errors ***"),
+      myfmt(x$latex,  "*** PDFLaTeX Errors ***"))
 }
 
 ### get the engine from a file

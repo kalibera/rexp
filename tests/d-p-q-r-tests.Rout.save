@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2019-05-20 r76550) -- "Unsuffered Consequences"
+R Under development (unstable) (2019-08-18 r77036) -- "Unsuffered Consequences"
 Copyright (C) 2019 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -1482,7 +1482,7 @@ rweibull (4, ..): 1 2  [Ok]
 > x <- sample(length(p), 100000, prob = p, replace = TRUE)
 > stopifnot(sum(x == 1) == 994)
 > 
-> ## check for faiure of new walker_Probsample
+> ## check for failure of new walker_Probsample
 > RNGversion("3.6.0")
 > set.seed(12345)
 > epsilon <- 1e-10
@@ -1490,7 +1490,10 @@ rweibull (4, ..): 1 2  [Ok]
 > x <- sample(length(p201), 100000, prob = p201, replace = TRUE)
 > stopifnot(sum(x <= 201) == 100000)
 > 
+> ## The PR#17577 bug fix for dgamma() is currently "optimized away" on Windows 32-bit (8087 proc).
+> ## --> check in ./reg-tests-1d.R (with no *.Rout.save) currently
+> 
 > 
 > cat("Time elapsed: ", proc.time() - .ptime,"\n")
-Time elapsed:  1.61 0.014 1.63 0 0 
+Time elapsed:  1.745 0.028 1.779 0 0 
 > 

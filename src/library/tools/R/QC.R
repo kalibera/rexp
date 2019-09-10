@@ -423,10 +423,13 @@ function(package, dir, lib.loc = NULL,
 
     ## Find the data sets to work on.
     data_dir <- file.path(dir, "data")
-    data_sets_in_code <- if(dir.exists(data_dir))
-        names(.try_quietly(list_data_in_pkg(package_name, dataDir = data_dir)))
-    else
-        character()
+    if(dir.exists(data_dir)) {
+        data_sets_in_code_variables <-
+            .try_quietly(list_data_in_pkg(package_name,
+                                          dataDir = data_dir))
+        data_sets_in_code <- names(data_sets_in_code_variables)
+    } else
+        data_sets_in_code <- data_sets_in_code_variables <- character()
 
     ## Find the function objects to work on.
     functions_in_code <-
@@ -590,9 +593,21 @@ function(package, dir, lib.loc = NULL,
     data_sets_in_usages <- character()
     functions_in_usages_not_in_code <- list()
     data_sets_in_usages_not_in_code <- list()
+    variables_in_usages_not_in_code <- list()
     objects_in_other_platforms <- names(compatibilityEnv())
     objects_as_in <- c(objects_in_code_or_namespace,
                        objects_in_other_platforms)
+
+    if(missing(package) && str_parse_logic(meta["LazyData"], FALSE))
+        objects_as_in <-
+            c(objects_as_in,
+              unlist(data_sets_in_code_variables, use.names = FALSE))
+    if(is_base) {
+        objects_as_in <-
+            c(objects_as_in,
+              c("NA", "NULL", "Inf", "NaN", "TRUE", "FALSE",
+                ".Autoloaded"))
+    }
 
     for(docObj in db_names) {
         exprs <- db_usages[[docObj]]
@@ -600,13 +615,18 @@ function(package, dir, lib.loc = NULL,
 
         ## Get variable names and data set usages first, mostly for
         ## curiosity.
-        ind <- ! vapply(exprs, is.call, NA)
+        ind <- vapply(exprs, is.name, NA)
         if(any(ind)) {
-            variables_in_usages <-
-                c(variables_in_usages,
-                  sapply(exprs[ind], deparse))
+            variables <- sapply(exprs[ind], deparse)
+            variables_in_usages <- c(variables_in_usages, variables)
+            variables <- setdiff(variables, objects_as_in)
+            if(length(variables))
+                variables_in_usages_not_in_code[[docObj]] <- variables
             exprs <- exprs[!ind]
         }
+
+        exprs <- exprs[vapply(exprs, is.call, NA)]
+
         ind <- vapply(exprs, is_data_for_dataset, NA, USE.NAMES=FALSE)
         if(any(ind)) {
             data_sets <- sapply(exprs[ind],
@@ -737,7 +757,7 @@ function(package, dir, lib.loc = NULL,
             c(functions_missing_from_usages,
               setdiff(objects_in_code_not_in_usages,
                       c(functions_in_code, data_sets_in_code)))
-        }
+                                       }
 
     attr(bad_doc_objects, "objects_in_code_not_in_usages") <-
         objects_in_code_not_in_usages
@@ -749,6 +769,11 @@ function(package, dir, lib.loc = NULL,
         function_args_in_code
     attr(bad_doc_objects, "data_sets_in_usages_not_in_code") <-
         data_sets_in_usages_not_in_code
+    if(config_val_to_logical(Sys.getenv("_R_CHECK_CODOC_VARIABLES_IN_USAGES_",
+                                        "FALSE"))) {
+        attr(bad_doc_objects, "variables_in_usages_not_in_code") <-
+            variables_in_usages_not_in_code
+    }
     attr(bad_doc_objects, "objects_missing_from_usages") <-
         objects_missing_from_usages
     attr(bad_doc_objects, "functions_missing_from_usages") <-
@@ -784,6 +809,17 @@ function(x, ...)
         }
     }
 
+    variables_in_usages_not_in_code <-
+        attr(x, "variables_in_usages_not_in_code")
+    if(length(variables_in_usages_not_in_code)) {
+        for(fname in names(variables_in_usages_not_in_code)) {
+            writeLines(gettextf("Variables with usage in documentation object '%s' but not in code:",
+                                fname))
+            .pretty_print(sQuote(unique(variables_in_usages_not_in_code[[fname]])))
+            writeLines("")
+        }
+    }
+    
     ## In general, functions in the code which only have an \alias but
     ## no \usage entry are not necessarily a problem---they might be
     ## mentioned in other parts of the Rd object documenting them, or be
@@ -3998,6 +4034,7 @@ function(x, ...)
   , choose.files = function(default = "", caption = "Select files", multi = TRUE,
                             filters = Filters, index = nrow(Filters)) {
       Filters <- NULL }
+  , Filters = NULL
   , close.winProgressBar = function(con, ...) {}
   , DLL.version = function(path) {}
   , getClipboardFormats = function(numeric = FALSE) {}
@@ -4406,8 +4443,10 @@ function(x, ...)
 .check_package_datasets <-
 function(pkgDir)
 {
+    on.exit(Sys.setlocale("LC_CTYPE", Sys.getlocale("LC_CTYPE")))
     Sys.setlocale("LC_CTYPE", "C")
-    options(warn=-1)
+    oop <- options(warn = -1)
+    on.exit(options(oop), add = TRUE)
     check_one <- function(x, ds)
     {
         if(!length(x)) return()
@@ -4435,7 +4474,7 @@ function(pkgDir)
     }
 
     sink(tempfile()) ## suppress startup messages to stdout
-    on.exit(sink())
+    on.exit(sink(), add = TRUE)
     files <- list_files_with_type(file.path(pkgDir, "data"), "data")
     files <- unique(basename(file_path_sans_ext(files)))
     ans <- vector("list", length(files))
@@ -4836,7 +4875,9 @@ function(dir)
     ## This was always run in the C locale < 2.5.0
     ## However, what chars are alphabetic depends on the locale,
     ## so as from R 2.5.0 we try to set a locale.
-    ## Any package with no declared encoding should have only ASCII R code.
+    ## Any package with no declared encoding should have only ASCII R
+    ## code.
+    on.exit(Sys.setlocale("LC_CTYPE", Sys.getlocale("LC_CTYPE")))    
     if(!is.na(enc)) {  ## try to use the declared encoding
         if(.Platform$OS.type == "windows") {
             ## "C" is in fact "en", and there are no UTF-8 locales
@@ -4914,7 +4955,6 @@ function(dir)
         lapply(list_files_with_type(dir, "code", full.names = FALSE,
                                     OS_subdirs = c("unix", "windows")),
                collect_parse_woes)
-    Sys.setlocale("LC_CTYPE", "C")
     structure(out[lengths(out) > 0L],
               class = "check_package_code_syntax")
 }
@@ -4987,7 +5027,7 @@ function(dir)
         ## length two with names starting with lib and pkg, respectively.
         if(is.na(match("...", nms)) &&
            ((length(nms) != 2L) ||
-            any(substring(nms, 1L, 3L) != c("lib", "pkg"))))
+            any(substr(nms, 1L, 3L) != c("lib", "pkg"))))
             out$bad_arg_names <- nms
         ## Look at all calls (not only at top level).
         calls <- .find_calls(fcode[[3L]], recursive = TRUE)
@@ -5153,7 +5193,7 @@ function(dir)
         ## Allow anything containing ... (for now); otherwise, insist on
         ## length one with names starting with lib.
         if(is.na(match("...", nms)) &&
-           (length(nms) != 1L || substring(nms, 1L, 3L) != "lib"))
+           (length(nms) != 1L || !startsWith(nms, "lib")))
             out$bad_arg_names <- nms
         ## Look at all calls (not only at top level).
         calls <- .find_calls(fcode[[3L]], recursive = TRUE)
@@ -6500,7 +6540,7 @@ function(cfile, dir = NULL)
         entries <-
             ifelse(nchar(entries) < 20L,
                    entries,
-                   paste(substring(entries, 1L, 20L), "[TRUNCATED]"))
+                   paste(substr(entries, 1L, 20L), "[TRUNCATED]"))
         writeLines(sprintf("entry %d: invalid type %s",
                            pos, sQuote(entries)))
     }
@@ -6942,7 +6982,7 @@ function(dir, localOnly = FALSE)
                                   "\n      ",
                                   ifelse(nchar(e) < 50L,
                                          e,
-                                         paste(substring(e, 1L, 50L),
+                                         paste(substr(e, 1L, 50L),
                                                "[TRUNCATED]")))))
                 },
                 names(x), x)
@@ -7228,6 +7268,25 @@ function(dir, localOnly = FALSE)
         }
     }
 
+    ## Check DESCRIPTION placeholders
+    placeholders <-
+        c(if(!is.na(x <- tolower(meta["Title"])) &&
+             startsWith(x, "what the package does"))
+              x,
+          if(!is.na(x <- meta["Author"]) &&
+             (x == "Who wrote it"))
+              x,
+          if(!is.na(x <- meta["Maintainer"]) &&
+             (startsWith(x, "Who to complain to") ||
+              startsWith(x, "The package maintainer")))
+              x,
+          if(!is.na(x <- tolower(meta["Description"])) &&
+             (startsWith(x, "what the package does") ||
+              startsWith(x, "more about what it does")))
+              x)
+    if(length(placeholders))
+        out$placeholders <- placeholders
+
     ## Are there non-ASCII characters in the R source code without a
     ## package encoding in DESCRIPTION?
     ## Note that checking always runs .check_package_ASCII_code() which
@@ -7321,17 +7380,44 @@ function(dir, localOnly = FALSE)
             urls <- udb$URL
             parts <- parse_URI_reference(urls)
             ind <- (parts[, "scheme"] %in% c("", "file"))
-            fpaths <- parts[ind, "path"]
+            fpaths1 <- fpaths0 <- parts[ind, "path"]
             parents <- udb[ind, "Parent"]
+            ## Help files, vignettes (and more) can be accessed via the
+            ## dynamic HTML help system.  This employs an internal HTTP
+            ## server which handles
+            ##   /doc/html /demo /library
+            ## and relative paths from help system components resolving
+            ## to such. 
+            ## (Note that these will not work in general, e.g. for the
+            ## pdf refmans.)
+            if(any(ind <- (startsWith(fpaths0, "../") &
+                           grepl("^(inst/doc|man|demo)", parents)))) {
+                ## Vignettes have document root
+                ##   /library/<pkg>/doc
+                ## Help pages have
+                ##   /library/<pkg>/html
+                foo <- rep.int("/library/<pkg>/<sub>", sum(ind))
+                bar <- fpaths0[ind]
+                while(length(pos <- which(startsWith(bar, "../")))) {
+                    foo[pos] <- dirname(foo[pos])
+                    bar[pos] <- substring(bar[pos], 4L)
+                }
+                fpaths1[ind] <- foo
+            }
+            fpaths1[grepl("^(/doc/html|/demo|/library)", fpaths1)] <- ""
+            fpaths1[(fpaths1 == "index.html") &
+                    startsWith(parents, "inst/doc")] <- ""
+            ## (Of course, one could verify that the special cased paths
+            ## really exist.)
             ppaths <- dirname(parents)
             pos <- which(!file.exists(file.path(ifelse(nzchar(ppaths),
                                                        file.path(dir,
                                                                  ppaths),
                                                        dir),
-                                                fpaths)))
+                                                fpaths1)))
             if(length(pos))
                 out$bad_file_URIs <-
-                    cbind(fpaths[pos], parents[pos])
+                    cbind(fpaths0[pos], parents[pos])
         }
     }
 
@@ -8095,6 +8181,15 @@ function(x, ...)
                 "The Date field is over a month old."
             })),
       if(length(y <- x$build_time_stamp_msg)) y,
+      if(length(y <- x$placeholders)) {
+          paste(c("DESCRIPTION fields with placeholder content:",
+                  paste0("  ",
+                         unlist(strsplit(formatDL(y,
+                                                  style = "list",
+                                                  indent = 2L),
+                                         "\n", fixed = TRUE)))),
+                collapse = "\n")
+      },
       if(length(y <- x$size_of_tarball))
           paste("Size of tarball:", y, "bytes"),
       fmt(c(if(length(y <- x$Rd_keywords_or_concepts_with_Rd_markup))
@@ -8312,7 +8407,7 @@ function(x, ...)
 
     .truncate <- function(s) {
         ifelse(nchar(s) > 140L,
-               paste(substring(s, 1, 140L),
+               paste(substr(s, 1, 140L),
                      "... [TRUNCATED]"),
                s)
     }
@@ -9129,15 +9224,25 @@ function(package, lib.loc = NULL)
 
     if(length(package) != 1L)
         stop("argument 'package' must be of length 1")
+
+    if(package == "base") return()
+    
     dir <- find.package(package, lib.loc)
-    if(!dir.exists(file.path(dir, "R"))) return
+    if(!dir.exists(file.path(dir, "R"))) return()
+    
     db <- .read_description(file.path(dir, "DESCRIPTION"))
     suggests <- unname(.get_requires_from_package_db(db, "Suggests"))
+    if(!length(suggests)) return()
 
-    if(!length(suggests)) return
+    reg <- parseNamespaceFile(package, dirname(dir))$S3methods
+    reg <- reg[!is.na(reg[, 4L]), , drop = FALSE]
+    if(length(reg))
+        out$reg <- cbind(Package = reg[, 4L],
+                         Generic = reg[, 1L],
+                         Class = reg[, 2L],
+                         Method = reg[, 3L])
 
-    if(basename(package) != "base")
-        .load_package_quietly(package, dirname(dir))
+    .load_package_quietly(package, dirname(dir))
     ok <- vapply(suggests, requireNamespace, quietly = TRUE,
                  FUN.VALUE = NA)
     out$bad <- suggests[!ok]
@@ -9202,6 +9307,15 @@ function(x, ...)
                     format(c("Generic", mat[, 2L])),
                     format(c("Method", mat[, 3L])))
             )
+      },
+      if(length(reg <- x$reg)) {
+          c("S3 methods using delayed registration:",
+            sprintf("  %s %s %s %s",
+                    format(c("Package", reg[, 1L])),
+                    format(c("Generic", reg[, 2L])),
+                    format(c("Class", reg[, 3L])),
+                    format(c("Method", reg[, 4L])))
+            )
       })
 }
 
@@ -9213,6 +9327,52 @@ function(ns)
     .get_S3_generics_in_env(env, nms)
 }
 
+### ** .check_package_datalist
+
+.check_package_datalist <-
+function(package, lib.loc = NULL)
+{
+    out <- list()
+    ans1 <- list_data_in_pkg(package, lib.loc)
+    ans2 <- list_data_in_pkg(package, lib.loc, use_datalist = FALSE)
+    ## Canonicalize.
+    ans1 <- lapply(ans1, sort)
+    ans1 <- ans1[order(names(ans1))]
+    ans2 <- lapply(ans2, sort)
+    ans2 <- ans2[order(names(ans2))]
+    if(!identical(ans1, ans2)) {
+        nx1 <- names(ans1)
+        nx2 <- names(ans2)
+        ex1 <- unlist(ans1)
+        ex2 <- unlist(ans2)
+        out <- Filter(length,
+                      list(n12 = setdiff(nx1, nx2),
+                           n21 = setdiff(nx2, nx1),
+                           e12 = setdiff(ex1, ex2),
+                           e21 = setdiff(ex2, ex1)))
+    }
+    class(out) <- "check_package_datalist"
+    out
+}
+
+format.check_package_datalist <-
+function(x, ...)
+{
+    fmt <- function(s) .strwrap22(s, " ")
+    c(character(),
+      if(length(y <- x$n12))
+          c("Data files in 'datalist' not in 'data' directory:",
+            fmt(y)),
+      if(length(y <- x$n21))
+          c("Data files in 'data' directory not in 'datalist':",
+            fmt(y)),
+      if(length(y <- x$e12))
+          c("Data objects in 'datalist' not in 'data' directory:",
+            fmt(y)),
+      if(length(y <- x$e21))
+          c("Data objects in 'data' directory not in 'datalist':",
+            fmt(y)))
+}
 
 ### Local variables: ***
 ### mode: outline-minor ***

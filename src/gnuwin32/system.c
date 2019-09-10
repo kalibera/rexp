@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2018  The R Core Team
+ *  Copyright (C) 1997--2019  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -950,6 +950,20 @@ int cmdlineoptions(int ac, char **av)
 	    Rp->R_Interactive = TRUE;
 	    Rp->ReadConsole = ThreadedReadConsole;
 	    InThreadReadConsole = CharReadConsole;
+	} else if (R_is_redirection_tty(0) && R_is_redirection_tty(1)) {
+	    /* Note it is not currently possible to use line editing with Msys2
+	       terminals such as mintty, because we cannot disable buffering in
+	       the terminal. One can only do that from applications linked
+	       against the Cygwin runtime, but R is linked against Msvcrt
+	       via Mingw and using multiple runtimes is not possible.
+
+	       Msys2/cygwin is handled in AppMain() by re-executing using
+	       winpty. This branch is taken when winpty is not available.
+	    */
+	    Rp->R_Interactive = TRUE;
+	    Rp->ReadConsole = ThreadedReadConsole;
+	    InThreadReadConsole = FileReadConsole;
+	    setvbuf(stdout, NULL, _IONBF, 0);
 	} else {
 	    Rp->R_Interactive = FALSE;
 	    Rp->ReadConsole = FileReadConsole;
