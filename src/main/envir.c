@@ -115,7 +115,6 @@
 #define SYMBOL_HAS_BINDING(s) (IS_ACTIVE_BINDING(s) || (SYMVALUE(s) != R_UnboundValue))
 
 #define SET_BINDING_VALUE(b,val) do { \
-  if (val == R_UnboundValue) { *(int *)0 = 1; } \
   SEXP __b__ = (b); \
   SEXP __val__ = (val); \
   if (BINDING_IS_LOCKED(__b__)) \
@@ -130,7 +129,6 @@
 } while (0)
 
 #define SET_SYMBOL_BINDING_VALUE(sym, val) do { \
-  if (val == R_UnboundValue) { *(int *)0 = 1; } \
   SEXP __sym__ = (sym); \
   SEXP __val__ = (val); \
   if (BINDING_IS_LOCKED(__sym__)) \
