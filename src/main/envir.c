@@ -371,7 +371,6 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
     return s;
 }
 
-
 /*----------------------------------------------------------------------
 
   R_HashDelete
@@ -381,29 +380,24 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
   it.
 */
 
-static SEXP DeleteItem(SEXP symbol, SEXP lst)
+static SEXP RemoveFromList(SEXP thing, SEXP list, int *found);
+
+static void R_HashDelete(int hashcode, SEXP symbol, SEXP env, int *found)
 {
-    if (lst != R_NilValue) {
-	SETCDR(lst, DeleteItem(symbol, CDR(lst)));
-	if (TAG(lst) == symbol) {
-	    SETCAR(lst, R_UnboundValue); /* in case binding is cached */
-	    LOCK_BINDING(lst);           /* in case binding is cached */
-	    lst = CDR(lst); /* remove from table */
-	}
+    int idx;
+    SEXP list, hashtab;
+
+    hashtab = HASHTAB(env);
+    idx = hashcode % HASHSIZE(hashtab);
+    list = RemoveFromList(symbol, VECTOR_ELT(hashtab, idx), found);
+    if (*found) {
+	if (env == R_GlobalEnv)
+	    R_DirtyImage = 1;
+	if (list == R_NilValue)
+	    SET_HASHPRI(hashtab, HASHPRI(hashtab) - 1);
+	SET_VECTOR_ELT(hashtab, idx, list);
     }
-    return lst;
 }
-
-static void R_HashDelete(int hashcode, SEXP symbol, SEXP table)
-{
-    SEXP list = DeleteItem(symbol,
-			   VECTOR_ELT(table, hashcode % HASHSIZE(table)));
-    if (list == R_NilValue)
-	SET_HASHPRI(table, HASHPRI(table) - 1);
-    SET_VECTOR_ELT(table, hashcode % HASHSIZE(table), list);
-    return;
-}
-
 
 
 /*----------------------------------------------------------------------
@@ -823,6 +817,7 @@ static SEXP RemoveFromList(SEXP thing, SEXP list, int *found)
 void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 {
     int hashcode;
+    int found;
     SEXP c;
 
     if (rho == R_BaseNamespace)
@@ -831,17 +826,16 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 	error(_("unbind in the base environment is unimplemented"));
     if (FRAME_IS_LOCKED(rho))
 	error(_("cannot remove bindings from a locked environment"));
-#ifdef USE_GLOBAL_CACHE
-    if (IS_GLOBAL_FRAME(rho))
-	R_FlushGlobalCache(symbol);
-#endif
     if (HASHTAB(rho) == R_NilValue) {
-	int found;
 	SEXP list;
 	list = RemoveFromList(symbol, FRAME(rho), &found);
 	if (found) {
 	    if (rho == R_GlobalEnv) R_DirtyImage = 1;
 	    SET_FRAME(rho, list);
+#ifdef USE_GLOBAL_CACHE
+	    if (IS_GLOBAL_FRAME(rho))
+		R_FlushGlobalCache(symbol);
+#endif
 	}
     }
     else {
@@ -852,9 +846,11 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 	    SET_HASHASH(c, 1);
 	}
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
-	R_HashDelete(hashcode, symbol, HASHTAB(rho));
-	/* we have no record here if deletion worked */
-	if (rho == R_GlobalEnv) R_DirtyImage = 1;
+	R_HashDelete(hashcode, symbol, rho, &found);
+#ifdef USE_GLOBAL_CACHE
+	if (found && IS_GLOBAL_FRAME(rho))
+	     R_FlushGlobalCache(symbol);
+#endif
     }
 }
 
@@ -1910,21 +1906,12 @@ static int RemoveVariable(SEXP name, int hashcode, SEXP env)
     }
 
     if (IS_HASHED(env)) {
-	SEXP hashtab = HASHTAB(env);
-	int idx = hashcode % HASHSIZE(hashtab);
-	list = RemoveFromList(name, VECTOR_ELT(hashtab, idx), &found);
-	if (found) {
-	    if(env == R_GlobalEnv) R_DirtyImage = 1;
-	    if (list == R_NilValue)
-		SET_HASHPRI(hashtab, HASHPRI(hashtab) - 1);
-	    SET_VECTOR_ELT(hashtab, idx, list);
+	R_HashDelete(hashcode, name, env, &found);
 #ifdef USE_GLOBAL_CACHE
-	    if (IS_GLOBAL_FRAME(env))
-		R_FlushGlobalCache(name);
+	if (found && IS_GLOBAL_FRAME(env))
+	    R_FlushGlobalCache(name);
 #endif
-	}
-    }
-    else {
+    } else {
 	list = RemoveFromList(name, FRAME(env), &found);
 	if (found) {
 	    if(env == R_GlobalEnv) R_DirtyImage = 1;
