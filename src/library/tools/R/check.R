@@ -1039,11 +1039,11 @@ add_dummies <- function(dir, Log)
                     }
                     msg <- if (is.na(findEmail(BR))) {
                         if (grepl("(^|.* )[^ ]+@[[:alnum:]._]+", BR))
-                            "BugReports field is not a suitable URL but appears to contain an email address\n  not specified by mailto: nor contained in < >"
+                            "BugReports field is not a suitable URL but appears to contain an email address\n  not specified by mailto: nor contained in < >\n   use the Contact field instead"
                         else
                             "BugReports field should be the URL of a single webpage"
                     } else
-                        "BugReports field is not a suitable URL but contains an email address\n  which will be used as from R 3.4.0"
+                        "BugReports field is not a suitable URL but contains an email address:\n   use the Contact field instead"
                 }
             } else {
                 msg <- "BugReports field should not be empty"
@@ -1075,11 +1075,15 @@ add_dummies <- function(dir, Log)
             if(length(Rver) && Rver[[1L]]$op == ">=") {
                 ver <- unclass(Rver[[1L]]$version)[[1L]]
                 thisver <- unclass(getRversion())[[1L]]
-                ## needs updating if we ever go to 4.0
-                tv <- if(thisver[1L] == 3L) thisver[2L] - 2L else 4L
-                if (length(ver) == 3L && ver[3L] != 0 &&
-                    ((ver[1L] > 3L) ||
-                     (ver[1L] == 3L) && (ver[2L] >= tv) )) {
+                ## needs updating if we ever go to 5.0
+                notOK <- length(ver) == 3L && ver[3L] != 0
+                if (notOK && (
+                    ## report only for last two versions,
+                    ## currently 3.5, 3.6 and 4.0
+                    ((ver[1L] == 4L) && (ver[2L] >= max(0L, thisver[2L] - 2L)))
+                    ||
+                    ((ver[1L] == 3L) && (ver[2L] >= thisver[2L] + 5L))
+                    )) {
                     ## This is not quite right: may have NOTE-d above
                     if(Check_R_deps == "warn") warningLog(Log)
                     else if(!any) noteLog(Log)
@@ -3004,6 +3008,7 @@ add_dummies <- function(dir, Log)
 
                 c1 <- grepl("^[[:space:]]*PKG_LIBS", lines, useBytes = TRUE)
                 anyInLIBS <- any(grepl("SHLIB_OPENMP_", lines[c1], useBytes = TRUE))
+                use_fc <- any(grepl("^USE_FC_TO_LINK", lines, useBytes = TRUE))
 
                 ## Now see what sort of files we have
                 have_c <- length(dir('src', pattern = "[.]c$", recursive = TRUE)) > 0L
@@ -3057,13 +3062,14 @@ add_dummies <- function(dir, Log)
                         c_or_cxx <- if(have_cxx) "CXXFLAGS" else "CFLAGS"
                         this2 <- if (f %in% c("F", "FC")) c_or_cxx else this
                         pat2 <- paste0("SHLIB_OPENMP_", this2)
-                        if(!any(grepl(pat2, lines[c1], useBytes = TRUE))) {
+                        if(!any(grepl(pat2, lines[c1], useBytes = TRUE))
+                           && !use_fc) {
                             if (!any) noteLog(Log)
                             any <- TRUE
                             msg <- if(anyInLIBS) {
                                 if (f == "F")
                                     sprintf("SHLIB_OPENMP_FFLAGS is included in PKG_FFLAGS but not SHLIB_OPENMP_%s in PKG_LIBS\n", c_or_cxx)
-                                 else if (f == "FC")
+                                else if (f == "FC")
                                      sprintf("SHLIB_OPENMP_%sFLAGS is included in PKG_FCFLAGS but not SHLIB_OPENMP_%s in PKG_LIBS\n", f_or_fc, c_or_cxx)
                                else
                                     sprintf("SHLIB_OPENMP_%s is included in PKG_%s but not in PKG_LIBS\n",
@@ -3099,7 +3105,7 @@ add_dummies <- function(dir, Log)
                     pat2 <- paste0("SHLIB_OPENMP_", this)
                     res <- any(grepl(pat2 , lines[c1], useBytes = TRUE))
                     cnt <- cnt + res
-                    if (res && f %in% c( "F", "FC"))  {
+                    if (res && f %in% c( "F", "FC") && !use_fc)  {
                         if (!any) noteLog(Log)
                         any <- TRUE
                         printLog(Log,"  ", m, ": ",
@@ -3122,6 +3128,8 @@ add_dummies <- function(dir, Log)
                     ## Fortran exceptions
                     if (((!have_cxx && f == "C") || (have_cxx && f == "CXX"))
                         && any(c("FFLAGS", "FCFLAGS") %in% used)) next
+                    ## A package still used PKG_FCFLAGS
+                    if (use_fc && f == "F" && used == "FCFLAGS") next
                     if (res) {
                         if (!any) noteLog(Log)
                         any <- TRUE
@@ -3727,7 +3735,7 @@ add_dummies <- function(dir, Log)
                         any <- TRUE
                     }
                     printLog(Log,
-                             sprintf("Examples with CPU or elapsed time > %gs\n",
+                             sprintf("Examples with CPU (user + system) or elapsed time > %gs\n",
                                      theta))
                     out <- utils::capture.output(format(times[keep, ]))
                     printLog0(Log, paste(out, collapse = "\n"), "\n")
@@ -4805,7 +4813,10 @@ add_dummies <- function(dir, Log)
                              "^Note: possible error in",
                              "^Note: (break|next) used in wrong context: no loop is visible",
                              ## Warnings about S4 classes
-                             "^  The prototype for class.*undefined slot"
+                             "^  The prototype for class.*undefined slot",
+
+                             ## from configure
+                             "'config' variable.*is deprecated"
                              )
                 ## Warnings spotted by gcc with
                 ##   '-Wimplicit-function-declaration'
@@ -4856,8 +4867,23 @@ add_dummies <- function(dir, Log)
                              ": warning: .* \\[-Waligned-new",
                              ## new in gcc 8
                              ": warning: .* \\[-Wcatch-value=\\]",
-                             # warns on code deprecated in C++11
                              ": warning: .* \\[-Wlto-type-mismatch\\]",
+                             ": warning: .* \\[-Wunused-value\\]",
+                             ## warning in g++, fatal in clang++.
+                             ": warning: .* \\[-Wnarrowing\\]",
+                             ## -pedantic warning in gcc, fatal in clang and ODS
+                             ": warning: initializer element is not a constant expression",
+                             ": warning: range expressions in switch statements are non-standard",
+                             ## clang version is
+                             ": warning: use of GNU case range extension",
+                             ": warning: ordered comparison of pointer with integer zero",
+                             ## clang version is
+                             ": warning: ordered comparison between pointer and zero",
+                             ": warning: initialization of a flexible array member",
+                             ## clang version is
+                             ": warning: flexible array initialization is a GNU extension",
+                             ": warning: C[+][+] designated initializers",
+                             ": warning: designated initializers are a C99 feature",
                              ## Fatal, not warning, for clang and Solaris ODS
                              ": warning: .* with a value, in function returning void"
                             )
@@ -4890,7 +4916,10 @@ add_dummies <- function(dir, Log)
                              ": warning: format string contains '[\\]0'",
                              ": warning: .* \\[-Wc[+][+]11-long-long\\]",
                              ": warning: empty macro arguments are a C99 feature",
-                             ## for non-portable flags (seen in sub-Makefiles)
+                             ": warning: .* \\[-Winvalid-source-encoding\\]",
+                             ": warning: .* \\[-Wunused-command-line-argument\\]",
+                             ": warning: .* \\[-Wxor-used-as-pow\\]", # clang 10
+                             ## For non-portable flags (seen in sub-Makefiles)
                              "warning: .* \\[-Wunknown-warning-option\\]"
                              )
 
@@ -5237,9 +5266,9 @@ add_dummies <- function(dir, Log)
             } else if(length(res$bad_version) ||
                       length(res$strong_dependencies_not_in_mainstream_repositories) ||
                       isTRUE(res$foss_with_BuildVignettes) ||
-                      res$Maintainer_invalid_or_multi_person ||
-                      res$empty_Maintainer_name ||
-                      res$Maintainer_needs_quotes)
+                      isTRUE(res$Maintainer_invalid_or_multi_person) ||
+                      isTRUE(res$empty_Maintainer_name) ||
+                      isTRUE(res$Maintainer_needs_quotes))
                 warningLog(Log)
             else if(length(res) > 1L) noteLog(Log)
             else resultLog(Log, "OK")
@@ -5884,6 +5913,9 @@ add_dummies <- function(dir, Log)
     R_check_things_in_check_dir <-
         config_val_to_logical(Sys.getenv("_R_CHECK_THINGS_IN_CHECK_DIR_",
                                          "FALSE"))
+    R_check_things_in_temp_dir <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_THINGS_IN_TEMP_DIR_",
+                                         "FALSE"))
     R_check_vignette_titles <-
         config_val_to_logical(Sys.getenv("_R_CHECK_VIGNETTE_TITLES_",
                                          "FALSE"))
@@ -5942,6 +5974,7 @@ add_dummies <- function(dir, Log)
         R_check_vignettes_skip_run_maybe <- TRUE
         R_check_serialization <- TRUE
         R_check_things_in_check_dir <- TRUE
+        R_check_things_in_temp_dir <- TRUE
         R_check_vignette_titles <- TRUE
     } else {
         ## do it this way so that INSTALL produces symbols.rds
@@ -5973,6 +6006,16 @@ add_dummies <- function(dir, Log)
     outdir <- getwd()
     setwd(startdir)
 
+    sessdir <- ""
+    if (R_check_things_in_temp_dir) {
+        ## tempdir() should be unique, so don't need a special name within it
+        sessdir <- file.path(tempdir(), "working_dir")
+        if (!dir.create(sessdir))
+            stop("unable to create working directory for subprocesses",
+                 domain = NA)
+        Sys.setenv(TMPDIR = sessdir)
+    }
+
     R_LIBS <- Sys.getenv("R_LIBS")
     arg_libdir <- libdir
     if (nzchar(libdir)) {
@@ -5982,14 +6025,14 @@ add_dummies <- function(dir, Log)
         setwd(startdir)
     }
 
-    ## all the analysis code is run with --slave
+    ## all the analysis code is run with --no-echo
     ## examples and tests are not.
     R_opts <- "--vanilla"
-    R_opts2 <- "--vanilla --slave"
+    R_opts2 <- "--vanilla --no-echo"
     ## do run Renviron.site for some multiarch runs
     ## We set R_ENVIRON_USER to skip .Renviron files.
     R_opts3 <- "--no-site-file --no-init-file --no-save --no-restore"
-    R_opts4 <- "--no-site-file --no-init-file --no-save --no-restore --slave"
+    R_opts4 <- "--no-site-file --no-init-file --no-save --no-restore --no-echo"
     env0 <- if(WINDOWS) "R_ENVIRON_USER='no_such_file'" else "R_ENVIRON_USER=''"
 
     msg_DESCRIPTION <-
@@ -6373,6 +6416,28 @@ add_dummies <- function(dir, Log)
                 printLog0(Log, paste(msg, collapse = "\n"), "\n")
             } else
                 resultLog(Log, "OK")
+        }
+
+        if (R_check_things_in_temp_dir) {
+            checkingLog(Log, "for detritus in the temp directory")
+            ff <- list.files(sessdir, include.dirs = TRUE)
+            ## Exclude session temp dirs from crashed subprocesses
+            dir <- file.info(ff)$isdir
+            poss <- grepl("^Rtmp[A-Za-z0-9.]{6}$", ff, useBytes = TRUE)
+            ff <- ff[!(poss & dir)]
+            patt <- Sys.getenv("_R_CHECK_THINGS_IN_TEMP_DIR_EXCLUDE_")
+            if (length(patt)) ff <- ff[!grepl(patt, ff, useBytes = TRUE)]
+	    ff <- ff[!is.na(ff)]
+            if (length(ff)) {
+                noteLog(Log)
+                msg <- c("Found the following files/directories:",
+                         strwrap(paste(sQuote(ff), collapse = " "),
+                                 indent = 2L, exdent = 2L))
+                printLog0(Log, paste(msg, collapse = "\n"), "\n")
+            } else
+                resultLog(Log, "OK")
+            ## clean up of this process would also do this
+            unlink(sessdir, recursive = TRUE)
         }
 
         summaryLog(Log)

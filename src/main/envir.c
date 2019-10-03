@@ -376,9 +376,9 @@ SEXP R_NewHashedEnv(SEXP enclos, SEXP size)
 
   R_HashDelete
 
-  Hash table delete function.  Symbols are not removed from the table.
-  They have their value set to 'R_UnboundValue'.
-
+  Hash table delete function. Symbols are completely removed from the table;
+  there is no way to mark a symbol as not present without actually removing
+  it.
 */
 
 static SEXP DeleteItem(SEXP symbol, SEXP lst)
@@ -388,7 +388,7 @@ static SEXP DeleteItem(SEXP symbol, SEXP lst)
 	if (TAG(lst) == symbol) {
 	    SETCAR(lst, R_UnboundValue); /* in case binding is cached */
 	    LOCK_BINDING(lst);           /* in case binding is cached */
-	    lst = CDR(lst);
+	    lst = CDR(lst); /* remove from table */
 	}
     }
     return lst;
@@ -845,7 +845,7 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 	}
     }
     else {
-	/* This case is currently unused */
+	/* This branch is used e.g. via sys.source, utils::data */ 
 	c = PRINTNAME(symbol);
 	if( !HASHASH(c) ) {
 	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
@@ -903,6 +903,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 		*canCache = table->canCache(CHAR(PRINTNAME(symbol)), table);
 		UNPROTECT(1);
 	    }
+	    MARK_NOT_MUTABLE(val); /* to keep complex assignment code sane */
 	}
 	return(tmp);
     }
@@ -1014,6 +1015,7 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean doGet)
 		else
 		    val = R_UnboundValue;
 	    }
+	    MARK_NOT_MUTABLE(val); /* to keep complex assignment code sane */
 	}
 	return(val);
     } else if (HASHTAB(rho) == R_NilValue) {
@@ -1246,7 +1248,7 @@ static SEXP findVarLoc(SEXP symbol, SEXP rho)
 	error(_("use of NULL environment is defunct"));
 
     if (!isEnvironment(rho))
-	error(_("argument to '%s' is not an environment"), "findVar");
+	error(_("argument to '%s' is not an environment"), "findVarLoc");
 
 #ifdef USE_GLOBAL_CACHE
     /* This first loop handles local frames, if there are any.  It

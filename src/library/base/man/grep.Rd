@@ -50,7 +50,7 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
     \code{\link{as.character}} to a character string if possible.  If a
     character vector of length 2 or more is supplied, the first element
     is used with a warning.  Missing values are allowed except for
-    \code{regexpr} and \code{gregexpr}.}
+    \code{regexpr}, \code{gregexpr} and \code{regexec}.}
   \item{x, text}{a character vector where matches are sought, or an
     object which can be coerced by \code{as.character} to a character
     vector.  \link{Long vectors} are supported.}
@@ -103,6 +103,9 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
   For \code{regexpr}, \code{gregexpr} and \code{regexec} it is an error
   for \code{pattern} to be \code{NA}, otherwise \code{NA} is permitted
   and gives an \code{NA} match.
+
+  Both \code{grep} and \code{grepl} take missing values in \code{x} as
+  not matching a non-missing \code{pattern}.
 
   The main effect of \code{useBytes} is to avoid errors/warnings about
   invalid inputs and spurious matches in multibyte locales, but for
@@ -208,16 +211,19 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
   \sQuote{studying} the compiled pattern when \code{x}/\code{text} has
   length at least 10.  As from \R 3.4.0 that study may use the PCRE JIT
   compiler on platforms where it is available (see
-  \code{\link{pcre_config}}).  The details are controlled by
+  \code{\link{pcre_config}}). As from PCRE2 (PCRE version >= 10.00 as
+  reported by \code{\link{extSoftVersion}}), there is no study phase, but
+  the patterns are optimized automatically when possible, and PCRE JIT is
+  used when enabled.  The details are controlled by
   \code{\link{options}} \code{PCRE_study} and \code{PCRE_use_JIT}.
   (Some timing comparisons can be seen by running file
   \file{tests/PCRE.R} in the \R sources (and perhaps installed).)
   People working with PCRE and very long strings can adjust the maximum
   size of the JIT stack by setting environment variable
   \env{R_PCRE_JIT_STACK_MAXSIZE} before JIT is used to a value between
-  \code{1} and \code{1000} in MB: the default is \code{64}.  (Then it
-  would usually be wise to set the \link{option}
-  \code{PCRE_limit_recursion}.)
+  \code{1} and \code{1000} in MB: the default is \code{64}. When JIT is not
+  used with PCRE version < 10.30 (that is with PCRE1 and old versions of
+  PCRE2), it might also be wise to set the option \code{PCRE_limit_recursion}.
 }
 
 \source{

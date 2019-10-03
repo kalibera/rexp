@@ -155,7 +155,7 @@ getOption(x, default = NULL)
 
     \item{\code{echo}:}{logical.  Only used in non-interactive mode,
       when it controls whether input is echoed.  Command-line option
-      \option{--slave} sets this to \code{FALSE}, but otherwise
+      \option{--no-echo} sets this to \code{FALSE}, but otherwise
       it starts the session as \code{TRUE}.}
 
     \item{\code{encoding}:}{The name of an encoding, default
@@ -293,20 +293,25 @@ getOption(x, default = NULL)
     \item{\code{PCRE_limit_recursion}:}{Logical: should
       \code{\link{grep}(perl = TRUE)} and similar limit the maximal
       recursion allowed when matching?  PCRE can be built not to use a
-      recursion stack (see \code{\link{pcre_config}}, but it is by
+      recursion stack (see \code{\link{pcre_config}}), but it is by
       default with a recursion limit of 10000000 which potentially needs
       a very large C stack: see the discussion at
       \url{http://www.pcre.org/original/doc/html/pcrestack.html}.  If
       true, the limit is reduced using \R's estimate of the C stack size
       available (if known), otherwise 10000.  If \code{NA}, the limit is
-      imposed only if any input string has 1000 or more bytes.}
+      imposed only if any input string has 1000 or more bytes. The limit
+      has no impact when PCRE's Just-in-Time compiler is used and it is
+      ignored with PCRE2 version >= 10.30, which no longer uses function
+      recursion for remembering backtracking positions.}
 
      \item{\code{PCRE_study}:}{Logical or integer: should
       \code{\link{grep}(perl = TRUE)} and similar \sQuote{study} the
       patterns?  Either logical or a numerical threshold for the minimum
       number of strings to be matched for the pattern to be studied (the
       default is \code{10})).  Missing values and negative numbers are
-      treated as false.}
+      treated as false. This option is ignore with PCRE2 (PCRE version >=
+      10.00) which does not have a separate study phase and patterns are
+      automatically optimized when possible.}
 
     \item{\code{PCRE_use_JIT}:}{Logical: should \code{\link{grep}(perl =
 	TRUE)}, \code{\link{strsplit}(perl = TRUE)} and similar make use
@@ -416,7 +421,7 @@ getOption(x, default = NULL)
       on progress?  Set to \code{TRUE} by the command-line option
       \option{--verbose}.}
 
-    \item{\code{warn}:}{sets the handling of warning messages.  If
+    \item{\code{warn}:}{integer value to set the handling of warning messages.  If
       \code{warn} is negative all warnings are ignored.  If \code{warn}
       is zero (the default) warnings are stored until the top--level
       function returns.  If 10 or fewer warnings were signalled they
@@ -424,8 +429,8 @@ getOption(x, default = NULL)
       signalled.  An object called \code{last.warning} is
       created and can be printed through the function
       \code{\link{warnings}}.  If \code{warn} is one, warnings are
-      printed as they occur.  If \code{warn} is two or larger all
-      warnings are turned into errors.}
+      printed as they occur.  If \code{warn} is two (or larger, coercible
+      to integer), all warnings are turned into errors.}
 
     \item{\code{warnPartialMatchArgs}:}{logical.  If true, warns if
       partial matching is used in argument matching.}

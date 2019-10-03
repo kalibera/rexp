@@ -94,10 +94,10 @@ stopifnot(dpois(0:5,0)		 == c(1, rep(0,5)),
 n1 <- 20; n2 <- 16
 for(lambda in rexp(n1))
     for(k in rpois(n2, lambda))
-	stopifnot(all.equal(1 - pchisq(2*lambda, 2*(1+ 0:k)),
+	stopifnot(all.equal(pchisq(2*lambda, 2*(1+ 0:k), lower.tail = FALSE),
 			    pp <- cumsum(dpois(0:k, lambda=lambda)),
 			    tolerance = 100*Meps),
-		  all.equal(pp, ppois(0:k, lambda=lambda), tolerance = 100*Meps),
+		  all.equal(    pp, ppois(0:k, lambda=lambda), tolerance = 100*Meps),
 		  all.equal(1 - pp, ppois(0:k, lambda=lambda, lower.tail = FALSE)))
 
 
@@ -1063,6 +1063,9 @@ stopifnot(sum(x <= 201) == 100000)
 
 ## The PR#17577 bug fix for dgamma() is currently "optimized away" on Windows 32-bit (8087 proc).
 ## --> check in ./reg-tests-1d.R (with no *.Rout.save) currently
+
+## Ditto for  pchisq(<LRG>, <LRG>, ..)
+
 
 
 cat("Time elapsed: ", proc.time() - .ptime,"\n")

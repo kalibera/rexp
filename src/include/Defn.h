@@ -730,7 +730,7 @@ extern0 struct RPRSTACK *R_PendingPromises INI_as(NULL); /* Pending promise stac
 /* File Input/Output */
 LibExtern Rboolean R_Interactive INI_as(TRUE);	/* TRUE during interactive use*/
 extern0 Rboolean R_Quiet	INI_as(FALSE);	/* Be as quiet as possible */
-extern Rboolean  R_Slave	INI_as(FALSE);	/* Run as a slave process */
+extern Rboolean  R_NoEcho	INI_as(FALSE);	/* do not echo R code */
 extern0 Rboolean R_Verbose	INI_as(FALSE);	/* Be verbose */
 /* extern int	R_Console; */	    /* Console active flag */
 /* IoBuffer R_ConsoleIob; : --> ./IOStuff.h */
@@ -865,7 +865,11 @@ LibExtern SEXP R_LogicalNAValue INI_as(NULL);
 
 /* for PCRE as from R 3.4.0 */
 extern0 Rboolean R_PCRE_use_JIT INI_as(TRUE);
+#ifdef HAVE_PCRE2
+extern0 int R_PCRE_study INI_as(-2);
+#else
 extern0 int R_PCRE_study INI_as(10);
+#endif
 extern0 int R_PCRE_limit_recursion;
 
 

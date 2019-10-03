@@ -1058,7 +1058,7 @@ SEXP installTrChar(SEXP x)
 }
 
 /* Translates as from R 3.6.0.
-   As from R 3.7.0 unused in newly installed code as installChar is
+   As from R 4.0.0 unused in newly installed code as installChar is
    remapped to Rf_installTrChar. 
  */
 SEXP Rf_installChar(SEXP x)
@@ -1910,7 +1910,7 @@ char * R_tmpnam2(const char *prefix, const char *tempdir, const char *fileext)
     return res;
 }
 
-void R_free_tmpnam(const char *name)
+void R_free_tmpnam(char *name)
 {
     if (name) free(name);
 }

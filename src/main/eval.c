@@ -1955,7 +1955,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
     return val;
 }
 
-static SEXP EnsureLocal(SEXP symbol, SEXP rho)
+static SEXP EnsureLocal(SEXP symbol, SEXP rho, R_varloc_t *ploc)
 {
     SEXP vl;
 
@@ -1971,6 +1971,9 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 	    INCREMENT_NAMED(vl);
 	    UNPROTECT(1);
 	}
+	PROTECT(vl); /* R_findVarLocInFrame allocates for user databases */
+	*ploc = R_findVarLocInFrame(rho, symbol);
+	UNPROTECT(1);
 	return vl;
     }
 
@@ -1980,6 +1983,7 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho)
 
     PROTECT(vl = shallow_duplicate(vl));
     defineVar(symbol, vl, rho);
+    *ploc = R_findVarLocInFrame(rho, symbol);
     INCREMENT_NAMED(vl);
     UNPROTECT(1);
     return vl;
@@ -2118,13 +2122,17 @@ SEXP attribute_hidden do_if(SEXP call, SEXP op, SEXP args, SEXP rho)
     return (eval(Stmt, rho));
 }
 
+#define IS_USER_DATABASE(rho)					\
+    (OBJECT((rho)) && inherits((rho), "UserDefinedDatabase"))
+
 static R_INLINE SEXP GET_BINDING_CELL(SEXP symbol, SEXP rho)
 {
-    if (rho == R_BaseEnv || rho == R_BaseNamespace)
+    if (rho == R_BaseEnv || rho == R_BaseNamespace || IS_USER_DATABASE(rho))
 	return R_NilValue;
     else {
 	R_varloc_t loc = R_findVarLocInFrame(rho, symbol);
-	return (! R_VARLOC_IS_NULL(loc)) ? loc.cell : R_NilValue;
+	return (! R_VARLOC_IS_NULL(loc) && ! IS_ACTIVE_BINDING(loc.cell)) ?
+	    loc.cell : R_NilValue;
     }
 }
 
@@ -2444,27 +2452,35 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
   nonlocal.
 */
 
-static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc)
+static SEXP evalseq(SEXP expr, SEXP rho, int forcelocal,  R_varloc_t tmploc,
+		    R_varloc_t *ploc)
 {
     SEXP val, nval, nexpr;
     if (isNull(expr))
 	error(_("invalid (NULL) left side of assignment"));
-    if (isSymbol(expr)) {
+    if (isSymbol(expr)) { /* now we are down to the target symbol */
 	PROTECT(expr);
 	if(forcelocal) {
-	    nval = EnsureLocal(expr, rho);
+	    nval = EnsureLocal(expr, rho, ploc);
 	}
-	else {/* now we are down to the target symbol */
-	  nval = eval(expr, ENCLOS(rho));
+	else {
+	    nval = eval(expr, ENCLOS(rho));
+	    PROTECT(nval); /* R_findVarLoc allocates for user databases */
+	    *ploc = R_findVarLoc(expr, ENCLOS(rho));
+	    UNPROTECT(1);
 	}
-	if (MAYBE_SHARED(nval))
+	int maybe_in_assign = ploc->cell ?
+	    ASSIGNMENT_PENDING(ploc->cell) : FALSE;
+	if (ploc->cell)
+	    SET_ASSIGNMENT_PENDING(ploc->cell, TRUE);
+	if (maybe_in_assign || MAYBE_SHARED(nval))
 	    nval = shallow_duplicate(nval);
 	UNPROTECT(1);
 	return CONS_NR(nval, expr);
     }
     else if (isLanguage(expr)) {
 	PROTECT(expr);
-	PROTECT(val = evalseq(CADR(expr), rho, forcelocal, tmploc));
+	PROTECT(val = evalseq(CADR(expr), rho, forcelocal, tmploc, ploc));
 	R_SetVarLocValue(tmploc, CAR(val));
 	PROTECT(nexpr = LCONS(R_GetVarLocSymbol(tmploc), CDDR(expr)));
 	PROTECT(nexpr = LCONS(CAR(expr), nexpr));
@@ -2705,8 +2721,12 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
     cntxt.cenddata = rho;
 
     /*  Do a partial evaluation down through the LHS. */
+    R_varloc_t lhsloc;
     lhs = evalseq(CADR(expr), rho,
-		  PRIMVAL(op)==1 || PRIMVAL(op)==3, tmploc);
+		  PRIMVAL(op)==1 || PRIMVAL(op)==3, tmploc, &lhsloc);
+    if (lhsloc.cell == NULL)
+	lhsloc.cell = R_NilValue;
+    PROTECT(lhsloc.cell);
 
     PROTECT(lhs);
     PROTECT(rhsprom = mkRHSPROMISE(CADR(args), rhs));
@@ -2739,7 +2759,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 	lhs = CDR(lhs);
 	expr = CADR(expr);
     }
-    nprot = 5; /* the commont case */
+    nprot = 6; /* the commont case */
     if (TYPEOF(CAR(expr)) == SYMSXP)
 	afun = getAssignFcnSymbol(CAR(expr));
     else {
@@ -2763,6 +2783,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(expr = replaceCall(afun, R_TmpvalSymbol, CDDR(expr), rhsprom));
     SEXP value = eval(expr, rho);
 
+    SET_ASSIGNMENT_PENDING(lhsloc.cell, FALSE);
     if (PRIMVAL(op) == 2)                       /* <<- */
 	setVar(lhsSym, value, ENCLOS(rho));
     else {                                      /* <-, = */
@@ -4642,6 +4663,13 @@ static R_INLINE SEXP getForLoopSeq(int offset, Rboolean *iscompact)
     R_BCNodeStackTop = __ntop__; \
 } while(0)
 
+#define BCNDUP3RD() do { \
+    R_bcstack_t *__ntop__ = R_BCNodeStackTop + 1; \
+    if (__ntop__ > R_BCNodeStackEnd) nodeStackOverflow(); \
+    __ntop__[-1] = __ntop__[-4]; \
+    R_BCNodeStackTop = __ntop__; \
+} while(0)
+
 #define BCNPOP() (R_BCNodeStackTop--, GETSTACK(0))
 #define BCNPOP_IGNORE_VALUE() R_BCNodeStackTop--
 
@@ -4927,14 +4955,7 @@ static R_INLINE void DECLNK_stack(R_bcstack_t *base, R_bcstack_t *top)
 static R_INLINE SEXP FIND_VAR_NO_CACHE(SEXP symbol, SEXP rho, SEXP cell,
 				       R_bcstack_t *stack_base)
 {
-    R_varloc_t loc;
-    /* only need to search the current frame again if
-       binding was special or frame is a base frame */
-    if (cell != R_NilValue ||
-	rho == R_BaseEnv || rho == R_BaseNamespace)
-	loc =  R_findVarLoc(symbol, rho);
-    else
-	loc =  R_findVarLoc(symbol, ENCLOS(rho));
+    R_varloc_t loc =  R_findVarLoc(symbol, rho);
     if (loc.cell && IS_ACTIVE_BINDING(loc.cell)) {
 	INCLNK_stack(stack_base, R_BCNodeStackTop);
 	SEXP value = R_GetVarLocValue(loc);
@@ -6853,19 +6874,26 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, sidx);
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	SEXP value = BINDING_VALUE(cell);
+	R_varloc_t loc;
 	if (value == R_UnboundValue ||
-	    TYPEOF(value) == PROMSXP ||
-#ifdef SWITCH_TO_REFCNT
-	    REFCNT(value) != 1
-#else
-	    NAMED(value) != 1
-#endif
-	    )
-	    value = EnsureLocal(symbol, rho);
+	    TYPEOF(value) == PROMSXP) {
+	    value = EnsureLocal(symbol, rho, &loc);
+	    if (loc.cell == NULL)
+		loc.cell = R_NilValue;
+	}
+	else loc.cell = cell;
 
+	int maybe_in_assign = ASSIGNMENT_PENDING(loc.cell);
+	SET_ASSIGNMENT_PENDING(loc.cell, TRUE);
+	BCNPUSH(loc.cell);
+
+	if (maybe_in_assign || MAYBE_SHARED(value))
+	    value = shallow_duplicate(value);
 	BCNPUSH(value);
-	BCNDUP2ND();
-	/* top three stack entries are now RHS value, LHS value, RHS value */
+
+	BCNDUP3RD();
+	/* top four stack entries are now
+	   RHS value, LHS cell, LHS value, RHS value */
 	if (IS_STACKVAL_BOXED(-1)) {
 	    FIXUP_RHS_NAMED(GETSTACK(-1));
 	    INCREMENT_REFCNT(GETSTACK(-1));
@@ -6874,6 +6902,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       }
     OP(ENDASSIGN, 1):
       {
+	SEXP lhscell = GETSTACK(-2);
+	SET_ASSIGNMENT_PENDING(lhscell, FALSE);
+
 	int sidx = GETOP();
 	SEXP symbol = VECTOR_ELT(constants, sidx);
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
@@ -6888,7 +6919,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	INCREMENT_NAMED(value);
 	if (! SET_BINDING_VALUE(cell, value))
 	    defineVar(symbol, value, rho);
-	R_BCNodeStackTop--; /* now pop LHS value off the stack */
+	R_BCNodeStackTop -= 2; /* now pop cell and LHS value off the stack */
 	/* original right-hand side value is now on top of stack again */
 #ifdef OLD_RHS_NAMED
 	/* we do not duplicate the right-hand side value, so to be
@@ -7047,20 +7078,39 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(STARTASSIGN2, 1):
       {
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
-	SEXP value = GETSTACK(-1);
-	BCNPUSH(getvar(symbol, ENCLOS(rho), FALSE, FALSE, NULL, 0, stack_base));
+	R_varloc_t loc = R_findVarLoc(symbol, rho);
+
+	if (loc.cell == NULL)
+	    loc.cell = R_NilValue;
+	int maybe_in_assign = ASSIGNMENT_PENDING(loc.cell);
+	SET_ASSIGNMENT_PENDING(loc.cell, TRUE);
+	BCNPUSH(loc.cell);
+
+	SEXP value = getvar(symbol, ENCLOS(rho), FALSE, FALSE, NULL, 0,
+			    stack_base);
+	if (maybe_in_assign || MAYBE_SHARED(value))
+	    value = shallow_duplicate(value);
 	BCNPUSH(value);
-	/* top three stack entries are now RHS value, LHS value, RHS value */
-	FIXUP_RHS_NAMED(value);
-	INCREMENT_REFCNT(value);
+
+	BCNDUP3RD();
+	/* top four stack entries are now
+	   RHS value, LHS cell, LHS value, RHS value */
+	if (IS_STACKVAL_BOXED(-1)) {
+	    FIXUP_RHS_NAMED(GETSTACK(-1));
+	    INCREMENT_REFCNT(GETSTACK(-1));
+	}
 	NEXT();
       }
     OP(ENDASSIGN2, 1):
       {
+	SEXP lhscell = GETSTACK(-2);
+	SET_ASSIGNMENT_PENDING(lhscell, FALSE);
+
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
-	SEXP value = BCNPOP();
+	SEXP value = GETSTACK(-1); /* leave on stack for GC protection */
 	INCREMENT_NAMED(value);
 	setVar(symbol, value, ENCLOS(rho));
+	R_BCNodeStackTop -= 2; /* now pop cell and LHS value off the stack */
 	/* original right-hand side value is now on top of stack again */
 #ifdef OLD_RHS_NAMED
 	/* we do not duplicate the right-hand side value, so to be

@@ -6,9 +6,36 @@
 \encoding{UTF-8}
 
 \section{\Rlogo CHANGES IN R-devel}{
+  \subsection{USER-VISIBLE CHANGES}{
+    \itemize{
+       \item The internal version number of R-devel has been set to 4.0.0,
+       reflecting the intention that the next non-patch release should be 4.0.0.
+
+       \item \R now builds by default against a PCRE2 library for Perl-like
+       regular expressions if available at build time on non-Windows
+       platforms (otherwise PCRE1 is used as in older versions of \R).
+
+       PCRE2 is stricter in some cases and reports errors for some
+       regular expressions that were accepted by PCRE1.  A hyphen now
+       has to be escaped in a character class to be interpreted as a
+       literal (unless first or last in the class definition).
+       \samp{\\R}, \samp{\\B} and \samp{\\X} are no longer allowed in
+       character classes (PCRE1 treated these as literals).
+
+       Option \code{PCRE_study} is no longer used, and reported as
+       \code{FALSE}.
+
+       The version of PCRE used can be obtained via
+       \code{extSoftVersion()}, PCRE1 has versions < 10, PCRE2 versions
+       >= 10.
+    }
+  }
 
   \subsection{NEW FEATURES}{
     \itemize{
+      \item The formula interface to \code{t.test} has been extended to
+      handle one-sample and paired tests.
+
       \item \code{assertError()} and \code{assertWarning()} (in package
       \pkg{tools}) can now check for \emph{specific} error or warning
       classes \emph{via} the new optional second argument \code{classes}
@@ -44,7 +71,7 @@
 
       \item New function \code{.S3method()} to register S3 methods in R
       scripts.
-      
+
       \item \code{file.path()} has some support for file paths not in
       the session encoding, e.g.\sspace{}with UTF-8 inputs in a
       non-UTF-8 locale the output is marked as UTF-8.
@@ -54,7 +81,7 @@
       translated (to the native encoding or in some cases on Windows to
       UTF-8), rather than translate to a different file path using
       escapes.  Some (such as \code{dir.exists()}, \code{file.exists()},
-      \code{file.access()}, \code{file.info()}, \code{list.files},
+      \code{file.access()}, \code{file.info()}, \code{list.files()},
       \code{normalizePath()} and \code{path.expand()}) treat this like
       any other non-existent file, often with a warning.
 
@@ -74,7 +101,14 @@
       detailing how file paths with marked encodings are handled.
 
       \item There is a new function \code{infoRDS()} providing information
-      about serialization format of a serialized object.
+      about the serialization format of a serialized object.
+
+      \item S3 method lookup now by default skips the elements of the
+      search path between the global and base environments.
+
+      \item Added an argument \code{add_datalist(*, small.size = 0)} to
+      allow the creation of a \file{data/datalist} file even when the
+      total size of the data sets is small.
     }
   }
 
@@ -90,9 +124,15 @@
       to the value of \samp{FC}, which is set for package compilation.
       But portable code should not rely on this.)
 
+      \item The deprecated support for specifying C++98 in package
+      installation has been removed.
+
       \item \command{R CMD config} no longer knows about the
       unused settings \samp{F77} and \samp{FCPIFCPLAGS}, nor
       \samp{CXX98} and similar.
+
+      \item Either PCRE >= 8.32 (Nov 2012) or PCRE2 is required: the
+      deprecated provision for 8.20--8.31 has been removed.
     }
   }
 
@@ -102,6 +142,10 @@
       \code{installTrChar}, of which it has been a wrapper since
       \R\sspace{}3.6.0.  Neither are part of the API, but packages using
       \code{installChar} can replace it if they depend on \samp{R >= 3.6.2}.
+
+      \item Header \file{R_ext/Print.h} defines \samp{R_USE_C99_IN_CXX}
+      and hence exposes \code{Rvprintf} and \code{REprintf} if used with
+      a C++11 compiler.
     }
   }
 
@@ -113,9 +157,28 @@
       \item There is a new variant option \option{--enable-lto=check}
       for checking consistency of BLAS/LAPACK/LINPACK calls --- see
       \sQuote{Writing R Extensions}.
-      
+
       \item A C++ compiler default is set only if the C++11 standard is
       supported: it no longer falls back to C++98.
+
+      \item PCRE2 is used if available: this is strongly recommended as
+      PCRE1 is no longer developed (it only receives bug fixes and has
+      outdated Unicode tables).  \command{configure} will warn if PCRE2
+      is not found and fall back to PCRE1.  \command{configure} options
+      \option{--without-pcre1} and \option{--without-pcre2} can be used
+      to exclude one or the other (but at least one of PCRE2 and PCRE1
+      is required).
+
+      \item The minimum required version of \code{libcurl} is now 7.28.0
+      (Oct 2012).
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R --help} now mentions the option \command{--no-echo}
+      (renamed from \command{--slave}) and its previously undocumented
+      short form \command{-s}.
     }
   }
 
@@ -145,6 +208,23 @@
       \item \code{format.default(*, scientific = FALSE)} now corresponds to
       a practically most extreme \code{options(scipen = n)} setting rather
       than arbitrary \code{n = 100}.
+
+      \item \code{format(as.symbol("foo"))} now works (returning \code{"foo"}).
+
+      \item \code{postscript(.., title = *)} now signals an error when the
+      title string contains a character which produces corrupt PostScript,
+      thanks to Daisuko Ogawa's \PR{17607}.
+
+      \item \code{x \%\% L} for finite \code{x} no longer returns
+      \code{NaN} when \code{L} is infinite, nor suffers from cancellation
+      for large finite \code{L}, thanks to Long Qu's \PR{17611}.
+
+      Analogously, \code{x \%/\% L} and \code{L \%/\% x} suffer less from
+      cancellation and return values corresponding to limits for large
+      \code{L}.
+
+      \item Certain \code{Ops} (notably comparison such as \code{==}) now
+      also work for 0-length data frames, after reports by Hilmar Berger.
     }
   }
 }
@@ -178,17 +258,35 @@
   \subsection{PACKAGE INSTALLATION}{
     \itemize{
       \item Header \file{Rconfig.h} contains the value of
-	\code{FC_LEN_T} deduced at installation which is used by the
-	prototypes in headers \file{BLAS.h} and \file{Lapack.h} but to
-	avoid extensive breakage this is only exposed when
-	\code{USE_FC_LEN_T} is defined.
+      \code{FC_LEN_T} deduced at installation which is used by the
+      prototypes in headers \file{R_ext/BLAS.h} and
+      \file{R_ext/Lapack.h} but to avoid extensive breakage this is
+      only exposed when \code{USE_FC_LEN_T} is defined.
 
-	If a package's C/C++ calls to BLAS/LAPACK allow for the
-	\sQuote{hidden} arguments used by most Fortran compilers to pass
-	the lengths of Fortran character arguments, define
-	\code{USE_FC_LEN_T} and include \file{Rconfig.h} (possibly
-	\emph{via} \file{R.h}) before including \file{BLAS.h} or
-	\file{Lapack.h}.
+      If a package's C/C++ calls to BLAS/LAPACK allow for the
+      \sQuote{hidden} arguments used by most Fortran compilers to pass
+      the lengths of Fortran character arguments, define
+      \code{USE_FC_LEN_T} and include \file{Rconfig.h} (possibly
+      \emph{via} \file{R.h}) before including \file{R_ext/BLAS.h} or
+      \file{R_ext/Lapack.h}.
+
+      \item A package with Fortran source code and perhaps C (but not
+      C++) sources can request for its shared object/DLL to be linked by
+      the Fortran compiler by including a line \code{USE_FC_TO_LINK=} in
+      \file{src/Makevars[.win]}.
+
+      The known reason for doing so is a package which uses Fortran
+      (only) OpenMP on a platform where the Fortran OpenMP runtime is
+      incompatible with the C one (e.g.\sspace{}\command{gfortran} 9.x
+      with \command{clang}).
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD check} has a new option to mitigate checks
+      leaving files/directories in \file{/tmp}.  See the \sQuote{R
+	Internals} manual -- this is part of \code{--as-cran}.
     }
   }
 
@@ -196,6 +294,14 @@
     \itemize{
       \item Support for specifying C++98 in package installation is
       deprecated.
+
+      \item Support in \command{R CMD config} for \samp{F77},
+      \samp{FCPIFCPLAGS}, \samp{CPP}, \samp{CXXCPP} and \samp{CXX98} and
+      similar is deprecated.  (\samp{CPP} is found from the system
+      \command{make} and may well not be set.)
+
+      Use \samp{$CC -E} and \samp{$CXX -E} instead of \samp{CPP} and
+      \samp{CXXCPP}.
     }
   }
 
@@ -234,6 +340,19 @@
       \item Auto-printing S4 objects no longer duplicates the object,
       for faster speed and reduced memory consumption. Reported by Aaron
       Lun.
+
+      \item \code{pchisq(<LRG>, <LRG>, ncp=100)} no longer takes
+      practically forever in some cases.  Hence ditto for corresponding
+      \code{qchisq()} calls.
+
+      \item \code{grepl(NA, *)} now returns \code{logical} as documented.
+
+      \item \code{options(warn=1e11)} is an error now, instead of later
+      leading to C stack overflow because of infinite recursion.
+
+      \item \code{R_tryCatch} no longer transfers control for all
+      conditions. Reported and patch provided by Linoel Henry in
+      \PR{17617}.
     }
   }
 }

@@ -79,7 +79,8 @@ AC_DEFINE_UNQUOTED(R_OS, "${host_os}",
 ## exclude some unsupported OSes
 case "${host_os}" in
    ## Darwin 1.3.1 was macOS 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
-   ## with 13 being 10.9.  We no longer support < 10.6 (Snow Leopard, Darwin 10)
+   ## with 18 being 10.14.
+   ## We no longer support < 10.6 (Snow Leopard, Darwin 10)
    ## https://en.wikipedia.org/wiki/Darwin_OS
    darwin1.*)
      AC_MSG_ERROR([The earliest supported macOS is 10.6.]
@@ -378,6 +379,18 @@ AC_ARG_WITH([readline],
 [R_ARG_USE(readline)],
 [use_readline=yes])
 
+## PCRE2.
+AC_ARG_WITH([pcre2],
+[AS_HELP_STRING([--with-pcre2],[use PCRE2 library (if available) @<:@yes@:>@])],
+[R_ARG_USE(pcre2)],
+[use_pcre2=yes])
+
+## PCRE1.
+AC_ARG_WITH([pcre1],
+[AS_HELP_STRING([--with-pcre1],[use PCRE1 library (if available and PCRE2 is not) @<:@yes@:>@])],
+[R_ARG_USE(pcre1)],
+[use_pcre1=yes])
+
 ## Aqua.
 AC_ARG_WITH([aqua],
 [AS_HELP_STRING([--with-aqua],[macOS only: use Aqua (if available) @<:@yes@:>@])],
@@ -669,6 +682,8 @@ AC_PROG_CXX
 ## check this actually compiles
 R_PROG_CXX
 
+## AC_PROG_CXXCPP looks for limits.h and does not include CPPFLAGS
+## CXXCPP is used in other places (not in R), so leave alone CXXCPP itself
 AC_PROG_CXXCPP
 if test "${CXXCPP}" = "${CXX} -E"; then
   CXXCPP0="\$(CXX) -E"
@@ -1687,7 +1702,6 @@ AC_SUBST(STATICR2)
 AC_SUBST(R_DYLIB_EXT)
 
 ## Test support for C++ standards
-R_STDCXX([98], [CXX98], [CXX])
 R_STDCXX([11], [CXX11], [CXX])
 R_STDCXX([14], [CXX14], [CXX11])
 R_STDCXX([17], [CXX17], [CXX14])
@@ -1911,9 +1925,17 @@ AC_SUBST(MACOS_SIERRA)
 ## Some OSes need -lrt: Linux (for glibc versions before 2.17), Solaris,
 ## not FreeBSD. 
 ## Unsurprising, as POSIX 2008 moved it from its timers section to base.
-## timespec_get is C11.
 AC_CHECK_LIB(rt, clock_gettime)
-R_CHECK_FUNCS([clock_gettime timespec_get], [#include <time.h>])
+R_CHECK_FUNCS([clock_gettime], [#include <time.h>])
+## timespec_get is C11.
+## macOS added timespec_get in 10.15 but used 10.15's SDK for 10.14 (Darwin 18)
+case "${host_os}" in
+   darwin1[[012345678]].*)
+   ;;
+   *)
+     R_CHECK_FUNCS([timespec_get], [#include <time.h>])
+   ;;
+esac
 ## We need setenv or putenv.  It seems that everyone does have
 ## putenv, as earlier versions of R would have failed without it.
 ## It is not always declared, so we do not require a declaration.
@@ -2305,11 +2327,8 @@ R_BZLIB
 ## LZMA headers and libraries from xz-utils
 R_LZMA
 
-## PCRE headers and libraries.
+## PCRE[12] headers and libraries.
 R_PCRE
-
-## PCRE2 header and 8-bit library.
-R_PCRE2
 
 ## tre headers and libraries.
 R_TRE
@@ -2457,7 +2476,7 @@ AC_FC_SRCEXT(f95, [dummy=1], [dummy=0])
 R_OPENMP
 AC_LANG_POP()
 
-## SHLIB_FCLD and {SHLIB_FCLDFLAGS are legacy
+## SHLIB_FCLD and {SHLIB_FCLDFLAGS are legacy, but might be used in a Makefile
 if test -z "${SHLIB_FCLD}"; then
   shlib_fcld_was_given=no
   SHLIB_FCLD="\$(FC)"
@@ -2766,8 +2785,13 @@ for item in X11 aqua tcltk; do
   fi
 done
 r_external_libs=
+if test "${r_cv_have_pcre2utf}" = yes; then
+  R_SH_VAR_ADD(r_external_libs, [pcre2], [, ])
+elif test "${r_cv_have_pcre832}" = yes; then
+  R_SH_VAR_ADD(r_external_libs, [pcre1], [, ])
+fi
 if test "${use_readline}" = yes; then
-  r_external_libs=readline
+  R_SH_VAR_ADD(r_external_libs, [readline], [, ])
 fi
 if test "${acx_blas_ok}" = "yes"; then
   ## Try to figure out which BLAS was used.
@@ -2919,8 +2943,8 @@ fi
 if test -n "${warn_tcltk_version}"; then
   AC_MSG_WARN([${warn_tcltk_version}])
 fi
-if test -n "${warn_pcre_version}"; then
-  AC_MSG_WARN([${warn_pcre_version}])
+if test -n "${warn_pcre2}"; then
+  AC_MSG_WARN([${warn_pcre2}])
 fi
 if test -n "${warn_info}"; then
   AC_MSG_WARN([${warn_info}])
