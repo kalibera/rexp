@@ -2615,7 +2615,7 @@ SEXP attribute_hidden do_search(SEXP call, SEXP op, SEXP args, SEXP env)
 
 */
 #define NONEMPTY_(_FRAME_) \
-    CHAR(PRINTNAME(TAG(_FRAME_)))[0] != '.' && CAR(_FRAME_) != R_UnboundValue
+    CHAR(PRINTNAME(TAG(_FRAME_)))[0] != '.'
 
 static int FrameSize(SEXP frame, int all)
 {
