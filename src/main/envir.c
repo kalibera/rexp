@@ -839,7 +839,7 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 	}
     }
     else {
-	/* This branch is used e.g. via sys.source, utils::data */ 
+	/* This branch is used e.g. via sys.source, utils::data */
 	c = PRINTNAME(symbol);
 	if( !HASHASH(c) ) {
 	    SET_HASHVALUE(c, R_Newhashpjw(CHAR(c)));
