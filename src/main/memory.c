@@ -3053,6 +3053,8 @@ void attribute_hidden R_check_thread(const char *s) {}
 static void R_gc_internal(R_size_t size_needed)
 {
     R_CHECK_THREAD;
+    if (R_in_gc)
+      R_Suicide("Recursive invocation of GC\n");
     if (!R_GCEnabled) {
       if (NO_FREE_NODES())
 	R_NSize = R_NodesInUse + 1;
