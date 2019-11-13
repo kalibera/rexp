@@ -111,6 +111,23 @@ extern void *Rm_realloc(void * p, size_t n);
 static int gc_reporting = 0;
 static int gc_count = 0;
 
+/* Report error encountered during garbage collection where for detecting
+   problems it is better to abort, but for debugging (or some production runs,
+   where external validation of results is possible) it may be preferred to
+   continue. Configurable via _R_GC_FAIL_ON_ERROR_. Typically these problems
+   are due to memory corruption.
+*/
+static Rboolean gc_fail_on_error = FALSE;
+static void gc_error(const char *msg)
+{
+    if (gc_fail_on_error)
+	R_Suicide(msg);
+    else if (R_in_gc)
+	REprintf(msg);
+    else
+	error(msg);
+}
+
 /* These are used in profiling to separate out time in GC */
 int R_gc_running() { return R_in_gc; }
 
@@ -708,15 +725,20 @@ static R_size_t R_NodesInUse = 0;
     dc__action__(ENCLOS(__n__), dc__extra__); \
     dc__action__(HASHTAB(__n__), dc__extra__); \
     break; \
+  case LISTSXP: \
+    dc__action__(TAG(__n__), dc__extra__); \
+    if (BOXED_BINDING_CELLS || BNDCELL_TAG(__n__) == 0) \
+      dc__action__(CAR0(__n__), dc__extra__); \
+    dc__action__(CDR(__n__), dc__extra__); \
+    break; \
   case CLOSXP: \
   case PROMSXP: \
-  case LISTSXP: \
   case LANGSXP: \
   case DOTSXP: \
   case SYMSXP: \
   case BCODESXP: \
     dc__action__(TAG(__n__), dc__extra__); \
-    dc__action__(CAR(__n__), dc__extra__); \
+    dc__action__(CAR0(__n__), dc__extra__); \
     dc__action__(CDR(__n__), dc__extra__); \
     break; \
   case EXTPTRSXP: \
@@ -801,7 +823,7 @@ static R_size_t R_NodesInUse = 0;
 static void CheckNodeGeneration(SEXP x, int g)
 {
     if (x && NODE_GENERATION(x) < g) {
-	REprintf("untraced old-to-new reference\n");
+	gc_error("untraced old-to-new reference\n");
     }
 }
 
@@ -817,7 +839,7 @@ static void DEBUG_CHECK_NODE_COUNTS(char *where)
 	     s = NEXT_NODE(s)) {
 	    NewCount++;
 	    if (i != NODE_CLASS(s))
-		REprintf("Inconsistent class assignment for node!\n");
+		gc_error("Inconsistent class assignment for node!\n");
 	}
 	for (gen = 0, OldCount = 0, OldToNewCount = 0;
 	     gen < NUM_OLD_GENERATIONS;
@@ -827,9 +849,9 @@ static void DEBUG_CHECK_NODE_COUNTS(char *where)
 		 s = NEXT_NODE(s)) {
 		OldCount++;
 		if (i != NODE_CLASS(s))
-		    REprintf("Inconsistent class assignment for node!\n");
+		    gc_error("Inconsistent class assignment for node!\n");
 		if (gen != NODE_GENERATION(s))
-		    REprintf("Inconsistent node generation\n");
+		    gc_error("Inconsistent node generation\n");
 		DO_CHILDREN(s, CheckNodeGeneration, gen);
 	    }
 	    for (s = NEXT_NODE(R_GenHeap[i].OldToNew[gen]);
@@ -837,9 +859,9 @@ static void DEBUG_CHECK_NODE_COUNTS(char *where)
 		 s = NEXT_NODE(s)) {
 		OldToNewCount++;
 		if (i != NODE_CLASS(s))
-		    REprintf("Inconsistent class assignment for node!\n");
+		    gc_error("Inconsistent class assignment for node!\n");
 		if (gen != NODE_GENERATION(s))
-		    REprintf("Inconsistent node generation\n");
+		    gc_error("Inconsistent node generation\n");
 	    }
 	}
 	REprintf("Class: %d, New = %d, Old = %d, OldToNew = %d, Total = %d\n",
@@ -1186,7 +1208,7 @@ static void AgeNodeAndChildren(SEXP s, int gen)
 	s = forwarded_nodes;
 	forwarded_nodes = NEXT_NODE(forwarded_nodes);
 	if (NODE_GENERATION(s) != gen)
-	    REprintf("****snapping into wrong generation\n");
+	    gc_error("****snapping into wrong generation\n");
 	SNAP_NODE(s, R_GenHeap[NODE_CLASS(s)].Old[gen]);
 	R_GenHeap[NODE_CLASS(s)].OldCount[gen]++;
 	DO_CHILDREN(s, AGE_NODE, gen);
@@ -1641,7 +1663,7 @@ static int RunGenCollect(R_size_t size_needed)
 		DO_CHILDREN(s, AgeNodeAndChildren, gen);
 		UNSNAP_NODE(s);
 		if (NODE_GENERATION(s) != gen)
-		    REprintf("****snapping into wrong generation\n");
+		    gc_error("****snapping into wrong generation\n");
 		SNAP_NODE(s, R_GenHeap[i].Old[gen]);
 		s = next;
 	    }
@@ -1717,7 +1739,7 @@ static int RunGenCollect(R_size_t size_needed)
 	    SEXP s;
 	    for (s = R_SymbolTable[i]; s != R_NilValue; s = CDR(s))
 		if (ATTRIB(CAR(s)) != R_NilValue)
-		    REprintf("****found a symbol with attributes\n");
+		    gc_error("****found a symbol with attributes\n");
 	}
 
     if (R_CurrentExpr != NULL)	           /* Current expression */
@@ -2109,9 +2131,16 @@ void attribute_hidden InitMemory()
 {
     int i;
     int gen;
+    char *arg;
 
     init_gctorture();
     init_gc_grow_settings();
+
+    arg = getenv("_R_GC_FAIL_ON_ERROR_");
+    if (arg != NULL && StringTrue(arg))
+	gc_fail_on_error = TRUE;
+    else if (arg != NULL && StringFalse(arg))
+	gc_fail_on_error = FALSE;
 
     gc_reporting = R_Verbose;
     R_StandardPPStackSize = R_PPStackSize;
@@ -2165,7 +2194,7 @@ void attribute_hidden InitMemory()
     INIT_REFCNT(R_NilValue);
     SET_REFCNT(R_NilValue, REFCNTMAX);
     SET_TYPEOF(R_NilValue, NILSXP);
-    CAR(R_NilValue) = R_NilValue;
+    CAR0(R_NilValue) = R_NilValue;
     CDR(R_NilValue) = R_NilValue;
     TAG(R_NilValue) = R_NilValue;
     ATTRIB(R_NilValue) = R_NilValue;
@@ -2177,6 +2206,7 @@ void attribute_hidden InitMemory()
 	R_Suicide("couldn't allocate node stack");
     R_BCNodeStackTop = R_BCNodeStackBase;
     R_BCNodeStackEnd = R_BCNodeStackBase + R_BCNODESTACKSIZE;
+    R_BCProtTop = R_BCNodeStackTop;
 
     R_weak_refs = R_NilValue;
 
@@ -2340,7 +2370,7 @@ SEXP allocSExp(SEXPTYPE t)
     s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     INIT_REFCNT(s);
     SET_TYPEOF(s, t);
-    CAR(s) = R_NilValue;
+    CAR0(s) = R_NilValue;
     CDR(s) = R_NilValue;
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
@@ -2390,7 +2420,7 @@ SEXP cons(SEXP car, SEXP cdr)
     s->sxpinfo = UnmarkedNodeTemplate.sxpinfo;
     INIT_REFCNT(s);
     SET_TYPEOF(s, LISTSXP);
-    CAR(s) = CHK(car); if (car) INCREMENT_REFCNT(car);
+    CAR0(s) = CHK(car); if (car) INCREMENT_REFCNT(car);
     CDR(s) = CHK(cdr); if (cdr) INCREMENT_REFCNT(cdr);
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
@@ -2422,7 +2452,7 @@ SEXP CONS_NR(SEXP car, SEXP cdr)
     INIT_REFCNT(s);
     DISABLE_REFCNT(s);
     SET_TYPEOF(s, LISTSXP);
-    CAR(s) = CHK(car);
+    CAR0(s) = CHK(car);
     CDR(s) = CHK(cdr);
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
@@ -2619,7 +2649,6 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    SET_TYPEOF(s, type);
 	    SET_STDVEC_LENGTH(s, (R_len_t) length); // is 1
 	    SET_STDVEC_TRUELENGTH(s, 0);
-	    SET_NAMED(s, 0);
 	    INIT_REFCNT(s);
 	    return(s);
 	}
@@ -2828,7 +2857,6 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
     }
     SETALTREP(s, 0);
     SET_STDVEC_TRUELENGTH(s, 0);
-    SET_NAMED(s, 0);
     INIT_REFCNT(s);
 
     /* The following prevents disaster in the case */
@@ -3053,7 +3081,9 @@ void attribute_hidden R_check_thread(const char *s) {}
 static void R_gc_internal(R_size_t size_needed)
 {
     R_CHECK_THREAD;
-    if (!R_GCEnabled) {
+    if (!R_GCEnabled || R_in_gc) {
+      if (R_in_gc)
+        gc_error("*** recursive gc invocation\n");
       if (NO_FREE_NODES())
 	R_NSize = R_NodesInUse + 1;
 
@@ -3149,41 +3179,46 @@ static void R_gc_internal(R_size_t size_needed)
 #endif
 
     if (first_bad_sexp_type != 0) {
+	char msg[256];
 #ifdef PROTECTCHECK
 	if (first_bad_sexp_type == FREESXP)
-	    error("GC encountered a node (%p) with type FREESXP (was %s)"
+	    snprintf(msg, 256,
+	          "GC encountered a node (%p) with type FREESXP (was %s)"
 		  " at memory.c:%d",
-		  first_bad_sexp_type_sexp,
+		  (void *) first_bad_sexp_type_sexp,
 		  sexptype2char(first_bad_sexp_type_old_type),
 		  first_bad_sexp_type_line);
 	else
-	    error("GC encountered a node (%p) with an unknown SEXP type: %d"
-		  " at memory.c:%d",
-		  first_bad_sexp_type_sexp,
-		  first_bad_sexp_type,
-		  first_bad_sexp_type_line);
+	    snprintf(msg, 256,
+		     "GC encountered a node (%p) with an unknown SEXP type: %d"
+		     " at memory.c:%d",
+		     (void *) first_bad_sexp_type_sexp,
+		     first_bad_sexp_type,
+		     first_bad_sexp_type_line);
 #else
-	error("GC encountered a node (%p) with an unknown SEXP type: %d"
-	      " at memory.c:%d",
-	      first_bad_sexp_type_sexp,
-	      first_bad_sexp_type,
-	      first_bad_sexp_type_line);
+	snprintf(msg, 256,
+		 "GC encountered a node (%p) with an unknown SEXP type: %d"
+		 " at memory.c:%d",
+		 (void *)first_bad_sexp_type_sexp,
+		 first_bad_sexp_type,
+		 first_bad_sexp_type_line);
+	gc_error(msg);
 #endif
     }
 
     /* sanity check on logical scalar values */
     if (R_TrueValue != NULL && LOGICAL(R_TrueValue)[0] != TRUE) {
 	LOGICAL(R_TrueValue)[0] = TRUE;
-	error("internal TRUE value has been modified");
+	gc_error("internal TRUE value has been modified");
     }
     if (R_FalseValue != NULL && LOGICAL(R_FalseValue)[0] != FALSE) {
 	LOGICAL(R_FalseValue)[0] = FALSE;
-	error("internal FALSE value has been modified");
+	gc_error("internal FALSE value has been modified");
     }
     if (R_LogicalNAValue != NULL &&
 	LOGICAL(R_LogicalNAValue)[0] != NA_LOGICAL) {
 	LOGICAL(R_LogicalNAValue)[0] = NA_LOGICAL;
-	error("internal logical NA value has been modified");
+	gc_error("internal logical NA value has been modified");
     }
 }
 
@@ -3675,6 +3710,8 @@ void (SET_ASSIGNMENT_PENDING)(SEXP x, int v)
 {
     SET_ASSIGNMENT_PENDING(CHK(x), v);
 }
+int (IS_ASSIGNMENT_CALL)(SEXP x) { return IS_ASSIGNMENT_CALL(CHK(x)); }
+void (MARK_ASSIGNMENT_CALL)(SEXP x) { MARK_ASSIGNMENT_CALL(CHK(x)); }
 
 void (SET_ATTRIB)(SEXP x, SEXP v) {
     if(TYPEOF(v) != LISTSXP && TYPEOF(v) != NILSXP)
@@ -3686,7 +3723,12 @@ void (SET_ATTRIB)(SEXP x, SEXP v) {
 }
 void (SET_OBJECT)(SEXP x, int v) { SET_OBJECT(CHK(x), v); }
 void (SET_TYPEOF)(SEXP x, int v) { SET_TYPEOF(CHK(x), v); }
-void (SET_NAMED)(SEXP x, int v) { SET_NAMED(CHK(x), v); }
+void (SET_NAMED)(SEXP x, int v)
+{
+#ifndef SWITCH_TO_REFCNT
+    SET_NAMED(CHK(x), v);
+#endif
+}
 void (SET_RTRACE)(SEXP x, int v) { SET_RTRACE(CHK(x), v); }
 int (SETLEVELS)(SEXP x, int v) { return SETLEVELS(CHK(x), v); }
 void DUPLICATE_ATTRIB(SEXP to, SEXP from) {
@@ -3982,9 +4024,77 @@ static R_INLINE SEXP CHKCONS(SEXP e)
 #define CHKCONS(e) CHK(e)
 #endif
 
+attribute_hidden
+int (BNDCELL_TAG)(SEXP cell) { return BNDCELL_TAG(cell); }
+attribute_hidden
+void (SET_BNDCELL_TAG)(SEXP cell, int val) { SET_BNDCELL_TAG(cell, val); }
+attribute_hidden
+double (BNDCELL_DVAL)(SEXP cell) { return BNDCELL_DVAL(cell); }
+attribute_hidden
+int (BNDCELL_IVAL)(SEXP cell) { return BNDCELL_IVAL(cell); }
+attribute_hidden
+int (BNDCELL_LVAL)(SEXP cell) { return BNDCELL_LVAL(cell); }
+attribute_hidden
+void (SET_BNDCELL_DVAL)(SEXP cell, double v) { SET_BNDCELL_DVAL(cell, v); }
+attribute_hidden
+void (SET_BNDCELL_IVAL)(SEXP cell, int v) { SET_BNDCELL_IVAL(cell, v); }
+attribute_hidden
+void (SET_BNDCELL_LVAL)(SEXP cell, int v) { SET_BNDCELL_LVAL(cell, v); }
+attribute_hidden
+void (INIT_BNDCELL)(SEXP cell, int type) { INIT_BNDCELL(cell, type); }
+
+#define CLEAR_BNDCELL_TAG(cell) do {		\
+	if (BNDCELL_TAG(cell)) {		\
+	    CAR0(cell) = R_NilValue;		\
+	    SET_BNDCELL_TAG(cell, 0);		\
+	}					\
+    } while (0)
+
+attribute_hidden
+void SET_BNDCELL(SEXP cell, SEXP val)
+{
+    CLEAR_BNDCELL_TAG(cell);
+    SETCAR(cell, val);
+}
+
+attribute_hidden void R_expand_binding_value(SEXP b)
+{
+#if BOXED_BINDING_CELLS
+    SET_BNDCELL_TAG(b, 0);
+#else
+    int typetag = BNDCELL_TAG(b);
+    if (typetag) {
+	union {
+	    SEXP sxpval;
+	    double dval;
+	    int ival;
+	} vv;
+	SEXP val;
+	vv.sxpval = CAR0(b);
+	switch (typetag) {
+	case REALSXP:
+	    val = ScalarReal(vv.dval);
+	    SET_BNDCELL(b, val);
+	    INCREMENT_NAMED(val);
+	    break;
+	case INTSXP:
+	    val = ScalarInteger(vv.ival);
+	    SET_BNDCELL(b, val);
+	    INCREMENT_NAMED(val);
+	    break;
+	case LGLSXP:
+	    val = ScalarLogical(vv.ival);
+	    SET_BNDCELL(b, val);
+	    INCREMENT_NAMED(val);
+	    break;
+	}
+    }
+#endif
+}
+
 /* List Accessors */
 SEXP (TAG)(SEXP e) { return CHK(TAG(CHKCONS(e))); }
-SEXP (CAR)(SEXP e) { return CHK(CAR(CHKCONS(e))); }
+SEXP (CAR0)(SEXP e) { return CHK(CAR0(CHKCONS(e))); }
 SEXP (CDR)(SEXP e) { return CHK(CDR(CHKCONS(e))); }
 SEXP (CAAR)(SEXP e) { return CHK(CAAR(CHKCONS(e))); }
 SEXP (CDAR)(SEXP e) { return CHK(CDAR(CHKCONS(e))); }
@@ -4009,11 +4119,12 @@ SEXP (SETCAR)(SEXP x, SEXP y)
 {
     if (CHKCONS(x) == NULL || x == R_NilValue)
 	error(_("bad value"));
+    CLEAR_BNDCELL_TAG(x);
     if (y == CAR(x))
 	return y;
     FIX_BINDING_REFCNT(x, CAR(x), y);
     CHECK_OLD_TO_NEW(x, y);
-    CAR(x) = y;
+    CAR0(x) = y;
     return y;
 }
 
@@ -4034,9 +4145,10 @@ SEXP (SETCADR)(SEXP x, SEXP y)
 	CHKCONS(CDR(x)) == NULL || CDR(x) == R_NilValue)
 	error(_("bad value"));
     cell = CDR(x);
+    CLEAR_BNDCELL_TAG(cell);
     FIX_REFCNT(cell, CAR(cell), y);
     CHECK_OLD_TO_NEW(cell, y);
-    CAR(cell) = y;
+    CAR0(cell) = y;
     return y;
 }
 
@@ -4048,9 +4160,10 @@ SEXP (SETCADDR)(SEXP x, SEXP y)
 	CHKCONS(CDDR(x)) == NULL || CDDR(x) == R_NilValue)
 	error(_("bad value"));
     cell = CDDR(x);
+    CLEAR_BNDCELL_TAG(cell);
     FIX_REFCNT(cell, CAR(cell), y);
     CHECK_OLD_TO_NEW(cell, y);
-    CAR(cell) = y;
+    CAR0(cell) = y;
     return y;
 }
 
@@ -4063,9 +4176,10 @@ SEXP (SETCADDDR)(SEXP x, SEXP y)
 	CHKCONS(CDDDR(x)) == NULL || CDDDR(x) == R_NilValue)
 	error(_("bad value"));
     cell = CDDDR(x);
+    CLEAR_BNDCELL_TAG(cell);
     FIX_REFCNT(cell, CAR(cell), y);
     CHECK_OLD_TO_NEW(cell, y);
-    CAR(cell) = y;
+    CAR0(cell) = y;
     return y;
 }
 
@@ -4081,9 +4195,10 @@ SEXP (SETCAD4R)(SEXP x, SEXP y)
 	CHKCONS(CD4R(x)) == NULL || CD4R(x) == R_NilValue)
 	error(_("bad value"));
     cell = CD4R(x);
+    CLEAR_BNDCELL_TAG(cell);
     FIX_REFCNT(cell, CAR(cell), y);
     CHECK_OLD_TO_NEW(cell, y);
-    CAR(cell) = y;
+    CAR0(cell) = y;
     return y;
 }
 

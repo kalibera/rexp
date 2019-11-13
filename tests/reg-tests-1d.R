@@ -3017,7 +3017,7 @@ stopifnot(exprs = {
     nchar(ch) == 309
     identical(ch, co)
     ch == format(xMAX, scientific=FALSE)
-})## format(*, scientific=FALSE) was "not obeyed" in R <= 3.6.1
+})## format(*, scientific=FALSE) was "not obeyed" in R < 4.0.0
 
 
 ## format(<symbol>) aka format(<name>) :
@@ -3104,6 +3104,130 @@ stopifnot(is.na(N), is.logical(N))
 ## options(warn=1e11) leading to infinite loop -> "C Stack ..." error
 tools::assertError(options(warn = 1+.Machine$integer.max))
 ## "worked" and gave problems later in R <= 3.6.1
+
+
+## PR#17628
+df <- data.frame(x = 1, y = 2); class(df$y) <- "object_size"
+df ## --> print.data.frame(*, digits=NULL)' -- error in R <= 3.6.1
+format(object.size(pi), digits=NULL)
+## error in R <= 3.6.1
+
+## PR#15522
+pos <- barplot(1:2, space=c(9, 1),
+    ylim=c(0, 21), xlim=c(0, 11), horiz=TRUE,
+    plot=FALSE)
+stopifnot(all.equal(pos, cbind(c(9.5, 11.5))))
+## bar spacing was wrong in R <= 3.6.1
+
+## methods(class = <{length > 1}>)  giving many non-helpful warnings
+tools::assertWarning(mc <- methods(class = class(ordered(4:1))), verbose=TRUE)
+                                        # class = ".S3methods",
+stopifnot(is.character(mc), inherits(mc, "MethodsFunction"),
+          is.data.frame(attr(mc,"info")))
+## warns once only, in R >= 3.6.2
+
+
+## PR#17580 -- using max.lines, "truncated"
+op <- options(error = expression(NULL)) # {careful! : errors do *NOT* stop}
+is.t.back <- function(x) is.pairlist(x) && all(vapply(x, is.character, NA))
+f <- function(...) stop(deparse(substitute(...)))
+g <- function(...) f(...)
+do.call(g, mtcars)
+tb. <- .traceback()
+traceback(tb1 <- .traceback(max.lines=1))# prints with '...' as it's truncated
+stopifnot(exprs = {
+    is.t.back(tb.)
+    is.t.back(tb1)
+    length(tb.) == length(tb1)
+    vapply(tb1, length, 0L) == 1
+    length(tb.[[3]]) > 20
+})
+f <- function() options(warn = 1+.Machine$integer.max)
+do.call(g, mtcars)
+tb0 <- .traceback()
+traceback(tb3  <- .traceback(max.lines = 3))
+traceback(tb00 <- .traceback(max.lines = 0))
+options(op)# revert to normal
+stopifnot(exprs = {
+    is.t.back(tb0)
+    is.t.back(tb3)
+    is.t.back(tb00)
+    vapply(tb0, function(.) is.null(attributes(.)), NA)
+    length(tb0) == length(tb3)
+    vapply(tb3 , length, 0L) <= 3
+    vapply(tb00, length, 0L) == 0L
+    identical(lapply(tb3, attributes),
+              list(list(truncated = TRUE), NULL))
+    identical(lapply(tb00, attributes),
+              rep(list(list(truncated = TRUE)), 2))
+})
+f <- function(...) .traceback(2, max.lines=1)
+g(
+  'hello hello hello hello hello hello hello hello hello hello hello',
+  'world world world world world world world world world world world'
+) -> tb2n1
+stopifnot(is.character(t1 <- tb2n1[[1]]), length(t1) == 1L, attr(t1, "truncated"))
+## partly not possible in R < 4.0.0; always deparsed in full
+
+
+## PR#13624 : get_all_vars(*, <matrix>):
+ok_get_all_vars <- function(form,d) { ## get_all_vars() :<=> model_frame() apart from "terms"
+    mf <- if(missing(d)) model.frame(form) else model.frame(form,d)
+    attr(mf, "terms") <- NULL
+    identical(mf,
+              if(missing(d)) get_all_vars(form) else get_all_vars(form,d))
+}
+M <- matrix(1:15, 5,3)
+n <- 26:30
+T <- TRUE
+m <- 2:7
+stopifnot(exprs = {
+    ok_get_all_vars(~ M)
+    ok_get_all_vars(~M+n)
+    ok_get_all_vars(~ X ,               list(X=  M))
+    ok_get_all_vars(~z+X,               list(X=  M,  z=n))
+    ok_get_all_vars(~z+X,               list(X=I(M), z=n))
+    ok_get_all_vars(~z+X,    data.frame(     X=I(M), z=n))
+    ok_get_all_vars(~z+X,    data.frame(list(X=I(M), z=n)))
+    ok_get_all_vars(~z+X, as.data.frame(list(X=I(M), z=n)))
+    lengths(d <- get_all_vars(~ n + T, "2n" = 2*n)) == 5L
+    identical(d[,"T"], rep.int(TRUE, 5))
+    ## recycling works when commensurate:
+    lengths(d6 <- get_all_vars(~ m + T, one=1, "2 s"=1:2, "3's"=3:1, `f 3` = gl(3,2))) == 6
+    identical(colnames(d6), c("m", "T", "one", "2 s", "3's", "f 3"))
+})
+## all but the first 4 cases worked already in R <= 3.6.1
+
+
+## two-arg Rd macros (PR#17627)
+parse_Rd_txt <- function(ch) tools::parse_Rd(textConnection(ch), fragment = TRUE)
+rd1 <- parse_Rd_txt(t1 <- "\\if{html}{\\out{<hr>}}")
+rd2 <- parse_Rd_txt(t2 <- "\\href{https://www.r-project.org}{some text}")
+(tx1 <- paste(as.character(rd1), collapse = ""))
+(tx2 <- paste(as.character(rd2), collapse = ""))
+stopifnot(exprs = {
+    identical(paste0(t1,"\n"), tx1)
+    identical(paste0(t2,"\n"), tx2)
+})
+## had duplicated braces in R < 4.0.0
+
+
+## power.t.test() failure for very small (unreasonable) n;  R-devel m.list Oct.4, 2019
+(ptt0 <- power.t.test(delta=10,  sd=1,       power=0.9 , sig.level=0.05, tol = 1e-8))
+(ptt1 <- power.t.test(delta=0.6, sd=0.00001, power=0.9 , sig.level=0.05))
+(ptt2 <- power.t.test(delta=2,   sd = 1e-8,  power=0.99, sig.level=0.01))
+stopifnot(exprs = {
+    all.equal(0.9, power.t.test(delta=10, sd=1, n = ptt0 $ n)$power)
+    all.equal(ptt1$n, 1.00428,   tol = 1e-5)
+    all.equal(ptt2$n, 1.1215733, tol = 1e-5)
+})
+## when uniroot() was trying n < 1, the code failed previously (in 2nd and 3rd case)
+
+
+## improved error message from contour():
+tt <- tryCatch(contour(volcano, levels = c(20*c(4:6, -Inf, 8:10))), error=identity)
+stopifnot(inherits(tt, "error"), grepl("non-finite level.*\\[4\\] = -inf", tt$message))
+## had "invalid NA contour values"
 
 
 

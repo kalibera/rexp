@@ -3592,6 +3592,18 @@ function(aar, strict = FALSE)
                                   is.na(match("aut", e$role)),
                                   NA)))
                         out$bad_authors_at_R_field_has_no_author_roles <- TRUE
+                    has_bad_ORCID_identifiers <-
+                        vapply(aar,
+                               function(e) {
+                                   e <- e$comment
+                                   e <- e[names(e) == "ORCID"]
+                                   any(!grepl(.ORCID_iD_variants_regexp,
+                                              e))
+                               },
+                               NA)
+                    if(any(has_bad_ORCID_identifiers))
+                        out$bad_authors_at_R_field_has_persons_with_bad_ORCID_identifiers <-
+                            format(aar[has_bad_ORCID_identifiers])
                 }
                 if(strict >= 3L) {
                     non_standard_roles <-
@@ -3692,6 +3704,10 @@ function(x)
       },
       if(length(x[["bad_authors_at_R_field_has_no_valid_maintainer"]])) {
           strwrap(gettext("Authors@R field gives no person with maintainer role, valid email address and non-empty name."))
+      },
+      if(length(bad <- x[["bad_authors_at_R_field_has_persons_with_bad_ORCID_identifiers"]])) {
+          c(gettext("Authors@R field gives persons with invalid ORCID identifiers:"),
+            paste0("  ", bad))
       }
       )
 }
@@ -6632,7 +6648,7 @@ function(package, dir, lib.loc = NULL, WINDOWS = FALSE)
                  ".find.package", ".path.package")
 
     ## X11 may not work on even a Unix-alike: it needs X support
-    ## (optional) at install time and and an X server at run time.
+    ## (optional) at install time and an X server at run time.
     bad_dev <- c("quartz", "x11", "X11")
     if(!WINDOWS)
         bad_dev <- c(bad_dev,  "windows", "win.graph", "win.metafile", "win.print")
@@ -8406,7 +8422,7 @@ function(dir, limit = c(usage = 95, examples = 105), installed = FALSE)
         Rd_db(basename(dir), lib.loc = dirname(dir))
     else
         Rd_db(dir = dir)
-    out <- find_wide_Rd_lines_in_Rd_db(db, limit)
+    out <- find_wide_Rd_lines_in_Rd_db(db, limit, installed)
     class(out) <- "check_Rd_line_widths"
     attr(out, "limit") <- limit
     out
@@ -8455,20 +8471,21 @@ function(x, ...)
 }
 
 find_wide_Rd_lines_in_Rd_db <-
-function(x, limit = NULL)
+function(x, limit = NULL, installed = FALSE)
 {
-    y <- lapply(x, find_wide_Rd_lines_in_Rd_object, limit)
+    y <- lapply(x, find_wide_Rd_lines_in_Rd_object, limit, installed)
     Filter(length, y)
 }
 
 find_wide_Rd_lines_in_Rd_object <-
-function(x, limit = NULL)
+function(x, limit = NULL, installed = FALSE)
 {
     if(is.null(limit))
         limit <- list(usage = c(79, 95), examples = c(87, 105))
     sections <- names(limit)
     if(is.null(sections))
         stop("no Rd sections specified")
+    if (installed) x <- prepare_Rd(x, stages = "render")
     y <- Map(function(s, l) {
         out <- NULL
         zz <- textConnection("out", "w", local = TRUE)

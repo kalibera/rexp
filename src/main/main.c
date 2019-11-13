@@ -203,6 +203,10 @@ Rf_ReplIteration(SEXP rho, int savestack, int browselevel, R_ReplState *state)
     SEXP value, thisExpr;
     Rboolean wasDisplayed = FALSE;
 
+    /* clear warnings that might have accumulated furing a jump to top level */
+    if (R_CollectWarnings)
+	PrintWarnings();
+
     if(!*state->bufp) {
 	    R_Busy(0);
 	    if (R_ReadConsole(R_PromptString(browselevel, state->prompt_type),
@@ -900,6 +904,7 @@ void setup_Rmainloop(void)
     R_Toplevel.conexit = R_NilValue;
     R_Toplevel.vmax = NULL;
     R_Toplevel.nodestack = R_BCNodeStackTop;
+    R_Toplevel.bcprottop = R_BCProtTop;
     R_Toplevel.cend = NULL;
     R_Toplevel.cenddata = NULL;
     R_Toplevel.intsusp = FALSE;

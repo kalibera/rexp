@@ -30,11 +30,11 @@ cm.colors(n, alpha = 1, rev = FALSE)
 \arguments{
   \item{n}{the number of colors (\eqn{\ge 1}) to be in the
     palette.}
-  \item{palette}{the name of the palette to generate colors from.
-    The name is matched to the list of available palettes (listed in the
-    details), ignoring upper vs. lower case, spaces, dashes, etc. in the
-    matching.}
-  \item{alpha}{the alpha transparency, a number in [0,1], see argument
+  \item{palette}{a valid palette name (one of \code{hcl.pals()}).
+    The name is matched to the list of available palettes, ignoring
+    upper vs. lower case, spaces, dashes, etc. in the matching.}
+  \item{alpha}{an alpha-transparency level in the range [0,1]
+    (0 means transparent and 1 means opaque), see argument
     \code{alpha} in \code{\link{hsv}} and \code{\link{hcl}}, respectively.}
   \item{rev}{logical indicating whether the ordering of the colors should
     be reversed.}
@@ -64,7 +64,7 @@ the corresponding palettes are typically not a good choice for statistical
 graphics and data visualization.
 
 In contrast, HCL (hue-chroma-luminance) colors are much more suitable for
-capturing human color perception (see also \code{\link{hcl}} and better color
+capturing human color perception (see also \code{\link{hcl}}) and better color
 palettes can be derived based on HCL coordinates.
 Conceptually, three types of palettes are often distinguished:
 \itemize{
@@ -101,7 +101,16 @@ up to five groups, \code{"YlGnBu"} is a sequential palette similar to
 \code{"viridis"} but with aligned chroma/luminance, and
 \code{"Green-Brown"} or \code{"Blue-Red 3"} are colorblind-safe
 diverging palettes.
-  
+
+Further qualitative palettes are provided in the 
+\code{\link{palette.colors}} function. While the qualitative palettes in 
+\code{hcl.colors} are always based on the same combination of chroma and 
+luminance, the \code{palette.colors} vary in chroma and luminance up to 
+a certain degree. The advantage of fixing chroma/luminance is that the 
+perceptual weight of the resulting colors is more balanced. The 
+advantage of allowing variation is that more distinguishable colors can 
+be obtained, especially for viewers with color vision deficiencies.
+
 Note that the \code{rainbow} function implements the (in-)famous rainbow (or
 jet) color palette that was used very frequently in many software packages but
 has been widely criticized for its many perceptual problems.
@@ -128,7 +137,7 @@ suitable palette from \code{hcl.colors} instead of
   Accessed March 26, 2019.
 
   Zeileis, A., Fisher, J. C., Hornik, K., Ihaka, R., McWhite, C. D., Murrell, P., Stauffer, R. and Wilke, C. O. (2019).
-  \dQuote{ccolorspace: A toolbox for manipulating and assessing colors and palettes.}
+  \dQuote{colorspace: A toolbox for manipulating and assessing colors and palettes.}
   arXiv:1903.06490, arXiv.org E-Print Archive.
   \url{http://arxiv.org/abs/1903.06490}.
 

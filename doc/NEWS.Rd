@@ -33,9 +33,6 @@
 
   \subsection{NEW FEATURES}{
     \itemize{
-      \item The formula interface to \code{t.test} has been extended to
-      handle one-sample and paired tests.
-
       \item \code{assertError()} and \code{assertWarning()} (in package
       \pkg{tools}) can now check for \emph{specific} error or warning
       classes \emph{via} the new optional second argument \code{classes}
@@ -61,7 +58,7 @@
       rather than the \emph{\code{deparse()}d} calls, deferring the
       deparsing to the user-level functions \code{.traceback()} and
       \code{traceback()}, fulfilling the wish of \PR{17580}, reported
-      (incl.\sspace{}patch proposal) by Brodie Gaslam.
+      incl.\sspace{}two patch proposals by Brodie Gaslam.
 
       \item \code{data.matrix()} now converts character columns to
       factors and from this to integers.
@@ -109,6 +106,35 @@
       \item Added an argument \code{add_datalist(*, small.size = 0)} to
       allow the creation of a \file{data/datalist} file even when the
       total size of the data sets is small.
+
+      \item The backquote function \code{bquote()} has a new argument
+      \code{splice} to enable splicing a computed list of values into an
+      expression, like \code{,@} in LISP's backquote.
+
+      \item The formula interface to \code{t.test()} and
+      \code{wilcox.test()} has been extended to handle one-sample and
+      paired tests.
+
+      \item \code{normalizePath()} on Windows now resolves symbolic links
+      and normalizes case of long names of path elements in case-insensitive
+      folders (\PR{17165}).
+
+      \item The \code{palette()} function has a new default set of
+      colours (which are less saturated and have better accessibility
+      properties).  There are also some new built-in palettes, which
+      are listed by the new \code{palette.pals()} function.  These
+      include the old default palette under the name \code{"R3"}. Finally,
+      the new \code{palette.colors()} function allows a subset of
+      colours to be selected from any of the built-in palettes.
+
+      \item \code{md5sum()} on Windows supports UTF-8 file names with
+      characters that cannot be translated to the native encoding
+      (\PR{17633}).
+
+      \item (Windows) \command{Rterm} gains new option \option{--workspace}
+      to specify the workspace to be restored.  This allows equals to be
+      part of the name when opening via Windows file associations (reported
+      by Christian Asseburg).
     }
   }
 
@@ -179,6 +205,10 @@
       \item \command{R --help} now mentions the option \command{--no-echo}
       (renamed from \command{--slave}) and its previously undocumented
       short form \command{-s}.
+
+      \item \command{R CMD check} now optionally checks
+      \command{configure} and \command{cleanup} scripts for
+      non-Bourne-shell code (\sQuote{bashisms}).
     }
   }
 
@@ -215,16 +245,25 @@
       title string contains a character which produces corrupt PostScript,
       thanks to Daisuko Ogawa's \PR{17607}.
 
-      \item \code{x \%\% L} for finite \code{x} no longer returns
-      \code{NaN} when \code{L} is infinite, nor suffers from cancellation
-      for large finite \code{L}, thanks to Long Qu's \PR{17611}.
-
-      Analogously, \code{x \%/\% L} and \code{L \%/\% x} suffer less from
-      cancellation and return values corresponding to limits for large
-      \code{L}.
-
       \item Certain \code{Ops} (notably comparison such as \code{==}) now
       also work for 0-length data frames, after reports by Hilmar Berger.
+
+      \item \code{methods(class = class(glm(..)))} now warns more usefully
+      and only once.
+
+      \item \code{write.dcf()} no longer mangles field names (\PR{17589}).
+
+      \item \code{Sys.glob()} on Windows now supports all characters from
+      the BMP, no longer corrupting (less commonly used) characters
+      (\PR{17638}).
+
+      \item Primitive replacement functions no longer mutate a
+      referenced first argument when used outside of a complex
+      assignment context.
+
+      \item Better error message for \code{contour(*, levels=Inf)}.
+
+      \item \code{contourLines()}' value is no longer \code{invisible()}.
     }
   }
 }
@@ -235,6 +274,9 @@
     \itemize{
       \item \code{runmed(x, *)} gets new option \code{na.action}
       determining \emph{how} to handle \code{NaN} or \code{NA} in \code{x}.
+
+      \item \code{dotchart()} gets new options \code{ann}, \code{xaxt},
+      \code{frame.plot} and \code{log}.
     }
   }
 
@@ -273,7 +315,8 @@
       \item A package with Fortran source code and perhaps C (but not
       C++) sources can request for its shared object/DLL to be linked by
       the Fortran compiler by including a line \code{USE_FC_TO_LINK=} in
-      \file{src/Makevars[.win]}.
+      \file{src/Makevars[.win]} and using \code{$(SHLIB_OPENMP_FFLAGS)}
+      as part of \code{PKG_LIBS}.
 
       The known reason for doing so is a package which uses Fortran
       (only) OpenMP on a platform where the Fortran OpenMP runtime is
@@ -345,14 +388,41 @@
       practically forever in some cases.  Hence ditto for corresponding
       \code{qchisq()} calls.
 
+      \item \code{x \%\% L} for finite \code{x} no longer returns
+      \code{NaN} when \code{L} is infinite, nor suffers from cancellation
+      for large finite \code{L}, thanks to Long Qu's \PR{17611}.
+
+      Analogously, \code{x \%/\% L} and \code{L \%/\% x} suffer less from
+      cancellation and return values corresponding to limits for large
+      \code{L}.
+
       \item \code{grepl(NA, *)} now returns \code{logical} as documented.
 
       \item \code{options(warn=1e11)} is an error now, instead of later
       leading to C stack overflow because of infinite recursion.
 
       \item \code{R_tryCatch} no longer transfers control for all
-      conditions. Reported and patch provided by Linoel Henry in
+      conditions. Reported and patch provided by Lionel Henry in
       \PR{17617}.
+
+      \item \code{format(object.size(.), digits=NULL)} now works, fixing
+      \PR{17628} reported by Jonathan Carroll.
+
+      \item \code{get_all_vars(f, d)} now also works for cases, e.g. where
+      \code{d} contains a matrix.  Reported by Simon Wood in 2009 and patch
+      provided by Ben Bolker in \PR{13624}.
+
+      \item \code{barplot()} could get spacings wrong if there were exactly two
+      bars \PR{15522}.  Patch by Michael Chirico.
+
+      \item \code{power.t.test()} works in more cases when returning values
+      of n smaller than 2.
+
+      \item \code{dotchart(*, pch=., groups=.)} now works better.  Reported
+      by Robert and confirmed by Nic Rochette in \PR{16953}.
+
+      \item \code{canCoerce(obj, cl)} no longer assumes
+      \code{length(class(obj)) == 1}.
     }
   }
 }

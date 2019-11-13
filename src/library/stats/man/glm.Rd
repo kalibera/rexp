@@ -1,6 +1,6 @@
 % File src/library/stats/man/glm.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2018 R Core Team
+% Copyright 1995-2019 R Core Team
 % Distributed under GPL 2 or later
 
 \name{glm}
@@ -24,9 +24,9 @@ glm(formula, family = gaussian, data, weights, subset,
     control = list(\dots), model = TRUE, method = "glm.fit",
     x = FALSE, y = TRUE, singular.ok = TRUE, contrasts = NULL, \dots)
 
-glm.fit(x, y, weights = rep(1, nobs),
+glm.fit(x, y, weights = rep.int(1, nobs),
         start = NULL, etastart = NULL, mustart = NULL,
-        offset = rep(0, nobs), family = gaussian(),
+        offset = rep.int(0, nobs), family = gaussian(),
         control = list(), intercept = TRUE, singular.ok = TRUE)
 
 \method{weights}{glm}(object, type = c("prior", "working"), \dots)
@@ -258,8 +258,9 @@ glm.fit(x, y, weights = rep(1, nobs),
   \item{data}{the \code{data argument}.}
   \item{offset}{the offset vector used.}
   \item{control}{the value of the \code{control} argument used.}
-  \item{method}{the name of the fitter function used, currently always
-    \code{"glm.fit"}.}
+  \item{method}{the name of the fitter function used (when provided as a
+    \code{\link{character}} string to \code{glm()}) or the fitter
+    \code{\link{function}} (when provided as that).}
   \item{contrasts}{(where relevant) the contrasts used.}
   \item{xlevels}{(where relevant) a record of the levels of the factors
     used in fitting.}
@@ -334,7 +335,7 @@ glm.fit(x, y, weights = rep(1, nobs),
 counts <- c(18,17,15,20,10,20,25,13,12)
 outcome <- gl(3,1,9)
 treatment <- gl(3,3)
-print(d.AD <- data.frame(treatment, outcome, counts))
+data.frame(treatment, outcome, counts) # showing data
 glm.D93 <- glm(counts ~ outcome + treatment, family = poisson())
 anova(glm.D93)
 \donttest{summary(glm.D93)}

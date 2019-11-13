@@ -1,5 +1,5 @@
 
-R Under development (unstable) (2019-09-30 r77236) -- "Unsuffered Consequences"
+R Under development (unstable) (2019-10-26 r77334) -- "Unsuffered Consequences"
 Copyright (C) 2019 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
@@ -5092,6 +5092,7 @@ Calls: do.call -> <Anonymous>
 2: (function (...) 
    stop())(mpg = c(21, 21, 22.8, 21.4, 18.7, 18.1, 14.3, 24.4, 22.8, 
    19.2, 17.8, 16.4, 17.3, 15.2, 10.4, 10.4, 14.7, 32.4, 30.4, 33.9, 
+    ...
 1: do.call(f, mtcars)
 > 
 > ## Debugger can handle a function that has a single function call as its body
@@ -6347,7 +6348,7 @@ function(given = NULL) {
     if (is.null(given)) callObj$default <- TRUE
     callObj
 }
-<bytecode: 0x30cd640>
+<bytecode: 0x3677870>
 > print(foo, useSource = FALSE)
 function (given = NULL) 
 {
@@ -6358,7 +6359,7 @@ function (given = NULL)
         callObj$default <- TRUE
     callObj
 }
-<bytecode: 0x30cd640>
+<bytecode: 0x3677870>
 > attr(foo, "srcref") <- NULL
 > foo
 function (given = NULL) 
@@ -6370,7 +6371,7 @@ function (given = NULL)
         callObj$default <- TRUE
     callObj
 }
-<bytecode: 0x30cd640>
+<bytecode: 0x3677870>
 > (f <- structure(function(){}, note = "just a note",
 +                 yada = function() "not the same"))
 function(){}

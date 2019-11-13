@@ -1,7 +1,7 @@
 #  File src/library/utils/R/objects.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2019 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -64,6 +64,10 @@ findGeneric <- function(fname, envir, warnS4only = TRUE)
     isUME(body(f))
 }
 
+## deparse(.) returning *one* string  {not exported (yet)}:
+deparse1 <- function(x, collapse=" ", ...)
+    paste(deparse(x, 500L, ...), collapse=collapse)
+
 getKnownS3generics <-
 function()
     c(names(.knownS3Generics), tools:::.get_internal_S3_generics())
@@ -105,7 +109,7 @@ function(generic.function, class, envir=parent.frame())
                        row.names = an)
     if (!missing(generic.function)) {
 	if (!is.character(generic.function))
-	    generic.function <- deparse(substitute(generic.function))
+	    generic.function <- deparse1(substitute(generic.function))
         ## else
         if(!exists(generic.function, mode = "function", envir = envir) &&
            !any(generic.function == c("Math", "Ops", "Complex", "Summary")))
@@ -143,8 +147,7 @@ function(generic.function, class, envir=parent.frame())
             genfun <- get(generic.function, mode = "function", envir = envir)
             if(.isMethodsDispatchOn() && methods::is(genfun, "genericFunction"))
                 genfun <- methods::finalDefaultMethod(genfun@default)
-            if (typeof(genfun) == "closure") environment(genfun)
-            else .BaseNamespaceEnv
+            .defenv_for_S3_registry(genfun)
         }
 	S3reg <- names(get(".__S3MethodsTable__.", envir = defenv))
 	S3reg <- S3reg[startsWith(S3reg, paste0(generic.function,"."))]
@@ -158,7 +161,11 @@ function(generic.function, class, envir=parent.frame())
     }
     else if (!missing(class)) {
 	if (!is.character(class))
-	    class <- paste(deparse(substitute(class)))
+	    class <- deparse1(substitute(class))
+	if(length(class) > 1L) {
+	    warning("'class' is of length > 1; only the first element will be used")
+	    class <- class[1L]
+	}
 	name <- paste0(".", class, "$")
         name <- gsub("([.[])", "\\\\\\1", name)
         info <- info[grep(name, row.names(info)), ]
@@ -224,7 +231,7 @@ function(generic.function, class)
     }
 
     if (!missing(class) && !is.character(class))
-        class <- paste(deparse(substitute(class)))
+        class <- deparse1(substitute(class))
 
     s3 <- .S3methods(generic.function, class, envir)
     s4 <- if (.isMethodsDispatchOn()) {
@@ -290,8 +297,7 @@ getS3method <- function(f, class, optional = FALSE, envir = parent.frame())
 	    if(.isMethodsDispatchOn() && methods::is(genfun, "genericFunction"))
 		## assumes the default method is the S3 generic function
 		genfun <- methods::selectMethod(genfun, "ANY")
-	    if (typeof(genfun) == "closure") environment(genfun)
-	    else .BaseNamespaceEnv
+            .defenv_for_S3_registry(genfun)
 	}
     S3Table <- get(".__S3MethodsTable__.", envir = defenv)
     if(!is.null(m <- get0(method, envir = S3Table, inherits = FALSE)))
@@ -344,8 +350,7 @@ isS3method <- function(method, f, class, envir = parent.frame())
 	    if(.isMethodsDispatchOn() && methods::is(genfun, "genericFunction"))
 		## assumes the default method is the S3 generic function
 		genfun <- methods::selectMethod(genfun, "ANY")
-	    if (typeof(genfun) == "closure") environment(genfun)
-	    else .BaseNamespaceEnv
+            .defenv_for_S3_registry(genfun)            
 	}
     S3Table <- get(".__S3MethodsTable__.", envir = defenv)
     ## return
@@ -409,8 +414,7 @@ function(x, value)
             genfun <- get(S3[i, 1L], mode = "function", envir = parent.frame())
             if(.isMethodsDispatchOn() && methods::is(genfun, "genericFunction"))
                 genfun <- methods::slot(genfun, "default")@methods$ANY
-            defenv <- if (typeof(genfun) == "closure") environment(genfun)
-            else .BaseNamespaceEnv
+            defenv <- .defenv_for_S3_registry(genfun)
             S3Table <- get(".__S3MethodsTable__.", envir = defenv)
             remappedName <- paste(S3[i, 1L], S3[i, 2L], sep = ".")
             if(exists(remappedName, envir = S3Table, inherits = FALSE))
@@ -470,8 +474,7 @@ function(x, value, ns, pos = -1, envir = as.environment(pos))
             genfun <- get(S3[i, 1L], mode = "function", envir = parent.frame())
             if(.isMethodsDispatchOn() && methods::is(genfun, "genericFunction"))
                 genfun <- methods::slot(genfun, "default")@methods$ANY
-            defenv <- if (typeof(genfun) == "closure") environment(genfun)
-		      else .BaseNamespaceEnv
+            defenv <- .defenv_for_S3_registry(genfun)
             S3Table <- get(".__S3MethodsTable__.", envir = defenv)
             remappedName <- paste(S3[i, 1L], S3[i, 2L], sep = ".")
             if(exists(remappedName, envir = S3Table, inherits = FALSE))
@@ -603,4 +606,20 @@ function(x)
         sapply(fs$objs[!fs$dups],
                function(f) if (is.function(f)) args(f))
     else args(fs$objs[[1L]])
+}
+
+.defenv_for_S3_registry <-
+function(genfun)
+{
+    if (typeof(genfun) == "closure") {    
+        lookup <- Sys.getenv("_R_S3_METHOD_LOOKUP_USE_TOPENV_AS_DEFENV_",
+                             "TRUE")
+        lookup <- tools:::config_val_to_logical(lookup)
+        if(lookup) {
+            topenv(environment(genfun))
+        } else {
+            environment(genfun)
+        }
+    }
+    else .BaseNamespaceEnv
 }

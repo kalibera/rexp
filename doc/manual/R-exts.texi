@@ -1554,15 +1554,19 @@ shells are not fully POSIX-compliant and omissions and idiosyncrasies
 need to be worked around---which Autoconf will do for you.  Arithmetic
 expansion is a known issue: see
 @uref{https://www.gnu.org/@/software/@/autoconf/@/manual/autoconf.html#Portable-Shell}
-for this and others.}) shell script @file{configure} in your package
-which (if present) is executed by @code{R CMD INSTALL} before any other
-action is performed.  This can be a script created by the Autoconf
-mechanism, but may also be a script written by yourself.  Use this to
-detect if any nonstandard libraries are present such that corresponding
-code in the package can be disabled at install time rather than giving
-error messages when the package is compiled or used.  To summarize, the
-full power of Autoconf is available for your extension package
-(including variable substitution, searching for libraries, etc.).
+for this and others.  Some checks can be done by the
+@code{checkbashisms} Perl script at
+@uref{https://sourceforge.net/@/projects/@/checkbaskisms/@/files}, also
+found in some Linux distributions.})  shell script @file{configure} in
+your package which (if present) is executed by @code{R CMD INSTALL}
+before any other action is performed.  This can be a script created by
+the Autoconf mechanism, but may also be a script written by yourself.
+Use this to detect if any nonstandard libraries are present such that
+corresponding code in the package can be disabled at install time rather
+than giving error messages when the package is compiled or used.  To
+summarize, the full power of Autoconf is available for your extension
+package (including variable substitution, searching for libraries,
+etc.).
 
 Under a Unix-alike only, an executable (Bourne shell) script
 @file{cleanup} is executed as the last thing by @code{R CMD INSTALL} if
@@ -1684,7 +1688,7 @@ to use @samp{FC FFLAGS FPICFLAGS} for fixed-form Fortran and
 be used with @R{} versions before 3.6.0 should use the legacy forms
 @samp{F77 FFLAGS FPICFLAGS} and @samp{FC FCFLAGS FCPICFLAGS}, but
 @samp{F77} and @samp{FCPICFLAGS} are no longer defined, so such packages
-should depend on @samp{R (< 3.7)}.)
+should depend on @samp{R (< 4.0)}.)
 
 To check for an external BLAS library using the @code{AX_BLAS} macro
 from the official Autoconf Macro Archive, one can simply do
@@ -3102,10 +3106,8 @@ for formulae and because the intention is to return objects in the
 environment of a function for later use.
 
 Complete checking of a package which contains a file @file{README.md}
-needs @command{pandoc} installed: see
-@uref{http://johnmacfarlane.net/@/pandoc/@/installing.html}.  This
-should be reasonably current: at the time of writing @acronym{CRAN} used
-version 1.12.4.2 to process these files.
+needs a reasonably current version of  @command{pandoc} installed: see
+@uref{http://johnmacfarlane.net/@/pandoc/@/installing.html}.
 
 You do need to ensure that the package is checked in a suitable locale
 if it contains non-@acronym{ASCII} characters.  Such packages are likely
@@ -4376,6 +4378,11 @@ export FOO=value
 @noindent
 which is bash-specific (first set the variable then export it by name).
 
+On macOS Catalina and later, which shell @file{/bin/sh} invokes is user-
+and platform-dependent: it might be @command{bash} version 3.2,
+@command{dash} or @command{zsh} (for new accounts it is @command{zsh},
+for accounts ported from earlier version it is usually @command{bash}).
+
 @item
 Make use of the abilities of your compilers to check the
 standards-conformance of your code.  For example, @command{gcc} and
@@ -4739,6 +4746,12 @@ An external command can be a (possibly optional) requirement for an
 imported or suggested package but needed for examples, tests or
 vignettes in the package itself.  Such usages should always be declared
 and conditional.
+
+Interpreters for scripting languages such as Perl, Python and Ruby need
+to be declared as system requirements and used conditionally: for
+example macOS 10.16 is announced not to have them.  Python 2 is widely
+deprecated and will be removed from some major distributions by Jan
+2020.
 
 @item
 Be sure to use portable encoding names: none of @code{utf8}, @code{mac}
