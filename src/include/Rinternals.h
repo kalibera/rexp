@@ -186,7 +186,7 @@ typedef struct SEXPREC *SEXP;
 
 /* Define SWITH_TO_REFCNT to use reference counting instead of the
    'NAMED' mechanism. */
-//#define SWITCH_TO_REFCNT
+#define SWITCH_TO_REFCNT
 
 #if defined(SWITCH_TO_REFCNT) && ! defined(COMPUTE_REFCNT_VALUES)
 # define COMPUTE_REFCNT_VALUES
