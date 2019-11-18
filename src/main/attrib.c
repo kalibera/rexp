@@ -248,7 +248,6 @@ SEXP setAttrib(SEXP vec, SEXP name, SEXP val)
     if (vec == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
 
-    if (MAYBE_REFERENCED(val)) val = R_FixupRHS(vec, val);
     UNPROTECT(2);
 
     if (name == R_NamesSymbol)
@@ -352,6 +351,8 @@ static SEXP installAttrib(SEXP vec, SEXP name, SEXP val)
     /* this does no allocation */
     for (SEXP s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
 	if (TAG(s) == name) {
+	    if (MAYBE_REFERENCED(val) && val != CAR(s))
+		val = R_FixupRHS(vec, val);
 	    SETCAR(s, val);
 	    return val;
 	}
@@ -362,6 +363,7 @@ static SEXP installAttrib(SEXP vec, SEXP name, SEXP val)
        but a lot of existing code depends assume that
        setAttrib/installAttrib protects its arguments */
     PROTECT(vec); PROTECT(name); PROTECT(val);
+    if (MAYBE_REFERENCED(val)) ENSURE_NAMEDMAX(val);
     SEXP s = CONS(val, R_NilValue);
     SET_TAG(s, name);
     if (ATTRIB(vec) == R_NilValue) SET_ATTRIB(vec, s); else SETCDR(t, s);
@@ -1432,7 +1434,7 @@ SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_CheckStack(); /* in case attributes might lead to a cycle */
 
     if(nargs == 3) {
-	exact = asLogical(CADDR(args));
+	exact = asLogical(CADDR(argList));
 	if(exact == NA_LOGICAL) exact = 0;
     }
 
@@ -1543,7 +1545,7 @@ static void check_slot_assign(SEXP obj, SEXP input, SEXP value, SEXP env)
 */
 SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP obj, name;
+    SEXP obj;
     checkArity(op, args);
 
     if(PRIMVAL(op)) { /* @<- */
@@ -1599,14 +1601,15 @@ SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	argList = matchArgs(do_attrgets_formals, args, call);
 	PROTECT(argList);
 
-	name = CADR(argList);
+	SEXP name = CADR(argList);
+	SEXP val = CADDR(argList);
 	if (!isValidString(name) || STRING_ELT(name, 0) == NA_STRING)
 	    error(_("'name' must be non-null character string"));
 	/* TODO?  if (isFactor(obj) && !strcmp(asChar(name), "levels"))
-	 * ---         if(any_duplicated(CADDR(args)))
+	 * ---         if(any_duplicated(val))
 	 *                  error(.....)
 	 */
-	setAttrib(obj, name, CADDR(args));
+	setAttrib(obj, name, val);
 	UNPROTECT(2);
 	SETTER_CLEAR_NAMED(obj);
 	return obj;
@@ -1813,9 +1816,6 @@ SEXP R_do_slot_assign(SEXP obj, SEXP name, SEXP value) {
 #else
 	/* simplified version of setAttrib(obj, name, value);
 	   here we do *not* treat "names", "dimnames", "dim", .. specially : */
-	PROTECT(name);
-	if (MAYBE_REFERENCED(value)) value = R_FixupRHS(obj, value);
-	UNPROTECT(1);
 	installAttrib(obj, name, value);
 #endif
     }
