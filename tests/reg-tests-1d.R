@@ -3177,11 +3177,11 @@ ok_get_all_vars <- function(form,d) { ## get_all_vars() :<=> model_frame() apart
     identical(mf,
               if(missing(d)) get_all_vars(form) else get_all_vars(form,d))
 }
-M <- matrix(1:15, 5,3)
+M <- .Date(matrix(1:15, 5,3)) # has class to be kept
 n <- 26:30
 T <- TRUE
 m <- 2:7
-stopifnot(exprs = {
+stopifnot(exprs = { is.matrix(M) ; dim(M) == c(5,3)
     ok_get_all_vars(~ M)
     ok_get_all_vars(~M+n)
     ok_get_all_vars(~ X ,               list(X=  M))
@@ -3248,6 +3248,21 @@ y <- list()
 stopifnot(identical(attr(`attr<-`(y, value = 1, "A"), "A"), 1))
 y <- structure(list(), AA = 1)
 stopifnot(is.null(attr(y, exact = TRUE, "A")))
+
+
+if(nzchar(Sys.getenv("_R_CLASS_MATRIX_ARRAY_"))) {
+## 1) A matrix is an array, too:
+stopifnot( vapply(1:9, function(N) inherits(array(pi, dim = 1:N), "array"), NA) )
+## was false for N=2 in R < 4.0.0
+##
+## 2) Matrix must dispatch for array methods, too :
+foo <- function(x) UseMethod("foo")
+foo.array <- function(x) "made in foo.array()"
+stopifnot(
+    vapply(1:9, function(N) foo(array(pi, dim = 1:N)), "chr") == foo.array())
+## foo(array(*)) gave error for N=2 in R < 4.0.0
+} else
+    cat("not tested\n")
 
 
 

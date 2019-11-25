@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997--2018  The R Core Team
+ *  Copyright (C) 1997--2019  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -636,8 +636,22 @@ SEXP R_data_class(SEXP obj, Rboolean singleString)
 	SEXP dim = getAttrib(obj, R_DimSymbol);
 	int nd = length(dim);
 	if(nd > 0) {
-	    if(nd == 2)
-		klass = mkChar("matrix");
+	    if(nd == 2) {
+	      char *p = getenv("_R_CLASS_MATRIX_ARRAY_");
+	      if(p) {  // "the future" (eventually, unconditionally)
+		if(singleString)
+		    klass = mkChar("matrix");
+		else { // R >= 4.0.0 :  class(<matrix>) |->  c("matrix", "array")
+		    PROTECT(klass = allocVector(STRSXP, 2));
+		    SET_STRING_ELT(klass, 0, mkChar("matrix"));
+		    SET_STRING_ELT(klass, 1, mkChar("array"));
+		    UNPROTECT(1);
+		    return klass;
+		}
+	      } else { // back-compatible R <= 3.x.y behavior
+		  klass = mkChar("matrix");
+	      }
+	    }
 	    else
 		klass = mkChar("array");
 	}
@@ -734,14 +748,16 @@ static struct {
 } Type2DefaultClass[MAX_NUM_SEXPTYPE];
 
 
-static SEXP createDefaultClass(SEXP part1, SEXP part2, SEXP part3)
+static SEXP createDefaultClass(SEXP part1, SEXP part2, SEXP part3, SEXP part4)
 {
     int size = 0;
     if (part1 != R_NilValue) size++;
     if (part2 != R_NilValue) size++;
     if (part3 != R_NilValue) size++;
+    if (part4 != R_NilValue) size++;
 
-    if (size == 0 || part2 == R_NilValue) return R_NilValue;
+    if (size == 0 || part3 == R_NilValue) // .. ?
+	return R_NilValue;
 
     SEXP res = allocVector(STRSXP, size);
     R_PreserveObject(res);
@@ -749,61 +765,66 @@ static SEXP createDefaultClass(SEXP part1, SEXP part2, SEXP part3)
     int i = 0;
     if (part1 != R_NilValue) SET_STRING_ELT(res, i++, part1);
     if (part2 != R_NilValue) SET_STRING_ELT(res, i++, part2);
-    if (part3 != R_NilValue) SET_STRING_ELT(res, i, part3);
+    if (part3 != R_NilValue) SET_STRING_ELT(res, i++, part3);
+    if (part4 != R_NilValue) SET_STRING_ELT(res, i, part4);
 
     MARK_NOT_MUTABLE(res);
     return res;
 }
 
+static Rboolean use_matrix_array = FALSE; // -Wall  (initialized below)
+
+// called when R's main loop is setup :
 attribute_hidden
 void InitS3DefaultTypes()
 {
+    char *p = getenv("_R_CLASS_MATRIX_ARRAY_");
+    use_matrix_array = ((p) ? TRUE : FALSE); // store globally
+
     for(int type = 0; type < MAX_NUM_SEXPTYPE; type++) {
-	SEXP part2 = R_NilValue;
 	SEXP part3 = R_NilValue;
+	SEXP part4 = R_NilValue;
 	int nprotected = 0;
 
 	switch(type) {
 	    case CLOSXP:
 	    case SPECIALSXP:
 	    case BUILTINSXP:
-		part2 = PROTECT(mkChar("function"));
+		part3 = PROTECT(mkChar("function"));
 		nprotected++;
 		break;
 	    case INTSXP:
 	    case REALSXP:
-		part2 = PROTECT(type2str_nowarn(type));
-		part3 = PROTECT(mkChar("numeric"));
+		part3 = PROTECT(type2str_nowarn(type));
+		part4 = PROTECT(mkChar("numeric"));
 		nprotected += 2;
 		break;
 	    case LANGSXP:
-		/* part2 remains R_NilValue: default type cannot be
+		/* part3 remains R_NilValue: default type cannot be
 		   pre-allocated, as it depends on the object value */
 		break;
 	    case SYMSXP:
-		part2 = PROTECT(mkChar("name"));
+		part3 = PROTECT(mkChar("name"));
 		nprotected++;
 		break;
 	    default:
-		part2 = PROTECT(type2str_nowarn(type));
+		part3 = PROTECT(type2str_nowarn(type));
 		nprotected++;
 	}
 
 	Type2DefaultClass[type].vector =
-	    createDefaultClass(R_NilValue, part2, part3);
+	    createDefaultClass(R_NilValue, R_NilValue, part3, part4);
 
-	SEXP part1;
-	PROTECT(part1 = mkChar("matrix"));
+	SEXP part2 = PROTECT(mkChar("array"));
+	SEXP part1 = PROTECT(mkChar("matrix"));
 	Type2DefaultClass[type].matrix =
-	    createDefaultClass(part1, part2, part3);
-	UNPROTECT(1);
-
-	PROTECT(part1 = mkChar("array"));
+	    (use_matrix_array
+	     ? createDefaultClass(part1, part2,      part3, part4)
+	     : createDefaultClass(part1, R_NilValue, part3, part4));
+	UNPROTECT(1); // part1
 	Type2DefaultClass[type].array =
-	    createDefaultClass(part1, part2, part3);
-	UNPROTECT(1);
-
-	UNPROTECT(nprotected);
+	    createDefaultClass(R_NilValue, part2, part3, part4);
+	UNPROTECT(1 + nprotected);
     }
 }
 
@@ -817,12 +838,22 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
 	else
 	    return klass;
     }
-    else { /* length(klass) == 0 */
+    else { // length(klass) == 0 , i.e., no class *attribute*: attr(obj, "class") is NULL
 
 	SEXP dim = getAttrib(obj, R_DimSymbol);
 	int n = length(dim);
 	SEXPTYPE t = TYPEOF(obj);
 	SEXP defaultClass;
+
+	/* For now, allow the user to change environment variable *during* R session,
+	   hence must check (slow ??!!) : */
+	char *p = getenv("_R_CLASS_MATRIX_ARRAY_");
+	Rboolean new_use_m_a = ((p) ? TRUE : FALSE);
+	if(new_use_m_a != use_matrix_array) { // re-initialize Type2DefaultClass table
+	    use_matrix_array = new_use_m_a; // global
+	    InitS3DefaultTypes();
+	}
+
 	switch(n) {
 	case 0:  defaultClass = Type2DefaultClass[t].vector; break;
 	case 2:  defaultClass = Type2DefaultClass[t].matrix; break;
@@ -839,17 +870,21 @@ SEXP attribute_hidden R_data_class2 (SEXP obj)
 	if (n == 0) {
 	    return ScalarString(lang2str(obj, t));
 	}
-	SEXP part1;
-	if (n == 2) {
-	    part1 = mkChar("matrix");
-	} else {
-	    part1 = mkChar("array");
-	}
-	PROTECT(part1);
-	defaultClass = PROTECT(allocVector(STRSXP, 2));
+	/* Where on earth is this ever needed ??
+	 * __FIXME / TODO__ ??
+	 * warning("R_data_class2(<LANGSXP with \"dim\" attribute>) .. please report!");
+	 */
+	int I_mat = (n == 2) ? 1 : 0,
+	    nprot = 2;  /* part1, defaultClass */
+	defaultClass = PROTECT(allocVector(STRSXP, 2 + I_mat));
+	SEXP part1 = PROTECT(mkChar("array")), part2;
 	SET_STRING_ELT(defaultClass, 0, part1);
-	SET_STRING_ELT(defaultClass, 1, lang2str(obj, t));
-	UNPROTECT(2); /* part1, defaultClass */
+	if (n == 2) {
+	    part2 = PROTECT(mkChar("matrix")); nprot++;
+	    SET_STRING_ELT(defaultClass, 1, part2);
+	}
+	SET_STRING_ELT(defaultClass, 1+I_mat, lang2str(obj, t));
+	UNPROTECT(nprot);
 	return defaultClass;
     }
 }
@@ -1398,7 +1433,7 @@ SEXP attribute_hidden do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	attributes(x)[[which]]
    }
 
-The R functions was being called very often and replacing it by
+The R function was being called very often and replacing it by
 something more efficient made a noticeable difference on several
 benchmarks.  There is still some inefficiency since using getAttrib
 means the attributes list will be searched twice, but this seems
@@ -1416,7 +1451,7 @@ SEXP attribute_hidden do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 	do_attr_formals = allocFormalsList3(install("x"), install("which"),
 					    R_ExactSymbol);
 
-    argList = matchArgs(do_attr_formals, args, call);
+    argList = matchArgs_NR(do_attr_formals, args, call);
 
     if (nargs < 2 || nargs > 3)
 	errorcall(call, "either 2 or 3 arguments are required");
@@ -1598,7 +1633,7 @@ SEXP attribute_hidden do_attrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (do_attrgets_formals == NULL)
 	    do_attrgets_formals = allocFormalsList3(install("x"), install("which"),
 						    install("value"));
-	argList = matchArgs(do_attrgets_formals, args, call);
+	argList = matchArgs_NR(do_attrgets_formals, args, call);
 	PROTECT(argList);
 
 	SEXP name = CADR(argList);

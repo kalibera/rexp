@@ -80,11 +80,6 @@
  *  2000/08/01  Also promises, expressions, environments when using [[ PD
  */
 
-/* a temporary hack until the SET_REFCNT below is removed */
-#ifdef SWITCH_TO_REFCNT
-# define USE_RINTERNALS
-#endif
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -1687,11 +1682,11 @@ static SEXP DeleteOneVectorListItem(SEXP x, R_xlen_t which)
     if (0 <= which && which < n) {
 	PROTECT(y = allocVector(TYPEOF(x), n - 1));
 	k = 0;
-	for (i = 0 ; i < n; i++)
-	    if(i != which) {
+	for (i = 0 ; i < n; i++) {
+	    if(i != which)
 		SET_VECTOR_ELT(y, k++, VECTOR_ELT(x, i));
-		CLEAR_VECTOR_ELT(x, i);
-	    }
+	    CLEAR_VECTOR_ELT(x, i);
+	}
 	xnames = getAttrib(x, R_NamesSymbol);
 	if (xnames != R_NilValue) {
 	    PROTECT(ynames = allocVector(STRSXP, n - 1));
@@ -2127,6 +2122,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		IS_S4_OBJECT(x) ?  SET_S4_OBJECT(CDR(x)) : UNSET_S4_OBJECT(CDR(x));
 		SET_OBJECT(CDR(x), OBJECT(x));
 		RAISE_NAMED(CDR(x), NAMED(x));
+		SETCAR(x, R_NilValue); // decrements REFCNT
 		x = CDR(x);
 	    }
 	    else {
@@ -2139,8 +2135,10 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 	else {
 	    for (t = x; t != R_NilValue; t = CDR(t))
 		if (TAG(CDR(t)) == nlist) {
-		    if (val == R_NilValue)
+		    if (val == R_NilValue) {
+			SETCAR(CDR(t), R_NilValue); // decrements REFCNT
 			SETCDR(t, CDDR(t));
+		    }
 		    else {
 			/* Here we need to check for cycles*/
 			if (MAYBE_REFERENCED(val) && CADR(t) != val)
@@ -2205,13 +2203,14 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		    int ii;
 		    PROTECT(ans = allocVector(type, nx - 1));
 		    PROTECT(ansnames = allocVector(STRSXP, nx - 1));
-		    for (i = 0, ii = 0; i < nx; i++)
+		    for (i = 0, ii = 0; i < nx; i++) {
 			if (i != imatch) {
 			    SET_VECTOR_ELT(ans, ii, VECTOR_ELT(x, i));
-			    CLEAR_VECTOR_ELT(x, i);
 			    SET_STRING_ELT(ansnames, ii, STRING_ELT(names, i));
 			    ii++;
 			}
+			CLEAR_VECTOR_ELT(x, i);
+		    }
 		    setAttrib(ans, R_NamesSymbol, ansnames);
 		    copyMostAttrib(x, ans);
 		    UNPROTECT(2);

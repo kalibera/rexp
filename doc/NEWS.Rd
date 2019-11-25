@@ -28,6 +28,20 @@
        The version of PCRE used can be obtained via
        \code{extSoftVersion()}, PCRE1 has versions < 10, PCRE2 versions
        >= 10.
+
+       \item For now only active when environment variable
+       \env{_R_CLASS_MATRIX_ARRAY_} is set to non-empty, but planned to be the
+       new unconditional behavior when R 4.0.0 is released:
+
+       Newly, \code{matrix} objects also inherit from class \code{"array"},
+       namely, e.g., \code{class(diag(1))} is \code{c("matrix", "array")}
+       which invalidates code (wrongly) assuming that
+       \code{length(class(obj)) == 1}, a wrong assumption that is less
+       frequently fulfilled now.
+       (Currently only after setting \env{_R_CLASS_MATRIX_ARRAY_} to non-empty.)
+
+       S3 methods for \code{"array"}, i.e., \code{<someFun>.array()}, are
+       now also dispatched for \code{matrix} objects.
     }
   }
 
@@ -135,8 +149,12 @@
       to specify the workspace to be restored.  This allows equals to be
       part of the name when opening via Windows file associations (reported
       by Christian Asseburg).
+
+      \item \code{n2mfrow()} gains an option \code{asp = 1} to specify the
+      aspect ratio, fulfilling the wish and extending the proposal of
+      Michael Chirico in \PR{17648}.
     }
-  }
+  }% end{ NEW FEATURES }
 
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
