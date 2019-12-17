@@ -21,11 +21,11 @@ hcl.colors(n, palette = "viridis", alpha = NULL, rev = FALSE, fixup = TRUE)
 hcl.pals(type = NULL)
 
 rainbow(n, s = 1, v = 1, start = 0, end = max(1, n - 1)/n,
-        alpha = 1, rev = FALSE)
-heat.colors(n, alpha = 1, rev = FALSE)
-terrain.colors(n, alpha = 1, rev = FALSE)
-topo.colors(n, alpha = 1, rev = FALSE)
-cm.colors(n, alpha = 1, rev = FALSE)
+        alpha, rev = FALSE)
+heat.colors(n, alpha, rev = FALSE)
+terrain.colors(n, alpha, rev = FALSE)
+topo.colors(n, alpha, rev = FALSE)
+cm.colors(n, alpha, rev = FALSE)
 }
 \arguments{
   \item{n}{the number of colors (\eqn{\ge 1}) to be in the
@@ -35,7 +35,10 @@ cm.colors(n, alpha = 1, rev = FALSE)
     upper vs. lower case, spaces, dashes, etc. in the matching.}
   \item{alpha}{an alpha-transparency level in the range [0,1]
     (0 means transparent and 1 means opaque), see argument
-    \code{alpha} in \code{\link{hsv}} and \code{\link{hcl}}, respectively.}
+    \code{alpha} in \code{\link{hsv}} and \code{\link{hcl}}, respectively.\cr
+    Since \R 4.0.0, a \code{\link{missing}}, i.e., not explicitly specified
+    \code{alpha} is equivalent to \code{alpha = NULL}, which does \emph{not}
+    add opacity codes (\code{"FF"}) to the individual color hex codes.}
   \item{rev}{logical indicating whether the ordering of the colors should
     be reversed.}
   \item{fixup}{logical indicating whether the resulting color should be

@@ -31,7 +31,8 @@ col2rgb <- function(col, alpha = FALSE)
     .Call(C_col2rgb, col, alpha)
 }
 
-gray <- function(level, alpha = NULL) .Call(C_gray, level, alpha)
+gray <- function(level, alpha)
+    .Call(C_gray, level, if (missing(alpha)) NULL else alpha)
 grey <- gray
 
 rgb <- function(red, green, blue, alpha, names = NULL, maxColorValue = 1)
@@ -49,10 +50,10 @@ rgb <- function(red, green, blue, alpha, names = NULL, maxColorValue = 1)
           maxColorValue, names)
 }
 
-hsv <- function(h = 1, s = 1, v = 1, alpha = 1)
+hsv <- function(h = 1, s = 1, v = 1, alpha)
     .Call(C_hsv, h, s, v, if(missing(alpha)) NULL else alpha)
 
-hcl <- function (h = 0, c = 35, l = 85, alpha = 1, fixup = TRUE)
+hcl <- function (h = 0, c = 35, l = 85, alpha, fixup = TRUE)
     .Call(C_hcl, h, c, l, if(missing(alpha)) NULL else alpha, fixup)
 
 
@@ -75,19 +76,19 @@ rgb2hsv <- function(r, g = NULL, b = NULL, maxColorValue = 255)
 ## A quick little ''rainbow'' function -- improved by MM
 ## doc in	../man/palettes.Rd
 rainbow <- function (n, s = 1, v = 1, start = 0, end = max(1,n - 1)/n,
-                     alpha = 1, rev = FALSE)
+                     alpha, rev = FALSE)
 {
     if ((n <- as.integer(n[1L])) > 0) {
 	if(start == end || any(c(start,end) < 0)|| any(c(start,end) > 1))
 	    stop("'start' and 'end' must be distinct and in [0, 1].")
 	cols <- hsv(h = seq.int(start, (start > end)*1 + end,
-                                length.out = n) %% 1, s, v, alpha)
-        if (rev) cols <- rev(cols)
-        cols
+				length.out = n) %% 1,
+		    s, v, alpha)
+        if(rev) rev(cols) else cols
     } else character()
 }
 
-topo.colors <- function (n, alpha = 1, rev = FALSE)
+topo.colors <- function (n, alpha, rev = FALSE)
 {
     if ((n <- as.integer(n[1L])) > 0) {
 	j <- n %/% 3
@@ -101,12 +102,11 @@ topo.colors <- function (n, alpha = 1, rev = FALSE)
                                             length.out = k), alpha = alpha,
                                 s = seq.int(from = 1, to = 0.3,
                                             length.out = k), v = 1))
-        if (rev) cols <- rev(cols)
-        cols        
+        if(rev) rev(cols) else cols
     } else character()
 }
 
-terrain.colors <- function (n, alpha = 1, rev = FALSE)
+terrain.colors <- function (n, alpha, rev = FALSE)
 {
     if ((n <- as.integer(n[1L])) > 0) {
 	k <- n%/%2
@@ -120,12 +120,11 @@ terrain.colors <- function (n, alpha = 1, rev = FALSE)
                       s = seq.int(s[2L], s[3L], length.out = n - k + 1)[-1L],
                       v = seq.int(v[2L], v[3L], length.out = n - k + 1)[-1L],
                       alpha = alpha))
-        if (rev) cols <- rev(cols)
-        cols
+        if(rev) rev(cols) else cols
     } else character()
 }
 
-heat.colors <- function (n, alpha = 1, rev = FALSE)
+heat.colors <- function (n, alpha, rev = FALSE)
 {
     if ((n <- as.integer(n[1L])) > 0) {
 	j <- n %/% 4
@@ -136,12 +135,11 @@ heat.colors <- function (n, alpha = 1, rev = FALSE)
                           s = seq.int(from = 1-1/(2*j), to = 1/(2*j),
                                       length.out = j),
                           v = 1, alpha = alpha))
-        if (rev) cols <- rev(cols)
-        cols
+        if(rev) rev(cols) else cols
     } else character()
 }
 
-cm.colors <- function (n, alpha = 1, rev = FALSE)
+cm.colors <- function (n, alpha, rev = FALSE)
 {
     if ((n <- as.integer(n[1L])) > 0L) {
 	even.n <- n %% 2L == 0L
@@ -156,18 +154,16 @@ cm.colors <- function (n, alpha = 1, rev = FALSE)
                   if(l2 > 1)
                       hsv(h = 10/12, s = seq.int(0, 0.5, length.out = l2)[-1L],
                           v = 1, alpha = alpha))
-        if (rev) cols <- rev(cols)
-        cols
+        if(rev) rev(cols) else cols
     } else character()
 }
 
-gray.colors <- function(n, start = 0.3, end = 0.9, gamma = 2.2, alpha = NULL,
+gray.colors <- function(n, start = 0.3, end = 0.9, gamma = 2.2, alpha,
                         rev = FALSE) {
     cols <- gray(seq.int(from = start^gamma,
                          to = end^gamma, length.out = n)^(1/gamma),
                  alpha)
-    if (rev) cols <- rev(cols)
-    cols
+    if(rev) rev(cols) else cols
 }
 
 grey.colors <- gray.colors
@@ -204,7 +200,7 @@ palette <- function (value)
 palette.pals <- function() names(.palette_colors_hex)
 
 palette.colors <- function(n = NULL, palette = "Okabe-Ito",
-                           alpha = 1, recycle = FALSE)
+                           alpha, recycle = FALSE)
 {
     ## number of colors
     if (!is.null(n)) {
@@ -255,11 +251,10 @@ palette.colors <- function(n = NULL, palette = "Okabe-Ito",
 
     ## new default in R >= 4.0.0		       
     "R4" = c("#000000", "#DF536B", "#61D04F", "#2297E6",
-             "#28E2E5", "#D03AF5", "#EEC21F", "#9E9E9E"),
-    ## hcl(
-    ##     h = c(0,   5, 125, 245, 195, 295,  65,   0),
-    ##     c = c(0, 100,  90,  85,  63, 120,  90,   0),
-    ##     l = c(0,  55,  75,  60,  82,  55,  80,  65)
+             "#28E2E5", "#CD0BBC", "#F5C710", "#9E9E9E"),
+    ## hcl(h = c(0,   5, 125, 245, 195, 315,  65,   0),
+    ##     c = c(0, 100,  90,  85,  63, 105,  94,   0),
+    ##     l = c(0,  55,  75,  60,  82,  48,  82,  65)
     ## ),
 
     ## scales::hue_pal (Hadley Wickham)
