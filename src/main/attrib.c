@@ -344,10 +344,18 @@ static SEXP installAttrib(SEXP vec, SEXP name, SEXP val)
 {
     SEXP t = R_NilValue; /* -Wall */
 
-    if(TYPEOF(vec) == CHARSXP)
-	error("cannot set attribute on a CHARSXP");
-    if (TYPEOF(vec) == SYMSXP)
-	error(_("cannot set attribute on a symbol"));
+    switch(TYPEOF(vec)) {
+    case CHARSXP:
+    case SYMSXP:
+    case BUILTINSXP:
+    case SPECIALSXP:
+    /* case NILSXP:   checked in setAttrib() */
+    case BCODESXP: /* should not get BCODESXP here */
+    case PROMSXP:  /* should not get PROMSXP here */
+	/* used to say "symbol" for SYMSXP */
+	error(_("cannot set attribute on a %s"), sexptype2char(TYPEOF(vec)));
+    default: break;
+    }
     /* this does no allocation */
     for (SEXP s = ATTRIB(vec); s != R_NilValue; s = CDR(s)) {
 	if (TAG(s) == name) {

@@ -25,8 +25,9 @@
 
 #include "Defn.h"
 
+static SEXP PrimCache = NULL;
 
-/*  mkPRIMSXP - return a builtin function      */
+/*  mkPRIMSXP - return a primitive function      */
 /*              either "builtin" or "special"  */
 
 /*  The value produced is cached do avoid the need for GC protection
@@ -38,7 +39,6 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 {
     SEXP result;
     SEXPTYPE type = eval ? BUILTINSXP : SPECIALSXP;
-    static SEXP PrimCache = NULL;
     static int FunTabSize = 0;
     
     if (PrimCache == NULL) {
@@ -65,6 +65,22 @@ SEXP attribute_hidden mkPRIMSXP(int offset, int eval)
 	error("requested primitive type is not consistent with cached value");
 
     return result;
+}
+
+void checkPrimitives()
+{
+    if (PrimCache != NULL) {
+        for(int i = 0; i < LENGTH(PrimCache); i++) {
+	    SEXP p = VECTOR_ELT(PrimCache, i);
+	    if (TYPEOF(p) == BUILTINSXP || TYPEOF(p) == SPECIALSXP) {
+		if (CDR(p) != R_NilValue || TAG(p) != R_NilValue ||
+		    ATTRIB(p) != R_NilValue) {
+		    REprintf("Detected corrupted primitive %s\n", PRIMNAME(p)); 
+		    R_Suicide("Found a corrupted primitive.");
+		}
+	    }
+	}
+    }
 }
 
 /* This is called by function() {}, where an invalid

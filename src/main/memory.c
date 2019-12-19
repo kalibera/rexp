@@ -1626,6 +1626,8 @@ SEXP attribute_hidden do_regFinaliz(SEXP call, SEXP op, SEXP args, SEXP rho)
     } \
 } while (0)
 
+extern void checkPrimitives();
+
 static int RunGenCollect(R_size_t size_needed)
 {
     int i, gen, gens_collected;
@@ -1742,6 +1744,7 @@ static int RunGenCollect(R_size_t size_needed)
 		    gc_error("****found a symbol with attributes\n");
 	}
 
+    checkPrimitives();
     if (R_CurrentExpr != NULL)	           /* Current expression */
 	FORWARD_NODE(R_CurrentExpr);
 
