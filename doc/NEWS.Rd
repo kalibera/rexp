@@ -150,6 +150,9 @@
       notably for \emph{vector} \code{n}, e.g. to get a \dQuote{corner} of
       a matrix, also extended for \code{array}'s of higher dimension,
       thanks to the patch proposal by Gabe Becker in \PR{17652}.
+      Consequently, optional argument \code{addrownums} is deprecated and
+      replaced by the (more general) \code{keepnums}.  Invalid (2nd arg.)
+      \code{n} now leads to typically more easily readable error messages.
 
       \item New function \code{.class2()} provides the full character
       vector of class names used for S3 method dispatch.
@@ -178,6 +181,16 @@
       invalid \code{endian} value.  The affected code needs to be fixed with
       care as the old undocumented behavior was to swap endian-ness in such
       cases.
+
+      \item \code{sequence()} is now an S3 generic, with an internally
+      implemented default method, and gains arguments to
+      generate more complex sequences. Based on code from the \pkg{S4Vectors}
+      Bioconductor package and the advice of Hervé Pagès.
+
+      \item \code{print()}'s default method and many other methods (by
+      calling the default eventually and passing \code{...}) now obey a new
+      optional \code{width} argument, the user not needing to set and unset
+      the option.
     }
   }% end{ NEW FEATURES }
 
@@ -198,6 +211,9 @@
       specify the workspace to be restored.  This allows equals to be
       part of the name when opening via Windows file associations
       (reported by Christian Asseburg).
+
+      \item \command{Rterm} now accepts ALT+xxx sequences also with NumLock
+      on. Tilde can be pasted with Italian keyboard (\PR{17679}).
    }
   }
 
@@ -377,6 +393,32 @@
       argument which should fix behaviour during daylight savings
       changeover days, fixing \PR{16764}, thanks to proposals and analysis
       by Johannes Ranke and Kirill Müller.
+
+      \item \code{round()} correctly rounds \dQuote{to even} in more cases,
+      thanks to a more careful algorithm prompted by the report from Adam
+      Wheeler in \PR{17668}.
+      (The current algorithm will be tweaked further before release.)
+      \cr
+      \code{round(x, dig)} for \emph{negative} digits is much more rational
+      now, notably for large \eqn{|dig|}.
+
+      \item Inheritance information on S4 classes is maintained more
+      consistently, particularly in the case of class unions (in part
+      due to \PR{17596} and a report from Ezra Tucker).
+
+      \item \code{is()} behaves more robustly when \code{class2} is a
+      \code{classRepresentation} object.
+
+      \item The warning message when attempting to export an nonexistent
+      class is now more readable; thanks to Thierry Onkelinx for
+      recognizing the problem.
+
+      \item \code{scan()} issues with UTF-8 data when running in DBCS locale
+      have been resolved (\PR{16520},\PR{16584}).
+
+      \item \code{choose()} misbehaved in corner cases where it switched
+      \code{n - k} for \code{k} and \code{n} was only \emph{nearly} integer
+      (report from Erik Scott Wright).
     }
   }
 }
@@ -389,7 +431,16 @@
       the included routines, just bug fixes).
     }
   }
-
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{update(form, new)} in the case of a long \code{new}
+      formula sometimes wrongly eliminated the intercept from \code{form},
+      or (more rarely) added a garbage term (or seg.faulted !); reported by Mathias Ambühl in
+      \PR{16326}.
+      %% There is *still* a bug left but at least no seg.faulting memory corruption
+      %% Will be ported to .. "patched" once that is fixed ..
+    }
+  }
 }
 
 \section{\Rlogo CHANGES IN R 3.6.2}{

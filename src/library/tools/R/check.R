@@ -142,19 +142,19 @@ setRlibs <-
 {
     WINDOWS <- .Platform$OS.type == "windows"
     useJunctions <- WINDOWS && !nzchar(Sys.getenv("R_WIN_NO_JUNCTIONS"))
-    
+
     # flink assumes it is only being used for package directories
     # containing DESCRIPTION!
     flink <- function(from, to) {
         if(WINDOWS) {
-            if(useJunctions) { 
+            if(useJunctions) {
                 Sys.junction(from, to)
                 if(file.exists(file.path(to, basename(from), "DESCRIPTION")))
                     return()
                 unlink(file.path(to, basename(from)), recursive = TRUE)
             }
             res <- file.copy(from, to, recursive = TRUE)
-        } else 
+        } else
             res <- file.symlink(from, to)
         if (!res) stop(gettextf("cannot link from %s", from), domain = NA)
     }
@@ -5009,7 +5009,11 @@ add_dummies <- function(dir, Log)
                 ex_re <- "^Warning: Fortran 2018 deleted feature:"
                 lines <- filtergrep(ex_re, lines, useBytes = TRUE)
 
-                ## and deprecated declarations in Eigen and boost
+                ## and gfortran 10 warnings
+                ex_re <- "^(Warning: Rank mismatch between actual argument|Warning: Array.*is larger than limit set)"
+                lines <- filtergrep(ex_re, lines, useBytes = TRUE)
+
+                ## And deprecated declarations in Eigen and boost
                 ex_re <- "(include/Eigen|include/boost|boost/smart_ptr).* warning: .* \\[-Wdeprecated-declarations\\]"
                 lines <- filtergrep(ex_re, lines, useBytes = TRUE)
 
@@ -5446,6 +5450,7 @@ add_dummies <- function(dir, Log)
                          "many_depends",
                          "skipped",
                          "hdOnly",
+                         "orphaned2", "orphaned",
                          if(!check_incoming) "bad_engine")
             if(!all(names(res) %in% allowed)) {
                 errorLog(Log)
@@ -5461,8 +5466,12 @@ add_dummies <- function(dir, Log)
                 summaryLog(Log)
                 do_exit(1L)
             } else {
-                noteLog(Log)
+                if(length(res[["orphaned"]])) warningLog(Log) else noteLog(Log)
                 printLog0(Log, paste(out, collapse = "\n"))
+                ## if(length(res$orphaned2))
+                ##     wrapLog("\nSuggested packages need to be used conditionally:",
+                ##             "this is particularly important for",
+                ##             "orphaned ones.\n")
             }
         } else resultLog(Log, "OK")
     }
@@ -6023,6 +6032,7 @@ add_dummies <- function(dir, Log)
         Sys.setenv("_R_CHECK_DATALIST_" = "TRUE")
         if(!WINDOWS) Sys.setenv("_R_CHECK_BASHISMS_" = "TRUE")
         Sys.setenv("_R_CLASS_MATRIX_ARRAY_" = "TRUE")
+        Sys.setenv("_R_CHECK_ORPHANED_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
