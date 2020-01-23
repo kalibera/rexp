@@ -414,11 +414,11 @@ prog	:	END_OF_INPUT			{ YYACCEPT; }
 
 expr_or_assign_or_help  :    expr               { $$ = $1; }
                 |    expr_or_assign_or_help EQ_ASSIGN expr_or_assign_or_help    { $$ = xxbinary($2,$1,$3); setId( $$, @$); }
-                |    expr_or_assign_or_help '?'  expr_or_assign_or_help		{ $$ = xxbinary($2,$1,$3); setId( $$, @$); }                
+                |    expr_or_assign_or_help '?'  expr_or_assign_or_help		{ $$ = xxbinary($2,$1,$3); setId( $$, @$); }
                 ;
 
-expr_or_help  :    expr                         { $$ = $1; }
-	      |    expr '?' expr	        { $$ = xxbinary($2,$1,$3); setId( $$, @$); }
+expr_or_help  :    expr				    { $$ = $1; }
+	      |    expr_or_help '?' expr_or_help    { $$ = xxbinary($2,$1,$3); setId( $$, @$); }
               ;
 
 expr	: 	NUM_CONST			{ $$ = $1;	setId( $$, @$); }
@@ -518,7 +518,7 @@ formlist:					{ $$ = xxnullformal(); }
 	|	SYMBOL				{ $$ = xxfirstformal0($1); 	modif_token( &@1, SYMBOL_FORMALS ) ; }
 	|	SYMBOL EQ_ASSIGN expr_or_help	{ $$ = xxfirstformal1($1,$3); 	modif_token( &@1, SYMBOL_FORMALS ) ; modif_token( &@2, EQ_FORMALS ) ; }
 	|	formlist ',' SYMBOL		{ $$ = xxaddformal0($1,$3, &@3);   modif_token( &@3, SYMBOL_FORMALS ) ; }
-	|	formlist ',' SYMBOL EQ_ASSIGN expr_or_help	
+	|	formlist ',' SYMBOL EQ_ASSIGN expr_or_help
 						{ $$ = xxaddformal1($1,$3,$5,&@3); modif_token( &@3, SYMBOL_FORMALS ) ; modif_token( &@4, EQ_FORMALS ) ;}
 	;
 
