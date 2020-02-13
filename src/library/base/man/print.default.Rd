@@ -36,11 +36,12 @@
     right aligned.  The default is left alignment.}
   \item{max}{a non-null value for \code{max} specifies the approximate
     maximum number of entries to be printed.  The default, \code{NULL},
-    uses \code{\link{getOption}("max.print")}; see that help page for more
+    uses \code{\link{getOption}("max.print")}: see that help page for more
     details.}
   \item{width}{controls the maximum number of columns on a line used in
     printing vectors, matrices, etc.  The default, \code{NULL}, uses
-    \code{\link{getOption}("digits")}; see that help page for more details.}
+    \code{\link{getOption}("width")}: see that help page for more
+    details including allowed values.}
   \item{useSource}{logical, indicating whether to use source
     references or copies rather than deparsing \link{language objects}.
     The default is to use the original source if it is available.}
@@ -96,7 +97,8 @@
   In all locales, the characters in the ASCII range (\samp{0x00} to
   \samp{0x7f}) are printed in the same way, as-is if printable, otherwise
   via ANSI escape sequences or 3-digit octal escapes as described for
-  single-byte locales.
+  single-byte locales. Whether a character is printable depends on the
+  current locale and the operating system (C library).
 
   Multi-byte non-printing characters are printed as an escape sequence
   of the form \samp{\\uxxxx} or \samp{\\Uxxxxxxxx} (in hexadecimal).
@@ -120,7 +122,8 @@
   In all locales, the characters in the ASCII range (\samp{0x00} to
   \samp{0x7f}) are printed in the same way, as-is if printable, otherwise
   via ANSI escape sequences or 3-digit octal escapes as described for
-  single-byte locales.
+  single-byte locales. Whether a character is printable depends on the
+  current locale and the operating system (C library).
 
   Multi-byte non-printing characters are printed as an escape sequence
   of the form \samp{\\uxxxx} (in hexadecimal). This is the Unicode code

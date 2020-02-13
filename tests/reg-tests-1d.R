@@ -308,6 +308,7 @@ tryCatch(contour(matrix(rnorm(100), 10, 10), levels = 0, labels = numeric()),
 ## unique.warnings() needs better duplicated():
 invisible(warnings())
 .tmp <- lapply(list(0, 1, 0:1, 1:2, c(1,1), -1:1), function(x) wilcox.test(x))
+if(!interactive())
 stopifnot(length(print(uw <- unique(warnings()))) == 2)
 ## unique() gave only one warning in  R <= 3.3.1
 
@@ -793,6 +794,7 @@ stopifnot(length(a1) == 1, length(a2) == 2)
 ## by.data.frame() called not from toplevel w different arg names
 dby <- function(dat, ind, F) by(dat, ind, FUN=F)
 dby(warpbreaks, warpbreaks[,"tension"], summary)
+if(!interactive())
 stopifnot(is.list(r <- .Last.value), inherits(r, "by"))
 ## failed after r72531
 
@@ -3251,8 +3253,6 @@ y <- structure(list(), AA = 1)
 stopifnot(is.null(attr(y, exact = TRUE, "A")))
 
 
-if(Sys.getenv("_R_CLASS_MATRIX_ARRAY_") %in%
-   c("true", "True", "TRUE", "T")) {
 ## 1) A matrix is an array, too:
 stopifnot( vapply(1:9, function(N) inherits(array(pi, dim = 1:N), "array"), NA) )
 ## was false for N=2 in R < 4.0.0
@@ -3263,8 +3263,6 @@ foo.array <- function(x) "made in foo.array()"
 stopifnot(
     vapply(1:9, function(N) foo(array(pi, dim = 1:N)), "chr") == foo.array())
 ## foo(array(*)) gave error for N=2 in R < 4.0.0
-} else
-    cat("not tested\n")
 
 
 ## PR#17659: Some *.colors() producers have appended (alpha=1) info even by default
@@ -3544,15 +3542,15 @@ x55 <- 55 + as.numeric(vapply(dd+1, function(k) paste0(".", strrep("5",k)), ""))
 
 rnd.x <- vapply(dd+1L, function(k) round(x55[k], dd[k]), 1.1)
 noquote(formatC(cbind(x55, dd, rnd.x), w=1, digits=15))
+signif (rnd.x - x55, 3) # look at .. but don't test (yet)
 stopifnot(exprs = {
-      print (   rnd.x - x55) > 0
-      all.equal(rnd.x - x55, 5 * 10^-(dd+1), tol = 1e-11) # see diff. of 6.8e-13
+      all.equal(abs(rnd.x - x55), 5 * 10^-(dd+1), tol = 1e-11) # see diff. of 6e-13
 })
 ## more than half of the above were rounded *down* in R <= 3.6.x
-## Some "wrong tests" cases from CRAN packages (relying on wrong R <= 3.6.x behavior)
+## Some "wrong" test cases from CRAN packages (partly relying on wrong R <= 3.6.x behavior)
 stopifnot(exprs = {
     all.equal(round(10.7775, digits=3), 10.778, tolerance = 1e-12) # even tol=0, was 10.777
-    all.equal(round(12345 / 1000,   2), 12.34 , tolerance = 1e-12) # even tol=0, was 12.35
+    all.equal(round(12345 / 1000,   2), 12.35 , tolerance = 1e-12) # even tol=0, was 12.34 in Rd
     all.equal(round(9.18665, 4),        9.1866, tolerance = 1e-12) # even tol=0, was  9.1867
 })
 ## This must work, too, the range of 'e' depending on 'd'
@@ -3604,9 +3602,10 @@ M <- .Machine$double.xmax
 rM <- round(M, -(1:400))
 stopifnot(exprs = {
     rM[(1:400) > 308] == 0
-    identical(which(rM == Inf),
-              c(if(!b64) 294L, 298L, 299L, 304:308) -> II)
-    is.finite(rM[-II])
+### platform (compiler configuration) dependent:
+    ## identical(which(rM == Inf),
+    ##           c(if(!b64) 294L, 298L, 299L, 304:308) -> II)
+    ## is.finite(rM[-II])
 })
 ## had many Inf and NaN; now looks optimal: 'Inf' are "correct" rounding up
 ##
@@ -3616,8 +3615,7 @@ dr <- diff(rmm <- round(mm, 301:500))
 (inz <- which(dr != 0))
 stopifnot(length(inz) == 1, dr[inz] == mm, dr[-inz] == 0,
           rmm[-(1:23)] == mm)
-## in R <= 3.6.x, all(rmm == 0)
-options(op)
+options(op) ## in R <= 3.6.x, all(rmm == 0)
 
 
 ## update.formula() triggering terms.formula() bug -- PR#16326
@@ -3644,12 +3642,116 @@ for(n in Ns)
 ##
 ##--TODO: less severe now (no seg.fault / corrupt memory crashes), but still really bad ! ---
 
+
 ## Corner cases in choose(),
 ## misbehaved when n was _nearly_ int, and n - k < k
-
-## These gave 0 and 4 in R <= 3.6.x
 stopifnot(choose(4 - 1e-7, 4) == 1)
 stopifnot(choose(4 + 1e-7, 4) == 1)
+## These gave 0 and 4 in R <= 3.6.x
+
+
+## correct error message:
+tt <- tryCatch(strptime(100, pi), error=identity)
+stopifnot(inherits(tt, "error"), grepl("'format'", tt$message))
+## had 'x' instead of 'format'
+
+
+## r<integer-RV>() now return double if integer would overflow:
+set.seed(47)
+Npi <- rpois(100, 0.9999 *2^31)
+Npd <- rpois(100, 0.99999*2^31)# had 33 NA's
+Nbi <- rbinom(100, 2^31, 1/2)
+Nbd <- rbinom(100, 2^32, 1/2)# 51 NA's
+Ngi <- rgeom(999, 1e-8)
+Ngd <- rgeom(999, 1e-9) # 106 NA's
+stopifnot(is.integer(Npi), is.double(Npd), !anyNA(Npi), !anyNA(Npd),
+          is.integer(Nbi), is.double(Nbd), !anyNA(Nbi), !anyNA(Nbd),
+          is.integer(Ngi), is.double(Ngd), !anyNA(Ngi), !anyNA(Ngd),
+          TRUE)
+## had many NA's in  3.0.0 <= R <= 3.6.x
+
+
+## rhyper() for some large arguments, PR#17694
+n <- 2e9 # => .Machine$integer.max ~= 1.07 * N
+set.seed(6860); N <- rhyper(1, n,n,n)
+x <- 1.99e9; Nhi <- rhyper(256, x,x,x)
+stopifnot(identical(N, 999994112L), is.integer(Nhi),
+          all.equal(mean(Nhi), x/2, tol = 6e-6)) # ==> also: no NAs
+## NA's and warnings, incl "SHOULD NOT HAPPEN!" in R <= 3.6.2
+
+
+## assertCondition(*, "error") etc triggered errors *twice* (accidentally)
+stopifnot(identical(tools::assertError(sqrt("a")),
+                    list(     tryCatch(sqrt("a"), error=identity))))
+## The former contained the error object twice in R <= 3.6.2
+
+
+## Overriding encoding in parse()
+oloc <- Sys.getlocale("LC_CTYPE")
+if (.Platform$OS.type == "windows") {
+  Sys.setlocale("LC_CTYPE", "English_United States.1252")
+} else {
+  ## assumes non-Windows system already all support UTF-8
+  Sys.setlocale("LC_CTYPE", "en_US.UTF-8")
+}
+##
+x8 <- "'\uf6'"
+(x8.2 <- substr(x8, 2,2))
+stopifnot(identical(Encoding(x8), "UTF-8"))
+f8 <- tempfile()
+writeLines(x8, f8, useBytes=TRUE) # save in UTF-8
+##
+chk_x82 <- function(x) stopifnot(identical(Encoding(x), "UTF-8"), identical(x, x8.2))
+## parse(*, encoding = "UTF-8", ..) :
+for(FF in c(function(.) parse(text=., encoding="UTF-8", keep.source=TRUE),
+            function(.) parse(text=., encoding="UTF-8", keep.source=FALSE)
+            )) {
+    x <- eval(FF(x8))
+    chk_x82(x)
+}
+for(K.S in c(TRUE, FALSE)) {
+    x <- eval(parse(file=f8, encoding="UTF-8", keep.source = K.S))
+    chk_x82(x)
+}
+## latin1 <--> UTF-8
+xl <- iconv(x8, from="UTF-8", to="latin1")
+stopifnot(identical(Encoding(xl), "latin1"))
+stopifnot(identical(x8, iconv(xl, from="latin1", to="UTF-8")))
+unlist(l10n_info()) # to see ..
+if (l10n_info()$"UTF-8") {
+    for(x in c(eval(parse(text=x8)),
+               eval(parse(text=xl, keep.source=TRUE)),
+               eval(parse(text=xl, keep.source=FALSE)),
+               eval(parse(file=f8)),
+               str2lang(x8),
+               str2expression(x8)))
+        stopifnot(identical(x, x8.2))
+}
+if (l10n_info()$"Latin-1") {
+    for(x in c(eval(parse(text=xl)),
+               eval(parse(text=x8, keep.source=TRUE)),
+               eval(parse(text=x8, keep.source=FALSE)),
+               str2lang(x8),
+               str2expression(x8)))
+        stopifnot(identical(x, x8.2))
+}
+Sys.setlocale("LC_CTYPE", oloc)
+## parse(text=xl) had failed w/ "EOF whilst reading MBCS char at line 2"
+
+
+## smoothEnds(<integer>, .) - PR#17693
+y1 <- as.integer(c(8,5,4,1,1,1,1))
+y2 <- y1; y2[3] <- 6L
+s1 <- smoothEnds(y1); s1.5 <- smoothEnds(y1, 5)
+s2 <- smoothEnds(y2); s2.5 <- smoothEnds(y2, 5)
+stopifnot(is.integer(y1), is.integer(y2), y1[-3] == y2[-3],
+          is.integer(s1), is.integer(s2),
+          is.integer(s1.5), is.integer(s2.5),
+          s1[1] == 7L, s1[-1] == y1[-1], identical(s1.5, s1),
+          s2[1] == 5L, s2[-1] == y2[-1], identical(s2.5, rep(c(6L, 1L), 3:4)))
+## s1, s1.5 were double in R <= 3.6.x
+
+
 
 ## keep at end
 rbind(last =  proc.time() - .pt,

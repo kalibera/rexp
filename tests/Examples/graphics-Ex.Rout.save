@@ -1,6 +1,6 @@
 
-R Under development (unstable) (2019-12-16 r77583) -- "Unsuffered Consequences"
-Copyright (C) 2019 The R Foundation for Statistical Computing
+R Under development (unstable) (2020-01-27 r77725) -- "Unsuffered Consequences"
+Copyright (C) 2020 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -102,7 +102,7 @@ Type 'q()' to quit R.
 > ### ** Examples
 > 
 > ## Aggregate over sex:
-> x <- margin.table(HairEyeColor, c(1, 2))
+> x <- marginSums(HairEyeColor, c(1, 2))
 > x
        Eye
 Hair    Brown Blue Hazel Green
@@ -954,7 +954,7 @@ Female Yes                89  17 202 131  94  24
 > ## frequencies standardized to equate the margins for admission
 > ## and sex.
 > ## Figure 1 in Friendly (1994).
-> fourfoldplot(margin.table(x, c(1, 2)))
+> fourfoldplot(marginSums(x, c(1, 2)))
 > 
 > ## Fourfold display of x, with frequencies in each table
 > ## standardized to equate the margins for admission and sex.
@@ -2156,7 +2156,7 @@ N
 > points.default # to see how it calls "plot.xy(xy.coords(x, y), ...)"
 function (x, y = NULL, type = "p", ...) 
 plot.xy(xy.coords(x, y), type = type, ...)
-<bytecode: 0x1781760>
+<bytecode: 0x1947040>
 <environment: namespace:graphics>
 > 
 > 
@@ -2587,7 +2587,7 @@ treatment none some marked
 > 
 > ## applications and admissions by department at UC Berkeley
 > ## (two-way tables)
-> (spineplot(margin.table(UCBAdmissions, c(3, 2)),
+> (spineplot(marginSums(UCBAdmissions, c(3, 2)),
 +            main = "Applications at UCB"))
     Gender
 Dept Male Female
@@ -2597,7 +2597,7 @@ Dept Male Female
    D  417    375
    E  191    393
    F  373    341
-> (spineplot(margin.table(UCBAdmissions, c(3, 1)),
+> (spineplot(marginSums(UCBAdmissions, c(3, 1)),
 +            main = "Admissions at UCB"))
     Admit
 Dept Admitted Rejected
@@ -3026,7 +3026,7 @@ function (xy = 1, warn.log = TRUE)
     u <- par("usr")
     xy * c(u[2L] - u[1L], u[4L] - u[3L])/par("pin")
 }
-<bytecode: 0x36ade68>
+<bytecode: 0x31f90c0>
 <environment: namespace:graphics>
 > 
 > ## plot labels offset 0.12 inches to the right
@@ -3107,7 +3107,7 @@ function (xy = 1, warn.log = TRUE)
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  5.888 0.238 6.172 0 0 
+Time elapsed:  3.014 0.057 3.087 0 0 
 > grDevices::dev.off()
 null device 
           1 

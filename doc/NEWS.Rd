@@ -29,15 +29,9 @@
        \code{extSoftVersion()}, PCRE1 has versions < 10, PCRE2 versions
        >= 10.
 
-       \item For now only active when environment variable
-       \env{_R_CLASS_MATRIX_ARRAY_} is set to something true (i.e., one
-       of \samp{TRUE}, \samp{True}, \samp{true}, or \samp{T}), but
-       planned to be the new unconditional behavior when R 4.0.0 is
-       released:
-
-       \code{matrix} objects now also inherit from class \code{"array"},
-       namely, e.g., \code{class(diag(1))} is \code{c("matrix",
-       "array")} which invalidates code assuming that
+       \item \code{matrix} objects now also inherit from class
+       \code{"array"}, namely, e.g., \code{class(diag(1))} is
+       \code{c("matrix", "array")} which invalidates code assuming that
        \code{length(class(obj)) == 1}, an incorrect assumption that is
        less frequently fulfilled now.
 
@@ -183,14 +177,37 @@
       cases.
 
       \item \code{sequence()} is now an S3 generic, with an internally
-      implemented default method, and gains arguments to
-      generate more complex sequences. Based on code from the \pkg{S4Vectors}
+      implemented default method, and gains arguments to generate more
+      complex sequences.  Based on code from the \pkg{S4Vectors}
       Bioconductor package and the advice of Hervé Pagès.
 
       \item \code{print()}'s default method and many other methods (by
-      calling the default eventually and passing \code{...}) now obey a new
-      optional \code{width} argument, the user not needing to set and unset
-      the option.
+      calling the default eventually and passing \code{...}) now make
+      use of a new optional \code{width} argument, avoiding the need for
+      the user to set and reset \code{options("width")}.
+
+      \item \code{memDecompress()} supports the RFC 1952 format
+      (e.g.\sspace{}in-memory copies of \command{gzip}-compressed files)
+      as well as RFC 1950.
+
+      \item \code{memCompress()} and \code{memDecompress()} support long
+      raw vectors for types \code{"gzip"} and \code{"zx"}.
+
+      \item \code{sweep()} and \code{slice.index()} can now use names
+      of dimnames for their \code{MARGIN} argument (\code{apply} has
+      had this for almost a decade).
+
+      \item New function \code{proportions()} and
+      \code{marginSums()}. The intention is that these should
+      eventually replace the unfortunately named \code{prop.table()}
+      and \code{margin.table()}. They can be drop-in replacements, but
+      also adds named-margin functionality.
+
+      \item Functions \code{rbinom()}, \code{rgeom()}, \code{rhyper()},
+      \code{rpois()}, \code{rnbinom(),} \code{rsignrank()} and
+      \code{rwilcox()} which have returned integer since R 3.0.0 and hence
+      \code{NA} when the numbers would have been outside the integer range,
+      now return double vectors (without NAs, typically) in these cases.
     }
   }% end{ NEW FEATURES }
 
@@ -394,10 +411,10 @@
       changeover days, fixing \PR{16764}, thanks to proposals and analysis
       by Johannes Ranke and Kirill Müller.
 
-      \item \code{round()} correctly rounds \dQuote{to even} in more cases,
-      thanks to a more careful algorithm prompted by the report from Adam
-      Wheeler in \PR{17668}.
-      (The current algorithm will be tweaked further before release.)
+      \item \code{round()} finally rounds \emph{\dQuote{to nearest}}
+      by \emph{measuring} and \emph{\dQuote{to even}}; thanks to a
+      careful algorithm originally prompted by the report from Adam Wheeler
+      and then others, in \PR{17668}.
       \cr
       \code{round(x, dig)} for \emph{negative} digits is much more rational
       now, notably for large \eqn{|dig|}.
@@ -419,6 +436,18 @@
       \item \code{choose()} misbehaved in corner cases where it switched
       \code{n - k} for \code{k} and \code{n} was only \emph{nearly} integer
       (report from Erik Scott Wright).
+
+      \item \code{mle()} in the \code{stats4} package had problems
+      combining use of box constraints and fixed starting values (in
+      particular, confidence intervals were affected).
+
+      \item Operator \code{?} now has lower precedence than \code{=}
+      to work as documented and to behave like \code{<-} in help
+      expressions (\PR{16710}).
+
+      \item \code{smoothEnds(x)} now returns \code{integer} type in
+      \emph{both} cases when \code{x} is \code{integer}, thanks to report
+      and proposal by Bill Dunlap \PR{17693}.
     }
   }
 }
@@ -431,8 +460,22 @@
       the included routines, just bug fixes).
     }
   }
+
   \subsection{BUG FIXES}{
     \itemize{
+      \item Fixed a C level integer overflow in \code{rhyper()}; reported
+      by Benjamin Tyner in \PR{17694}.
+
+      \item Uses of \code{url(gzcon(.))} needing to extend buffer size
+      have failed (with HTTP/2 servers), reported by Gábor Csárdi.
+
+      \item \code{predict(loess(..), se=TRUE)} now errors out (instead of
+      seg.faulting etc) for large sample sizes, thanks to a report and
+      patch by Benjamin Tyner in \PR{17121}.
+
+      \item \code{tools:assertCondition(., "error")} and hence
+      \code{assertError()} no longer return errors twice (invisibly).
+
       \item \code{update(form, new)} in the case of a long \code{new}
       formula sometimes wrongly eliminated the intercept from \code{form},
       or (more rarely) added a garbage term (or seg.faulted !); reported by Mathias Ambühl in

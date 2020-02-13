@@ -1,7 +1,7 @@
 #  File src/library/tools/R/check.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2019 The R Core Team
+#  Copyright (C) 1995-2020 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -2481,8 +2481,10 @@ add_dummies <- function(dir, Log)
         ## Check for non-ASCII characters in 'data'
         if (!is_base_pkg && R_check_ascii_data && dir.exists("data")) {
             checkingLog(Log, "data for non-ASCII characters")
-            out <- R_runR0("tools:::.check_package_datasets('.')",
-                           R_opts2, elibs)
+            el <- if (R_check_depends_only_data) {
+                      setRlibs(pkgdir = pkgdir, libdir = libdir)
+                  } else elibs
+            out <- R_runR0("tools:::.check_package_datasets('.')", R_opts2, el)
             out <- filtergrep("Loading required package", out)
             out <- filtergrep("Warning: changing locked binding", out, fixed = TRUE)
             out <- filtergrep("^OMP:", out)
@@ -2492,8 +2494,12 @@ add_dummies <- function(dir, Log)
                 if(any(bad) || bad2) warningLog(Log) else noteLog(Log)
                 printLog0(Log, .format_lines_with_indent(out), "\n")
                 if(bad2)
-                     printLog0(Log,
-                               "  The dataset(s) may use package(s) not declared in the DESCRIPTION file.\n")
+                    if(R_check_depends_only_data || R_check_suggests_only)
+                        printLog0(Log,
+                                  "  The dataset(s) may use package(s) not declared in Depends/Imports.\n")
+                    else
+                        printLog0(Log,
+                                  "  The dataset(s) may use package(s) not declared in the DESCRIPTION file.\n")
             } else resultLog(Log, "OK")
         }
 
@@ -5447,7 +5453,7 @@ add_dummies <- function(dir, Log)
             out <- format(res)
             allowed <- c("suggests_but_not_installed",
                          "enhances_but_not_installed",
-                         "many_depends",
+                         "many_depends", "many_imports",
                          "skipped",
                          "hdOnly",
                          "orphaned2", "orphaned",
@@ -5969,6 +5975,10 @@ add_dummies <- function(dir, Log)
         config_val_to_logical(Sys.getenv("_R_CHECK_DEPENDS_ONLY_", "FALSE"))
     R_check_suggests_only <-
         config_val_to_logical(Sys.getenv("_R_CHECK_SUGGESTS_ONLY_", "FALSE"))
+    ## Restrict check of data() to Imports/Depends, if not already done
+    R_check_depends_only_data <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_DEPENDS_ONLY_DATA_",
+                                         "FALSE")) && !R_check_depends_only
     R_check_FF <- Sys.getenv("_R_CHECK_FF_CALLS_", "true")
     R_check_FF_DUP <-
         config_val_to_logical(Sys.getenv("_R_CHECK_FF_DUP_", "TRUE"))
@@ -6031,8 +6041,9 @@ add_dummies <- function(dir, Log)
         Sys.setenv("_R_CHECK_CODOC_VARIABLES_IN_USAGES_" = "TRUE")
         Sys.setenv("_R_CHECK_DATALIST_" = "TRUE")
         if(!WINDOWS) Sys.setenv("_R_CHECK_BASHISMS_" = "TRUE")
-        Sys.setenv("_R_CLASS_MATRIX_ARRAY_" = "TRUE")
         Sys.setenv("_R_CHECK_ORPHANED_" = "TRUE")
+        Sys.setenv("_R_CHECK_EXCESSIVE_IMPORTS_" = "20")
+        Sys.setenv("_R_CHECK_DEPENDS_ONLY_DATA_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
