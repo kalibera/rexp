@@ -17,6 +17,7 @@
 /* #undef HAVE_AQUA */
 /* Will enable the use of Fortran character lengths,
    e.g. in BLAS.h and Lapack.h */
+#define USE_FC_LEN_T 1
 #ifdef USE_FC_LEN_T
 #define FC_LEN_T size_t
 #endif

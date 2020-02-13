@@ -26,6 +26,7 @@ line=`grep "HAVE_AQUA" config.h`
 echo "${line}"
 echo "/* Will enable the use of Fortran character lengths,"
 echo "   e.g. in BLAS.h and Lapack.h */"
+echo "#define USE_FC_LEN_T 1"
 echo "#ifdef USE_FC_LEN_T"
 line=`grep "FC_LEN_T" config.h`
 echo "${line}"
