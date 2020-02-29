@@ -264,6 +264,18 @@ marginSums <- function (x, margin = NULL)
       
    if (length(margin)) {
       z <- apply(x, margin, sum)
+      ## apply() may lose dims, in which case we need to put them
+      ## back. It is probably only strictly necessary if margin
+      ## has length 1. Need to convert margin to numeric for this 
+      ## to work, but can assume that x has named dimnames in that 
+      ## case (or apply() would have complained.
+      if (! is.array(z))
+      {
+        if (is.character(margin))
+            margin <- match(margin, names(dimnames(x)))
+        dim(z) <- dim(x)[margin] 
+        dimnames(z) <- dimnames(x)[margin]
+      }
       class(z) <- oldClass(x)
       z
    }
@@ -277,28 +289,31 @@ proportions <- function (x, margin = NULL)
     else x/sum(x)
 }
 
-prop.table <- function(x, margin = NULL)
-{
-###    .Deprecated("proportions")
-    if(length(margin))
-	sweep(x, margin, margin.table(x, margin), "/", check.margin=FALSE)
-    else
-	x / sum(x)
-}
+prop.table <- proportions
+margin.table <- marginSums
 
-margin.table <- function(x, margin = NULL)
-{
-###    .Deprecated("marginSums")
-    if(!is.array(x)) stop("'x' is not an array")
-    if (length(margin)) {
-	z <- apply(x, margin, sum)
-	dim(z) <- dim(x)[margin]
-	dimnames(z) <- dimnames(x)[margin]
-    }
-    else return(sum(x))
-    class(z) <- oldClass(x) # avoid adding "matrix"
-    z
-}
+## prop.table <- function(x, margin = NULL)
+## {
+## ###    .Deprecated("proportions")
+##     if(length(margin))
+## 	sweep(x, margin, margin.table(x, margin), "/", check.margin=FALSE)
+##     else
+## 	x / sum(x)
+## }
+
+## margin.table <- function(x, margin = NULL)
+## {
+## ###    .Deprecated("marginSums")
+##     if(!is.array(x)) stop("'x' is not an array")
+##     if (length(margin)) {
+## 	z <- apply(x, margin, sum)
+## 	dim(z) <- dim(x)[margin]
+## 	dimnames(z) <- dimnames(x)[margin]
+##     }
+##     else return(sum(x))
+##     class(z) <- oldClass(x) # avoid adding "matrix"
+##     z
+## }
 
 `[.table` <-
 function(x, i, j, ..., drop = TRUE)

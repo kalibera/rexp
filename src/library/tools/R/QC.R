@@ -1471,8 +1471,11 @@ function(package, dir, lib.loc = NULL)
             }
             bad <- vapply(arg_names_in_arg_list_missing_in_usage,
                           function(x)
-			  !grepl(paste0("\\b", x, "\\b"),
-                                 usage_text),
+                              !grepl(paste0("(^|\\W)",
+                                            reQuote(x),
+                                            "($|\\W)"),
+                                     gsub("\\\\dots", "...",
+                                          usage_text)),
                           NA)
             arg_names_in_arg_list_missing_in_usage <-
                 c(bad_args,
@@ -2466,7 +2469,7 @@ function(package, dir, lib.loc = NULL)
         ## error in current S-PLUS versions.)
         if(endsWith(m, ".formula")) {
             if(gArgs[1L] != "...") gArgs <- gArgs[-1L]
-            mArgs <- mArgs[-1L]
+            if(mArgs[1L] != "...") mArgs <- mArgs[-1L]
         }
         dotsPos <- which(gArgs == "...")
         ipos <- if(length(dotsPos))
@@ -4454,15 +4457,16 @@ function(package, dir, lib.loc = NULL)
     }
 
     unknown <- unique(unknown)
-    obsolete <- unknown %in% c("ctest", "eda", "lqs", "mle", "modreg", "mva", "nls", "stepfun", "ts")
-    if (any(obsolete)) {
-        message(sprintf(ngettext(sum(obsolete),
-                                 "Obsolete package %s in Rd xrefs",
-                                 "Obsolete packages %s in Rd xrefs"),
-                        paste(sQuote(unknown[obsolete]), collapse = ", ")),
-                domain = NA)
-    }
-    unknown <- unknown[!obsolete]
+    ## Ancient history ....
+    ## obsolete <- unknown %in% c("ctest", "eda", "lqs", "mle", "modreg", "mva", "nls", "stepfun", "ts")
+    ## if (any(obsolete)) {
+    ##     message(sprintf(ngettext(sum(obsolete),
+    ##                              "Obsolete package %s in Rd xrefs",
+    ##                              "Obsolete packages %s in Rd xrefs"),
+    ##                     paste(sQuote(unknown[obsolete]), collapse = ", ")),
+    ##             domain = NA)
+    ## }
+    ## unknown <- unknown[!obsolete]
     if (length(unknown)) {
         repos <- .get_standard_repository_URLs()
         ## Also allow for additionally specified repositories.
@@ -7512,6 +7516,39 @@ function(dir, localOnly = FALSE)
                 out$bad_file_URIs <-
                     cbind(fpaths0[pos], parents[pos])
         }
+        if(remote) {
+            ## Also check arXiv ids.
+            pat <- "<(arXiv:)([[:alnum:]/.-]+)([[:space:]]*\\[[^]]+\\])?>"
+            dsc <- meta["Description"]
+            ids <- .gregexec_at_pos(pat, dsc, gregexpr(pat, dsc), 3L)
+            if(length(ids)) {
+                ini <- "https://arxiv.org/abs/"
+                udb <- url_db(paste0(ini, ids),
+                              rep.int("DESCRIPTION", length(ids)))
+                bad <- tryCatch(check_url_db(udb), error = identity)
+                if(!inherits(bad, "error") && length(bad))
+                    out$bad_arXiv_ids <-
+                        substring(bad$URL, nchar(ini) + 1L)
+            }
+            ## Also check ORCID iDs.
+            odb <- .ORCID_iD_db_from_package_sources(dir)
+            if(NROW(odb)) {
+                ## Only look at things that may be valid: the others are
+                ## complained about elsewhere.
+                ind <- grepl(.ORCID_iD_variants_regexp, odb[, 1L])
+                odb <- odb[ind, , drop = FALSE]
+            }
+            if(NROW(odb)) {
+                ids <- sub(.ORCID_iD_variants_regexp, "\\3", odb[, 1L])
+                ini <- "https://orcid.org/"
+                udb <- url_db(paste0(ini, ids), odb[, 2L])
+                bad <- tryCatch(check_url_db(udb), error = identity)
+                if(!inherits(bad, "error") && length(bad))
+                    out$bad_ORCID_iDs <-
+                        cbind(substring(bad$URL, nchar(ini) + 1L),
+                              bad[, 2L])
+            }
+        }
     }
 
     ## Checks from here down require Internet access, so drop out now if we
@@ -8212,8 +8249,29 @@ function(x, ...)
                               "Found the following (possibly) invalid DOIs:"
                           else
                               "Found the following (possibly) invalid DOI:",
-                          paste0("  ", gsub("\n", "\n    ", format(y), fixed=TRUE))),
+                          paste0("  ", gsub("\n", "\n    ", format(y),
+                                            fixed = TRUE))),
                         collapse = "\n")
+          }),
+      fmt(if(length(y <- x$bad_arXiv_ids)) {
+              paste(c(if(length(y) > 1L)
+                          "The Description field contains the following (possibly) invalid arXiv ids:"
+                      else
+                          "The Description field contains the following (possibly) invalid arXiv id:",
+                      paste0("  ", gsub("\n", "\n    ", format(y),
+                                        fixed = TRUE))),
+                    collapse = "\n")
+          }),
+      fmt(if(length(y <- x$bad_ORCID_iDs)) {
+              paste(c(if(NROW(y) > 1L)
+                          "Found the following (possibly) invalid ORCID iDs:"
+                      else
+                          "Found the following (possibly) invalid ORCID iD:",
+                      sprintf("  iD: %s\t(from: %s)",
+                              unlist(y[, 1L]),
+                              vapply(y[, 2L], paste, "",
+                                     collapse = ", "))),
+                    collapse = "\n")
           }),
       if(length(y <- x$R_files_non_ASCII)) {
           paste(c("No package encoding and non-ASCII characters in the following R files:",

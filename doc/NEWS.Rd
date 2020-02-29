@@ -45,7 +45,19 @@
        help make the internal code easier to maintain. This change is
        expected to have minimal impact on packages not using unsupported
        coding practices in their C/C++ code.
-    }
+
+       \item \R now provides a syntax for specifying raw character
+       constants similar to the one used in C++: \code{r"(...)"} with
+       \code{...} any character sequence, except that it must not
+       contain the closing sequence \samp{)"}. %}) \samp{*}: Rd-parser bug for \code{*}"
+       This makes it easier to write strings that contain backslashes or
+       both single and double quotes.  For more details see \code{?Quotes}.
+
+       \item \code{N <- NULL; N[[1]] <- val} now turns \code{N} into a
+       \code{list} also when \code{length(val) == 1}, consistently.  This
+       also enables \code{dimnames(r1)[[1]] <- "R1"} for a 1-row matrix
+       \code{r1}, fixing \PR{17719}, reported by Serguei Sokol.
+     }
   }
 
   \subsection{NEW FEATURES}{
@@ -198,16 +210,52 @@
       had this for almost a decade).
 
       \item New function \code{proportions()} and
-      \code{marginSums()}. The intention is that these should
-      eventually replace the unfortunately named \code{prop.table()}
-      and \code{margin.table()}. They can be drop-in replacements, but
-      also adds named-margin functionality.
+      \code{marginSums()}. These should
+      replace the unfortunately named \code{prop.table()}
+      and \code{margin.table()}. They are drop-in replacements, but
+      also add named-margin functionality. The old names are retained
+      as aliases for back-compatibility.
 
       \item Functions \code{rbinom()}, \code{rgeom()}, \code{rhyper()},
       \code{rpois()}, \code{rnbinom(),} \code{rsignrank()} and
       \code{rwilcox()} which have returned integer since R 3.0.0 and hence
       \code{NA} when the numbers would have been outside the integer range,
       now return double vectors (without NAs, typically) in these cases.
+
+      \item \code{matplot(x,y)} (and hence \code{matlines()} and
+      \code{matpoints()}) now call the corresponding methods of
+      \code{plot()} and \code{lines()}, e.g, when \code{x} is a
+      \code{"Date"} or \code{"POSIXct"} object; prompted by Spencer Graves'
+      suggestion.
+
+      \item \code{stopifnot()} now allows customizing error messages via
+      argument names, thanks to a patch proposal by Neal Fultz in \PR{17688}.
+
+      \item  \code{unlink()} gains a new argument \code{expand} to
+      disable wildcard and tilde expansion.
+
+      \item \code{mle()} in the \code{stats4} package has had its
+      interface extended so that arguments to the negative
+      log-likelihood function can be one or more vectors, with similar
+      conventions applying to bounds, start values, and parameter values
+      to be kept fixed. NB: This has required a minor extension to class
+      \code{"mle"}, so saved objects from earlier versions may need to
+      be recomputed.
+
+      \item The default for \code{pdf()} is now
+      \code{useDingbats = FALSE}.
+
+      \item The default (fill colour) for both \code{hist()} and
+      \code{boxplot()} is now \code{col = "lightgray"}.
+
+      \item The default order of the levels on the y-axis
+      for both \code{spineplot()} and \code{cdplot()}
+      has been reversed.
+
+      \item If the \env{R_ALWAYS_INSTALL_TESTS} environment variable is
+      set to a true value, \command{R CMD INSTALL} behaves as if
+      the \option{--install-tests} option is always specified. Thanks to
+      Reinhold Koch for the suggestion.
     }
   }% end{ NEW FEATURES }
 
@@ -268,6 +316,11 @@
       \item Header \file{R_ext/Print.h} defines \samp{R_USE_C99_IN_CXX}
       and hence exposes \code{Rvprintf} and \code{REprintf} if used with
       a C++11 compiler.
+
+      \item There are new Fortran subroutines \code{dblepr1},
+      \code{realpr1} and \code{intpr1} to print a scalar variable
+      (\command{gfortran} 10 enforces the distinction between scalars
+      and length-one arrays).  Also \code{labelpr} to print just a label.
     }
   }
 
@@ -305,6 +358,9 @@
       \item \command{R CMD check} now optionally checks
       \command{configure} and \command{cleanup} scripts for
       non-Bourne-shell code (\sQuote{bashisms}).
+
+      \item \command{R CMD check --as-cran} now uses a
+      \samp{stringsAsFactors = FALSE} default setting.
     }
   }
 
@@ -448,11 +504,19 @@
       \item \code{smoothEnds(x)} now returns \code{integer} type in
       \emph{both} cases when \code{x} is \code{integer}, thanks to report
       and proposal by Bill Dunlap \PR{17693}.
+
+      \item The \pkg{methods} package does a better job of tracking
+      inheritance relationships across packages.
+
+      \item \code{norm(diag(c(1, NA)), "2")} now works.
+
+      \item \code{subset()} had problems with 0-col dataframe (Bill Dunlap,
+      \PR{17721})
     }
   }
 }
 
-\section{\Rlogo CHANGES IN R 3.6.2 patched}{
+\section{\Rlogo CHANGES IN R 3.6.3}{
 
   \subsection{NEW FEATURES}{
     \itemize{
@@ -478,10 +542,16 @@
 
       \item \code{update(form, new)} in the case of a long \code{new}
       formula sometimes wrongly eliminated the intercept from \code{form},
-      or (more rarely) added a garbage term (or seg.faulted !); reported by Mathias Ambühl in
-      \PR{16326}.
-      %% There is *still* a bug left but at least no seg.faulting memory corruption
-      %% Will be ported to .. "patched" once that is fixed ..
+      or (more rarely) added a garbage term (or seg.faulted !); the fix
+      happened by simplifying the C-level logic of \code{terms.formula()}.
+      Reported by Mathias Ambühl in \PR{16326}.
+
+      \item The error message from \code{stopifnot(.., <error producing call>)}
+      again contains the full \code{"stopifnot(.......)"} call: Its
+      attempted suppression did not work consistently. % & was an ugly hack
+
+      \item On Windows, \code{download.file(., , "wininet", headers=character())}
+      would fail; reported with patch proposal by Kevin Ushey in \PR{17710}.
     }
   }
 }

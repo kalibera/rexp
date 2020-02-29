@@ -4,6 +4,7 @@ pdf("reg-tests-1d.pdf", encoding = "ISOLatin1.enc")
 .pt <- proc.time()
 tryCid <- function(expr) tryCatch(expr, error = identity)
 identCO <- function(x,y, ...) identical(capture.output(x), capture.output(y), ...)
+onWindows <- .Platform$OS.type == "windows"
 
 ## body() / formals() notably the replacement versions
 x <- NULL; tools::assertWarning(   body(x) <-    body(mean))	# to be error
@@ -19,7 +20,7 @@ englishMsgs <- {
     if(nzchar(lang <- Sys.getenv("LANGUAGE")))
         lang == "en"
     else { ## query the  locale
-        if(.Platform$OS.type != "windows") {
+        if(!onWindows) {
             ## sub() :
             lc.msgs <- sub("\\..*", "", print(Sys.getlocale("LC_MESSAGES")))
             lc.msgs == "C" || substr(lc.msgs, 1,2) == "en"
@@ -848,16 +849,17 @@ stopifnot(identical(one, 1)) # i.e., 'one <<- 2' was *not* evaluated
 (et <- tryCid(stopifnot(0 < 1:10, is.numeric(..vaporware..), stop("FOO!"))))
 stopifnot(exprs = {
     inherits(et, "simpleError")
-    ## no condition call, or at least should *not* contain 'stopifnot':
-    !grepl("^stopifnot", deparse(conditionCall(et), width.cutoff=500))
+    ## condition call now *does* contain 'stopifnot':
+    ## !grepl("^stopifnot", deparse(conditionCall(et), width.cutoff=500))
     grepl("'..vaporware..'", conditionMessage(et))
 })
-## call was the full 'stopifnot(..)' in R < 3.5.0 ...
+## call was the full 'stopifnot(..)' in R < 3.5.0 .. and again in R > 3.6.x
+## (don't afford tryCatch()ing everything)
 
 
 ## path.expand shouldn't translate to local encoding PR#17120
 ## This has been fixed on Windows, but not yet on Unix non-UTF8 systems
-if(.Platform$OS.type == "windows") {
+if(onWindows) {
     filename <- "\U9b3c.R"
     stopifnot(identical(path.expand(paste0("~/", filename)),
 		 	      paste0(path.expand("~/"), filename)))
@@ -2996,7 +2998,6 @@ stopifnot(exprs = { length(prE) >= 3
 str(.M[grep("^sizeof", names(.M))]) ## also differentiate long-double..
 b64 <- .M$sizeof.pointer == 8
 arch <- Sys.info()[["machine"]]
-onWindows <- .Platform$OS.type == "windows"
 if(!(onWindows && arch == "x86")) {
 ## PR#17577 - dgamma(x, shape)  for shape < 1 (=> +Inf at x=0) and very small x
 stopifnot(exprs = {
@@ -3377,8 +3378,8 @@ stopifnot( identical(t3,   tail(iris3[,1,],  keepnums  = FALSE)) )
 ##
 ## 4-dim array
 ## 4th dimension failed transiently when I using switch() in keepnums logic
-adims <- c(11, 3, 3, 3)
-arr <- array(seq_len(prod(adims)) * 100, adims)
+adims <- c(11, 12, 4, 3)
+arr <- array(seq_len(prod(adims)), adims)
 headI4 <- function(M, n) {
     d <- dim(M)
     M[head(seq_len(d[1]), n[1]),
@@ -3405,8 +3406,10 @@ stopifnot(
                                          check.attributes=FALSE), NA))
 
 ## full output
-aco <- capture.output(print(arr))
+aco <- capture.output(arr)
 ## extract all dimnames from full output
+## assumes no spaces in names
+## assumes NO WRAPPING when printing rows!
 getnames <- function(txt, ndim = 4) {
     el <- which(!nzchar(txt))
     ## first handled elsewhere, last is just trailing line
@@ -3414,11 +3417,11 @@ getnames <- function(txt, ndim = 4) {
     hdln  <- c(1L, el[seq(2, length(el), by = 2)] - 1L)
     hdraw <- lapply(txt[hdln], function(tx) strsplit(tx, ", ")[[1L]])
 
-    ## 1 is higher indices, 2 is blank
+    ## line 1 is higher indices, 2 is blank, 3 is columns
     cnms <- strsplit(trimws(txt[3], which = "left"), split = "[[:space:]]+")[[1]]
     cnms <- cnms[nzchar(cnms)]
     matln <- 4:(el[1] - 1L)
-    rnms <- gsub("^([^]]+]).*", "\\1", txt[matln])
+    rnms <- gsub("^([[:space:]]*[^[:space:]]+)[[:space:]].*", "\\1", txt[matln])
     hdnms <- lapply(3:ndim, ## blank ones are left in so this is ok
                     function(i) unique(sapply(hdraw, `[`, i )))
     c(list(rnms, cnms),
@@ -3432,7 +3435,26 @@ stopifnot(
                                                 x = fpnms, ni = n, SIMPLIFY = FALSE)),
            NA)
 )
-##
+## mix named and non-named dimensions to catch bug in initial keepnums patch
+arr2 <- arr
+adnms <- lapply(seq_along(adims),
+                function(i) paste0("dim_", i, "_", seq(1L, adims[i])))
+adnms[3L] <- list(NULL)
+dimnames(arr2) <- adnms
+ii <- seq_along(adnms)
+stopifnot(
+    vapply(n.set2, function(n)
+        identical(dimnames(tail(arr2, n)),
+                  mapply(function(i, ni) {
+                            x <- adnms[[i]]
+                            if(is.null(x))
+                                x <- as.character(seq_len(adims[i]))
+                            if(ni != 0L)
+                                tail(x, ni)
+                         },
+                         i = ii, ni = n, SIMPLIFY = FALSE)),
+        NA)
+)
 ##
 ## matrix of "language" -- with expression()
 is.arr.expr <- function(x) is.array(x) && is.expression(x)
@@ -3451,7 +3473,7 @@ stopifnot(exprs = {
 
 
 ## Forgotten 'drop=FALSE' in plot.formula()
-df <- data.frame(x=1:3, grp=c("A","A","B"))
+df <- data.frame(x=1:3, grp=c("A","A","B"), stringsAsFactors = TRUE)
 plot( ~grp, data=df, subset = x > 1)
 ## failed in R <= 3.6.1
 
@@ -3623,19 +3645,18 @@ mkF <- function(nw) as.formula(paste("y ~ x + x1",
                                      paste0("- w", seq_len(nw), collapse="")),
                                env = .GlobalEnv)
 fterms <- function(n, simplify=TRUE) formula(terms.formula(mkF(n), simplify=simplify))
-## Fixed the main bug, which lead to corrupted memory, the following is still wrong:
-for(n in 1:20) print(fterms(66))
+if(interactive())
+    for(n in 1:20) print(fterms(66)) # always correct now:  y ~ x + x1
 ## used to have a '-1'  (and much more, see below) in R <= 3.6.2
 ## NB: had memory / random behavior -- and sometimes ended in
 ##     malloc(): corrupted top size
 ##     Process R... aborted (core dumped)
 set.seed(17)
-N <- 50 # FIXME once it works, take larger value ..
+N <- 1024
 Ns <- sort(1 + rpois(N, 3)+ 16*rpois(N, 3))
-for(n in Ns)
-    if(!identical(y ~ x + x1, F <- fterms(n)))
-        cat("n=",n, "; fterms(n) |--> ", format(F),"\n", sep="")
-    ## stopifnot(identical(y ~ x + x1, fterms(1+32*rpois(1, 1))))
+FN <- lapply(Ns, fterms)
+(UFN <- unique(FN))
+stopifnot(identical(y ~ x + x1, UFN[[1]]))
 ## Ended in this error [which really comes from C code trying to set dimnames !] :
 ##   Error in terms.formula(mkF(n), simplify = simplify) :
 ##     'dimnames' applied to non-array
@@ -3688,7 +3709,7 @@ stopifnot(identical(tools::assertError(sqrt("a")),
 
 ## Overriding encoding in parse()
 oloc <- Sys.getlocale("LC_CTYPE")
-if (.Platform$OS.type == "windows") {
+if (onWindows) {
   Sys.setlocale("LC_CTYPE", "English_United States.1252")
 } else {
   ## assumes non-Windows system already all support UTF-8
@@ -3750,6 +3771,46 @@ stopifnot(is.integer(y1), is.integer(y2), y1[-3] == y2[-3],
           s1[1] == 7L, s1[-1] == y1[-1], identical(s1.5, s1),
           s2[1] == 5L, s2[-1] == y2[-1], identical(s2.5, rep(c(6L, 1L), 3:4)))
 ## s1, s1.5 were double in R <= 3.6.x
+
+
+## stopifnot() custom message now via <named> args:
+e <- tools::assertError(stopifnot("ehmm, you must be kidding!" = 1 == 0), verbose=TRUE)
+stopifnot(grepl("must be kidding!", e[[1]]$message))
+e2 <- tools::assertError(
+ stopifnot("2 is not approximately 2.1" = all.equal(2, 2.1)), verbose=TRUE)
+stopifnot(grepl("not approximately", e2[[1]]$message))
+## did not work in original stopifnot(<named>) patch
+CHK <- function(...) stopifnot(...)
+e  <- tryCid(CHK(1 == 1, 1 == 0))
+e2 <- tryCid(CHK(1 == 1, "not possible" = 1 == 0))
+stopifnot(inherits(e , "error"), grepl("is not TRUE", e$message),
+          inherits(e2, "error"), identical("not possible", e2$message))
+## wrapping stopifnot() in this way did not work in some unreleased R-devel
+
+
+## norm(<matrix-w-NA>, "2")
+stopifnot(is.na( norm(diag(c(1, NA)), "2") ))
+## gave error from svd() in R <= 3.6.x
+
+
+## norm(<matrix-w-NA>, "F")
+(m <- cbind(0, c(NA, 0), 0:-1))
+nTypes <- eval(formals(base::norm)$type) # "O" "I" "F" "M" "2"
+stopifnot(is.na( print(vapply(nTypes, norm, 0., x = m)) )) # print(): show NA *or* NaN
+## "F" gave non-NA with LAPACK 3.9.0, before our patch in R-devel and R-patched
+
+
+## dimnames(<matrix>)[[.]] <- v -- inconsistency when length(v) == 1 : PR#17719
+aa <- matrix(1:2); dimnames(aa)[[1]] <- c("a", "b") # OK (always)
+ a <- matrix(1)  ; dimnames(a )[[1]] <-   "a"       # gave error: 'dimnames' must be a list
+stopifnot(exprs = {
+    identical(dimnames(a ), list(  "a",      NULL))
+    identical(dimnames(aa), list(c("a","b"), NULL))
+})
+## The above works, because now, `[[<-` is consistently returning a list:
+N <- NULL; N[["a"]] <- 1:2; stopifnot(identical(N, list(a = 1:2)))
+N <- NULL; N[["a"]] <- 1  ; stopifnot(identical(N, list(a = 1)))
+## the latter gave c(a = 1) in earlier versions of R
 
 
 
