@@ -112,10 +112,10 @@ svnonly:
 	    | sed -n -e '/^Revision/p' -e '/^Last Changed Date/'p \
 	    | cut -d' ' -f1,2,3,4 > SVN-REVISION-tmp ; \
 	  if test "`cat SVN-REVISION-tmp`" = "Revision: -99"; then \
-	    $(ECHO) "WARNING: not an svn checkout"; \
-	  else \
-  	    $(SHELL) $(top_srcdir)/tools/move-if-change SVN-REVISION-tmp SVN-REVISION ; \
+	    $(ECHO) "ERROR: not an svn checkout"; \
+	    exit 1; \
 	  fi; \
+	  $(SHELL) $(top_srcdir)/tools/move-if-change SVN-REVISION-tmp SVN-REVISION ; \
 	  rm -f SVN-REVISION-tmp ; \
 	else \
 	  if test "$(BUILDDIR_IS_SRCDIR)" = no ; then \
@@ -221,6 +221,68 @@ distdir: $(DISTFILES) vignettes
 	  cp library/$${d}/doc/*.pdf $(distdir)/src/library/$${d}/inst/doc; \
 	done
 	@(cd $(distdir); tools/link-recommended)
+
+distcheck: distcheck-unix
+distcheck-unix: dist
+	distname=`$(srcdir)/tools/GETDISTNAME`; \
+	dirname=`$(ECHO) $${distname} | sed -e s/_.*//`; \
+	rm -Rf $${dirname}; \
+	$(R_GZIPCMD) -d -c $${distname}.tar.gz | $(TAR) -x -f -; \
+	chmod u+w $${dirname}; \
+	mkdir $${dirname}/_build $${dirname}/_inst; \
+	test -d $${dirname}/_build || exit 0; \
+	dc_install_base=`cd $${dirname}/_inst && pwd` \
+	  && save__cwd=`pwd` \
+	  && cd $${dirname}/_build \
+	  && ../configure --srcdir=.. --prefix="$$dc_install_base" \
+	  && $(MAKE) \
+	  && $(MAKE) check-all \
+	  && $(MAKE) install \
+	  && $(MAKE) uninstall \
+	  && $(MAKE) distuninstallcheck_dir="$$dc_install_base" \
+	        distuninstallcheck \
+	  && $(MAKE) dist \
+	  && rm -f $${distname}.tar.gz \
+	  && $(MAKE) distcleancheck \
+	  && cd "$$save__cwd" \
+	  || exit 1; \
+	rm -Rf $${dirname}; \
+	$(ECHO) "$${distname}.tar.gz ready for distribution"
+
+distcheck-win:
+distuninstallcheck:
+	@test -n '$(distuninstallcheck_dir)' || { \
+	  echo 'ERROR: trying to run $@ with an empty' \
+	       '$$(distuninstallcheck_dir)' >&2; \
+	  exit 1; \
+	}; \
+	cd '$(distuninstallcheck_dir)' || { \
+	  $(ECHO) 'ERROR: cannot chdir into $(distuninstallcheck_dir)' >&2; \
+	  exit 1; \
+	}; \
+	test `find . -type f -print | wc -l` -eq 0 || \
+	  { $(ECHO) "ERROR: files left after uninstall:" ; \
+	    `find . -type f -print`; \
+	    exit 1; } >&2
+distcleancheck: distclean
+	@test `find . -type f -print | wc -l` -eq 0 || \
+	  { $(ECHO) "ERROR: files left in build directory after distclean:" ; \
+	    `find . -type f -print`; \
+	    exit 1; } >&2
+
+## For developers: from an svn checkout expect .svn to be only in the srcdir
+checkdistcomplete:
+	@distname=`$(srcdir)/tools/GETDISTNAME`; \
+	dirname=`$(ECHO) $${distname} | sed -e s/_.*//`; \
+	if test -d $${dirname}; then \
+	  echo "Please remove directory $${dirname} first"; \
+	  exit 1; \
+	fi; \
+	rm -Rf $${dirname}; \
+	echo "Checking $${distname}.tar.gz"; \
+	$(R_GZIPCMD) -d -c $${distname}.tar.gz | $(TAR) -x -f -; \
+	diff -r $${dirname} $(srcdir) | grep "^Only in $(srcdir)" | grep -v "^Only in.*[.]svn"; \
+	rm -Rf $${dirname}
 
 info pdf:
 	-@(cd doc && $(MAKE) $@)

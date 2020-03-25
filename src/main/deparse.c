@@ -35,7 +35,7 @@
  *    do_dump() -> deparse1() -> deparse1WithCutoff()
  *  ---------
  *  Workhorse: deparse1WithCutoff() -> deparse2() -> deparse2buff() --> {<itself>, ...}
- *  ---------  ~~~~~~~~~~~~~~~~~~ `-- implicit arg R_BrowseLines == getOption("deparse.max.lines")
+ *  ---------  ~~~~~~~~~~~~~~~~~~  implicit arg R_BrowseLines == getOption("deparse.max.lines")
  *
  *  ./errors.c: PrintWarnings() | warningcall_dflt() ... -> deparse1s() -> deparse1WithCutoff()
  *  ./print.c : Print[Language|Closure|Expression]()    --> deparse1w() -> deparse1WithCutoff()
@@ -1542,13 +1542,16 @@ static void vector2buff(SEXP vector, LocalParseData *d)
     Rboolean surround = FALSE, allNA,
 	intSeq = FALSE; // := TRUE iff integer sequence 'm:n' (up *or* down)
     if(TYPEOF(vector) == INTSXP) {
-	int *vec = INTEGER(vector), d_i;
+	int *vec = INTEGER(vector);
+	// vec[1] - vec[0] could overflow, and does in package Rmpfr
+	double d_i = (double) vec[1] - (double)vec[0];
 	intSeq = (tlen > 1 &&
 		  vec[0] != NA_INTEGER &&
 		  vec[1] != NA_INTEGER &&
-		  abs(d_i = vec[1] - vec[0]) == 1);
+		  fabs(d_i) == 1);
 	if(intSeq) for(i = 2; i < tlen; i++) {
-	    if((vec[i] == NA_INTEGER) || (vec[i] - vec[i-1]) != d_i) {
+	    if((vec[i] == NA_INTEGER) ||
+	       ((double)vec[i] - (double)vec[i-1]) != d_i) {
 		intSeq = FALSE;
 		break;
 	    }
@@ -1712,7 +1715,7 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 		    strp = hex;
 		} else
 		    strp = EncodeElement(vector, i, quote, '.');
-	    } else if (TYPEOF(vector) == REALSXP && (d->opts & DIGITS16)) {
+	    } else if (TYPEOF(vector) == REALSXP && (d->opts & DIGITS17)) {
 		double x = REAL(vector)[i];
 		if (R_FINITE(x)) {
 		    snprintf(hex, 32, "%.17g", x);
@@ -1726,7 +1729,7 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 		    strp = hex;
 		} else
 		    strp = EncodeElement(vector, i, quote, '.');
-	    } else if (TYPEOF(vector) == CPLXSXP && (d->opts & DIGITS16)) {
+	    } else if (TYPEOF(vector) == CPLXSXP && (d->opts & DIGITS17)) {
 		Rcomplex z =  COMPLEX(vector)[i];
 		if (R_FINITE(z.r) && R_FINITE(z.i)) {
 		    snprintf(hex, 64, "%.17g%+.17gi", z.r, z.i);
