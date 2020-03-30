@@ -8,43 +8,45 @@
 \section{\Rlogo CHANGES IN 4.0.0}{
   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
     \itemize{
-       \item \code{matrix} objects now also inherit from class
-       \code{"array"}, so e.g., \code{class(diag(1))} is \code{c("matrix",
-       "array")}.  This invalidates code incorrectly assuming that
-       \code{class(matrix_obj))} has length one.
+      \item Packages need to be (re-)installed under this version
+      (4.0.0) of \R.
+      
+      \item \code{matrix} objects now also inherit from class
+      \code{"array"}, so e.g., \code{class(diag(1))} is \code{c("matrix",
+	"array")}.  This invalidates code incorrectly assuming that
+      \code{class(matrix_obj))} has length one.
 
-       S3 methods for class \code{"array"} are now dispatched for
-       \code{matrix} objects.
+      S3 methods for class \code{"array"} are now dispatched for
+      \code{matrix} objects.
 
-       \item There is a new syntax for specifying \emph{raw} character
-       constants similar to the one used in C++: \code{r"(...)"} with
-       \code{...} any character sequence not containing the sequence
-       \samp{)"}. %}) \samp{*}: Rd-parser bug for \code{*}"
-       This makes it easier to write strings that contain backslashes or
-       both single and double quotes.  For more details see
-       \code{?Quotes}.
+      \item There is a new syntax for specifying \emph{raw} character
+      constants similar to the one used in C++: \code{r"(...)"} with
+      \code{...} any character sequence not containing the sequence
+      \samp{)"}. %}) \samp{*}: Rd-parser bug for \code{*}"
+      This makes it easier to write strings that contain backslashes or
+      both single and double quotes.  For more details see \code{?Quotes}.
 
-       \item \R now uses a \samp{stringsAsFactors = FALSE} default, and
-       hence by default no longer converts strings to factors in calls
-       to \code{data.frame()} and \code{read.table()}.
+      \item \R now uses a \samp{stringsAsFactors = FALSE} default, and
+      hence by default no longer converts strings to factors in calls
+      to \code{data.frame()} and \code{read.table()}.
 
-       A large number of packages relied on the previous behaviour and
-       so have needed/will need updating.
+      A large number of packages relied on the previous behaviour and
+      so have needed/will need updating.
 
-       \item The \code{plot()} S3 generic function is now in package
-       \pkg{base} rather than package \pkg{graphics}, as it is
-       reasonable to have methods that do not use the \pkg{graphics}
-       package.  The generic is currently re-exported from the
-       \pkg{graphics} namespace to allow packages importing it from
-       there to continue working, but this may change in future.
+      \item The \code{plot()} S3 generic function is now in package
+      \pkg{base} rather than package \pkg{graphics}, as it is
+      reasonable to have methods that do not use the \pkg{graphics}
+      package.  The generic is currently re-exported from the
+      \pkg{graphics} namespace to allow packages importing it from
+      there to continue working, but this may change in future.
 
-       Packages which define S4 generics for \code{plot()} should be
-       re-installed and package code using such generics from other
-       packages needs to ensure that they are imported rather than rely
-       on their being looked for on the search path (as in a namespace,
-       the base namespace has precedence over the search path).
-     }
-   }
+      Packages which define S4 generics for \code{plot()} should be
+      re-installed and package code using such generics from other
+      packages needs to ensure that they are imported rather than rely
+      on their being looked for on the search path (as in a namespace,
+      the base namespace has precedence over the search path).
+    }
+  }
 
   \subsection{REFERENCE COUNTING}{
     \itemize{
@@ -363,6 +365,14 @@
       set and the second does not.  Previously both ignored empty
       variables.  There are several uses of the first form in
       \file{etc/Renviron}.
+
+      \item New \code{classes} argument for \code{suppressWarnings()}
+      and \code{suppressMessages()} to selectively suppress only
+      warnings or messages that inherit from particular classes.
+      Based on patch from Lionel Henry submitted with \PR{17619}.
+
+      \item New function \code{activeBindingFunction()} retrieves the
+      function of an active binding.
     }
   }% end{ NEW FEATURES }
 
@@ -432,6 +442,10 @@
       \code{realpr1} and \code{intpr1} to print a scalar variable
       (\command{gfortran} 10 enforces the distinction between scalars
       and length-one arrays).  Also \code{labelpr} to print just a label.
+
+      \item \code{R_withCallingErrorHandler} is now available for
+      establishing a calling handler in C code for conditions inheriting
+      from class \code{error}.
     }
   }
 
@@ -453,11 +467,14 @@
       \item The minimum required version of \code{libcurl} is now 7.28.0
       (Oct 2012).
 
-      \item New make target \command{distcheck} checks that: R can be
-      rebuilt from the tarball created by \command{dist}; the tarball
-      build passes \command{check-all}; the build installs and
-      uninstalls ; and the source files are properly cleaned by
-      \command{distclean}.
+      \item New make target \command{distcheck} checks
+      \itemize{
+	\item \R can be rebuilt from the tarball created by
+	\command{make dist},
+	\item the build from the tarball passes \command{make check-all},
+	\item the build installs and uninstalls,
+	\item the source files are properly cleaned by \command{make distclean}.
+      }
     }
   }
 
@@ -476,6 +493,17 @@
       instructing the tester to do so.  This can be temporarily
       circumvented during development by setting environment variable
       \env{_R_CHECK_DONTTEST_EXAMPLES_} to a false value.
+    }
+  }
+
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item There is the beginnings of support for the recently approved
+      C++20 standard, specified analogously to C++14 and C++17.  There is
+      currently only limited support for this in compilers, with flags
+      such as \option{-std=c++20} and \option{-std=c++2a}.  For the time
+      being the \command{configure} test is of accepting one of these
+      flags and compiling C++17 code. 
     }
   }
 
@@ -639,8 +667,8 @@
       They now return \code{NA} but give a warning as they may have
       given random results or corrupted memory in earlier versions of \R.
 
-      \item \code{socketConnection(server = FALSE)} now respects connection
-      timeout also on Linux.
+      \item \code{socketConnection(server = FALSE)} now respects the
+      connection timeout also on Linux.
 
       \item \code{socketConnection(server = FALSE)} no longer leaks a
       connection that is available right away without waiting (e.g. on
