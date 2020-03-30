@@ -353,42 +353,29 @@ SEXP attribute_hidden matchArgs_NR(SEXP formals, SEXP supplied, SEXP call)
 	}
     } else {
 	/* Check that all arguments are used */
-	SEXP unused = R_NilValue, last = R_NilValue;
-	for (b = supplied; b != R_NilValue; b = CDR(b))
-	    if (!ARGUSED(b)) {
-		if(last == R_NilValue) {
-		    PROTECT(unused = CONS(CAR(b), R_NilValue));
-		    SET_TAG(unused, TAG(b));
-		    last = unused;
-		} else {
-		    SETCDR(last, CONS(CAR(b), R_NilValue));
+	for (b = supplied; b != R_NilValue && ARGUSED(b); b = CDR(b));
+
+	if (b != R_NilValue) {
+            /* show bad arguments in call without evaluating them */
+	    SEXP carB = CAR(b);
+	    if (TYPEOF(carB) == PROMSXP) carB = PREXPR(carB);
+	    SEXP unused = PROTECT(CONS(carB, R_NilValue));
+	    SET_TAG(unused, TAG(b));
+	    SEXP last = unused;
+
+            for(b = CDR(b) ; b != R_NilValue ; b = CDR(b))
+		if (!ARGUSED(b)) {
+		    SEXP carB = CAR(b);
+		    if (TYPEOF(carB) == PROMSXP) carB = PREXPR(carB);
+		    SETCDR(last, CONS(carB, R_NilValue));
 		    last = CDR(last);
 		    SET_TAG(last, TAG(b));
 		}
-	    }
-
-	if(last != R_NilValue) {
-            /* show bad arguments in call without evaluating them */
-            SEXP unusedForError = R_NilValue, last = R_NilValue;
-
-            for(b = unused ; b != R_NilValue ; b = CDR(b)) {
-                SEXP tagB = TAG(b), carB = CAR(b) ;
-                if (TYPEOF(carB) == PROMSXP) carB = PREXPR(carB) ;
-                if (last == R_NilValue) {
-                    PROTECT(last = CONS(carB, R_NilValue));
-                    SET_TAG(last, tagB);
-                    unusedForError = last;
-                } else {
-                    SETCDR(last, CONS(carB, R_NilValue));
-                    last = CDR(last);
-                    SET_TAG(last, tagB);
-                }
-            }
 	    errorcall(call /* R_GlobalContext->call */,
 		      ngettext("unused argument %s",
 			       "unused arguments %s",
-			       (unsigned long) length(unusedForError)),
-		      strchr(CHAR(asChar(deparse1line(unusedForError, 0))), '('));
+			       (unsigned long) length(unused)),
+		      strchr(CHAR(asChar(deparse1line(unused, 0))), '('));
 	}
     }
     UNPROTECT(1);

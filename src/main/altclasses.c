@@ -1961,7 +1961,7 @@ SEXP attribute_hidden do_tryWrap(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 /* When a wrapper has no useful meta-data, is no longer referenced
-   anywhere, and its data is unly accessible from the wrapper, then
+   anywhere, and its data is only accessible from the wrapper, then
    the wrapper can be unwrapped to its wrapped data, and its
    attributes can be transferred to the data.
 

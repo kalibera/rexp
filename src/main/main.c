@@ -1644,7 +1644,8 @@ R_taskCallbackRoutine(SEXP expr, SEXP value, Rboolean succeeded,
     PROTECT(e = allocVector(LANGSXP, 5 + useData));
     SETCAR(e, VECTOR_ELT(f, 0));
     cur = CDR(e);
-    SETCAR(cur, tmp = allocVector(LANGSXP, 2));
+    tmp = allocVector(LANGSXP, 2);
+    SETCAR(cur, tmp);
 	SETCAR(tmp, lang3(R_DoubleColonSymbol, R_BaseSymbol, R_QuoteSymbol));
 	SETCAR(CDR(tmp), expr);
     cur = CDR(cur);

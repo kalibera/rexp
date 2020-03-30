@@ -828,7 +828,7 @@ protectedEval(void *d)
 	env = data->env;
     }
     data->val = eval(data->expression, env);
-    PROTECT(data->val);
+    R_PreserveObject(data->val);
 }
 
 SEXP
@@ -848,7 +848,7 @@ R_tryEval(SEXP e, SEXP env, int *ErrorOccurred)
     if (ok == FALSE)
 	data.val = NULL;
     else
-	UNPROTECT(1);
+	R_ReleaseObject(data.val);	
 
     return(data.val);
 }
@@ -882,9 +882,9 @@ SEXP R_ExecWithCleanup(SEXP (*fun)(void *), void *data,
 
     PROTECT(result = fun(data));
     cleanfun(cleandata);
+    endcontext(&cntxt);
     UNPROTECT(1);
 
-    endcontext(&cntxt);
     return result;
 }
 
