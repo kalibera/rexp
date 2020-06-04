@@ -109,12 +109,11 @@ static void recordParents( int, yyltype*, int) ;
 static int _current_token ;
 
 /**
- * Records an expression (non terminal symbol 'expr') and gives it an id
+ * Records the current non-terminal token expression and gives it an id
  *
- * @param expr expression we want to record and flag with the next id
  * @param loc the location of the expression
  */   
-static void setId( SEXP expr, yyltype loc){
+static void setId(yyltype loc){
     record_( 
 	    (loc).first_parsed, (loc).first_column, (loc).last_parsed, (loc).last_column, 
 	    _current_token, (loc).id, 0 ) ;
@@ -413,72 +412,72 @@ prog	:	END_OF_INPUT			{ YYACCEPT; }
 	;
 
 expr_or_assign_or_help  :    expr               { $$ = $1; }
-                |    expr_or_assign_or_help EQ_ASSIGN expr_or_assign_or_help    { $$ = xxbinary($2,$1,$3); setId( $$, @$); }
-                |    expr_or_assign_or_help '?'  expr_or_assign_or_help		{ $$ = xxbinary($2,$1,$3); setId( $$, @$); }
+                |    expr_or_assign_or_help EQ_ASSIGN expr_or_assign_or_help    { $$ = xxbinary($2,$1,$3); setId(@$); }
+                |    expr_or_assign_or_help '?'  expr_or_assign_or_help		{ $$ = xxbinary($2,$1,$3); setId(@$); }
                 ;
 
 expr_or_help  :    expr				    { $$ = $1; }
-	      |    expr_or_help '?' expr_or_help    { $$ = xxbinary($2,$1,$3); setId( $$, @$); }
+	      |    expr_or_help '?' expr_or_help    { $$ = xxbinary($2,$1,$3); setId(@$); }
               ;
 
-expr	: 	NUM_CONST			{ $$ = $1;	setId( $$, @$); }
-	|	STR_CONST			{ $$ = $1;	setId( $$, @$); }
-	|	NULL_CONST			{ $$ = $1;	setId( $$, @$); }          
-	|	SYMBOL				{ $$ = $1;	setId( $$, @$); }
+expr	: 	NUM_CONST			{ $$ = $1;	setId(@$); }
+	|	STR_CONST			{ $$ = $1;	setId(@$); }
+	|	NULL_CONST			{ $$ = $1;	setId(@$); } 
+	|	SYMBOL				{ $$ = $1;	setId(@$); }
 
-	|	'{' exprlist '}'		{ $$ = xxexprlist($1,&@1,$2); setId( $$, @$); }
-	|	'(' expr_or_assign_or_help ')'	{ $$ = xxparen($1,$2);	setId( $$, @$); }
+	|	'{' exprlist '}'		{ $$ = xxexprlist($1,&@1,$2); setId(@$); }
+	|	'(' expr_or_assign_or_help ')'	{ $$ = xxparen($1,$2);	setId(@$); }
 
-	|	'-' expr %prec UMINUS		{ $$ = xxunary($1,$2);	setId( $$, @$); }
-	|	'+' expr %prec UMINUS		{ $$ = xxunary($1,$2);	setId( $$, @$); }
-	|	'!' expr %prec UNOT		{ $$ = xxunary($1,$2);	setId( $$, @$); }
-	|	'~' expr %prec TILDE		{ $$ = xxunary($1,$2);	setId( $$, @$); }
-	|	'?' expr_or_assign_or_help	{ $$ = xxunary($1,$2);	setId( $$, @$); }
+	|	'-' expr %prec UMINUS		{ $$ = xxunary($1,$2);	setId(@$); }
+	|	'+' expr %prec UMINUS		{ $$ = xxunary($1,$2);	setId(@$); }
+	|	'!' expr %prec UNOT		{ $$ = xxunary($1,$2);	setId(@$); }
+	|	'~' expr %prec TILDE		{ $$ = xxunary($1,$2);	setId(@$); }
+	|	'?' expr_or_assign_or_help	{ $$ = xxunary($1,$2);	setId(@$); }
 
-	|	expr ':'  expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '+'  expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '-' expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '*' expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '/' expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '^' expr 			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr SPECIAL expr		{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '~' expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr LT expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr LE expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr EQ expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr NE expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr GE expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr GT expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr AND expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr OR expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr AND2 expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr OR2 expr			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr LEFT_ASSIGN expr 		{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr RIGHT_ASSIGN expr 		{ $$ = xxbinary($2,$3,$1);	setId( $$, @$); }
+	|	expr ':'  expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr '+'  expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr '-' expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr '*' expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr '/' expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr '^' expr 			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr SPECIAL expr		{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr '~' expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr LT expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr LE expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr EQ expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr NE expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr GE expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr GT expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr AND expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr OR expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr AND2 expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr OR2 expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr LEFT_ASSIGN expr 		{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr RIGHT_ASSIGN expr 		{ $$ = xxbinary($2,$3,$1);	setId(@$); }
 	|	FUNCTION '(' formlist ')' cr expr_or_assign_or_help %prec LOW
-						{ $$ = xxdefun($1,$3,$6,&@$); 	setId( $$, @$); }
-	|	expr '(' sublist ')'		{ $$ = xxfuncall($1,$3);  setId( $$, @$); modif_token( &@1, SYMBOL_FUNCTION_CALL ) ; }
-	|	IF ifcond expr_or_assign_or_help 	{ $$ = xxif($1,$2,$3);	setId( $$, @$); }
-	|	IF ifcond expr_or_assign_or_help ELSE expr_or_assign_or_help	{ $$ = xxifelse($1,$2,$3,$5);	setId( $$, @$); }
-	|	FOR forcond expr_or_assign_or_help %prec FOR	{ $$ = xxfor($1,$2,$3);	setId( $$, @$); }
-	|	WHILE cond expr_or_assign_or_help   { $$ = xxwhile($1,$2,$3);	setId( $$, @$); }
-	|	REPEAT expr_or_assign_or_help	    { $$ = xxrepeat($1,$2);	setId( $$, @$); }
-	|	expr LBB sublist ']' ']'	{ $$ = xxsubscript($1,$2,$3);	setId( $$, @$); }
-	|	expr '[' sublist ']'		{ $$ = xxsubscript($1,$2,$3);	setId( $$, @$); }
-	|	SYMBOL NS_GET SYMBOL		{ $$ = xxbinary($2,$1,$3);      setId( $$, @$); modif_token( &@1, SYMBOL_PACKAGE ) ; }
-	|	SYMBOL NS_GET STR_CONST		{ $$ = xxbinary($2,$1,$3);      setId( $$, @$); modif_token( &@1, SYMBOL_PACKAGE ) ; }
-	|	STR_CONST NS_GET SYMBOL		{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	STR_CONST NS_GET STR_CONST	{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	SYMBOL NS_GET_INT SYMBOL	{ $$ = xxbinary($2,$1,$3);      setId( $$, @$); modif_token( &@1, SYMBOL_PACKAGE ) ;}
-	|	SYMBOL NS_GET_INT STR_CONST	{ $$ = xxbinary($2,$1,$3);      setId( $$, @$); modif_token( &@1, SYMBOL_PACKAGE ) ;}
-	|	STR_CONST NS_GET_INT SYMBOL	{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	STR_CONST NS_GET_INT STR_CONST	{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '$' SYMBOL			{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '$' STR_CONST		{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	expr '@' SYMBOL			{ $$ = xxbinary($2,$1,$3);      setId( $$, @$); modif_token( &@3, SLOT ) ; }
-	|	expr '@' STR_CONST		{ $$ = xxbinary($2,$1,$3);	setId( $$, @$); }
-	|	NEXT				{ $$ = xxnxtbrk($1);	setId( $$, @$); }
-	|	BREAK				{ $$ = xxnxtbrk($1);	setId( $$, @$); }
+						{ $$ = xxdefun($1,$3,$6,&@$); 	setId(@$); }
+	|	expr '(' sublist ')'		{ $$ = xxfuncall($1,$3);  setId(@$); modif_token( &@1, SYMBOL_FUNCTION_CALL ) ; }
+	|	IF ifcond expr_or_assign_or_help 	{ $$ = xxif($1,$2,$3);	setId(@$); }
+	|	IF ifcond expr_or_assign_or_help ELSE expr_or_assign_or_help	{ $$ = xxifelse($1,$2,$3,$5);	setId(@$); }
+	|	FOR forcond expr_or_assign_or_help %prec FOR	{ $$ = xxfor($1,$2,$3);	setId(@$); }
+	|	WHILE cond expr_or_assign_or_help   { $$ = xxwhile($1,$2,$3);	setId(@$); }
+	|	REPEAT expr_or_assign_or_help	    { $$ = xxrepeat($1,$2);	setId(@$); }
+	|	expr LBB sublist ']' ']'	{ $$ = xxsubscript($1,$2,$3);	setId(@$); }
+	|	expr '[' sublist ']'		{ $$ = xxsubscript($1,$2,$3);	setId(@$); }
+	|	SYMBOL NS_GET SYMBOL		{ $$ = xxbinary($2,$1,$3);      setId(@$); modif_token( &@1, SYMBOL_PACKAGE ) ; }
+	|	SYMBOL NS_GET STR_CONST		{ $$ = xxbinary($2,$1,$3);      setId(@$); modif_token( &@1, SYMBOL_PACKAGE ) ; }
+	|	STR_CONST NS_GET SYMBOL		{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	STR_CONST NS_GET STR_CONST	{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	SYMBOL NS_GET_INT SYMBOL	{ $$ = xxbinary($2,$1,$3);      setId(@$); modif_token( &@1, SYMBOL_PACKAGE ) ;}
+	|	SYMBOL NS_GET_INT STR_CONST	{ $$ = xxbinary($2,$1,$3);      setId(@$); modif_token( &@1, SYMBOL_PACKAGE ) ;}
+	|	STR_CONST NS_GET_INT SYMBOL	{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	STR_CONST NS_GET_INT STR_CONST	{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr '$' SYMBOL			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr '$' STR_CONST		{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr '@' SYMBOL			{ $$ = xxbinary($2,$1,$3);      setId(@$); modif_token( &@3, SLOT ) ; }
+	|	expr '@' STR_CONST		{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	NEXT				{ $$ = xxnxtbrk($1);	setId(@$); }
+	|	BREAK				{ $$ = xxnxtbrk($1);	setId(@$); }
 	;
 
 
@@ -488,14 +487,14 @@ cond	:	'(' expr_or_help ')'			{ $$ = xxcond($2);   }
 ifcond	:	'(' expr_or_help ')'			{ $$ = xxifcond($2); }
 	;
 
-forcond :	'(' SYMBOL IN expr_or_help ')' 		{ $$ = xxforcond($2,$4);	setId( $$, @$); }
+forcond :	'(' SYMBOL IN expr_or_help ')' 		{ $$ = xxforcond($2,$4);	setId(@$); }
 	;
 
 
-exprlist:					{ $$ = xxexprlist0();	setId( $$, @$); }
+exprlist:					{ $$ = xxexprlist0();	setId(@$); }
 	|	expr_or_assign_or_help			{ $$ = xxexprlist1($1, &@1); }
 	|	exprlist ';' expr_or_assign_or_help	{ $$ = xxexprlist2($1, $3, &@3); }
-	|	exprlist ';'			{ $$ = $1;		setId( $$, @$); }
+	|	exprlist ';'			{ $$ = $1;		setId(@$); }
 	|	exprlist '\n' expr_or_assign_or_help	{ $$ = xxexprlist2($1, $3, &@3); }
 	|	exprlist '\n'			{ $$ = $1;}
 	;
@@ -653,7 +652,10 @@ static void finish_mbcs_in_parse_context()
     if (!R_ParseContext[i])
 	first = (i + 1) % PARSE_CONTEXT_SIZE;
     else
-	first = i;
+	/* The beginning of the context has been overwritten and for a general
+	   encoding there is not way to recover it. It is possible for UTF-8,
+	   though. */
+	return;
 
     /* decode multi-byte characters */
     for(i = 0; i < nbytes; i++) {
@@ -2127,7 +2129,12 @@ static void yyerror(const char *s)
     static char const yyexpecting[] = ", expecting ";
     char *expecting;
     
-    finish_mbcs_in_parse_context();
+    if (!EndOfFile)
+	/* On EndOfFile, there are no more bytes to add, but trying to do
+	   so may have non-trivial performance overhead and this can be
+	   reached also in non-error situations, e.g. from repl.
+	*/
+	finish_mbcs_in_parse_context();
 
     R_ParseError     = yylloc.first_line;
     R_ParseErrorCol  = yylloc.first_column;
@@ -2813,7 +2820,7 @@ static int StringValue(int c, Rboolean forSymbol)
     }
 }
 
-static int RawStringValue(int c)
+static int RawStringValue(int c0, int c)
 {
     int quote = c;
     int delim = ')';
@@ -2826,24 +2833,26 @@ static int RawStringValue(int c)
     ucs_t wcs[10001];
     Rboolean oct_or_hex = FALSE, use_wcs = FALSE, currtext_truncated = FALSE;
 
+    CTEXT_PUSH(c0); /* 'r' or 'R' */
+    CTEXT_PUSH(c);  /* opening quote */
+
     /* count dashes between the opening quote and opening delimiter */
     int ndash = 0;
-    while (nextchar('-')) ndash++;
+    while (nextchar('-')) { CTEXT_PUSH('-'); ndash++; }
 
-    if (! nextchar('(')) {
-	if (nextchar('['))
-	    delim = ']';
-	else if (nextchar('{'))
-	    delim = '}';
-	else if (nextchar('|'))
-	    delim = '|';
-	else		
-	    error(_("malformed raw string literal at line %d"),
-		  ParseState.xxlineno);
+    c = xxgetc();
+    CTEXT_PUSH(c);
+    switch(c) {
+    case '(': delim = ')'; break;
+    case '[': delim = ']'; break;
+    case '{': delim = '}'; break;
+    case '|': delim = '|'; break;
+    default:
+	error(_("malformed raw string literal at line %d"),
+	      ParseState.xxlineno);
     }
 
     PROTECT_WITH_INDEX(R_NilValue, &sti);
-    CTEXT_PUSH(c);
     while ((c = xxgetc()) != R_EOF) {
 	if (c == delim) {
 	    /* count the dashes after the closing delimiter */
@@ -2909,7 +2918,11 @@ static int RawStringValue(int c)
 	UNPROTECT(1); /* release stext */
     	return INCOMPLETE_STRING;
     } else {
-    	CTEXT_PUSH(c);
+	/* record delim, dashes, and quote, and terminate string */
+	CTEXT_PUSH(delim);
+	for (int i = 0; i < ndash; i++)
+	    CTEXT_PUSH('-');
+	CTEXT_PUSH(quote);
     	CTEXT_PUSH('\0');
     }
     if (!currtext_truncated)
@@ -3134,9 +3147,9 @@ static int token(void)
 
     if (c == 'r' || c == 'R') {
 	if (nextchar('"'))
-	    return RawStringValue('"');
+	    return RawStringValue(c, '"');
 	else if (nextchar('\''))
-	    return RawStringValue('\'');
+	    return RawStringValue(c, '\'');
     }
 
     /* literal strings */

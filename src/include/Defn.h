@@ -254,6 +254,10 @@ extern char *strdup(const char *s1);
 extern int strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
 
+/* safer alternative */
+extern char *Rstrdup(const char *s);
+
+
 /* Glibc manages to not define this in -pedantic -ansi */
 #if defined(HAVE_PUTENV) && !defined(putenv) && defined(HAVE_DECL_PUTENV) && !HAVE_DECL_PUTENV
 extern int putenv(char *string);
@@ -1346,6 +1350,8 @@ const char *EncodeString(SEXP, int, int, Rprt_adj);
 const char *EncodeReal2(double, int, int, int);
 const char *EncodeChar(SEXP);
 
+/* main/raw.c */
+int mbrtoint(int *w, const char *s);
 
 /* main/sort.c */
 void orderVector1(int *indx, int n, SEXP key, Rboolean nalast,

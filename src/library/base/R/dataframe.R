@@ -15,7 +15,7 @@
 #  https://www.R-project.org/Licenses/
 
 # Statlib code by John Chambers, Bell Labs, 1994
-# Changes Copyright (C) 1998-2019 The R Core Team
+# Changes Copyright (C) 1998-2020 The R Core Team
 
 
 ## As from R 2.4.0, row.names can be either character or integer.
@@ -137,7 +137,8 @@ anyNA.data.frame <- function(x, recursive = FALSE)
 
 is.data.frame <- function(x) inherits(x, "data.frame")
 
-I <- function(x) { structure(x, class = unique(c("AsIs", oldClass(x)))) }
+## as fast as possible; used also for subsetting:
+I <- function(x) `class<-`(x, unique.default(c("AsIs", oldClass(x))))
 
 print.AsIs <- function (x, ...)
 {
@@ -211,7 +212,8 @@ as.data.frame.data.frame <- function(x, row.names = NULL, ...)
 as.data.frame.list <-
     function(x, row.names = NULL, optional = FALSE, ...,
 	     cut.names = FALSE, col.names = names(x), fix.empty.names = TRUE,
-             stringsAsFactors = default.stringsAsFactors())
+             check.names = !optional,
+             stringsAsFactors = FALSE)
 {
     ## need to protect names in x.
     ## truncate any of more than 256 (or cut.names) bytes:
@@ -227,9 +229,8 @@ as.data.frame.list <-
 	       col.names, 0L)
     if(any.m <- any(m)) col.names[m] <- paste0("..adfl.", col.names[m])
     if(new.nms || any.m || cut.names) names(x) <- col.names
-    if(is.null(check.n <- list(...)$check.names)) check.n <- !optional
     ## data.frame() is picky with its 'row.names':
-    alis <- c(list(check.names = check.n, fix.empty.names = fix.empty.names,
+    alis <- c(list(check.names = check.names, fix.empty.names = fix.empty.names,
 		   stringsAsFactors = stringsAsFactors),
 	      if(!is.null(row.names)) list(row.names = row.names))
     x <- do.call(data.frame, c(x, alis))
@@ -285,7 +286,7 @@ as.data.frame.complex <- as.data.frame.vector
 default.stringsAsFactors <- function()
 {
     val <- getOption("stringsAsFactors")
-    if(is.null(val)) val <- TRUE
+    if(is.null(val)) val <- FALSE
     if(!is.logical(val) || is.na(val) || length(val) != 1L)
         stop('options("stringsAsFactors") not set to TRUE or FALSE')
     val
@@ -293,17 +294,17 @@ default.stringsAsFactors <- function()
 
 ## in case someone passes 'nm'
 as.data.frame.character <-
-    function(x, ..., stringsAsFactors = default.stringsAsFactors())
+    function(x, ..., stringsAsFactors = FALSE)
 {
     nm <- deparse1(substitute(x))
     if(stringsAsFactors) x <- factor(x)
-    if(!"nm" %in% names(list(...)))
+    if(!"nm" %in% ...names())
         as.data.frame.vector(x, ..., nm = nm)
     else as.data.frame.vector(x, ...)
 }
 
 as.data.frame.matrix <- function(x, row.names = NULL, optional = FALSE, make.names = TRUE, ...,
-                                 stringsAsFactors = default.stringsAsFactors())
+                                 stringsAsFactors = FALSE)
 {
     d <- dim(x)
     nrows <- d[[1L]]
@@ -434,7 +435,7 @@ as.data.frame.AsIs <- function(x, row.names = NULL, optional = FALSE, ...)
 data.frame <-
     function(..., row.names = NULL, check.rows = FALSE, check.names = TRUE,
 	     fix.empty.names = TRUE,
-             stringsAsFactors = default.stringsAsFactors())
+             stringsAsFactors = FALSE)
 {
     data.row.names <-
 	if(check.rows && is.null(row.names))
@@ -1259,7 +1260,7 @@ cbind.data.frame <- function(..., deparse.level = 1)
     data.frame(..., check.names = FALSE)
 
 rbind.data.frame <- function(..., deparse.level = 1, make.row.names = TRUE,
-                             stringsAsFactors = default.stringsAsFactors(),
+                             stringsAsFactors = FALSE,
                              factor.exclude = TRUE)
 {
     match.names <- function(clabs, nmi)
@@ -1388,8 +1389,8 @@ rbind.data.frame <- function(..., deparse.level = 1, make.row.names = TRUE,
 	    else stop("invalid list argument: all variables should have the same length")
 	    rows[[i]] <- ri <-
                 as.integer(seq.int(from = nrow + 1L, length.out = ni))
-	    nrow <- nrow + ni
 	    if(make.row.names) rlabs[[i]] <- Make.row.names(nmi, ri, ni, nrow)
+	    nrow <- nrow + ni
 	    if(length(nmi <- names(xi)) > 0L) {
 		if(is.null(clabs))
 		    clabs <- nmi

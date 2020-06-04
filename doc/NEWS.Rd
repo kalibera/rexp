@@ -5,12 +5,180 @@
 \title{R News}
 \encoding{UTF-8}
 
-\section{\Rlogo CHANGES IN 4.0.0}{
+\section{\Rlogo CHANGES IN R-devel}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \samp{www.omegahat.net} is no longer one of the repositories
+      known to \code{setRepositories()}.   (Nowadays it only provides
+      source packages and is often unavailable.)
+
+      \item \code{package_dependencies()} (in package \pkg{tools}) can
+      now use different dependency types for direct and recursive
+      dependencies.
+
+      \item Size of tarball checking in \command{R CMD check --as-cran <pkg>}
+      may be tweaked via new \env{_R_CHECK_CRAN_INCOMING_TARBALL_THRESHOLD_},
+      as suggested in \PR{17777} by Jan Gorecki.
+
+      \item Using \code{c()} to combine a factor with other factors
+      now gives a factor, and specifically an ordered factor when
+      combining ordered factors with identical levels.
+
+      \item Graphics devices can now specify \code{canClip =
+        NA_LOGICAL}, in which case the graphics engine will never
+      perform any clipping of output itself.
+
+      The clipping that the graphics engine does perform (for both
+      \code{canClip = TRUE} and \code{canClip = FALSE}) has also
+      been improved to avoid producing unnecessary artifacts in clipped
+      output.
+
+      \item \code{apply()} gains a \code{simplify} argument to possibly
+      disable simplifying results.
+
+      \item The \code{format()} method for class \code{"ftable"} gets an
+      option \code{justify}; suggested by Thomas Soeiro.
+
+      \item New \code{...names()} utility, complementing others, proposed
+      by Neal Fultz in \PR{17705}.
+
+      \item \code{type.convert()} now warns when its \code{as.is} argument
+      is not specified, as the help file always said it \emph{should}.  In
+      that case, the default is changed to \code{TRUE} in line with its
+      change in \code{read.table()} (related to \code{stringsAsFactor}) in
+      \R 4.0.0.
+
+      \item When printing list arrays, classed objects are now shown via
+      their \code{format()} value if this is a short enough character
+      string, or by giving the first elements of their class vector and
+      their length.
+    }
+  }
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD check} skips vignette re-building (with a
+      warning) if the \samp{VignetteBuilder} package(s) are not available.
+    }
+  }
+
+  \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+      \item Function \code{plclust()} from the package \pkg{stats}, and
+      \code{package.dependencies()}, \code{pkgDepends()},
+      \code{getDepList()}, \code{installFoundDepends()}, and
+      \code{vignetteDepends()} from \pkg{tools} are defunct.
+
+      \item Defunct functions \code{checkNEWS()} and \code{readNEWS()} from
+      package \pkg{tools} and \code{CRAN.packages()} from \pkg{utils} have
+      been removed.
+
+      \item \command{R CMD config CXXCPP} is defunct (it was deprecated
+      in \R{} 3.6.2).
+
+      \item \code{parallel::detectCores()} drops support for Irix
+      (retired in 2013).
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item Many more C-level allocations (mainly by \code{malloc} and
+      \code{strdup}) are checked for success with suitable alternative
+      actions.
+
+      \item Bug fix for \code{replayPlot()};  this was turning off
+      graphics engine display list recording if a recorded plot was
+      replayed in the same session.  The impact of the bug became
+      visible if resize the device after replay OR if attempted another
+      \code{savePlot()} after replay (empty display list means empty
+      screen on resize or empty saved plot).
+
+      \item \command{R CMD check} etc now warn when a package exports
+      non-existing S4 classes or methods, also in case of no "methods"
+      presence; reported by Alex Bertram; repr.ex. and patch by Sebastian
+      Meyer in \PR{16662}.
+
+      \item \code{round()} and \code{signif()} now longer tolerate wrong
+      argument names, notably in 1-argument calls; reported by Shane
+      Mueller on R-devel (mailing list).
+
+      \item \code{source(*, echo=TRUE)} no longer fails in some cases with
+      empty lines; reported by Bill Dunlap in \PR{17769}.
+
+      \item \code{boxplot()} now also accepts \code{call}s for labels such
+      as \code{ylab}, the same as \code{plot()}.  Reported by Marius Hofert.
+
+      \item \code{on.exit()} now correctly matches named arguments, thanks
+      to \PR{17815} including patch by Brodie Gaslam.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 4.0.1}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item \code{paste()} and \code{paste0()} gain a new optional
+      argument \code{recycle0}.  When set to true, zero-length
+      arguments are recycled leading to \code{character(0)} after the
+      \code{sep}-concatenation, i.e., to the empty string \code{""} if
+      \code{collapse} is a string and to the zero-length value
+      \code{character(0)} when \code{collapse = NULL}.
+
+      A package whose code uses this should depend on \samp{R (>= 4.0.1)}.
+
+      \item The \code{summary(<warnings>)} method now maps the counts
+      correctly to the warning messages.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{aov(frml, ...)} now also works where the \code{formula}
+      deparses to more than 500 characters, thanks to a report and patch
+      proposal by Jan Hauffa.
+
+      \item Fix a dozen places (code, examples) as \code{Sys.setlocale()}
+      returns the new rather than the previous setting.
+
+      \item Fix for adding two complex \pkg{grid} units via \code{sum()}.
+      Thanks to Gu Zuguang for the report and Thomas Lin Pedersen for
+      the patch.
+
+      \item Fix \code{parallel::mclapply(..., mc.preschedule=FALSE)}
+      to handle raw vector results correctly. \PR{17779}
+
+      \item Computing the \code{base} value, i.e., 2, \dQuote{everywhere},
+      now uses \code{FLT_RADIX}, as the original \file{machar} code looped
+      indefinitely on the ppc64 architecture for the \code{longdouble} case.
+
+      \item In \R 4.0.0, \code{sort.list(x)} when \code{is.object(x)} was
+      true, e.g., for \code{x <- I(letters)}, was accidentally using
+      \code{method = "radix"}.  Consequently, e.g., \code{merge(<data.frame>)}
+      was much slower than previously; reported in \PR{17794}.
+
+      \item \code{plot(y ~ x, ylab = quote(y[i]))} now works, as e.g., for
+      \code{xlab}; related to \PR{10525}.
+
+      \item \code{parallel::detect.cores(all.tests = TRUE)} tries a
+      matching OS name before the other tests (which were intended only
+      for unknown OSes).
+
+      \item Parse data for raw strings is now recorded correctly. Reported
+      by Gabor Csardi.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 4.0.0}{
+
   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
     \itemize{
       \item Packages need to be (re-)installed under this version
       (4.0.0) of \R.
-      
+
       \item \code{matrix} objects now also inherit from class
       \code{"array"}, so e.g., \code{class(diag(1))} is \code{c("matrix",
 	"array")}.  This invalidates code incorrectly assuming that
@@ -196,7 +364,8 @@
 
       \item \code{sort.list(x)} now works for non-atomic objects
       \code{x} and \code{method = "auto"} (the default) or
-      \code{"radix"} in cases \code{order(x)} works.
+      \code{"radix"} in cases \code{order(x)} works, typically via a
+      \code{xtfrm()} method.
 
       \item Where they are available, \code{writeBin()} allows
       long vectors.% (those of length \eqn{\ge 2^{31}}{>= 2^31}).
@@ -373,6 +542,13 @@
 
       \item New function \code{activeBindingFunction()} retrieves the
       function of an active binding.
+
+      \item New \code{"cairoFT"} and \code{"pango"} components in the
+      output of \code{grSoftVersion()}.
+
+      \item New argument \code{symbolfamily} in cairo-based graphics
+      devices and new function \code{cairoSymbolFont()} that can be used
+      to provide the value for that argument.
     }
   }% end{ NEW FEATURES }
 
@@ -424,6 +600,17 @@
 
       \item Either PCRE2 or PCRE1 >= 8.32 (Nov 2012) is required: the
       deprecated provision for 8.20--8.31 has been removed.
+
+      \item Defunct functions \code{mem.limits()}, \code{.readRDS()},
+      \code{.saveRDS()},.\code{.find.package()}, and \code{.path.package()}
+      from package \pkg{base}
+      and \code{allGenerics()}, \code{getAccess()}, \code{getAllMethods()},
+      \code{getClassName()}, \code{getClassPackage()}, \code{getExtends()},
+      \code{getProperties()}, \code{getPrototype()},
+      \code{getSubclasses()}, \code{getVirtual()}, \code{mlistMetaName()},
+      \code{removeMethodsObject()}, \code{seemsS4Object()},
+      \code{traceOff()}, and \code{traceOn()} from \pkg{methods} have been
+      removed.
     }
   }
 
@@ -503,7 +690,7 @@
       currently only limited support for this in compilers, with flags
       such as \option{-std=c++20} and \option{-std=c++2a}.  For the time
       being the \command{configure} test is of accepting one of these
-      flags and compiling C++17 code. 
+      flags and compiling C++17 code.
     }
   }
 
@@ -693,6 +880,19 @@
       \code{ngettext()}, since the latter is handled by
       \code{xngettext()}. Thanks to Daniele Medri for the report and all
       the recent work he has done on the Italian translations.
+
+      \item \code{data(package = "P")} for \code{P} in \pkg{base} and
+      \pkg{stats} no longer reports the data sets from package
+      \pkg{datasets} (which it did for back compatibility for 16 years),
+      fixing \PR{17730}.
+
+      \item \code{x[[Inf]]} (returning \code{NULL}) no longer leads to
+      undefined behavior, thanks to a report by Kirill Müller in
+      \PR{17756}.  Further, \code{x[[-Inf]]} and \code{x[[-n]]} now give
+      more helpful error messages.
+
+      \item \code{Gamma()} family sometimes had trouble storing
+      link name \PR{15891}
     }
   }
 
@@ -710,7 +910,7 @@
       \item \code{scan()} issues with UTF-8 data when running in a DBCS
       locale have been resolved (\PR{16520}, \PR{16584}).
 
-      \item \command{RTerm} now accepts enhanced/arrow keys also with
+      \item \command{Rterm} now accepts enhanced/arrow keys also with
       ConPTY.
 
       \item \R can can now be started \emph{via} the launcher icon in a

@@ -25,6 +25,7 @@
 
 #include <Defn.h>
 #include <R_ext/RStartup.h>
+#include <R_ext/RS.h> // for Calloc
 
 
 /* Remove and process common command-line arguments
@@ -47,19 +48,23 @@
    These are populated via the routine R_set_command_line_arguments().
 */
 static int    NumCommandLineArgs = 0;
-static char **CommandLineArgs = NULL;
+static char **CommandLineArgs = NULL; // this does not get freed
 
 
 void
 R_set_command_line_arguments(int argc, char **argv)
 {
-    int i;
-
+    // nothing here is ever freed.
     NumCommandLineArgs = argc;
     CommandLineArgs = (char**) calloc((size_t) argc, sizeof(char*));
+    if(CommandLineArgs == NULL)
+	R_Suicide("allocation failure in R_set_command_line_arguments");
 
-    for(i = 0; i < argc; i++)
+    for(int i = 0; i < argc; i++) {
 	CommandLineArgs[i] = strdup(argv[i]);
+	if(CommandLineArgs[i] == NULL)
+	    R_Suicide("allocation failure in R_set_command_line_arguments");
+    }
 }
 
 

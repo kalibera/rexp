@@ -213,6 +213,7 @@ zipunzip(const char *zipname, const char *dest, int nfiles, const char **files,
     if (nfiles == 0) { /* all files */
 	unz_global_info64 gi;
 	unzGetGlobalInfo64(uf, &gi);
+	PROTECT(names = allocVector(STRSXP, 5000));
 	for (i = 0; i < gi.number_entry; i++) {
 	    if (i > 0) if ((err = unzGoToNextFile(uf)) != UNZ_OK) break;
 	    if (*nnames+1 >= LENGTH(names)) {
@@ -231,6 +232,7 @@ zipunzip(const char *zipname, const char *dest, int nfiles, const char **files,
 #endif
 	}
     } else {
+	PROTECT(names = allocVector(STRSXP, nfiles));
 	for (i = 0; i < nfiles; i++) {
 	    if ((err = unzLocateFile(uf, files[i], 1)) != UNZ_OK) break;
 	    if ((err = extract_one(uf, dest, files[i], names, nnames,
@@ -244,6 +246,7 @@ zipunzip(const char *zipname, const char *dest, int nfiles, const char **files,
     }
     *pnames = names;
     unzClose(uf);
+    UNPROTECT(1); /* names */
     return err;
 }
 
@@ -260,8 +263,10 @@ static SEXP ziplist(const char *zipname)
 
     gi.number_entry = 0; /* =Wall */
     err = unzGetGlobalInfo64 (uf, &gi);
-    if (err != UNZ_OK)
+    if (err != UNZ_OK) {
+	unzClose(uf);
 	error("error %d with zipfile in unzGetGlobalInfo", err);
+    }
     nfiles = (int) gi.number_entry;
     /* name, length, datetime */
     PROTECT(ans = allocVector(VECSXP, 3));
@@ -275,8 +280,10 @@ static SEXP ziplist(const char *zipname)
 
 	err = unzGetCurrentFileInfo64(uf, &file_info, filename_inzip,
 				      sizeof(filename_inzip), NULL, 0, NULL, 0);
-	if (err != UNZ_OK)
+	if (err != UNZ_OK) {
+	    unzClose(uf);
 	    error("error %d with zipfile in unzGetCurrentFileInfo\n", err);
+	}
 	/* In theory at least bit 11 of the flag tells us that the
 	   filename is in UTF-8, so FIXME */
 	SET_STRING_ELT(names, i, mkChar(filename_inzip));
@@ -291,8 +298,10 @@ static SEXP ziplist(const char *zipname)
 
 	if (i < nfiles - 1) {
 	    err = unzGoToNextFile(uf);
-	    if (err != UNZ_OK)
-		error("error %d with zipfile in unzGoToNextFile\n",err);
+	    if (err != UNZ_OK) {
+		unzClose(uf);
+		error("error %d with zipfile in unzGoToNextFile\n", err);
+	    }
 	}
     }
     unzClose(uf);
@@ -354,12 +363,9 @@ SEXP Runzip(SEXP args)
     if (setTime == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "setTime");
 
-    if (ntopics > 0)
-	PROTECT(names = allocVector(STRSXP, ntopics));
-    else
-	PROTECT(names = allocVector(STRSXP, 5000));
     rc = zipunzip(zipname, dest, ntopics, topics, &names, &nnames,
 		  overwrite, junk, setTime);
+    PROTECT(names);
     if (rc != UNZ_OK)
 	switch(rc) {
 	case UNZ_END_OF_LIST_OF_FILE:
@@ -384,7 +390,7 @@ SEXP Runzip(SEXP args)
     PROTECT(ans = ScalarInteger(rc));
     PROTECT(names = lengthgets(names, nnames));
     setAttrib(ans, install("extracted"), names);
-    UNPROTECT(3);
+    UNPROTECT(3); /* old names, ans, names */
     vmaxset(vmax);
     return ans;
 }

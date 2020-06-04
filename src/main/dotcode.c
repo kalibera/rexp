@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2018  The R Core Team
+ *  Copyright (C) 1997--2020  The R Core Team
  *  Copyright (C) 2003	      The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -1256,6 +1256,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     int nargs;
     const void *vmax = vmaxget();
     char buf[MaxSymbolBytes];
+    int nprotect = 0;
 
     if (length(args) < 1) errorcall(call, _("'.NAME' is missing"));
     check1arg2(args, call, ".NAME");
@@ -1281,9 +1282,12 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
     else {
 	SEXP *cargscp = (SEXP *) R_alloc(nargs, sizeof(SEXP));
 	int i;
-	for(i = 0; i < nargs; i++)
+	for(i = 0; i < nargs; i++) {
 	    cargscp[i] = PROTECT(duplicate(cargs[i]));
+	    nprotect++;
+	}
 	retval = PROTECT(R_doDotCall(ofun, nargs, cargs, call));
+	nprotect++;
 	Rboolean constsOK = TRUE;
 	for(i = 0; constsOK && i < nargs; i++)
 	    /* 39: not numerical comparison, not single NA, not attributes as
@@ -1313,7 +1317,7 @@ SEXP attribute_hidden do_dotcall(SEXP call, SEXP op, SEXP args, SEXP env)
 		    );
 	    R_Suicide("compiler constants were modified (in .Call?)!\n");
 	}
-	UNPROTECT(nargs + 1);
+	UNPROTECT(nprotect);
     }
     vmaxset(vmax);
     return retval;
@@ -1342,8 +1346,18 @@ SEXP attribute_hidden do_Externalgr(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP retval;
     pGEDevDesc dd = GEcurrentDevice();
     Rboolean record = dd->recordGraphics;
+#ifdef R_GE_DEBUG
+    if (getenv("R_GE_DEBUG_record")) {
+        printf("do_Externalgr: record = FALSE\n");
+    }
+#endif
     dd->recordGraphics = FALSE;
     PROTECT(retval = do_External(call, op, args, env));
+#ifdef R_GE_DEBUG
+    if (getenv("R_GE_DEBUG_record")) {
+        printf("do_Externalgr: record = %d\n", record);
+    }
+#endif
     dd->recordGraphics = record;
     if (GErecording(call, dd)) { // which is record && call != R_NilValue
 	if (!GEcheckState(dd))
@@ -1353,8 +1367,9 @@ SEXP attribute_hidden do_Externalgr(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_args_enable_refcnt(args);
 	GErecordGraphicOperation(op, args, dd);
     }
+    check_retval(call, retval);
     UNPROTECT(1);
-    return check_retval(call, retval);
+    return retval;
 }
 
 SEXP attribute_hidden do_dotcallgr(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -1362,8 +1377,18 @@ SEXP attribute_hidden do_dotcallgr(SEXP call, SEXP op, SEXP args, SEXP env)
     SEXP retval;
     pGEDevDesc dd = GEcurrentDevice();
     Rboolean record = dd->recordGraphics;
+#ifdef R_GE_DEBUG
+    if (getenv("R_GE_DEBUG_record")) {
+        printf("do_dotcallgr: record = FALSE\n");
+    }
+#endif
     dd->recordGraphics = FALSE;
     PROTECT(retval = do_dotcall(call, op, args, env));
+#ifdef R_GE_DEBUG
+    if (getenv("R_GE_DEBUG_record")) {
+        printf("do_dotcallgr: record = %d\n", record);
+    }
+#endif
     dd->recordGraphics = record;
     if (GErecording(call, dd)) {
 	if (!GEcheckState(dd))
@@ -1372,8 +1397,9 @@ SEXP attribute_hidden do_dotcallgr(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_args_enable_refcnt(args);
 	GErecordGraphicOperation(op, args, dd);
     }
+    check_retval(call, retval);
     UNPROTECT(1);
-    return check_retval(call, retval);
+    return retval;
 }
 
 static SEXP

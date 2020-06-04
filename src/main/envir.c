@@ -1211,7 +1211,7 @@ static R_INLINE SEXP findGlobalVar(SEXP symbol)
     case NILSXP: return R_UnboundValue;
     case SYMSXP: return SYMBOL_BINDING_VALUE(symbol);
     default: return BINDING_VALUE(loc);
-    }	
+    }
 }
 #endif
 
@@ -1459,6 +1459,24 @@ SEXP attribute_hidden do_dotsLength(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("incorrect context: the current call has no '...' to look in"));
     // else
     return ScalarInteger(length_DOTS(vl));
+}
+
+SEXP attribute_hidden do_dotsNames(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    checkArity(op, args);
+    SEXP vl = findVar(R_DotsSymbol, env);
+    if (vl == R_UnboundValue)
+	error(_("incorrect context: the current call has no '...' to look in"));
+    // else
+    SEXP out = PROTECT(allocVector(STRSXP, length_DOTS(vl)));
+    for(int i = 0; i < LENGTH(out); i++) {
+        SEXP tag = TAG(vl);
+        SET_STRING_ELT(out, i, tag == R_NilValue ? NA_STRING : PRINTNAME(tag));
+        vl = CDR(vl);
+    }
+
+    UNPROTECT(1);
+    return out;
 }
 
 #undef length_DOTS
@@ -1872,6 +1890,7 @@ SEXP attribute_hidden do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
     x = CAR(args);
     n = LENGTH(x);
     xnms = getAttrib(x, R_NamesSymbol);
+    PROTECT(xnms);
     if (n && (TYPEOF(xnms) != STRSXP || LENGTH(xnms) != n))
 	error(_("names(x) must be a character vector of the same length as x"));
     envir = CADR(args);
@@ -1882,6 +1901,7 @@ SEXP attribute_hidden do_list2env(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SEXP name = installTrChar(STRING_ELT(xnms, i));
 	defineVar(name, lazy_duplicate(VECTOR_ELT(x, i)), envir);
     }
+    UNPROTECT(1); /* xnms */
 
     return envir;
 }

@@ -8,7 +8,7 @@ export("Adobe_glyphs", "HTMLheader", "Rcmd", "Rd2HTML", "Rd2ex",
        "assertCondition", "assertError", "assertWarning", "bibstyle",
        "buildVignette", "buildVignettes", "charset_to_Unicode",
        "checkDocFiles", "checkDocStyle", "checkFF", "checkMD5sums",
-       "checkNEWS", "checkRd", "checkPoFile", "checkPoFiles",
+       "checkRd", "checkPoFile", "checkPoFiles",
        "checkRdaFiles", "checkReplaceFuns", "checkS3methods",
        "checkTnF", "checkVignettes", "codoc", "codocClasses",
        "codocData", "compactPDF", "delimMatch", "deparseLatex",
@@ -27,7 +27,7 @@ export("Adobe_glyphs", "HTMLheader", "Rcmd", "Rd2HTML", "Rd2ex",
        "package_dependencies",
        "package_native_routine_registration_skeleton",
        "parseLatex", "parse_Rd",
-       "pkgVignettes", "pskill", "psnice", "read.00Index", "readNEWS",
+       "pkgVignettes", "pskill", "psnice", "read.00Index",
        "resaveRdaFiles", "showNonASCII", "showNonASCIIfile",
        "startDynamicHelp", "testInstalledBasic",
        "testInstalledPackage", "testInstalledPackages", "texi2dvi",
@@ -83,6 +83,7 @@ S3method("format", "check_package_code_startup_functions")
 S3method("format", "check_package_datalist")
 S3method("format", "check_package_datasets")
 S3method("format", "check_package_depends")
+S3method("format", "check_package_description")
 S3method("format", "check_package_description2")
 S3method("format", "check_package_description_encoding")
 S3method("format", "check_package_license")

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2007-9  The R Foundation
+ *  Copyright (C) 2007-2020  The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -133,7 +133,7 @@ QuartzDesc_t QuartzBitmap_DeviceCreate(void *dd, QuartzFunctions_t *fn, QuartzPa
     QuartzDesc_t ret = NULL;
     if (!qf) qf = fn;
     if(!type || strlen(type) == 0) type = "public.png";
-    if (!dpi) dpi=mydpi;
+    if (!dpi) dpi = mydpi;
 
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_4
     /* We'll gladly support any image destination type */
@@ -146,11 +146,26 @@ QuartzDesc_t QuartzBitmap_DeviceCreate(void *dd, QuartzFunctions_t *fn, QuartzPa
         size_t s = h*rb;
         /* QuartzDesc_t qd; */
         /* Allocate sufficient space */
-	/* FIXME: check allocations */
         QuartzBitmapDevice *dev = malloc(sizeof(QuartzBitmapDevice)+s);
+	if(dev == NULL) error("allocation failure in QuartzBitmap_DeviceCreate");
         dev->length = (unsigned int) s;
-        dev->uti  = type ? strdup(type) : NULL;
-        dev->path = par->file ? strdup(par->file) : NULL;
+        // dev->uti  = type ? strdup(type) : NULL;
+	if(type) { // code above forces this
+	    dev->uti = strdup(type);
+	    if(dev->uti == NULL) {
+		free(dev);
+		error("allocation failure in QuartzBitmap_DeviceCreate");
+	    }
+	} else dev->uti = NULL;
+        // dev->path = par->file ? strdup(par->file) : NULL;
+	if (par->file) {
+	    dev->path = strdup(par->file);
+	    if (dev->path == NULL) {
+		if (dev->uti) free(dev->uti);
+		free(dev);
+		error("allocation failure in QuartzBitmap_DeviceCreate");
+	    }
+	} else dev->path = NULL;
         dev->page = 0;
         memset(dev->data, 0, s);
         dev->bitmap = CGBitmapContextCreate(dev->data, w, h, 8, rb,

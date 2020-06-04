@@ -41,7 +41,7 @@ if(file.exists("myTst2")) unlink("myTst2", recursive=TRUE)
 package.skeleton("myTst2", code_files = tmp)
 ##- end_2_ # failed in R 2.11.0
 stopifnot(1 == grep("setClass",
-	  readLines(list.files("myTst/R", full.names=TRUE))),
+		    readLines(list.files("myTst/R", full.names=TRUE))),
 	  c("foo-class.Rd","show-methods.Rd") %in% list.files("myTst/man"))
 ## failed for several reasons in R < 2.7.0
 ##
@@ -75,7 +75,7 @@ install.packages("myTst", lib = "myLib", repos=NULL, type = "source") # with war
 print(installed.packages(lib.loc= "myLib", priority= "NA"))## (PR#13332)
 stopifnot(require("myTst",lib = "myLib"))
 sm <- findMethods(show, where= as.environment("package:myTst"))
-stopifnot(names(sm@names) == "foo")
+stopifnot(sm@names == "foo")
 unlink("myTst_*")
 
 ## getPackageName()  for "package:foo":
@@ -132,7 +132,7 @@ dir.create(file.path(pkgPath, "pkgB", "R"), recursive = TRUE,
 	   showWarnings = FALSE)
 p.lis <- c(if("Matrix" %in% row.names(installed.packages(.Library)))
                c("pkgA", "pkgB", "pkgC"),
-           "exNSS4", "exSexpr")
+           "exNSS4", "exNSS4nil", "exSexpr")
 InstOpts <- list("exSexpr" = "--html")
 pkgApath <- file.path(pkgPath, "pkgA")
 if("pkgA" %in% p.lis && !dir.exists(d <- pkgApath)) {
@@ -157,7 +157,8 @@ for(p in p.lis) {
         stop("R CMD build failed (no tarball) for package ", p)
     ## otherwise install the tar file:
     cat("installing package", p., "using built file", r, "...\n")
-    ## "FIXME": want to catch warnings in the "console output" of this:
+    ## "FIXME": want to catch warnings in the "console output" of this,
+    ## e.g. exNSS4nil, "S4 exports specified in 'NAMESPACE' but not defined .."
     install.packages(r, lib = "myLib", repos=NULL, type = "source",
                      INSTALL_opts = InstOpts[[p.]])
     stopifnot(require(p., lib = "myLib", character.only=TRUE))

@@ -16,7 +16,7 @@ read.DIF(file, header = FALSE,
          row.names, col.names, as.is = !stringsAsFactors,
          na.strings = "NA", colClasses = NA, nrows = -1,
          skip = 0, check.names = TRUE, blank.lines.skip = TRUE,
-         stringsAsFactors = default.stringsAsFactors(),
+         stringsAsFactors = FALSE,
          transpose = FALSE, fileEncoding = "")
 }
 \arguments{
@@ -55,9 +55,9 @@ read.DIF(file, header = FALSE,
   \item{col.names}{a vector of optional names for the variables.
     The default is to use \code{"V"} followed by the column number.}
 
-  \item{as.is}{the default behavior of \code{read.DIF} is to convert
-    character variables to factors.  The variable \code{as.is} controls the
-    conversion of columns not otherwise specified by \code{colClasses}.
+  \item{as.is}{controls conversion of character variables (insofar as
+    they are not converted to logical, numeric or complex) to factors,
+    if not otherwise specified by \code{colClasses}.
     Its value is either a vector of logicals (values are recycled if
     necessary), or a vector of numeric or character indices which
     specify which columns should not be converted to factors.
