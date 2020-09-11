@@ -2,7 +2,7 @@
 ###
 ### Process this file with autoconf to produce a configure script.
 ###
-### Copyright (C) 1998-2019 R Core Team
+### Copyright (C) 1998-2020 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -79,7 +79,7 @@ AC_DEFINE_UNQUOTED(R_OS, "${host_os}",
 ## exclude some unsupported OSes
 case "${host_os}" in
    ## Darwin 1.3.1 was macOS 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
-   ## with 18 being 10.14.
+   ## with 19 being 10.15 (Catalina) and 20 11.0 (Big Sur)
    ## We no longer support < 10.6 (Snow Leopard, Darwin 10)
    ## https://en.wikipedia.org/wiki/Darwin_OS
    darwin1.*)
@@ -328,27 +328,56 @@ AM_CONDITIONAL(BUILD_HTML, [test "x${want_prebuilt_html}" = xyes])
 AC_ARG_ENABLE([lto],
 [AS_HELP_STRING([--enable-lto],[enable link-time optimization @<:@no@:>@])],
 [want_lto="${enableval}"], [want_lto=no])
-## TODO: add a test for gcc >= 4.5.0 and/or clang/flang
+ltoall=no
+dnl Allow to be set to empty, although what would be the point?
+if test "${LTO+set}" = set; then
+  uLTO="${LTO}"
+else
+  uLTO=-flto
+fi
+dnl Might well want to set to empty
+if test "${LTO_FC+set}" = set; then
+  uLTO_FC="${LTO_FC}"
+else
+  uLTO_FC="${uLTO}"
+fi
 if test "x${want_lto}" = xyes; then
-  ## used in Makeconf
-  LTO=-flto
-  ## used in etc/Makeconf
-  LTOALL=-flto
+  ltoall=yes
+  LTO="${uLTO}"
+  LTOALL="${uLTO}"
+  LTO_FC="${uLTO_FC}"
+  LTOALL_FC="${uLTO_FC}"
 elif  test "x${want_lto}" = xR; then
-  LTO=-flto
+  LTO="${uLTO}"
+  LTO_FC="${uLTO_FC}"
 elif  test "x${want_lto}" = xcheck; then
-  ## use for maintainer checking.
-  LTO=-flto
-  LTOALL=-flto
+  ltoall=yes
+  LTO="${uLTO}"
+  LTOALL="${uLTO}"
+  LTO_FC="${uLTO_FC}"
+  LTOALL_FC="${uLTO_FC}"
   LIBR0="-L\"\$(R_HOME)/lib\$(R_ARCH)\""
   LIBR1="${LIBR1} -lLinpack"
 elif  test "x${want_lto}" != xno; then
   AC_MSG_WARN([Unknown value --enable-lto=${enableval}])
+  want_lto=no
+fi
+if test "x${want_lto}" = xno; then
+  dnl unset as inadvertent settings will at best slow down R build.
+  LTO=
+  LTOALL=
+  LTO_FC=
+  LTOALL_FC=
+  LTO_LD=
 fi
 AC_SUBST(LTO)
 AC_SUBST(LTOALL)
+AC_SUBST(LTO_FC)
+AC_SUBST(LTOALL_FC)
+AC_SUBST(LTO_LD)
 ## used in src/main/Makefile
 AM_CONDITIONAL(BUILD_LTO, [test "x${want_lto}" != xno])
+AM_CONDITIONAL(BUILD_LTO_ALL, [test "x${ltoall}" = xyes])
 AM_CONDITIONAL(BUILD_LTO_CHECK, [test "x${want_lto}" = xcheck])
 
 AC_ARG_ENABLE([java],
@@ -790,6 +819,7 @@ AC_CHECK_LIB(dl, dlopen)
 
 ## Readline.
 if test "${use_readline}" = yes; then
+  dnl in libedit both headers exist as links to editline/readline.h
   AC_CHECK_HEADERS(readline/history.h readline/readline.h)
   r_save_LIBS="${LIBS}"
   LIBS=
@@ -812,12 +842,15 @@ if test "${use_readline}" = yes; then
   if test "${use_readline}" = no; then
     AC_MSG_ERROR([--with-readline=yes (default) and headers/libs are not available])
   else
-    ## the NetBSD emulation supplied by macOS does not have these
+    ## the NetBSD emulation (libedit) supplied by macOS did not have these,
+    ## but it does now (10.13) have history_truncate_file
+    ## it has tilde_expand, which is documented to be like tilde_expand_word
+    ## 'does tilde expansion of strings of type ``~user/foo''
     AC_CHECK_FUNCS(history_truncate_file tilde_expand_word)
-    ## rl_completion_matches is >= 4.2.
-    ## rl_resize_terminal is >= 4.0 ane we use it only for >= 6.3.
-    ## rl_callback_sigcleanup is in pre-releases for 7.0, not yet used.
-    R_CHECK_FUNCS([rl_callback_sigcleanup rl_completion_matches rl_resize_terminal rl_sort_completion_matches], 
+    ## rl_completion_matches is >= 4.2 (emulation has it)
+    ## rl_resize_terminal is >= 4.0 but we use it only for >= 6.3.
+    ## rl_sort_completion_matches is >= 6.0 (not in emulation)
+    R_CHECK_FUNCS([rl_completion_matches rl_resize_terminal rl_sort_completion_matches], 
 [#include <stdio.h>
 #include <readline/readline.h>]
                  )
@@ -1036,7 +1069,7 @@ case "${host_os}" in
     AC_DEFINE(HAVE_NO_SYMBOL_UNDERSCORE)
     ;;
    hpux*)
-dnl leave this in as not easily overridden by userx
+dnl leave this in as not easily overridden by users
      AC_DEFINE(HAVE_NO_SYMBOL_UNDERSCORE)
 dnl     case "${CC}" in
 dnl       cc|c89)
@@ -1868,7 +1901,7 @@ AC_CHECK_FUNCS(fseeko ftello matherr)
 ## POSIX functions
 R_CHECK_FUNCS([fcntl], [#include <fcntl.h>])
 R_CHECK_FUNCS([getgrgid], [#include <grp.h>])
-R_CHECK_FUNCS([getpwuid], [#include <pwd.h>])
+R_CHECK_FUNCS([getpwnam getpwuid], [#include <pwd.h>])
 R_CHECK_FUNCS([kill sigaction sigaltstack sigemptyset], [#include <signal.h>])
 R_CHECK_FUNCS([fdopen popen], [#include <stdio.h>])
 if test "${ac_cv_have_decl_popen}" = "no"; then

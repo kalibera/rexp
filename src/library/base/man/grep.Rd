@@ -231,7 +231,7 @@ regexec(pattern, text, ignore.case = FALSE, perl = FALSE,
 \source{
   The C code for POSIX-style regular expression matching has changed
   over the years.  As from \R 2.10.0 (Oct 2009) the TRE library of Ville
-  Laurikari (\url{http://laurikari.net/tre/}) is used.  The POSIX
+  Laurikari (\url{https://laurikari.net/tre/}) is used.  The POSIX
   standard does give some room for interpretation, especially in the
   handling of invalid regular expressions and the collation of character
   ranges, so the results will have changed slightly over the years.
@@ -300,10 +300,15 @@ txt <- c("The", "licenses", "for", "most", "software", "are",
 ( i <- grep("[gu]", txt) ) # indices
 stopifnot( txt[i] == grep("[gu]", txt, value = TRUE) )
 
-## Note that in locales such as en_US this includes B as the
-## collation order is aAbBcCdDe ...
+## Note that for some implementations character ranges are
+## locale-dependent (but not currently).  Then [b-e] in locales such as
+## en_US may include B as the collation order is aAbBcCdDe ...
 (ot <- sub("[b-e]",".", txt))
 txt[ot != gsub("[b-e]",".", txt)]#- gsub does "global" substitution
+## In caseless matching, ranges include both cases:
+a <- grep("[b-e]", txt, value = TRUE)
+b <- grep("[b-e]", txt, ignore.case = TRUE, value = TRUE)
+setdiff(b, a)
 
 txt[gsub("g","#", txt) !=
     gsub("g","#", txt, ignore.case = TRUE)] # the "G" words

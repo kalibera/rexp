@@ -1,7 +1,7 @@
 #  File src/library/stats/R/addmargins.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 2004-2015 The R Core Team
+#  Copyright (C) 2004-2020 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -51,8 +51,7 @@ addmargins <-
 	## Recursive function to add names to unnamed list components
 	add.names <- function(thelist)
 	{
-	    n <- names(thelist)
-	    if (is.null(n)) n <- rep("", length(thelist))
+	    n <- names(thelist) %||% rep("", length(thelist))
 	    for (i in seq_along(thelist)[-1L]) {
 		if (!is.call(thelist[[i]])) {
 		    if (n[i] == "") n[i] <- as.character(thelist[[i]])
@@ -65,7 +64,7 @@ addmargins <-
 	## this only makes sense if we were given an expression for FUN
 	## which we can deparse.
 	if(mode(substitute(FUN)) == "call")
-	    FUN <- eval(add.names(substitute(FUN)))
+	    FUN <- eval.parent(add.names(substitute(FUN)))
 	if (is.null(names(FUN))) names(FUN) <- rep("", length(FUN))
     }
 
@@ -128,7 +127,7 @@ addmargins <-
 	## Define the dimensions of the new table with the margins
 	newdim <- d
 	newdim[margin] <- newdim[margin] + n.mar
-	if(is.null(dnA <- dimnames(A))) dnA <- vector("list", n.dim)
+	dnA <- dimnames(A) %||% vector("list", n.dim)
 	dnA[[margin]] <-
 	    c(if(is.null(dnA[[margin]])) rep("", d[[margin]]) else dnA[[margin]],
 	      fnames)

@@ -2054,18 +2054,26 @@ SEXP attribute_hidden do_pathexpand(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(ans = allocVector(STRSXP, n));
     for (i = 0; i < n; i++) {
 	SEXP tmp = STRING_ELT(fn, i);
-#ifndef Win32
-	const char *p = translateCharFP2(tmp);
-	if (p && tmp != NA_STRING)
-	    tmp = markKnown(R_ExpandFileName(p), tmp);
-#else
-/* Windows can have files and home directories that aren't representable
-   in the native encoding (e.g. latin1), so we need to translate
-   everything to UTF8.
-*/
-	if (tmp != NA_STRING)
-	    tmp = mkCharCE(R_ExpandFileNameUTF8(trCharUTF8(tmp)), CE_UTF8);
+	if (tmp != NA_STRING) {
+#ifdef Win32
+	    /* Windows can have files and home directories that aren't
+	       representable in the native encoding (e.g. latin1). Translate
+	       to UTF-8 when the input is in UTF-8 already or is in latin1,
+	       but the native encoding is not latin1.
+
+	       R (including R_ExpandFileNameUTF8) for now only supports R home
+	       directories representable in native encoding.
+	    */
+	    if (IS_UTF8(tmp) || (IS_LATIN1(tmp) && !latin1locale))
+		tmp = mkCharCE(R_ExpandFileNameUTF8(trCharUTF8(tmp)), CE_UTF8);
+	    else
 #endif
+	    {
+		const char *p = translateCharFP2(tmp);
+		if (p)
+		    tmp = markKnown(R_ExpandFileName(p), tmp);
+	    }
+	}
 	SET_STRING_ELT(ans, i, tmp);
     }
     UNPROTECT(1);
@@ -2121,8 +2129,8 @@ SEXP attribute_hidden do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     checkArity(op, args);
 
-    PROTECT(ans = allocVector(LGLSXP, 18));
-    PROTECT(ansnames = allocVector(STRSXP, 18));
+    PROTECT(ans      = allocVector(LGLSXP, 19));
+    PROTECT(ansnames = allocVector(STRSXP, 19));
 
     SET_STRING_ELT(ansnames, i, mkChar("jpeg"));
 #ifdef HAVE_JPEG
@@ -2210,7 +2218,7 @@ SEXP attribute_hidden do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (strcmp(R_GUIType, "GNOME") == 0) {  /* always interactive */
 	LOGICAL(ans)[i] = TRUE;  /* also AQUA ? */
     } else {
-#if defined(HAVE_LIBREADLINE) && defined(HAVE_READLINE_HISTORY_H)
+#if defined(HAVE_LIBREADLINE)
 	extern Rboolean UsingReadline;
 	if (R_Interactive && UsingReadline) LOGICAL(ans)[i] = TRUE;
 #endif
@@ -2224,6 +2232,13 @@ SEXP attribute_hidden do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SET_STRING_ELT(ansnames, i, mkChar("NLS"));
 #ifdef ENABLE_NLS
+    LOGICAL(ans)[i++] = TRUE;
+#else
+    LOGICAL(ans)[i++] = FALSE;
+#endif
+
+    SET_STRING_ELT(ansnames, i, mkChar("Rprof"));
+#ifdef R_PROFILING
     LOGICAL(ans)[i++] = TRUE;
 #else
     LOGICAL(ans)[i++] = FALSE;
@@ -2834,7 +2849,8 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if(strlen(q) > PATH_MAX - 2) // allow for '/' and terminator
 	    error(_("invalid '%s' argument"), "to");
 	char dir[PATH_MAX];
-	strncpy(dir, q, PATH_MAX);
+	// gcc 10 with sanitizers objects to PATH_MAX here.
+	strncpy(dir, q, PATH_MAX - 1);
 	dir[PATH_MAX - 1] = '\0';
 	if (*(dir + (strlen(dir) - 1)) !=  '/')
 	    strcat(dir, "/");
@@ -3303,7 +3319,17 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     SET_STRING_ELT(ans, i, mkChar(p));
     SET_STRING_ELT(nms, i++, mkChar("iconv"));
 #ifdef HAVE_LIBREADLINE
-    SET_STRING_ELT(ans, i, mkChar(rl_library_version));
+    /* libedit reports "EditLine wrapper": so we look at
+       rl_readline_version, which is currently 0x0402 */
+    const char *rl = rl_library_version;
+    if (streql(rl, "EditLine wrapper")) {
+	int num = rl_readline_version;
+	int maj = num / 256, min = num % 256;
+	char buf[40];
+	snprintf(buf, 40, "%d.%d (%s)", maj, min, rl);
+	SET_STRING_ELT(ans, i, mkChar(buf));
+    } else
+	SET_STRING_ELT(ans, i, mkChar(rl));
 #else
     SET_STRING_ELT(ans, i, mkChar(""));
 #endif
@@ -3316,7 +3342,7 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
     && defined(HAVE_DECL_RTLD_NEXT) && HAVE_DECL_RTLD_NEXT
 
     /* Look for blas function dgemm and try to figure out in which
-       binary/shared library is it defined. This is based on experimentation
+       binary/shared library it is defined.  That is based on experimentation
        and heuristics, and depends on implementation details
        of dynamic linkers.
     */

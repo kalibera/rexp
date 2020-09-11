@@ -13,8 +13,8 @@ R_HOME = $(top_builddir)
 R_SHARE_DIR = $(R_HOME)/share
 R_INCLUDE_DIR = $(R_HOME)/include
 
-SOURCES_C = gpar.c grid.c just.c layout.c matrix.c register.c state.c \
-  unit.c util.c viewport.c
+SOURCES_C = clippath.c gpar.c grid.c just.c layout.c mask.c matrix.c \
+  register.c state.c unit.c util.c viewport.c
 
 SOURCES_F =
 DEPENDS = $(SOURCES_C:.c=.d)
@@ -42,6 +42,7 @@ shlib: $(SHLIB)
 
 include $(R_HOME)/etc${R_ARCH}/Makeconf
 include $(top_srcdir)/share/make/shlib.mk
+## override to use LTO for linking with --enable-lto=R
 LTO = @LTO@
 
 mostlyclean: clean

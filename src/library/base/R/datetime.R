@@ -1,7 +1,7 @@
 #  File src/library/base/R/datetime.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2019 The R Core Team
+#  Copyright (C) 1995-2020 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -48,6 +48,22 @@ Sys.timezone <- function(location = TRUE)
     tz <- Sys.getenv("TZ")
     if(nzchar(tz)) return(tz)
     if(.Platform$OS.type == "windows") return(.Internal(tzone_name()))
+
+    if(!nzchar(Sys.getenv("TZDIR")) && grepl("darwin", R.Version()$os) &&
+       dir.exists(zp <-file.path(R.home("share"), "zoneinfo")))  {
+        ## On macOS, have choice of system or internal zoneinfo
+        ## so chose system if newer.
+        veri <- try(readLines(file.path(zp, "VERSION")), silent = TRUE)
+        vers <- try(readLines("/var/db/timezone/zoneinfo/+VERSION"),
+                    silent = TRUE)
+        if(!inherits(veri, "try-error") && !inherits(vers, "try-error") &&
+           vers != veri) {
+            yri <- substr(veri, 1L, 4L); sufi <- substr(veri, 5, 5)
+            yrs <- substr(vers, 1L, 4L); sufs <- substr(vers, 5, 5)
+            if (yrs > yri || (yrs == yri && sufs > sufi))
+                Sys.setenv(TZDIR = "macOS")
+        }
+    }
 
     ## At least tzcode and glibc respect TZDIR.
     ## glibc uses $(datadir)/zoneinfo
@@ -255,7 +271,7 @@ as.POSIXlt.numeric <- function(x, tz = "", origin, ...)
 {
     if(missing(origin)) {
         if(!length(x))
-            return(as.POSIXlt.character(character(), tz))        
+            return(as.POSIXlt.character(character(), tz))
         if(!any(is.finite(x)))
             return(as.POSIXlt.character(rep_len(NA_character_,
                                                 length(x)),
@@ -576,14 +592,20 @@ anyNA.POSIXlt <- function(x, recursive = FALSE)
     anyNA(as.POSIXct(x))
 
 ## <FIXME> check the argument validity
-## This is documented to remove the timezone
-c.POSIXct <- function(..., recursive = FALSE)
-    .POSIXct(c(unlist(lapply(list(...),
-                             function(e) unclass(as.POSIXct(e))))))
+## This is documented to remove the timezone (unless all are marked with
+## the same).
+c.POSIXct <- function(..., recursive = FALSE) {
+    x <- lapply(list(...), function(e) unclass(as.POSIXct(e)))
+    tzones <- lapply(x, attr, "tzone")
+    tz <- if(length(unique(tzones)) == 1L) tzones[[1L]] else NULL
+    .POSIXct(c(unlist(x)), tz)
+}
 
 ## we need conversion to POSIXct as POSIXlt objects can be in different tz.
-c.POSIXlt <- function(..., recursive = FALSE)
-    as.POSIXlt(do.call("c", lapply(list(...), as.POSIXct)))
+c.POSIXlt <- function(..., recursive = FALSE) {
+    as.POSIXlt(do.call("c",
+                       lapply(list(...), as.POSIXct)))
+}
 
 
 ISOdatetime <- function(year, month, day, hour, min, sec, tz = "")
@@ -832,7 +854,6 @@ function(..., recursive = FALSE)
                days = 60*60*24*x, weeks = 60*60*24*7*x)
     }
     args <- list(...)
-    args <- args[!vapply(args, is.null, NA)]
     if(!length(args)) return(.difftime(double(), "secs"))
     ind <- sapply(args, inherits, "difftime")
     pos <- which(!ind)
@@ -1309,7 +1330,7 @@ is.numeric.difftime <- function(x) FALSE
 ## Class generators added in 2.11.0, class order changed in 2.12.0.
 
 ## FIXME:
-## At least temporarily avoide structure() for performance reasons.
+## At least temporarily avoid structure() for performance reasons.
 ## .POSIXct <- function(xx, tz = NULL)
 ##     structure(xx, class = c("POSIXct", "POSIXt"), tzone = tz)
 .POSIXct <- function(xx, tz = NULL, cl = c("POSIXct", "POSIXt")) {

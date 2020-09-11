@@ -33,8 +33,8 @@ reshape <-
     ix2names <- function(ix)
         if (is.character(ix)) ix else names(data)[ix]
 
-    guess <- function(nms,re = split$regexp,drop = !split$include,
-                      fixed=if(is.null(split$fixed)) FALSE else split$fixed)
+    guess <- function(nms, re = split$regexp, drop = !split$include,
+                      fixed = split$fixed %||% FALSE)
     {
         if (drop)
             nn <- do.call("rbind",strsplit(nms, re, fixed = fixed))
@@ -76,11 +76,15 @@ reshape <-
             undoInfo <- list(varying = varying, v.names = v.names,
                              idvar = idvar, timevar = timevar)
 
-            ## multiple id variables
-            if (length(idvar) > 1L) {
-                ids <- interaction(data[, idvar], drop=TRUE)
-            } else if (idvar %in% names(data)) {
-                ids <- data[, idvar]
+            ## use id variable(s) in wide data to create new row names
+            if (is.null(new.row.names)) {
+                if (length(idvar) > 1L) {
+                    ids <- interaction(data[, idvar], drop=TRUE)
+                } else if (idvar %in% names(data)) {
+                    ids <- data[, idvar]
+                }
+                if (anyDuplicated(ids))
+                    stop("'idvar' must uniquely identify records")
             }
 
             d <- data
@@ -95,7 +99,9 @@ reshape <-
                 varying.i <- vapply(varying, `[`, i, FUN.VALUE=character(1L))
                 d[, v.names] <- data[, varying.i]
                 if (is.null(new.row.names))
-                    row.names(d) <- paste(ids, times[i], sep = ".")
+                    ##  avoid re-checking uniqueness for performance reasons
+                    ##    row.names(d) <- paste(ids, times[i], sep = ".")
+                    attr(d, "row.names") <- paste(ids, times[i], sep = ".")
                 else
                     row.names(d) <- new.row.names[(i-1L)*NROW(d) + 1L:NROW(d)]
                 d

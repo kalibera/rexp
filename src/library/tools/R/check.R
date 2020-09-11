@@ -367,7 +367,7 @@ add_dummies <- function(dir, Log)
     ## checkReplaceFuns
     ## checkFF
     ## .check_code_usage_in_package (with full set)
-    ## .check_T_and_F (with full set)
+    ## .check_bogus_return (with full set)
     ## .check_dotInternal (with full set)
     ## undoc, codoc, codocData, codocClasses
     ## checkDocFiles, checkDocStyle
@@ -463,13 +463,22 @@ add_dummies <- function(dir, Log)
                 ## First check time on system running 'check',
                 ## by reading an external source in UTC
                 now <- tryCatch({
-                    foo <- suppressWarnings(readLines("http://worldtimeapi.org/api/timezone/UTC",
+                    foo <- suppressWarnings(readLines("https://worldtimeapi.org/api/timezone/etc/UTC",
                                                       warn = FALSE))
                     ## gives time in sub-secs
                     as.POSIXct(gsub(".*\"datetime\":\"([^Z]*).*", "\\1", foo),
                                "UTC", "%Y-%m-%dT%H:%M:%S")
                 }, error = function(e) NA)
                 if (is.na(now)) {
+                    now <- tryCatch({
+                        foo <- suppressWarnings(readLines("http://worldtimeapi.org/api/timezone/etc/UTC",
+                                                          warn = FALSE))
+                        ## gives time in sub-secs
+                        as.POSIXct(gsub(".*\"datetime\":\"([^Z]*).*", "\\1", foo),
+                                   "UTC", "%Y-%m-%dT%H:%M:%S")
+                    }, error = function(e) NA)
+                }
+                if (FALSE && is.na(now)) { ## seems permanently stopped
                     now <- tryCatch({
                         foo <- suppressWarnings(readLines("http://worldclockapi.com/api/json/utc/now",
                                                           warn = FALSE))
@@ -552,7 +561,7 @@ add_dummies <- function(dir, Log)
             check_R_files(is_rec_pkg) # codetools etc
         }
 
-        check_Rd_files(haveR)
+        check_Rd_files(haveR, chkInternal = R_check_Rd_internal_too)
 
         check_data() # 'data' dir and sysdata.rda
 
@@ -1967,7 +1976,7 @@ add_dummies <- function(dir, Log)
         out1 <- if (length(out1) && length(out1a)) c(out1, "", out1a)
                 else c(out1, out1a)
 
-        out2 <- out3 <- out4 <- out5 <- out6 <- out7 <- out8 <- NULL
+        out2 <- out3 <- out4 <- out5 <- out6 <- out7 <- out8 <- out9 <- NULL
 
         if (!is_base_pkg && R_check_unsafe_calls) {
             Rcmd <- paste(opWarn_string, "\n",
@@ -2048,12 +2057,23 @@ add_dummies <- function(dir, Log)
                               sprintf("tools:::.check_depdef(dir = \"%s\", WINDOWS = %s)\n", pkgdir, win))
             out8 <- R_runR2(Rcmd, "R_DEFAULT_PACKAGES=")
         }
+
+        ## Potentially erroneous use of 'return' without '()'
+        if (!is_base_pkg && R_check_use_codetools && R_check_bogus_return) {
+            Rcmd <- paste(opWarn_string, "\n",
+                          if (do_install)
+                              sprintf("tools:::.check_bogus_return(package = \"%s\")\n", pkgname)
+                          else
+                              sprintf("tools:::.check_bogus_return(dir = \"%s\")\n", pkgdir))
+            out9 <- R_runR2(Rcmd, "R_DEFAULT_PACKAGES=")
+        }
+
         t2 <- proc.time()
         print_time(t1, t2, Log)
 
         if (length(out1) || length(out2) || length(out3) ||
             length(out4) || length(out5) || length(out6) ||
-            length(out7) || length(out8)) {
+            length(out7) || length(out8) || length(out9)) {
             ini <- character()
             if(length(out4) ||
                (length(out8) &&
@@ -2113,10 +2133,14 @@ add_dummies <- function(dir, Log)
                 wrapLog(gettextf("See section %s in '%s'.",
                                  sQuote("Good practice"), "?data"))
             }
+            if (length(out9)) {
+                printLog0(Log, paste(c(ini, out9, ""), collapse = "\n"))
+                ini <- ""
+            }
         } else resultLog(Log, "OK")
     }
 
-    check_Rd_files <- function(haveR)
+    check_Rd_files <- function(haveR, chkInternal = FALSE)
     {
         msg_writing_Rd <-
             c("See chapter 'Writing R documentation files' in the 'Writing R Extensions' manual.\n")
@@ -2193,7 +2217,7 @@ add_dummies <- function(dir, Log)
                           sprintf("tools:::.check_Rd_xrefs(dir = \"%s\")\n", pkgdir))
             out <- R_runR0(Rcmd, R_opts2, "R_DEFAULT_PACKAGES=NULL")
             if (length(out)) {
-                if (!all(grepl("(Package[s]? unavailable to check|Unknown package.*in Rd xrefs)", out)))
+                if (!all(grepl("(Package[s]? unavailable to check|Unknown package.*in Rd xrefs|Undeclared package.*in Rd xrefs)", out)))
                     warningLog(Log)
                 else noteLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
@@ -2306,10 +2330,10 @@ add_dummies <- function(dir, Log)
                   "valid R code.\n")
             any <- FALSE
             Rcmd <- paste(opWarn_string, "\n",
-                          if (do_install)
-                          sprintf("tools::checkDocFiles(package = \"%s\")\n", pkgname)
-                          else
-                          sprintf("tools::checkDocFiles(dir = \"%s\")\n", pkgdir))
+                          sprintf("tools::checkDocFiles(%s, chkInternal=%s)\n",
+                                  if(do_install)
+                                       sprintf("package = \"%s\"", pkgname)
+                                  else sprintf("dir = \"%s\"",     pkgdir), chkInternal))
             out <- R_runR2(Rcmd)
             if (length(out)) {
                 any <- TRUE
@@ -2346,10 +2370,11 @@ add_dummies <- function(dir, Log)
         if (dir.exists("man") && R_check_Rd_contents && !extra_arch) {
             checkingLog(Log, "Rd contents")
             Rcmd <- paste(opWarn_string, "\n",
-                          if (do_install)
-                          sprintf("tools:::.check_Rd_contents(package = \"%s\")\n", pkgname)
-                          else
-                          sprintf("tools:::.check_Rd_contents(dir = \"%s\")\n", pkgdir))
+                          sprintf("tools::checkRdContents(%s, chkInternal=%s)\n",
+                                  if(do_install)
+                                       sprintf("package = \"%s\"", pkgname)
+                                  else sprintf("dir = \"%s\"",     pkgdir),
+                                  R_check_Rd_internal_too))
             out <- R_runR0(Rcmd, R_opts2, "R_DEFAULT_PACKAGES=NULL")
             if (length(out)) {
                 warningLog(Log)
@@ -4983,11 +5008,12 @@ add_dummies <- function(dir, Log)
                              ": warning: .* \\[-Waligned-new",
                              ## new in gcc 8
                              ": warning: .* \\[-Wcatch-value=\\]",
-                             ": warning: .* \\[-Wlto-type-mismatch\\]",
                              ## removed 2020-05, nowadays clang only
                              ## ": warning: .* \\[-Wunused-value\\]",
                              ## warning in g++, fatal in clang++.
                              ": warning: .* \\[-Wnarrowing\\]",
+                             ## includes -Waddress-of-packed-member
+                             ": warning: .* \\[-Waddress",
                              ## -pedantic warning in gcc, fatal in clang and ODS
                              ": warning: initializer element is not a constant expression",
                              ": warning: range expressions in switch statements are non-standard",
@@ -5003,6 +5029,8 @@ add_dummies <- function(dir, Log)
                              ": warning: designated initializers are a C99 feature",
                              ## Fatal, not warning, for clang and Solaris ODS
                              ": warning: .* with a value, in function returning void",
+                             ": warning: .*\\[-Wlto",
+                             ": warning: .*\\[-Wodr\\]",
                              ## gcc 10 some -fanalyzer warnings
                              ": warning: .*\\[-Wanalyzer-null-dereference\\]",
                              ": warning: .*\\[-Wanalyzer-double-free\\]",
@@ -5045,6 +5073,8 @@ add_dummies <- function(dir, Log)
                              ": warning: .* \\[-Wunused-command-line-argument\\]",
                              ": warning: .* \\[-Wxor-used-as-pow\\]", # clang 10
                              ": warning: .* \\[-Winconsistent-missing-override\\]",
+                             ": warning: .* \\[-Wsizeof-array-div\\]",
+                             ": warning: .* \\[-Wvarargs\\]",
                              ## also on gcc, but fewer warnings
                              ": warning: .* \\[-Wlogical-not-parentheses\\]",
                              ## For non-portable flags (seen in sub-Makefiles)
@@ -5987,6 +6017,8 @@ add_dummies <- function(dir, Log)
         config_val_to_logical(Sys.getenv("_R_CHECK_RD_STYLE_", "TRUE"))
     R_check_Rd_xrefs <-
         config_val_to_logical(Sys.getenv("_R_CHECK_RD_XREFS_", "TRUE"))
+    R_check_Rd_internal_too <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_RD_INTERNAL_TOO_", "FALSE"))
     R_check_use_codetools <-
         config_val_to_logical(Sys.getenv("_R_CHECK_USE_CODETOOLS_", "TRUE"))
     ## However, we cannot use this if we did not install the recommended
@@ -6006,6 +6038,8 @@ add_dummies <- function(dir, Log)
         config_val_to_logical(Sys.getenv("_R_CHECK_DOT_INTERNAL_", "TRUE"))
     R_check_depr_def <-
         config_val_to_logical(Sys.getenv("_R_CHECK_DEPRECATED_DEFUNCT_", "FALSE"))
+    R_check_bogus_return <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_BOGUS_RETURN_", "FALSE"))
     R_check_ascii_code <-
         config_val_to_logical(Sys.getenv("_R_CHECK_ASCII_CODE_", "TRUE"))
     R_check_ascii_data <-
@@ -6118,6 +6152,8 @@ add_dummies <- function(dir, Log)
         Sys.setenv("_R_CHECK_EXCESSIVE_IMPORTS_" = "20")
         Sys.setenv("_R_CHECK_DEPENDS_ONLY_DATA_" = "TRUE")
         Sys.setenv("_R_OPTIONS_STRINGS_AS_FACTORS_" = "FALSE")
+##        Sys.setenv("_R_CHECK_XREFS_PKGS_ARE_DECLARED_" = "TRUE")
+##        Sys.setenv("_R_CHECK_XREFS_MIND_SUSPECT_ANCHORS_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
@@ -6135,6 +6171,7 @@ add_dummies <- function(dir, Log)
         R_check_things_in_check_dir <- TRUE
         R_check_things_in_temp_dir <- TRUE
         R_check_vignette_titles <- TRUE
+        R_check_bogus_return <- TRUE
     } else {
         ## do it this way so that INSTALL produces symbols.rds
         ## when called from check but not in general.
@@ -6148,7 +6185,7 @@ add_dummies <- function(dir, Log)
         R_check_Rd_contents <- R_check_all_non_ISO_C <-
             R_check_Rd_xrefs <- R_check_use_codetools <- R_check_Rd_style <-
                 R_check_executables <- R_check_permissions <-
-                    R_check_dot_internal <- R_check_ascii_code <-
+                    R_check_dot_internal <- R_check_bogus_return <- R_check_ascii_code <-
                         R_check_ascii_data <- R_check_compact_data <-
                             R_check_pkg_sizes <- R_check_doc_sizes <-
                                 R_check_doc_sizes2 <-

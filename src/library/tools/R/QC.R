@@ -33,7 +33,7 @@
 ## .check_package_code_attach
 ## .check_package_code_data_into_globalenv
 ## .check_code_usage_in_package
-## .check_T_and_F
+## .check_bogus_return
 ## .check_dotInternal
 ## .check_package_parseRd
 ## .check_Rd_xrefs
@@ -44,8 +44,8 @@
 ## checkDocFiles
 ## checkDocStyle
 ## checkFF
-## checkReplaceFuns
 ## checkS3methods
+## checkReplaceFuns
 ## .check_package_datasets
 ## .check_package_compact_datasets
 ## .check_package_compact_sysdata
@@ -54,7 +54,7 @@
 ## .runPackageTestsR (testing.R)
 ## .get_LaTeX_errors_from_log_file
 ## .check_package_CRAN_incoming
-## .check_Rd_contents
+## checkRdContents
 
 ## R CMD build uses .check_package_subdirs
 
@@ -71,7 +71,7 @@ langElts <- c("(", "{", ":", "~",
 ## typically function names of default methods for .Primitive s:
 conceptual_base_code <- c("c.default")
 
-##' a "default" print method used "below" (in several *.R):
+##' a "default" print method (see NAMESPACE):
 .print.via.format <- function(x, ...) {
     writeLines(format(x, ...))
     invisible(x)
@@ -543,29 +543,26 @@ function(package, dir, lib.loc = NULL,
         ## Compare the formals of the function in the code named 'fName'
         ## and formals 'ffd' obtained from the documentation.
         ffc <- function_args_in_code[[fName]]
-        if(isFALSE(use.values)) {
-            ffc <- names(ffc)
-            ffd <- names(ffd)
-            ok <- identical(ffc, ffd)
-        } else {
-            if(!identical(names(ffc), names(ffd)))
-                ok <- FALSE
-            else {
-                vffc <- as.character(ffc) # values
-                vffd <- as.character(ffd) # values
-                if(!isTRUE(use.values)) {
-                    ind <- nzchar(as.character(ffd))
-                    vffc <- vffc[ind]
-                    vffd <- vffd[ind]
-                }
-                ok <- identical(vffc, vffd)
-            }
-        }
-        if(ok)
-            NULL
-        else
+        ident <- if(isFALSE(use.values)) {
+                     ffc <- names(ffc)
+                     ffd <- names(ffd)
+                     identical(ffc, ffd)
+                 } else {
+                     identical(names(ffc), names(ffd)) &&
+                         {
+                             vffc <- as.character(ffc) # values
+                             vffd <- as.character(ffd) # values
+                             if(!isTRUE(use.values)) {
+                                 ind <- nzchar(vffd)
+                                 vffc <- vffc[ind]
+                                 vffd <- vffd[ind]
+                             }
+                             identical(vffc, vffd)
+                         }
+                 }
+        if(!ident)
             list(list(name = fName, code = ffc, docs = ffd))
-    }
+    } #{check_codoc}
 
     db <- if(!missing(package))
         Rd_db(package, lib.loc = dirdir)
@@ -593,20 +590,13 @@ function(package, dir, lib.loc = NULL,
     functions_in_usages_not_in_code <- list()
     data_sets_in_usages_not_in_code <- list()
     variables_in_usages_not_in_code <- list()
-    objects_in_other_platforms <- names(compatibilityEnv())
-    objects_as_in <- c(objects_in_code_or_namespace,
-                       objects_in_other_platforms)
-
-    if(missing(package) && str_parse_logic(meta["LazyData"], FALSE))
-        objects_as_in <-
-            c(objects_as_in,
-              unlist(data_sets_in_code_variables, use.names = FALSE))
-    if(is_base) {
-        objects_as_in <-
-            c(objects_as_in,
-              c("NA", "NULL", "Inf", "NaN", "TRUE", "FALSE",
-                ".Autoloaded"))
-    }
+    objects_as_in <- c(objects_in_code_or_namespace
+                     , names(compatibilityEnv()) # objects in other platforms
+                     , if(missing(package) && str_parse_logic(meta["LazyData"], FALSE))
+                           unlist(data_sets_in_code_variables, use.names = FALSE)
+                     , if(is_base)
+                           c("NA", "NULL", "Inf", "NaN", "TRUE", "FALSE", ".Autoloaded")
+                       )
 
     for(docObj in db_names) {
         exprs <- db_usages[[docObj]]
@@ -614,7 +604,7 @@ function(package, dir, lib.loc = NULL,
 
         ## Get variable names and data set usages first, mostly for
         ## curiosity.
-        ind <- vapply(exprs, is.name, NA)
+        ind <- vapply(exprs, is.name, NA, USE.NAMES=FALSE)
         if(any(ind)) {
             variables <- sapply(exprs[ind], deparse)
             variables_in_usages <- c(variables_in_usages, variables)
@@ -624,7 +614,7 @@ function(package, dir, lib.loc = NULL,
             exprs <- exprs[!ind]
         }
 
-        exprs <- exprs[vapply(exprs, is.call, NA)]
+        exprs <- exprs[vapply(exprs, is.call, NA, USE.NAMES=FALSE)]
 
         ind <- vapply(exprs, is_data_for_dataset, NA, USE.NAMES=FALSE)
         if(any(ind)) {
@@ -745,9 +735,9 @@ function(package, dir, lib.loc = NULL,
             ## Drop the defunct functions.
             is_defunct <- function(f) {
                 f <- get(f, envir = code_env) # get is expensive
-                if(!is.function(f)) return(FALSE)
-                (is.call(b <- body(f))
-                 && identical(as.character(b[[1L]]), ".Defunct"))
+                is.function(f) &&
+                    is.call(b <- body(f)) &&
+                    identical(as.character(b[[1L]]), ".Defunct")
             }
             functions[!vapply(functions, is_defunct, NA, USE.NAMES=FALSE)]
         }
@@ -1074,7 +1064,7 @@ function(package, lib.loc = NULL)
         superSlots <- .inheritedSlotNames(cld@contains)
         if(length(superSlots)) ## allow '\dots' in docSlots
             docSlots <-
-                docSlots[is.na(match(docSlots, c("...", "\\dots")))]
+                docSlots[docSlots %notin% c("...", "\\dots")]
         ## was if(!identical(slots_in_code, slots_in_docs)) {
         if(!all(docSlots %in% codeSlots) ||
            !all(setdiff(codeSlots, superSlots) %in% docSlots) ) {
@@ -1329,7 +1319,7 @@ function(x, ...)
 ### * checkDocFiles
 
 checkDocFiles <-
-function(package, dir, lib.loc = NULL)
+function(package, dir, lib.loc = NULL, chkInternal = FALSE)
 {
     ## Argument handling.
     if(!missing(package)) {
@@ -1350,9 +1340,9 @@ function(package, dir, lib.loc = NULL)
     }
 
     db <- if(!missing(package))
-        Rd_db(package, lib.loc = dirname(dir))
-    else
-        Rd_db(dir = dir)
+              Rd_db(package, lib.loc = dirname(dir))
+          else
+              Rd_db(dir = dir)
 
     db_aliases  <- lapply(db, .Rd_get_metadata, "alias")
     db_keywords <- lapply(db, .Rd_get_metadata, "keyword")
@@ -1375,13 +1365,11 @@ function(package, dir, lib.loc = NULL)
                   NA)
     bad_lines <- lapply(db_usages[ind], attr, "bad_lines")
 
-    ## Exclude internal objects from further computations.
-    ind <- (vapply(db_keywords,
-                   function(x) match("internal", x, 0L),
-                   0L) > 0L)
-    if(any(ind)) {                      # exclude them
-        db <- db[!ind]
-        db_names <- db_names[!ind]
+    if(!chkInternal &&
+       any(ind <- vapply(db_keywords, function(x) "internal" %in% x, NA))) {
+        ## exclude them
+        db         <- db        [!ind]
+        db_names   <- db_names  [!ind]
         db_aliases <- db_aliases[!ind]
     }
 
@@ -1403,10 +1391,11 @@ function(package, dir, lib.loc = NULL)
         ind <- vapply(exprs,
                       function(e)
                           length(e) > 1L && !is_data_for_dataset(e),
-                      NA)
+                      NA, USE.NAMES=FALSE)
         exprs <- exprs[ind]
         ## Split out replacement function usages.
-        ind <- vapply(exprs, .is_call_from_replacement_function_usage, NA)
+        ind <- vapply(exprs, .is_call_from_replacement_function_usage,
+                      NA, USE.NAMES=FALSE)
         replace_exprs <- exprs[ind]
         exprs <- exprs[!ind]
         ## Ordinary functions.
@@ -1417,7 +1406,7 @@ function(package, dir, lib.loc = NULL)
         ind <- functions %in% c("<-", "=")
         assignments <- exprs[ind]
         if(any(ind)) {
-            exprs <- exprs[!ind]
+            exprs     <- exprs    [!ind]
             functions <- functions[!ind]
         }
         ## (Note that as.character(sapply(exprs, "[[", 1L)) does not do
@@ -1488,22 +1477,22 @@ function(package, dir, lib.loc = NULL)
         ## Also test whether the objects we found from the \usage all
         ## have aliases, provided that there is no alias which ends in
         ## '-deprecated' (see e.g. base-deprecated.Rd).
-        if(!any(endsWith(aliases, "-deprecated"))) {
-            ## Argh.  There are good reasons for keeping \S4method{}{}
-            ## as is, but of course this is not what the aliases use ...
-            ## <FIXME>
-            ## Should maybe use utils:::topicName(), but in any case, we
-            ## should have functions for converting between the two
-            ## forms, see also the code for undoc().
-            aliases <- sub("([^,]+),(.+)-method$",
-                           "\\\\S4method{\\1}{\\2}",
-                           aliases)
-            ## </FIXME>
-            aliases <- gsub("\\%", "%", aliases, fixed=TRUE)
-            functions_not_in_aliases <- setdiff(functions, aliases)
-        }
-        else
-            functions_not_in_aliases <- character()
+        functions_not_in_aliases <-
+            if(!any(endsWith(aliases, "-deprecated"))) {
+                ## Argh.  There are good reasons for keeping \S4method{}{}
+                ## as is, but of course this is not what the aliases use ...
+                ## <FIXME>
+                ## Should maybe use utils:::topicName(), but in any case, we
+                ## should have functions for converting between the two
+                ## forms, see also the code for undoc().
+                aliases <- sub("([^,]+),(.+)-method$",
+                               "\\\\S4method{\\1}{\\2}",
+                               aliases)
+                ## </FIXME>
+                aliases <- gsub("\\%", "%", aliases, fixed=TRUE)
+                setdiff(functions, aliases)
+            }
+            else character()
 
         if((length(arg_names_in_usage_missing_in_arg_list))
            || anyDuplicated(arg_names_in_arg_list)
@@ -1517,8 +1506,7 @@ function(package, dir, lib.loc = NULL)
                      overdoc = arg_names_in_arg_list_missing_in_usage,
                      unaliased = functions_not_in_aliases,
                      assignments = assignments)
-
-    }
+    } # for(..)
 
     structure(bad_doc_objects, class = "checkDocFiles",
 	      "bad_lines" = bad_lines)
@@ -1654,10 +1642,7 @@ function(package, dir, lib.loc = NULL)
 
         code_env <- new.env(hash = TRUE)
         dfile <- file.path(dir, "DESCRIPTION")
-        meta <- if(file_test("-f", dfile))
-            .read_description(dfile)
-        else
-            character()
+        meta <- if(file_test("-f", dfile)) .read_description(dfile) else character()
         .source_assignments_in_code_dir(code_dir, code_env, meta)
         sys_data_file <- file.path(code_dir, "sysdata.rda")
         if(file_test("-f", sys_data_file)) load(sys_data_file, code_env)
@@ -1677,7 +1662,7 @@ function(package, dir, lib.loc = NULL)
             ## generics.
             ns_S3_methods_db <- .get_namespace_S3_methods_db(nsInfo)
             ns_S3_generics <- ns_S3_methods_db[, 1L]
-            ns_S3_methods <- ns_S3_methods_db[, 3L]
+            ns_S3_methods  <- ns_S3_methods_db[, 3L]
         }
 
     }
@@ -2163,12 +2148,9 @@ function(package, dir, file, lib.loc = NULL,
                     nm <- getNamespaceName(env)
                     if (nm == package) body(f) else NULL
                 } else body(f)
-            } else NULL
+            } # else NULL
         exprs <- lapply(ls(envir = code_env, all.names = TRUE),
-                        function(f) {
-                            f <- get(f, envir = code_env) # get is expensive
-                            checkFFmy(f)
-                        })
+                        function(f) checkFFmy(get(f, envir = code_env))) # get is expensive
         if(.isMethodsDispatchOn()) {
             ## Also check the code in S4 methods.
             ## This may find things twice if a setMethod() with a bad FF
@@ -2494,7 +2476,7 @@ function(package, dir, lib.loc = NULL)
             names(l) <- c(g, m)
             list(l)
         }
-    }
+    } ## end{ checkArgs() }
 
     all_S3_generics <-
         unique(c(Filter(function(f) .is_S3_generic(f, envir = code_env),
@@ -2637,9 +2619,7 @@ function(package, dir, lib.loc = NULL)
         }
         else
             code_env <- .package_env(package)
-    }
-
-    else {
+    } else { # missing(package)
         if(missing(dir))
             stop("you must specify 'package' or 'dir'")
         ## Using sources from directory @code{dir} ...
@@ -2717,8 +2697,7 @@ function(package, dir, lib.loc = NULL)
                    ## Always get the functions from code_env ...
                    ## Should maybe get S3 methods from the registry ...
                    f <- get(f, envir = code_env)  # get is expensive
-                   if(!is.function(f)) return(FALSE)
-                   ! .check_last_formal_arg(f)
+                   is.function(f) && ! .check_last_formal_arg(f)
                },
                replace_funs)
     } else character()
@@ -3255,10 +3234,13 @@ function(x, ...)
             strwrap("RdMacros packages must be contained in the DESCRIPTION Imports/Suggests/Depends entries."),
             "")
       },
-      if(length(bad <- x$missing_namespace_depends) > 1L) {
-          c(.pretty_format2("Namespace dependencies not required:", bad), "")
-      } else if(length(bad)) {
-          c(sprintf("Namespace dependency not required: %s", sQuote(bad)), "")
+      if(length(bad <- x$missing_namespace_depends)) {
+          error_str <- "missing from DESCRIPTION Imports/Depends entries:"
+          c(if(length(bad) > 1L)
+                .pretty_format2(paste("Namespace dependencies", error_str), bad)
+            else
+                sprintf("Namespace dependency %s %s", error_str, sQuote(bad)),
+          "")
       },
       if(length(y <- x$many_depends)) {
           c(.pretty_format2("Depends: includes the non-default packages:", y),
@@ -3679,10 +3661,7 @@ function(aar, strict = FALSE)
                 }
                 if(strict >= 2L) {
                     if(all(has_no_name |
-                           vapply(aar,
-                                  function(e)
-                                  is.na(match("aut", e$role)),
-                                  NA)))
+                           vapply(aar, function(e) "aut" %notin% e$role, NA)))
                         out$bad_authors_at_R_field_has_no_author_roles <- TRUE
                     has_bad_ORCID_identifiers <-
                         vapply(aar,
@@ -3728,9 +3707,7 @@ function(aar, strict = FALSE)
             ## * has no person with a cre role, "valid" email address
             ##   and a non-empty name.
             bad <- FALSE
-            p <- Filter(function(e) {
-                !is.na(match("cre", e$role))
-            },
+            p <- Filter(function(e) "cre" %in% e$role,
                         aar)
             if(length(p) > 1L) {
                 bad <- TRUE
@@ -4407,7 +4384,7 @@ function(package, dir, lib.loc = NULL)
 
     ## Flatten the xref db into one big matrix.
     db <- cbind(do.call("rbind", db),
-                rep.int(names(db), vapply(db, NROW, 0L)))
+                File = rep.int(names(db), vapply(db, NROW, 0L)))
     if(nrow(db) == 0L)
         return(structure(list(), class = "check_Rd_xrefs"))
 
@@ -4440,18 +4417,47 @@ function(package, dir, lib.loc = NULL)
         aliases_db <- NULL
     }
 
-    for (pkg in unique(thispkg[have_anchor])) {
+    anchors <- unique(thispkg[have_anchor])
+
+    ## added in 4.1.0: are anchors declared?
+    check_anchors <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_XREFS_PKGS_ARE_DECLARED_",
+                                         "FALSE"))
+    if(check_anchors) {
+        deps2 <- c(names(pkgInfo$Depends), names(pkgInfo$Imports),
+                   names(pkgInfo$Suggests))
+        ## people link to the package itself, although never needed.
+        undeclared <- setdiff(anchors, c(unique(deps2), package, base))
+        if(length(undeclared)) {
+            ## Now dig out Enhances
+            DESC <- pkgInfo$DESCRIPTION
+            if("Enhances" %in% names(DESC)) {
+                enh <- names(.split_dependencies(DESC[["Enhances"]]))
+                undeclared <- setdiff(undeclared, enh)
+            }
+        }
+        if(length(undeclared))
+            message(sprintf(ngettext(length(undeclared),
+                                     "Undeclared package %s in Rd xrefs",
+                                     "Undeclared packages %s in Rd xrefs"),
+                            paste(sQuote(undeclared), collapse = ", "),
+                            domain = NA))
+    }
+
+    mind_suspects <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_XREFS_MIND_SUSPECT_ANCHORS_",
+                                         "FALSE"))
+    if(mind_suspects) {
+        db <- cbind(db, suspect = FALSE)
+    }
+
+    for (pkg in anchors) {
         ## we can't do this on the current uninstalled package!
         if (missing(package) && pkg == basename(dir)) next
         this <- have_anchor & (thispkg %in% pkg)
         top <- system.file(package = pkg, lib.loc = lib.loc)
         if(nzchar(top)) {
             RdDB <- file.path(top, "help", "paths.rds")
-            if(!file.exists(RdDB)) {
-                message(gettextf("package %s exists but was not installed under R >= 2.10.0 so xrefs cannot be checked", sQuote(pkg)),
-                        domain = NA)
-                next
-            }
             nm <- sub("\\.[Rr]d", "", basename(readRDS(RdDB)))
             good <- thisfile[this] %in% nm
             suspect <- if(any(!good)) {
@@ -4460,6 +4466,9 @@ function(package, dir, lib.loc = NULL)
                 !good & (thisfile[this] %in% aliases1)
             } else FALSE
             db[this, "bad"] <- !good & !suspect
+            if(mind_suspects)
+                db[this, "suspect"] <- suspect
+
         } else if(use_aliases_from_CRAN) {
             if(is.null(aliases_db)) {
                 ## Not yet read in.
@@ -4480,22 +4489,14 @@ function(package, dir, lib.loc = NULL)
                 !good & (thisfile[this] %in% aliases1)
             } else FALSE
             db[this, "bad"] <- !good & !suspect
+            if(mind_suspects)
+                db[this, "suspect"] <- suspect
         }
         else
             unknown <- c(unknown, pkg)
     }
 
     unknown <- unique(unknown)
-    ## Ancient history ....
-    ## obsolete <- unknown %in% c("ctest", "eda", "lqs", "mle", "modreg", "mva", "nls", "stepfun", "ts")
-    ## if (any(obsolete)) {
-    ##     message(sprintf(ngettext(sum(obsolete),
-    ##                              "Obsolete package %s in Rd xrefs",
-    ##                              "Obsolete packages %s in Rd xrefs"),
-    ##                     paste(sQuote(unknown[obsolete]), collapse = ", ")),
-    ##             domain = NA)
-    ## }
-    ## unknown <- unknown[!obsolete]
     if (length(unknown)) {
         repos <- .get_standard_repository_URLs()
         ## Also allow for additionally specified repositories.
@@ -4524,25 +4525,37 @@ function(package, dir, lib.loc = NULL)
     }
     ## The bad ones:
     bad <- db[, "bad"] == "TRUE"
-    res1 <- split(db[bad, "report"], db[bad, 3L])
-    structure(list(bad = res1), class = "check_Rd_xrefs")
+    out <- list(bad = split(db[bad, "report"], db[bad, "File"]))
+    if(mind_suspects && any(ind <- db[, "suspect"] == "TRUE")) {
+        out <- c(out, list(suspect = split(db[ind, "report"],
+                                           db[ind, "File"])))
+    }
+    structure(out, class = "check_Rd_xrefs")
 }
 
 format.check_Rd_xrefs <-
 function(x, ...)
 {
-    xx <- x$bad
-    if(length(xx)) {
-        .fmt <- function(i) {
+    xb <- x$bad
+    xs <- x$suspect
+    if(length(xb) || length(xs)) {
+        .fmtb <- function(i) {
             c(gettextf("Missing link or links in documentation object '%s':",
-                       names(xx)[i]),
+                       names(xb)[i]),
               ## NB, link might be empty, and was in mvbutils
-              .pretty_format(unique(xx[[i]])),
+              .pretty_format(unique(xb[[i]])),
               "")
         }
-        c(unlist(lapply(seq_along(xx), .fmt)),
-          strwrap(gettextf("See section 'Cross-references' in the 'Writing R Extensions' manual.")),
-          "")
+        .fmts <- function(i) {
+            c(gettextf("Non-file package-anchored link(s) in documentation object '%s':",
+                       names(xs)[i]),
+              .pretty_format(unique(xs[[i]])),
+              "")
+        }
+        c(unlist(lapply(seq_along(xb), .fmtb)),
+          unlist(lapply(seq_along(xs), .fmts)),
+          strwrap(gettextf("See section 'Cross-references' in the 'Writing R Extensions' manual."))
+          )
     } else {
         character()
     }
@@ -5135,7 +5148,7 @@ function(dir)
         ## Check names of formals.
         ## Allow anything containing ... (for now); otherwise, insist on
         ## length two with names starting with lib and pkg, respectively.
-        if(is.na(match("...", nms)) &&
+        if(("..." %notin% nms) &&
            ((length(nms) != 2L) ||
             any(substr(nms, 1L, 3L) != c("lib", "pkg"))))
             out$bad_arg_names <- nms
@@ -5302,8 +5315,7 @@ function(dir)
         ## Check names of formals.
         ## Allow anything containing ... (for now); otherwise, insist on
         ## length one with names starting with lib.
-        if(is.na(match("...", nms)) &&
-           (length(nms) != 1L || !startsWith(nms, "lib")))
+        if("..." %notin% nms && (length(nms) != 1L || !startsWith(nms, "lib")))
             out$bad_arg_names <- nms
         ## Look at all calls (not only at top level).
         calls <- .find_calls(fcode[[3L]], recursive = TRUE)
@@ -5543,7 +5555,7 @@ function(dir)
         env <- e$envir
         tab <- c("package", "lib.loc", "verbose", "envir")
         if(!is.null(nms <- names(e)))
-            e <- e[is.na(match(nms, tab))]
+            e <- e[nms %notin% tab]
         ((length(e) > 1L) &&
          (is.null(env) ||
           (is.name(env) && as.character(env) == ".GlobalEnv") ||
@@ -5657,7 +5669,7 @@ function(package, dir, lib.loc = NULL)
                && (length(e) >= 2L)) {
                 ## We need to remove '...': OTOH the argument could be NULL
                 keep <- vapply(e, function(x) deparse(x)[1L] != "...", NA)
-                mc <- match.call(get(Call, baseenv()), e[keep])
+                mc <- match.call(baseenv()[[Call]], e[keep])
                 if(!is.null(pkg <- mc$package)) {
                     ## <NOTE>
                     ## Using code analysis, we really don't know which
@@ -6120,7 +6132,7 @@ function(db, files)
                     keep <- vapply(e,
                                    function(x) deparse(x)[1L] != "...",
                                    NA)
-                    mc <- match.call(get(Call, baseenv()), e[keep])
+                    mc <- match.call(baseenv()[[Call]], e[keep])
                     if(!is.null(pkg <- mc$package)) {
                         pkg <- sub('^"(.*)"$', '\\1', pkg)
                         ## <NOTE>
@@ -6471,6 +6483,75 @@ function(x, ...)
             paste0("  ", x$bad_examples))
       })
 }
+
+### * .check_bogus_return
+
+## Find bogus 'return' statements probably intended as a return() call.
+## This uses codetools::findGlobals() to find functions which rely on a
+## global variable "return".
+## The code is derived from .check_T_and_F above.
+
+.check_bogus_return <-
+function(package, dir, lib.loc = NULL)
+{
+    bad_closures <- character()
+
+    find_bad_closures <- function(env) {
+        x <- lapply(as.list(env, all.names = TRUE, sorted = TRUE),
+                    function(v) {
+                        if (typeof(v) == "closure")
+                            codetools::findGlobals(v, merge = FALSE)$variables
+                    })
+        names(x)[vapply(x, function(s) any(s %in% "return"), NA)]
+    }
+
+    if(!missing(package)) {
+        if(length(package) != 1L)
+            stop("argument 'package' must be of length 1")
+        dir <- find.package(package, lib.loc)
+        if(package %notin% .get_standard_package_names()$base) {
+            .load_package_quietly(package, lib.loc)
+            code_env <- asNamespace(package)
+            bad_closures <- find_bad_closures(code_env)
+        }
+    }
+    else {
+        ## The dir case.
+        if(missing(dir))
+            stop("you must specify 'package' or 'dir'")
+        dir <- file_path_as_absolute(dir)
+        code_dir <- file.path(dir, "R")
+        if(dir.exists(code_dir)) {
+            code_env <- new.env(hash = TRUE)
+            dfile <- file.path(dir, "DESCRIPTION")
+            meta <- if(file_test("-f", dfile))
+                .read_description(dfile)
+            else
+                character()
+            .source_assignments_in_code_dir(code_dir, code_env, meta)
+            bad_closures <- find_bad_closures(code_env)
+        }
+    }
+
+    out <- list(bad_closures = bad_closures)
+    class(out) <- "check_bogus_return"
+    out
+}
+
+format.check_bogus_return <-
+function(x, ...)
+{
+    c(character(),
+      if(length(x$bad_closures)) {
+          msg <- ngettext(length(x$bad_closures),
+                          "Possibly missing '()' after 'return' in the following function:",
+                          "Possibly missing '()' after 'return' in the following functions:"
+                          )
+          c(strwrap(msg),
+            .pretty_format(x$bad_closures))
+      })
+}
+
 
 ### * .check_dotIntenal
 
@@ -7034,7 +7115,7 @@ function(dir, localOnly = FALSE, pkgSize = NA)
     ## Check for possibly mis-spelled field names.
     nms <- names(meta)
     stdNms <- .get_standard_DESCRIPTION_fields()
-    nms <- nms[is.na(match(nms, stdNms)) &
+    nms <- nms[nms %notin% stdNms &
                !grepl(paste0("^(",
                              paste(c("X-CRAN",
                                      "X-schema.org",
@@ -7045,7 +7126,7 @@ function(dir, localOnly = FALSE, pkgSize = NA)
                              ")"),
                       nms)]
     if(length(nms) && ## Allow maintainer notes  <stdName>Note :
-       length(nms <- nms[is.na(match(nms, paste0(stdNms,"Note")))]))
+       length(nms <- nms[nms %notin% paste0(stdNms,"Note")]))
         out$fields <- nms
 
 
@@ -7116,9 +7197,7 @@ function(dir, localOnly = FALSE, pkgSize = NA)
         }
         bad <- lapply(Rdb,
                       function(Rd) {
-                          Rd <- Rd[!is.na(match(RdTags(Rd),
-                                                c("\\keyword",
-                                                  "\\concept")))]
+                          Rd <- Rd[RdTags(Rd) %in% c("\\keyword", "\\concept")]
                           Rd[vapply(Rd,
                                     function(e)
                                         any(unlist(RdTags(e)) != "TEXT"),
@@ -7129,9 +7208,7 @@ function(dir, localOnly = FALSE, pkgSize = NA)
             out$Rd_keywords_or_concepts_with_Rd_markup <- .fmt(bad)
         bad <- lapply(Rdb,
                       function(Rd) {
-                          Rd <- Rd[!is.na(match(RdTags(Rd),
-                                                c("\\keyword",
-                                                  "\\concept")))]
+                          Rd <- Rd[RdTags(Rd) %in% c("\\keyword", "\\concept")]
                           Rd[grepl("[,\n]",
                                    trimws(vapply(Rd, paste, "",
                                                  collapse = "\n"))) &
@@ -7595,15 +7672,14 @@ function(dir, localOnly = FALSE, pkgSize = NA)
     if(!localOnly && foss) {
         available <-
             utils::available.packages(utils::contrib.url(urls, "source"),
-                                      filters =
-                                      c("R_version", "duplicates"))
+                                      filters = c("R_version", "duplicates"))
         ## We need the current dependencies of the package (so batch
         ## upload checks will not necessarily do "the right thing").
         package <- meta["Package"]
         depends <- c("Depends", "Imports", "LinkingTo")
         ## Need to be careful when merging the dependencies of the
         ## package (in case it is not yet available).
-        if(!is.na(pos <- match(package, rownames(available)))) {
+        if(package %in% rownames(available)) {
             available[package, depends] <- meta[depends]
         } else {
             entry <- rbind(meta[colnames(available)])
@@ -7871,10 +7947,9 @@ function(dir, localOnly = FALSE, pkgSize = NA)
     ## Check submission recency and frequency.
     current_db <- CRAN_current_db()
     mtimes <- c(current_db[match(package,
-                                      sub("_.*", "",
-                                          rownames(current_db)),
-                                      nomatch = 0L),
-                                "mtime"],
+                                 sub("_.*", "", rownames(current_db)),
+                                 nomatch = 0L),
+                           "mtime"],
                 archive_db[[package]]$mtime)
     if(length(mtimes)) {
         deltas <- Sys.Date() - as.Date(sort(mtimes, decreasing = TRUE))
@@ -7935,7 +8010,7 @@ function(dir, localOnly = FALSE, pkgSize = NA)
                as.numeric(Sys.getenv("_R_CHECK_CRAN_INCOMING_ASPELL_RECHECK_START_",
                                      "2013")))) {
             a0 <- .aspell_package_description_for_CRAN(meta = meta0)
-            out$spelling <- a[is.na(match(a$Original, a0$Original)), ]
+            out$spelling <- a[a$Original %notin% a0$Original, ]
         }
 
         # possible title_includes_name and only report if the title actually changed
@@ -8480,13 +8555,13 @@ function(x, ...)
       })
 }
 
-## * .check_Rd_contents
+## * checkRdContents
 
-.check_Rd_contents <-
-function(package, dir, lib.loc = NULL)
+checkRdContents <- # was  .check_Rd_contents <-
+function(package, dir, lib.loc = NULL, chkInternal = FALSE)
 {
     out <- list()
-    class(out) <- "check_Rd_contents"
+    class(out) <- "checkRdContents" # was "check_Rd_contents"
 
     ## Argument handling.
     if(!missing(package)) {
@@ -8507,19 +8582,17 @@ function(package, dir, lib.loc = NULL)
     }
 
     db <- if(!missing(package))
-        Rd_db(package, lib.loc = dirname(dir))
-    else
-        Rd_db(dir = dir)
+              Rd_db(package, lib.loc = dirname(dir))
+          else
+              Rd_db(dir = dir)
+
+    if(!chkInternal && ## Exclude internal objects from further computations.
+       any(ind <- vapply(lapply(db, .Rd_get_metadata, "keyword"),
+                         function(x) "internal" %in% x, NA))) {
+        db <- db[!ind]
+    }
 
     names(db) <- .Rd_get_names_from_Rd_db(db)
-
-    ## Exclude internal objects from further computations.
-    ind <- (vapply(lapply(db, .Rd_get_metadata, "keyword"),
-                   function(x) match("internal", x, 0L),
-                   0L) > 0L)
-    if(any(ind))                        # exclude them
-        db <- db[!ind]
-
     for(nm in names(db)) {
         rd <- db[[nm]]
 
@@ -8546,7 +8619,7 @@ function(package, dir, lib.loc = NULL)
     out
 }
 
-format.check_Rd_contents <-
+format.checkRdContents <-
 function(x, ...)
 {
     .fmt <- function(nm) {
@@ -9280,7 +9353,7 @@ function(x)
     if(config_val_to_logical(Sys.getenv("_R_CHECK_RD_CONTENTS_KEYWORDS_",
                                         "FALSE"))) {
         k <- .Rd_get_metadata(x, "keyword")
-        k <- k[!is.na(match(k, .Rd_keywords_auto))]
+        k <- k[k %in% .Rd_keywords_auto]
         if(length(k)) {
             ## Not quite perfect as .Rd_get_metadata() already calls
             ## trimws() ...

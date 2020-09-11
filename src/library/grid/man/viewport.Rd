@@ -1,6 +1,6 @@
 % File src/library/grid/man/viewport.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2013 R Core Team
+% Copyright 1995-2020 R Core Team
 % Distributed under GPL 2 or later
 
 \name{Grid Viewports}
@@ -18,7 +18,7 @@
 viewport(x = unit(0.5, "npc"), y = unit(0.5, "npc"),
          width = unit(1, "npc"), height = unit(1, "npc"),
          default.units = "npc", just = "centre",
-         gp = gpar(), clip = "inherit",
+         gp = gpar(), clip = "inherit", mask = "inherit",
          xscale = c(0, 1), yscale = c(0, 1),
          angle = 0,
          layout = NULL,
@@ -45,15 +45,22 @@ vpTree(parent, children)
     and \code{"top"}.  For numeric values, 0 means left alignment
     and 1 means right alignment.
   }
-  \item{gp}{An object of class \code{gpar}, typically the output
-    from a call to the function \code{gpar}.  This is basically
+  \item{gp}{An object of class \code{"gpar"}, typically the output
+    from a call to the function \code{\link{gpar}}.  This is basically
     a list of graphical parameter settings.}
   \item{clip}{One of \code{"on"}, \code{"inherit"}, or
     \code{"off"}, indicating whether to
     clip to the extent of this viewport, inherit the clipping region
     from the parent viewport, or turn clipping off altogether.
     For back-compatibility, a logical value of \code{TRUE} corresponds
-    to \code{"on"} and \code{FALSE} corresponds to \code{"inherit"}.}
+    to \code{"on"} and \code{FALSE} corresponds to \code{"inherit"}.
+
+    May also be a grob (or a gTree) that describes a clipping path.}
+  \item{mask}{One of \code{"none"} (or \code{FALSE})
+    or \code{"inherit"} (or \code{TRUE}) 
+    or a grob (or a gTree).  This specifies that the viewport
+    should have no mask, or it should inherit the mask of its parent,
+    or it should have its own mask, as described by the grob.}
   \item{xscale}{A numeric vector of length two indicating the minimum and
     maximum on the x-scale.  The limits may not be identical. }
   \item{yscale}{A numeric vector of length two indicating the minimum

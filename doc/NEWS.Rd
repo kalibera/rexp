@@ -10,35 +10,28 @@
   \subsection{NEW FEATURES}{
     \itemize{
       \item \samp{www.omegahat.net} is no longer one of the repositories
-      known to \code{setRepositories()}.   (Nowadays it only provides
-      source packages and is often unavailable.)
+      known by default to \code{setRepositories()}.  (Nowadays it only
+      provides source packages and is often unavailable.)
 
       \item \code{package_dependencies()} (in package \pkg{tools}) can
       now use different dependency types for direct and recursive
       dependencies.
 
-      \item Size of tarball checking in \command{R CMD check --as-cran <pkg>}
-      may be tweaked via new \env{_R_CHECK_CRAN_INCOMING_TARBALL_THRESHOLD_},
-      as suggested in \PR{17777} by Jan Gorecki.
+      \item The checking of the size of tarball in
+      \command{R CMD check --as-cran <pkg>} may be tweaked via the new
+      environment variable
+      \env{_R_CHECK_CRAN_INCOMING_TARBALL_THRESHOLD_}, as suggested in
+      \PR{17777} by Jan Gorecki.
 
       \item Using \code{c()} to combine a factor with other factors
       now gives a factor, and specifically an ordered factor when
       combining ordered factors with identical levels.
 
-      \item Graphics devices can now specify \code{canClip =
-        NA_LOGICAL}, in which case the graphics engine will never
-      perform any clipping of output itself.
-
-      The clipping that the graphics engine does perform (for both
-      \code{canClip = TRUE} and \code{canClip = FALSE}) has also
-      been improved to avoid producing unnecessary artifacts in clipped
-      output.
-
       \item \code{apply()} gains a \code{simplify} argument to possibly
       disable simplifying results.
 
-      \item The \code{format()} method for class \code{"ftable"} gets an
-      option \code{justify}; suggested by Thomas Soeiro.
+      \item The \code{format()} method for class \code{"ftable"} gets a
+      new option \code{justify}; suggested by Thomas Soeiro.
 
       \item New \code{...names()} utility, complementing others, proposed
       by Neal Fultz in \PR{17705}.
@@ -49,26 +42,187 @@
       change in \code{read.table()} (related to \code{stringsAsFactor}) in
       \R 4.0.0.
 
-      \item When printing list arrays, classed objects are now shown via
-      their \code{format()} value if this is a short enough character
-      string, or by giving the first elements of their class vector and
-      their length.
+      \item When printing list arrays, classed objects are now shown
+      \emph{via} their \code{format()} value if this is a short enough
+      character string, or by giving the first elements of their class
+      vector and their length.
+
+      \item Unicode character width tables (as used by \code{nchar(,
+	type="w")}) have been updated to Unicode 12.1 by Brodie Gaslam
+      (\PR{17781}).
+
+      \item \code{capabilities()} gets new entry \code{"Rprof"} which is
+      \code{TRUE} when \R has been configured with the equivalent of
+      \command{--enable-R-profiling} (as it is by default): related to
+      Michael Orlitzky's report \PR{17836}.
+
+      \code{str(xS4)} now also shows extraneous attributes of an S4 object
+      \code{xS4}.
+
+      \item Rudimentary support for vi-style tags in \code{rtags()} and
+      \code{R CMD rtags}, based on patch from Neal Fultz in \PR{17214}.
+
+      \item \code{checkRdContents()} is now exported from \pkg{tools}; it
+      and also \code{checkDocFiles()} have a new option \code{chkInternal}
+      allowing to check Rd files marked with keyword \code{"internal"} as
+      well.  The latter can be activated for \command{R CMD check} via
+      experimental environment variable \env{_R_CHECK_RD_INTERNAL_TOO_}.
+
+      \item New functions \code{numToBits()} and \code{numToInts()}
+      extend the \code{raw} conversion utilities to (double precision)
+      \code{numeric}.
+
+      \item Functions \code{URLencode()} and \code{URLdecode()} in
+      package \pkg{utils} now work on vectors of URLs.
+      Based on patch from Bob Rudis submitted with \PR{17873}.
+
+      \item \code{path.expand()} can expand \samp{~user} on most
+      Unix-alikes even when \code{readline} is not in use.  It tries
+      harder to expand \samp{~}, for example should environment variable
+      \env{HOME} be unset.
+
+      \item For HTML help (both dynamic and static), Rd file links to
+      help pages in external packages are now treated as references to
+      topics rather than file names, and falls back to a file link only
+      if the topic is not found in the target package. The earlier rule
+      which prioritized file names over topics can be restored by
+      setting the environment variable \env{_R_HELP_LINKS_TO_TOPICS_} to
+      a false value.
+
+      \item \code{c()} now removes \code{NULL} arguments before dispatching
+      to methods, thus simplifying the implementation of \code{c()}
+      methods, \emph{but} for back compatibility reasons keeps \code{NULL}
+      when it is the first argument; from a report and patch proposal by
+      Lionel Henry in \PR{17900}.
+
+      \item \code{Vectorize()}'s result function's environment no longer
+      keeps unneeded objects.
+
+      \item \code{...elt()} now propagates visibility consistently with
+      \code{..n}, thanks to Lionel Henry's \PR{17905}.
+
+      \item \code{capture.output()} no longer uses NSE to evaluate its
+      arguments.  This makes evaluation of functions like
+      \code{parent.frame()} more consistent, thanks to Lionel Henry's
+      \PR{17907}.
+
+      \item \code{packBits(bits, type="double")} newly works as inverse of
+      \code{numToBits()}, thanks to Bill Dunlap's proposal in \PR{17914}.
+    }
+  }
+
+  \subsection{GRAPHICS}{
+    \itemize{
+      \item The graphics engine version, \code{R_GE_version}, has been
+      bumped to 13 and so packages that provide graphics devices should
+      be reinstalled.
+
+      \item Graphics devices can now specify \code{canClip =
+        NA_LOGICAL}, in which case the graphics engine will never
+      perform any clipping of output itself.
+
+      The clipping that the graphics engine does perform (for both
+      \code{canClip = TRUE} and \code{canClip = FALSE}) has been
+      improved to avoid producing unnecessary artifacts in clipped
+      output.
+
+      \item The \pkg{grid} package now allows \code{gpar(fill)} to be
+      a \code{linearGradient()}, a \code{radialGradient()}, or a
+      \code{pattern()}.  The \code{viewport(clip)} can now also be
+      a grob, which defines a clipping path, and there is a new
+      \code{viewport(mask)} that can also be a grob, which defines
+      a mask.
+
+      These new features are only supported (so far) on Cairo graphics
+      devices and the \code{pdf()} device.
+    }
+  }
+
+  \subsection{C-LEVEL FACILITIES}{
+    \itemize{
+      \item The \emph{standalone} \file{libRmath} math library and \R's C
+      API now provide \code{log1pexp()} again as documented, and gain
+      \code{log1mexp()}.
+    }
+  }
+
+  \subsection{LINK-TIME OPTIMIZATION on a UNIX-ALIKE}{
+    \itemize{
+      \item Configuring with flag \option{--enable-lto=R} now also uses
+      LTO when installing the recommended packages.
+
+      \item \command{R CMD INSTALL} and \command{R CMD SHLIB} have a new
+      flag \option{--use-LTO} to use LTO when compiling code, for use
+      with \R configured with \option{--enable-lto=R}.  For \R
+      configured with \option{--enable-lto}, they have the new flag
+      \option{--no-use-LTO}.
+
+      Packages can opt in or out of LTO compilation \emph{via} a
+      \samp{UseLTO} field in the \file{DESCRIPTION} file.  (As usual this
+      can be overridden by the command-line flags.)
+    }
+  }
+
+  \subsection{BUILDING R on Windows}{
+    \itemize{
+      \item for GCC \eqn{\ge}{>=} 8, \code{FC_LEN_T} is defined in
+      \file{config.h} and hence character lengths are passed from C to
+      Fortran in \emph{inter alia} BLAS and LAPACK calls.
+
+      \item There is a new text file
+      \file{src/gnuwin32/README.compilation}, which outlines how C/Fortran
+      code compilation is organized and documents new features:
+      \itemize{
+	\item \R can be built with Link-Time Optimization with a
+	suitable compiler -- doing so with GCC 9.2 showed several
+	inconsistencies which have been corrected.
+
+	\item There is support for cross-compiling the C and Fortran
+	code in \R and standard packages on suitable (Linux) platforms.
+	This is mainly intended to allow developers to test later
+	versions of compilers -- for example using GCC 9.2 or 10.x has
+	detected issues that GCC 8.3 in Rtools40 does not.
+
+	\item There is experimental support for cross-building \R
+	packages with C, C++ and/or Fortran code.
+      }
+    }
+  }
+
+  \subsection{PACKAGE INSTALLATION on Windows}{
+    \itemize{
+      \item \command{R CMD INSTALL} and \command{R CMD SHLIB} make use
+      of their flag \option{--use-LTO} when the \samp{LTO_OPT} make
+      macro is set in file \file{etc/$\{R_ARCH\}/Makeconf} or in a
+      personal/site \file{Makevars} file.  (For details see
+      \sQuote{Writing R Extensions} §4.5.)
+
+      This provides a valuable check on code consistency.  It does work
+      with GCC 8.3 as in Rtools40, but that does not detect everything
+      the \acronym{CRAN} checks with GCC 10 do.
     }
   }
 
   \subsection{UTILITIES}{
     \itemize{
-      \item \command{R CMD check} skips vignette re-building (with a
-      warning) if the \samp{VignetteBuilder} package(s) are not available.
+      \item \command{R CMD check} can now scan package functions for
+      bogus \code{return} statements, which were possibly intended as
+      \code{return()} calls (wish of \PR{17180}, patch by Sebastian
+      Meyer). This check can be activated via the new environment
+      variable \env{_R_CHECK_BOGUS_RETURN_}, true for \code{--as-cran}.
+
+      \item \command{R CMD build} now omits tarballs and binaries of
+      previous builds from the top-level package directory; \PR{17828},
+      patch by Sebastian Meyer.
     }
   }
 
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
-      \item Function \code{plclust()} from the package \pkg{stats}, and
+      \item Function \code{plclust()} from the package \pkg{stats} and
       \code{package.dependencies()}, \code{pkgDepends()},
       \code{getDepList()}, \code{installFoundDepends()}, and
-      \code{vignetteDepends()} from \pkg{tools} are defunct.
+      \code{vignetteDepends()} from package \pkg{tools} are defunct.
 
       \item Defunct functions \code{checkNEWS()} and \code{readNEWS()} from
       package \pkg{tools} and \code{CRAN.packages()} from \pkg{utils} have
@@ -79,6 +233,11 @@
 
       \item \code{parallel::detectCores()} drops support for Irix
       (retired in 2013).
+
+      \item The \code{LINPACK} argument to \code{chol.default()},
+      \code{chol2inv()}, \code{solve.default()} and \code{svd()} has
+      been defunct since \R 3.1.0.  It was silently ignored up to \R
+      4.0.3 but now gives an error.
     }
   }
 
@@ -100,18 +259,164 @@
       presence; reported by Alex Bertram; repr.ex. and patch by Sebastian
       Meyer in \PR{16662}.
 
-      \item \code{round()} and \code{signif()} now longer tolerate wrong
+      \item \code{round()} and \code{signif()} no longer tolerate wrong
       argument names, notably in 1-argument calls; reported by Shane
-      Mueller on R-devel (mailing list).
-
-      \item \code{source(*, echo=TRUE)} no longer fails in some cases with
-      empty lines; reported by Bill Dunlap in \PR{17769}.
+      Mueller on the  R-devel mailing list.
 
       \item \code{boxplot()} now also accepts \code{call}s for labels such
       as \code{ylab}, the same as \code{plot()}.  Reported by Marius Hofert.
 
+      \item \code{phyper(11, 15, 0, 12, log.p=TRUE)} no longer gives
+      \code{NaN}; reported as \PR{17271} by Alexey Stukalov.
+
+      \item The help page for \code{xtabs()} now correctly states that
+      \code{addNA} is setting \code{na.action = na.pass} among others;
+      reported as \PR{17770} by Thomas Soeiro.
+
+      \item The \command{R CMD check <pkg>} gives a longer and more
+      comprehensible message when \file{DESCRIPTION} misses dependencies,
+      e.g., in \code{Imports:}; thanks to the contributors of \PR{17179}.
+
+      \item \code{update.default()} now calls the generic \code{update()}
+      on the formula to work correctly for models with extended formulas;
+      as reported and suggested by Neal Fultz in \PR{17865}.
+
+      \item The horizontal position of leaves in a dendrogram is now
+      correct also with \code{center = FALSE}; \PR{14938}, patch from
+      Sebastian Meyer.
+
+      \item A very old bug could cause a segfault in \code{model.matrix()}
+      when terms involved logical variables.  Related to \PR{17879}, but not
+      a complete fix for that issue.
+
+      \item \code{model.frame.default()} allowed \code{data = 1}, leading to
+      involuntary variable capture (rest of \PR{17879}).
+
+      \item \code{R_allocLD()} has been fixed to return memory aligned for
+      long double type (PR#16534).
+
+      \item Fix incorrect calculation in \code{logLik.nls()} \PR{16100}, patch
+      from Sebastian Meyer.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 4.0.2 patched}{
+
+  \subsection{NEW FEATURES}{
+    \itemize{
+      \item On platforms using \command{configure} option
+      \option{--with-internal-tzcode}, additional values
+      \code{"internal"} and (on macOS only) \code{"macOS"} are accepted
+      for the environment variable \env{TZDIR}.  (See \code{?TZDIR}.)
+
+      On macOS, \code{"macOS"} is used by default if the system timezone
+      database is a newer version than that in the \R installation.
+
+      \item When \code{install.packages()} fails to find a package in a
+      source repository it mentions package versions which are excluded
+      by their \R version requirement and links to hints on why a package
+      might not be found.
+    }
+  }
+
+  \subsection{LINK-TIME OPTIMIZATION on a UNIX-ALIKE}{
+    \itemize{
+      \item There is now support for parallelized Link-Time Optimization
+      (LTO) with GCC and for \sQuote{thin} LTO with
+      \command{clang} \emph{via} setting the \samp{LTO} macro.
+
+      \item There is support for setting a different LTO flag for the
+      Fortran compiler, including to empty when mixing \command{clang}
+      and \command{gfortran} (as on macOS).  See file \file{config.site}.
+
+      \item There is a new \samp{LTO_LD} macro to set linker options for
+      LTO compilation, for example to select an alternative linker or
+      to parallelize thin LTO.
+    }
+  }
+
+    \subsection{DEPRECATED AND DEFUNCT}{
+    \itemize{
+
+      \item The \code{LINPACK} argument to \code{chol.default()},
+      \code{chol2inv()}, \code{solve.default()} and \code{svd()} has been
+      defunct since \R 3.1.0.  Using it now gives a warning which will
+      become an error in \R 4.1.0.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item The code mitigating stack overflow with PCRE regexps on very
+      long strings is enabled for PCRE2 < 10.30 also when JIT is enabled,
+      since stack overflows have been seen in that case.
+      %% Ubuntu 16.04LTS has PCRE2 10.21
+
+      \item Fix to correctly show the group labels in \code{dotchart()}
+      (which where lost in the \code{ylab} improvement for \R 4.0.0).
+
+      \item \code{addmargins(*, ..)} now also works when \code{fn()} is a
+      local function, thanks to bug report and patch \PR{17124} from Alex
+      Bertram.
+
+      \item \code{rank(x)} and hence \code{sort(x)} now work when \code{x}
+      is an object (as per \code{is.object(x)}) of type \code{"raw"}
+      \emph{and} provides a valid \code{`[`} method, e.g., for
+      \code{gmp::as.bigz(.)} numbers.
+
+      \item \code{chisq.test(*, simulate.p.value=TRUE)} and
+      \code{r2dtable()} now work correctly for large table entries (in the
+      millions).  Reported by Sebastian Meyer and investigated by more
+      helpers in \PR{16184}.
+
+      \item Low-level socket read/write operations have been fixed to
+      correctly signal communication errors. Previously, such errors could
+      lead to a segfault due to invalid memory access. Reported
+      and debugged by Dmitriy Selivanov in \PR{17850}.
+
+      \item \code{quantile(x, pr)} works more consistently for \code{pr}
+      values slightly outside [0,1], thanks to Suharto Anggono's \PR{17891}.
+
+      Further, \code{quantile(x, prN, names=FALSE)} now works even when
+      \code{prN} contains \code{NA}s, thanks to Anggono's \PR{17892}.
+
+      \item Libcurl-based internet access, including
+      \code{curlGetHeaders()}, was not respecting the \code{"timeout"} option.
+
+      \item \code{as.Date(<char>)} now also works with an initial
+      \code{""}, thanks to Michael Chirico's \PR{17909}.
+    }
+  }
+}
+
+
+\section{\Rlogo CHANGES IN R 4.0.2}{
+
+  \subsection{UTILITIES}{
+    \itemize{
+      \item \command{R CMD check} skips vignette re-building (with a
+      warning) if the \samp{VignetteBuilder} package(s) are not available.
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item Paths with non-ASCII characters caused problems for
+      package loading on Windows \PR{17833}.
+
+      \item Using \pkg{tcltk} widgets no longer crashes R on
+      Windows.
+
+      \item \code{source(*, echo=TRUE)} no longer fails in some cases with
+      empty lines; reported by Bill Dunlap in \PR{17769}.
+
       \item \code{on.exit()} now correctly matches named arguments, thanks
-      to \PR{17815} including patch by Brodie Gaslam.
+      to \PR{17815} (including patch) by Brodie Gaslam.
+
+      \item \code{regexpr(*, perl=TRUE)} no longer returns incorrect
+      positions into text containing characters outside of the Unicode
+      Basic Multilingual Plane on Windows.
     }
   }
 }

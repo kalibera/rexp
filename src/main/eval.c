@@ -1679,9 +1679,12 @@ static R_INLINE void cleanupEnvVector(SEXP v)
        to wake things up, so hold off for now. */
     return;
 
+    // avoid ODS compiler warning.
+ #ifdef FALSE
     R_xlen_t len = XLENGTH(v);
     for (R_xlen_t i = 0; i < len; i++)
 	SET_VECTOR_ELT(v, i, R_NilValue);
+#endif
 }
 
 static R_INLINE void R_CleanupEnvir(SEXP rho, SEXP val)
@@ -6950,7 +6953,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 //#define REPORT_OVERRIDEN_BUILTINS
 #ifdef REPORT_OVERRIDEN_BUILTINS
 	if (value != findFun(symbol, rho)) {
-	    Rprintf("Possibly overriden builtin: %s\n", PRIMNAME(value));
+	    Rprintf("Possibly overridden builtin: %s\n", PRIMNAME(value));
 	}
 #endif
 	if (RTRACE(value)) {
