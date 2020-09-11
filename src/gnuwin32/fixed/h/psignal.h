@@ -30,6 +30,15 @@
 #include <errno.h>
 #include <setjmp.h>
 
+#if defined(__MINGW64__)
+  #undef setjmp
+  #ifdef _UCRT
+    #define setjmp(x) __intrinsic_setjmpex((x), NULL)
+  #else
+    #define setjmp(x) _setjmp((x), NULL)
+  #endif
+#endif
+
 #define	SIGHUP	1	/* hangup */
 #define	SIGINT	2	/* interrupt */
 #define	SIGQUIT	3	/* quit */
