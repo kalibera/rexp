@@ -27,7 +27,7 @@ isBasePkg <- function(pkg) {
 
 getDependencies <-
     function(pkgs, dependencies = NA, available = NULL, lib = .libPaths()[1L],
-             binary = FALSE, ..., av2) ## ... is passed to installed.packages().
+             binary = FALSE, ..., av2 = NULL) ## ... is passed to installed.packages().
 {
     if (is.null(dependencies)) return(unique(pkgs))
     oneLib <- length(lib) == 1L
@@ -738,12 +738,12 @@ install.packages <-
     }
 
     ## from here on we deal with source packages in repos
+    av2 <- NULL
     if(is.null(available)) {
         filters <- getOption("available_packages_filters")
         if(!is.null(filters)) {
             available <- available.packages(contriburl = contriburl,
                                             method = method, ...)
-            av2 <- NULL
         } else {
             f <- setdiff(available_packages_filters_default,
                          c("R_version", "duplicates"))
@@ -865,6 +865,10 @@ install.packages <-
             }
             if(keep_outputs)
                 file.copy(paste0(update[, 1L], ".out"), outdir)
+            ## Keep binary packages possibly created via --build
+            file.copy(Sys.glob(paste0(update[, 1L], "*.zip")), cwd)
+            file.copy(Sys.glob(paste0(update[, 1L], "*.tgz")), cwd)
+            file.copy(Sys.glob(paste0(update[, 1L], "*.tar.gz")), cwd)
             setwd(cwd); on.exit()
             unlink(tmpd2, recursive = TRUE)
         } else {

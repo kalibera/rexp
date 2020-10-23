@@ -412,7 +412,7 @@ static int NORET null_vfprintf(Rconnection con, const char *format, va_list ap)
 }
 
 /* va_copy is C99, but a draft standard had __va_copy.  Glibc has
-   __va_copy declared uncondiitonally */
+   __va_copy declared unconditionally */
 
 
 #if defined(HAVE_VASPRINTF) && !HAVE_DECL_VASPRINTF
@@ -420,6 +420,7 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif
 
 # define BUFSIZE 10000
+// similar to Rcons_vprintf in printutils.c
 int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 {
     R_CheckStack2(BUFSIZE); // prudence
@@ -437,9 +438,8 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 	res = vasprintf(&b, format, ap);
 	if (res < 0) {
 	    b = buf;
-	    res = (int)strlen(buf) + 1;
-	    buf[res-1] = '\n';
 	    warning(_("printing of extremely long output is truncated"));
+	    res = (int)strlen(buf);
 	} else usedVasprintf = TRUE;
     }
 #else
@@ -458,8 +458,7 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 	res = Rvsnprintf_mbcs(b, 10*BUFSIZE, format, ap);
 	if (res < 0 || res >= 10*BUFSIZE) {
 	    warning(_("printing of extremely long output is truncated"));
-	    res = strlen(b) + 1;
-	    b[res-1] = '\n';
+	    res = (int)strlen(b);
 	}
     }
 #endif /* HAVE_VASPRINTF */
@@ -3201,12 +3200,11 @@ static int text_vfprintf(Rconnection con, const char *format, va_list ap)
 #define NBUFSIZE (already + 100*BUFSIZE)
 	vmax = vmaxget();
 	b = R_alloc(NBUFSIZE, sizeof(char));
-	strncpy(b, this->lastline, NBUFSIZE);
+	strncpy(b, this->lastline, NBUFSIZE); /* `already` < NBUFSIZE */
 	*(b + NBUFSIZE - 1) = '\0';
 	p = b + already;
-	res = vsnprintf(p, NBUFSIZE - already, format, ap);
-	if (res < 0) {
-	    *(b + NBUFSIZE - 1) = '\0';
+	res = Rvsnprintf_mbcs(p, NBUFSIZE - already, format, ap);
+	if (res < 0 || res >= NBUFSIZE - already) {
 	    warning(_("printing of extremely long output is truncated"));
 	}
     }
@@ -5937,7 +5935,7 @@ SEXP attribute_hidden do_gzcon(SEXP call, SEXP op, SEXP args, SEXP rho)
  	/* for Solaris 12.5 */ new = NULL;
    }
     strcpy(new->class, "gzcon");
-    snprintf(description, 1000, "gzcon(%s)", incon->description);
+    Rsnprintf_mbcs(description, 1000, "gzcon(%s)", incon->description);
     new->description = (char *) malloc(strlen(description) + 1);
     if(!new->description) {
 	free(new->class); free(new);

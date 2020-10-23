@@ -4312,8 +4312,37 @@ if (l10n_info()$"UTF-8") {
         ## trailing newline adds 1
         stopifnot(nchar(short_error(call.=FALSE)) == 101L)
     }
-}
+    ## PrintGenericVector truncations
+    ##
+    ## New printing in r78508 needs to account for UTF-8 truncation
+    grin <- "\U0001F600"
+    lc1 <- paste0(c(rep(LETTERS, length.out=110), grin), collapse="")
+    lc2 <- paste0(c(rep(LETTERS, length.out=111), grin), collapse="")
+    list.mats <- list(matrix(list(structure(1:2, class=lc1))),
+                      matrix(list(structure(1:2, class=lc2))))
 
+    ## Allowed UTF-8 truncation in R < 4.1
+    ls1 <- paste0(c(rep(0:9, length.out=95), "\U0001F600"), collapse="")
+    ls2 <- paste0(c(rep(0:9, length.out=96), "\U0001F600"), collapse="")
+    long.strings <- list(matrix(list(ls1)), matrix(list(ls2)))
+
+    ## Invalid UTF-8 output as "\xf0\x9f..." so needs to be parsed to un-escape
+    capt_parse <- function(x) {
+        out <- capture.output(print(x))
+        eval(parse(text=paste0(c('c(', sprintf("'%s',", out), 'NULL)'),
+                               collapse=""))[[1]])
+    }
+    capt.parsed <- unlist(lapply(c(list.mats, long.strings), capt_parse))
+    stopifnot(validUTF8(capt.parsed))
+
+    ## Allowed MBCS truncation in R < 4.1
+    fmt <- paste0(c(rep_len("a", 253), "\U0001f600"), collapse="")
+    stopifnot(validUTF8(format(as.POSIXlt('2020-01-01'), fmt)))
+
+    f <- file(paste0(c(rep_len("a", 992), "\U0001F600"), collapse=""))
+    suppressWarnings(g <- gzcon(f))
+    stopifnot(!grepl("xf0", capture.output(g)[2]))
+}
 
 ## c() generic removes all NULL elements --- *but* the first --- before dispatch
 c.foobar <- function(...) list("ok", ...)
@@ -4389,8 +4418,8 @@ stopifnot(sum(l0 <- as.logical(b0)) == 62L,
 ## No longer assuming integer length()
 if(.Machine$sizeof.pointer >= 8) {
   .Internal(inspect(-199900000:2e9))
-  ## gave an error in R <= 4.0.2
 }
+## gave an error in R <= 4.0.2
 
 
 ## PR#17907 -- capture.output() now using standard evaluation (SE) :
@@ -4429,6 +4458,117 @@ stopifnot(identical(packBits(b0, "double"), n0))
 r <- c(pi, 1+ (0:8)/4); head(b <- numToBits(r), 25)
 stopifnot(identical(packBits(b, "double"), r))
 ## thanks to PR#17914 by Bill Dunlap
+
+
+## quantile(x, probs) when probs has NA's, PR#17899
+stopifnot(identical(quantile(NULL), quantile(numeric())), # back-compatibility
+	  identical(quantile(structure(numeric(), names = character()), names = FALSE),
+		    rep(NA_real_, 5)))
+L <- list(ordered(letters[1:11]), # class "ordered" "factor"
+          seq(as.Date("2000-01-07"), as.Date("1997-12-17"), by="-1 month"))
+ct <- seq(as.POSIXct("2020-01-01 12:13:14", tz="UTC"), by="1 hour", length.out = 47)
+LL <- c(L, list(o0 = L[[1]][FALSE], D0 = L[[2]][FALSE],
+                ct = ct, lt = as.POSIXlt(ct), num= as.numeric(ct)))
+prb <- seq(0, 1, by=2^-8) # includes 0.25, 0.5, etc
+for(x in LL) {
+    cat("x : "); str(x, vec.len=3)
+    clx <- class(if(inherits(x, "POSIXlt")) as.POSIXct(x) else x)
+    ## for "ordered" *and* "Date", type must be 1 or 3
+    for(typ in if(any(clx %in% c("ordered", "Date"))) c(1,3) else 1:7) {
+        cat(typ, ": ")
+        stopifnot(exprs = {
+            identical(clx, class(q1 <- quantile(x, probs=  prb,     type=typ)))
+            identical(clx, class(qN <- quantile(x, probs=c(prb,NA), type=typ))) # failed
+            ## for "POSIXct", here q1 is integer, qN "double":
+            { if(inherits(q1, "POSIXct")) storage.mode(qN) <- storage.mode(q1); TRUE }
+            identical(qN[seq_along(q1)], q1)
+            is.na(    qN[length(qN)])
+        })
+    }; cat("\n")
+}
+## qN often lost class() e.g. for "ordered" and "Date" in  R <= 4.0.2
+
+
+## isS3stdGeneric() traced function:
+trace(print)
+stopifnot( isS3stdGeneric(print) )
+untrace(print)
+## was FALSE in R <= 4.0.2
+
+
+## PR#17897: all.equal.factor() did not distinguish the two different NA in factors
+labs <- c("a", "b", NA)
+x <- factor(      3:1,                labels = labs)
+y <- factor(c(NA, 2:1), levels = 1:3, labels = labs)
+x
+dput(x) ; dput(y) ## --> they are clearly different, but print the same:
+stopifnot(exprs = {
+    identical(capture.output(x),
+              capture.output(y))
+    is.character(print(ae <- all.equal(x,y)))
+    !englishMsgs || grepl("NA mismatch", ae, fixed=TRUE)
+})
+## all.equal() gave TRUE wrongly, from 2012 till R <= 4.0.2
+
+
+## PR#17935:  `[.formula` for formulas with NULL:
+forms <- list(f0 = (~ NULL)
+            , f1 = (z ~ NULL)
+            , f2 = (NULL ~ x)
+            , f3 = (NULL ~ NULL)
+              )
+rr <- lapply(forms, function(f)
+        lapply(seq_along(f), function(ii) f[ii]))
+cN <- quote(NULL())
+stopifnot(exprs = {
+    identical( unique(lapply(rr , `[[`, 1)), list(`~`()))
+    identical( lapply(unname(rr), `[[`, 2),  list(cN, quote(z()), cN,cN) )
+})
+## subsetting failed for all 4 formulas in R <= 4.0.3
+(tm1 <- (~ "~")[-1])
+(tq1 <- (~ `~`)[-1])
+stopifnot(exprs = {
+    identical((~ NA)[-1], quote(NA())) ## subsetting (~ NA) failed in R <= 4.0.3
+    identical(tm1,        `[[<-`(call("T"), 1L, "~")) ;  is.call(tm1)
+    identical(tq1,        structure(call("~"), class="formula", ".Environment" = globalenv()))
+})
+## zero-length formulas from subsetting are now equal to formula(NULL)
+exps <- expression(
+           (~ x)[FALSE]
+         , (~ x)[rep(FALSE, 2)]
+         , (y ~ x)[FALSE])
+formL <- lapply(exps, eval)
+stopifnot( length(unique(formL)) == 1,
+          all.equal(formL[[1]], formula(NULL)) )
+## Gave error  "attempt to set an attribute on NULL" in R <= 4,0.3
+
+
+## Regression in .traceback()  PR#17930
+op <- options(keep.source=TRUE)
+f <- function() .traceback(1)
+g <- function() f()
+x <- g()
+stopifnot(inherits(attr(x[[1]], 'srcref'), "srcref"))
+options(op)
+## had worked up to R 3.6.3, but not from 4.0.0 to 4.0.3
+
+
+## Summary() and Math() data.frame methods with *logical* columns
+a <- na.omit(airquality)
+aF <- a[FALSE,] # 0-row version of it
+dL0 <- data.frame(x=numeric(), L=logical()) # logical column
+stopifnot(exprs = {
+    ## "Summary" :
+    sum(aF) == 0 # gave Error  "only defined on a data frame with all numeric variables"
+    sum(subset(a, Ozone > 200)) == 0 # (ditto)
+    suppressWarnings(range(dL0) == c(Inf, -Inf)) # (2 warnings)
+    ## "Math" , gave Error..: non-numeric variable(s) in data frame :
+    identical(exp(data.frame(L=TRUE)), data.frame(L=exp(TRUE)))
+    identical(sinL0 <- sin(dL0), data.frame(x=numeric(), L=numeric()))
+    identical(sinL0, log1p(dL0))
+    identical(cumsum(dL0),       data.frame(x=numeric(), L=integer()))
+})
+## probably never worked in any R <= 4.0.3
 
 
 

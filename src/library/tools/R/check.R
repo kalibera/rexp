@@ -652,12 +652,6 @@ add_dummies <- function(dir, Log)
         ## Check for portable file names.
         checkingLog(Log, "for portable file names")
 
-        ## Build list of exclude patterns.
-        ignore <- get_exclude_patterns()
-        ignore_file <- ".Rbuildignore"
-        if (ignore_file %in% dir())
-            ignore <- c(ignore, readLines(ignore_file))
-
         ## Ensure that the names of the files in the package are valid
         ## for at least the supported OS types.  Under Unix, we
         ## definitely cannot have '/'.  Under Windows, the control
@@ -700,8 +694,6 @@ add_dummies <- function(dir, Log)
                         full.names = TRUE, recursive = TRUE)
         allfiles <- c(allfiles, unique(dirname(allfiles)))
         allfiles <- af <- sub("^./", "", allfiles)
-        ignore_re <- paste0("(", paste(ignore, collapse = "|"), ")")
-        allfiles <- filtergrep(ignore_re, allfiles)
         bad_files <- allfiles[grepl("[[:cntrl:]\"*/:<>?\\|]",
                                     basename(allfiles))]
         is_man <- endsWith(dirname(allfiles), "man")
@@ -1820,7 +1812,7 @@ add_dummies <- function(dir, Log)
 
             out <- R_runR2(Rcmd, "R_DEFAULT_PACKAGES=NULL")
             if (length(out)) {
-                if(any(grepl("(not declared from|Including base/recommended)", out))) warningLog(Log)
+                if(any(grepl("(not declared from|Missing or unexported object|Including base/recommended)", out))) warningLog(Log)
                 else noteLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
                 ## wrapLog(msg_DESCRIPTION)
@@ -1833,7 +1825,7 @@ add_dummies <- function(dir, Log)
 
             out <- R_runR0(Rcmd, R_opts2, "R_DEFAULT_PACKAGES=NULL")
             if (length(out)) {
-                if(any(grepl("not declared from", out))) warningLog(Log)
+                if(any(grepl("(not declared from|Missing or unexported object)", out))) warningLog(Log)
                 else noteLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
                 ## wrapLog(msg_DESCRIPTION)
@@ -2147,11 +2139,14 @@ add_dummies <- function(dir, Log)
 
         if (dir.exists("man") && !extra_arch) {
             checkingLog(Log, "Rd files")
+            t1 <- proc.time()
             minlevel <- Sys.getenv("_R_CHECK_RD_CHECKRD_MINLEVEL_", "-1")
             Rcmd <- paste(opWarn_string, "\n",
                           sprintf("tools:::.check_package_parseRd('.', minlevel=%s)\n", minlevel))
             ## This now evaluates \Sexpr, so run with usual packages.
             out <- R_runR0(Rcmd, R_opts2, elibs)
+            t2 <- proc.time()
+            print_time(t1, t2, Log)
             if (length(out)) {
                 if(length(grep("^prepare.*Dropping empty section", out,
                                invert = TRUE)))
@@ -5031,6 +5026,7 @@ add_dummies <- function(dir, Log)
                              ": warning: .* with a value, in function returning void",
                              ": warning: .*\\[-Wlto",
                              ": warning: .*\\[-Wodr\\]",
+                             ": warning: line number out of range",
                              ## gcc 10 some -fanalyzer warnings
                              ": warning: .*\\[-Wanalyzer-null-dereference\\]",
                              ": warning: .*\\[-Wanalyzer-double-free\\]",
@@ -5078,7 +5074,8 @@ add_dummies <- function(dir, Log)
                              ## also on gcc, but fewer warnings
                              ": warning: .* \\[-Wlogical-not-parentheses\\]",
                              ## For non-portable flags (seen in sub-Makefiles)
-                             "warning: .* \\[-Wunknown-warning-option\\]"
+                             "warning: .* \\[-Wunknown-warning-option\\]",
+                             "warning: .* \\[-Wnested-anon-types\\]"
                              )
 
                 warn_re <- paste0("(", paste(warn_re, collapse = "|"), ")")

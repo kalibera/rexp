@@ -719,8 +719,11 @@ const char *EncodeString(SEXP s, int w, int quote, Rprt_adj justify)
 	    }
 	}
 #ifndef __STDC_ISO_10646__
+// We know Solaris conforms even if the system headers do not define it.
+# ifndef __sun
 	if(Unicode_warning)
 	    warning(_("it is not known that wchar_t is Unicode on this platform"));
+# endif
 #endif
 
     } else
@@ -876,6 +879,7 @@ int vasprintf(char **strp, const char *fmt, va_list ap)
 #endif
 
 # define R_BUFSIZE BUFSIZE
+// similar to dummy_vfprintf in connections.c
 attribute_hidden
 void Rcons_vprintf(const char *format, va_list arg)
 {
@@ -899,6 +903,8 @@ void Rcons_vprintf(const char *format, va_list arg)
 #else
     if(res >= R_BUFSIZE) { /* res is the desired output length */
 	usedRalloc = TRUE;
+	/* dummy_vfprintf protects against `res` being counted short; we do not
+	   do that here */
 	p = R_alloc(res+1, sizeof(char));
 	vsprintf(p, format, arg);
     } else if(res < 0) {
@@ -986,9 +992,8 @@ void REvprintf(const char *format, va_list arg)
 	va_list aq;
 
 	va_copy(aq, arg);
-	int res = vsnprintf(buf, BUFSIZE, format, aq);
+	int res = Rvsnprintf_mbcs(buf, BUFSIZE, format, aq);
 	va_end(aq);
-	buf[BUFSIZE-1] = '\0';
 	if (res >= BUFSIZE) {
 	    /* A very long string has been truncated. Try to allocate a large
 	       buffer for it to print it in full. Do not use R_alloc() as this

@@ -128,7 +128,10 @@ download.file(url, destfile, method, quiet = FALSE, mode = "w",
   and \code{"libcurl"} methods only.
 
   The timeout for many parts of the transfer can be set by the option
-  \code{timeout} which defaults to 60 seconds.
+  \code{timeout} which defaults to 60 seconds.  This is often
+  insufficient for downloads of large files (hundreds of MB or more) and
+  so should be increased when \code{download.file} is used in packages
+  to do so.
 
   The level of detail provided during transfer can be set by the
   \code{quiet} argument and the \code{internet.info} option: the details
@@ -180,7 +183,7 @@ download.file(url, destfile, method, quiet = FALSE, mode = "w",
   user/password authentication if proper values are stored in the
   configuration file for \code{wget}.
 
-  \command{wget} (\url{http://www.gnu.org/software/wget/}) is commonly
+  \command{wget} (\url{https://www.gnu.org/software/wget/}) is commonly
   installed on Unix-alikes (but not macOS).  Windows binaries are
   available from Cygwin, gnuwin32 and elsewhere.
 
@@ -190,7 +193,7 @@ download.file(url, destfile, method, quiet = FALSE, mode = "w",
 \section{Setting Proxies}{
   For the Windows-only method \code{"wininet"}, the \sQuote{Internet
   Options} of the system are used to choose proxies and so on; these are
-  set in the Control Panel and are those used for Internet Explorer.
+  set in the Control Panel and are those used for system browsers.
 
   The next two paragraphs apply to the internal code only.
 
