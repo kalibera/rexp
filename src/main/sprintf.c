@@ -23,6 +23,7 @@
 #include <config.h>
 #endif
 
+#define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Internal.h>
 #include "RBufferUtils.h"
@@ -476,6 +477,36 @@ SEXP attribute_hidden do_sprintf(SEXP call, SEXP op, SEXP args, SEXP env)
 	warning(_("argument not used by format"));
     else if (nunused > 1)
 	warning(_("%d arguments not used by format"), nunused);
+    if (nunused > 0) {
+	int oldout = R_OutputCon;
+        R_OutputCon = 2;
+        int olderr = R_ErrorCon;
+        R_ErrorCon = 2;
+        REprintf(" ----------- FAILURE REPORT -------------- \n");
+        REprintf(" --- call from context --- \n");
+        PrintValue(R_GlobalContext->call);
+        REprintf(" --- R stacktrace ---\n");
+        printwhere();
+	REprintf(" --- format (%d)---\n", length(format));
+	PrintValue(format);
+	REprintf(" --- arguments (%d) ---\n", nargs);
+	for(i = 0; i < nargs; i++) {
+	    REprintf(" ARG %d %s[%d] %s:\n", i+1, type2char(TYPEOF(a[i])),
+		length(a[i]), used[i] ? "USED" : "UNUSED");
+	    PrintValue(a[i]);
+	}
+        REprintf(" --- function from context --- \n");
+        if (R_GlobalContext->nextcontext->callfun != NULL &&
+            TYPEOF(R_GlobalContext->nextcontext->callfun) == CLOSXP)
+            PrintValue(R_GlobalContext->nextcontext->callfun);
+        REprintf(" --- function search by body ---\n");
+        if (R_GlobalContext->nextcontext->callfun != NULL &&
+            TYPEOF(R_GlobalContext->nextcontext->callfun) == CLOSXP)
+            findFunctionForBody(R_ClosureExpr(R_GlobalContext->nextcontext->callfun));
+        REprintf(" ----------- END OF FAILURE REPORT -------------- \n");
+        R_OutputCon = oldout;
+        R_ErrorCon = olderr;
+    }
 
     UNPROTECT(nprotect);
     R_FreeStringBufferL(&outbuff);
