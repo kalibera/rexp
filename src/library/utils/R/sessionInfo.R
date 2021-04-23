@@ -1,7 +1,7 @@
 #  File src/library/utils/R/sessionInfo.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2019 The R Core Team
+#  Copyright (C) 1995-2020 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -67,15 +67,19 @@
                                       "13" = "High Sierra",
                                       "14" = "Mojave",
                                       "15" = "Catalina",
-                                      "16" = "Big Sur", # probably not 10.16
+                                      "16" = "Big Sur", # early pre-releases
                                       ""),
                                ver)
-                   else
+                   else if(ver1[1L] == "11")
+                       ## it looks like 11.1 is also Big Sur, with the
+                       # next major change (Autumn 2021?) to 12
                        sprintf("macOS %s %s",
                                switch(ver2,
                                       "0" = "Big Sur",
-                                      ""),
+                                      "Big Sur"),
                                ver)
+                   else
+                       sprintf("macOS %s", ver)
                },
                "SunOS" = {
                    ver <- system('uname -r', intern = TRUE)

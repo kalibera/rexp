@@ -1,7 +1,7 @@
 #  File src/library/tools/R/RdConv2.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2020 The R Core Team
+#  Copyright (C) 1995-2021 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -266,8 +266,7 @@ processRdChunk <- function(code, stage, options, env, Rdfile, macros)
 	    	stopRd(code, Rdfile, err$message)
 	    }
 
-	    if(length(output) & (options$results != "hide")){
-
+	    if(length(output) && (options$results != "hide")) {
 		output <- paste(output, collapse="\n")
 		if(options$strip.white %in% c("all", "true")) {
 		    output <- sub("^[[:space:]]*\n", "", output)
@@ -390,7 +389,7 @@ processRdSexprs <-
              env = new.env(hash = TRUE, parent = globalenv()), macros)
 {
     recurse <- function(block) {
-    	if (!any(getDynamicFlags(block)[stage])) return(block)
+    	if (!any(getDynamicFlags(block)[c("\\Sexpr",stage)])) return(block)
 
         if (is.list(block)) {
             if (!is.null(tag <- attr(block, "Rd_tag"))) {
@@ -408,7 +407,7 @@ processRdSexprs <-
 	block
     }
 
-    if (!any(getDynamicFlags(block)[stage])) return(block)
+    if (!any(getDynamicFlags(block)[c("\\Sexpr",stage)])) return(block)
     expandDynamicFlags(recurse(block), options)
 }
 

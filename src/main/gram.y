@@ -30,9 +30,10 @@
 #include "Parse.h"
 #include <R_ext/Print.h>
 
-#if !defined(__STDC_ISO_10646__) && (defined(__APPLE__) || defined(__FreeBSD__))
+#if !defined(__STDC_ISO_10646__) && (defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun))
 /* This may not be 100% true (see the comment in rlocale.h),
-   but it seems true in normal locales */
+   but it seems true in normal locales.
+ */
 # define __STDC_ISO_10646__
 #endif
 
@@ -184,6 +185,8 @@ static SEXP	NewList(void);
 static void	NextArg(SEXP, SEXP, SEXP); /* add named element to list end */
 static SEXP	TagArg(SEXP, SEXP, YYLTYPE *);
 static int 	processLineDirective();
+
+static SEXP R_PipeBindSymbol = NULL;
 
 /* These routines allocate constants */
 
@@ -350,6 +353,8 @@ static SEXP	xxrepeat(SEXP, SEXP);
 static SEXP	xxnxtbrk(SEXP);
 static SEXP	xxfuncall(SEXP, SEXP);
 static SEXP	xxdefun(SEXP, SEXP, SEXP, YYLTYPE *);
+static SEXP	xxpipe(SEXP, SEXP);
+static SEXP	xxpipebind(SEXP, SEXP, SEXP);
 static SEXP	xxunary(SEXP, SEXP);
 static SEXP	xxbinary(SEXP, SEXP, SEXP);
 static SEXP	xxparen(SEXP, SEXP);
@@ -378,6 +383,8 @@ static int	xxvalue(SEXP, int, YYLTYPE *);
 %token		SYMBOL_PACKAGE
 /* no longer used: %token COLON_ASSIGN */
 %token		SLOT
+%token		PIPE
+%token          PIPEBIND
 
 /* This is the precedence table, low to high */
 %left		'?'
@@ -394,7 +401,8 @@ static int	xxvalue(SEXP, int, YYLTYPE *);
 %nonassoc   	GT GE LT LE EQ NE
 %left		'+' '-'
 %left		'*' '/'
-%left		SPECIAL
+%left		SPECIAL PIPE
+%left		PIPEBIND
 %left		':'
 %left		UMINUS UPLUS
 %right		'^'
@@ -452,10 +460,13 @@ expr	: 	NUM_CONST			{ $$ = $1;	setId(@$); }
 	|	expr OR expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
 	|	expr AND2 expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
 	|	expr OR2 expr			{ $$ = xxbinary($2,$1,$3);	setId(@$); }
+	|	expr PIPE expr			{ $$ = xxpipe($1,$3);  setId(@$); }
+	|	expr PIPEBIND expr		{ $$ = xxpipebind($2,$1,$3);	setId(@$); }
 	|	expr LEFT_ASSIGN expr 		{ $$ = xxbinary($2,$1,$3);	setId(@$); }
 	|	expr RIGHT_ASSIGN expr 		{ $$ = xxbinary($2,$3,$1);	setId(@$); }
 	|	FUNCTION '(' formlist ')' cr expr_or_assign_or_help %prec LOW
 						{ $$ = xxdefun($1,$3,$6,&@$); 	setId(@$); }
+	|	'\\' '(' formlist ')' cr expr_or_assign_or_help %prec LOW							{ $$ = xxdefun(R_FunctionSymbol,$3,$6,&@$); 	setId(@$); }
 	|	expr '(' sublist ')'		{ $$ = xxfuncall($1,$3);  setId(@$); modif_token( &@1, SYMBOL_FUNCTION_CALL ) ; }
 	|	IF ifcond expr_or_assign_or_help 	{ $$ = xxif($1,$2,$3);	setId(@$); }
 	|	IF ifcond expr_or_assign_or_help ELSE expr_or_assign_or_help	{ $$ = xxifelse($1,$2,$3,$5);	setId(@$); }
@@ -1161,6 +1172,65 @@ static SEXP xxbinary(SEXP n1, SEXP n2, SEXP n3)
     return ans;
 }
 
+static SEXP findPlaceholderCell(SEXP, SEXP);
+
+static void check_rhs(SEXP rhs)
+{
+    if (TYPEOF(rhs) != LANGSXP)
+	error(_("The pipe operator requires a function call as RHS"));
+
+    /* rule out syntactically special functions */
+    /* the IS_SPECIAL_SYMBOL bit is set in names.c */
+    SEXP fun = CAR(rhs);
+    if (TYPEOF(fun) == SYMSXP && IS_SPECIAL_SYMBOL(fun))
+	error("function '%s' not supported in RHS call of a pipe",
+	      CHAR(PRINTNAME(fun)));
+}
+
+static SEXP xxpipe(SEXP lhs, SEXP rhs)
+{
+    SEXP ans;
+    if (GenerateCode) {
+	/* allow x => log(x) on RHS */
+	if (TYPEOF(rhs) == LANGSXP && CAR(rhs) == R_PipeBindSymbol) {
+	    SEXP var = CADR(rhs);
+	    SEXP expr = CADDR(rhs);
+	    check_rhs(expr);
+	    SEXP phcell = findPlaceholderCell(var, expr);
+	    if (phcell == NULL)
+		error(_("no placeholder found on RHS"));
+	    SETCAR(phcell, lhs);
+	    return expr;
+	}
+
+	check_rhs(rhs);
+	
+        SEXP fun = CAR(rhs);
+        SEXP args = CDR(rhs);
+	PRESERVE_SV(ans = lcons(fun, lcons(lhs, args)));
+    }
+    else {
+	PRESERVE_SV(ans = R_NilValue);
+    }
+    RELEASE_SV(lhs);
+    RELEASE_SV(rhs);
+    return ans;
+}
+
+static SEXP xxpipebind(SEXP fn, SEXP lhs, SEXP rhs)
+{
+    static int use_pipebind = 0;
+    if (use_pipebind != 1) {
+	char *lookup = getenv("_R_USE_PIPEBIND_");
+	use_pipebind = ((lookup != NULL) && StringTrue(lookup)) ? 1 : 0;
+    }
+
+    if (use_pipebind)
+	return xxbinary(fn, lhs, rhs);
+    else
+	error("'=>' is disabled; set '_R_USE_PIPEBIND_' envvar to a true value to enable it");
+}
+
 static SEXP xxparen(SEXP n1, SEXP n2)
 {
     SEXP ans;
@@ -1392,6 +1462,7 @@ void InitParser(void)
     INIT_SVS();
     R_PreserveObject(ParseState.sexps); /* never released in an R session */
     R_NullSymbol = install("NULL");
+    R_PipeBindSymbol = install("=>");
 }
 
 static void FinalizeSrcRefStateOnError(void *dummy)
@@ -2123,6 +2194,8 @@ static void yyerror(const char *s)
 	"OR2",		"'||'",
 	"NS_GET",	"'::'",
 	"NS_GET_INT",	"':::'",
+	"PIPE",         "'|>'",
+	"PIPEBIND",     "'=>'",
 	0
     };
     static char const yyunexpected[] = "syntax error, unexpected ";
@@ -2212,10 +2285,12 @@ static char yytext[MAXELTSIZE];
 static int SkipSpace(void)
 {
     int c;
-    static wctype_t blankwct = 0;
 
+#if defined(USE_RI18N_FNS) // includes Win32
+    static wctype_t blankwct = 0;
     if (!blankwct)
 	blankwct = Ri18n_wctype("blank");
+#endif
 
 #ifdef Win32
     if(!mbcslocale) { /* 0xa0 is NBSP in all 8-bit Windows locales */
@@ -2247,11 +2322,16 @@ static int SkipSpace(void)
 	    if (c == '\n' || c == R_EOF) break;
 	    if ((unsigned int) c < 0x80) break;
 	    clen = mbcs_get_next(c, &wc);
+#if defined(USE_RI18N_FNS)
 	    if(! Ri18n_iswctype(wc, blankwct) ) break;
+#else
+	    if(! iswblank(wc) ) break;
+#endif
 	    for(i = 1; i < clen; i++) c = xxgetc();
 	}
     } else
 #endif
+	// does not support non-ASCII spaces, unlike Windows
 	while ((c = xxgetc()) == ' ' || c == '\t' || c == '\f') ;
     return c;
 }
@@ -2368,6 +2448,12 @@ static int NumericValue(int c)
 		if (nd == 0) return ERROR;
 	    }
             if (seendot && !seenexp) return ERROR;
+	    if (c == 'L') /* for getParseData */
+	    {
+		// seenexp will be checked later
+		YYTEXT_PUSH(c, yyp);
+		break;
+	    }
 	    break;
 	}
 	if (c == 'E' || c == 'e') {
@@ -2468,10 +2554,11 @@ static int NumericValue(int c)
 
 /* The idea here is that if a string contains \u escapes that are not
    valid in the current locale, we should switch to UTF-8 for that
-   string.  Needs Unicode wide-char support.
+   string.  Needs Unicode wide-char support or out substitutes.
 
-   Defining __STDC_ISO_10646__ is done by the OS (nor to) in wchar.t.
-   Some (e.g. Solaris, FreeBSD) have Unicode wchar_t but do not define it.
+   Defining __STDC_ISO_10646__ is done by the OS (or not) in wchar.t.
+   Some (e.g. macOS, Solaris, FreeBSD) have Unicode wchar_t but do not
+   define it: we override macOS and FreeBSD earlier in this file.
 */
 
 #if defined(Win32) || defined(__STDC_ISO_10646__)
@@ -2479,7 +2566,8 @@ typedef wchar_t ucs_t;
 # define mbcs_get_next2 mbcs_get_next
 #else
 typedef unsigned int ucs_t;
-# define WC_NOT_UNICODE 
+# define WC_NOT_UNICODE
+// which is used to select our mbtoucs rather than system mbrtowc
 static int mbcs_get_next2(int c, ucs_t *wc)
 {
     int i, res, clen = 1; char s[9];
@@ -2535,11 +2623,8 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
     R_CheckStack2(nb);
     char s[nb];
     memset(s, 0, nb); /* safety */
-#ifdef WC_NOT_UNICODE
-    for(char *ss = s; *wcs; wcs++) ss += ucstoutf8(ss, *wcs);
-#else
-    wcstoutf8(s, wcs, sizeof(s));
-#endif
+    // This used to differentiate WC_NOT_UNICODE but not needed
+    wcstoutf8(s, (const wchar_t *)wcs, sizeof(s));
     PROTECT(t = allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharCE(s, CE_UTF8));
     UNPROTECT(1); /* t */
@@ -2692,11 +2777,21 @@ static int StringValue(int c, Rboolean forSymbol)
 		}
 		if(delim) {
 		    if((c = xxgetc()) != '}')
-			error(_("invalid \\U{xxxxxxxx} sequence (line %d)"), ParseState.xxlineno);
+			error(_("invalid \\U{xxxxxxxx} sequence (line %d)"),
+			      ParseState.xxlineno);
 		    else CTEXT_PUSH(c);
 		}
 		if (!val)
-		    error(_("nul character not allowed (line %d)"), ParseState.xxlineno);
+		    error(_("nul character not allowed (line %d)"),
+			  ParseState.xxlineno);
+		if (val > 0x10FFFF) {
+		    if(delim)
+			error(_("invalid \\U{xxxxxxxx} value %6x (line %d)"),
+			      val, ParseState.xxlineno);
+		    else
+			error(_("invalid \\Uxxxxxxxx value %6x (line %d)"),
+			      val, ParseState.xxlineno);
+		}
 #ifdef Win32
 		if (0x010000 <= val && val <= 0x10FFFF) {   /* Need surrogate pair in Windows */
 		    val = val - 0x010000;
@@ -3010,6 +3105,7 @@ static int SymbolValue(int c)
     int kw;
     DECLARE_YYTEXT_BUFP(yyp);
     if(mbcslocale) {
+	// FIXME potentially need R_wchar_t with UTF-8 Windows.
 	wchar_t wc; int i, clen;
 	clen = mbcs_get_next(c, &wc);
 	while(1) {
@@ -3170,6 +3266,7 @@ static int token(void)
 
     if (c == '.') return SymbolValue(c);
     if(mbcslocale) {
+	// FIXME potentially need R_wchar_t with UTF-8 Windows.
 	mbcs_get_next(c, &wc);
 	if (iswalpha(wc)) return SymbolValue(c);
     } else
@@ -3229,6 +3326,10 @@ static int token(void)
 	    yylval = install_and_save("==");
 	    return EQ;
 	}
+	else if (nextchar('>')) {
+	    yylval = install_and_save("=>");
+	    return PIPEBIND;
+	}		 
 	yylval = install_and_save("=");
 	return EQ_ASSIGN;
     case ':':
@@ -3259,6 +3360,10 @@ static int token(void)
 	if (nextchar('|')) {
 	    yylval = install_and_save("||");
 	    return OR2;
+	}
+	else if (nextchar('>')) {
+	    yylval = install_and_save("|>");
+	    return PIPE;
 	}
 	yylval = install_and_save("|");
 	return OR;
@@ -3305,6 +3410,7 @@ static int token(void)
     case '~':
     case '$':
     case '@':
+    case '\\':
 	yytext[0] = (char) c;
 	yytext[1] = '\0';
 	yylval = install(yytext);
@@ -3486,6 +3592,8 @@ static int yylex(void)
     case AND:
     case OR2:
     case AND2:
+    case PIPE:
+    case PIPEBIND:
     case SPECIAL:
     case FUNCTION:
     case WHILE:
@@ -3961,4 +4069,39 @@ static void growID( int target ){
     
     int new_size = (1 + new_count)*2;
     PS_SET_IDS(lengthgets2(PS_IDS, new_size));
+}
+
+static int checkForPlaceholder(SEXP placeholder, SEXP arg)
+{
+    if (arg == placeholder)
+	return TRUE;
+    else if (TYPEOF(arg) == LANGSXP)
+	for (SEXP cur = arg; cur != R_NilValue; cur = CDR(cur))
+	    if (checkForPlaceholder(placeholder, CAR(cur)))
+		return TRUE;
+    return FALSE;
+}
+
+static void NORET signal_ph_error(SEXP rhs, SEXP ph) {
+    errorcall(rhs, _("pipe placeholder must only appear as a top-level "
+		     "argument in the RHS call"));
+}
+    
+static SEXP findPlaceholderCell(SEXP placeholder, SEXP rhs)
+{
+    SEXP phcell = NULL;
+    int count = 0;
+    if (checkForPlaceholder(placeholder, CAR(rhs)))
+	signal_ph_error(rhs, placeholder);
+    for (SEXP a = CDR(rhs); a != R_NilValue; a = CDR(a))
+	if (CAR(a) == placeholder) {
+	    if (phcell == NULL)
+		phcell = a;
+	    count++;
+	}
+	else if (checkForPlaceholder(placeholder, CAR(a)))
+	    signal_ph_error(rhs, placeholder);
+    if (count > 1)
+	errorcall(rhs, _("pipe placeholder may only appear once"));
+    return phcell;
 }

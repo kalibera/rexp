@@ -82,7 +82,12 @@ getDependencies <-
         msg3 <- c(paste0(ngettext(sum(m0),
                                   "A version of this package for your version of R might be available elsewhere,\nsee the ideas at\n",
                                   "Versions of these packages for your version of R might be available elsewhere,\nsee the ideas at\n"),
-                         "https://cran.r-project.org/doc/manuals/r-patched/R-admin.html#Installing-packages")
+                         ## refer to r-patched for released/patched versions
+                         if (grepl("Under development", R.version.string)) {
+                             "https://cran.r-project.org/doc/manuals/r-devel/R-admin.html#Installing-packages"
+                         } else {
+                             "https://cran.r-project.org/doc/manuals/r-patched/R-admin.html#Installing-packages"
+                         })
                  )
 	warning(sprintf(ngettext(sum(m0),
 				 "package %s is not available %s",
@@ -699,7 +704,7 @@ install.packages <-
                          paste(c(cmd0, args0), collapse = " ")),
                 domain = NA)
 
-    if(is.null(repos) & missing(contriburl)) {
+    if(is.null(repos) && missing(contriburl)) {
         ## install from local source tarball(s)
         update <- cbind(path.expand(pkgs), lib) # for side-effect of recycling to same length
 

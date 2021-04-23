@@ -1,6 +1,6 @@
 % File src/library/base/man/conditions.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2018 R Core Team
+% Copyright 1995-2020 R Core Team
 % Distributed under GPL 2 or later
 
 \name{conditions}
@@ -128,7 +128,7 @@ allowInterrupts(expr)
    functions \code{conditionMessage} and \code{conditionCall} are
    generic functions that return the message and call of a condition.
 
-   The function \code{errorCondition} and \code{warningCondition} can be
+   The function \code{errorCondition} can be
    used to construct error conditions of a particular class with
    additional fields specified as the \code{\dots} argument.
    \code{warningCondition} is analogous for warnings.
@@ -218,7 +218,7 @@ allowInterrupts(expr)
    signalled with arbitrary protocols (error, warning, etc), it is
    recommended to use this permissive variant whenever you are handling
    conditions signalled from a foreign context. For instance, invocation
-   of a \code{"muffleWarnings"} restart should be optional because the
+   of a \code{"muffleWarning"} restart should be optional because the
    warning might have been signalled by the user or from a different
    package with the \code{stop} or \code{message} protocols. Only use
    \code{invokeRestart} when you have control of the signalling context,

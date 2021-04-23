@@ -42,7 +42,8 @@
         ## common cause of problems with CRAN binary installs reported
         ## for Rcmdr.
         if (file.exists("/usr/bin/otool")) {
-            ## otool is part of the OS nowadays.
+            ## otool is part of the OS nowadays, but in recent versions
+            ## is a stub requiring the CLT to be installed
             DSO <- file.path(libname, pkgname, "libs", .Platform$r_arch, "tcltk.so")
             out <- system2("/usr/bin/otool", c("-L", shQuote(DSO)), stdout = TRUE)
             ind <- grep("libtk[.0-9]+[.]dylib", out)
@@ -58,7 +59,7 @@
                 this <- sub(" .*", "", sub("^\t", "", out[ind]))
                 ##  message("tcltk DLL is linked to ", shQuote(this))
                 if(!file.exists(this))
-                    stop("X11 library is missing: install XQuartz from xquartz.macosforge.org",
+                    stop("X11 library is missing: install XQuartz from www.xquartz.org",
                          domain = NA)
             }
         }

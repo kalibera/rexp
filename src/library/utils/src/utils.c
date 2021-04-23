@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2012-2015   The R Core Team.
+ *  Copyright (C) 2012-2021   The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -50,7 +50,58 @@ SEXP unzip(SEXP args)
     return Runzip(CDR(args));
 }
 
+#include <wctype.h>
+#include "rlocale.h" // may remap iswctype, wctype
 
+/* Declarations from Defn.h */
+int IS_ASCII(SEXP x);
+int IS_UTF8(SEXP x);
+const wchar_t *Rf_wtransChar(SEXP x);
+
+#if defined(USE_RI18N_FNS) || (defined(HAVE_ISWCTYPE) && defined(HAVE_WCTYPE))
+SEXP charClass(SEXP x, SEXP scl)
+{
+    R_xlen_t n;
+    const int *px;
+    if (isString(x)) {
+	if (XLENGTH(x) != 1)
+	    error(_("argument 'x' must be a length-1 character vector"));
+	if (IS_ASCII(x) || IS_UTF8(x))
+	    error(_("argument 'x' must be UTF-8 encoded (including ASCII)"));
+	PROTECT(x); // PROTECT for balance only
+	SEXP sx = STRING_ELT(x, 0);
+	const wchar_t *wx = Rf_wtransChar(sx);
+	n = wcslen(wx);;
+	px = (const int*) wx;
+    } else {
+	PROTECT(x = coerceVector(x, INTSXP));
+	n = XLENGTH(x);
+	px = INTEGER(x);
+    }
+
+    if (!isString(scl))
+	error(_("argument 'class' must be a character string"));
+    const char *cl = CHAR(STRING_ELT(scl, 0));
+    wctype_t wcl = wctype(cl);
+    if(wcl == 0) error("character class \"%s\" is invalid", cl);
+
+    SEXP ans = allocVector(LGLSXP, n);
+    int *pans = LOGICAL(ans);
+    for (R_xlen_t i = 0; i < n; i++) {
+	int this = px[i];
+	if (this < 0) pans[i] = NA_LOGICAL;
+	else pans[i] = iswctype(this, wcl);
+    }
+    UNPROTECT(1);
+    return ans;
+}
+#else
+SEXP charClass(SEXP x, SEXP scl)
+{
+    error("'charClass' is not available on this platform");
+    return R_NilValue;
+}
+#endif
 
 
 #include <lzma.h>
@@ -108,4 +159,3 @@ SEXP nsl(SEXP hostname)
     return R_NilValue;
 }
 #endif
-

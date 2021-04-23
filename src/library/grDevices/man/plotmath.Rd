@@ -252,7 +252,7 @@
   % \url{https://www.adobe.com/products/postscript/pdfs/PLRM.pdf} now points to
   \url{https://www.adobe.com/content/dam/acom/en/devnet/actionscript/articles/PLRM.pdf}
   or PDF
-  \url{https://www.adobe.com/devnet/acrobat/pdfs/pdf_reference_1-7.pdf}
+  \url{https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/pdf_reference_1-7.pdf}
   and in decimal, octal and hex at
   \url{https://www.stat.auckland.ac.nz/~paul/R/CM/AdobeSym.html}.
 }
@@ -268,7 +268,7 @@
 \examples{
 require(graphics)
 
-x <- seq(-4, 4, len = 101)
+x <- seq(-4, 4, length.out = 101)
 y <- cbind(sin(x), cos(x))
 matplot(x, y, type = "l", xaxt = "n",
         main = expression(paste(plain(sin) * phi, "  and  ",

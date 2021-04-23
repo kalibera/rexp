@@ -58,12 +58,14 @@ check_for_XQuartz <- function()
 {
     if (file.exists("/usr/bin/otool") &&
         file.exists(DSO <- file.path(R.home("modules"), "R_X11.so"))) {
+        ## otool is part of the OS nowadays, but in recent versions
+        ## is a stub requiring the CLT to be installed
         out <- system2("otool", c("-L", shQuote(DSO)), stdout = TRUE)
         ind <- grep("libX11[.][0-9]+[.]dylib", out)
         if(length(ind)) {
             this <- sub(" .*", "", sub("^\t", "", out[ind]))
             if(!file.exists(this))
-                stop("X11 library is missing: install XQuartz from xquartz.macosforge.org", domain = NA)
+                stop("X11 library is missing: install XQuartz from www.xquartz.org", domain = NA)
         }
     }
 }

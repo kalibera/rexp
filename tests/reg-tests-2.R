@@ -2838,7 +2838,15 @@ read.csv(f, skipNul = TRUE, fileEncoding = "UTF-8-BOM")
 ## all.equal datetime method
 x <- Sys.time()
 all.equal(x,x)
-all.equal(x, as.POSIXlt(x))
+
+# FIXME: check.tzone = FALSE needed because since 79037, all.equal.POSIXt
+# strictly reports "" and the current time zone (even from TZ environment
+# variable) as different.  The conversion round-trip from Sys.time()
+# (POSIXct) via POSIXlt and back to POSIXct creates an object with the
+# current time zone, yet the original is with "" as time zone (and both
+# refer to the same time zone).
+all.equal(x, as.POSIXlt(x), check.tzone = FALSE)
+
 all.equal(x, as.numeric(x))  # errored in R <= 4.0.2
 all.equal(x, as.POSIXlt(x, tz = "EST5EDT"))
 all.equal(x, x+1e-4)
@@ -3161,3 +3169,22 @@ if(capabilities("Rprof")) {
     options(op)
     unlink(tf)
 }
+
+
+## printing *named* complex vectors (*not* arrays), PR#17868 (and PR#18019):
+a <- 1:12; (z <- a + a*1i); names(z) <- letters[seq_along(z)]; z
+## fixed in R-devel in July 2020;  R 4.0.3 patched on Dec 26, 2020
+
+
+## identical(*) on "..." object
+(ddd <- (function(...) environment())(1)$...) # <...>
+ dd2 <- (function(...) environment())(1)$...
+stopifnot( identical(ddd, dd2) )
+## In R <= 4.0.3,  printed to console (no warning, no message!):
+## "Unknown Type: ... (11)"
+
+
+## printCoefmat() should keep NaN values (PR#17336)
+##cm <- summary(lm(c(0,0,0) ~ 1))$coefficients
+cm <- cbind(Estimate = 0, SE = 0, t = NaN, "Pr(>|t|)" = NaN)
+printCoefmat(cm)  # NaN's were replaced by NA in R < 4.1.0

@@ -1,7 +1,7 @@
 #  File src/library/methods/R/show.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2019 The R Core Team
+#  Copyright (C) 1995-2020 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -92,7 +92,8 @@ show <- function(object) showDefault(object)
               where = envir)
     setMethod("show", "genericFunction",
               function(object)  {
-                  cat(class(object)," for \"", object@generic,
+                  nam <- as.character(object@generic)
+                  cat(class(object)," for \"", nam,
                       "\" defined from package \"", object@package,
                       "\"\n", sep = "")
                   if(length(object@group))
@@ -103,12 +104,17 @@ show <- function(object) showDefault(object)
                           "\"\n", sep="")
                   cat("\n")
                   show(object@.Data)
+                  pkg <- object@package
+                  exported <- pkg == ".GlobalEnv" || isBaseNamespace(ns <- asNamespace(pkg)) ||
+                      nam %in% names(.getNamespaceInfo(ns, "exports"))
+                  showGen <- if(exported) nam # was dQuote(nam, NULL)
+                             else paste(pkg, nam, sep=":::")
                   cat("Methods may be defined for arguments: ",
-                      paste(object@signature, collapse=", "), "\n",
-			    "Use  showMethods(\"", object@generic,
-			    "\")  for currently available ones.\n", sep="")
+                      paste0(object@signature, collapse=", "), "\n",
+                      "Use  showMethods(", showGen,
+                      ")  for currently available ones.\n", sep="")
                   if(.simpleInheritanceGeneric(object))
-                      cat("(This generic function excludes non-simple inheritance; see ?setIs)\n");
+                      cat("(This generic function excludes non-simple inheritance; see ?setIs)\n")
               },
               where = envir)
     setMethod("show", "classRepresentation",

@@ -1,7 +1,7 @@
 #  File src/library/base/R/zzz.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2020 The R Core Team
+#  Copyright (C) 1995-2021 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -56,6 +56,8 @@ is.name <- is.symbol
 
 .ArgsEnv <- new.env(hash = TRUE, parent = emptyenv())
 
+assign("::", function(pkg, name) NULL, envir = .ArgsEnv)
+assign(":::", function(pkg, name) NULL, envir = .ArgsEnv)
 assign("%*%", function(x, y) NULL, envir = .ArgsEnv)
 assign("...length", function() NULL, envir = .ArgsEnv)
 assign("...names",  function() NULL, envir = .ArgsEnv)
@@ -254,7 +256,7 @@ assign("trunc", function(x, ...) UseMethod("trunc"), envir = .GenericArgsEnv)
 assign("as.numeric", get("as.double", envir = .GenericArgsEnv),
        envir = .GenericArgsEnv)
 
-## Keep this in sync with
+## Keep this in sync with ../../tools/R/utils.R
 ##   tools:::.make_S3_methods_table_for_base()
 ## for computing the methods table and
 ##   tools:::.deparse_S3_methods_table_for_base()
@@ -295,6 +297,7 @@ matrix(c("!", "hexmode",
          "[<-", "POSIXct",
          "[<-", "POSIXlt",
          "[<-", "data.frame",
+         "[<-", "difftime",
          "[<-", "factor",
          "[<-", "numeric_version",
          "[[", "Date",
@@ -336,6 +339,7 @@ matrix(c("!", "hexmode",
          "all.equal", "environment",
          "all.equal", "factor",
          "all.equal", "formula",
+         "all.equal", "function",
          "all.equal", "language",
          "all.equal", "list",
          "all.equal", "numeric",
@@ -561,6 +565,7 @@ matrix(c("!", "hexmode",
          "rep", "Date",
          "rep", "POSIXct",
          "rep", "POSIXlt",
+         "rep", "difftime",
          "rep", "factor",
          "rep", "numeric_version",
          "rev", "default",
@@ -630,6 +635,7 @@ matrix(c("!", "hexmode",
          "xtfrm", "Date",
          "xtfrm", "POSIXct",
          "xtfrm", "POSIXlt",
+         "xtfrm", "data.frame",
          "xtfrm", "default",
          "xtfrm", "difftime",
          "xtfrm", "factor",

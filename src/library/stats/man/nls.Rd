@@ -37,8 +37,10 @@ nls(formula, data, start, control, algorithm,
     references.  Can be abbreviated.}
   \item{trace}{logical value indicating if a trace of the iteration
     progress should be printed.  Default is \code{FALSE}.  If
-    \code{TRUE} the residual (weighted) sum-of-squares and the
-    parameter values are printed at the conclusion of each iteration.
+    \code{TRUE} the residual (weighted) sum-of-squares, the convergence
+    criterion and the parameter values are printed at the conclusion of
+    each iteration.  Note that \code{\link{format}()} is used, so these
+    mostly depend on \code{\link{getOption}("digits")}.
     When the \code{"plinear"} algorithm is used, the conditional
     estimates of the linear parameters are printed after the nonlinear
     parameters.  When the \code{"port"} algorithm is used the
@@ -266,6 +268,7 @@ try(nls(y ~ a + b*x, start = list(a = 0.12345, b = 0.54321)))
 nls(y ~ a + b*x, start = list(a = 0.12345, b = 0.54321),
     control = list(scaleOffset = 1, printEval=TRUE))
 ## Alternatively jittering the "too exact" values, slightly:
+set.seed(27)
 yeps <- y + rnorm(length(y), sd = 0.01) # added noise
 nls(yeps ~ a + b*x, start = list(a = 0.12345, b = 0.54321))
 
@@ -279,8 +282,15 @@ plot(x,y, main = "nls(*), data, true function and fit, n=100")
 curve(100 + 10 * exp(x / 2), col = 4, add = TRUE)
 lines(x, predict(nlmod), col = 2)
 
+## Here, requiring close convergence, you need to use more accurate numerical
+##  differentiation; this gives Error: "step factor .. reduced below 'minFactor' .."
+options(digits = 10) # more accuracy for 'trace'
+## IGNORE_RDIFF_BEGIN
+try(nlm1 <- update(nlmod, control = list(tol = 1e-7))) # where central diff. work here:
+   (nlm2 <- update(nlmod, control = list(tol = 8e-8, nDcentral=TRUE), trace=TRUE))
+## --> convergence tolerance  4.997e-8 (in 11 iter.)
+## IGNORE_RDIFF_END
 
-\donttest{
 ## The muscle dataset in MASS is from an experiment on muscle
 ## contraction on 21 animals.  The observed variables are Strip
 ## (identifier of muscle), Conc (Cacl concentration) and Length
@@ -295,10 +305,9 @@ with(muscle, table(Strip)) # 2, 3 or 4 obs per strip
 
 ## We first use the plinear algorithm to fit an overall model,
 ## ignoring that alpha and beta might vary with Strip.
-
-## IGNORE_RDIFF_BEGIN
 musc.1 <- nls(Length ~ cbind(1, exp(-Conc/th)), muscle,
               start = list(th = 1), algorithm = "plinear")
+## IGNORE_RDIFF_BEGIN
 summary(musc.1)
 ## IGNORE_RDIFF_END
 
@@ -314,7 +323,6 @@ musc.2 <- nls(Length ~ a[Strip] + b[Strip]*exp(-Conc/th), muscle,
 ## IGNORE_RDIFF_BEGIN
 summary(musc.2)
 ## IGNORE_RDIFF_END
-}
 \dontshow{options(od)}
 }
 \keyword{nonlinear}

@@ -71,13 +71,15 @@ fifo(description, open = "", blocking = FALSE,
 socketConnection(host = "localhost", port, server = FALSE,
                  blocking = FALSE, open = "a+",
                  encoding = getOption("encoding"),
-                 timeout = getOption("timeout"))
+                 timeout = getOption("timeout"),
+                 options = getOption("socketOptions"))
 
 serverSocket(port)
 
 socketAccept(socket, blocking = FALSE, open = "a+",
              encoding = getOption("encoding"),
-             timeout = getOption("timeout"))
+             timeout = getOption("timeout"),
+             options = getOption("socketOptions"))
 
 open(con, \dots)
 \method{open}{connection}(con, open = "r", blocking = TRUE, \dots)
@@ -122,6 +124,8 @@ socketTimeout(socket, timeout = -1)
     connection.  Beware that some OSes may treat very large values as
     zero: however the POSIX standard requires values up to 31 days to be
     supported.}
+  \item{options}{optional character vector with options. Currently only
+    \code{"no-delay"} is supported on TCP sockets.}
   \item{filename}{a filename within a zip file.}
   \item{host}{character string.  Host name for the port.}
   \item{port}{integer.  The TCP port number.}
@@ -157,7 +161,7 @@ socketTimeout(socket, timeout = -1)
   connections were introduced, method \code{"wininet"} is only available
   on Windows (it uses the WinINet functions of that OS) and method
   \code{"libcurl"} (using the library of that name:
-  \url{https://curl.haxx.se/libcurl/}) is required on a Unix-alike but
+  \url{https://curl.se/libcurl/}) is required on a Unix-alike but
   optional on Windows.  Method \code{"default"} uses method
   \code{"internal"} for \samp{file:} URLs and \code{"libcurl"} for
   \code{ftps:} URLs.  On a Unix-alike it uses \code{"libcurl"} for
@@ -225,6 +229,13 @@ socketTimeout(socket, timeout = -1)
   for accepting multiple socket connections by \code{socketAccept}.  To stop
   listening for new connections, a server socket needs to be closed
   explicitly by \code{close}.
+
+  \code{socketConnection} and \code{socketAccept} support setting of
+  socket-specific options. Currently only \code{"no-delay"} is
+  implemented which enables the \code{TCP_NODELAY} socket option, causing
+  the socket to flush send buffers immediately (instead of waiting to
+  collect all output before sending). This option is useful for
+  protocols that need fast request/response turn-around times.
 
   \code{socketTimeout} sets connection timeout of a socket connection.  A
   negative \code{timeout} can be given to query the old value.
@@ -538,7 +549,7 @@ socketTimeout(socket, timeout = -1)
 #ifdef unix
   Unix users wishing to \emph{write} to one of the X11 selections may be
   able to do so via \command{xclip}
-  (\url{https://sourceforge.net/projects/xclip/}) or \command{xsel}
+  (\url{https://github.com/astrand/xclip}) or \command{xsel}
   (\url{http://www.vergenet.net/~conrad/software/xsel/}), for example by
   \code{pipe("xclip -i", "w")} for the primary selection.
 

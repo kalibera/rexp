@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2020  The R Core Team.
+ *  Copyright (C) 1998--2021  The R Core Team.
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -3091,8 +3091,12 @@ static void R_gc_internal(R_size_t size_needed)
 	  VHEAP_FREE() < size_needed + R_MinFreeFrac * R_VSize)
 	num_old_gens_to_collect++;
 
-      if (size_needed > VHEAP_FREE())
-	R_VSize += size_needed - VHEAP_FREE();
+      if (size_needed > VHEAP_FREE()) {
+	  R_size_t expand = size_needed - VHEAP_FREE();
+	  if (R_VSize + expand > R_MaxVSize)
+	      mem_err_heap(size_needed);
+	  R_VSize += expand;
+      }
 
       gc_pending = TRUE;
       return;
@@ -3673,8 +3677,8 @@ SEXP R_MakeExternalPtr(void *p, SEXP tag, SEXP prot)
 {
     SEXP s = allocSExp(EXTPTRSXP);
     EXTPTR_PTR(s) = p;
-    EXTPTR_PROT(s) = CHK(prot);
-    EXTPTR_TAG(s) = CHK(tag);
+    EXTPTR_PROT(s) = CHK(prot); if (prot) INCREMENT_REFCNT(prot);
+    EXTPTR_TAG(s) = CHK(tag); if (tag) INCREMENT_REFCNT(tag);
     return s;
 }
 
@@ -3729,8 +3733,8 @@ SEXP R_MakeExternalPtrFn(DL_FUNC p, SEXP tag, SEXP prot)
     SEXP s = allocSExp(EXTPTRSXP);
     tmp.fn = p;
     EXTPTR_PTR(s) = tmp.p;
-    EXTPTR_PROT(s) = CHK(prot);
-    EXTPTR_TAG(s) = CHK(tag);
+    EXTPTR_PROT(s) = CHK(prot); if (prot) INCREMENT_REFCNT(prot);
+    EXTPTR_TAG(s) = CHK(tag); if (tag) INCREMENT_REFCNT(tag);
     return s;
 }
 
@@ -4133,19 +4137,25 @@ attribute_hidden void R_expand_binding_value(SEXP b)
 	vv.sxpval = CAR0(b);
 	switch (typetag) {
 	case REALSXP:
+	    PROTECT(b);
 	    val = ScalarReal(vv.dval);
 	    SET_BNDCELL(b, val);
 	    INCREMENT_NAMED(val);
+	    UNPROTECT(1);
 	    break;
 	case INTSXP:
+	    PROTECT(b);
 	    val = ScalarInteger(vv.ival);
 	    SET_BNDCELL(b, val);
 	    INCREMENT_NAMED(val);
+	    UNPROTECT(1);
 	    break;
 	case LGLSXP:
+	    PROTECT(b);
 	    val = ScalarLogical(vv.ival);
 	    SET_BNDCELL(b, val);
 	    INCREMENT_NAMED(val);
+	    UNPROTECT(1);
 	    break;
 	}
     }
@@ -4433,8 +4443,9 @@ void (SET_PRIMFUN)(SEXP x, CCODE f) { PRIMFUN(CHK(x)) = f; }
 /* for use when testing the write barrier */
 int  attribute_hidden (IS_BYTES)(SEXP x) { return IS_BYTES(CHK(x)); }
 int  attribute_hidden (IS_LATIN1)(SEXP x) { return IS_LATIN1(CHK(x)); }
-int  attribute_hidden (IS_ASCII)(SEXP x) { return IS_ASCII(CHK(x)); }
-int  attribute_hidden (IS_UTF8)(SEXP x) { return IS_UTF8(CHK(x)); }
+/* Next two are used in package utils */
+int  (IS_ASCII)(SEXP x) { return IS_ASCII(CHK(x)); }
+int  (IS_UTF8)(SEXP x) { return IS_UTF8(CHK(x)); }
 void attribute_hidden (SET_BYTES)(SEXP x) { SET_BYTES(CHK(x)); }
 void attribute_hidden (SET_LATIN1)(SEXP x) { SET_LATIN1(CHK(x)); }
 void attribute_hidden (SET_UTF8)(SEXP x) { SET_UTF8(CHK(x)); }

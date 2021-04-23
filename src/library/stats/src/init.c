@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2001-2019   The R Core Team.
+ *  Copyright (C) 2001-2021   The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -61,7 +61,7 @@ static const R_CallMethodDef CallEntries[] = {
     CALLDEF(cutree, 2),
     CALLDEF(isoreg, 1),
     CALLDEF(monoFC_m, 2),
-    CALLDEF(numeric_deriv, 4),
+    CALLDEF(numeric_deriv, 6),
     CALLDEF(nls_iter, 3),
     CALLDEF(setup_starma, 8),
     CALLDEF(free_starma, 1),
@@ -251,12 +251,12 @@ static const R_CallMethodDef CallEntries[] = {
     {NULL, NULL, 0}
 };
 
-#define FDEF(name)  {#name, (DL_FUNC) &F77_NAME(name), sizeof(name ## _t)/sizeof(name ## _t[0]), name ##_t}
+#define FDEF(name)  {#name, (DL_FUNC) &F77_NAME(name), sizeof(name ## _types)/sizeof(name ## _types[0]), name ##_types}
 
 
-static R_NativePrimitiveArgType lowesw_t[] = {
+static R_NativePrimitiveArgType lowesw_types[] = {
     REALSXP, INTSXP, REALSXP, INTSXP};
-static R_NativePrimitiveArgType lowesp_t[] = {
+static R_NativePrimitiveArgType lowesp_types[] = {
     INTSXP, REALSXP, REALSXP, REALSXP, REALSXP, INTSXP, REALSXP};
 
 

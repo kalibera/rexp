@@ -1,6 +1,6 @@
 % File src/library/stats/man/SSbiexp.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2020 R Core Team
 % Distributed under GPL 2 or later
 
 \name{SSbiexp}
@@ -52,7 +52,7 @@ summary(fm1)
 ## Show the model components visually
   require(graphics)
 
-  xx <- seq(0, 5, len = 101)
+  xx <- seq(0, 5, length.out = 101)
   y1 <- 3.5 * exp(-4*xx)
   y2 <- 1.5 * exp(-xx)
   plot(xx, y1 + y2, type = "l", lwd=2, ylim = c(-0.2,6), xlim = c(0, 5),
@@ -67,5 +67,25 @@ summary(fm1)
   ySS <- SSbiexp(xx, 3.5, log(4), 1.5, log(1))
   ##                      ---          ---
   stopifnot(all.equal(y1+y2, ySS, tolerance = 1e-15))
+
+## Show a no-noise example
+datN <- data.frame(time = (0:600)/64)
+datN$conc <- predict(fm1, newdata=datN)
+plot(conc ~ time, data=datN) # perfect, no noise
+## IGNORE_RDIFF_BEGIN
+## Fails by default (scaleOffset=0):
+\dontrun{
+        nls(conc ~ SSbiexp(time, A1, lrc1, A2, lrc2), data = datN, trace=TRUE)}
+\dontshow{try( # maxiter=10: store less garbage
+        nls(conc ~ SSbiexp(time, A1, lrc1, A2, lrc2), data = datN,
+            trace=TRUE, control = list(maxiter = 10)) )}
+fmX1 <- nls(conc ~ SSbiexp(time, A1, lrc1, A2, lrc2), data = datN, control = list(scaleOffset=1))
+fmX  <- nls(conc ~ SSbiexp(time, A1, lrc1, A2, lrc2), data = datN,
+           control = list(scaleOffset=1, printEval=TRUE, tol=1e-11, nDcentral=TRUE), trace=TRUE)
+all.equal(coef(fm1), coef(fmX1), tolerance=0) # ... rel.diff.: 1.57e-6
+all.equal(coef(fm1), coef(fmX),  tolerance=0) # ... rel.diff.: 1.03e-12
+## IGNORE_RDIFF_END
+stopifnot(all.equal(coef(fm1), coef(fmX1), tolerance = 6e-6),
+          all.equal(coef(fm1), coef(fmX ), tolerance = 1e-11))
 }
 \keyword{models}

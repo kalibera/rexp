@@ -1,7 +1,7 @@
 #  File src/library/tools/R/install.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2020 The R Core Team
+#  Copyright (C) 1995-2021 The R Core Team
 #
 # NB: also copyright dates in Usages.
 #
@@ -148,10 +148,12 @@ if(FALSE) {
     }
 
     # This produces a (by default single) quoted string for use in a
-    # command sent to another R process.  Currently it only fixes backslashes;
-    # more extensive escaping might be a good idea
-    quote_path <- function(path, quote = "'")
-    	paste0(quote, gsub("\\", "\\\\", path, fixed=TRUE), quote)
+    # command sent to another R process.
+    quote_path <- function(path, quote = "'") {
+        path <- gsub("\\", "\\\\", path, fixed = TRUE)
+        path <- gsub(quote, paste0("\\", quote), path, fixed = TRUE)
+    	paste0(quote, path, quote)
+    }
 
     # Escape backslashes in a replacement string for gsub etc.
     # To be used when the replacement is a path name which may include
@@ -969,8 +971,13 @@ if(FALSE) {
         ## going on in parallel
 
         pkgInfo <- .split_description(.read_description("DESCRIPTION"))
-        pkgs <- unique(c(names(pkgInfo$Depends), names(pkgInfo$Imports),
-                         names(pkgInfo$LinkingTo)))
+        R_install_force_depends_imports <- config_val_to_logical(Sys.getenv(
+                "_R_INSTALL_LIBS_ONLY_FORCE_DEPENDS_IMPORTS_", "TRUE"))
+        if (libs_only && isFALSE(R_install_force_depends_imports))
+            pkgs <- unique(c(names(names(pkgInfo$LinkingTo))))
+        else
+            pkgs <- unique(c(names(pkgInfo$Depends), names(pkgInfo$Imports),
+                             names(pkgInfo$LinkingTo)))
         if (length(pkgs)) {
             miss <- character()
             for (pkg in pkgs) {
@@ -1406,9 +1413,6 @@ if(FALSE) {
 		if (!thislazy && resave_data) {
 		    paths <- Sys.glob(c(file.path(is, "*.rda"),
 					file.path(is, "*.RData")))
-		    if (pkg_name == "cyclones")
-			paths <-
-			    c(paths, Sys.glob(file.path(is, "*.Rdata")))
 		    if (length(paths)) {
 			starsmsg(paste0(stars, "*"), "resaving rda files")
 			resaveRdaFiles(paths, compress = "auto")
@@ -1430,6 +1434,7 @@ if(FALSE) {
                                                 "gzip" = TRUE,
                                                 "bzip2" = 2L,
                                                 "xz" = 3L,
+                                                ## perhaps error?
                                                 TRUE)  # default to gzip
 		    res <- try(data2LazyLoadDB(pkg_name, lib,
 					       compress = data_compress))
@@ -2552,10 +2557,17 @@ if(FALSE) {
         }
     } else if (use_fc_link && (with_f77 || with_f9x))
         makeargs <- c("SHLIB_LDFLAGS='$(SHLIB_FCLDFLAGS)'",
-                      "SHLIB_LD='$(SHLIB_FCLD)'", makeargs)
+                      "SHLIB_LD='$(SHLIB_FCLD)'",
+                      ## avoid $(LIBINTL) and $(LIBR)
+                      "ALL_LIBS='$(PKG_LIBS) $(SHLIB_LIBADD)'",
+                      makeargs)
     if (with_objc) shlib_libadd <- c(shlib_libadd, "$(OBJC_LIBS)")
-    if (with_f77 || with_f9x)
-        shlib_libadd <- c(shlib_libadd, "$(FLIBS) $(FCLIBS_XTRA)")
+    if (with_f77 || with_f9x) {
+        if (use_fc_link)
+            shlib_libadd <- c(shlib_libadd, "$(FCLIBS_XTRA)")
+        else
+            shlib_libadd <- c(shlib_libadd, "$(FLIBS) $(FCLIBS_XTRA)")
+    }
 
     if (length(pkg_libs))
         makeargs <- c(makeargs,

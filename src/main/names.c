@@ -156,6 +156,7 @@ FUNTAB R_FunTab[] =
 {"makeLazy",	do_makelazy,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	  0}},
 {"identical",	do_identical,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	  0}},
 {"C_tryCatchHelper",do_tryCatchHelper,0,11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"getNamespaceValue",	do_getNSValue,	0,	211,	3,	{PP_FUNCALL, PREC_FN,	  0}},
 
 
 /* Binary Operators, all primitives */
@@ -185,6 +186,8 @@ FUNTAB R_FunTab[] =
 {":",		do_colon,	0,	1,	2,	{PP_BINARY2, PREC_COLON,  0}},
 /* does not evaluate */
 {"~",		do_tilde,	0,	0,	-1,	{PP_BINARY,  PREC_TILDE,  0}},
+{"::",		do_colon2,	0,	200,	2,	{PP_BINARY2, PREC_NS,	  0}},
+{":::",		do_colon3,	0,	200,	2,	{PP_BINARY2, PREC_NS,	  0}},
 
 
 /* Logic Related Functions */
@@ -885,8 +888,8 @@ FUNTAB R_FunTab[] =
 {"rawConnectionValue",do_rawconvalue,0, 11,     1,      {PP_FUNCALL, PREC_FN,	0}},
 {"textConnection",do_textconnection,0,	11,     5,      {PP_FUNCALL, PREC_FN,	0}},
 {"textConnectionValue",do_textconvalue,0,11,    1,      {PP_FUNCALL, PREC_FN,	0}},
-{"socketConnection",do_sockconn,0,	11,     7,      {PP_FUNCALL, PREC_FN,	0}},
-{"socketAccept",do_sockconn,	1,	11,     5,      {PP_FUNCALL, PREC_FN,	0}},
+{"socketConnection",do_sockconn,0,	11,     8,      {PP_FUNCALL, PREC_FN,	0}},
+{"socketAccept",do_sockconn,	1,	11,     6,      {PP_FUNCALL, PREC_FN,	0}},
 {"sockSelect",do_sockselect,	0,	11,     3,      {PP_FUNCALL, PREC_FN,	0}},
 {"serverSocket",do_serversocket,0,	11,     1,      {PP_FUNCALL, PREC_FN,	0}},
 {"socketTimeout",do_socktimeout,0,	11,     2,      {PP_FUNCALL, PREC_FN,	0}},
@@ -1010,12 +1013,18 @@ FUNTAB R_FunTab[] =
    Any symbols can be put here, but ones that contain special
    characters, or are reserved words, are the ones unlikely to be
    defined in any environment other than base, and hence the ones
-   where this is most likely to help. */
+   where this is most likely to help.
+
+   This is now also used for screening out syntactically special
+   functions fromuse on the RHS of a pipe. If a
+   non-syntactically-special symbol is added here it would neet to be
+   explicutly allowed in the pipe code. */
 
 static char *Spec_name[] = {
     "if", "while", "repeat", "for", "break", "next", "return", "function",
     "(", "{",
-    "+", "-", "*", "/", "^", "%%", "%/%", "%*%", ":",
+    "+", "-", "*", "/", "^", "%%", "%/%", "%*%", ":", "::", ":::", "?", "|>",
+    "~", "@", "=>",
     "==", "!=", "<", ">", "<=", ">=",
     "&", "|", "&&", "||", "!",
     "<-", "<<-", "=",
@@ -1129,6 +1138,7 @@ static void SymbolShortcuts(void)
     R_SpecSymbol = install("spec");
     R_NamespaceEnvSymbol = install(".__NAMESPACE__.");
     R_AsCharacterSymbol = install("as.character");
+    R_FunctionSymbol = install("function");
 
     R_dot_Generic = install(".Generic");
     R_dot_Method = install(".Method");

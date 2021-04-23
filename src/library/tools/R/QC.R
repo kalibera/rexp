@@ -1,7 +1,7 @@
 #  File src/library/tools/R/QC.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2020 The R Core Team
+#  Copyright (C) 1995-2021 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -161,7 +161,7 @@ function(package, dir, lib.loc = NULL)
     ## Find the data sets to work on.
     data_dir <- file.path(dir, "data")
     data_objs <- if(dir.exists(data_dir))
-	unlist(.try_quietly(list_data_in_pkg(pkgname, dataDir = data_dir)),
+	unlist(.try_quietly(list_data_in_pkg(dir = dir)),
 	       use.names = FALSE)
     else
         character()
@@ -425,8 +425,7 @@ function(package, dir, lib.loc = NULL,
     data_dir <- file.path(dir, "data")
     if(dir.exists(data_dir)) {
         data_sets_in_code_variables <-
-            .try_quietly(list_data_in_pkg(package_name,
-                                          dataDir = data_dir))
+            .try_quietly(list_data_in_pkg(dir = dir))
         data_sets_in_code <- names(data_sets_in_code_variables)
     } else
         data_sets_in_code <- data_sets_in_code_variables <- character()
@@ -1691,27 +1690,31 @@ function(package, dir, lib.loc = NULL)
     ## Change in 3.0.0: we only look for methods named generic.class,
     ## not those registered by a 3-arg S3method().
     methods_stop_list <- nonS3methods(package_name)
-    methods_in_package <- sapply(all_S3_generics, function(g) {
-        ## This isn't really right: it assumes the generics are visible.
-        if(!exists(g, envir = code_env)) return(character())
-        ## <FIXME>
-        ## We should really determine the name g dispatches for, see
-        ## a current version of methods() [2003-07-07].  (Care is needed
-        ## for internal generics and group generics.)
-        name <- paste0(g, ".")
-        methods <-
-            functions_in_code[startsWith(functions_in_code, name)]
-        ## </FIXME>
-        methods <- setdiff(methods, methods_stop_list)
-        if(has_namespace) {
-            ## Find registered methods for generic g.
-            methods2 <- ns_S3_methods[ns_S3_generics == g]
-            ## but for these purposes check name.
-            OK <- startsWith(methods2, name)
-            methods <- c(methods, methods2[OK])
-        }
-        methods
-    })
+    methods_in_package <-
+        Map(function(g) {
+                ## This isn't really right: it assumes the generics are
+                ## visible. 
+                if(!exists(g, envir = code_env)) return(character())
+                ## <FIXME>
+                ## We should really determine the name g dispatches for,
+                ## see a current version of methods() [2003-07-07].
+                ## (Care is needed for internal generics and group
+                ## generics.) 
+                name <- paste0(g, ".")
+                methods <-
+                    functions_in_code[startsWith(functions_in_code, name)]
+                ## </FIXME>
+                methods <- setdiff(methods, methods_stop_list)
+                if(has_namespace) {
+                    ## Find registered methods for generic g.
+                    methods2 <- ns_S3_methods[ns_S3_generics == g]
+                    ## but for these purposes check name.
+                    OK <- startsWith(methods2, name)
+                    methods <- c(methods, methods2[OK])
+                }
+                methods
+            },
+            all_S3_generics)
     all_methods_in_package <- unlist(methods_in_package)
     ## There are situations where S3 methods might be documented as
     ## functions (i.e., with their full name), if they do something
@@ -1782,10 +1785,9 @@ function(package, dir, lib.loc = NULL)
         functions <- .transform_S3_method_markup(functions)
 
         methods_with_generic <-
-            sapply(intersect(functions, all_S3_generics),
-                   function(g)
-                   intersect(functions, methods_in_package[[g]]),
-                   simplify = FALSE)
+            Map(function(g)
+                    intersect(functions, methods_in_package[[g]]),
+                intersect(functions, all_S3_generics))
 
         if((length(methods_with_generic)) ||
            (length(methods_with_full_name)))
@@ -2708,7 +2710,7 @@ function(package, dir, lib.loc = NULL)
         ## replacement functions.
         S4_generics <- S4_generics[endsWith(names(S4_generics), "<-")]
         bad_S4_replace_methods <-
-            sapply(S4_generics,
+            lapply(S4_generics,
                    function(f) {
                        mlist <- .get_S4_methods_list(f, code_env)
                        ind <- !vapply(mlist, .check_last_formal_arg, NA)
@@ -4123,6 +4125,8 @@ function(x, ...)
   , Filters = NULL
   , close.winProgressBar = function(con, ...) {}
   , DLL.version = function(path) {}
+  , .fixupGFortranStderr = function() {}
+  , .fixupGFortranStdout = function() {}
   , getClipboardFormats = function(numeric = FALSE) {}
   , getIdentification = function() {}
   , getWindowsHandle = function(which = "Console") {}
@@ -4440,8 +4444,8 @@ function(package, dir, lib.loc = NULL)
             message(sprintf(ngettext(length(undeclared),
                                      "Undeclared package %s in Rd xrefs",
                                      "Undeclared packages %s in Rd xrefs"),
-                            paste(sQuote(undeclared), collapse = ", "),
-                            domain = NA))
+                            paste(sQuote(undeclared), collapse = ", ")),
+                    domain = NA)
     }
 
     mind_suspects <-
@@ -4644,7 +4648,7 @@ function(pkgDir)
     ## add try() to ensure that all datasets are looked at
     ## (if not all of each dataset).
     for(ds in ls(envir = dataEnv, all.names = TRUE)) {
-        if(inherits(suppressMessages(try(check_one(get(ds, envir = dataEnv), ds), silent = TRUE)),
+        if(inherits(suppressWarnings(suppressMessages(try(check_one(get(ds, envir = dataEnv), ds), silent = TRUE))),
                     "try-error")) {
             msg <- sprintf("Error loading dataset %s:\n ", sQuote(ds))
             message(msg, geterrmessage())
@@ -5448,7 +5452,7 @@ function(dir)
            as.character(e[[2L]][[1L]]) == "unlockBinding") return(TRUE)
         if(as.character(e[[1L]])[1L] %in% "assignInNamespace") {
             e3 <- as.character(e[[4L]])
-            if (e3 == "asNamespace") e3 <- as.character(e[[4L]][[2L]])
+            if (e3[[1L]] == "asNamespace") e3 <- as.character(e[[4L]][[2L]])
             return(e3 != pkgname)
         }
         FALSE
@@ -6460,7 +6464,7 @@ function(dir)
 function(dir)
 {
     if(!dir.exists(file.path(dir, "man"))) return(NULL)
-    sapply(Rd_db(dir = dir), .Rd_get_example_code)
+    lapply(Rd_db(dir = dir), .Rd_get_example_code)
 }
 
 format.check_T_and_F <-
@@ -7221,6 +7225,23 @@ function(dir, localOnly = FALSE, pkgSize = NA)
         bad <- Filter(length, bad)
         if(length(bad))
             out$Rd_keywords_or_concepts_more_than_one <- .fmt(bad)
+        ## Also check for URLs which should use \doi with the DOI name.
+        .fmt <- function(x) {
+            Map(function(f, e) {
+                    c(paste0("  File ", sQuote(f), ":"),
+                      paste0("    ", e))
+                },
+                names(x), x)
+        }
+        bad <- lapply(Rdb,
+                      function(Rd) {
+                          grep("https?://(dx[.])?doi[.]org/10",
+                               .get_urls_from_Rd(Rd),
+                               value = TRUE)
+                      })
+        bad <- Filter(length, bad)
+        if(length(bad))
+            out$Rd_URLs_which_should_use_doi <- .fmt(bad)
     }
 
 
@@ -7440,9 +7461,18 @@ function(dir, localOnly = FALSE, pkgSize = NA)
         ## matching wrapped texts for to ease reporting ...
         out$descr_bad_URLs <- descr[ind]
     }
-    if(any(ind <- grepl("https?://.*doi.org/", descr)))
+    if(any(ind <- grepl(paste(c("https?://.*doi.org/",
+                                "(^|[^<])doi:",
+                                "<doi[^:]",
+                                "<10[.]"),
+                              collapse = "|"),
+                        descr, ignore.case = TRUE)))
         out$descr_bad_DOIs <- descr[ind]
-    if(any(ind <- grepl("https?://arxiv.org", descr)))
+    if(any(ind <- grepl(paste(c("https?://arxiv.org",
+                                "(^|[^<])arxiv:",
+                                "<arxiv[^:]"),
+                              collapse = "|"),
+                        descr, ignore.case = TRUE)))
         out$descr_bad_arXiv_ids <- descr[ind]
 
     skip_dates <-
@@ -7549,11 +7579,16 @@ function(dir, localOnly = FALSE, pkgSize = NA)
         (!localOnly &&
          !config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_SKIP_URL_CHECKS_IF_REMOTE_",
                                            "FALSE")))
+    check_urls_in_parallel <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_CHECK_URLS_IN_PARALLEL_",
+                                         "FALSE"))
     if(!capabilities("libcurl") && remote)
         out$no_url_checks <- TRUE
     else {
         udb <- url_db_from_package_sources(dir)
-        bad <- tryCatch(check_url_db(udb, remote = remote),
+        bad <- tryCatch(check_url_db(udb,
+                                     remote = remote,
+                                     parallel = check_urls_in_parallel),
                         error = identity)
         if(inherits(bad, "error")) {
             out$bad_urls <- bad
@@ -7635,7 +7670,10 @@ function(dir, localOnly = FALSE, pkgSize = NA)
                 ini <- "https://arxiv.org/abs/"
                 udb <- url_db(paste0(ini, ids),
                               rep.int("DESCRIPTION", length(ids)))
-                bad <- tryCatch(check_url_db(udb), error = identity)
+                bad <- tryCatch(check_url_db(udb,
+                                             parallel =
+                                                 check_urls_in_parallel),
+                                error = identity)
                 if(!inherits(bad, "error") && length(bad))
                     out$bad_arXiv_ids <-
                         substring(bad$URL, nchar(ini) + 1L)
@@ -7652,7 +7690,10 @@ function(dir, localOnly = FALSE, pkgSize = NA)
                 ids <- sub(.ORCID_iD_variants_regexp, "\\3", odb[, 1L])
                 ini <- "https://orcid.org/"
                 udb <- url_db(paste0(ini, ids), odb[, 2L])
-                bad <- tryCatch(check_url_db(udb), error = identity)
+                bad <- tryCatch(check_url_db(udb,
+                                             parallel =
+                                                 check_urls_in_parallel),
+                                error = identity)
                 if(!inherits(bad, "error") && length(bad))
                     out$bad_ORCID_iDs <-
                         cbind(substring(bad$URL, nchar(ini) + 1L),
@@ -7902,7 +7943,8 @@ function(dir, localOnly = FALSE, pkgSize = NA)
     if(capabilities("libcurl") &&
        !config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_SKIP_DOI_CHECKS_",
                                          "FALSE"))) {
-        bad <- tryCatch(check_doi_db(doi_db_from_package_sources(dir)),
+        bad <- tryCatch(check_doi_db(doi_db_from_package_sources(dir),
+                                     parallel = check_urls_in_parallel),
                         error = identity)
         if(inherits(bad, "error") || NROW(bad))
             out$bad_dois <- bad
@@ -7942,7 +7984,7 @@ function(dir, localOnly = FALSE, pkgSize = NA)
        !config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_SKIP_VERSIONS_",
                                          "FALSE")))
         out$bad_version <- list(v_m, v_d)
-    if((v_m$major == v_d$major) & (v_m$minor >= v_d$minor + 10))
+    if((v_m$major == v_d$major) && (v_m$minor >= v_d$minor + 10))
         out$version_with_jump_in_minor <- list(v_m, v_d)
 
     ## Check submission recency and frequency.
@@ -8458,6 +8500,10 @@ function(x, ...)
             if(length(y <- x$Rd_keywords_or_concepts_more_than_one))
                 paste(c("Found the following \\keyword or \\concept entries",
                         "which likely give several index terms:",
+                        unlist(y)),
+                      collapse = "\n"),
+            if(length(y <- x$Rd_URLs_which_should_use_doi))
+                paste(c("Found the following URLs which should use \\doi (with the DOI name only):",
                         unlist(y)),
                       collapse = "\n")))
       )

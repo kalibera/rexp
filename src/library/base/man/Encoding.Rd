@@ -1,6 +1,6 @@
 % File src/library/base/man/Encoding.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2019 R Core Team
+% Copyright 1995-2021 R Core Team
 % Distributed under GPL 2 or later
 
 \name{Encoding}
@@ -47,7 +47,8 @@ enc2utf8(x)
 
   There are other ways for character strings to acquire a declared
   encoding apart from explicitly setting it (and these have changed as
-  \R has evolved).  Functions \code{\link{scan}},
+  \R has evolved).  The parser marks strings containing \samp{\\u} or
+  \samp{\\U} escapes.  Functions \code{\link{scan}},
   \code{\link{read.table}}, \code{\link{readLines}}, and
   \code{\link{parse}} have an \code{encoding} argument that is used to
   declare encodings, \code{\link{iconv}} declares encodings from its
@@ -78,19 +79,19 @@ enc2utf8(x)
 
   \code{\link{paste}} and \code{\link{sprintf}} return elements marked
   as bytes if any of the corresponding inputs is marked as bytes, and
-  otherwise marked as UTF-8 of any of the inputs is marked as UTF-8.
+  otherwise marked as UTF-8 if any of the inputs is marked as UTF-8.
 
   \code{\link{match}}, \code{\link{pmatch}}, \code{\link{charmatch}},
   \code{\link{duplicated}} and \code{\link{unique}} all match in UTF-8
   if any of the elements are marked as UTF-8.
-  
+
   There is some ambiguity as to what is meant by a \sQuote{Latin-1}
   locale, since some OSes (notably Windows) make use of character
-  positions used for control characters in the ISO 8859-1 character set.
-  How such characters are interpreted is system-dependent but as from \R
-  3.5.0 they are if possible interpreted as per Windows codepage 1252
-  (which Microsoft calls \sQuote{Windows Latin 1 (ANSI)}) when
-  converting to e.g.\sspace{}UTF-8.
+  positions undefined (or used for control characters) in the ISO 8859-1
+  character set.  How such characters are interpreted is
+  system-dependent but as from \R 3.5.0 they are if possible interpreted
+  as per Windows codepage 1252 (which Microsoft calls \sQuote{Windows
+  Latin 1 (ANSI)}) when converting to e.g.\sspace{}UTF-8.
 }
 \value{
   A character vector.
@@ -100,16 +101,19 @@ enc2utf8(x)
 }
 \examples{
 ## x is intended to be in latin1
-x <- "fa\xE7ile"
-Encoding(x)
+x. <- x <- "fa\xE7ile"
+Encoding(x.) # "unknown" (UTF-8 loc.) | "latin1" (8859-1/CP-1252 loc.) | ....
 Encoding(x) <- "latin1"
 x
 xx <- iconv(x, "latin1", "UTF-8")
-Encoding(c(x, xx))
+Encoding(c(x., x, xx))
 c(x, xx)
-Encoding(xx) <- "bytes"
-xx # will be encoded in hex
-cat("xx = ", xx, "\n", sep = "")
+xb <- xx; Encoding(xb) <- "bytes"
+xb # will be encoded in hex
+cat("x = ", x, ", xx = ", xx, ", xb = ", xb, "\n", sep = "")
+(Ex <- Encoding(c(x.,x,xx,xb)))
+stopifnot(identical(Ex, c(Encoding(x.), Encoding(x),
+                          Encoding(xx), Encoding(xb))))
 }
 \keyword{utilities}
 \keyword{character}

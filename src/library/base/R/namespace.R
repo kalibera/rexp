@@ -1,7 +1,7 @@
 #  File src/library/base/R/namespace.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2020 The R Core Team
+#  Copyright (C) 1995-2021 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -34,13 +34,17 @@ getNamespace <- function(name) {
 ..getNamespace <- function(name, where) {
     ns <- .Internal(getRegisteredNamespace(name))
     if (!is.null(ns)) ns
-    else tryCatch(loadNamespace(name),
-                  error = function(e) {
-                      warning(gettextf("namespace %s is not available and has been replaced\nby .GlobalEnv when processing object %s",
-                                       sQuote(name)[1L], sQuote(where)),
-                              domain = NA, call. = FALSE, immediate. = TRUE)
-                      .GlobalEnv
-                  })
+    else tryCatch(loadNamespace(name), error = function(e) {
+             tr <- Sys.getenv("_R_NO_REPORT_MISSING_NAMESPACES_")
+             if( tr == "false" || (where != "<unknown>" && !nzchar(tr)) ) {
+                 warning(gettextf("namespace %s is not available and has been replaced\nby .GlobalEnv when processing object %s",
+                                  sQuote(name)[1L], sQuote(where)),
+                         domain = NA, call. = FALSE, immediate. = TRUE)
+                 if(nzchar(Sys.getenv("_R_CALLS_MISSING_NAMESPACES_")))
+                     print(sys.calls())
+             }
+             .GlobalEnv
+         })
 }
 
 loadedNamespaces <- function() names(.Internal(getNamespaceRegistry()))
@@ -83,44 +87,15 @@ getNamespaceUsers <- function(ns) {
     users
 }
 
-getExportedValue <- function(ns, name) {
-    ns <- asNamespace(ns)
-    if (isBaseNamespace(ns))
-	get(name, envir = ns, inherits = FALSE) # incl. error
-    else {
-	if (!is.null(oNam <- .getNamespaceInfo(ns, "exports")[[name]])) {
-	    get0(oNam, envir = ns)
-	} else { ##  <pkg> :: <dataset>  for lazydata :
-	    ld <- .getNamespaceInfo(ns, "lazydata")
-	    if (!is.null(obj <- ld[[name]]))
-		obj
-	    else { ## if there's a lazydata object with value NULL:
-		if(exists(name, envir = ld, inherits = FALSE))
-		    NULL
-		else
-		    stop(gettextf("'%s' is not an exported object from 'namespace:%s'",
-				  name, getNamespaceName(ns)),
-			 call. = FALSE, domain = NA)
-	    }
-	}
-    }
-}
-
-
-`::` <- function(pkg, name) {
-    pkg <- as.character(substitute(pkg))
-    name <- as.character(substitute(name))
-    getExportedValue(pkg, name)
-}
+getExportedValue <- function(ns, name)
+    .Internal(getNamespaceValue(ns, name, TRUE))
 
 ## NOTE: Both "::" and ":::" must signal an error for non existing objects
-
-`:::` <- function(pkg, name) {
-    pkg <- as.character(substitute(pkg))
-    name <- as.character(substitute(name))
-    get(name, envir = asNamespace(pkg), inherits = FALSE)
-}
-
+## :: and ::: are now SPECIALSXP primitives.
+## `::` <- function(pkg, name)
+##     .Internal(getNamespaceValue(substitute(pkg), substitute(name), TRUE))
+## `:::` <- function(pkg, name)
+##     .Internal(getNamespaceValue(substitute(pkg), substitute(name), FALSE))
 
 attachNamespace <- function(ns, pos = 2L, depends = NULL, exclude, include.only)
 {
@@ -235,6 +210,21 @@ loadNamespace <- function (package, lib.loc = NULL,
         }
         ns
     } else {
+        lev <- 0L
+        ## Values 1,2,3,4 give increasingly detailed tracing
+        ## Negative values trace specific actions, -5 for S4 generics/methods
+        msg <- Sys.getenv("_R_TRACE_LOADNAMESPACE_", "")
+        if (nzchar(msg)) {
+            if(package %in%
+               c("base", "tools", "utils", "grDevices", "graphics",
+                 "stats", "datasets", "methods", "grid", "splines", "stats4",
+                 "tcltk", "compiler", "parallel")) lev <- 0L
+            else {
+                lev <- as.integer(msg)
+                if(is.na(lev)) lev <- 0L
+            }
+        }
+	if(lev > 0L) message("- loading ", dQuote(package))
         ## only used here for .onLoad
         runHook <- function(hookname, env, libname, pkgname) {
 	    if (!is.null(fun <- env[[hookname]])) {
@@ -270,9 +260,7 @@ loadNamespace <- function (package, lib.loc = NULL,
             setNamespaceInfo(env, "path",
                              normalizePath(file.path(lib, name), "/", TRUE))
             setNamespaceInfo(env, "dynlibs", NULL)
-            ## <FIXME delayed S3 method registration>
             setNamespaceInfo(env, "S3methods", matrix(NA_character_, 0L, 4L))
-            ## </FIXME delayed S3 method registration>
             env$.__S3MethodsTable__. <-
                 new.env(hash = TRUE, parent = baseenv())
             .Internal(registerNamespace(name, env))
@@ -524,6 +512,7 @@ loadNamespace <- function (package, lib.loc = NULL,
         on.exit(.Internal(unregisterNamespace(package)))
 
         ## process imports
+	if(lev > 1L) message("-- processing imports for ", dQuote(package))
         for (i in nsInfo$imports) {
             if (is.character(i))
                 namespaceImport(ns,
@@ -555,6 +544,8 @@ loadNamespace <- function (package, lib.loc = NULL,
                                                      versionCheck = vI[[j]]),
                                    imp[[2L]], from = package)
 
+        if(lev > 1L) message("-- done processing imports for ", dQuote(package))
+
         ## store info for loading namespace for loadingNamespaceInfo to read
         "__LoadingNamespaceInfo__" <- list(libname = package.lib,
                                            pkgname = package)
@@ -567,6 +558,7 @@ loadNamespace <- function (package, lib.loc = NULL,
         codename <- strsplit(package, "_", fixed = TRUE)[[1L]][1L]
         codeFile <- file.path(pkgpath, "R", codename)
         if (file.exists(codeFile)) {
+            if(lev > 1L) message("-- loading code for ", dQuote(package))
 	    # The code file has been converted to the native encoding
 	    save.enc <- options(encoding = "native.enc")
             res <- try(sys.source(codeFile, env, keep.source = keep.source,
@@ -575,6 +567,7 @@ loadNamespace <- function (package, lib.loc = NULL,
             if(inherits(res, "try-error"))
                 stop(gettextf("unable to load R code in package %s",
                               sQuote(package)), call. = FALSE, domain = NA)
+            if(lev > 1L) message("-- loading code for ", dQuote(package))
         }
         # a package without R code currently is required to have a namespace
         # else warning(gettextf("package %s contains no R code",
@@ -586,15 +579,22 @@ loadNamespace <- function (package, lib.loc = NULL,
 
         ## lazy-load any sysdata
         dbbase <- file.path(pkgpath, "R", "sysdata")
-        if (file.exists(paste0(dbbase, ".rdb"))) lazyLoad(dbbase, env)
+        if (file.exists(paste0(dbbase, ".rdb"))) {
+            if(lev > 1L) message("-- loading sysdata for ", dQuote(package))
+            lazyLoad(dbbase, env)
+	}
 
         ## load any lazydata into a separate environment
         dbbase <- file.path(pkgpath, "data", "Rdata")
-        if(file.exists(paste0(dbbase, ".rdb")))
+        if(file.exists(paste0(dbbase, ".rdb"))) {
+            if(lev > 1L) message("-- loading lazydata for ", dQuote(package))
             lazyLoad(dbbase, .getNamespaceInfo(env, "lazydata"))
+	}
 
         ## register any S3 methods
+        if(lev > 1L) message("-- registerS3methods for ", dQuote(package))
         registerS3methods(nsInfo$S3methods, package, env)
+        if(lev > 1L) message("-- done registerS3methods for ", dQuote(package))
 
         ## load any dynamic libraries
         dlls <- list()
@@ -624,7 +624,9 @@ loadNamespace <- function (package, lib.loc = NULL,
         Sys.setenv("_R_NS_LOAD_" = package)
         on.exit(Sys.unsetenv("_R_NS_LOAD_"), add = TRUE)
         ## run the load hook
+	if(lev > 1L) message("-- running .onLoad for ", dQuote(package))
         runHook(".onLoad", env, package.lib, package)
+	if(lev > 1L) message("-- done running .onLoad for ", dQuote(package))
 
         ## process exports, seal, and clear on.exit action
         exports <- nsInfo$exports
@@ -642,9 +644,13 @@ loadNamespace <- function (package, lib.loc = NULL,
                 sQuote(package)), call. = FALSE, domain = NA)
         }
         if(.isMethodsDispatchOn() && hasS4m && !identical(package, "methods") ) {
+            if(lev > 1L || lev == -5)
+                message("-- processing S4 stuff for ", dQuote(package))
             ## cache generics, classes in this namespace (but not methods itself,
+            if(lev > 2L) message('--- caching metadata')
             ## which pre-cached at install time
             methods::cacheMetaData(ns, TRUE, ns)
+	    if(lev > 2L) message('--- done caching metadata')
             ## This also ran .doLoadActions
             ## load actions may have added objects matching patterns
             for (p in nsInfo$exportPatterns) {
@@ -655,6 +661,7 @@ loadNamespace <- function (package, lib.loc = NULL,
             }
             ## process class definition objects
             expClasses <- nsInfo$exportClasses
+	    if(lev > 2L) message('--- processing classes')
             ##we take any pattern, but check to see if the matches are classes
             pClasses <- character()
             aClasses <- methods::getClasses(ns)
@@ -767,6 +774,7 @@ loadNamespace <- function (package, lib.loc = NULL,
                 }
                 for(i in seq_along(expMethods)) {
                     mi <- expMethods[[i]]
+                    if(lev > 3L) message("---- export method ", sQuote(mi))
                     if(!(mi %in% exports) &&
                        exists(mi, envir = ns, mode = "function",
                               inherits = FALSE))
@@ -793,6 +801,8 @@ loadNamespace <- function (package, lib.loc = NULL,
                               paste(expMethods, collapse = ", ")),
                      domain = NA)
             exports <- unique(c(exports, expClasses,  expTables))
+            if(lev > 1L || lev == -5)
+                message("-- done processing S4 stuff for ", dQuote(package))
         }
         ## certain things should never be exported.
         if (length(exports)) {
@@ -801,10 +811,13 @@ loadNamespace <- function (package, lib.loc = NULL,
                           ".onAttach", ".conflicts.OK", ".noGenerics")
             exports <- exports[! exports %in% stoplist]
         }
+	if(lev > 2L) message("--- processing exports for ", dQuote(package))
         namespaceExport(ns, exports)
+	if(lev > 2L) message("--- sealing exports for ", dQuote(package))
         sealNamespace(ns)
         runUserHook(package, pkgpath)
         on.exit()
+	if(lev > 0L) message("- done loading ", dQuote(package))
         Sys.unsetenv("_R_NS_LOAD_")
         ns
     }
@@ -1046,9 +1059,8 @@ namespaceImportFrom <- function(self, ns, vars, generics, packages,
                 poss <- lapply(rev(current), "[", n)
                 poss <- poss[!sapply(poss, is.na)]
                 if(length(poss) >= 1L) {
-                    msg <- gettext("replacing previous import %s by %s when loading %s")
                     prev <- names(poss)[1L]
-                    warning(sprintf(msg,
+                    warning(sprintf(gettext("replacing previous import %s by %s when loading %s"),
                                     sQuote(paste(prev, n, sep = "::")),
                                     sQuote(paste(nsname, n, sep = "::")),
                                     sQuote(from)),
@@ -1302,9 +1314,7 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
     importClasses <- list()
     dynlibs <- character()
     nS3methods <- 1000L
-    ## <FIXME delayed S3 method registration>
     S3methods <- matrix(NA_character_, nS3methods, 4L)
-    ## </FIXME delayed S3 method registration>
     nativeRoutines <- list()
     nS3 <- 0L
     parseDirective <- function(e) {
@@ -1488,17 +1498,12 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
                        old <- S3methods
                        nold <- nS3methods
                        nS3methods <<- nS3methods * 2L
-                       ## <FIXME delayed S3 method registration>
                        new <- matrix(NA_character_, nS3methods, 4L)
-                       ## </FIXME delayed S3 method registration>
                        ind <- seq_len(nold)
-                       ## <FIXME delayed S3 method registration>
                        for (i in 1:4) new[ind, i] <- old[ind, i]
-                       ## </FIXME delayed S3 method registration>
                        S3methods <<- new
                        rm(old, new)
                    }
-                   ## <FIXME delayed S3 method registration>
                    if(is.call(gen <- spec[[1L]]) &&
                       identical(as.character(gen[[1L]]), "::")) {
                        pkg <- as.character(gen[[2L]])[1L]
@@ -1506,7 +1511,6 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
                        S3methods[nS3, c(seq_along(spec), 4L)] <<-
                            c(gen, asChar(spec[-1L]), pkg)
                    } else
-                   ## </FIXME delayed S3 method registration>
                    S3methods[nS3, seq_along(spec)] <<- asChar(spec)
                },
                stop(gettextf("unknown namespace directive: %s", deparse(e, nlines=1L)),
@@ -1532,9 +1536,7 @@ parseNamespaceFile <- function(package, package.lib, mustExist = TRUE)
 registerS3method <- function(genname, class, method, envir = parent.frame()) {
     addNamespaceS3method <- function(ns, generic, class, method) {
 	regs <- rbind(.getNamespaceInfo(ns, "S3methods"),
-        ## <FIXME delayed S3 method registration>
 		      c(generic, class, method, NA_character_))
-        ## </FIXME delayed S3 method registration>
         setNamespaceInfo(ns, "S3methods", regs)
     }
     groupGenerics <- c("Math", "Ops",  "Summary", "Complex")
@@ -1619,14 +1621,12 @@ registerS3methods <- function(info, package, env)
     methname <- paste(info[,1], info[,2], sep = ".")
     z <- is.na(info[,3])
     info[z,3] <- methname[z]
-    ## <FIXME delayed S3 method registration>
     ## Simpler to re-arrange so that packages for delayed registration
     ## come in the last column, and the non-delayed registration code
     ## can remain unchanged.
     if(ncol(info) == 3L)
         info <- cbind(info, NA_character_)
     Info <- cbind(info[, 1L : 3L, drop = FALSE], methname, info[, 4L])
-    ## <FIXME delayed S3 method registration>
     loc <- names(env)
     if(any(notex <- match(info[,3], loc, nomatch=0L) == 0L)) { # not %in%
         warning(sprintf(ngettext(sum(notex),
@@ -1636,11 +1636,9 @@ registerS3methods <- function(info, package, env)
                 call. = FALSE, domain = NA)
         Info <- Info[!notex, , drop = FALSE]
     }
-    ## <FIXME delayed S3 method registration>
     eager <- is.na(Info[, 5L])
     delayed <- Info[!eager, , drop = FALSE]
     Info    <- Info[ eager, , drop = FALSE]
-    ## </FIXME delayed S3 method registration>
 
     ## Do local generics first (this could be load-ed if pre-computed).
     ## However, the local generic could be an S4 takeover of a non-local
@@ -1720,7 +1718,6 @@ registerS3methods <- function(info, package, env)
         }
     }
 
-    ## <FIXME delayed S3 method registration>
     register_S3_method_delayed <- function(pkg, gen, cls, fun) {
         pkg <- pkg                      # force evaluation
         gen <- gen                      # force evaluation
@@ -1745,7 +1742,6 @@ registerS3methods <- function(info, package, env)
             register_S3_method_delayed(pkg, gen, cls, fun)
         }
     }
-    ## </FIXME delayed S3 method registration>
 
     ## Provide useful error message to user in case of ncol() mismatch:
     nsI <- getNamespaceInfo(env, "S3methods")

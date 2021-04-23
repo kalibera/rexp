@@ -56,6 +56,11 @@
 
 /* Override the SVID matherr function:
    the main difference here is not to print warnings.
+
+   This used to be common but was removed in glibc 2.27 having
+   previously been marked as obsolete.
+
+   macOS had it for x86_64 even in 11.0, but not for arm64.
  */
 #ifndef __cplusplus
 int matherr(struct exception *exc)
@@ -2271,7 +2276,7 @@ static SEXP math5(SEXP sa, SEXP sb, SEXP sc, SEXP sd, SEXP se, double (*f)())
 #define FINISH_Math5					\
     if(naflag) warning(R_MSG_NA);			\
 							\
-    if (n == na) SHALLOW_DUPLICATE_ATTRIB(sy, sa);	\
+    if      (n == na) SHALLOW_DUPLICATE_ATTRIB(sy, sa);	\
     else if (n == nb) SHALLOW_DUPLICATE_ATTRIB(sy, sb);	\
     else if (n == nc) SHALLOW_DUPLICATE_ATTRIB(sy, sc);	\
     else if (n == nd) SHALLOW_DUPLICATE_ATTRIB(sy, sd);	\

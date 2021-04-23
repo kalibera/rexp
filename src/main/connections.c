@@ -124,7 +124,7 @@ typedef long long int _lli_t;
 # include <Startup.h>
 #endif
 
-#define NCONNECTIONS 128 /* snow needs one per no-echo node */
+#define NCONNECTIONS 128 /* need one per cluster node */
 #define NSINKS 21
 
 static Rconnection Connections[NCONNECTIONS];
@@ -1202,31 +1202,30 @@ static char* win_getlasterror_str(void)
 static Rboolean	fifo_open(Rconnection con)
 {
     Rfifoconn this = con->private;
-    unsigned int uin_pipname_len = strlen(con->description);
     unsigned int uin_mode_len = strlen(con->mode);
     char *hch_pipename = NULL;
-    const char *hch_tempname = NULL;
     Rboolean boo_retvalue = TRUE;
+    const char *pipe_prefix = "\\\\.\\pipe\\";
 
     /* Prepare FIFO filename */
-    if (!uin_pipname_len) {
-	hch_pipename = R_tmpnam("fifo", "\\\\.\\pipe\\");
-    } else {
-	if (strncmp("\\\\.\\pipe\\", con->description, 9) != 0) {
-	    uin_pipname_len += strlen("\\\\.\\pipe\\") + 1;
-	    hch_pipename = (char*) malloc(uin_pipname_len);
-	    if (!hch_pipename) error(_("allocation of fifo name failed"));
-	    ZeroMemory(hch_pipename, uin_pipname_len);
-/*	    strcpy_s(hch_pipename, uin_pipname_len, "\\\\.\\pipe\\");  Win XP doesn't support this */
-	    strcpy(hch_pipename, "\\\\.\\pipe\\");
-	} else {
-	    hch_pipename = (char*)malloc(uin_pipname_len);
-	    if (!hch_pipename) error(_("allocation of fifo name failed"));
-	    ZeroMemory(hch_pipename, uin_pipname_len);
-	}
-	hch_tempname = R_ExpandFileName(con->description);
-/*	strcat_s(hch_pipename, uin_pipname_len, hch_tempname);  Win XP doesn't support this */
-	strcat(hch_pipename, hch_tempname);
+    if (strlen(con->description) == 0) 
+	hch_pipename = R_tmpnam("fifo", pipe_prefix); /* malloc */
+    else {
+	const char* hch_tempname = R_ExpandFileName(con->description);
+	size_t len = strlen(hch_tempname);
+	Rboolean add_prefix = FALSE;
+	if (strncmp(pipe_prefix, con->description, strlen(pipe_prefix)) != 0) {
+	    len += strlen(pipe_prefix);
+	    add_prefix = TRUE;
+	}	
+	hch_pipename = (char*) malloc(len+1);
+	if (!hch_pipename)
+	    error(_("allocation of fifo name failed"));
+	if (add_prefix) {
+	    strcpy(hch_pipename, pipe_prefix);
+	    strcat(hch_pipename, hch_tempname);
+	} else
+	    strcpy(hch_pipename, hch_tempname);
     }
 
     /* Prepare FIFO open mode */
@@ -1291,12 +1290,11 @@ static Rboolean	fifo_open(Rconnection con)
 
     /* Free malloc-ed variables */
     free(hch_pipename);
-    if (hch_tempname) free((void*) hch_tempname);
 
     /* Finalize FIFO configuration (only if FIFO is opened/created) */
     if (boo_retvalue && this->hdl_namedpipe) {
 	con->isopen = TRUE;
-	con->text = uin_mode_len >= 2 && con->mode[uin_mode_len - 1] == 'b';
+	con->text = strchr(con->mode, 'b') ? FALSE : TRUE;
 	set_iconv(con);
 	con->save = -1000;
     }
@@ -3424,13 +3422,13 @@ SEXP attribute_hidden do_textconvalue(SEXP call, SEXP op, SEXP args, SEXP env)
 /* ------------------- socket connections  --------------------- */
 
 
-/* socketConnection(host, port, server, blocking, open, encoding, timeout) */
-/* socketAccept(socket, blocking, open, encoding, timeout) */
+/* socketConnection(host, port, server, blocking, open, encoding, timeout, options) */
+/* socketAccept(socket, blocking, open, encoding, timeout, options) */
 SEXP attribute_hidden do_sockconn(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP scmd, sopen, ans, class, enc;
     const char *host, *open;
-    int ncon, port, server, blocking, timeout, serverfd;
+    int ncon, port, server, blocking, timeout, serverfd, options = 0;
     Rconnection con = NULL;
     Rservsockconn scon = NULL;
 
@@ -3472,9 +3470,22 @@ SEXP attribute_hidden do_sockconn(SEXP call, SEXP op, SEXP args, SEXP env)
 	error(_("invalid '%s' argument"), "encoding");
     args = CDR(args);
     timeout = asInteger(CAR(args));
+    args = CDR(args);
+    /* we don't issue errors/warnings on unknown options to allow for
+       future extensions */
+    if (isString(CAR(args))) {
+	SEXP sOpts = CAR(args);
+	int i = 0, n = LENGTH(sOpts);
+	while (i < n) {
+	    const char *opt = CHAR(STRING_ELT(sOpts, i));
+	    if (!strcmp("no-delay", opt))
+		options |= RSC_SET_TCP_NODELAY;
+	    i++;
+	}
+    }
 
     ncon = NextConnection();
-    con = R_newsock(host, port, server, serverfd, open, timeout);
+    con = R_newsock(host, port, server, serverfd, open, timeout, options);
     Connections[ncon] = con;
     con->blocking = blocking;
     strncpy(con->encname, CHAR(STRING_ELT(enc, 0)), 100); /* ASCII */

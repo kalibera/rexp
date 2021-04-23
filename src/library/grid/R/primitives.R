@@ -80,7 +80,7 @@ validDetails.move.to <- function(x) {
       !is.unit(x$y))
     stop("'x' and 'y' must be units")
   # Make sure that x and y are of length 1
-  if (length(x$x) > 1 | length(x$y) > 1)
+  if (length(x$x) > 1 || length(x$y) > 1)
     stop("'x' and 'y' must have length 1")
   x
 }
@@ -115,7 +115,7 @@ validDetails.line.to <- function(x) {
       !is.unit(x$y))
     stop("'x' and 'y' must be units")
   # Make sure that x and y are of length 1
-  if (length(x$x) > 1 | length(x$y) > 1)
+  if (length(x$x) > 1 || length(x$y) > 1)
     stop("'x' and 'y' must have length 1")
   if (!(is.null(x$arrow) || inherits(x$arrow, "arrow")))
       stop("invalid 'arrow' argument")
@@ -426,7 +426,7 @@ validDetails.arrows <- function(x) {
     stop("'length' must be a 'unit' object")
   x$ends <- as.integer(match(x$ends, c("first", "last", "both")))
   x$type <- as.integer(match(x$type, c("open", "closed")))
-  if (any(is.na(x$ends)) || any(is.na(x$type)))
+  if (anyNA(x$ends) || anyNA(x$type))
     stop("invalid 'ends' or 'type' argument")
   x
 }
@@ -1697,13 +1697,3 @@ nullGrob <- function(x=unit(0.5, "npc"), y=unit(0.5, "npc"),
 grid.null <- function(...) {
     grid.draw(nullGrob(...))
 }
-
-
-
-
-
-
-
-
-
-

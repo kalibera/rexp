@@ -114,6 +114,7 @@ function(file, header = FALSE, sep = "", quote = "\"'", dec = ".",
                       nlines = 1, quiet = TRUE, skip = 0,
                       strip.white = TRUE,
                       blank.lines.skip = blank.lines.skip,
+                      na.strings=character(0),# NA colname if !check.names 
                       comment.char = comment.char, allowEscapes = allowEscapes,
                       encoding = encoding, skipNul = skipNul)
         col1 <- if(missing(col.names)) length(first) else length(col.names)
@@ -184,7 +185,7 @@ function(file, header = FALSE, sep = "", quote = "\"'", dec = ".",
     colClasses[colClasses %in% c("real", "double")] <- "numeric"
     known <- colClasses %in% c("logical", "integer", "numeric", "complex",
                                "character", "raw")
-    what[known] <- sapply(colClasses[known], do.call, list(0))
+    what[known] <- lapply(colClasses[known], do.call, list(0))
     what[colClasses %in% "NULL"] <- list(NULL)
     keep <- !sapply(what, is.null)
 

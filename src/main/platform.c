@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2020 The R Core Team
+ *  Copyright (C) 1998--2021 The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -118,11 +118,16 @@ static void Init_R_Machine(SEXP rho)
 
     R_dec_min_exponent = (int) floor(log10(R_AccuracyInfo.xmin)); /* smallest decimal exponent */
 
+    /*
 #ifdef HAVE_LONG_DOUBLE
 # define MACH_SIZE 18+10
 #else
 # define MACH_SIZE 18
 #endif
+    */
+    int MACH_SIZE = 18;
+    if (sizeof(LDOUBLE) > sizeof(double)) MACH_SIZE += 10;
+    
     SEXP ans = PROTECT(allocVector(VECSXP, MACH_SIZE)),
 	 nms = PROTECT(allocVector(STRSXP, MACH_SIZE));
 
@@ -184,32 +189,37 @@ static void Init_R_Machine(SEXP rho)
     SET_STRING_ELT(nms, 17, mkChar("sizeof.pointer"));
     SET_VECTOR_ELT(ans, 17, ScalarInteger(sizeof(SEXP)));
 
+/* This used to be just
 #ifdef HAVE_LONG_DOUBLE
-    static struct {
-	int ibeta, it, irnd, ngrd, machep, negep, iexp, minexp, maxexp;
-	long double eps, epsneg, xmin, xmax;
-    } R_LD_AccuracyInfo;
+   but platforms can have the type and it be identical to double
+   (as on ARM).  So do the same as capabilities("long.double")
+*/
+#ifdef HAVE_LONG_DOUBLE
+    if (sizeof(LDOUBLE) > sizeof(double)) {
+	static struct {
+	    int ibeta, it, irnd, ngrd, machep, negep, iexp, minexp, maxexp;
+	    long double eps, epsneg, xmin, xmax;
+	} R_LD_AccuracyInfo;
+	
+	machar_LD(&R_LD_AccuracyInfo.ibeta,
+		  &R_LD_AccuracyInfo.it,
+		  &R_LD_AccuracyInfo.irnd,
+		  &R_LD_AccuracyInfo.ngrd,
+		  &R_LD_AccuracyInfo.machep,
+		  &R_LD_AccuracyInfo.negep,
+		  &R_LD_AccuracyInfo.iexp,
+		  &R_LD_AccuracyInfo.minexp,
+		  &R_LD_AccuracyInfo.maxexp,
+		  &R_LD_AccuracyInfo.eps,
+		  &R_LD_AccuracyInfo.epsneg,
+		  &R_LD_AccuracyInfo.xmin,
+		  &R_LD_AccuracyInfo.xmax);
+ 
+	SET_STRING_ELT(nms, 18+0, mkChar("longdouble.eps"));
+	SET_VECTOR_ELT(ans, 18+0, ScalarReal((double) R_LD_AccuracyInfo.eps));
 
-    machar_LD(&R_LD_AccuracyInfo.ibeta,
-	      &R_LD_AccuracyInfo.it,
-	      &R_LD_AccuracyInfo.irnd,
-	      &R_LD_AccuracyInfo.ngrd,
-	      &R_LD_AccuracyInfo.machep,
-	      &R_LD_AccuracyInfo.negep,
-	      &R_LD_AccuracyInfo.iexp,
-	      &R_LD_AccuracyInfo.minexp,
-	      &R_LD_AccuracyInfo.maxexp,
-	      &R_LD_AccuracyInfo.eps,
-	      &R_LD_AccuracyInfo.epsneg,
-	      &R_LD_AccuracyInfo.xmin,
-	      &R_LD_AccuracyInfo.xmax);
-
-    SET_STRING_ELT(nms, 18+0, mkChar("longdouble.eps"));
-    SET_VECTOR_ELT(ans, 18+0, ScalarReal((double) R_LD_AccuracyInfo.eps));
-
-    SET_STRING_ELT(nms, 18+1, mkChar("longdouble.neg.eps"));
-    SET_VECTOR_ELT(ans, 18+1, ScalarReal((double) R_LD_AccuracyInfo.epsneg));
-
+	SET_STRING_ELT(nms, 18+1, mkChar("longdouble.neg.eps"));
+	SET_VECTOR_ELT(ans, 18+1, ScalarReal((double) R_LD_AccuracyInfo.epsneg));
     /*
     SET_STRING_ELT(nms, 18+2, mkChar("longdouble.xmin"));     // not representable as double
     SET_VECTOR_ELT(ans, 18+2, ScalarReal(R_LD_AccuracyInfo.xmin));
@@ -221,30 +231,31 @@ static void Init_R_Machine(SEXP rho)
     SET_VECTOR_ELT(ans, 18+4, ScalarInteger(R_LD_AccuracyInfo.ibeta));
     */
 
-    SET_STRING_ELT(nms, 18+2, mkChar("longdouble.digits"));
-    SET_VECTOR_ELT(ans, 18+2, ScalarInteger(R_LD_AccuracyInfo.it));
+	SET_STRING_ELT(nms, 18+2, mkChar("longdouble.digits"));
+	SET_VECTOR_ELT(ans, 18+2, ScalarInteger(R_LD_AccuracyInfo.it));
 
-    SET_STRING_ELT(nms, 18+3, mkChar("longdouble.rounding"));
-    SET_VECTOR_ELT(ans, 18+3, ScalarInteger(R_LD_AccuracyInfo.irnd));
+	SET_STRING_ELT(nms, 18+3, mkChar("longdouble.rounding"));
+	SET_VECTOR_ELT(ans, 18+3, ScalarInteger(R_LD_AccuracyInfo.irnd));
 
-    SET_STRING_ELT(nms, 18+4, mkChar("longdouble.guard"));
-    SET_VECTOR_ELT(ans, 18+4, ScalarInteger(R_LD_AccuracyInfo.ngrd));
+	SET_STRING_ELT(nms, 18+4, mkChar("longdouble.guard"));
+	SET_VECTOR_ELT(ans, 18+4, ScalarInteger(R_LD_AccuracyInfo.ngrd));
 
-    SET_STRING_ELT(nms, 18+5, mkChar("longdouble.ulp.digits"));
-    SET_VECTOR_ELT(ans, 18+5, ScalarInteger(R_LD_AccuracyInfo.machep));
+	SET_STRING_ELT(nms, 18+5, mkChar("longdouble.ulp.digits"));
+	SET_VECTOR_ELT(ans, 18+5, ScalarInteger(R_LD_AccuracyInfo.machep));
 
-    SET_STRING_ELT(nms, 18+6, mkChar("longdouble.neg.ulp.digits"));
-    SET_VECTOR_ELT(ans, 18+6, ScalarInteger(R_LD_AccuracyInfo.negep));
+	SET_STRING_ELT(nms, 18+6, mkChar("longdouble.neg.ulp.digits"));
+	SET_VECTOR_ELT(ans, 18+6, ScalarInteger(R_LD_AccuracyInfo.negep));
 
-    SET_STRING_ELT(nms, 18+7, mkChar("longdouble.exponent"));
-    SET_VECTOR_ELT(ans, 18+7, ScalarInteger(R_LD_AccuracyInfo.iexp));
+	SET_STRING_ELT(nms, 18+7, mkChar("longdouble.exponent"));
+	SET_VECTOR_ELT(ans, 18+7, ScalarInteger(R_LD_AccuracyInfo.iexp));
 
-    SET_STRING_ELT(nms, 18+8, mkChar("longdouble.min.exp"));
-    SET_VECTOR_ELT(ans, 18+8, ScalarInteger(R_LD_AccuracyInfo.minexp));
+	SET_STRING_ELT(nms, 18+8, mkChar("longdouble.min.exp"));
+	SET_VECTOR_ELT(ans, 18+8, ScalarInteger(R_LD_AccuracyInfo.minexp));
 
-    SET_STRING_ELT(nms, 18+9, mkChar("longdouble.max.exp"));
-    SET_VECTOR_ELT(ans, 18+9, ScalarInteger(R_LD_AccuracyInfo.maxexp));
+	SET_STRING_ELT(nms, 18+9, mkChar("longdouble.max.exp"));
+	SET_VECTOR_ELT(ans, 18+9, ScalarInteger(R_LD_AccuracyInfo.maxexp));
 
+    }
 #endif
 
     setAttrib(ans, R_NamesSymbol, nms);
@@ -337,16 +348,20 @@ const char attribute_hidden *R_nativeEncoding(void)
 /* retrieves information about the current locale and
    sets the corresponding variables (known_to_be_utf8,
    known_to_be_latin1, utf8locale, latin1locale and mbcslocale) */
+
+static char codeset[R_CODESET_MAX + 1];
 void attribute_hidden R_check_locale(void)
 {
     known_to_be_utf8 = utf8locale = FALSE;
     known_to_be_latin1 = latin1locale = FALSE;
     mbcslocale = FALSE;
     strcpy(native_enc, "ASCII");
+    strcpy(codeset, "");
 #ifdef HAVE_LANGINFO_CODESET
     /* not on Windows */
     {
 	char  *p = nl_langinfo(CODESET);
+	strcpy(codeset, p);  // copy just in case something else calls nl_langinfo.
 	/* more relaxed due to Darwin: CODESET is case-insensitive and
 	   latin1 is ISO8859-1 */
 	if (R_strieql(p, "UTF-8")) known_to_be_utf8 = utf8locale = TRUE;
@@ -354,9 +369,14 @@ void attribute_hidden R_check_locale(void)
 	if (R_strieql(p, "ISO8859-1")) known_to_be_latin1 = latin1locale = TRUE;
 # if __APPLE__
 	/* On Darwin 'regular' locales such as 'en_US' are UTF-8 (hence
-	   MB_CUR_MAX == 6), but CODESET is "" */
-	if (*p == 0 && MB_CUR_MAX == 6)
+	   MB_CUR_MAX == 6), but CODESET is "" 
+	   2021: that comment dated from 2008: MB_CUR_MAX is now 4 in 
+	   a UTF-8 locale, even on 10.13. 
+	*/
+	if (*p == 0 && (MB_CUR_MAX == 4 || MB_CUR_MAX == 6)) {
 	    known_to_be_utf8 = utf8locale = TRUE;
+	    strcpy(codeset, "UTF-8");
+	}
 # endif
 	if (utf8locale)
 	    strcpy(native_enc, "UTF-8");
@@ -2895,7 +2915,7 @@ SEXP attribute_hidden do_l10n_info(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef Win32
     int len = 5;
 #else
-    int len = 3;
+    int len = 4;
 #endif
     SEXP ans, names;
     checkArity(op, args);
@@ -2907,6 +2927,10 @@ SEXP attribute_hidden do_l10n_info(SEXP call, SEXP op, SEXP args, SEXP env)
     SET_VECTOR_ELT(ans, 0, ScalarLogical(mbcslocale));
     SET_VECTOR_ELT(ans, 1, ScalarLogical(utf8locale));
     SET_VECTOR_ELT(ans, 2, ScalarLogical(latin1locale));
+#ifndef Win32
+    SET_STRING_ELT(names, 3, mkChar("codeset"));
+    SET_VECTOR_ELT(ans, 3, mkString(codeset));
+#endif
 #ifdef Win32
     SET_STRING_ELT(names, 3, mkChar("codepage"));
     SET_VECTOR_ELT(ans, 3, ScalarInteger(localeCP));

@@ -1,6 +1,6 @@
 
-R Under development (unstable) (2020-10-06 r79301) -- "Unsuffered Consequences"
-Copyright (C) 2020 The R Foundation for Statistical Computing
+R Under development (unstable) (2021-04-16 r80178) -- "Unsuffered Consequences"
+Copyright (C) 2021 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -3259,7 +3259,7 @@ Error in `[.data.frame`(x, 1, c("a", "c")) : undefined columns selected
 [31] print         prompt        rbind         row.names     row.names<-  
 [36] rowsum        split         split<-       stack         str          
 [41] subset        summary       t             tail          transform    
-[46] type.convert  unique        unstack       within       
+[46] type.convert  unique        unstack       within        xtfrm        
 > meth2gen("dendrogram")
  [1] [[            as.dendrogram as.hclust     cophenetic    cut          
  [6] labels        merge         nobs          plot          print        
@@ -6363,7 +6363,7 @@ function(given = NULL) {
     if (is.null(given)) callObj$default <- TRUE
     callObj
 }
-<bytecode: 0x2ab29c8>
+<bytecode: 0x2177a80>
 > print(foo, useSource = FALSE)
 function (given = NULL) 
 {
@@ -6374,7 +6374,7 @@ function (given = NULL)
         callObj$default <- TRUE
     callObj
 }
-<bytecode: 0x2ab29c8>
+<bytecode: 0x2177a80>
 > attr(foo, "srcref") <- NULL
 > foo
 function (given = NULL) 
@@ -6386,7 +6386,7 @@ function (given = NULL)
         callObj$default <- TRUE
     callObj
 }
-<bytecode: 0x2ab29c8>
+<bytecode: 0x2177a80>
 > (f <- structure(function(){}, note = "just a note",
 +                 yada = function() "not the same"))
 function(){}
@@ -7368,8 +7368,16 @@ Warning messages:
 > x <- Sys.time()
 > all.equal(x,x)
 [1] TRUE
-> all.equal(x, as.POSIXlt(x))
+> 
+> # FIXME: check.tzone = FALSE needed because since 79037, all.equal.POSIXt
+> # strictly reports "" and the current time zone (even from TZ environment
+> # variable) as different.  The conversion round-trip from Sys.time()
+> # (POSIXct) via POSIXlt and back to POSIXct creates an object with the
+> # current time zone, yet the original is with "" as time zone (and both
+> # refer to the same time zone).
+> all.equal(x, as.POSIXlt(x), check.tzone = FALSE)
 [1] TRUE
+> 
 > all.equal(x, as.numeric(x))  # errored in R <= 4.0.2
 [1] "'current' is not a POSIXt"
 > all.equal(x, as.POSIXlt(x, tz = "EST5EDT"))
@@ -8061,4 +8069,32 @@ mean of x
 +     options(op)
 +     unlink(tf)
 + }
+> 
+> 
+> ## printing *named* complex vectors (*not* arrays), PR#17868 (and PR#18019):
+> a <- 1:12; (z <- a + a*1i); names(z) <- letters[seq_along(z)]; z
+ [1]  1+ 1i  2+ 2i  3+ 3i  4+ 4i  5+ 5i  6+ 6i  7+ 7i  8+ 8i  9+ 9i 10+10i
+[11] 11+11i 12+12i
+     a      b      c      d      e      f      g      h      i      j      k 
+ 1+ 1i  2+ 2i  3+ 3i  4+ 4i  5+ 5i  6+ 6i  7+ 7i  8+ 8i  9+ 9i 10+10i 11+11i
+     l 
+12+12i
+> ## fixed in R-devel in July 2020;  R 4.0.3 patched on Dec 26, 2020
+> 
+> 
+> ## identical(*) on "..." object
+> (ddd <- (function(...) environment())(1)$...) # <...>
+<...>
+>  dd2 <- (function(...) environment())(1)$...
+> stopifnot( identical(ddd, dd2) )
+> ## In R <= 4.0.3,  printed to console (no warning, no message!):
+> ## "Unknown Type: ... (11)"
+> 
+> 
+> ## printCoefmat() should keep NaN values (PR#17336)
+> ##cm <- summary(lm(c(0,0,0) ~ 1))$coefficients
+> cm <- cbind(Estimate = 0, SE = 0, t = NaN, "Pr(>|t|)" = NaN)
+> printCoefmat(cm)  # NaN's were replaced by NA in R < 4.1.0
+     Estimate SE   t Pr(>|t|)
+[1,]        0  0 NaN      NaN
 > 

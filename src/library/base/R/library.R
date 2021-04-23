@@ -34,7 +34,7 @@
 ## If we want this it would be better to factor out the core of checkConflicts.
 ## searchConflicts <- function(pkg) {
 ##     vars <- getNamespaceExports(pkg)
-##     conflicts <- function(pos) intersect(vars, ls(pos, all = TRUE))
+##     conflicts <- function(pos) intersect(vars, ls(pos, all.names = TRUE))
 ##     val <- Filter(length, sapply(search()[-1], conflicts))
 ##     if (length(val)) val else NULL
 ## }
@@ -806,17 +806,22 @@ function(package = NULL, lib.loc = NULL, quiet = FALSE,
                 ## Note that this is sometimes used for source
                 ## packages, e.g. by promptPackage from package.skeleton
                 pfile <- file.path(p, "Meta", "package.rds")
-                info <- if(file.exists(pfile))
+                info <- if(file.exists(pfile)) {
                     ## this must have these fields to get installed
-                    readRDS(pfile)$DESCRIPTION[c("Package", "Version")]
-                else {
+                    tryCatch(readRDS(pfile)$DESCRIPTION[c("Package",
+                                                          "Version")],
+                             error = function(e)
+                                 c(Package = NA_character_,
+                                   Version = NA_character_))
+                } else {
                     info <- tryCatch(read.dcf(file.path(p, "DESCRIPTION"),
                                               c("Package", "Version"))[1, ],
                                      error = identity)
                     if(inherits(info, "error")
                        || (length(info) != 2L)
                        || anyNA(info))
-                        c(Package = NA, Version = NA) # need dimnames below
+                        c(Package = NA_character_,
+                          Version = NA_character_) # need dimnames below
                     else
                         info
                 }

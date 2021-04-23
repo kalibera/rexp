@@ -1,6 +1,6 @@
 ### cairo.m4 -- extra macros for configuring R for cairo    -*- Autoconf -*-
 ###
-### Copyright (C) 2008 R Core Team
+### Copyright (C) 2008-2021 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -35,6 +35,9 @@ else
   ])
   if test "x${r_cv_has_pangocairo}" = "xyes"; then
     modlist="pangocairo"
+    ## These tests are useful for existence of features but
+    ## because cairo is built as a single library they
+    ## currently make no difference to CPPFLAGS nor LIBS
     for module in cairo-png; do
       if "${PKG_CONFIG}" --exists ${module}; then
 	modlist="${modlist} ${module}"
@@ -52,15 +55,24 @@ else
        modlist="${modlist} cairo-svg"
        r_cairo_svg=yes
     fi
-      if "${PKG_CONFIG}" --exists cairo-xlib; then
-         xmodlist="${modlist} cairo-xlib"
-      else
-         xmodlist="${modlist}"
-      fi
+    if "${PKG_CONFIG}" --exists cairo-xlib; then
+       xmodlist="${modlist} cairo-xlib"
+       r_cairo_xlib=yes
+    else
+       xmodlist="${modlist}"
+    fi
     CAIRO_CPPFLAGS=`"${PKG_CONFIG}" --cflags ${modlist}`
     CAIROX11_CPPFLAGS=`"${PKG_CONFIG}" --cflags ${xmodlist}`
-    CAIRO_LIBS=`"${PKG_CONFIG}" --libs ${modlist}`
-    CAIROX11_LIBS=`"${PKG_CONFIG}" --libs ${xmodlist}`
+    ## Static builds may currently be impossible as harfbuzz
+    ## requires graphite2 and that does not support static building.
+    if test "x$use_static_cairo" = xyes; then
+       AC_MSG_NOTICE([using static pangocairo])
+       CAIRO_LIBS=`"${PKG_CONFIG}" --static --libs ${modlist}`
+       CAIROX11_LIBS=`"${PKG_CONFIG}" --static --libs ${xmodlist}`
+    else
+       CAIRO_LIBS=`"${PKG_CONFIG}" --libs ${modlist}`
+       CAIROX11_LIBS=`"${PKG_CONFIG}" --libs ${xmodlist}`
+    fi
 
     CPPFLAGS="${CPPFLAGS} ${CAIRO_CPPFLAGS}"
     LIBS="${LIBS} ${CAIRO_LIBS}"
@@ -70,7 +82,8 @@ else
                     [AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <pango/pango.h>
 #include <pango/pangocairo.h>
-#include <cairo-xlib.h>
+//#include <cairo-xlib.h>
+#include <stddef.h>
 #if CAIRO_VERSION  < 10200
 #error cairo version >= 1.2 required
 #endif
@@ -118,23 +131,20 @@ int main(void) {
       fi
       if "${PKG_CONFIG}" --exists cairo-xlib; then
          xmodlist="${modlist} cairo-xlib"
+         r_cairo_xlib=yes
       else
          xmodlist="${modlist}"
       fi
       CAIRO_CPPFLAGS=`"${PKG_CONFIG}" --cflags ${modlist}`
       CAIROX11_CPPFLAGS=`"${PKG_CONFIG}" --cflags ${xmodlist}`
-      case "${host_os}" in
-        darwin*)
-          ## This is for static macOS build
-	  ## FIXME: doing that unconditionally is really not a good idea
+      if test "x$use_static_cairo" = xyes; then
+      	  AC_MSG_NOTICE([using static cairo])
           CAIRO_LIBS=`"${PKG_CONFIG}" --static --libs ${modlist}`
           CAIROX11_LIBS=`"${PKG_CONFIG}" --static --libs ${xmodlist}`
-          ;;
-        *)
+      else
           CAIRO_LIBS=`"${PKG_CONFIG}" --libs ${modlist}`
           CAIROX11_LIBS=`"${PKG_CONFIG}" --libs ${xmodlist}`
-          ;;
-      esac
+      fi
 
       CPPFLAGS="${CPPFLAGS} ${CAIRO_CPPFLAGS} ${CAIROX11_CPPFLAGS}"
       LIBS="${LIBS} ${CAIRO_LIBS}"
@@ -143,12 +153,13 @@ int main(void) {
 		     [r_cv_cairo_works], 
                      [AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <cairo.h>
-#include <cairo-xlib.h>
+//#include <cairo-xlib.h>
+#include <stddef.h>
 #if CAIRO_VERSION  < 10200
 #error cairo version >= 1.2 required
 #endif
 int main(void) {
-    cairo_t  *CC;    
+    cairo_t  *CC = NULL; // silence picky compilers    
     cairo_arc(CC, 0.0, 0.0, 1.0, 0.0, 6.28);
     cairo_select_font_face (CC, "Helvetica", CAIRO_FONT_SLANT_NORMAL, 
                             CAIRO_FONT_WEIGHT_BOLD);
@@ -157,6 +168,8 @@ int main(void) {
 	]])],[r_cv_cairo_works=yes],[r_cv_cairo_works=no
           CAIRO_LIBS=
           CAIRO_CFLAGS=
+          CAIROX11_LIBS=
+          CAIROX11_CFLAGS=
         ])])
       CPPFLAGS=${save_CPPFLAGS}
       LIBS=${save_LIBS}
@@ -169,6 +182,10 @@ if test "x${r_cv_has_pangocairo}" = xyes; then
 fi
 if test "x${r_cv_cairo_works}" = xyes; then
    AC_DEFINE(HAVE_WORKING_CAIRO, 1, [Define to 1 if you have cairo.])
+   if test "x${r_cairo_xlib}" = xyes; then
+      AC_DEFINE(HAVE_WORKING_X11_CAIRO, 1,
+               [Define to 1 if you have cairo including Xlib.])
+   fi
 fi
 if test "x${r_cairo_pdf}" = xyes; then
    AC_DEFINE(HAVE_CAIRO_PDF, 1, [Define to 1 if you have cairo-ps.]) 

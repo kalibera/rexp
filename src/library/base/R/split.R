@@ -36,8 +36,12 @@ split.default <- function(x, f, drop = FALSE, sep = ".", lex.order = FALSE, ...)
 
 ## This is documented to work for matrices too
 split.data.frame <- function(x, f, drop = FALSE, ...)
+{
+    ## If formula, maybe should check that there is no LHS?
+    if (inherits(f, "formula")) f <- eval(attr(stats::terms(f), "variables"), x, environment(f))
     lapply(split(x = seq_len(nrow(x)), f = f, drop = drop, ...),
            function(ind) x[ind, , drop = FALSE])
+}
 
 `split<-` <- function(x, f, drop = FALSE, ..., value) UseMethod("split<-")
 
@@ -56,6 +60,7 @@ split.data.frame <- function(x, f, drop = FALSE, ...)
 ## This is documented to work for matrices too
 `split<-.data.frame` <- function(x, f, drop = FALSE, ..., value)
 {
+    if (inherits(f, "formula")) f <- eval(attr(stats::terms(f), "variables"), x, environment(f))
     ix <- split(seq_len(nrow(x)), f, drop = drop, ...)
     n <- length(value)
     j <- 0
@@ -66,14 +71,17 @@ split.data.frame <- function(x, f, drop = FALSE, ...)
     x
 }
 
+## (Note: use rep(NA_integer_, len) for indexing here. Logical NA confuses 
+## tibbles and only coincidentally does the right thing otherwise, 
+## because len is longer than value[[1]]. Otherwise recycling would kick in.) 
 unsplit <- function (value, f, drop = FALSE)
 {
     len <- length(if (is.list(f)) f[[1L]] else f)
     if (is.data.frame(value[[1L]])) {
-        x <- value[[1L]][rep(NA, len),, drop = FALSE]
+        x <- value[[1L]][rep(NA_integer_, len),, drop = FALSE]
         rownames(x) <- unsplit(lapply(value, rownames), f, drop = drop)
     } else
-        x <- value[[1L]][rep(NA, len)]
+        x <- value[[1L]][rep(NA_integer_, len)]
     split(x, f, drop = drop) <- value
     x
 }

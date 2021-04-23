@@ -799,32 +799,39 @@ void setup_Rmainloop(void)
 #ifdef HAVE_LOCALE_H
 #ifdef Win32
     {
-	char *p, Rlocale[1000]; /* Windows' locales can be very long */
+	char allbuf[1000]; /* Windows' locales can be very long */ 
+	char *p, *lcall; 
+    
 	p = getenv("LC_ALL");
-	strncpy(Rlocale, p ? p : "", 1000);
-	Rlocale[1000 - 1] = '\0';
-	if(!(p = getenv("LC_CTYPE"))) p = Rlocale;
+	if(p) {
+	    strncpy(allbuf, p, sizeof(allbuf));
+	    allbuf[1000 - 1] = '\0';
+	    lcall = allbuf;
+	} else
+	    lcall = NULL;
+	
 	/* We'd like to use warning, but need to defer.
 	   Also cannot translate. */
-	if(!setlocale(LC_CTYPE, p))
+
+	p = lcall ? lcall : getenv("LC_COLLATE");
+	if(!setlocale(LC_COLLATE, p ? p : ""))
 	    snprintf(deferred_warnings[ndeferred_warnings++], 250,
-		     "Setting LC_CTYPE=%s failed\n", p);
-	if((p = getenv("LC_COLLATE"))) {
-	    if(!setlocale(LC_COLLATE, p))
-		snprintf(deferred_warnings[ndeferred_warnings++], 250,
-			 "Setting LC_COLLATE=%s failed\n", p);
-	} else setlocale(LC_COLLATE, Rlocale);
-	if((p = getenv("LC_TIME"))) {
-	    if(!setlocale(LC_TIME, p))
-		snprintf(deferred_warnings[ndeferred_warnings++], 250,
-			 "Setting LC_TIME=%s failed\n", p);
-	} else setlocale(LC_TIME, Rlocale);
-	if((p = getenv("LC_MONETARY"))) {
-	    if(!setlocale(LC_MONETARY, p))
-		snprintf(deferred_warnings[ndeferred_warnings++], 250,
-			 "Setting LC_MONETARY=%s failed\n", p);
-	} else setlocale(LC_MONETARY, Rlocale);
-	/* Windows does not have LC_MESSAGES */
+		     "Setting LC_COLLATE=%.200s failed\n", p);
+
+	p = lcall ? lcall : getenv("LC_CTYPE");
+	if(!setlocale(LC_CTYPE, p ? p : ""))
+	    snprintf(deferred_warnings[ndeferred_warnings++], 250,
+		     "Setting LC_CTYPE=%.200s failed\n", p);
+	
+	p = lcall ? lcall : getenv("LC_MONETARY");
+	if(!setlocale(LC_MONETARY, p ? p : ""))
+	    snprintf(deferred_warnings[ndeferred_warnings++], 250,
+		     "Setting LC_MONETARY=%.200s failed\n", p);
+
+	p = lcall ? lcall : getenv("LC_TIME");
+	if(!setlocale(LC_TIME, p ? p : ""))
+	    snprintf(deferred_warnings[ndeferred_warnings++], 250,
+		     "Setting LC_TIME=%.200s failed\n", p);
 
 	/* We set R_ARCH here: Unix does it in the shell front-end */
 	char Rarch[30];
@@ -961,10 +968,7 @@ void setup_Rmainloop(void)
     R_LoadProfile(R_OpenSysInitFile(), baseEnv);
     /* These are the same bindings, so only lock them once */
     R_LockEnvironment(R_BaseNamespace, TRUE);
-#ifdef NOTYET
-    /* methods package needs to trample here */
-    R_LockEnvironment(R_BaseEnv, TRUE);
-#endif
+    R_LockEnvironment(R_BaseEnv, FALSE);
     /* At least temporarily unlock some bindings used in graphics */
     R_unLockBinding(R_DeviceSymbol, R_BaseEnv);
     R_unLockBinding(R_DevicesSymbol, R_BaseEnv);
@@ -1632,47 +1636,82 @@ Rf_callToplevelHandlers(SEXP expr, SEXP value, Rboolean succeeded,
 }
 
 
+static void defineVarInc(SEXP sym, SEXP val, SEXP rho)
+{
+    defineVar(sym, val, rho);
+    INCREMENT_NAMED(val); /* in case this is used in a NAMED build */
+}
+
 Rboolean
 R_taskCallbackRoutine(SEXP expr, SEXP value, Rboolean succeeded,
 		      Rboolean visible, void *userData)
 {
+    /* install some symbols */
+    static SEXP R_cbSym = NULL;
+    static SEXP R_exprSym = NULL;
+    static SEXP R_valueSym = NULL;
+    static SEXP R_succeededSym = NULL;
+    static SEXP R_visibleSym = NULL;
+    static SEXP R_dataSym = NULL;
+    if (R_cbSym == NULL) {
+	R_cbSym = install("cb");
+	R_exprSym = install("expr");
+	R_valueSym = install("value");
+	R_succeededSym = install("succeeded");
+	R_visibleSym = install("visible");
+	R_dataSym = install("data");
+    }
+    
     SEXP f = (SEXP) userData;
-    SEXP e, tmp, val, cur;
+    SEXP e, val, cur, rho;
     int errorOccurred;
     Rboolean again, useData = LOGICAL(VECTOR_ELT(f, 2))[0];
 
-    PROTECT(e = allocVector(LANGSXP, 5 + useData));
-    SETCAR(e, VECTOR_ELT(f, 0));
-    cur = CDR(e);
-    tmp = allocVector(LANGSXP, 2);
-    SETCAR(cur, tmp);
-	SETCAR(tmp, lang3(R_DoubleColonSymbol, R_BaseSymbol, R_QuoteSymbol));
-	SETCAR(CDR(tmp), expr);
-    cur = CDR(cur);
-    SETCAR(cur, value);
-    cur = CDR(cur);
-    SETCAR(cur, ScalarLogical(succeeded));
-    cur = CDR(cur);
-    SETCAR(cur, tmp = ScalarLogical(visible));
-    if(useData) {
-	cur = CDR(cur);
-	SETCAR(cur, VECTOR_ELT(f, 1));
-    }
+    /* create an environment with bindings for the function and arguments */
+    PROTECT(rho = NewEnvironment(R_NilValue, R_NilValue, R_GlobalEnv));
+    defineVarInc(R_cbSym, VECTOR_ELT(f, 0), rho);
+    defineVarInc(R_exprSym, expr, rho);
+    defineVarInc(R_valueSym, value, rho);
+    defineVarInc(R_succeededSym, ScalarLogical(succeeded), rho);
+    defineVarInc(R_visibleSym, ScalarLogical(visible), rho);
+    if(useData)
+	defineVarInc(R_dataSym, VECTOR_ELT(f, 1), rho);
 
-    val = R_tryEval(e, NULL, &errorOccurred);
-    UNPROTECT(1); /* e */
+    /* create the call; these could be saved and re-used */
+    PROTECT(e = allocVector(LANGSXP, 5 + useData));
+    SETCAR(e, R_cbSym); cur = CDR(e);
+    SETCAR(cur, R_exprSym); cur = CDR(cur);
+    SETCAR(cur, R_valueSym); cur = CDR(cur);
+    SETCAR(cur, R_succeededSym); cur = CDR(cur);
+    SETCAR(cur, R_visibleSym); cur = CDR(cur);
+    if(useData)
+	SETCAR(cur, R_dataSym);
+
+    val = R_tryEval(e, rho, &errorOccurred);
+    PROTECT(val);
+
+    /* clear the environment to reduce reference counts */
+    defineVar(R_cbSym, R_NilValue, rho);
+    defineVar(R_exprSym, R_NilValue, rho);
+    defineVar(R_valueSym, R_NilValue, rho);
+    defineVar(R_succeededSym, R_NilValue, rho);
+    defineVar(R_visibleSym, R_NilValue, rho);
+    if(useData)
+	defineVar(R_dataSym, R_NilValue, rho);
+
     if(!errorOccurred) {
-	PROTECT(val);
 	if(TYPEOF(val) != LGLSXP) {
-	      /* It would be nice to identify the function. */
+	    /* It would be nice to identify the function. */
 	    warning(_("top-level task callback did not return a logical value"));
 	}
 	again = asLogical(val);
-	UNPROTECT(1);
     } else {
 	/* warning("error occurred in top-level task callback\n"); */
 	again = FALSE;
     }
+
+    UNPROTECT(3); /* rho, e, val */
+
     return(again);
 }
 

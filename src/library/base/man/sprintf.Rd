@@ -1,6 +1,6 @@
 % File src/library/base/man/sprintf.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2020 R Core Team
+% Copyright 1995-2021 R Core Team
 % Distributed under GPL 2 or later
 
 \name{sprintf}
@@ -36,7 +36,9 @@ gettextf(fmt, \dots, domain = NULL)
   is done in parallel.  Zero-length arguments are allowed and will give
   a zero-length result.  All arguments are evaluated even if unused, and
   hence some types (e.g., \code{"symbol"} or \code{"language"}, see
-  \code{\link{typeof}}) are not allowed.
+  \code{\link{typeof}}) are not allowed. Arguments unused by \code{fmt}
+  result in a warning. (The format \code{\%.0s} can be used to
+  \dQuote{skip} an argument.)
 
   The following is abstracted from Kernighan and Ritchie (see
   References): however the actual implementation will follow the C99
@@ -187,7 +189,11 @@ gettextf(fmt, \dots, domain = NULL)
   Describes the format options in table B-1 in the Appendix.
 
   The C Standards, especially ISO/IEC 9899:1999 for \sQuote{C99}.  Links
-  can be found at \url{https://developer.r-project.org/Portability.html}.
+  can be found at
+  \url{https://developer.r-project.org/Portability.html}.
+
+  \url{https://pubs.opengroup.org/onlinepubs/9699919799/functions/snprintf.html }
+  for POSIX extensions such as numbered arguments.
 
   \command{man sprintf} on a Unix-alike system.
 }

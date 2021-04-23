@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R-base 3.6.3\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2020-08-13 10:30\n"
+"POT-Creation-Date: 2021-02-12 09:25\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Daniele Medri <dmedri@gmail.com>\n"
 "Language-Team: Italian https://github.com/dmedri/R-italian-lang\n"
@@ -223,6 +223,12 @@ msgstr ""
 "l'argomento 'object' dev'essere ritrattato in una singola stringa di "
 "caratteri"
 
+#, fuzzy
+msgid "'name' must be a single character string"
+msgstr ""
+"l'argomento 'object' dev'essere ritrattato in una singola stringa di "
+"caratteri"
+
 msgid "'origin' must be one of 'start', 'current' or 'end'"
 msgstr "'origin' dev'essere uno tra 'start', 'current' o 'end'"
 
@@ -381,7 +387,8 @@ msgstr "<0 righe> (o 0-length row.names)"
 msgid "invalid 'max' / getOption(\"max.print\"):"
 msgstr "'max' / getOption(\"max.print\") non valido:"
 
-msgid "non-numeric variable(s) in data frame:"
+#, fuzzy
+msgid "non-numeric-alike variable(s) in data frame:"
 msgstr "variabili non numeriche nel data frame:"
 
 msgid ","
@@ -393,8 +400,13 @@ msgstr "%s è definito solo per data frame di dimensioni identiche"
 msgid "list of length %d not meaningful"
 msgstr "lista di lunghezza %d non significativa"
 
-msgid "only defined on a data frame with all numeric variables"
+#, fuzzy
+msgid "only defined on a data frame with all numeric-alike variables"
 msgstr "è definito solo per data frame con sole variabili numeriche"
+
+#, fuzzy
+msgid "cannot xtfrm data frames"
+msgstr "non è un data frame"
 
 msgid "character string is not in a standard unambiguous format"
 msgstr "la stringa di caratteri non è in un formato standard"
@@ -756,6 +768,10 @@ msgstr "valore per %s non trovato"
 msgid "all arguments must be named"
 msgstr "tutti gli argomenti devono essere nominati"
 
+#, fuzzy
+msgid "argument '%s' will be ignored"
+msgstr "argomento 'drop' sarà ignorato"
+
 msgid "match distance components must be non-negative"
 msgstr ""
 "i componenti della distanza di corrispondenza devono essere non-negativi"
@@ -1103,9 +1119,6 @@ msgstr ""
 "namespace %s non disponibile ed è stato sostituito\n"
 "da .GlobalEnv durante l'elaborazione dell'oggetto %s"
 
-msgid "'%s' is not an exported object from 'namespace:%s'"
-msgstr "'%s' non è un oggetto esportato dal 'namespace:%s'"
-
 msgid "namespace is already attached"
 msgstr "namespace già agganciato"
 
@@ -1123,6 +1136,9 @@ msgstr "%s non trovato"
 
 msgid "namespace %s %s is already loaded, but %s %s is required"
 msgstr "namespace %s %s già caricato, ma %s %s è richiesto"
+
+msgid "- loading"
+msgstr ""
 
 msgid "namespace %s is already sealed in 'loadNamespace'"
 msgstr "il namespace %s è già protetto in 'loadNamespace'"
@@ -1195,14 +1211,54 @@ msgstr ""
 "differenti; dev'essere reinstallato per essere utilizzato con questa "
 "versione di R"
 
+msgid "-- processing imports for"
+msgstr ""
+
+msgid "-- done processing imports for"
+msgstr ""
+
+msgid "-- loading code for"
+msgstr ""
+
 msgid "unable to load R code in package %s"
 msgstr "non è possibile caricare il codice R nel pacchetto %s"
+
+msgid "-- loading sysdata for"
+msgstr ""
+
+msgid "-- loading lazydata for"
+msgstr ""
+
+msgid "-- registerS3methods for"
+msgstr ""
+
+msgid "-- done registerS3methods for"
+msgstr ""
+
+msgid "-- running .onLoad for"
+msgstr ""
+
+msgid "-- done running .onLoad for"
+msgstr ""
 
 #, fuzzy
 msgid "S4 exports specified in 'NAMESPACE' but not defined in package %s"
 msgstr ""
 "'exportClassPattern' specificato in 'NAMESPACE' ma non corrispondono le "
 "classi nel pacchetto %s"
+
+msgid "-- processing S4 stuff for"
+msgstr ""
+
+msgid "--- caching metadata"
+msgstr ""
+
+msgid "--- done caching metadata"
+msgstr ""
+
+#, fuzzy
+msgid "--- processing classes"
+msgstr "classe sbagliata"
 
 msgid ""
 "'exportClassPattern' specified in 'NAMESPACE' but no matching classes in "
@@ -1224,6 +1280,9 @@ msgstr ""
 msgid "in %s methods for export not found: %s"
 msgstr "in%s metodi per l'esportazione non trovati: %s"
 
+msgid "---- export method"
+msgstr ""
+
 msgid "multiple methods tables found for %s"
 msgstr "trovate tabelle metodi multiple per %s"
 
@@ -1234,6 +1293,18 @@ msgid "in package %s methods %s were specified for export but not defined"
 msgstr ""
 "nel pacchetto %s i metodi %s sono stati specificati per l'esportazione ma "
 "non definiti"
+
+msgid "-- done processing S4 stuff for"
+msgstr ""
+
+msgid "--- processing exports for"
+msgstr ""
+
+msgid "--- sealing exports for"
+msgstr ""
+
+msgid "- done loading"
+msgstr ""
 
 msgid "Loading required namespace: %s"
 msgstr "Caricamento dei namespace richiesti: %s"
@@ -1520,6 +1591,9 @@ msgid ""
 msgstr ""
 "'x' dev'essere atomico per 'sort.list'\n"
 "Si è chiamato 'sort' su una lista?"
+
+msgid "cannot xtfrm 'x'"
+msgstr ""
 
 msgid "'local' must be TRUE, FALSE or an environment"
 msgstr "'local' dev'essere TRUE, FALSE o un ambiente"
@@ -1979,6 +2053,9 @@ msgstr[0] ""
 msgstr[1] ""
 "In %s :\n"
 " gli argomenti extra %s saranno ignorati"
+
+#~ msgid "'%s' is not an exported object from 'namespace:%s'"
+#~ msgstr "'%s' non è un oggetto esportato dal 'namespace:%s'"
 
 #~ msgid "bad handler specification"
 #~ msgstr "specificazione dell'handler non valida"

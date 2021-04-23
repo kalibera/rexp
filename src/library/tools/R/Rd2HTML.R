@@ -1,6 +1,6 @@
 #  File src/library/tools/R/Rd2HTML.R
 #
-#  Copyright (C) 1995-2019 The R Core Team
+#  Copyright (C) 1995-2021 The R Core Team
 #  Part of the R package, https://www.R-project.org
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -102,7 +102,7 @@ vhtmlify <- function(x, inEqn = FALSE) { # code version
     ## http://htmlhelp.com/reference/html40/entities/symbols.html
     if(inEqn) {
         x <- psub("\\\\(Alpha|Beta|Gamma|Delta|Epsilon|Zeta|Eta|Theta|Iota|Kappa|Lambda|Mu|Nu|Xi|Omicron|Pi|Rho|Sigma|Tau|Upsilon|Phi|Chi|Psi|Omega|alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|le|ge|sum|prod)", "&\\1;", x)
-        x <- psub("\\\\(dots|ldots)", "&\\hellip;", x)
+        x <- psub("\\\\(dots|ldots)", "&hellip;", x)
         x <- fsub("\\infty", "&infin;", x)
         x <- fsub("\\sqrt", "&radic;", x)
     }
@@ -178,7 +178,8 @@ createRedirects <- function(file, Rdobj)
         if (file.exists(afile))
             warning("Previous alias or file overwritten by alias: ", aname)
         try(cat(redirHTML, file = afile), silent = TRUE) # Fails for \alias{%/%}
-        redirMsg("topic", aname, basename(file), if (file.exists(afile)) "SUCCESS" else "FAIL")
+        ## redirMsg("topic", aname, basename(file), if (file.exists(afile)) "SUCCESS" else "FAIL")
+        if (!file.exists(afile)) redirMsg("topic", aname, basename(file), "FAIL")
     }
     ## Also add .../pkg/help/file.html -> ../pkg/html/file.html as fallback
     ## when topic is not found (but do not overwrite)
@@ -451,7 +452,7 @@ Rd2HTML <-
                                        urlify(parts$targetfile),
                                        if (!dynamic) ".html" else "")
                 else
-                    htmlfile <- paste0("../../", urlify(parts$pkg), "/html/", htmlfile)    
+                    htmlfile <- paste0("../../", urlify(parts$pkg), "/html/", htmlfile)
                 writeHref()
             }
         }
