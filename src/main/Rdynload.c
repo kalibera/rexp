@@ -124,6 +124,7 @@ static int CountDLL = 0;
 
 /* Allocated in initLoadedDLL at R session start. Never free'd */
 static DllInfo** LoadedDLL = NULL;
+static SEXP DLLInfoEptrs = NULL; /* cache of external pointers to DllInfo */
 
 static int addDLL(char *dpath, char *name, HINSTANCE handle);
 static SEXP Rf_MakeDLLInfo(DllInfo *info);
@@ -231,6 +232,8 @@ static void initLoadedDLL()
     LoadedDLL = (DllInfo **) calloc(MaxNumDLLs, sizeof(DllInfo*));
     if (LoadedDLL == NULL)
 	R_Suicide(_("could not allocate space for DLL table"));
+    DLLInfoEptrs = allocVector(VECSXP, MaxNumDLLs);
+    R_PreserveObject(DLLInfoEptrs);
 }
 
 /* returns DllInfo used by the embedding application.
@@ -298,6 +301,16 @@ R_getDllInfo(const char *path)
 	if(strcmp(LoadedDLL[i]->path, path) == 0) return(LoadedDLL[i]);
     }
     return (DllInfo*) NULL;
+}
+
+static int
+R_getDllIndex(DllInfo *info)
+{
+    int i;
+    for(i = 0; i < CountDLL; i++) {
+	if(LoadedDLL[i] == info) return i;
+    }
+    return -1;
 }
 
 /*
@@ -525,9 +538,13 @@ found:
     R_callDLLUnload(LoadedDLL[loc]);
     R_osDynSymbol->closeLibrary(LoadedDLL[loc]->handle);
     Rf_freeDllInfo(LoadedDLL[loc]);
-    for(i = loc + 1 ; i < CountDLL ; i++)
+    for(i = loc + 1 ; i < CountDLL ; i++) {
 	LoadedDLL[i - 1] = LoadedDLL[i];
+	SET_VECTOR_ELT(DLLInfoEptrs, i - 1, VECTOR_ELT(DLLInfoEptrs, i));
+    }
     CountDLL--;
+    LoadedDLL[CountDLL] = NULL;
+    SET_VECTOR_ELT(DLLInfoEptrs, CountDLL, R_NilValue);
     return 1;
 }
 
@@ -693,6 +710,7 @@ addDLL(char *dpath, char *DLLname, HINSTANCE handle)
     info->FortranSymbols = NULL;
     info->ExternalSymbols = NULL;
     LoadedDLL[CountDLL] = info;
+    SET_VECTOR_ELT(DLLInfoEptrs, CountDLL, R_NilValue);
     CountDLL++;
 
     return(ans);
@@ -1063,13 +1081,22 @@ Rf_makeDllObject(HINSTANCE inst)
 }
 
 static SEXP
-Rf_makeDllInfoReference(HINSTANCE inst)
+Rf_makeDllInfoReference(DllInfo *info)
 {
     SEXP ans;
 
-    PROTECT(ans = R_MakeExternalPtr(inst, install("DLLInfo"),
-				    install("DLLInfo")));
+    int i = R_getDllIndex(info);
+    if (i >= 0) {
+	ans = VECTOR_ELT(DLLInfoEptrs, i);
+	if (!isNull(ans))
+	    return ans;
+    }
+
+    PROTECT(ans = R_MakeExternalPtr((HINSTANCE) info, install("DLLInfo"),
+				    R_NilValue));
     setAttrib(ans, R_ClassSymbol, mkString("DLLInfoReference"));
+    if (i >= 0)
+	SET_VECTOR_ELT(DLLInfoEptrs, i, ans);
     UNPROTECT(1);
 
     return(ans);
@@ -1103,7 +1130,7 @@ Rf_MakeDLLInfo(DllInfo *info)
 
     SET_VECTOR_ELT(ref, 3, Rf_makeDllObject(info->handle));
 
-    SET_VECTOR_ELT(ref, 4, Rf_makeDllInfoReference((HINSTANCE) info));
+    SET_VECTOR_ELT(ref, 4, Rf_makeDllInfoReference(info));
 
     PROTECT(elNames = allocVector(STRSXP, n));
     for(i = 0; i < n; i++)
