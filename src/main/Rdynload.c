@@ -123,7 +123,7 @@ static int CountDLL = 0;
 #include <R_ext/Rdynload.h>
 
 /* Allocated in initLoadedDLL at R session start. Never free'd */
-static DllInfo* LoadedDLL = NULL;
+static DllInfo** LoadedDLL = NULL;
 
 static int addDLL(char *dpath, char *name, HINSTANCE handle);
 static SEXP Rf_MakeDLLInfo(DllInfo *info);
@@ -146,7 +146,7 @@ InitDynload()
 {
     initLoadedDLL();
     int which = addDLL(Rstrdup("base"), "base", NULL);
-    DllInfo *dll = &LoadedDLL[which];
+    DllInfo *dll = LoadedDLL[which];
     R_init_base(dll);
     InitFunctionHashing();
 }
@@ -228,7 +228,7 @@ static void initLoadedDLL()
     }
 
     /* memory is set to zero */
-    LoadedDLL = (DllInfo *) calloc(MaxNumDLLs, sizeof(DllInfo));
+    LoadedDLL = (DllInfo **) calloc(MaxNumDLLs, sizeof(DllInfo*));
     if (LoadedDLL == NULL)
 	R_Suicide(_("could not allocate space for DLL table"));
 }
@@ -240,7 +240,7 @@ DllInfo *R_getEmbeddingDllInfo()
     DllInfo *dll = R_getDllInfo("(embedding)");
     if (dll == NULL) {
 	int which = addDLL(Rstrdup("(embedding)"), "(embedding)", NULL);
-	dll = &LoadedDLL[which];
+	dll = LoadedDLL[which];
 	/* make sure we don't attempt dynamic lookup */
 	R_useDynamicSymbols(dll, FALSE);
     }
@@ -295,7 +295,7 @@ R_getDllInfo(const char *path)
 {
     int i;
     for(i = 0; i < CountDLL; i++) {
-	if(strcmp(LoadedDLL[i].path, path) == 0) return(&LoadedDLL[i]);
+	if(strcmp(LoadedDLL[i]->path, path) == 0) return(LoadedDLL[i]);
     }
     return (DllInfo*) NULL;
 }
@@ -455,6 +455,8 @@ static void
 Rf_freeDllInfo(DllInfo *info)
 {
     int i;
+    if (!info)
+	return;
     free(info->name);
     free(info->path);
     if(info->CSymbols) {
@@ -477,6 +479,7 @@ Rf_freeDllInfo(DllInfo *info)
 	    Rf_freeFortranSymbol(info->FortranSymbols+i);
 	free(info->FortranSymbols);
     }
+    free(info);
 }
 
 
@@ -507,7 +510,7 @@ static int DeleteDLL(const char *path)
     int   i, loc;
 
     for (i = 0; i < CountDLL; i++) {
-	if (!strcmp(path, LoadedDLL[i].path)) {
+	if (!strcmp(path, LoadedDLL[i]->path)) {
 	    loc = i;
 	    goto found;
 	}
@@ -516,28 +519,14 @@ static int DeleteDLL(const char *path)
 found:
 #ifdef CACHE_DLL_SYM
     if(R_osDynSymbol->deleteCachedSymbols)
-	R_osDynSymbol->deleteCachedSymbols(&LoadedDLL[loc]);
+	R_osDynSymbol->deleteCachedSymbols(LoadedDLL[loc]);
 #endif
-    R_reinit_altrep_classes(&LoadedDLL[loc]);
-    R_callDLLUnload(&LoadedDLL[loc]);
-    R_osDynSymbol->closeLibrary(LoadedDLL[loc].handle);
-    Rf_freeDllInfo(LoadedDLL+loc);
-    /* FIXME: why not use memcpy here? */
-    for(i = loc + 1 ; i < CountDLL ; i++) {
-	LoadedDLL[i - 1].path = LoadedDLL[i].path;
-	LoadedDLL[i - 1].name = LoadedDLL[i].name;
-	LoadedDLL[i - 1].handle = LoadedDLL[i].handle;
-	LoadedDLL[i - 1].useDynamicLookup = LoadedDLL[i].useDynamicLookup;
-	LoadedDLL[i - 1].numCSymbols = LoadedDLL[i].numCSymbols;
-	LoadedDLL[i - 1].numCallSymbols = LoadedDLL[i].numCallSymbols;
-	LoadedDLL[i - 1].numFortranSymbols = LoadedDLL[i].numFortranSymbols;
-	LoadedDLL[i - 1].numExternalSymbols = LoadedDLL[i].numExternalSymbols;
-	LoadedDLL[i - 1].CSymbols = LoadedDLL[i].CSymbols;
-	LoadedDLL[i - 1].CallSymbols = LoadedDLL[i].CallSymbols;
-	LoadedDLL[i - 1].FortranSymbols = LoadedDLL[i].FortranSymbols;
-	LoadedDLL[i - 1].ExternalSymbols = LoadedDLL[i].ExternalSymbols;
-	LoadedDLL[i - 1].forceSymbols = LoadedDLL[i].forceSymbols;
-    }
+    R_reinit_altrep_classes(LoadedDLL[loc]);
+    R_callDLLUnload(LoadedDLL[loc]);
+    R_osDynSymbol->closeLibrary(LoadedDLL[loc]->handle);
+    Rf_freeDllInfo(LoadedDLL[loc]);
+    for(i = loc + 1 ; i < CountDLL ; i++)
+	LoadedDLL[i - 1] = LoadedDLL[i];
     CountDLL--;
     return 1;
 }
@@ -655,7 +644,7 @@ static DllInfo *R_RegisterDLL(HINSTANCE handle, const char *path)
 #endif
 
     if (addDLL(dpath, DLLname, handle)) {
-	info = &LoadedDLL[CountDLL-1];
+	info = LoadedDLL[CountDLL-1];
 	/* default is to use old-style dynamic lookup.  The object's
 	   initialization routine can limit access by setting this to FALSE.
 	*/
@@ -663,6 +652,7 @@ static DllInfo *R_RegisterDLL(HINSTANCE handle, const char *path)
 	info->forceSymbols = FALSE;
 	return info;
     } else
+	/* dpath freed in addDLL */
 	return NULL;
 }
 
@@ -678,20 +668,31 @@ addDLL(char *dpath, char *DLLname, HINSTANCE handle)
 	free(dpath);
 	return 0;
     }
-
     strcpy(name, DLLname);
-    LoadedDLL[CountDLL].path = dpath;
-    LoadedDLL[CountDLL].name = name;
-    LoadedDLL[CountDLL].handle = handle;
 
-    LoadedDLL[CountDLL].numCSymbols = 0;
-    LoadedDLL[CountDLL].numCallSymbols = 0;
-    LoadedDLL[CountDLL].numFortranSymbols = 0;
-    LoadedDLL[CountDLL].numExternalSymbols = 0;
-    LoadedDLL[CountDLL].CSymbols = NULL;
-    LoadedDLL[CountDLL].CallSymbols = NULL;
-    LoadedDLL[CountDLL].FortranSymbols = NULL;
-    LoadedDLL[CountDLL].ExternalSymbols = NULL;
+    DllInfo *info = (DllInfo *) malloc(sizeof(DllInfo));
+    if(info == NULL) {
+	strcpy(DLLerror, _("could not allocate space for 'DllInfo'"));
+	if(handle)
+	    R_osDynSymbol->closeLibrary(handle);
+	free(name);
+	free(dpath);
+	return 0;
+    }
+
+    info->path = dpath;
+    info->name = name;
+    info->handle = handle;
+
+    info->numCSymbols = 0;
+    info->numCallSymbols = 0;
+    info->numFortranSymbols = 0;
+    info->numExternalSymbols = 0;
+    info->CSymbols = NULL;
+    info->CallSymbols = NULL;
+    info->FortranSymbols = NULL;
+    info->ExternalSymbols = NULL;
+    LoadedDLL[CountDLL] = info;
     CountDLL++;
 
     return(ans);
@@ -875,17 +876,17 @@ DL_FUNC R_FindSymbol(char const *name, char const *pkg,
 
     for (i = CountDLL - 1; i >= 0; i--) {
 	doit = all;
-	if(!doit && !strcmp(pkg, LoadedDLL[i].name)) doit = 2;
-	if(doit && LoadedDLL[i].forceSymbols) doit = 0;
+	if(!doit && !strcmp(pkg, LoadedDLL[i]->name)) doit = 2;
+	if(doit && LoadedDLL[i]->forceSymbols) doit = 0;
 	if(doit) {
-	    fcnptr = R_dlsym(&LoadedDLL[i], name, symbol); /* R_osDynSymbol->dlsym */
+	    fcnptr = R_dlsym(LoadedDLL[i], name, symbol); /* R_osDynSymbol->dlsym */
 	    if (fcnptr != (DL_FUNC) NULL) {
 		if(symbol)
-		    symbol->dll = LoadedDLL+i;
+		    symbol->dll = LoadedDLL[i];
 #ifdef CACHE_DLL_SYM
 		if(strlen(pkg) <= 20 && strlen(name) <= 40 && nCPFun < MAX_CACHE
 		   && (!symbol || !symbol->symbol.c)) {
-		    strcpy(CPFun[nCPFun].pkg, LoadedDLL[i].name);
+		    strcpy(CPFun[nCPFun].pkg, LoadedDLL[i]->name);
 		    strcpy(CPFun[nCPFun].name, name);
 		    CPFun[nCPFun++].func = fcnptr;
 		}
@@ -1176,7 +1177,7 @@ R_getDllTable()
  again:
     PROTECT(ans = allocVector(VECSXP, CountDLL));
     for(i = 0; i < CountDLL; i++)
-	SET_VECTOR_ELT(ans, i, Rf_MakeDLLInfo(&(LoadedDLL[i])));
+	SET_VECTOR_ELT(ans, i, Rf_MakeDLLInfo(LoadedDLL[i]));
     
     setAttrib(ans, R_ClassSymbol, mkString("DLLInfoList"));
     UNPROTECT(1);
