@@ -1269,7 +1269,10 @@ R_getSymbolInfo(SEXP sname, SEXP spackage, SEXP withRegistrationInfo)
 	    package = translateCharFP(STRING_ELT(spackage, 0));
 	else if(TYPEOF(spackage) == EXTPTRSXP &&
 		R_ExternalPtrTag(spackage) == install("DLLInfo")) {
-	    f = R_dlsym((DllInfo *) R_ExternalPtrAddr(spackage), name, &symbol);
+	    DllInfo *dll = (DllInfo *) R_ExternalPtrAddr(spackage);
+	    if (!dll)
+		error(_("NULL value passed for DllInfo"));
+	    f = R_dlsym(dll, name, &symbol);
 	    package = NULL;
 	} else
 	    error(_("must pass package name or DllInfo reference"));
