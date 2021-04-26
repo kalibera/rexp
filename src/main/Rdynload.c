@@ -125,6 +125,7 @@ static int CountDLL = 0;
 /* Allocated in initLoadedDLL at R session start. Never free'd */
 static DllInfo** LoadedDLL = NULL;
 static SEXP DLLInfoEptrs = NULL; /* cache of external pointers to DllInfo */
+static SEXP SymbolEptrs = NULL;  /* (weak) list of symbol external pointers */
 
 static int addDLL(char *dpath, char *name, HINSTANCE handle);
 static SEXP Rf_MakeDLLInfo(DllInfo *info);
@@ -234,6 +235,33 @@ static void initLoadedDLL()
 	R_Suicide(_("could not allocate space for DLL table"));
     DLLInfoEptrs = allocVector(VECSXP, MaxNumDLLs);
     R_PreserveObject(DLLInfoEptrs);
+    SymbolEptrs = CONS(R_NilValue, R_NilValue);
+    R_PreserveObject(SymbolEptrs);
+}
+
+static void
+R_registerSymbolEptr(SEXP eptr, SEXP einfo)
+{
+    const int MAXCOUNT = 10;
+    static int cleancount = MAXCOUNT;
+
+    /* remove unneeded entries from the list */
+    if(--cleancount <= 0) {
+	cleancount = MAXCOUNT;
+	for (SEXP last = SymbolEptrs, next = CDR(SymbolEptrs);
+	     next != R_NilValue;
+	     next = CDR(next))
+	    if (R_WeakRefKey(CAR(next)) == R_NilValue)
+		SETCDR(last, CDR(next));
+	    else
+		last = next;
+    }
+
+    /* Add eptr to the head of the list, with weakref value identifying the
+       DllInfo. The identification is needed when deleting the DLL. */
+    SETCDR(SymbolEptrs,
+           CONS(R_MakeWeakRef(eptr, einfo, R_NilValue, FALSE),
+                CDR(SymbolEptrs)));
 }
 
 /* returns DllInfo used by the embedding application.
@@ -514,6 +542,8 @@ R_callDLLUnload(DllInfo *dllInfo)
     return(TRUE);
 }
 
+static void freeRegisteredNativeSymbolCopy(SEXP);
+
 	/* Remove the specified DLL from the current DLL list */
 	/* Returns 1 if the DLL was found and removed from */
 	/* the list and returns 0 otherwise. */
@@ -538,6 +568,28 @@ found:
     R_callDLLUnload(LoadedDLL[loc]);
     R_osDynSymbol->closeLibrary(LoadedDLL[loc]->handle);
     Rf_freeDllInfo(LoadedDLL[loc]);
+
+    /* zero pointers to DllInfo and the handle */
+    SEXP e = VECTOR_ELT(DLLInfoEptrs, loc);
+    if (!isNull(e))
+	R_ClearExternalPtr(e);
+    SEXP sRegisteredNativeSymbol = install("registered native symbol");
+    for (SEXP last = SymbolEptrs, next = CDR(SymbolEptrs);
+         next != R_NilValue;
+         next = CDR(next))
+	if (R_WeakRefValue(CAR(next)) == e) {
+	    SETCDR(last, CDR(next)); /* remove from list */
+	    SEXP p = R_WeakRefKey(CAR(next));
+	    if (TYPEOF(p) == EXTPTRSXP && R_ExternalPtrAddr(p)) {
+		if (R_ExternalPtrTag(p) == sRegisteredNativeSymbol)
+		    freeRegisteredNativeSymbolCopy(p);
+		R_ClearExternalPtr(p);
+	    }
+	} else
+	    last = next;
+
+
+
     for(i = loc + 1 ; i < CountDLL ; i++) {
 	LoadedDLL[i - 1] = LoadedDLL[i];
 	SET_VECTOR_ELT(DLLInfoEptrs, i - 1, VECTOR_ELT(DLLInfoEptrs, i));
@@ -549,19 +601,48 @@ found:
 }
 
 attribute_hidden
-DL_FUNC Rf_lookupCachedSymbol(const char *name, const char *pkg, int all)
+DL_FUNC Rf_lookupCachedSymbol(const char *name, const char *pkg, int all, DllInfo **dll)
 {
 #ifdef CACHE_DLL_SYM
     int i;
     for (i = 0; i < nCPFun; i++)
 	if (!strcmp(name, CPFun[i].name) &&
-	    (all || !strcmp(pkg, CPFun[i].pkg)))
+	    (all || !strcmp(pkg, CPFun[i].pkg))) {
+
+	    if (dll)
+		*dll = CPFun[i].dll;
 	    return CPFun[i].func;
+	}
 #endif
 
     return((DL_FUNC) NULL);
 }
 
+ /*
+   If we are caching the native level symbols, this routine
+   discards the ones from the DLL identified by loc.
+   This is called as the initial action of DeleteDLL().
+  */
+attribute_hidden
+void Rf_deleteCachedSymbols(DllInfo *dll)
+{
+#ifdef CACHE_DLL_SYM
+    int i;
+    /* Wouldn't a linked list be easier here?
+       Potentially ruin the contiguity of the memory.
+    */
+    for(i = nCPFun - 1; i >= 0; i--)
+	if(!strcmp(CPFun[i].pkg, dll->name)) {
+	    if(i < nCPFun - 1) {
+		nCPFun--;
+		strcpy(CPFun[i].name, CPFun[nCPFun].name);
+		strcpy(CPFun[i].pkg, CPFun[nCPFun].pkg);
+		CPFun[i].func = CPFun[nCPFun].func;
+		CPFun[i].dll = CPFun[nCPFun].dll;
+	    } else nCPFun--;
+	}
+#endif /* CACHE_DLL_SYM */
+}
 
 
 #ifdef Win32
@@ -867,6 +948,8 @@ R_dlsym(DllInfo *info, char const *name,
     }
 #endif
 
+    if (f && symbol)
+	symbol->dll = info;
     return f;
 }
 
@@ -881,10 +964,14 @@ DL_FUNC R_FindSymbol(char const *name, char const *pkg,
     DL_FUNC fcnptr = (DL_FUNC) NULL;
     int i, all = (strlen(pkg) == 0), doit;
 
-    if(R_osDynSymbol->lookupCachedSymbol)
-	fcnptr = R_osDynSymbol->lookupCachedSymbol(name, pkg, all);
-
-    if(fcnptr) return(fcnptr);
+    if(R_osDynSymbol->lookupCachedSymbol) {
+	DllInfo *dll = NULL;
+	fcnptr = R_osDynSymbol->lookupCachedSymbol(name, pkg, all, &dll);
+	if (fcnptr && symbol && dll)
+	    symbol->dll = dll;
+	if(fcnptr)
+	    return(fcnptr);
+    }
 
     /* The following is not legal ANSI C. */
     /* It is only meant to be used in systems supporting */
@@ -906,7 +993,9 @@ DL_FUNC R_FindSymbol(char const *name, char const *pkg,
 		   && (!symbol || !symbol->symbol.c)) {
 		    strcpy(CPFun[nCPFun].pkg, LoadedDLL[i]->name);
 		    strcpy(CPFun[nCPFun].name, name);
-		    CPFun[nCPFun++].func = fcnptr;
+		    CPFun[nCPFun].func = fcnptr;
+		    CPFun[nCPFun].dll = LoadedDLL[i];
+		    nCPFun++;
 		}
 #endif
 		return fcnptr;
@@ -1128,9 +1217,11 @@ Rf_MakeDLLInfo(DllInfo *info)
 	SET_STRING_ELT(tmp, 0, mkChar(info->path));
     SET_VECTOR_ELT(ref, 2, ScalarLogical(info->useDynamicLookup));
 
-    SET_VECTOR_ELT(ref, 3, Rf_makeDllObject(info->handle));
-
-    SET_VECTOR_ELT(ref, 4, Rf_makeDllInfoReference(info));
+    SEXP ehandle = Rf_makeDllObject(info->handle);
+    SET_VECTOR_ELT(ref, 3, ehandle);
+    SEXP einfo = Rf_makeDllInfoReference(info);
+    SET_VECTOR_ELT(ref, 4, einfo);
+    R_registerSymbolEptr(ehandle, einfo);
 
     PROTECT(elNames = allocVector(STRSXP, n));
     for(i = 0; i < n; i++)
@@ -1247,13 +1338,18 @@ createRSymbolObject(SEXP sname, DL_FUNC f, R_RegisteredNativeSymbol *symbol,
     SET_VECTOR_ELT(sym, 0, sname);
     SET_STRING_ELT(names, 0, mkChar("name"));
 
-    SET_VECTOR_ELT(sym, 1,
-		   withRegistrationInfo && symbol && symbol->symbol.c && symbol->dll
+    SEXP eaddress =
+	withRegistrationInfo && symbol && symbol->symbol.c && symbol->dll
 		   ? Rf_MakeRegisteredNativeSymbol(symbol)
-		   : Rf_MakeNativeSymbolRef(f));
+		   : Rf_MakeNativeSymbolRef(f);
+    SET_VECTOR_ELT(sym, 1, eaddress);
     SET_STRING_ELT(names, 1, mkChar("address"));
-    if(symbol->dll)
-	SET_VECTOR_ELT(sym, 2, Rf_MakeDLLInfo(symbol->dll));
+    if(symbol->dll) { /* now always */
+	SEXP rinfo = Rf_MakeDLLInfo(symbol->dll);
+	SET_VECTOR_ELT(sym, 2, rinfo);
+	SEXP einfo = VECTOR_ELT(rinfo, 4 /* info */);
+	R_registerSymbolEptr(eaddress, einfo);
+    }
     SET_STRING_ELT(names, 2, mkChar("dll"));
 
 
@@ -1438,7 +1534,8 @@ static SEXP get_package_CEntry_table(const char *package)
     return penv;
 }
 
-
+/* FIXME: clear the callables when unloading DLLs. May require changing
+   the interface or approximating. */
 void R_RegisterCCallable(const char *package, const char *name, DL_FUNC fptr)
 {
     SEXP penv = get_package_CEntry_table(package);
