@@ -667,7 +667,36 @@ static DllInfo* AddDLL(const char *path, int asLocal, int now,
     HINSTANCE handle;
     DllInfo *info = NULL;
 
-    DeleteDLL(path);
+    int i, loc;
+
+    loc = -1;
+    for (i = 0; i < CountDLL; i++)
+	if (!strcmp(path, LoadedDLL[i]->path)) {
+	    loc = i;
+	    break;
+	}
+
+    if (loc >= 0) {
+	/* The DLL is already loaded, so move it to the head of the list
+	   and exit. We assume that the same path means the DLL file is
+	   also the same: the user should always unload a DLL file before
+	   modifying it (on Windows, it is locked, on Unix, modifying while
+	   loaded may cause a crash on function call or even dlsym()). */
+
+	DllInfo *info = LoadedDLL[loc];
+	SEXP eptrs = PROTECT(VECTOR_ELT(DLLInfoEptrs, loc));
+
+	for(i = loc + 1 ; i < CountDLL ; i++) {
+	    LoadedDLL[i - 1] = LoadedDLL[i];
+	    SET_VECTOR_ELT(DLLInfoEptrs, i - 1, VECTOR_ELT(DLLInfoEptrs, i));
+	}
+
+	LoadedDLL[CountDLL - 1] = info;
+	SET_VECTOR_ELT(DLLInfoEptrs, CountDLL - 1, eptrs);
+	UNPROTECT(1); /* eptrs */
+	return info;
+    }
+
     if(CountDLL == MaxNumDLLs) {
 	strcpy(DLLerror, _("`maximal number of DLLs reached..."));
 	return NULL;
