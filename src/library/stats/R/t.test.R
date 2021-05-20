@@ -76,8 +76,8 @@ function(x, y = NULL, alternative = c("two.sided", "less", "greater"),
 	my <- mean(y)
 	vy <- var(y)
 	method <- paste(if(!var.equal)"Welch", "Two Sample t-test")
-	estimate <- c(mx,my)
-	names(estimate) <- c("mean of x","mean of y")
+	estimate <- mx - my
+	names(estimate) <- "difference in means"
 	if(var.equal) {
 	    df <- nx+ny-2
             v <- 0
