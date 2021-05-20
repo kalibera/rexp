@@ -110,13 +110,15 @@ capabilities(what = NULL,
 
     Although not guaranteed, it is a reasonable assumption that if
     present long doubles will have at least as much range and accuracy
-    as the ISO/IEC 60559 80-bit \sQuote{extended precision} format.
+    as the ISO/IEC 60559 80-bit \sQuote{extended precision} format.  Since
+    \R{}\sspace{}4.0.0 \code{\link{.Machine}} gives information on the
+    long-double type (if present).
   }
 
   \item{libcurl}{is \code{libcurl} available in this build?  Used by
     function \code{\link{curlGetHeaders}} and optionally by
     \code{\link{download.file}} and \code{\link{url}}.   As from \R
-    3.3.0 always true for Unix-alikes, and true for CRAN Windows builds.}
+    3.3.0 always true for Unix-alikes, and as from \R 4.2.0 true on Windows.}
 }
 \seealso{
   \code{\link{.Platform}}, \code{\link{extSoftVersion}}, and

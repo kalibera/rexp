@@ -2235,7 +2235,8 @@ if(FALSE) {
 
     if (fake) {
         use_configure <- FALSE
-        build_html <- FALSE
+        if("--html" %notin% args0)
+            build_html <- FALSE
         build_latex <- FALSE
         build_example <- FALSE
 	install_libs <- FALSE
@@ -2795,7 +2796,7 @@ if(FALSE) {
     } else { # no rows
          writeLines("There are no help pages in this package", outcon)
     }
-    writeLines('</body></html>', outcon)
+    writeLines('</div></body></html>', outcon)
     file.copy(file.path(R.home("doc"), "html", "R.css"), outman)
     invisible(NULL)
 }

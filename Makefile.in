@@ -76,8 +76,7 @@ FORCE:
 stamp-recommended: R docs
 	@(cd src/library/Recommended && $(MAKE))
 
-## One of the grid vignettes requires lattice
-vignettes: stamp-recommended
+vignettes: R
 	@(cd src/library && $(MAKE) $@)
 
 ## This needs packages built, hence 'R' dependence on 'javaconf'
@@ -115,7 +114,7 @@ svnonly:
 	    $(ECHO) "WARNING: not an svn checkout"; \
 	  else \
 	    $(SHELL) $(top_srcdir)/tools/move-if-change SVN-REVISION-tmp SVN-REVISION ; \
-	    rm -f SVN-REVISION-tmp ; \
+            rm -f SVN-REVISION-tmp ; \
 	  fi; \
 	else \
 	  if test "$(BUILDDIR_IS_SRCDIR)" = no ; then \
