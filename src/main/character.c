@@ -35,7 +35,7 @@ here prior to 2.10.0 are now in grep.c and agrep.c
 make.unique, duplicated, unique, match, pmatch, charmatch are in unique.c
 iconv is in sysutils.c
 
-Character strings in R are less than 2^31-1 bytes, so we use int not size_t.
+Character strings in R are at most 2^31-1 bytes, so we use int not size_t.
 
 Support for UTF-8-encoded strings in non-UTF-8 locales
 ======================================================
@@ -71,7 +71,7 @@ abbreviate chartr make.names strtrim tolower toupper give error.
 # include <config.h>
 #endif
 
-/* Used to indicate that we can safely converted marked UTF-8 strings
+/* Used to indicate that we can safely convert marked UTF-8 strings
    to wchar_t* -- not currently used.
 */
 #if defined(Win32) || defined(__STDC_ISO_10646__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun)
@@ -275,8 +275,8 @@ int R_nchar(SEXP string, nchar_type type_,
 		if (msg_name)
 		    R_FreeStringBufferL(&cbuff);
 		vmaxset(vmax);
-		return (nci18n < 1) ? nc : nci18n;
-	    } else if (allowNA) {
+		return (nci18n < 0) ? nc : nci18n;
+	    } else if (!allowNA) {
 		if (msg_name)
 		    error(_("invalid multibyte string, %s"), msg_name);
 		else
@@ -399,11 +399,11 @@ static void substr(const char *str, int len, int ienc, int sa, int so,
 	mbs_init(&mb_st);
 	for (i = 0; i < sa - 1 && str < end; i++)
 	    /* throws error on invalid multi-byte string */
-	    str += Mbrtowc(NULL, str, MB_CUR_MAX, &mb_st);
+	    str += Mbrtowc(NULL, str, R_MB_CUR_MAX, &mb_st);
 	*rfrom = str;
 	for (; i < so && str < end; i++)
 	    /* throws error on invalid multi-byte string */
-	    str += (int) Mbrtowc(NULL, str, MB_CUR_MAX, &mb_st);
+	    str += (int) Mbrtowc(NULL, str, R_MB_CUR_MAX, &mb_st);
 	*rlen = (int) (str - *rfrom);
     } else {
 	if (so - 1 < len) {
@@ -612,11 +612,16 @@ substrset(char *buf, const char *const str, cetype_t ienc, int sa, int so,
     } else {
 	/* This cannot work for stateful encodings */
 	if (mbcslocale) {
-	    for (i = 1; i < sa; i++) buf += Mbrtowc(NULL, buf, MB_CUR_MAX, NULL);
+	    mbstate_t mb_st_in;
+	    mbs_init(&mb_st_in);
+	    for (i = 1; i < sa; i++)
+		buf += Mbrtowc(NULL, buf, R_MB_CUR_MAX, &mb_st_in);
 	    /* now work out how many bytes to replace by how many */
+	    mbstate_t mb_st_out;
+	    mbs_init(&mb_st_out);
 	    for (i = sa; i <= so && in < strlen(str); i++) {
-		in += (int) Mbrtowc(NULL, str+in, MB_CUR_MAX, NULL);
-		out += (int) Mbrtowc(NULL, buf+out, MB_CUR_MAX, NULL);
+		in += (int) Mbrtowc(NULL, str+in, R_MB_CUR_MAX, &mb_st_in);
+		out += (int) Mbrtowc(NULL, buf+out, R_MB_CUR_MAX, &mb_st_out);
 		if (!str[in]) break;
 	    }
 	    if (in != out) memmove(buf+in, buf+out, strlen(buf+out)+1);
@@ -674,7 +679,7 @@ SEXP attribute_hidden do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	    ss = CHAR(el);
 	    slen = strlen(ss);
 	    if (start < 1) start = 1;
-	    if (stop > slen) stop = (int) slen; /* SBCS optimization */
+	    if (stop > (int) slen) stop = (int) slen; /* SBCS optimization */
 	    if (start > stop) {
 		/* just copy element across */
 		SET_STRING_ELT(s, i, STRING_ELT(x, i));
@@ -701,6 +706,8 @@ SEXP attribute_hidden do_substrgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
 	R_FreeStringBufferL(&cbuff);
     }
+    SHALLOW_DUPLICATE_ATTRIB(s, x);
+    /* This copied the class, if any */
     UNPROTECT(1);
     return s;
 }
@@ -994,11 +1001,11 @@ SEXP attribute_hidden do_makenames(SEXP call, SEXP op, SEXP args, SEXP env)
 	    mbstate_t mb_st;
 	    const char *pp = This;
 	    mbs_init(&mb_st);
-	    used = (int) Mbrtowc(&wc, pp, MB_CUR_MAX, &mb_st);
+	    used = (int) Mbrtowc(&wc, pp, R_MB_CUR_MAX, &mb_st);
 	    pp += used; nc -= used;
 	    if (wc == L'.') {
 		if (nc > 0) {
-		    Mbrtowc(&wc, pp, MB_CUR_MAX, &mb_st);
+		    Mbrtowc(&wc, pp, R_MB_CUR_MAX, &mb_st);
 		    if (iswdigit(wc))  need_prefix = TRUE;
 		}
 	    } else if (!iswalpha(wc)) need_prefix = TRUE;
@@ -1719,7 +1726,7 @@ SEXP attribute_hidden do_strtrim(SEXP call, SEXP op, SEXP args, SEXP env)
 	    mbs_init(&mb_st);
 	    for (p = This, w0 = 0, q = buf; *p ;) {
 		wchar_t wc;
-		nb =  (int) Mbrtowc(&wc, p, MB_CUR_MAX, &mb_st);
+		nb =  (int) Mbrtowc(&wc, p, R_MB_CUR_MAX, &mb_st);
 #ifdef USE_RI18N_WIDTH
 		w0 = Ri18n_wcwidth((R_wchar_t) wc);
 #else

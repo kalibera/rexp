@@ -122,24 +122,22 @@ static double R_ValueOfNA(void)
     return x.value;
 }
 
+/* is a value known to be a NaN also an R NA? */
+int attribute_hidden R_NaN_is_R_NA(double x)
+{
+    ieee_double y;
+    y.value = x;
+    return (y.word[lw] == 1954);
+}
+
 int R_IsNA(double x)
 {
-    if (isnan(x)) {
-	ieee_double y;
-	y.value = x;
-	return (y.word[lw] == 1954);
-    }
-    return 0;
+    return isnan(x) && R_NaN_is_R_NA(x);
 }
 
 int R_IsNaN(double x)
 {
-    if (isnan(x)) {
-	ieee_double y;
-	y.value = x;
-	return (y.word[lw] != 1954);
-    }
-    return 0;
+    return isnan(x) && ! R_NaN_is_R_NA(x);
 }
 
 /* ISNAN uses isnan, which is undefined by C++ headers
@@ -1684,6 +1682,8 @@ SEXP attribute_hidden do_Math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	res = do_math2(call, op, args, env);
     }
     UNPROTECT(nprotect);
+    SETCDR(call2, R_NilValue); /* clear refcnt on args */
+    R_try_clear_args_refcnt(args);
     return res;
 }
 

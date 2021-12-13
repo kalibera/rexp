@@ -226,9 +226,11 @@ tabulate(numeric(0))
 
 ## ts
 # Ensure working arithmetic for 'ts' objects :
-z <- ts(matrix(1:900, 100, 3), start = c(1961, 1), frequency = 12)
+z <- ts(matrix(1:300, 100, 3), start = c(1961, 1), frequency = 12)
 stopifnot(z == z)
 stopifnot(z-z == 0)
+if(FALSE) ## <<-- not currently: _R_CHECK_MATRIX_DATA_ \\ related to earlier code:
+tools::assertWarning(matrix(1:90, 10, 3), verbose=TRUE)
 
 ts(1:5, start=2, end=4) # truncate
 ts(1:5, start=3, end=17)# repeat
@@ -2076,6 +2078,9 @@ dput(d0)
 dput(d1)
 identical(d0, d1)
 all.equal(d0, d1)
+## change to identical(,attrib.as.set) code to support internal representation in 4.2.0
+identical(d0, d1, attrib.as.set = FALSE)
+##
 row.names(d1) <- as.character(1:4)
 dput(d1)
 identical(d0, d1)
@@ -3035,6 +3040,9 @@ quote(!!x) # was `!(!x)`
 quote(??x) # Suboptimal
 quote(~+-!?x) # ditto: ....`?`(x)
 ## `!` no longer produces parentheses now
+##
+## There should be no parentheses (always worked)
+quote(+!x)
 
 
 ## summary.data.frame() with NAs in columns of class "Date" -- PR#16709
@@ -3191,3 +3199,74 @@ stopifnot( identical(ddd, dd2) )
 ##cm <- summary(lm(c(0,0,0) ~ 1))$coefficients
 cm <- cbind(Estimate = 0, SE = 0, t = NaN, "Pr(>|t|)" = NaN)
 printCoefmat(cm)  # NaN's were replaced by NA in R < 4.1.0
+
+
+## deparse() wraps cflow bodies when deeply burried through a LHS (PR#18232)
+##
+## These didn't print the same before fix, the bquote() expression
+## missed parentheses
+ quote(1 +        (if (TRUE) 2)  + 3)
+bquote(1 + .(quote(if (TRUE) 2)) + 3)
+bquote(2 * .(quote(if (TRUE) 2 else 3)) / 4)
+## From Suharto. Failed `left` state wasn't properly forwarded across operators
+bquote(1 + ++.(quote(if (TRUE) 2)) + 3)
+bquote(1^- .  (quote(if (TRUE) 2)) + 3)
+## (found when fiddling w/ cases below):
+quote(`-`(1 + if(L) 2, 3+4))# wrongly was  1 + if (L) 2 - (3 + 4)
+##
+##__ All the following were ok in R <= 4.1.x already __
+bquote(1 + .(quote(if (TRUE) 2)) ^ 3) # already correct previously
+## other constructs cancel the LHS state ==> `if` call isn't wrapped:
+bquote(1 + .(quote(   f(if (TRUE) 2))) + 3)
+bquote(1 + .(quote((2 + if (TRUE) 3))) + 4)
+## cflow bodies are only wrapped if needed ==> no parentheses here :
+quote(a <- if (TRUE) 1)
+## print the same
+quote(`^`(-1, 2))
+quote((-1)^2)
+## no parentheses:
+quote(1^-2)
+quote(1^-2 + 3)
+## The "formula" case of Adrian Dusa (maintainer of QCA); R-devel ML, Nov.15, 2021
+quote(A + ~B + C ~ D) # no parens
+## 'simple' binary op
+quote(a$"b")
+## When cflow body is burried deeply through the right, don't rewrap
+## unnecessarily. There should be only one set of parentheses.
+## Cases where R-devel 81211 still gave unneeded parens:
+quote(`^`(1 + if(L) 2, 3))
+quote(`*`(1 - if(L) 2 else 22, 3))
+quote(`^`(1 + repeat 2, 3))
+quote(`*`(1 + repeat 2, 3))
+quote(`=`(1 + repeat 2, 3))# *no* parens in R <= 4.1.x
+quote(`=`(1 + `+`(2, repeat 3), 4))
+quote(`+`(`<-`(1, `=`(2, repeat 3)), 4)) # (1 <- (2 = ..
+quote(`+`(`:`(1, `=`(2, repeat 3)), 4))
+## No parentheses when the cflow form is trailing
+quote(1 + +repeat 2)
+quote(`<-`(1, +repeat 2))
+quote(1^+repeat 2)
+quote(`$`(1, +repeat 2))
+## More cases where parens are needed
+quote(`^`(`+`(repeat 1, 2), 3))
+quote(`+`(`+`(repeat 1, 2), 3))
+quote(`+`(`+`(`+`(repeat 1, repeat 2), repeat 3), 4))
+##__ end { all fine in older R }
+
+## Unary operators are parenthesised if needed; print the same:
+quote((-a)$b)
+quote(`$`(-a, b))    # no parens in R <= 4.1.x
+## Binary operators are parenthesised on the LHS of `$`. ; the same:
+quote((1 + 1)$b)
+quote(`$`(1 + 1, b)) # no parens in R <= 4.1.x
+##
+## Unparseable expressions are deparsed in prefixed form
+quote(`$`(1))       # was 1$NULL  in R <= 4.1.x
+quote(`$`(1, 2, 3)) # was 1$2
+quote(`$`(1, NA_character_)) # was 1$NA_char..
+quote(`$`(1, if(L) 2))   # was 1$if (L) 2
+quote(`$`(`$`(1, if(L) 2), 3))
+## No parens because prefix form
+quote(`$`(1 + repeat 2, 3))
+quote(`=`(`$`(1, `$`(2, repeat 3)), 4))
+## these were really bad in  R <= 4.1.x

@@ -52,7 +52,7 @@ static void private_delmetafile(metafile obj)
 	CloseClipboard())
 	return;
     else {
-	R_ShowMessage(_("Unable to save metafile to the clipboard"));
+	R_ShowMessage(G_("Unable to save metafile to the clipboard"));
 	DeleteEnhMetaFile(hm);
 	return;
     }
@@ -71,23 +71,32 @@ static object get_metafile_base(void)
 }
 
 /* width and height are in mm */
-metafile newmetafile(const char *name, double width, double height)
+metafile newmetafile(const char *name, double width, double height,
+                     double xpinch, double ypinch)
 {
     metafile obj;
     HDC hDC;
     RECT wr;
     static double cppix=-1, ppix, cppiy, ppiy;
 
-    /*
-     * In theory, (cppix=ppix) and (cppiy=ppiy). However, we
-     * use the ratio to adjust the 'reference dimension'
-     * in case.... ("Importing graph in MsWord" thread)
-     */
-    if (cppix < 0) {
-	cppix = 25.40 * devicewidth(NULL) / devicewidthmm(NULL);
-	ppix  = 100 * devicepixelsx(NULL);
-	cppiy = 25.40 * deviceheight(NULL) / deviceheightmm(NULL);
-	ppiy = 100 * devicepixelsy(NULL);
+    /* If user has overridden, do not query Windows for device info */
+    if (xpinch > 0.0 && ypinch > 0.0) {
+        cppix = xpinch;
+        ppix = 100 * xpinch;
+        cppiy = ypinch;
+        ppiy = 100 * ypinch;
+    } else {
+        /*
+         * In theory, (cppix=ppix) and (cppiy=ppiy). However, we
+         * use the ratio to adjust the 'reference dimension'
+         * in case.... ("Importing graph in MsWord" thread)
+         */
+        if (cppix < 0) {
+            cppix = 25.40 * devicewidth(NULL) / devicewidthmm(NULL);
+            ppix  = 100 * devicepixelsx(NULL);
+            cppiy = 25.40 * deviceheight(NULL) / deviceheightmm(NULL);
+            ppiy = 100 * devicepixelsy(NULL);
+        }
     }
     /* This is all very peculiar. We would really like to create
        a metafile measured in some sensible units, but it seems
@@ -105,12 +114,12 @@ metafile newmetafile(const char *name, double width, double height)
     hDC = CreateEnhMetaFile(NULL, strlen(name) ? name : NULL, &wr,
 			    "GraphApp\0\0");
     if ( !hDC ) {
-	R_ShowMessage(_("Unable to create metafile"));
+	R_ShowMessage(G_("Unable to create metafile"));
 	return NULL;
     }
     obj = new_object(MetafileObject, (HANDLE) hDC, get_metafile_base());
     if ( !obj ) {
-	R_ShowMessage(_("Insufficient memory to create metafile"));
+	R_ShowMessage(G_("Insufficient memory to create metafile"));
 	DeleteEnhMetaFile(CloseEnhMetaFile(hDC));
 	return NULL;
     }

@@ -389,17 +389,25 @@ void attribute_hidden R_check_locale(void)
     }
 #endif
     mbcslocale = MB_CUR_MAX > 1;
+    R_MB_CUR_MAX = MB_CUR_MAX;
+#ifdef __sun
+    /* Solaris 10 (at least) has MB_CUR_MAX == 3 in some, but ==4
+       in other UTF-8 locales. The former does not allow working
+       with non-BMP characters using mbrtowc(). Work-around by
+       allowing to use more. */
+    if (utf8locale && R_MB_CUR_MAX < 4)
+	R_MB_CUR_MAX = 4;
+#endif
 #ifdef Win32
     {
 	char *ctype = setlocale(LC_CTYPE, NULL), *p;
 	p = strrchr(ctype, '.');
+	localeCP = 0;
 	if (p) {
 	    if (isdigit(p[1]))
 		localeCP = atoi(p+1);
 	    else if (!strcasecmp(p+1, "UTF-8") || !strcasecmp(p+1, "UTF8"))
 		localeCP = 65001;
-	    else
-		localeCP = 0;
 	}
 	/* Not 100% correct, but CP1252 is a superset */
 	known_to_be_latin1 = latin1locale = (localeCP == 1252);
@@ -413,10 +421,6 @@ void attribute_hidden R_check_locale(void)
 	}
 	systemCP = GetACP();
     }
-#endif
-#if defined(SUPPORT_UTF8_WIN32) /* never at present */
-    utf8locale = mbcslocale = TRUE;
-    strcpy(native_enc, "UTF-8");
 #endif
 }
 
@@ -481,11 +485,7 @@ SEXP attribute_hidden do_fileshow(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (i = 0; i < n; i++) {
 	SEXP el = STRING_ELT(fn, i);
 	if (!isNull(el) && el != NA_STRING)
-#ifdef Win32
-	    f[i] = acopy_string(reEnc(CHAR(el), getCharCE(el), CE_UTF8, 1));
-#else
 	    f[i] = acopy_string(translateCharFP(el));
-#endif
 	else
 	    error(_("invalid filename specification"));
 	if (STRING_ELT(hd, i) != NA_STRING)
@@ -1262,12 +1262,15 @@ list_files(const char *dnp, const char *stem, int *count, SEXP *pans,
 	    if (allfiles || !R_HiddenFile(de->d_name)) {
 		Rboolean not_dot = strcmp(de->d_name, ".") && strcmp(de->d_name, "..");
 		if (recursive) {
+		    int res;
 #ifdef Win32
 		    if (strlen(dnp) == 2 && dnp[1] == ':') // e.g. "C:"
-			snprintf(p, PATH_MAX, "%s%s", dnp, de->d_name);
+			res = snprintf(p, PATH_MAX, "%s%s", dnp, de->d_name);
 		    else
 #endif
-			snprintf(p, PATH_MAX, "%s%s%s", dnp, R_FileSep, de->d_name);
+			res = snprintf(p, PATH_MAX, "%s%s%s", dnp, R_FileSep, de->d_name);
+		    if (res >= PATH_MAX) 
+			warning(_("over-long path"));
 
 #ifdef Windows
 		    _stati64(p, &sb);
@@ -1291,12 +1294,14 @@ list_files(const char *dnp, const char *stem, int *count, SEXP *pans,
 			    if (stem) {
 #ifdef Win32
 				if(strlen(stem) == 2 && stem[1] == ':')
-				    snprintf(stem2, PATH_MAX, "%s%s", stem,
+				    res = snprintf(stem2, PATH_MAX, "%s%s", stem,
 					     de->d_name);
 				else
 #endif
-				    snprintf(stem2, PATH_MAX, "%s%s%s", stem,
+				    res = snprintf(stem2, PATH_MAX, "%s%s%s", stem,
 					     R_FileSep, de->d_name);
+				if (res >= PATH_MAX)
+				    warning(_("over-long path"));
 			    } else
 				strcpy(stem2, de->d_name);
 
@@ -1400,14 +1405,17 @@ static void list_dirs(const char *dnp, const char *nm,
 	    SET_STRING_ELT(*pans, (*count)++, mkChar(full ? dnp : nm));
 	}
 	while ((de = readdir(dir))) {
+	    int res;
 #ifdef Win32
 	    if (strlen(dnp) == 2 && dnp[1] == ':')
-		snprintf(p, PATH_MAX, "%s%s", dnp, de->d_name);
+		res = snprintf(p, PATH_MAX, "%s%s", dnp, de->d_name);
 	    else
-		snprintf(p, PATH_MAX, "%s%s%s", dnp, R_FileSep, de->d_name);
+		res = snprintf(p, PATH_MAX, "%s%s%s", dnp, R_FileSep, de->d_name);
 #else
-	    snprintf(p, PATH_MAX, "%s%s%s", dnp, R_FileSep, de->d_name);
+	    res = snprintf(p, PATH_MAX, "%s%s%s", dnp, R_FileSep, de->d_name);
 #endif
+	    if (res >= PATH_MAX)
+		warning(_("over-long path"));
 #ifdef Windows
 	    _stati64(p, &sb);
 #else
@@ -1417,8 +1425,10 @@ static void list_dirs(const char *dnp, const char *nm,
 		if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..")) {
 		    if(recursive) {
 			char nm2[PATH_MAX];
-			snprintf(nm2, PATH_MAX, "%s%s%s", nm, R_FileSep,
+			res = snprintf(nm2, PATH_MAX, "%s%s%s", nm, R_FileSep,
 				 de->d_name);
+			if (res >= PATH_MAX)
+			    warning(_("over-long path"));
 			list_dirs(p, nm[0] ? nm2 : de->d_name, full, count,
 				  pans, countmax, idx, recursive);
 
@@ -1579,9 +1589,17 @@ SEXP attribute_hidden do_fileaccess(SEXP call, SEXP op, SEXP args, SEXP rho)
 static int R_rmdir(const wchar_t *dir)
 {
     wchar_t tmp[MAX_PATH];
-    GetShortPathNameW(dir, tmp, MAX_PATH);
-    //printf("removing directory %ls\n", tmp);
-    return _wrmdir(tmp);
+    DWORD res = 0;
+    /* FIXME: GetShortPathName is probably not needed here anymore. */
+    res = GetShortPathNameW(dir, tmp, MAX_PATH);
+    if (res == 0) 
+	/* GetShortPathName mail fail if there are insufficient permissions
+	   on a component of the path. */
+        return _wrmdir(dir);
+    else
+	/* Even when GetShortPathName succeeds, "tmp" may be the long name,
+	   because short names may not be enabled/available. */
+        return _wrmdir(tmp);
 }
 
 /* Junctions and symbolic links are fundamentally reparse points, so
@@ -1717,11 +1735,14 @@ static int R_unlink(const char *name, int recursive, int force)
 		    if (streql(de->d_name, ".") || streql(de->d_name, ".."))
 			continue;
 		    size_t n = strlen(name);
+		    int pres;
 		    if (name[n] == R_FileSep[0])
-			snprintf(p, PATH_MAX, "%s%s", name, de->d_name);
+			pres = snprintf(p, PATH_MAX, "%s%s", name, de->d_name);
 		    else
-			snprintf(p, PATH_MAX, "%s%s%s", name, R_FileSep,
+			pres = snprintf(p, PATH_MAX, "%s%s%s", name, R_FileSep,
 				 de->d_name);
+		    if (pres >= PATH_MAX)
+			error(_("path too long"));
 		    lstat(p, &sb);
 		    if ((sb.st_mode & S_IFDIR) > 0) { /* a directory */
 			if (force) chmod(p, sb.st_mode | S_IWUSR | S_IXUSR);
@@ -2217,7 +2238,7 @@ SEXP attribute_hidden do_capabilities(SEXP call, SEXP op, SEXP args, SEXP rho)
     LOGICAL(ans)[i++] = TRUE;
 
     SET_STRING_ELT(ansnames, i, mkChar("libxml"));
-    LOGICAL(ans)[i++] = TRUE;
+    LOGICAL(ans)[i++] = FALSE;
 
     SET_STRING_ELT(ansnames, i, mkChar("fifo"));
 #if (defined(HAVE_MKFIFO) && defined(HAVE_FCNTL_H)) || defined(_WIN32)

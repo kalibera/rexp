@@ -102,11 +102,11 @@ void attribute_hidden Rstd_Suicide(const char *s)
 
 static SIGJMP_BUF seljmpbuf;
 
-static RETSIGTYPE (*oldSigintHandler)(int) = SIG_DFL;
+static void (*oldSigintHandler)(int) = SIG_DFL;
 
 typedef void (*sel_intr_handler_t)(void);
 
-static RETSIGTYPE NORET handleSelectInterrupt(int dummy)
+static void NORET handleSelectInterrupt(int dummy)
 {
     signal(SIGINT, oldSigintHandler);
     SIGLONGJMP(seljmpbuf, 1);
@@ -163,15 +163,14 @@ int R_SelectEx(int  n,  fd_set  *readfds,  fd_set  *writefds,
 	       context. */
 	    R_interrupts_suspended = FALSE;
 
+	    /* check for and handle any pending interrupt registered
+	       by the standard handler. */
+	    if (R_interrupts_pending)
+		myintr();
+
 	    /* install a temporary signal handler for breaking out of
 	       a blocking select */
 	    oldSigintHandler = signal(SIGINT, handleSelectInterrupt);
-
-	    /* once the new sinal handler is in place we need to check
-	       for and handle any pending interrupt registered by the
-	       standard handler. */
-	    if (R_interrupts_pending)
-		myintr();
 
 	    /* now do the (possibly blocking) select, restore the
 	       signal handler, and return the result of the select. */
@@ -569,7 +568,7 @@ static struct {
 #ifdef NEED_INT_HANDLER
 static volatile Rboolean caught_sigwinch = FALSE;
 
-static RETSIGTYPE
+static void
 R_readline_sigwinch_handler(int sig)
 {
     caught_sigwinch = TRUE;

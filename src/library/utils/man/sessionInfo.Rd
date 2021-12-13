@@ -1,6 +1,6 @@
 % File src/library/utils/man/sessionInfo.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2020 R Core Team
+% Copyright 1995-2021 R Core Team
 % Distributed under GPL 2 or later
 
 \name{sessionInfo}
@@ -76,10 +76,10 @@ osVersion
   possible \code{osVersion} (and hence \code{sessionInfo()$running}) uses
   a human-readable form.
 
-  Where \R is compiled under an earlier version of macOS (as the
-  \acronym{CRAN} distribution has been) but running under \sQuote{Big
-  Sur}, macOS reports itself as \samp{10.16} (which \R recognizes as
-  \sQuote{Big Sur})  and not \samp{11.x}.
+  Where \R was compiled under macOS 10.x (as the \acronym{CRAN} Intel
+  distributions have been) but running under \sQuote{Big Sur} or later,
+  macOS reports itself as \samp{10.16} (which \R recognizes as
+  \sQuote{Big Sur/Monterey}) and not \samp{11.x} or \samp{12.x}.
 }
 \note{
   The information on \sQuote{loaded} packages and namespaces is the

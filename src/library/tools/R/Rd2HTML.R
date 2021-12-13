@@ -154,8 +154,16 @@ invalid_HTML_chars_re <-
     "[\u0001-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]"
 
 
+topic2filename <- function(x) gsub("%", "+", utils::URLencode(x, reserved=TRUE))
+
+
 ## Create HTTP redirect files for aliases; called only during package
-## installation if static help files are enabled.
+## installation if static help files are enabled. Files are named
+## after aliases, which may contain 'undesirable' characters. These
+## are escaped using topic2filename(). Analogous escaping needs to be
+## done when creating links in HTML output as well, but ONLY for
+## static HTML (dynamic help is already capable of handling such
+## links)
 createRedirects <- function(file, Rdobj)
 {
     linksToTopics <-
@@ -165,8 +173,8 @@ createRedirects <- function(file, Rdobj)
     redirHTML <- sprintf("<html><head><meta http-equiv='refresh' content='0; url=../html/%s'></head></html>\n", urlify(basename(file)))
     toProcess <- which(RdTags(Rdobj) == "\\alias")
     helpdir <- paste0(dirname(dirname(file)), "/help") # .../pkg/help/
-    aliasName <- function(i) Rdobj[[i]][[1]]
-    aliasFile <- function(i) file.path(helpdir, sprintf("%s.html", aliasName(i)))
+    aliasName <- function(i) trimws(Rdobj[[i]][[1]])
+    aliasFile <- function(i) file.path(helpdir, sprintf("%s.html", topic2filename(aliasName(i))))
     redirMsg <- function(type, src, dest, status) {
         ## change sprintf to gettextf to make translatable, but seems unnecessary
         msg <- sprintf("\nREDIRECT:%s\t %s -> %s [ %s ]", type, src, dest, status)
@@ -185,16 +193,16 @@ createRedirects <- function(file, Rdobj)
             message(msg, appendLF = FALSE)
         }
         try(suppressWarnings(cat(redirHTML, file = afile)), silent = TRUE) # Fails for \alias{%/%}
-        ## redirMsg("topic", aname, basename(file), if (file.exists(afile)) "SUCCESS" else "FAIL")
-        if (!file.exists(afile)) redirMsg("topic", aname, basename(file), "FAIL")
+        ## redirMsg("topic", aname, basename(file), if (file.exists(afile)) "SUCCESS" else "FAILURE")
+        if (!file.exists(afile)) redirMsg("topic", aname, basename(file), "FAILURE")
     }
     ## Also add .../pkg/help/file.html -> ../pkg/html/file.html as fallback
     ## when topic is not found (but do not overwrite)
     file.fallback <- file.path(helpdir, basename(file))
     if (!file.exists(file.fallback)) {
         try(cat(redirHTML, file = file.fallback), silent = TRUE)
-        ## redirMsg("file", basename(file), basename(file), if (file.exists(file.fallback)) "SUCCESS" else "FAIL")
-        if (!file.exists(file.fallback)) redirMsg("file", basename(file), basename(file),  "FAIL")
+        ## redirMsg("file", basename(file), basename(file), if (file.exists(file.fallback)) "SUCCESS" else "FAILURE")
+        if (!file.exists(file.fallback)) redirMsg("file", basename(file), basename(file),  "FAILURE")
     }
 }
 
@@ -304,7 +312,7 @@ Rd2HTML <-
                   "\\file"='&lsquo;<span class="file">',
                   "\\option"='<span class="option">',
                   "\\pkg"='<span class="pkg">',
-                  "\\samp"='<span class="samp">',
+                  "\\samp"='&lsquo;<span class="samp">&#8288;',
                   "\\sQuote"="&lsquo;",
                   "\\dQuote"="&ldquo;",
                   "\\verb"='<code style="white-space: pre;">')
@@ -314,7 +322,7 @@ Rd2HTML <-
                    "\\file"='</span>&rsquo;',
                    "\\option"="</span>",
                    "\\pkg"="</span>",
-                   "\\samp"="</span>",
+                   "\\samp"="&#8288;</span>&rsquo;",
                    "\\sQuote"="&rsquo;",
                    "\\dQuote"="&rdquo;",
                    "\\verb"="</code>")
@@ -391,7 +399,7 @@ Rd2HTML <-
                 ## package, but also those in base+recommended
                 ## packages. We do this branch only if this is a
                 ## within-package link
-                htmlfile <- paste0("../../", urlify(package), "/help/", urlify(topic), ".html")
+                htmlfile <- paste0("../../", urlify(package), "/help/", topic2filename(topic), ".html")
                 writeHref()
                 return()
 
@@ -422,9 +430,12 @@ Rd2HTML <-
             }
     	} else {
             ## ----------------- \link[pkg]{file} and \link[pkg:file]{bar}
-            htmlfile <- paste0(urlify(parts$targetfile), ".html")
             if (!dynamic && !linksToTopics && !no_links &&
-               nzchar(pkgpath <- system.file(package = parts$pkg))) {
+                nzchar(pkgpath <- system.file(package = parts$pkg))) {
+                ## old-style static HTML: prefer filename over topic,
+                ## so treat as filename and urlify() instead of
+                ## topic2filename()
+                htmlfile <- paste0(urlify(parts$targetfile), ".html")
                 ## check the link, only if the package is found
                 OK <- FALSE
                 if (!file.exists(file.path(pkgpath, "html", htmlfile))) {
@@ -452,20 +463,24 @@ Rd2HTML <-
             }
             if (parts$pkg == package) { # within same package
                 if (linksToTopics)
-                    htmlfile <- paste0("../help/", urlify(parts$targetfile),
-                                       if (!dynamic) ".html" else "")
-                ## else # not needed as htmlfile already defined
-                ## ## use href = "file.html"
-                ##     htmlfile <- paste0(urlify(parts$targetfile), ".html")
+                    htmlfile <-
+                        if (dynamic) paste0("../help/", urlify(parts$targetfile))
+                        else paste0("../help/", topic2filename(parts$targetfile), ".html")
+                else # use href = "file.html"
+                    htmlfile <- paste0(urlify(parts$targetfile), ".html")
                 writeHref()
             } else {  # link to different package
                 ## href = "../../pkg/html/file.html"
                 if (linksToTopics)
-                    htmlfile <- paste0("../../", urlify(parts$pkg), "/help/",
-                                       urlify(parts$targetfile),
-                                       if (!dynamic) ".html" else "")
+                    htmlfile <-
+                        if (dynamic) paste0("../../", urlify(parts$pkg), "/help/",
+                                            urlify(parts$targetfile))
+                        else paste0("../../", urlify(parts$pkg), "/help/",
+                                    topic2filename(parts$targetfile), ".html")
+
                 else
-                    htmlfile <- paste0("../../", urlify(parts$pkg), "/html/", htmlfile)
+                    htmlfile <- paste0("../../", urlify(parts$pkg), "/html/",
+                                       urlify(parts$targetfile), ".html")
                 writeHref()
             }
         }
@@ -908,6 +923,10 @@ Rd2HTML <-
     invisible(out)
 } ## Rd2HTML()
 
+
+## The following functions return 'relative' links assuming that all
+## packages are installed in the same virtual library tree.
+
 findHTMLlinks <- function(pkgDir = "", lib.loc = NULL, level = 0:2)
 {
     ## The priority order is
@@ -937,23 +956,38 @@ findHTMLlinks <- function(pkgDir = "", lib.loc = NULL, level = 0:2)
     gsub("[Rr]d$", "html", Links)
 }
 
+## These helper functions can optionally return the absolute path as
+## well (in the local file system)
+
 .find_HTML_links_in_package <-
-function(dir)
+function(dir, absolute = FALSE)
 {
-    if (file_test("-f", f <- file.path(dir, "Meta", "links.rds")))
-        readRDS(f)
-    else if (file_test("-f", f <- file.path(dir, "Meta", "Rd.rds")))
-        .build_links_index(readRDS(f), basename(dir))
-    else character()
+    ans <- 
+        if (file_test("-f", f <- file.path(dir, "Meta", "links.rds")))
+            readRDS(f)
+        else if (file_test("-f", f <- file.path(dir, "Meta", "Rd.rds")))
+            .build_links_index(readRDS(f), basename(dir))
+        else character()
+    if (absolute)
+        structure(file.path(dir, "html", basename(ans), fsep = "/"),
+                  names = names(ans))
+    else
+        ans
 }
 
 .find_HTML_links_in_library <-
-function(dir)
+function(dir, absolute = FALSE)
 {
-    if (file_test("-f", f <- file.path(dir, ".Meta", "links.rds")))
-        readRDS(f)
+    ans <- 
+        if (file_test("-f", f <- file.path(dir, ".Meta", "links.rds")))
+            readRDS(f)
+        else
+            .build_library_links_index(dir)
+    if (absolute)
+        structure(file.path(dir, substring(ans, first = 7), fsep = "/"), # drop initial "../../"
+                  names = names(ans))
     else
-        .build_library_links_index(dir)
+        ans
 }
 
 .build_library_links_index <-

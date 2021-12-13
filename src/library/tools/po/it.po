@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tools 4.1.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2021-02-01 13:59+0000\n"
+"POT-Creation-Date: 2021-11-06 17:18+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Daniele Medri <dmedri@gmail.com>\n"
 "Language-Team: Italian https://github.com/dmedri/R-italian-lang\n"
@@ -147,12 +147,16 @@ msgstr "modalità testo errata %d in 'deparseRd'"
 msgid "invalid bind address specification"
 msgstr "specificazione indirizzo bind non valida"
 
-#: install.c:112 install.c:131 install.c:133
+#: install.c:98
+msgid "path too long"
+msgstr ""
+
+#: install.c:115 install.c:134 install.c:136
 #, c-format
 msgid "invalid '%s' argument"
 msgstr "argomento '%s' non valido"
 
-#: install.c:162
+#: install.c:165
 msgid "write error during file append"
 msgstr "errore di scrittura durante file append"
 
@@ -172,10 +176,10 @@ msgstr "pskill() non è supportata su questa piattaforma"
 msgid "psnice() is not supported on this platform"
 msgstr "psnice() non è supportata su questa piattaforma"
 
-#: text.c:67
+#: text.c:69
 msgid "invalid argument type"
 msgstr "tipo argomento non valido"
 
-#: text.c:223 text.c:245
+#: text.c:225 text.c:247
 msgid "out of memory"
 msgstr "memoria esausta"

@@ -4,6 +4,8 @@
         paste(libp, collapse = .Platform$path.sep)
     else "" # character(0) is invalid for Sys.setenv()
 }
+.libPaths(tail(.libPaths(), 1), include.site=FALSE) # no extra libraries (w/ many pkgs)\n")
+
 Sys.setenv(R_LIBS = .R_LIBS() # for build.pkg() & install.packages()
          , R_BUILD_ENVIRON = "nothing" # avoid ~/.R/build.environ which might set R_LIBS
          , R_ENVIRON = "none"
@@ -57,17 +59,19 @@ stopifnot(1 == grep("setClass",
 ## failed for several reasons in R < 2.7.0
 ##
 ## Part 2: -- build, install, load and "inspect" the package:
-build.pkg <- function(dir, destdir = NULL, ignore.stderr = FALSE) {
+build.pkg <- function(dir, destdir = NULL, ignore.stderr = FALSE, no.latex=TRUE) {
     dir <- normalizePath(dir)
     if(length(dir) > 1)
-        return(lapply(dir, build.pkg, destdir = destdir))
+        return(lapply(dir, build.pkg, destdir=destdir,
+                      ignore.stderr=ignore.stderr, no.latex=no.latex))
     ## else one 'dir':
     stopifnot(dir.exists(dir), file.exists(DESC <- file.path(dir, "DESCRIPTION")))
     pkgName <- sub("^[A-Za-z]+: ", "", grep("^Package: ", readLines(DESC), value=TRUE))
     patt <- paste(pkgName, ".*tar\\.gz$", sep="_")
     unlink(dir('.', pattern = patt))
     Rcmd <- paste(shQuote(file.path(R.home("bin"), "R")), "CMD")
-    r <- system(paste(Rcmd, "build --keep-empty-dirs", shQuote(dir)),
+    r <- system(paste(Rcmd, "build --keep-empty-dirs",
+                      if(no.latex) "--no-manual", shQuote(dir)),
                 ignore.stderr=ignore.stderr, intern = TRUE)
     ## return name of tar file built {plus the build log} :
     tball <- structure(dir('.', pattern = patt), log3 = r)
@@ -173,6 +177,7 @@ if(okB3 <- file.exists(DN <- file.path(pB3p, "DESCRIPTION"))) {
 }
 p.lis <- c(if("Matrix" %in% row.names(installed.packages(.Library)))
                c("pkgA", "pkgB", if(okB2) "pkgB2", if(okB3) "pkgB3", "pkgC"),
+           "PR17501",
            "exNSS4", "exNSS4nil", "exSexpr")
 p.lis; (pBlis <- grep("^pkgB", p.lis, value=TRUE))
 InstOpts <- list("exSexpr" = "--html")
@@ -237,6 +242,27 @@ stopifnot(exprs = {
     res[,"LibPath"] == "myLib"
 })
 ### Specific Tests on our "special" packages: ------------------------------
+
+tf <- tempfile("chk_donttest")
+## why does this not work (not catch stderr)?  textConnection("checkTxt", open="w")
+system.time(status <-
+        tools:::run_Rcmd(c("check", "PR17501_1.0.tar.gz", "--no-manual"),
+                         out=tf, timeout = 50))# see 5--7 sec; Solaris needed > 30
+stopifnot(exprs = {
+    status == 1 # an ERROR now
+    is.character(exLines <-
+                     readLines(file.path("PR17501.Rcheck", "PR17501-Ex.R")))
+    { str(exLines); length(exLines) > 20 } # str(): diagnostic in case
+    is.integer(i <- grep("^R\\.Version\\( *# missing closing paren", exLines))
+    grepl("^## No test", exLines[i-1])
+    { str(tlines <- readLines(tf)); length(tlines) > 20 }
+    length(iw <- grep("^Warning: parse error", tlines)) == 1
+    (lenN <- length(print(iN <- grep("^[1-9][0-9]:", tlines)))) >= 2
+    iN - iw == seq_len(lenN) # these (3) lines come immediately after 'Warning',
+    ## and "related" to the some 'missing .. paren' above:
+    8 <= print(iw - i) & iw - i <= 20 # see ~14
+}) ## failed in R <= 4.1.1
+
 
 ## These used to fail because of the sym.link in pkgA
 if("pkgA" %in% p.lis && dir.exists(pkgApath)) {
@@ -446,16 +472,21 @@ if(isWIN){
 checkMatrix <- function(x, n) stopifnot(is.matrix(x), nrow(x) == n)
 
 docompare(latestOnly = TRUE)
-checkMatrix(available.packages(repourl, filters = list()), 2)
+str(ap <- available.packages(repourl, filters = list()))
+checkMatrix(ap, 2)
 
 docompare(latestOnly = FALSE)
-checkMatrix(available.packages(repourl, filters = list()), 4)
+str(ap <- available.packages(repourl, filters = list()))
+checkMatrix(ap, 4)
 
 docompare(latestOnly = TRUE, strict = FALSE)
-checkMatrix(available.packages(repourl, filters = list()), 2)
+str(ap <- available.packages(repourl, filters = list()))
+checkMatrix(ap, 2)
 
 docompare(latestOnly = FALSE, strict = FALSE)
-checkMatrix(available.packages(repourl, filters = list()), 4)
+str(ap <- available.packages(repourl, filters = list()))
+checkMatrix(ap, 4)
+
 
 
 

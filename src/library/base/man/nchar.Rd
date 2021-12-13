@@ -1,6 +1,6 @@
 % File src/library/base/man/nchar.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2020 R Core Team
+% Copyright 1995-2021 R Core Team
 % Distributed under GPL 2 or later
 
 \name{nchar}
@@ -47,7 +47,7 @@ nzchar(x, keepNA = FALSE)
       print the string in a monospaced font.  The same as \code{chars}
       if this cannot be calculated.}
   }
-  These will often be the same, and almost always will be in single-byte
+  These will often be the same, and usually will be in single-byte
   locales (but note how \code{type} determines the default for
   \code{keepNA}).  There will be differences between the first two with
   multibyte character sequences, e.g.\sspace{}in UTF-8 locales.
@@ -83,9 +83,9 @@ nzchar(x, keepNA = FALSE)
   Names, dims and dimnames are copied from the input.
 
   For \code{nzchar}, a logical vector of the same length as \code{x},
-  true if and only if the element has non-zero length; if the element is
+  true if and only if the element has non-zero size; if the element is
   \code{NA}, \code{nzchar()} is true when \code{keepNA} is false (the
-  default) and \code{NA} otherwise.
+  default) or \code{NA}, and \code{NA} otherwise.
 }
 \note{
   This does \strong{not} by default give the number of characters that
@@ -128,9 +128,9 @@ nzchar(x, keepNA = FALSE)
   the locale, being one except in some East Asian locales on some OSes
   (notably Windows).
 
-  Control characters are given width zero in multi-byte locales, but are
-  usually given width one in single-byte ones (as their positions are
-  often undefined and maybe re-used as in CP1252 \emph{vs} Latin-1).
+  Control characters are usually given width zero: this includes CR and
+  LF.  Computing the width of a string containing control characters
+  should be avoided (and may depend on the OS and \R version).
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
@@ -151,6 +151,11 @@ nchar(x)
 
 nchar(deparse(mean))
 # 18 17  <-- unless mean differs from base::mean
+
+## NA behaviour as function of keepNA=* :
+logi <- setNames(, c(FALSE, NA, TRUE))
+sapply(logi, \(k) data.frame(nchar =  nchar (NA, keepNA=k),
+                             nzchar = nzchar(NA, keepNA=k)))
 
 x[3] <- NA; x
 nchar(x, keepNA= TRUE) #  5  6 NA  1 15

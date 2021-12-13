@@ -290,6 +290,20 @@ x$name <- value
   nothing.
 }
 
+\section{Error conditions}{
+  Attempting to apply a subsetting operation to objects for which this is
+  not possible signals an error of class
+  \code{notSubsettableError}. The \code{object} component of the error
+  condition contains the non-subsettable object.
+
+  Subscript out of bounds errors are signaled as errors of class
+  \code{subscriptOutOfBoundsError}. The \code{object} component of the
+  error condition contains the object being subsetted. The integer
+  \code{subscript} component is zero for vector subscripting, and for
+  multiple subscripts indicates which subscript was out of bounds. The
+  \code{index} component contains the erroneous index.
+}
+
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)
   \emph{The New S Language}.

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2020	The R Core Team.
+ *  Copyright (C) 1998--2021	The R Core Team.
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -460,10 +460,23 @@ static void R_InitProfiling(SEXP filename, int append, double dinterval,
 
     signal(SIGPROF, doprof);
 
-    itv.it_interval.tv_sec = 0;
-    itv.it_interval.tv_usec = interval;
-    itv.it_value.tv_sec = 0;
-    itv.it_value.tv_usec = interval;
+    /* The macOS implementation requires normalization here:
+
+       setitimer is obsolescent (POSIX >= 2008), replaced by
+       timer_create / timer_settime, but the supported clocks are
+       implementation-dependent.
+
+       Recent Linux has CLOCK_PROCESS_CPUTIME_ID
+       Solaris has CLOCK_PROF, in -lrt.
+       FreeBSD only supports CLOCK_{REALTIME,MONOTONIC}
+       Seems not to be supported at all on macOS.
+    */ 
+    itv.it_interval.tv_sec = interval / 1000000;
+    itv.it_interval.tv_usec =
+	(suseconds_t)(interval - itv.it_interval.tv_sec * 10000000);
+    itv.it_value.tv_sec = interval / 1000000;
+    itv.it_value.tv_usec =
+	(suseconds_t)(interval - itv.it_value.tv_sec * 1000000);
     if (setitimer(ITIMER_PROF, &itv, NULL) == -1)
 	R_Suicide("setting profile timer failed");
 #endif /* not Win32 */
@@ -707,9 +720,17 @@ SEXP eval(SEXP e, SEXP rho)
     /* We need to explicit set a NULL call here to circumvent attempts
        to deparse the call in the error-handler */
     if (R_EvalDepth > R_Expressions) {
+	/* This bump of R_Expressions doesn't really work in many
+	   cases since jumps (e.g. from explicit return() calls or in
+	   UseMethod dispatch) reset this. Something more
+	   sophisticated might work, but also increase the risk of a C
+	   stack overflow. LT */
 	R_Expressions = R_Expressions_keep + 500;
-	errorcall(R_NilValue,
-		  _("evaluation nested too deeply: infinite recursion / options(expressions=)?"));
+
+	/* condiiton is pre-allocated and protected with R_PreserveObject */
+	SEXP cond = R_getExpressionStackOverflowError();
+
+	R_signalErrorCondition(cond, R_NilValue);
     }
     R_CheckStack();
 
@@ -753,7 +774,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    else tmp = PRVALUE(tmp);
 	    ENSURE_NAMEDMAX(tmp);
 	}
-	else ENSURE_NAMED(tmp); /* should not really be needed - LT */
+	else ENSURE_NAMED(tmp); /* needed for .Last.value - LT */
 	break;
     case PROMSXP:
 	if (PRVALUE(e) == R_UnboundValue)
@@ -4880,7 +4901,10 @@ static R_INLINE SEXP getForLoopSeq(int offset, Rboolean *iscompact)
 
 static void NORET nodeStackOverflow()
 {
-    error(_("node stack overflow"));
+    /* condiiton is pre-allocated and protected with R_PreserveObject */
+    SEXP cond = R_getNodeStackOverflowError();
+
+    R_signalErrorCondition(cond, R_CurrentExpression);
 }
 
 /* Allocate consecutive space of nelems node stack elements */
@@ -5181,7 +5205,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	        ENSURE_NAMEDMAX(pv);
 		value = pv;
 	}
-    } else ENSURE_NAMED(value); /* should not really be needed - LT */
+    } else ENSURE_NAMED(value); /* needed for .Last.value - LT */
     return value;
 }
 
@@ -8292,10 +8316,12 @@ SEXP do_bcprofstart(SEXP call, SEXP op, SEXP args, SEXP env)
 
     signal(SIGPROF, dobcprof);
 
-    itv.it_interval.tv_sec = 0;
-    itv.it_interval.tv_usec = interval;
-    itv.it_value.tv_sec = 0;
-    itv.it_value.tv_usec = interval;
+    itv.it_interval.tv_sec = interval / 1000000;
+    itv.it_interval.tv_usec =
+	(suseconds_t) (interval - itv.it_interval.tv_sec * 1000000);
+    itv.it_value.tv_sec = interval / 1000000;
+    itv.it_value.tv_usec =
+	(suseconds_t) (interval - itv.it_value.tv_sec * 1000000);
     if (setitimer(ITIMER_PROF, &itv, NULL) == -1)
 	error(_("setting profile timer failed"));
 

@@ -79,7 +79,6 @@
 #include <Fileio.h>
 #include <Rconnections.h>
 #include <R_ext/Complex.h>
-//#include <R-ftp-http.h>
 #include <R_ext/RS.h>		/* R_chk_calloc and Free */
 #include <R_ext/Riconv.h>
 #include <R_ext/Print.h> // REprintf, REvprintf
@@ -4690,8 +4689,10 @@ readFixedString(Rconnection con, int len, int useBytes, Rboolean *warnOnNul)
 	int i, clen;
 	char *p, *q;
 
-	p = buf = (char *) R_alloc(MB_CUR_MAX*len+1, sizeof(char));
-	memset(buf, 0, MB_CUR_MAX*len+1);
+	p = buf = (char *) R_alloc(R_MB_CUR_MAX*len+1, sizeof(char));
+	memset(buf, 0, R_MB_CUR_MAX*len+1);
+	mbstate_t mb_st;
+	mbs_init(&mb_st);
 	for(i = 0; i < len; i++) {
 	    q = p;
 	    m = (int) con->read(p, sizeof(char), 1, con);
@@ -4702,7 +4703,7 @@ readFixedString(Rconnection con, int len, int useBytes, Rboolean *warnOnNul)
 		if(m < clen - 1) error(_("invalid UTF-8 input in readChar()"));
 		p += clen - 1;
 		/* NB: this only checks validity of multi-byte characters */
-		if((int)mbrtowc(NULL, q, clen, NULL) < 0)
+		if((int)mbrtowc(NULL, q, clen, &mb_st) < 0)
 		    error(_("invalid UTF-8 input in readChar()"));
 	    } else if (*q == '\0' && *warnOnNul) {
 		*warnOnNul = FALSE;
@@ -4744,7 +4745,7 @@ rawFixedString(Rbyte *bytes, int len, int nbytes, int *np, int useBytes)
 	char *p;
 	Rbyte *q;
 
-	p = buf = (char *) R_alloc(MB_CUR_MAX*len+1, sizeof(char));
+	p = buf = (char *) R_alloc(R_MB_CUR_MAX*len+1, sizeof(char));
 	for(i = 0; i < len; i++, p += clen, iread += clen) {
 	    if (iread >= nbytes) break;
 	    q = bytes + iread;
@@ -4987,7 +4988,7 @@ SEXP attribute_hidden do_writechar(SEXP call, SEXP op, SEXP args, SEXP env)
 		    const char *p = s;
 		    mbs_init(&mb_st);
 		    for(i = 0, lenb = 0; i < len; i++) {
-			used = Mbrtowc(NULL, p, MB_CUR_MAX, &mb_st);
+			used = Mbrtowc(NULL, p, R_MB_CUR_MAX, &mb_st);
 			p += used;
 			lenb += used;
 		    }
@@ -5355,13 +5356,15 @@ R_newCurlUrl(const char *description, const char * const mode, SEXP headers, int
 */
 SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP scmd, sopen, ans, class, enc, headers = R_NilValue,
-	headers_flat = R_NilValue;
+    SEXP scmd, sopen, ans, class, enc, headers = R_NilValue;
+#ifdef Win32
+    SEXP headers_flat = R_NilValue;
+#endif
     char *class2 = "url";
     const char *url, *open;
     int ncon, block, raw = 0, defmeth,
 	meth = 0, // 0: "internal" | "wininet", 1: "libcurl"
-	winmeth;  // 0: "internal", 1: "wininet" (Windows only)
+	winmeth = 0;  // 0: "internal", 1: "wininet" (Windows only)
     cetype_t ienc = CE_NATIVE;
     Rconnection con = NULL;
 
@@ -5390,20 +5393,30 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
     url = translateCharFP(STRING_ELT(scmd, 0));
 #endif
 
+    // curl-based url() does not need to know the type. so
+    // only set for use by the wininet method.
+#ifdef Win32
     UrlScheme type = HTTPsh;	/* -Wall */
+#endif
     Rboolean inet = TRUE;
-    if (strncmp(url, "http://", 7) == 0)
+    if (strncmp(url, "http://", 7) == 0) {
+#ifdef Win32
 	type = HTTPsh;
-    else if (strncmp(url, "ftp://", 6) == 0)
+#endif
+    } else if (strncmp(url, "ftp://", 6) == 0) {
+#ifdef Win32
 	type = FTPsh;
-    else if (strncmp(url, "https://", 8) == 0)
+#endif
+    } else if (strncmp(url, "https://", 8) == 0) {
+#ifdef Win32
 	type = HTTPSsh;
+ #endif
     // ftps:// is available via most libcurl, only
-    // The internal and wininet methods will create a connection
-    // but refuse to open it so as from R 3.2.0 we switch to libcurl
-    else if (strncmp(url, "ftps://", 7) == 0)
+    } else if (strncmp(url, "ftps://", 7) == 0) {
+#ifdef Win32
 	type = FTPSsh;
-    else
+#endif
+    } else
 	inet = FALSE; // file:// URL or a file path
 
     // --------- open
@@ -5430,7 +5443,7 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 //#endif
     if (streql(cmeth, "wininet")) {
 #ifdef Win32
-	winmeth = 1;  // it already was as this is the default
+	winmeth = 1;
 #else
 	error(_("method = \"wininet\" is only supported on Windows"));
 #endif
@@ -5451,7 +5464,9 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	SEXP lheaders = CAD4R(CDR(args));
 	if (!isNull(lheaders)) {
 	    headers = VECTOR_ELT(lheaders, 0);
+#ifdef Win32
 	    headers_flat = VECTOR_ELT(lheaders, 1);
+#endif
 	}
     }
 
@@ -5496,8 +5511,13 @@ SEXP attribute_hidden do_url(SEXP call, SEXP op, SEXP args, SEXP env)
 	    error("url(method = \"libcurl\") is not supported on this platform");
 # endif
 	} else {
+	    if(!winmeth)
+		error(_("the 'internal' method of url() is defunct for http:// and ftp:// URLs"));
+#ifdef Win32
+	    // so for "wininet' only
 	    con = R_newurl(url, strlen(open) ? open : "r", headers_flat, winmeth);
 	    ((Rurlconn)con->private)->type = type;
+#endif
 	}
     } else {
 	if(PRIMVAL(op) == 1) { /* call to file() */

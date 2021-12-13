@@ -69,9 +69,11 @@
 /* At times we want to convert marked UTF-8 strings to wchar_t*. We
  * can use our facilities to do so in a UTF-8 locale or system
  * facilities if the platform tells us that wchar_t is UCS-4 or we
- * know that about the platform. */
+ * know that about the platform. 
+ * Add __OpenBSD__ and  __NetBSD__ ?
+ */
 #if !defined(__STDC_ISO_10646__) && (defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun))
-/* This may not be 100% true (see the comment in rlocales.h),
+/* This may not be 100% true (see the comment in rlocale.h),
    but it seems true in normal locales */
 # define __STDC_ISO_10646__
 #endif
@@ -168,6 +170,14 @@ const char *EncodeEnvironment(SEXP x)
 
     vmaxset(vmax);
     return ch;
+}
+
+attribute_hidden
+const char *EncodeExtptr(SEXP x)
+{
+    static char buf[1000];
+    sprintf(buf, "<pointer: %p>", R_ExternalPtrAddr(x));
+    return buf;
 }
 
 const char *EncodeReal(double x, int w, int d, int e, char cdec)
@@ -403,16 +413,7 @@ int Rstrwid(const char *str, int slen, cetype_t ienc, int quote)
     if(ienc > 2) // CE_NATIVE, CE_UTF8, CE_BYTES are supported
 	warning("unsupported encoding (%d) in Rstrwid", ienc);
     if(mbcslocale || ienc == CE_UTF8) {
-#ifdef __sun
-	/* Need to avoid mbtrowc on Solaris, where it only covers the BMP
-	   so we set ienc for unmarked strings in a UTF-8 locale */
-	Rboolean useUTF8 = (ienc == CE_UTF8) || utf8locale;
-	if (ienc == CE_LATIN1)
-	    /* Future-proof, cannot happen now. */
-	    warning("unexpected encoding (%d) in Rstrwid", ienc);
-#else
 	Rboolean useUTF8 = (ienc == CE_UTF8);
-#endif
 	mbstate_t mb_st;
 
 	if(!useUTF8)  mbs_init(&mb_st);
@@ -420,7 +421,7 @@ int Rstrwid(const char *str, int slen, cetype_t ienc, int quote)
 	    unsigned int k; /* not wint_t as it might be signed */
 	    wchar_t wc;
 	    int res = useUTF8 ? (int) utf8toucs(&wc, p):
-		(int) mbrtowc(&wc, p, MB_CUR_MAX, NULL);
+		(int) mbrtowc(&wc, p, R_MB_CUR_MAX, &mb_st);
 	    if(res >= 0) {
 		if (useUTF8 && IS_HIGH_SURROGATE(wc))
 		    k = utf8toucs32(wc, p);
@@ -616,18 +617,6 @@ const char *EncodeString(SEXP s, int w, int quote, Rprt_adj justify)
 		ienc = CE_UTF8;
 	    }
 #endif
-#ifdef __sun
-	} else if(ienc == CE_LATIN1) {
-	    p = translateCharUTF8(s);
-	    if(p == CHAR(s)) {
-		i = Rstrlen(s, quote);
-		cnt = LENGTH(s);
-	    } else {
-		cnt = (int) strlen(p);
-		i = Rstrwid(p, cnt, CE_UTF8, quote);
-	    }
-	    ienc = CE_UTF8;
-#endif
 	} else {
 	    if (useUTF8 && ienc == CE_UTF8) {
 		p = CHAR(s);
@@ -672,18 +661,15 @@ const char *EncodeString(SEXP s, int w, int quote, Rprt_adj justify)
     }
     if(quote) *q++ = (char) quote;
     if(mbcslocale || ienc == CE_UTF8) {
-#ifdef __sun
-	/* Need to avoid mbtrowc on Solaris, where it only covers the BMP
-	   so we set ienc for unmarked strings in a UTF-8 locale */
-	/* Latin-1 string would have been converted to UTF-8 above. */
-	Rboolean useUTF8 = (ienc == CE_UTF8) || utf8locale;
-#else
 	Rboolean useUTF8 = (ienc == CE_UTF8);
-#endif
+	Rboolean wchar_is_ucs_or_utf16 = TRUE;
 	mbstate_t mb_st;
 #ifndef __STDC_ISO_10646__
 	Rboolean Unicode_warning = FALSE;
 #endif
+# if !defined (__STDC_ISO_10646__) && !defined (Win32)
+	wchar_is_ucs_or_utf16 = FALSE;
+# endif
 	if(!useUTF8)  mbs_init(&mb_st);
 #ifdef Win32
 	else if(WinUTF8out) { memcpy(q, UTF8in, 3); q += 3; }
@@ -691,8 +677,11 @@ const char *EncodeString(SEXP s, int w, int quote, Rprt_adj justify)
 	for (i = 0; i < cnt; i++) {
 	    wchar_t wc;
 	    int res = (int)(useUTF8 ? utf8toucs(&wc, p):
-			    mbrtowc(&wc, p, MB_CUR_MAX, NULL));
-	    if(res >= 0) { /* res = 0 is a terminator */
+			    mbrtowc(&wc, p, R_MB_CUR_MAX, &mb_st));
+	    /* res = 0 is a terminator
+	     * some mbrtowc implementations return wc past end of UCS */
+	    if(res >= 0 &&
+	       ((0 <= wc && wc <= 0x10FFFF) || !wchar_is_ucs_or_utf16)) {
 		unsigned int k; /* not wint_t as it might be signed */
 		if (useUTF8 && IS_HIGH_SURROGATE(wc))
 		    k = utf8toucs32(wc, p);
@@ -752,7 +741,7 @@ const char *EncodeString(SEXP s, int w, int quote, Rprt_adj justify)
 			for(int j = 0; j < res; j++) *q++ = *p++;
 		    } else {
 # if !defined (__STDC_ISO_10646__) && !defined (Win32)
-			if(!use_ucs) Unicode_warning = TRUE;
+			Unicode_warning = TRUE;
 # endif
 			if(k > 0xffff)
 			    snprintf(buf, 13, "\\U{%06x}", k);

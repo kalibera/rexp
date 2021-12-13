@@ -144,31 +144,31 @@ socketTimeout(socket, timeout = -1)
   connection created by \code{serverSocket}), but may
   be opened by setting a non-empty value of argument \code{open}.
 
-  For \code{file} the description is a path to the file to be opened or
-  a complete URL (when it is the same as calling \code{url}), or
-  \code{""} (the default) or \code{"clipboard"} (see the
-  \sQuote{Clipboard} section).  Use \code{"stdin"} to refer to the
-  C-level \sQuote{standard input} of the process (which need not be
-  connected to anything in a console or embedded version of \R, and is
-  not in \code{RGui} on Windows).  See also \code{\link{stdin}()} for
-  the subtly different R-level concept of \code{stdin}. See
-  \code{\link{nullfile}()} for a platform-independent way to get
-  filename of the null device.
+  For \code{file} the description is a path to the file to be opened
+  (when \link{tilde expansion} is done) or a complete URL (when it is
+  the same as calling \code{url}), or \code{""} (the default) or
+  \code{"clipboard"} (see the \sQuote{Clipboard} section).  Use
+  \code{"stdin"} to refer to the C-level \sQuote{standard input} of the
+  process (which need not be connected to anything in a console or
+  embedded version of \R, and is not in \code{RGui} on Windows).  See
+  also \code{\link{stdin}()} for the subtly different R-level concept of
+  \code{stdin}. See \code{\link{nullfile}()} for a platform-independent
+  way to get filename of the null device.
 
   For \code{url} the description is a complete URL including scheme
   (such as \samp{http://}, \samp{https://}, \samp{ftp://} or
   \samp{file://}).  Method \code{"internal"} is that available since
-  connections were introduced.  Method \code{"wininet"} is only
-  available on Windows (it uses the WinINet functions of that OS) and
-  method \code{"libcurl"} (using the library of that name:
-  \url{https://curl.se/libcurl/}) is required on a Unix-alike but was
-  optional on Windows before \R 4.2.0.  Method \code{"default"}
-  currently uses method \code{"internal"} for \samp{file://} URLs and
-  \code{"libcurl"} for all others.  Which methods support which schemes
-  has varied by \R version -- currently \code{"internal"} supports only
-  \samp{file://} and \code{"wininet"} supports \samp{file://},
-  \samp{http://} and \samp{https://}.  Proxies can be specified: see
-  \code{\link{download.file}}.
+  connections were introduced but now mainly defunct.  Method
+  \code{"wininet"} is only available on Windows (it uses the WinINet
+  functions of that OS) and method \code{"libcurl"} (using the library
+  of that name: \url{https://curl.se/libcurl/}) is required on a
+  Unix-alike but was optional on Windows before \R 4.2.0.  Method
+  \code{"default"} currently uses method \code{"internal"} for
+  \samp{file://} URLs and \code{"libcurl"} for all others.  Which
+  methods support which schemes has varied by \R version -- currently
+  \code{"internal"} supports only \samp{file://}; \code{"wininet"}
+  supports \samp{file://}, \samp{http://} and \samp{https://}.  Proxies
+  can be specified: see \code{\link{download.file}}.
 
   For \code{gzfile} the description is the path to a file compressed by
   \command{gzip}: it can also open for reading uncompressed files and
@@ -258,9 +258,11 @@ socketTimeout(socket, timeout = -1)
   in \samp{http://} URLs (see \code{\link{URLencode}}), but it seems the
   \code{"wininet"} method does.
 
-  A note on \samp{file://} URLs.  The most general form (from RFC1738) is
-  \samp{file://host/path/to/file}, but \R only accepts the form with an
-  empty \code{host} field referring to the local machine.
+  A note on \samp{file://} URLs (which are handled by the same internal
+  code irrespective of argument \code{method}).  The most general form
+  (from RFC1738) is \samp{file://host/path/to/file}, but \R only accepts
+  the form with an empty \code{host} field referring to the local
+  machine.
 
   On a Unix-alike, this is then \samp{file:///path/to/file}, where
   \samp{path/to/file} is relative to \file{/}.  So although the third
