@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2000--2013  The R Core Team
+ *  Copyright (C) 2000--2022  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -56,8 +56,14 @@ static int Tcl_lock = 0; /* reentrancy guard */
 
 static void TclSpinLoop(void *data)
 {
+    /* Defensively limit the number of events to avoid infinite loops.
+       An infinite loop has been seen with an R handler that refuses to
+       run recursively (internal http server). Such a handler would
+       return without reading from the connection, so checkProc would
+       create an event for it again, etc. */
+    int max_ev = 100;
     /* Tcl_ServiceAll is not enough here, for reasons that escape me */
-    while (Tcl_DoOneEvent(TCL_DONT_WAIT)) ;
+    while (Tcl_DoOneEvent(TCL_DONT_WAIT) && max_ev) max_ev--;
 }
 
 //extern Rboolean R_isForkedChild;
@@ -109,14 +115,15 @@ static void RTcl_setupProc(ClientData clientData, int flags)
 {
     Tcl_SetMaxBlockTime(&timeout);
 }
-static void RTcl_eventProc(RTcl_Event *evPtr, int flags)
+static int RTcl_eventProc(Tcl_Event *evPtr, int flags)
 {
     fd_set *readMask = R_checkActivity(0 /*usec*/, 1 /*ignore_stdin*/);
 
     if (readMask==NULL)
-	return;
+	return TRUE;
 
     R_runHandlers(R_InputHandlers, readMask);
+    return TRUE;
 }
 static void RTcl_checkProc(ClientData clientData, int flags)
 {
@@ -126,7 +133,7 @@ static void RTcl_checkProc(ClientData clientData, int flags)
 	return;
 
     evPtr = (RTcl_Event*) Tcl_Alloc(sizeof(RTcl_Event));
-    evPtr->proc = (Tcl_EventProc*) RTcl_eventProc;
+    evPtr->proc = RTcl_eventProc;
 
     Tcl_QueueEvent((Tcl_Event*) evPtr, TCL_QUEUE_HEAD);
 }

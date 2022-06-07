@@ -1,7 +1,7 @@
 #  File src/library/tools/R/Vignettes.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2021 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -439,6 +439,7 @@ function(package, dir, subdirs = NULL, lib.loc = NULL, output = FALSE,
         for (i in seq_along(docs)) {
             file <- docs[i]
             name <- names[i]
+            engine <- vignetteEngine(engines[i])
             outputI <- find_vignette_product(name, by = "weave", dir = docdir, engine = engine)
             outputs[i] <- outputI
         }
@@ -450,6 +451,7 @@ function(package, dir, subdirs = NULL, lib.loc = NULL, output = FALSE,
         for (i in seq_along(docs)) {
             file <- docs[i]
             name <- names[i]
+            engine <- vignetteEngine(engines[i])
             sourcesI <- find_vignette_product(name, by = "tangle", main = FALSE, dir = docdir, engine = engine)
             sources[[file]] <- sourcesI
         }
@@ -756,11 +758,9 @@ buildVignette <-
     olddir <- setwd(dir)
     if (!is.null(olddir)) on.exit(setwd(olddir))
 
-    ## # Record existing files
-    ## origfiles <- list.files(all.files = TRUE)
-    if (is.na(clean) || clean) {
-	file.create(".build.timestamp")
-    }
+    # Record existing files (not to be cleaned)
+    if (is.na(clean) || clean)
+        origfiles <- list.files(all.files = TRUE)
 
     tdir <- getwd()# if 'dir' was relative, resetting to tdir will work
     output <- NULL
@@ -793,19 +793,10 @@ buildVignette <-
 	clean <- TRUE
     }
     if (clean) {
-	f <- setdiff(list.files(all.files = TRUE, no.. = TRUE), keep)
-	newer <- file_test("-nt", f, ".build.timestamp")
+	f <- setdiff(list.files(all.files = TRUE, no.. = TRUE),
+                     c(keep, origfiles))
 	## some packages create directories
-	unlink(f[newer], recursive = TRUE)
-    }
-    ### huh?  2nd round of cleaning even if  clean is FALSE ??
-    ##     f <- setdiff(list.files(all.files = TRUE, no.. = TRUE), c(keep, origfiles))
-    ##     f <- f[file_test("-f", f)]
-    ##     file.remove(f)
-    ## #}
-
-    if((is.na(clean) || clean) && file.exists(".build.timestamp")) {
-        file.remove(".build.timestamp")
+	unlink(f, recursive = TRUE)
     }
 
     unique(keep)
@@ -1088,7 +1079,7 @@ function(pkg, con, vignetteIndex = NULL)
 			     otherfiles)
 	urls <- paste0('<a href="', otherfiles, '">', otherfiles, '</a>')
         html <- c(html, '<h2>Other files in the <span class="samp">doc</span> directory</h2>',
-                  '<table width="100%" summary="Other docs">',
+                  '<table style="width: 100%;">',
 		  '<col style="width: 24%;" />',
 		  '<col style="width: 50%;" />',
 		  '<col style="width: 24%;" />',

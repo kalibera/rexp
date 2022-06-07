@@ -1,7 +1,7 @@
 #  File src/library/tools/R/install.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2021 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 # NB: also copyright dates in Usages.
 #
@@ -165,7 +165,7 @@ if(FALSE) {
     WINDOWS <- .Platform$OS.type == "windows"
     cross <- Sys.getenv("R_CROSS_BUILD")
     have_cross <- nzchar(cross)
-    if(have_cross && !cross %in% c("i386", "x64"))
+    if(have_cross && !cross %in% "x64")
         stop("invalid value ", sQuote(cross), " for R_CROSS_BUILD")
     if (have_cross) {
         WINDOWS <- TRUE
@@ -178,7 +178,7 @@ if(FALSE) {
     if (WINDOWS && nzchar(.Platform$r_arch))
         rarch <- paste0("/", .Platform$r_arch)
     cross <- Sys.getenv("R_CROSS_BUILD")
-    if(have_cross && !cross %in% c("i386", "x64"))
+    if(have_cross && !cross %in% "x64")
         stop("invalid value ", sQuote(cross), " for R_CROSS_BUILD")
     test_archs <- rarch
     if (have_cross) {
@@ -366,6 +366,12 @@ if(FALSE) {
 
         dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
         if (!dir.exists(instdir)) {
+            # This allows a package to be installed if a broken symbolic
+            # link (or a regular file) is place (PR#18262)
+            unlink(instdir, recursive = FALSE)
+            dir.create(instdir, recursive = TRUE, showWarnings = FALSE)
+        }
+        if (!dir.exists(instdir)) {
             message("ERROR: unable to create ", sQuote(instdir), domain = NA)
             do_exit_on_error()
         }
@@ -525,7 +531,7 @@ if(FALSE) {
         }
         if (WINDOWS) {
             if (file.exists("cleanup.ucrt"))
-                system("sh ./cleanup.ucrt") 
+                system("sh ./cleanup.ucrt")
             else if (file.exists("cleanup.win"))
                 system("sh ./cleanup.win")
         } else if (file_test("-x", "cleanup")) system("./cleanup")
@@ -1074,17 +1080,12 @@ if(FALSE) {
         if (preclean) run_clean()
 
         if (WINDOWS) {
-            # Installation-time patching is enabled as a temporary measure
+            # Installation-time patching was enabled as a temporary measure
             # during the transition from MSVCRT to UCRT, when packages with
-            # many reverse dependencies have to be update to link. To
-            # disable this feature, switch it_patches_base below to "no".
+            # many reverse dependencies had to be updated to link.
 
-            # Users may locally disable this feature by setting
-            # _R_INSTALL_TIME_PATCHES_ to "no", or provide a local directory
-            # with their own patches.
-
-            it_patches_base <- Sys.getenv("_R_INSTALL_TIME_PATCHES_",
-                "https://www.r-project.org/nosvn/winutf8/ucrt3/")
+            # URL or a local directory with patches: ("no" to no patching)
+            it_patches_base <- Sys.getenv("_R_INSTALL_TIME_PATCHES_", "no")
 
             # The patches are identified by package name. An index is used
             # to map the name to a directory with patches for a given
@@ -1104,7 +1105,7 @@ if(FALSE) {
             # the future.
 
 	    if (!it_patches_base %in% c("no", "disabled", "false", "FALSE")) {
-        
+
                 patches_idx <- tryCatch({
                         idxfile <- file(paste0(it_patches_base, "/",
                                                "patches_idx.rds"))
@@ -1133,13 +1134,28 @@ if(FALSE) {
                             utils::download.file(purl, destfile = fname, mode = "wb")
     		        else
                             file.copy(purl, fname)
-                        if (system2("patch", args = c("-p2", "--binary", "--force"), stdin = fname) != 0)
-                            message("WARNING: failed to apply patch ", p, "\n")
-                        else
-                            message("Applied installation-time patch ", purl,
-                                    " and saved it as ", fname,
-                                    " in package installation\n")
-                     }
+
+                        if (system2("patch", args = c("--dry-run", "-p2", "--binary", "--force"),
+                                    stdin = fname, stdout = NULL, stderr = NULL) != 0) {
+                            ## the patch cannot be applied, check if it might
+                            ## be reversed
+                            if (system2("patch", args = c("--dry-run", "-R", "-p2", "--binary",
+                                                          "--force"), stdin = fname) == 0)
+                                message("NOTE: Skipping installation-time patch ", purl,
+                                        " which seems to be already applied.\n")
+                            else
+                                message("WARNING: failed to apply patch ", purl, "\n")
+                        } else {
+                            if (system2("patch", args = c("-p2", "--binary", "--force"),
+                                        stdin = fname) != 0)
+                                ## should not happen as dry-run succeeded
+                                message("WARNING: failed to apply patch ", p, "\n")
+                            else
+                                message("Applied installation-time patch ", purl,
+                                        " and saved it as ", fname,
+                                        " in package installation\n")
+                        }
+                    }
                 }
             }
 	}
@@ -1285,7 +1301,7 @@ if(FALSE) {
                                 force_biarch <- TRUE
                             else if (has_configure_ucrt)
                                 warning("this package has a non-empty 'configure.ucrt' file,\nso building only the main architecture\n", call. = FALSE, domain = NA)
-                            else 
+                            else
                                 warning("this package has a non-empty 'configure.win' file,\nso building only the main architecture\n", call. = FALSE, domain = NA)
                         }
                     }
@@ -1397,6 +1413,8 @@ if(FALSE) {
                              paste("Archs:", paste(dirs, collapse = ", "))
                              )
                 writeLines(newdesc, descfile, useBytes = TRUE)
+                saveRDS(.split_description(.read_description(descfile)),
+                         file.path(instdir, "Meta", "package.rds"))
             }
         } else if (multiarch) {   # end of src dir
             if (WINDOWS) {
@@ -1415,7 +1433,7 @@ if(FALSE) {
             ## Windows, even if it is installed.
             if (!grepl(" x64 ", utils::win.version())) test_archs <- "i386"
         }
- 
+
         if (have_cross) Sys.unsetenv("R_ARCH")
 
         if (WINDOWS && dir.exists("install_time_patches"))
@@ -1696,7 +1714,7 @@ if(FALSE) {
 	    if (build_help) {
 		## This is used as the default outputEncoding for latex
 		outenc <- desc["Encoding"]
-		if (is.na(outenc)) outenc <- "latin1" # or ASCII
+		if (is.na(outenc)) outenc <- "UTF-8"
 		.convertRdfiles(pkg_dir, instdir,
 				types = build_help_types,
 				outenc = outenc)
@@ -1957,7 +1975,7 @@ if(FALSE) {
                 R.version[["major"]], ".",  R.version[["minor"]],
                 " (r", R.version[["svn rev"]], ")\n", sep = "")
             cat("",
-                "Copyright (C) 2000-2020 The R Core Team.",
+                .R_copyright_msg(2000),
                 "This is free software; see the GNU General Public License version 2",
                 "or later for copying conditions.  There is NO warranty.",
                 sep = "\n")
@@ -2479,7 +2497,7 @@ if(FALSE) {
                 R.version[["major"]], ".",  R.version[["minor"]],
                 " (r", R.version[["svn rev"]], ")\n", sep = "")
             cat("",
-                "Copyright (C) 2000-2020 The R Core Team.",
+                .R_copyright_msg(2000),
                 "This is free software; see the GNU General Public License version 2",
                 "or later for copying conditions.  There is NO warranty.",
                 sep = "\n")
@@ -2689,6 +2707,8 @@ if(FALSE) {
                   else if(isFALSE(use_lto)) c("LTO=", "LTO_FC=")
                   )
 
+    if(config_val_to_logical(Sys.getenv("_R_NO_S_TYPEDEFS_", "FALSE")))
+         makeargs <- c(makeargs, "XDEFS=-DNO_S_TYPEDEFS")
     cmd <- paste(MAKE, p1(paste("-f", shQuote(makefiles))), p1(makeargs),
                  p1(makeobjs))
     if (dry_run) {
@@ -2771,22 +2791,20 @@ if(FALSE) {
 
     topics <- Rd$Aliases
     M <- if (!length(topics)) {
-        data.frame(Topic = character(),
-                   File = character(),
-                   Title = character(),
-                   Internal = character(),
-                   stringsAsFactors = FALSE)
+        list2DF(list(Topic = character(),
+                     File = character(),
+                     Title = character(),
+                     Internal = character()))
     } else {
         lens <- lengths(topics)
         files <- sub("\\.[Rr]d$", "", Rd$File)
         internal <- (vapply(Rd$Keywords,
                             function(x) match("internal", x, 0L),
                             0L) > 0L)
-        data.frame(Topic = unlist(topics),
-                   File = rep.int(files, lens),
-                   Title = rep.int(Rd$Title, lens),
-                   Internal = rep.int(internal, lens),
-                   stringsAsFactors = FALSE)
+        list2DF(list(Topic = unlist(topics),
+                     File = rep.int(files, lens),
+                     Title = rep.int(Rd$Title, lens),
+                     Internal = rep.int(internal, lens)))
     }
     ## FIXME duplicated aliases warning
     outman <- file.path(outDir, "help")
@@ -2875,15 +2893,15 @@ if(FALSE) {
         for (f in nm) {
             MM <- M[first == f, ]
             if (f != " ")
-                cat("\n<h2><a name=\"", f, "\">-- ", f, " --</a></h2>\n\n",
+                cat("\n<h2><a id=\"", f, "\">-- ", f, " --</a></h2>\n\n",
                     sep = "", file = outcon)
-	    writeLines(c('<table width="100%" summary="Help pages">',
+	    writeLines(c('<table style="width: 100%;">',
 			 paste0('<tr><td style="width: 25%;"><a href="', MM[, 2L], '.html">',
 				MM$HTopic, '</a></td>\n<td>', MM[, 3L],'</td></tr>'),
 			 "</table>"), outcon)
        }
     } else if (nrow(M)) {
-	writeLines(c('<table width="100%" summary="Help pages">',
+	writeLines(c('<table style="width: 100%;">',
 		     paste0('<tr><td style="width: 25%;"><a href="', M[, 2L], '.html">',
 			    M$HTopic, '</a></td>\n<td>', M[, 3L],'</td></tr>'),
 		     "</table>"), outcon)

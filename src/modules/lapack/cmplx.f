@@ -69,8 +69,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -81,10 +79,9 @@
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DZSUM1( N, CX, INCX )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INCX, N
@@ -211,17 +208,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       INTEGER FUNCTION ILAZLC( M, N, A, LDA )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            M, N, LDA
@@ -329,17 +323,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       INTEGER FUNCTION ILAZLR( M, N, A, LDA )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            M, N, LDA
@@ -448,8 +439,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date February 2014
-*
 *> \ingroup complexOTHERauxiliary
 *
 *> \par Contributors:
@@ -460,10 +449,9 @@
 *  =====================================================================
       INTEGER FUNCTION IZMAX1( N, ZX, INCX )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     February 2014
 *
 *     .. Scalar Arguments ..
       INTEGER            INCX, N
@@ -734,18 +722,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZBDSQR( UPLO, N, NCVT, NRU, NCC, D, E, VT, LDVT, U,
      $                   LDU, C, LDC, RWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -1439,17 +1424,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZDRSCL( N, SA, SX, INCX )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INCX, N
@@ -1659,18 +1641,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       SUBROUTINE ZGEBAK( JOB, SIDE, N, ILO, IHI, SCALE, M, V, LDV,
      $                   INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOB, SIDE
@@ -1929,8 +1908,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -1968,10 +1945,9 @@
 *  =====================================================================
       SUBROUTINE ZGEBAL( JOB, N, A, LDA, ILO, IHI, SCALE, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.1) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOB
@@ -2338,8 +2314,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -2395,10 +2369,9 @@
 *  =====================================================================
       SUBROUTINE ZGEBD2( M, N, A, LDA, D, E, TAUQ, TAUP, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.1) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, M, N
@@ -2453,7 +2426,7 @@
             ALPHA = A( I, I )
             CALL ZLARFG( M-I+1, ALPHA, A( MIN( I+1, M ), I ), 1,
      $                   TAUQ( I ) )
-            D( I ) = ALPHA
+            D( I ) = DBLE( ALPHA )
             A( I, I ) = ONE
 *
 *           Apply H(i)**H to A(i:m,i+1:n) from the left
@@ -2472,7 +2445,7 @@
                ALPHA = A( I, I+1 )
                CALL ZLARFG( N-I, ALPHA, A( I, MIN( I+2, N ) ), LDA,
      $                      TAUP( I ) )
-               E( I ) = ALPHA
+               E( I ) = DBLE( ALPHA )
                A( I, I+1 ) = ONE
 *
 *              Apply G(i) to A(i+1:m,i+1:n) from the right
@@ -2497,7 +2470,7 @@
             ALPHA = A( I, I )
             CALL ZLARFG( N-I+1, ALPHA, A( I, MIN( I+1, N ) ), LDA,
      $                   TAUP( I ) )
-            D( I ) = ALPHA
+            D( I ) = DBLE( ALPHA )
             A( I, I ) = ONE
 *
 *           Apply G(i) to A(i+1:m,i:n) from the right
@@ -2516,7 +2489,7 @@
                ALPHA = A( I+1, I )
                CALL ZLARFG( M-I, ALPHA, A( MIN( I+2, M ), I ), 1,
      $                      TAUQ( I ) )
-               E( I ) = ALPHA
+               E( I ) = DBLE( ALPHA )
                A( I+1, I ) = ONE
 *
 *              Apply H(i)**H to A(i+1:m,i+1:n) from the left
@@ -2684,8 +2657,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2017
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -2742,10 +2713,9 @@
       SUBROUTINE ZGEBRD( M, N, A, LDA, D, E, TAUQ, TAUP, WORK, LWORK,
      $                   INFO )
 *
-*  -- LAPACK computational routine (version 3.8.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, LWORK, M, N
@@ -3005,18 +2975,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       SUBROUTINE ZGECON( NORM, N, A, LDA, ANORM, RCOND, WORK, RWORK,
      $                   INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          NORM
@@ -3290,18 +3257,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       SUBROUTINE ZGEEQU( M, N, A, LDA, R, C, ROWCND, COLCND, AMAX,
      $                   INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, M, N
@@ -3660,18 +3624,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEeigen
 *
 *  =====================================================================
       SUBROUTINE ZGEES( JOBVS, SORT, SELECT, N, A, LDA, SDIM, W, VS,
      $                  LDVS, WORK, LWORK, RWORK, BWORK, INFO )
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOBVS, SORT
@@ -3756,7 +3717,7 @@
 *
             CALL ZHSEQR( 'S', JOBVS, N, 1, N, A, LDA, W, VS, LDVS,
      $             WORK, -1, IEVAL )
-            HSWORK = WORK( 1 )
+            HSWORK = DBLE( WORK( 1 ) )
 *
             IF( .NOT.WANTVS ) THEN
                MAXWRK = MAX( MAXWRK, HSWORK )
@@ -4064,7 +4025,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
 *
 *  @precisions fortran z -> c
 *
@@ -4075,10 +4035,9 @@
      $                  WORK, LWORK, RWORK, INFO )
       implicit none
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOBVL, JOBVR
@@ -4504,8 +4463,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -4547,10 +4504,9 @@
 *  =====================================================================
       SUBROUTINE ZGEHD2( N, ILO, IHI, A, LDA, TAU, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IHI, ILO, INFO, LDA, N
@@ -4742,8 +4698,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -4781,18 +4735,17 @@
 *>  modified element of the upper Hessenberg matrix H, and vi denotes an
 *>  element of the vector defining H(i).
 *>
-*>  This file is a slight modification of LAPACK-3.0's DGEHRD
+*>  This file is a slight modification of LAPACK-3.0's ZGEHRD
 *>  subroutine incorporating improvements proposed by Quintana-Orti and
-*>  Van de Geijn (2006). (See DLAHR2.)
+*>  Van de Geijn (2006). (See ZLAHR2.)
 *> \endverbatim
 *>
 *  =====================================================================
       SUBROUTINE ZGEHRD( N, ILO, IHI, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IHI, ILO, INFO, LDA, LWORK, N
@@ -5018,7 +4971,7 @@
 *> where:
 *>
 *>    Q is a n-by-n orthogonal matrix;
-*>    L is an lower-triangular m-by-m matrix;
+*>    L is a lower-triangular m-by-m matrix;
 *>    0 is a m-by-(n-m) zero matrix, if m < n.
 *>
 *> \endverbatim
@@ -5082,8 +5035,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2019
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -5107,10 +5058,9 @@
 *  =====================================================================
       SUBROUTINE ZGELQ2( M, N, A, LDA, TAU, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.9.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2019
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, M, N
@@ -5220,7 +5170,7 @@
 *> where:
 *>
 *>    Q is a N-by-N orthogonal matrix;
-*>    L is an lower-triangular M-by-M matrix;
+*>    L is a lower-triangular M-by-M matrix;
 *>    0 is a M-by-(N-M) zero matrix, if M < N.
 *>
 *> \endverbatim
@@ -5298,8 +5248,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2019
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -5323,10 +5271,9 @@
 *  =====================================================================
       SUBROUTINE ZGELQF( M, N, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.9.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2019
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, LWORK, M, N
@@ -5631,18 +5578,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEsolve
 *
 *  =====================================================================
       SUBROUTINE ZGELS( TRANS, M, N, NRHS, A, LDA, B, LDB, WORK, LWORK,
      $                  INFO )
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          TRANS
@@ -6172,8 +6116,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16GEsolve
 *
 *> \par Contributors:
@@ -6187,10 +6129,9 @@
       SUBROUTINE ZGELSD( M, N, NRHS, A, LDA, B, LDB, S, RCOND, RANK,
      $                   WORK, LWORK, RWORK, IWORK, INFO )
 *
-*  -- LAPACK driver routine (version 3.7.1) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, LDB, LWORK, M, N, NRHS, RANK
@@ -6754,8 +6695,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -6786,10 +6725,9 @@
       SUBROUTINE ZGEQP3( M, N, A, LDA, JPVT, TAU, WORK, LWORK, RWORK,
      $                   INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, LWORK, M, N
@@ -7104,8 +7042,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2019
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -7129,10 +7065,9 @@
 *  =====================================================================
       SUBROUTINE ZGEQR2( M, N, A, LDA, TAU, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.9.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2019
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, M, N
@@ -7295,7 +7230,8 @@
 *> \param[in] LWORK
 *> \verbatim
 *>          LWORK is INTEGER
-*>          The dimension of the array WORK.  LWORK >= max(1,N).
+*>          The dimension of the array WORK.
+*>          LWORK >= 1, if MIN(M,N) = 0, and LWORK >= N, otherwise.
 *>          For optimum performance LWORK >= N*NB, where NB is
 *>          the optimal blocksize.
 *>
@@ -7320,8 +7256,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2019
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -7345,10 +7279,9 @@
 *  =====================================================================
       SUBROUTINE ZGEQRF( M, N, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.9.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2019
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, LWORK, M, N
@@ -7378,10 +7311,9 @@
 *
 *     Test the input arguments
 *
+      K = MIN( M, N )
       INFO = 0
       NB = ILAENV( 1, 'ZGEQRF', ' ', M, N, -1, -1 )
-      LWKOPT = N*NB
-      WORK( 1 ) = LWKOPT
       LQUERY = ( LWORK.EQ.-1 )
       IF( M.LT.0 ) THEN
          INFO = -1
@@ -7389,19 +7321,25 @@
          INFO = -2
       ELSE IF( LDA.LT.MAX( 1, M ) ) THEN
          INFO = -4
-      ELSE IF( LWORK.LT.MAX( 1, N ) .AND. .NOT.LQUERY ) THEN
-         INFO = -7
+      ELSE IF( .NOT.LQUERY ) THEN
+         IF( LWORK.LE.0 .OR. ( M.GT.0 .AND. LWORK.LT.MAX( 1, N ) ) )
+     $      INFO = -7
       END IF
       IF( INFO.NE.0 ) THEN
          CALL XERBLA( 'ZGEQRF', -INFO )
          RETURN
       ELSE IF( LQUERY ) THEN
+         IF( K.EQ.0 ) THEN
+            LWKOPT = 1
+         ELSE
+            LWKOPT = N*NB
+         END IF
+         WORK( 1 ) = LWKOPT
          RETURN
       END IF
 *
 *     Quick return if possible
 *
-      K = MIN( M, N )
       IF( K.EQ.0 ) THEN
          WORK( 1 ) = 1
          RETURN
@@ -7657,18 +7595,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       SUBROUTINE ZGERFS( TRANS, N, NRHS, A, LDA, AF, LDAF, IPIV, B, LDB,
      $                   X, LDX, FERR, BERR, WORK, RWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          TRANS
@@ -8029,8 +7964,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2017
-*
 *> \ingroup complex16GEauxiliary
 *
 *> \par Contributors:
@@ -8042,10 +7975,9 @@
 *  =====================================================================
       SUBROUTINE ZGESC2( N, A, LDA, RHS, IPIV, JPIV, SCALE )
 *
-*  -- LAPACK auxiliary routine (version 3.8.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            LDA, N
@@ -8328,9 +8260,10 @@
 *> \param[out] INFO
 *> \verbatim
 *>          INFO is INTEGER
-*>          = 0:  successful exit.
-*>          < 0:  if INFO = -i, the i-th argument had an illegal value.
-*>          > 0:  The updating process of DBDSDC did not converge.
+*>          <  0:  if INFO = -i, the i-th argument had an illegal value.
+*>          = -4:  if A had a NAN entry.
+*>          >  0:  The updating process of DBDSDC did not converge.
+*>          =  0:  successful exit.
 *> \endverbatim
 *
 *  Authors:
@@ -8340,8 +8273,6 @@
 *> \author Univ. of California Berkeley
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
-*
-*> \date June 2016
 *
 *> \ingroup complex16GEsing
 *
@@ -8356,10 +8287,9 @@
      $                   WORK, LWORK, RWORK, IWORK, INFO )
       implicit none
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOBZ
@@ -8410,9 +8340,10 @@
      $                   ZLASET, ZUNGBR, ZUNGLQ, ZUNGQR, ZUNMBR
 *     ..
 *     .. External Functions ..
-      LOGICAL            LSAME
-      DOUBLE PRECISION   DLAMCH, ZLANGE
-      EXTERNAL           LSAME, DLAMCH, ZLANGE
+      LOGICAL            LSAME, DISNAN
+      DOUBLE PRECISION   DLAMCH, ZLANGE, DROUNDUP_LWORK
+      EXTERNAL           LSAME, DLAMCH, ZLANGE, DISNAN, 
+     $                   DROUNDUP_LWORK
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          INT, MAX, MIN, SQRT
@@ -8748,7 +8679,7 @@
          MAXWRK = MAX( MAXWRK, MINWRK )
       END IF
       IF( INFO.EQ.0 ) THEN
-         WORK( 1 ) = MAXWRK
+         WORK( 1 ) = DROUNDUP_LWORK( MAXWRK )
          IF( LWORK.LT.MINWRK .AND. .NOT. LQUERY ) THEN
             INFO = -12
          END IF
@@ -8776,6 +8707,10 @@
 *     Scale A if max element outside range [SMLNUM,BIGNUM]
 *
       ANRM = ZLANGE( 'M', M, N, A, LDA, DUM )
+      IF( DISNAN( ANRM ) ) THEN
+          INFO = -4
+          RETURN
+      END IF
       ISCL = 0
       IF( ANRM.GT.ZERO .AND. ANRM.LT.SMLNUM ) THEN
          ISCL = 1
@@ -10340,7 +10275,7 @@
 *
 *     Return optimal workspace in WORK(1)
 *
-      WORK( 1 ) = MAXWRK
+      WORK( 1 ) = DROUNDUP_LWORK( MAXWRK )
 *
       RETURN
 *
@@ -10464,17 +10399,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16GEsolve
 *
 *  =====================================================================
       SUBROUTINE ZGESV( N, NRHS, A, LDA, IPIV, B, LDB, INFO )
 *
-*  -- LAPACK driver routine (version 3.7.1) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, LDB, N, NRHS
@@ -10734,18 +10666,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date April 2012
-*
 *> \ingroup complex16GEsing
 *
 *  =====================================================================
       SUBROUTINE ZGESVD( JOBU, JOBVT, M, N, A, LDA, S, U, LDU,
      $                   VT, LDVT, WORK, LWORK, RWORK, INFO )
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     April 2012
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOBU, JOBVT
@@ -14574,8 +14503,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date April 2012
-*
 *> \ingroup complex16GEsolve
 *
 *  =====================================================================
@@ -14583,10 +14510,9 @@
      $                   EQUED, R, C, B, LDB, X, LDX, RCOND, FERR, BERR,
      $                   WORK, RWORK, INFO )
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     April 2012
 *
 *     .. Scalar Arguments ..
       CHARACTER          EQUED, FACT, TRANS
@@ -14936,8 +14862,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16GEauxiliary
 *
 *> \par Contributors:
@@ -14949,10 +14873,9 @@
 *  =====================================================================
       SUBROUTINE ZGETC2( N, A, LDA, IPIV, JPIV, INFO )
 *
-*  -- LAPACK auxiliary routine (version 3.8.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, N
@@ -15173,17 +15096,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       SUBROUTINE ZGETF2( M, N, A, LDA, IPIV, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, M, N
@@ -15387,17 +15307,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       SUBROUTINE ZGETRF( M, N, A, LDA, IPIV, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, M, N
@@ -15617,17 +15534,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       RECURSIVE SUBROUTINE ZGETRF2( M, N, A, LDA, IPIV, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, M, N
@@ -15892,17 +15806,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       SUBROUTINE ZGETRI( N, A, LDA, IPIV, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDA, LWORK, N
@@ -16161,17 +16072,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       SUBROUTINE ZGETRS( TRANS, N, NRHS, A, LDA, IPIV, B, LDB, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          TRANS
@@ -16403,8 +16311,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GBcomputational
 *
 *> \par Further Details:
@@ -16420,10 +16326,9 @@
       SUBROUTINE ZGGBAK( JOB, SIDE, N, ILO, IHI, LSCALE, RSCALE, M, V,
      $                   LDV, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOB, SIDE
@@ -16739,8 +16644,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16GBcomputational
 *
 *> \par Further Details:
@@ -16756,10 +16659,9 @@
       SUBROUTINE ZGGBAL( JOB, N, A, LDA, B, LDB, ILO, IHI, LSCALE,
      $                   RSCALE, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOB
@@ -17412,8 +17314,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEeigen
 *
 *  =====================================================================
@@ -17421,10 +17321,9 @@
      $                  SDIM, ALPHA, BETA, VSL, LDVSL, VSR, LDVSR, WORK,
      $                  LWORK, RWORK, BWORK, INFO )
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOBVSL, JOBVSR, SORT
@@ -17947,8 +17846,8 @@
 *>                The QZ iteration failed.  No eigenvectors have been
 *>                calculated, but ALPHA(j) and BETA(j) should be
 *>                correct for j=INFO+1,...,N.
-*>          > N:  =N+1: other then QZ iteration failed in DHGEQZ,
-*>                =N+2: error return from DTGEVC.
+*>          > N:  =N+1: other then QZ iteration failed in ZHGEQZ,
+*>                =N+2: error return from ZTGEVC.
 *> \endverbatim
 *
 *  Authors:
@@ -17959,18 +17858,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date April 2012
-*
 *> \ingroup complex16GEeigen
 *
 *  =====================================================================
       SUBROUTINE ZGGEV( JOBVL, JOBVR, N, A, LDA, B, LDB, ALPHA, BETA,
      $                  VL, LDVL, VR, LDVR, WORK, LWORK, RWORK, INFO )
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     April 2012
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOBVL, JOBVR
@@ -18494,8 +18390,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Further Details:
@@ -18512,10 +18406,9 @@
       SUBROUTINE ZGGHRD( COMPQ, COMPZ, N, ILO, IHI, A, LDA, B, LDB, Q,
      $                   LDQ, Z, LDZ, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          COMPQ, COMPZ
@@ -18801,18 +18694,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16HEeigen
 *
 *  =====================================================================
       SUBROUTINE ZHEEV( JOBZ, UPLO, N, A, LDA, W, WORK, LWORK, RWORK,
      $                  INFO )
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOBZ, UPLO
@@ -18893,7 +18783,7 @@
       END IF
 *
       IF( N.EQ.1 ) THEN
-         W( 1 ) = A( 1, 1 )
+         W( 1 ) = DBLE( A( 1, 1 ) )
          WORK( 1 ) = 1
          IF( WANTZ )
      $      A( 1, 1 ) = CONE
@@ -19153,8 +19043,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16HEeigen
 *
 *> \par Further Details:
@@ -19172,10 +19060,9 @@
       SUBROUTINE ZHEEVD( JOBZ, UPLO, N, A, LDA, W, WORK, LWORK, RWORK,
      $                   LRWORK, IWORK, LIWORK, INFO )
 *
-*  -- LAPACK driver routine (version 3.7.0) --
+*  -- LAPACK driver routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          JOBZ, UPLO
@@ -19284,7 +19171,7 @@
      $   RETURN
 *
       IF( N.EQ.1 ) THEN
-         W( 1 ) = A( 1, 1 )
+         W( 1 ) = DBLE( A( 1, 1 ) )
          IF( WANTZ )
      $      A( 1, 1 ) = CONE
          RETURN
@@ -19487,8 +19374,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16HEcomputational
 *
 *> \par Further Details:
@@ -19540,10 +19425,9 @@
 *  =====================================================================
       SUBROUTINE ZHETD2( UPLO, N, A, LDA, D, E, TAU, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -19613,7 +19497,7 @@
 *
             ALPHA = A( I, I+1 )
             CALL ZLARFG( I, ALPHA, A( 1, I+1 ), 1, TAUI )
-            E( I ) = ALPHA
+            E( I ) = DBLE( ALPHA )
 *
             IF( TAUI.NE.ZERO ) THEN
 *
@@ -19641,10 +19525,10 @@
                A( I, I ) = DBLE( A( I, I ) )
             END IF
             A( I, I+1 ) = E( I )
-            D( I+1 ) = A( I+1, I+1 )
+            D( I+1 ) = DBLE( A( I+1, I+1 ) )
             TAU( I ) = TAUI
    10    CONTINUE
-         D( 1 ) = A( 1, 1 )
+         D( 1 ) = DBLE( A( 1, 1 ) )
       ELSE
 *
 *        Reduce the lower triangle of A
@@ -19657,7 +19541,7 @@
 *
             ALPHA = A( I+1, I )
             CALL ZLARFG( N-I, ALPHA, A( MIN( I+2, N ), I ), 1, TAUI )
-            E( I ) = ALPHA
+            E( I ) = DBLE( ALPHA )
 *
             IF( TAUI.NE.ZERO ) THEN
 *
@@ -19686,10 +19570,10 @@
                A( I+1, I+1 ) = DBLE( A( I+1, I+1 ) )
             END IF
             A( I+1, I ) = E( I )
-            D( I ) = A( I, I )
+            D( I ) = DBLE( A( I, I ) )
             TAU( I ) = TAUI
    20    CONTINUE
-         D( N ) = A( N, N )
+         D( N ) = DBLE( A( N, N ) )
       END IF
 *
       RETURN
@@ -19838,8 +19722,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16HEcomputational
 *
 *> \par Further Details:
@@ -19891,10 +19773,9 @@
 *  =====================================================================
       SUBROUTINE ZHETRD( UPLO, N, A, LDA, D, E, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -20027,7 +19908,7 @@
 *
             DO 10 J = I, I + NB - 1
                A( J-1, J ) = E( J-1 )
-               D( J ) = A( J, J )
+               D( J ) = DBLE( A( J, J ) )
    10       CONTINUE
    20    CONTINUE
 *
@@ -20059,7 +19940,7 @@
 *
             DO 30 J = I, I + NB - 1
                A( J+1, J ) = E( J )
-               D( J ) = A( J, J )
+               D( J ) = DBLE( A( J, J ) )
    30       CONTINUE
    40    CONTINUE
 *
@@ -20343,8 +20224,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date April 2012
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Further Details:
@@ -20361,10 +20240,9 @@
      $                   ALPHA, BETA, Q, LDQ, Z, LDZ, WORK, LWORK,
      $                   RWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     April 2012
 *
 *     .. Scalar Arguments ..
       CHARACTER          COMPQ, COMPZ, JOB
@@ -20396,13 +20274,14 @@
       DOUBLE PRECISION   ABSB, ANORM, ASCALE, ATOL, BNORM, BSCALE, BTOL,
      $                   C, SAFMIN, TEMP, TEMP2, TEMPR, ULP
       COMPLEX*16         ABI22, AD11, AD12, AD21, AD22, CTEMP, CTEMP2,
-     $                   CTEMP3, ESHIFT, RTDISC, S, SHIFT, SIGNBC, T1,
-     $                   U12, X
+     $                   CTEMP3, ESHIFT, S, SHIFT, SIGNBC,
+     $                   U12, X, ABI12, Y
 *     ..
 *     .. External Functions ..
+      COMPLEX*16         ZLADIV
       LOGICAL            LSAME
       DOUBLE PRECISION   DLAMCH, ZLANHS
-      EXTERNAL           LSAME, DLAMCH, ZLANHS
+      EXTERNAL           ZLADIV, LSAME, DLAMCH, ZLANHS
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           XERBLA, ZLARTG, ZLASET, ZROT, ZSCAL
@@ -20428,6 +20307,7 @@
          ILSCHR = .TRUE.
          ISCHUR = 2
       ELSE
+         ILSCHR = .TRUE.
          ISCHUR = 0
       END IF
 *
@@ -20441,6 +20321,7 @@
          ILQ = .TRUE.
          ICOMPQ = 3
       ELSE
+         ILQ = .TRUE.
          ICOMPQ = 0
       END IF
 *
@@ -20454,6 +20335,7 @@
          ILZ = .TRUE.
          ICOMPZ = 3
       ELSE
+         ILZ = .TRUE.
          ICOMPZ = 0
       END IF
 *
@@ -20592,13 +20474,17 @@
          IF( ILAST.EQ.ILO ) THEN
             GO TO 60
          ELSE
-            IF( ABS1( H( ILAST, ILAST-1 ) ).LE.ATOL ) THEN
+            IF( ABS1( H( ILAST, ILAST-1 ) ).LE.MAX( SAFMIN, ULP*( 
+     $         ABS1( H( ILAST, ILAST ) ) + ABS1( H( ILAST-1, ILAST-1 ) 
+     $         ) ) ) ) THEN
                H( ILAST, ILAST-1 ) = CZERO
                GO TO 60
             END IF
          END IF
 *
-         IF( ABS( T( ILAST, ILAST ) ).LE.BTOL ) THEN
+         IF( ABS( T( ILAST, ILAST ) ).LE.MAX( SAFMIN, ULP*( 
+     $         ABS( T( ILAST - 1, ILAST ) ) + ABS( T( ILAST-1, ILAST-1 )
+     $          ) ) ) ) THEN
             T( ILAST, ILAST ) = CZERO
             GO TO 50
          END IF
@@ -20612,7 +20498,9 @@
             IF( J.EQ.ILO ) THEN
                ILAZRO = .TRUE.
             ELSE
-               IF( ABS1( H( J, J-1 ) ).LE.ATOL ) THEN
+               IF( ABS1( H( J, J-1 ) ).LE.MAX( SAFMIN, ULP*( 
+     $            ABS1( H( J, J ) ) + ABS1( H( J-1, J-1 ) ) 
+     $            ) ) ) THEN
                   H( J, J-1 ) = CZERO
                   ILAZRO = .TRUE.
                ELSE
@@ -20622,7 +20510,10 @@
 *
 *           Test 2: for T(j,j)=0
 *
-            IF( ABS( T( J, J ) ).LT.BTOL ) THEN
+            TEMP = ABS ( T( J, J + 1 ) )
+            IF ( J .GT. ILO )
+     $           TEMP = TEMP + ABS ( T( J - 1, J ) )
+            IF( ABS( T( J, J ) ).LT.MAX( SAFMIN,ULP*TEMP ) ) THEN
                T( J, J ) = CZERO
 *
 *              Test 1a: Check for 2 consecutive small subdiagonals in A
@@ -20807,22 +20698,34 @@
             AD22 = ( ASCALE*H( ILAST, ILAST ) ) /
      $             ( BSCALE*T( ILAST, ILAST ) )
             ABI22 = AD22 - U12*AD21
+            ABI12 = AD12 - U12*AD11
 *
-            T1 = HALF*( AD11+ABI22 )
-            RTDISC = SQRT( T1**2+AD12*AD21-AD11*AD22 )
-            TEMP = DBLE( T1-ABI22 )*DBLE( RTDISC ) +
-     $             DIMAG( T1-ABI22 )*DIMAG( RTDISC )
-            IF( TEMP.LE.ZERO ) THEN
-               SHIFT = T1 + RTDISC
-            ELSE
-               SHIFT = T1 - RTDISC
+            SHIFT = ABI22
+            CTEMP = SQRT( ABI12 )*SQRT( AD21 )
+            TEMP = ABS1( CTEMP )
+            IF( CTEMP.NE.ZERO ) THEN
+               X = HALF*( AD11-SHIFT )
+               TEMP2 = ABS1( X )
+               TEMP = MAX( TEMP, ABS1( X ) )
+               Y = TEMP*SQRT( ( X / TEMP )**2+( CTEMP / TEMP )**2 )
+               IF( TEMP2.GT.ZERO ) THEN
+                  IF( DBLE( X / TEMP2 )*DBLE( Y )+
+     $                DIMAG( X / TEMP2 )*DIMAG( Y ).LT.ZERO )Y = -Y
+               END IF
+               SHIFT = SHIFT - CTEMP*ZLADIV( CTEMP, ( X+Y ) )
             END IF
          ELSE
 *
 *           Exceptional shift.  Chosen for no particularly good reason.
 *
-            ESHIFT = ESHIFT + (ASCALE*H(ILAST,ILAST-1))/
-     $                        (BSCALE*T(ILAST-1,ILAST-1))
+            IF( ( IITER / 20 )*20.EQ.IITER .AND. 
+     $         BSCALE*ABS1(T( ILAST, ILAST )).GT.SAFMIN ) THEN
+               ESHIFT = ESHIFT + ( ASCALE*H( ILAST,
+     $            ILAST ) )/( BSCALE*T( ILAST, ILAST ) )
+            ELSE
+               ESHIFT = ESHIFT + ( ASCALE*H( ILAST,
+     $            ILAST-1 ) )/( BSCALE*T( ILAST-1, ILAST-1 ) )
+            END IF
             SHIFT = ESHIFT
          END IF
 *
@@ -21169,8 +21072,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Contributors:
@@ -21252,10 +21153,9 @@
       SUBROUTINE ZHSEQR( JOB, COMPZ, N, ILO, IHI, H, LDH, W, Z, LDZ,
      $                   WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IHI, ILO, INFO, LDH, LDZ, LWORK, N
@@ -21273,10 +21173,10 @@
 *     .    ZLAHQR because of insufficient subdiagonal scratch space.
 *     .    (This is a hard limit.) ====
       INTEGER            NTINY
-      PARAMETER          ( NTINY = 11 )
+      PARAMETER          ( NTINY = 15 )
 *
 *     ==== NL allocates some local workspace to help small matrices
-*     .    through a rare ZLAHQR failure.  NL > NTINY = 11 is
+*     .    through a rare ZLAHQR failure.  NL > NTINY = 15 is
 *     .    required and NL <= NMIN = ILAENV(ISPEC=12,...) is recom-
 *     .    mended.  (The default value of NMIN is 75.)  Using NL = 49
 *     .    allows up to six simultaneous shifts and a 16-by-16
@@ -21608,8 +21508,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -21663,10 +21561,9 @@
       SUBROUTINE ZLABRD( M, N, NB, A, LDA, D, E, TAUQ, TAUP, X, LDX, Y,
      $                   LDY )
 *
-*  -- LAPACK auxiliary routine (version 3.7.1) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            LDA, LDX, LDY, M, N, NB
@@ -21721,7 +21618,7 @@
             ALPHA = A( I, I )
             CALL ZLARFG( M-I+1, ALPHA, A( MIN( I+1, M ), I ), 1,
      $                   TAUQ( I ) )
-            D( I ) = ALPHA
+            D( I ) = DBLE( ALPHA )
             IF( I.LT.N ) THEN
                A( I, I ) = ONE
 *
@@ -21761,7 +21658,7 @@
                ALPHA = A( I, I+1 )
                CALL ZLARFG( N-I, ALPHA, A( I, MIN( I+2, N ) ), LDA,
      $                      TAUP( I ) )
-               E( I ) = ALPHA
+               E( I ) = DBLE( ALPHA )
                A( I, I+1 ) = ONE
 *
 *              Compute X(i+1:m,i)
@@ -21805,7 +21702,7 @@
             ALPHA = A( I, I )
             CALL ZLARFG( N-I+1, ALPHA, A( I, MIN( I+1, N ) ), LDA,
      $                   TAUP( I ) )
-            D( I ) = ALPHA
+            D( I ) = DBLE( ALPHA )
             IF( I.LT.M ) THEN
                A( I, I ) = ONE
 *
@@ -21839,7 +21736,7 @@
                ALPHA = A( I+1, I )
                CALL ZLARFG( M-I, ALPHA, A( MIN( I+2, M ), I ), 1,
      $                      TAUQ( I ) )
-               E( I ) = ALPHA
+               E( I ) = DBLE( ALPHA )
                A( I+1, I ) = ONE
 *
 *              Compute Y(i+1:n,i)
@@ -21938,17 +21835,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLACGV( N, X, INCX )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INCX, N
@@ -22083,8 +21977,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -22120,10 +22012,9 @@
 *  =====================================================================
       SUBROUTINE ZLACN2( N, V, X, EST, KASE, ISAVE )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            KASE, N
@@ -22382,17 +22273,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLACP2( UPLO, M, N, A, LDA, B, LDB )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -22542,17 +22430,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLACPY( UPLO, M, N, A, LDA, B, LDB )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -22712,17 +22597,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLACRM( M, N, A, LDA, B, LDB, C, LDC, RWORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            LDA, LDB, LDC, M, N
@@ -22847,17 +22729,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       COMPLEX*16     FUNCTION ZLADIV( X, Y )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       COMPLEX*16         X, Y
@@ -22885,7 +22764,7 @@
 *     End of ZLADIV
 *
       END
-*> \brief \b ZLAED0 used by sstedc. Computes all eigenvalues and corresponding eigenvectors of an unreduced symmetric tridiagonal matrix using the divide and conquer method.
+*> \brief \b ZLAED0 used by ZSTEDC. Computes all eigenvalues and corresponding eigenvectors of an unreduced symmetric tridiagonal matrix using the divide and conquer method.
 *
 *  =========== DOCUMENTATION ===========
 *
@@ -23024,18 +22903,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZLAED0( QSIZ, N, D, E, Q, LDQ, QSTORE, LDQS, RWORK,
      $                   IWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, LDQ, LDQS, N, QSIZ
@@ -23256,7 +23132,7 @@
 *     End of ZLAED0
 *
       END
-*> \brief \b ZLAED7 used by sstedc. Computes the updated eigensystem of a diagonal matrix after modification by a rank-one symmetric matrix. Used when the original matrix is dense.
+*> \brief \b ZLAED7 used by ZSTEDC. Computes the updated eigensystem of a diagonal matrix after modification by a rank-one symmetric matrix. Used when the original matrix is dense.
 *
 *  =========== DOCUMENTATION ===========
 *
@@ -23497,8 +23373,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
@@ -23507,10 +23381,9 @@
      $                   GIVPTR, GIVCOL, GIVNUM, WORK, RWORK, IWORK,
      $                   INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            CURLVL, CURPBM, CUTPNT, INFO, LDQ, N, QSIZ,
@@ -23641,7 +23514,7 @@
 *     End of ZLAED7
 *
       END
-*> \brief \b ZLAED8 used by sstedc. Merges eigenvalues and deflates secular equation. Used when the original matrix is dense.
+*> \brief \b ZLAED8 used by ZSTEDC. Merges eigenvalues and deflates secular equation. Used when the original matrix is dense.
 *
 *  =========== DOCUMENTATION ===========
 *
@@ -23862,8 +23735,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
@@ -23871,10 +23742,9 @@
      $                   Q2, LDQ2, W, INDXP, INDX, INDXQ, PERM, GIVPTR,
      $                   GIVCOL, GIVNUM, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            CUTPNT, GIVPTR, INFO, K, LDQ, LDQ2, N, QSIZ
@@ -24300,8 +24170,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -24323,11 +24191,11 @@
 *  =====================================================================
       SUBROUTINE ZLAHQR( WANTT, WANTZ, N, ILO, IHI, H, LDH, W, ILOZ,
      $                   IHIZ, Z, LDZ, INFO )
+      IMPLICIT NONE
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IHI, IHIZ, ILO, ILOZ, INFO, LDH, LDZ, N
@@ -24347,6 +24215,8 @@
       PARAMETER          ( RZERO = 0.0d0, RONE = 1.0d0, HALF = 0.5d0 )
       DOUBLE PRECISION   DAT1
       PARAMETER          ( DAT1 = 3.0d0 / 4.0d0 )
+      INTEGER            KEXSH
+      PARAMETER          ( KEXSH = 10 )
 *     ..
 *     .. Local Scalars ..
       COMPLEX*16         CDUM, H11, H11S, H22, SC, SUM, T, T1, TEMP, U,
@@ -24354,7 +24224,7 @@
       DOUBLE PRECISION   AA, AB, BA, BB, H10, H21, RTEMP, S, SAFMAX,
      $                   SAFMIN, SMLNUM, SX, T2, TST, ULP
       INTEGER            I, I1, I2, ITS, ITMAX, J, JHI, JLO, K, L, M,
-     $                   NH, NZ
+     $                   NH, NZ, KDEFL
 *     ..
 *     .. Local Arrays ..
       COMPLEX*16         V( 2 )
@@ -24444,6 +24314,10 @@
 *
       ITMAX = 30 * MAX( 10, NH )
 *
+*     KDEFL counts the number of iterations since a deflation
+*
+      KDEFL = 0
+*
 *     The main loop begins here. I is the loop index and decreases from
 *     IHI to ILO in steps of 1. Each iteration of the loop works
 *     with the active submatrix in rows and columns L to I.
@@ -24503,6 +24377,7 @@
 *
          IF( L.GE.I )
      $      GO TO 140
+         KDEFL = KDEFL + 1
 *
 *        Now the active submatrix is in rows and columns L to I. If
 *        eigenvalues only are being computed, only the active submatrix
@@ -24513,18 +24388,18 @@
             I2 = I
          END IF
 *
-         IF( ITS.EQ.10 ) THEN
-*
-*           Exceptional shift.
-*
-            S = DAT1*ABS( DBLE( H( L+1, L ) ) )
-            T = S + H( L, L )
-         ELSE IF( ITS.EQ.20 ) THEN
+         IF( MOD(KDEFL,2*KEXSH).EQ.0 ) THEN
 *
 *           Exceptional shift.
 *
             S = DAT1*ABS( DBLE( H( I, I-1 ) ) )
             T = S + H( I, I )
+         ELSE IF( MOD(KDEFL,KEXSH).EQ.0 ) THEN
+*
+*           Exceptional shift.
+*
+            S = DAT1*ABS( DBLE( H( L+1, L ) ) )
+            T = S + H( L, L )
          ELSE
 *
 *           Wilkinson's shift.
@@ -24686,6 +24561,8 @@
 *     H(I,I-1) is negligible: one eigenvalue has converged.
 *
       W( I ) = H( I, I )
+*     reset deflation counter
+      KDEFL = 0
 *
 *     return to start of the main loop with new value of I.
 *
@@ -24823,8 +24700,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -24864,11 +24739,11 @@
 *>  modified element of the upper Hessenberg matrix H, and vi denotes an
 *>  element of the vector defining H(i).
 *>
-*>  This subroutine is a slight modification of LAPACK-3.0's DLAHRD
+*>  This subroutine is a slight modification of LAPACK-3.0's ZLAHRD
 *>  incorporating improvements proposed by Quintana-Orti and Van de
 *>  Gejin. Note that the entries of A(1:K,2:NB) differ from those
-*>  returned by the original LAPACK-3.0's DLAHRD routine. (This
-*>  subroutine is not backward compatible with LAPACK-3.0's DLAHRD.)
+*>  returned by the original LAPACK-3.0's ZLAHRD routine. (This
+*>  subroutine is not backward compatible with LAPACK-3.0's ZLAHRD.)
 *> \endverbatim
 *
 *> \par References:
@@ -24881,10 +24756,9 @@
 *  =====================================================================
       SUBROUTINE ZLAHR2( N, K, NB, A, LDA, TAU, T, LDT, Y, LDY )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            K, LDA, LDT, LDY, N, NB
@@ -25150,8 +25024,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -25195,10 +25067,9 @@
 *  =====================================================================
       SUBROUTINE ZLAHRD( N, K, NB, A, LDA, TAU, T, LDT, Y, LDY )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            K, LDA, LDT, LDY, N, NB
@@ -25574,8 +25445,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Contributors:
@@ -25590,10 +25459,9 @@
      $                   PERM, GIVPTR, GIVCOL, LDGCOL, GIVNUM, LDGNUM,
      $                   POLES, DIFL, DIFR, Z, K, C, S, RWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            GIVPTR, ICOMPQ, INFO, K, LDB, LDBX, LDGCOL,
@@ -26126,8 +25994,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Contributors:
@@ -26143,10 +26009,9 @@
      $                   GIVCOL, LDGCOL, PERM, GIVNUM, C, S, RWORK,
      $                   IWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.1) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            ICOMPQ, INFO, LDB, LDBX, LDGCOL, LDU, N, NRHS,
@@ -26683,8 +26548,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Contributors:
@@ -26698,10 +26561,9 @@
       SUBROUTINE ZLALSD( UPLO, SMLSIZ, N, NRHS, D, E, B, LDB, RCOND,
      $                   RANK, WORK, RWORK, IWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.1) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -27312,19 +27174,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEauxiliary
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION ZLANGE( NORM, M, N, A, LDA, WORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
-      IMPLICIT NONE
 *     .. Scalar Arguments ..
       CHARACTER          NORM
       INTEGER            LDA, M, N
@@ -27342,17 +27200,14 @@
 *     ..
 *     .. Local Scalars ..
       INTEGER            I, J
-      DOUBLE PRECISION   SUM, VALUE, TEMP
-*     ..
-*     .. Local Arrays ..
-      DOUBLE PRECISION   SSQ( 2 ), COLSSQ( 2 )
+      DOUBLE PRECISION   SCALE, SUM, VALUE, TEMP
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME, DISNAN
       EXTERNAL           LSAME, DISNAN
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           ZLASSQ, DCOMBSSQ
+      EXTERNAL           ZLASSQ
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, MIN, SQRT
@@ -27404,19 +27259,13 @@
       ELSE IF( ( LSAME( NORM, 'F' ) ) .OR. ( LSAME( NORM, 'E' ) ) ) THEN
 *
 *        Find normF(A).
-*        SSQ(1) is scale
-*        SSQ(2) is sum-of-squares
-*        For better accuracy, sum each column separately.
 *
-         SSQ( 1 ) = ZERO
-         SSQ( 2 ) = ONE
+         SCALE = ZERO
+         SUM = ONE
          DO 90 J = 1, N
-            COLSSQ( 1 ) = ZERO
-            COLSSQ( 2 ) = ONE
-            CALL ZLASSQ( M, A( 1, J ), 1, COLSSQ( 1 ), COLSSQ( 2 ) )
-            CALL DCOMBSSQ( SSQ, COLSSQ )
+            CALL ZLASSQ( M, A( 1, J ), 1, SCALE, SUM )
    90    CONTINUE
-         VALUE = SSQ( 1 )*SQRT( SSQ( 2 ) )
+         VALUE = SCALE*SQRT( SUM )
       END IF
 *
       ZLANGE = VALUE
@@ -27544,19 +27393,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16HEauxiliary
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION ZLANHE( NORM, UPLO, N, A, LDA, WORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
-      IMPLICIT NONE
 *     .. Scalar Arguments ..
       CHARACTER          NORM, UPLO
       INTEGER            LDA, N
@@ -27574,17 +27419,14 @@
 *     ..
 *     .. Local Scalars ..
       INTEGER            I, J
-      DOUBLE PRECISION   ABSA, SUM, VALUE
-*     ..
-*     .. Local Arrays ..
-      DOUBLE PRECISION   SSQ( 2 ), COLSSQ( 2 )
+      DOUBLE PRECISION   ABSA, SCALE, SUM, VALUE
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME, DISNAN
       EXTERNAL           LSAME, DISNAN
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           ZLASSQ, DCOMBSSQ
+      EXTERNAL           ZLASSQ
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, DBLE, SQRT
@@ -27654,48 +27496,31 @@
       ELSE IF( ( LSAME( NORM, 'F' ) ) .OR. ( LSAME( NORM, 'E' ) ) ) THEN
 *
 *        Find normF(A).
-*        SSQ(1) is scale
-*        SSQ(2) is sum-of-squares
-*        For better accuracy, sum each column separately.
 *
-         SSQ( 1 ) = ZERO
-         SSQ( 2 ) = ONE
-*
-*        Sum off-diagonals
-*
+         SCALE = ZERO
+         SUM = ONE
          IF( LSAME( UPLO, 'U' ) ) THEN
             DO 110 J = 2, N
-               COLSSQ( 1 ) = ZERO
-               COLSSQ( 2 ) = ONE
-               CALL ZLASSQ( J-1, A( 1, J ), 1,
-     $                      COLSSQ( 1 ), COLSSQ( 2 ) )
-               CALL DCOMBSSQ( SSQ, COLSSQ )
+               CALL ZLASSQ( J-1, A( 1, J ), 1, SCALE, SUM )
   110       CONTINUE
          ELSE
             DO 120 J = 1, N - 1
-               COLSSQ( 1 ) = ZERO
-               COLSSQ( 2 ) = ONE
-               CALL ZLASSQ( N-J, A( J+1, J ), 1,
-     $                      COLSSQ( 1 ), COLSSQ( 2 ) )
-               CALL DCOMBSSQ( SSQ, COLSSQ )
+               CALL ZLASSQ( N-J, A( J+1, J ), 1, SCALE, SUM )
   120       CONTINUE
          END IF
-         SSQ( 2 ) = 2*SSQ( 2 )
-*
-*        Sum diagonal
-*
+         SUM = 2*SUM
          DO 130 I = 1, N
             IF( DBLE( A( I, I ) ).NE.ZERO ) THEN
                ABSA = ABS( DBLE( A( I, I ) ) )
-               IF( SSQ( 1 ).LT.ABSA ) THEN
-                  SSQ( 2 ) = ONE + SSQ( 2 )*( SSQ( 1 ) / ABSA )**2
-                  SSQ( 1 ) = ABSA
+               IF( SCALE.LT.ABSA ) THEN
+                  SUM = ONE + SUM*( SCALE / ABSA )**2
+                  SCALE = ABSA
                ELSE
-                  SSQ( 2 ) = SSQ( 2 ) + ( ABSA / SSQ( 1 ) )**2
+                  SUM = SUM + ( ABSA / SCALE )**2
                END IF
             END IF
   130    CONTINUE
-         VALUE = SSQ( 1 )*SQRT( SSQ( 2 ) )
+         VALUE = SCALE*SQRT( SUM )
       END IF
 *
       ZLANHE = VALUE
@@ -27808,19 +27633,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION ZLANHS( NORM, N, A, LDA, WORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
-      IMPLICIT NONE
 *     .. Scalar Arguments ..
       CHARACTER          NORM
       INTEGER            LDA, N
@@ -27838,17 +27659,14 @@
 *     ..
 *     .. Local Scalars ..
       INTEGER            I, J
-      DOUBLE PRECISION   SUM, VALUE
-*     ..
-*     .. Local Arrays ..
-      DOUBLE PRECISION   SSQ( 2 ), COLSSQ( 2 )
+      DOUBLE PRECISION   SCALE, SUM, VALUE
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME, DISNAN
       EXTERNAL           LSAME, DISNAN
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           ZLASSQ, DCOMBSSQ
+      EXTERNAL           ZLASSQ
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, MIN, SQRT
@@ -27900,20 +27718,13 @@
       ELSE IF( ( LSAME( NORM, 'F' ) ) .OR. ( LSAME( NORM, 'E' ) ) ) THEN
 *
 *        Find normF(A).
-*        SSQ(1) is scale
-*        SSQ(2) is sum-of-squares
-*        For better accuracy, sum each column separately.
 *
-         SSQ( 1 ) = ZERO
-         SSQ( 2 ) = ONE
+         SCALE = ZERO
+         SUM = ONE
          DO 90 J = 1, N
-            COLSSQ( 1 ) = ZERO
-            COLSSQ( 2 ) = ONE
-            CALL ZLASSQ( MIN( N, J+1 ), A( 1, J ), 1,
-     $                   COLSSQ( 1 ), COLSSQ( 2 ) )
-            CALL DCOMBSSQ( SSQ, COLSSQ )
+            CALL ZLASSQ( MIN( N, J+1 ), A( 1, J ), 1, SCALE, SUM )
    90    CONTINUE
-         VALUE = SSQ( 1 )*SQRT( SSQ( 2 ) )
+         VALUE = SCALE*SQRT( SUM )
       END IF
 *
       ZLANHS = VALUE
@@ -28058,20 +27869,16 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION ZLANTR( NORM, UPLO, DIAG, M, N, A, LDA,
      $                 WORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
-      IMPLICIT NONE
 *     .. Scalar Arguments ..
       CHARACTER          DIAG, NORM, UPLO
       INTEGER            LDA, M, N
@@ -28090,17 +27897,14 @@
 *     .. Local Scalars ..
       LOGICAL            UDIAG
       INTEGER            I, J
-      DOUBLE PRECISION   SUM, VALUE
-*     ..
-*     .. Local Arrays ..
-      DOUBLE PRECISION   SSQ( 2 ), COLSSQ( 2 )
+      DOUBLE PRECISION   SCALE, SUM, VALUE
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME, DISNAN
       EXTERNAL           LSAME, DISNAN
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           ZLASSQ, DCOMBSSQ
+      EXTERNAL           ZLASSQ
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, MIN, SQRT
@@ -28211,7 +28015,7 @@
             END IF
          ELSE
             IF( LSAME( DIAG, 'U' ) ) THEN
-               DO 210 I = 1, N
+               DO 210 I = 1, MIN( M, N )
                   WORK( I ) = ONE
   210          CONTINUE
                DO 220 I = N + 1, M
@@ -28241,56 +28045,38 @@
       ELSE IF( ( LSAME( NORM, 'F' ) ) .OR. ( LSAME( NORM, 'E' ) ) ) THEN
 *
 *        Find normF(A).
-*        SSQ(1) is scale
-*        SSQ(2) is sum-of-squares
-*        For better accuracy, sum each column separately.
 *
          IF( LSAME( UPLO, 'U' ) ) THEN
             IF( LSAME( DIAG, 'U' ) ) THEN
-               SSQ( 1 ) = ONE
-               SSQ( 2 ) = MIN( M, N )
+               SCALE = ONE
+               SUM = MIN( M, N )
                DO 290 J = 2, N
-                  COLSSQ( 1 ) = ZERO
-                  COLSSQ( 2 ) = ONE
-                  CALL ZLASSQ( MIN( M, J-1 ), A( 1, J ), 1,
-     $                         COLSSQ( 1 ), COLSSQ( 2 ) )
-                  CALL DCOMBSSQ( SSQ, COLSSQ )
+                  CALL ZLASSQ( MIN( M, J-1 ), A( 1, J ), 1, SCALE, SUM )
   290          CONTINUE
             ELSE
-               SSQ( 1 ) = ZERO
-               SSQ( 2 ) = ONE
+               SCALE = ZERO
+               SUM = ONE
                DO 300 J = 1, N
-                  COLSSQ( 1 ) = ZERO
-                  COLSSQ( 2 ) = ONE
-                  CALL ZLASSQ( MIN( M, J ), A( 1, J ), 1,
-     $                         COLSSQ( 1 ), COLSSQ( 2 ) )
-                  CALL DCOMBSSQ( SSQ, COLSSQ )
+                  CALL ZLASSQ( MIN( M, J ), A( 1, J ), 1, SCALE, SUM )
   300          CONTINUE
             END IF
          ELSE
             IF( LSAME( DIAG, 'U' ) ) THEN
-               SSQ( 1 ) = ONE
-               SSQ( 2 ) = MIN( M, N )
+               SCALE = ONE
+               SUM = MIN( M, N )
                DO 310 J = 1, N
-                  COLSSQ( 1 ) = ZERO
-                  COLSSQ( 2 ) = ONE
-                  CALL ZLASSQ( M-J, A( MIN( M, J+1 ), J ), 1,
-     $                         COLSSQ( 1 ), COLSSQ( 2 ) )
-                  CALL DCOMBSSQ( SSQ, COLSSQ )
+                  CALL ZLASSQ( M-J, A( MIN( M, J+1 ), J ), 1, SCALE,
+     $                         SUM )
   310          CONTINUE
             ELSE
-               SSQ( 1 ) = ZERO
-               SSQ( 2 ) = ONE
+               SCALE = ZERO
+               SUM = ONE
                DO 320 J = 1, N
-                  COLSSQ( 1 ) = ZERO
-                  COLSSQ( 2 ) = ONE
-                  CALL ZLASSQ( M-J+1, A( J, J ), 1,
-     $                         COLSSQ( 1 ), COLSSQ( 2 ) )
-                  CALL DCOMBSSQ( SSQ, COLSSQ )
+                  CALL ZLASSQ( M-J+1, A( J, J ), 1, SCALE, SUM )
   320          CONTINUE
             END IF
          END IF
-         VALUE = SSQ( 1 )*SQRT( SSQ( 2 ) )
+         VALUE = SCALE*SQRT( SUM )
       END IF
 *
       ZLANTR = VALUE
@@ -28436,18 +28222,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLAQGE( M, N, A, LDA, R, C, ROWCND, COLCND, AMAX,
      $                   EQUED )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          EQUED
@@ -28661,8 +28444,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -28688,10 +28469,9 @@
       SUBROUTINE ZLAQP2( M, N, OFFSET, A, LDA, JPVT, TAU, VN1, VN2,
      $                   WORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            LDA, M, N, OFFSET
@@ -28955,8 +28735,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -28982,10 +28760,9 @@
       SUBROUTINE ZLAQPS( M, N, OFFSET, NB, KB, A, LDA, JPVT, TAU, VN1,
      $                   VN2, AUXV, F, LDF )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            KB, LDA, LDF, M, N, NB, OFFSET
@@ -29390,8 +29167,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -29416,10 +29191,9 @@
       SUBROUTINE ZLAQR0( WANTT, WANTZ, N, ILO, IHI, H, LDH, W, ILOZ,
      $                   IHIZ, Z, LDZ, WORK, LWORK, INFO )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IHI, IHIZ, ILO, ILOZ, INFO, LDH, LDZ, LWORK, N
@@ -29437,7 +29211,7 @@
 *     .    ZLAHQR because of insufficient subdiagonal scratch space.
 *     .    (This is a hard limit.) ====
       INTEGER            NTINY
-      PARAMETER          ( NTINY = 11 )
+      PARAMETER          ( NTINY = 15 )
 *
 *     ==== Exceptional deflation windows:  try to cure rare
 *     .    slow convergence by varying the size of the
@@ -29532,22 +29306,22 @@
          END IF
 *
 *        ==== NWR = recommended deflation window size.  At this
-*        .    point,  N .GT. NTINY = 11, so there is enough
+*        .    point,  N .GT. NTINY = 15, so there is enough
 *        .    subdiagonal workspace for NWR.GE.2 as required.
 *        .    (In fact, there is enough subdiagonal space for
-*        .    NWR.GE.3.) ====
+*        .    NWR.GE.4.) ====
 *
          NWR = ILAENV( 13, 'ZLAQR0', JBCMPZ, N, ILO, IHI, LWORK )
          NWR = MAX( 2, NWR )
          NWR = MIN( IHI-ILO+1, ( N-1 ) / 3, NWR )
 *
 *        ==== NSR = recommended number of simultaneous shifts.
-*        .    At this point N .GT. NTINY = 11, so there is at
+*        .    At this point N .GT. NTINY = 15, so there is at
 *        .    enough subdiagonal workspace for NSR to be even
 *        .    and greater than or equal to two as required. ====
 *
          NSR = ILAENV( 15, 'ZLAQR0', JBCMPZ, N, ILO, IHI, LWORK )
-         NSR = MIN( NSR, ( N+6 ) / 9, IHI-ILO )
+         NSR = MIN( NSR, ( N-3 ) / 6, IHI-ILO )
          NSR = MAX( 2, NSR-MOD( NSR, 2 ) )
 *
 *        ==== Estimate optimal workspace ====
@@ -29595,7 +29369,7 @@
 *        ==== NSMAX = the Largest number of simultaneous shifts
 *        .    for which there is sufficient workspace. ====
 *
-         NSMAX = MIN( ( N+6 ) / 9, 2*LWORK / 3 )
+         NSMAX = MIN( ( N-3 ) / 6, 2*LWORK / 3 )
          NSMAX = NSMAX - MOD( NSMAX, 2 )
 *
 *        ==== NDFL: an iteration count restarted at deflation. ====
@@ -29735,7 +29509,7 @@
 *
 *                 ==== Got NS/2 or fewer shifts? Use ZLAQR4 or
 *                 .    ZLAHQR on a trailing principal submatrix to
-*                 .    get more. (Since NS.LE.NSMAX.LE.(N+6)/9,
+*                 .    get more. (Since NS.LE.NSMAX.LE.(N-3)/6,
 *                 .    there is enough space below the subdiagonal
 *                 .    to fit an NS-by-NS scratch array.) ====
 *
@@ -29836,7 +29610,7 @@
 *              .      (NVE-by-KDU) vertical work WV arrow along
 *              .      the left-hand-edge. ====
 *
-               KDU = 3*NS - 3
+               KDU = 2*NS
                KU = N - KDU + 1
                KWH = KDU + 1
                NHO = ( N-KDU+1-4 ) - ( KDU+1 ) + 1
@@ -29972,8 +29746,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -29985,10 +29757,9 @@
 *  =====================================================================
       SUBROUTINE ZLAQR1( N, H, LDH, S1, S2, V )
 *
-*  -- LAPACK auxiliary routine (version 3.7.1) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       COMPLEX*16         S1, S2
@@ -30312,8 +30083,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -30327,10 +30096,9 @@
      $                   IHIZ, Z, LDZ, NS, ND, SH, V, LDV, NH, T, LDT,
      $                   NV, WV, LDWV, WORK, LWORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.1) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            IHIZ, ILOZ, KBOT, KTOP, LDH, LDT, LDV, LDWV,
@@ -30876,8 +30644,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -30891,10 +30657,9 @@
      $                   IHIZ, Z, LDZ, NS, ND, SH, V, LDV, NH, T, LDT,
      $                   NV, WV, LDWV, WORK, LWORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.1) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IHIZ, ILOZ, KBOT, KTOP, LDH, LDT, LDV, LDWV,
@@ -31423,8 +31188,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -31449,10 +31212,9 @@
       SUBROUTINE ZLAQR4( WANTT, WANTZ, N, ILO, IHI, H, LDH, W, ILOZ,
      $                   IHIZ, Z, LDZ, WORK, LWORK, INFO )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IHI, IHIZ, ILO, ILOZ, INFO, LDH, LDZ, LWORK, N
@@ -31470,7 +31232,7 @@
 *     .    ZLAHQR because of insufficient subdiagonal scratch space.
 *     .    (This is a hard limit.) ====
       INTEGER            NTINY
-      PARAMETER          ( NTINY = 11 )
+      PARAMETER          ( NTINY = 15 )
 *
 *     ==== Exceptional deflation windows:  try to cure rare
 *     .    slow convergence by varying the size of the
@@ -31565,22 +31327,22 @@
          END IF
 *
 *        ==== NWR = recommended deflation window size.  At this
-*        .    point,  N .GT. NTINY = 11, so there is enough
+*        .    point,  N .GT. NTINY = 15, so there is enough
 *        .    subdiagonal workspace for NWR.GE.2 as required.
 *        .    (In fact, there is enough subdiagonal space for
-*        .    NWR.GE.3.) ====
+*        .    NWR.GE.4.) ====
 *
          NWR = ILAENV( 13, 'ZLAQR4', JBCMPZ, N, ILO, IHI, LWORK )
          NWR = MAX( 2, NWR )
          NWR = MIN( IHI-ILO+1, ( N-1 ) / 3, NWR )
 *
 *        ==== NSR = recommended number of simultaneous shifts.
-*        .    At this point N .GT. NTINY = 11, so there is at
+*        .    At this point N .GT. NTINY = 15, so there is at
 *        .    enough subdiagonal workspace for NSR to be even
 *        .    and greater than or equal to two as required. ====
 *
          NSR = ILAENV( 15, 'ZLAQR4', JBCMPZ, N, ILO, IHI, LWORK )
-         NSR = MIN( NSR, ( N+6 ) / 9, IHI-ILO )
+         NSR = MIN( NSR, ( N-3 ) / 6, IHI-ILO )
          NSR = MAX( 2, NSR-MOD( NSR, 2 ) )
 *
 *        ==== Estimate optimal workspace ====
@@ -31628,7 +31390,7 @@
 *        ==== NSMAX = the Largest number of simultaneous shifts
 *        .    for which there is sufficient workspace. ====
 *
-         NSMAX = MIN( ( N+6 ) / 9, 2*LWORK / 3 )
+         NSMAX = MIN( ( N-3 ) / 6, 2*LWORK / 3 )
          NSMAX = NSMAX - MOD( NSMAX, 2 )
 *
 *        ==== NDFL: an iteration count restarted at deflation. ====
@@ -31768,7 +31530,7 @@
 *
 *                 ==== Got NS/2 or fewer shifts? Use ZLAHQR
 *                 .    on a trailing principal submatrix to
-*                 .    get more. (Since NS.LE.NSMAX.LE.(N+6)/9,
+*                 .    get more. (Since NS.LE.NSMAX.LE.(N-3)/6,
 *                 .    there is enough space below the subdiagonal
 *                 .    to fit an NS-by-NS scratch array.) ====
 *
@@ -31863,7 +31625,7 @@
 *              .      (NVE-by-KDU) vertical work WV arrow along
 *              .      the left-hand-edge. ====
 *
-               KDU = 3*NS - 3
+               KDU = 2*NS
                KU = N - KDU + 1
                KWH = KDU + 1
                NHO = ( N-KDU+1-4 ) - ( KDU+1 ) + 1
@@ -31974,10 +31736,9 @@
 *>             matrix entries.
 *>        = 1: ZLAQR5 accumulates reflections and uses matrix-matrix
 *>             multiply to update the far-from-diagonal matrix entries.
-*>        = 2: ZLAQR5 accumulates reflections, uses matrix-matrix
-*>             multiply to update the far-from-diagonal matrix entries,
-*>             and takes advantage of 2-by-2 block structure during
-*>             matrix multiplies.
+*>        = 2: Same as KACC22 = 1. This option used to enable exploiting
+*>             the 2-by-2 structure during matrix multiplications, but
+*>             this is no longer supported.
 *> \endverbatim
 *>
 *> \param[in] N
@@ -32075,14 +31836,14 @@
 *>
 *> \param[out] U
 *> \verbatim
-*>          U is COMPLEX*16 array, dimension (LDU,3*NSHFTS-3)
+*>          U is COMPLEX*16 array, dimension (LDU,2*NSHFTS)
 *> \endverbatim
 *>
 *> \param[in] LDU
 *> \verbatim
 *>          LDU is INTEGER
 *>             LDU is the leading dimension of U just as declared in the
-*>             in the calling subroutine.  LDU >= 3*NSHFTS-3.
+*>             in the calling subroutine.  LDU >= 2*NSHFTS.
 *> \endverbatim
 *>
 *> \param[in] NV
@@ -32094,7 +31855,7 @@
 *>
 *> \param[out] WV
 *> \verbatim
-*>          WV is COMPLEX*16 array, dimension (LDWV,3*NSHFTS-3)
+*>          WV is COMPLEX*16 array, dimension (LDWV,2*NSHFTS)
 *> \endverbatim
 *>
 *> \param[in] LDWV
@@ -32120,7 +31881,7 @@
 *> \verbatim
 *>          LDWH is INTEGER
 *>             Leading dimension of WH just as declared in the
-*>             calling procedure.  LDWH >= 3*NSHFTS-3.
+*>             calling procedure.  LDWH >= 2*NSHFTS.
 *> \endverbatim
 *>
 *  Authors:
@@ -32131,8 +31892,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Contributors:
@@ -32140,6 +31899,11 @@
 *>
 *>       Karen Braman and Ralph Byers, Department of Mathematics,
 *>       University of Kansas, USA
+*>
+*>       Lars Karlsson, Daniel Kressner, and Bruno Lang
+*>
+*>       Thijs Steel, Department of Computer science,
+*>       KU Leuven, Belgium
 *
 *> \par References:
 *  ================
@@ -32149,15 +31913,19 @@
 *>       Performance, SIAM Journal of Matrix Analysis, volume 23, pages
 *>       929--947, 2002.
 *>
+*>       Lars Karlsson, Daniel Kressner, and Bruno Lang, Optimally packed
+*>       chains of bulges in multishift QR algorithms.
+*>       ACM Trans. Math. Softw. 40, 2, Article 12 (February 2014).
+*>
 *  =====================================================================
       SUBROUTINE ZLAQR5( WANTT, WANTZ, KACC22, N, KTOP, KBOT, NSHFTS, S,
      $                   H, LDH, ILOZ, IHIZ, Z, LDZ, V, LDV, U, LDU, NV,
      $                   WV, LDWV, NH, WH, LDWH )
+      IMPLICIT NONE
 *
-*  -- LAPACK auxiliary routine (version 3.7.1) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IHIZ, ILOZ, KACC22, KBOT, KTOP, LDH, LDU, LDV,
@@ -32181,11 +31949,11 @@
       COMPLEX*16         ALPHA, BETA, CDUM, REFSUM
       DOUBLE PRECISION   H11, H12, H21, H22, SAFMAX, SAFMIN, SCL,
      $                   SMLNUM, TST1, TST2, ULP
-      INTEGER            I2, I4, INCOL, J, J2, J4, JBOT, JCOL, JLEN,
-     $                   JROW, JTOP, K, K1, KDU, KMS, KNZ, KRCOL, KZS,
-     $                   M, M22, MBOT, MEND, MSTART, MTOP, NBMPS, NDCOL,
+      INTEGER            I2, I4, INCOL, J, JBOT, JCOL, JLEN,
+     $                   JROW, JTOP, K, K1, KDU, KMS, KRCOL,
+     $                   M, M22, MBOT, MTOP, NBMPS, NDCOL,
      $                   NS, NU
-      LOGICAL            ACCUM, BLK22, BMP22
+      LOGICAL            ACCUM, BMP22
 *     ..
 *     .. External Functions ..
       DOUBLE PRECISION   DLAMCH
@@ -32239,10 +32007,6 @@
 *
       ACCUM = ( KACC22.EQ.1 ) .OR. ( KACC22.EQ.2 )
 *
-*     ==== If so, exploit the 2-by-2 block structure? ====
-*
-      BLK22 = ( NS.GT.2 ) .AND. ( KACC22.EQ.2 )
-*
 *     ==== clear trash ====
 *
       IF( KTOP+2.LE.KBOT )
@@ -32254,28 +32018,39 @@
 *
 *     ==== KDU = width of slab ====
 *
-      KDU = 6*NBMPS - 3
+      KDU = 4*NBMPS
 *
 *     ==== Create and chase chains of NBMPS bulges ====
 *
-      DO 210 INCOL = 3*( 1-NBMPS ) + KTOP - 1, KBOT - 2, 3*NBMPS - 2
+      DO 180 INCOL = KTOP - 2*NBMPS + 1, KBOT - 2, 2*NBMPS
+*
+*        JTOP = Index from which updates from the right start.
+*
+         IF( ACCUM ) THEN
+            JTOP = MAX( KTOP, INCOL )
+         ELSE IF( WANTT ) THEN
+            JTOP = 1
+         ELSE
+            JTOP = KTOP
+         END IF
+*
          NDCOL = INCOL + KDU
          IF( ACCUM )
      $      CALL ZLASET( 'ALL', KDU, KDU, ZERO, ONE, U, LDU )
 *
 *        ==== Near-the-diagonal bulge chase.  The following loop
 *        .    performs the near-the-diagonal part of a small bulge
-*        .    multi-shift QR sweep.  Each 6*NBMPS-2 column diagonal
+*        .    multi-shift QR sweep.  Each 4*NBMPS column diagonal
 *        .    chunk extends from column INCOL to column NDCOL
 *        .    (including both column INCOL and column NDCOL). The
-*        .    following loop chases a 3*NBMPS column long chain of
-*        .    NBMPS bulges 3*NBMPS-2 columns to the right.  (INCOL
+*        .    following loop chases a 2*NBMPS+1 column long chain of
+*        .    NBMPS bulges 2*NBMPS columns to the right.  (INCOL
 *        .    may be less than KTOP and and NDCOL may be greater than
 *        .    KBOT indicating phantom columns from which to chase
 *        .    bulges before they are actually introduced or to which
 *        .    to chase bulges beyond column KBOT.)  ====
 *
-         DO 140 KRCOL = INCOL, MIN( INCOL+3*NBMPS-3, KBOT-2 )
+         DO 145 KRCOL = INCOL, MIN( INCOL+2*NBMPS-1, KBOT-2 )
 *
 *           ==== Bulges number MTOP to MBOT are active double implicit
 *           .    shift bulges.  There may or may not also be small
@@ -32284,24 +32059,156 @@
 *           .    down the diagonal to make room.  The phantom matrix
 *           .    paradigm described above helps keep track.  ====
 *
-            MTOP = MAX( 1, ( ( KTOP-1 )-KRCOL+2 ) / 3+1 )
-            MBOT = MIN( NBMPS, ( KBOT-KRCOL ) / 3 )
+            MTOP = MAX( 1, ( KTOP-KRCOL ) / 2+1 )
+            MBOT = MIN( NBMPS, ( KBOT-KRCOL-1 ) / 2 )
             M22 = MBOT + 1
-            BMP22 = ( MBOT.LT.NBMPS ) .AND. ( KRCOL+3*( M22-1 ) ).EQ.
+            BMP22 = ( MBOT.LT.NBMPS ) .AND. ( KRCOL+2*( M22-1 ) ).EQ.
      $              ( KBOT-2 )
 *
 *           ==== Generate reflections to chase the chain right
 *           .    one column.  (The minimum value of K is KTOP-1.) ====
 *
-            DO 10 M = MTOP, MBOT
-               K = KRCOL + 3*( M-1 )
+            IF ( BMP22 ) THEN
+*
+*              ==== Special case: 2-by-2 reflection at bottom treated
+*              .    separately ====
+*
+               K = KRCOL + 2*( M22-1 )
+               IF( K.EQ.KTOP-1 ) THEN
+                  CALL ZLAQR1( 2, H( K+1, K+1 ), LDH, S( 2*M22-1 ),
+     $                         S( 2*M22 ), V( 1, M22 ) )
+                  BETA = V( 1, M22 )
+                  CALL ZLARFG( 2, BETA, V( 2, M22 ), 1, V( 1, M22 ) )
+               ELSE
+                  BETA = H( K+1, K )
+                  V( 2, M22 ) = H( K+2, K )
+                  CALL ZLARFG( 2, BETA, V( 2, M22 ), 1, V( 1, M22 ) )
+                  H( K+1, K ) = BETA
+                  H( K+2, K ) = ZERO
+               END IF
+
+*
+*              ==== Perform update from right within 
+*              .    computational window. ====
+*
+               DO 30 J = JTOP, MIN( KBOT, K+3 )
+                  REFSUM = V( 1, M22 )*( H( J, K+1 )+V( 2, M22 )*
+     $                     H( J, K+2 ) )
+                  H( J, K+1 ) = H( J, K+1 ) - REFSUM
+                  H( J, K+2 ) = H( J, K+2 ) -
+     $                          REFSUM*DCONJG( V( 2, M22 ) )
+   30          CONTINUE
+*
+*              ==== Perform update from left within 
+*              .    computational window. ====
+*
+               IF( ACCUM ) THEN
+                  JBOT = MIN( NDCOL, KBOT )
+               ELSE IF( WANTT ) THEN
+                  JBOT = N
+               ELSE
+                  JBOT = KBOT
+               END IF
+               DO 40 J = K+1, JBOT
+                  REFSUM = DCONJG( V( 1, M22 ) )*
+     $                     ( H( K+1, J )+DCONJG( V( 2, M22 ) )*
+     $                     H( K+2, J ) )
+                  H( K+1, J ) = H( K+1, J ) - REFSUM
+                  H( K+2, J ) = H( K+2, J ) - REFSUM*V( 2, M22 )
+   40          CONTINUE
+*
+*              ==== The following convergence test requires that
+*              .    the tradition small-compared-to-nearby-diagonals
+*              .    criterion and the Ahues & Tisseur (LAWN 122, 1997)
+*              .    criteria both be satisfied.  The latter improves
+*              .    accuracy in some examples. Falling back on an
+*              .    alternate convergence criterion when TST1 or TST2
+*              .    is zero (as done here) is traditional but probably
+*              .    unnecessary. ====
+*
+               IF( K.GE.KTOP ) THEN
+                  IF( H( K+1, K ).NE.ZERO ) THEN
+                     TST1 = CABS1( H( K, K ) ) + CABS1( H( K+1, K+1 ) )
+                     IF( TST1.EQ.RZERO ) THEN
+                        IF( K.GE.KTOP+1 )
+     $                     TST1 = TST1 + CABS1( H( K, K-1 ) )
+                        IF( K.GE.KTOP+2 )
+     $                     TST1 = TST1 + CABS1( H( K, K-2 ) )
+                        IF( K.GE.KTOP+3 )
+     $                     TST1 = TST1 + CABS1( H( K, K-3 ) )
+                        IF( K.LE.KBOT-2 )
+     $                     TST1 = TST1 + CABS1( H( K+2, K+1 ) )
+                        IF( K.LE.KBOT-3 )
+     $                     TST1 = TST1 + CABS1( H( K+3, K+1 ) )
+                        IF( K.LE.KBOT-4 )
+     $                     TST1 = TST1 + CABS1( H( K+4, K+1 ) )
+                     END IF
+                     IF( CABS1( H( K+1, K ) )
+     $                   .LE.MAX( SMLNUM, ULP*TST1 ) ) THEN
+                        H12 = MAX( CABS1( H( K+1, K ) ),
+     $                     CABS1( H( K, K+1 ) ) )
+                        H21 = MIN( CABS1( H( K+1, K ) ),
+     $                     CABS1( H( K, K+1 ) ) )
+                        H11 = MAX( CABS1( H( K+1, K+1 ) ),
+     $                     CABS1( H( K, K )-H( K+1, K+1 ) ) )
+                        H22 = MIN( CABS1( H( K+1, K+1 ) ),
+     $                     CABS1( H( K, K )-H( K+1, K+1 ) ) )
+                        SCL = H11 + H12
+                        TST2 = H22*( H11 / SCL )
+*
+                        IF( TST2.EQ.RZERO .OR. H21*( H12 / SCL ).LE.
+     $                      MAX( SMLNUM, ULP*TST2 ) )H( K+1, K ) = ZERO
+                     END IF
+                  END IF
+               END IF
+*
+*              ==== Accumulate orthogonal transformations. ====
+*
+               IF( ACCUM ) THEN
+                  KMS = K - INCOL
+                  DO 50 J = MAX( 1, KTOP-INCOL ), KDU
+                     REFSUM = V( 1, M22 )*( U( J, KMS+1 )+
+     $                        V( 2, M22 )*U( J, KMS+2 ) )
+                     U( J, KMS+1 ) = U( J, KMS+1 ) - REFSUM
+                     U( J, KMS+2 ) = U( J, KMS+2 ) -
+     $                               REFSUM*DCONJG( V( 2, M22 ) )
+  50                 CONTINUE
+               ELSE IF( WANTZ ) THEN
+                  DO 60 J = ILOZ, IHIZ
+                     REFSUM = V( 1, M22 )*( Z( J, K+1 )+V( 2, M22 )*
+     $                        Z( J, K+2 ) )
+                     Z( J, K+1 ) = Z( J, K+1 ) - REFSUM
+                     Z( J, K+2 ) = Z( J, K+2 ) -
+     $                             REFSUM*DCONJG( V( 2, M22 ) )
+  60              CONTINUE
+               END IF
+            END IF
+*
+*           ==== Normal case: Chain of 3-by-3 reflections ====
+*
+            DO 80 M = MBOT, MTOP, -1
+               K = KRCOL + 2*( M-1 )
                IF( K.EQ.KTOP-1 ) THEN
                   CALL ZLAQR1( 3, H( KTOP, KTOP ), LDH, S( 2*M-1 ),
      $                         S( 2*M ), V( 1, M ) )
                   ALPHA = V( 1, M )
                   CALL ZLARFG( 3, ALPHA, V( 2, M ), 1, V( 1, M ) )
                ELSE
-                  BETA = H( K+1, K )
+*
+*                 ==== Perform delayed transformation of row below
+*                 .    Mth bulge. Exploit fact that first two elements
+*                 .    of row are actually zero. ====
+*
+                  REFSUM = V( 1, M )*V( 3, M )*H( K+3, K+2 )
+                  H( K+3, K   ) = -REFSUM
+                  H( K+3, K+1 ) = -REFSUM*DCONJG( V( 2, M ) )
+                  H( K+3, K+2 ) = H( K+3, K+2 ) -
+     $                            REFSUM*DCONJG( V( 3, M ) )
+*
+*                 ==== Calculate reflection to move
+*                 .    Mth bulge one step. ====
+*
+                  BETA      = H( K+1, K )
                   V( 2, M ) = H( K+2, K )
                   V( 3, M ) = H( K+3, K )
                   CALL ZLARFG( 3, BETA, V( 2, M ), 1, V( 1, M ) )
@@ -32349,7 +32256,7 @@
                         H( K+3, K ) = ZERO
                      ELSE
 *
-*                       ==== Stating a new bulge here would
+*                       ==== Starting a new bulge here would
 *                       .    create only negligible fill.
 *                       .    Replace the old reflector with
 *                       .    the new one. ====
@@ -32363,163 +32270,32 @@
                      END IF
                   END IF
                END IF
-   10       CONTINUE
 *
-*           ==== Generate a 2-by-2 reflection, if needed. ====
+*              ====  Apply reflection from the right and
+*              .     the first column of update from the left.
+*              .     These updates are required for the vigilant
+*              .     deflation check. We still delay most of the
+*              .     updates from the left for efficiency. ====
 *
-            K = KRCOL + 3*( M22-1 )
-            IF( BMP22 ) THEN
-               IF( K.EQ.KTOP-1 ) THEN
-                  CALL ZLAQR1( 2, H( K+1, K+1 ), LDH, S( 2*M22-1 ),
-     $                         S( 2*M22 ), V( 1, M22 ) )
-                  BETA = V( 1, M22 )
-                  CALL ZLARFG( 2, BETA, V( 2, M22 ), 1, V( 1, M22 ) )
-               ELSE
-                  BETA = H( K+1, K )
-                  V( 2, M22 ) = H( K+2, K )
-                  CALL ZLARFG( 2, BETA, V( 2, M22 ), 1, V( 1, M22 ) )
-                  H( K+1, K ) = BETA
-                  H( K+2, K ) = ZERO
-               END IF
-            END IF
+               DO 70 J = JTOP, MIN( KBOT, K+3 )
+                  REFSUM = V( 1, M )*( H( J, K+1 )+V( 2, M )*
+     $                     H( J, K+2 )+V( 3, M )*H( J, K+3 ) )
+                  H( J, K+1 ) = H( J, K+1 ) - REFSUM
+                  H( J, K+2 ) = H( J, K+2 ) -
+     $                          REFSUM*DCONJG( V( 2, M ) )
+                  H( J, K+3 ) = H( J, K+3 ) -
+     $                          REFSUM*DCONJG( V( 3, M ) )
+   70          CONTINUE
 *
-*           ==== Multiply H by reflections from the left ====
+*              ==== Perform update from left for subsequent
+*              .    column. ====
 *
-            IF( ACCUM ) THEN
-               JBOT = MIN( NDCOL, KBOT )
-            ELSE IF( WANTT ) THEN
-               JBOT = N
-            ELSE
-               JBOT = KBOT
-            END IF
-            DO 30 J = MAX( KTOP, KRCOL ), JBOT
-               MEND = MIN( MBOT, ( J-KRCOL+2 ) / 3 )
-               DO 20 M = MTOP, MEND
-                  K = KRCOL + 3*( M-1 )
-                  REFSUM = DCONJG( V( 1, M ) )*
-     $                     ( H( K+1, J )+DCONJG( V( 2, M ) )*
-     $                     H( K+2, J )+DCONJG( V( 3, M ) )*H( K+3, J ) )
-                  H( K+1, J ) = H( K+1, J ) - REFSUM
-                  H( K+2, J ) = H( K+2, J ) - REFSUM*V( 2, M )
-                  H( K+3, J ) = H( K+3, J ) - REFSUM*V( 3, M )
-   20          CONTINUE
-   30       CONTINUE
-            IF( BMP22 ) THEN
-               K = KRCOL + 3*( M22-1 )
-               DO 40 J = MAX( K+1, KTOP ), JBOT
-                  REFSUM = DCONJG( V( 1, M22 ) )*
-     $                     ( H( K+1, J )+DCONJG( V( 2, M22 ) )*
-     $                     H( K+2, J ) )
-                  H( K+1, J ) = H( K+1, J ) - REFSUM
-                  H( K+2, J ) = H( K+2, J ) - REFSUM*V( 2, M22 )
-   40          CONTINUE
-            END IF
-*
-*           ==== Multiply H by reflections from the right.
-*           .    Delay filling in the last row until the
-*           .    vigilant deflation check is complete. ====
-*
-            IF( ACCUM ) THEN
-               JTOP = MAX( KTOP, INCOL )
-            ELSE IF( WANTT ) THEN
-               JTOP = 1
-            ELSE
-               JTOP = KTOP
-            END IF
-            DO 80 M = MTOP, MBOT
-               IF( V( 1, M ).NE.ZERO ) THEN
-                  K = KRCOL + 3*( M-1 )
-                  DO 50 J = JTOP, MIN( KBOT, K+3 )
-                     REFSUM = V( 1, M )*( H( J, K+1 )+V( 2, M )*
-     $                        H( J, K+2 )+V( 3, M )*H( J, K+3 ) )
-                     H( J, K+1 ) = H( J, K+1 ) - REFSUM
-                     H( J, K+2 ) = H( J, K+2 ) -
-     $                             REFSUM*DCONJG( V( 2, M ) )
-                     H( J, K+3 ) = H( J, K+3 ) -
-     $                             REFSUM*DCONJG( V( 3, M ) )
-   50             CONTINUE
-*
-                  IF( ACCUM ) THEN
-*
-*                    ==== Accumulate U. (If necessary, update Z later
-*                    .    with with an efficient matrix-matrix
-*                    .    multiply.) ====
-*
-                     KMS = K - INCOL
-                     DO 60 J = MAX( 1, KTOP-INCOL ), KDU
-                        REFSUM = V( 1, M )*( U( J, KMS+1 )+V( 2, M )*
-     $                           U( J, KMS+2 )+V( 3, M )*U( J, KMS+3 ) )
-                        U( J, KMS+1 ) = U( J, KMS+1 ) - REFSUM
-                        U( J, KMS+2 ) = U( J, KMS+2 ) -
-     $                                  REFSUM*DCONJG( V( 2, M ) )
-                        U( J, KMS+3 ) = U( J, KMS+3 ) -
-     $                                  REFSUM*DCONJG( V( 3, M ) )
-   60                CONTINUE
-                  ELSE IF( WANTZ ) THEN
-*
-*                    ==== U is not accumulated, so update Z
-*                    .    now by multiplying by reflections
-*                    .    from the right. ====
-*
-                     DO 70 J = ILOZ, IHIZ
-                        REFSUM = V( 1, M )*( Z( J, K+1 )+V( 2, M )*
-     $                           Z( J, K+2 )+V( 3, M )*Z( J, K+3 ) )
-                        Z( J, K+1 ) = Z( J, K+1 ) - REFSUM
-                        Z( J, K+2 ) = Z( J, K+2 ) -
-     $                                REFSUM*DCONJG( V( 2, M ) )
-                        Z( J, K+3 ) = Z( J, K+3 ) -
-     $                                REFSUM*DCONJG( V( 3, M ) )
-   70                CONTINUE
-                  END IF
-               END IF
-   80       CONTINUE
-*
-*           ==== Special case: 2-by-2 reflection (if needed) ====
-*
-            K = KRCOL + 3*( M22-1 )
-            IF( BMP22 ) THEN
-               IF ( V( 1, M22 ).NE.ZERO ) THEN
-                  DO 90 J = JTOP, MIN( KBOT, K+3 )
-                     REFSUM = V( 1, M22 )*( H( J, K+1 )+V( 2, M22 )*
-     $                        H( J, K+2 ) )
-                     H( J, K+1 ) = H( J, K+1 ) - REFSUM
-                     H( J, K+2 ) = H( J, K+2 ) -
-     $                             REFSUM*DCONJG( V( 2, M22 ) )
-   90             CONTINUE
-*
-                  IF( ACCUM ) THEN
-                     KMS = K - INCOL
-                     DO 100 J = MAX( 1, KTOP-INCOL ), KDU
-                        REFSUM = V( 1, M22 )*( U( J, KMS+1 )+
-     $                           V( 2, M22 )*U( J, KMS+2 ) )
-                        U( J, KMS+1 ) = U( J, KMS+1 ) - REFSUM
-                        U( J, KMS+2 ) = U( J, KMS+2 ) -
-     $                                  REFSUM*DCONJG( V( 2, M22 ) )
-  100                CONTINUE
-                  ELSE IF( WANTZ ) THEN
-                     DO 110 J = ILOZ, IHIZ
-                        REFSUM = V( 1, M22 )*( Z( J, K+1 )+V( 2, M22 )*
-     $                           Z( J, K+2 ) )
-                        Z( J, K+1 ) = Z( J, K+1 ) - REFSUM
-                        Z( J, K+2 ) = Z( J, K+2 ) -
-     $                                REFSUM*DCONJG( V( 2, M22 ) )
-  110                CONTINUE
-                  END IF
-               END IF
-            END IF
-*
-*           ==== Vigilant deflation check ====
-*
-            MSTART = MTOP
-            IF( KRCOL+3*( MSTART-1 ).LT.KTOP )
-     $         MSTART = MSTART + 1
-            MEND = MBOT
-            IF( BMP22 )
-     $         MEND = MEND + 1
-            IF( KRCOL.EQ.KBOT-2 )
-     $         MEND = MEND + 1
-            DO 120 M = MSTART, MEND
-               K = MIN( KBOT-1, KRCOL+3*( M-1 ) )
+               REFSUM =  DCONJG( V( 1, M ) )*( H( K+1, K+1 )
+     $                  +DCONJG( V( 2, M ) )*H( K+2, K+1 )
+     $                  +DCONJG( V( 3, M ) )*H( K+3, K+1 ) )
+               H( K+1, K+1 ) = H( K+1, K+1 ) - REFSUM
+               H( K+2, K+1 ) = H( K+2, K+1 ) - REFSUM*V( 2, M )
+               H( K+3, K+1 ) = H( K+3, K+1 ) - REFSUM*V( 3, M )
 *
 *              ==== The following convergence test requires that
 *              .    the tradition small-compared-to-nearby-diagonals
@@ -32530,6 +32306,8 @@
 *              .    is zero (as done here) is traditional but probably
 *              .    unnecessary. ====
 *
+               IF( K.LT.KTOP)
+     $              CYCLE
                IF( H( K+1, K ).NE.ZERO ) THEN
                   TST1 = CABS1( H( K, K ) ) + CABS1( H( K+1, K+1 ) )
                   IF( TST1.EQ.RZERO ) THEN
@@ -32563,23 +32341,77 @@
      $                   MAX( SMLNUM, ULP*TST2 ) )H( K+1, K ) = ZERO
                   END IF
                END IF
-  120       CONTINUE
+   80       CONTINUE
 *
-*           ==== Fill in the last row of each bulge. ====
+*           ==== Multiply H by reflections from the left ====
 *
-            MEND = MIN( NBMPS, ( KBOT-KRCOL-1 ) / 3 )
-            DO 130 M = MTOP, MEND
-               K = KRCOL + 3*( M-1 )
-               REFSUM = V( 1, M )*V( 3, M )*H( K+4, K+3 )
-               H( K+4, K+1 ) = -REFSUM
-               H( K+4, K+2 ) = -REFSUM*DCONJG( V( 2, M ) )
-               H( K+4, K+3 ) = H( K+4, K+3 ) -
-     $                         REFSUM*DCONJG( V( 3, M ) )
-  130       CONTINUE
+            IF( ACCUM ) THEN
+               JBOT = MIN( NDCOL, KBOT )
+            ELSE IF( WANTT ) THEN
+               JBOT = N
+            ELSE
+               JBOT = KBOT
+            END IF
+*
+            DO 100 M = MBOT, MTOP, -1
+               K = KRCOL + 2*( M-1 )
+               DO 90 J = MAX( KTOP, KRCOL + 2*M ), JBOT
+                  REFSUM = DCONJG( V( 1, M ) )*
+     $                     ( H( K+1, J )+DCONJG( V( 2, M ) )*
+     $                     H( K+2, J )+DCONJG( V( 3, M ) )*H( K+3, J ) )
+                  H( K+1, J ) = H( K+1, J ) - REFSUM
+                  H( K+2, J ) = H( K+2, J ) - REFSUM*V( 2, M )
+                  H( K+3, J ) = H( K+3, J ) - REFSUM*V( 3, M )
+   90          CONTINUE
+  100       CONTINUE
+*
+*           ==== Accumulate orthogonal transformations. ====
+*
+            IF( ACCUM ) THEN
+*
+*              ==== Accumulate U. (If needed, update Z later
+*              .    with an efficient matrix-matrix
+*              .    multiply.) ====
+*
+               DO 120 M = MBOT, MTOP, -1
+                  K = KRCOL + 2*( M-1 )
+                  KMS = K - INCOL
+                  I2 = MAX( 1, KTOP-INCOL )
+                  I2 = MAX( I2, KMS-(KRCOL-INCOL)+1 )
+                  I4 = MIN( KDU, KRCOL + 2*( MBOT-1 ) - INCOL + 5 )
+                  DO 110 J = I2, I4
+                     REFSUM = V( 1, M )*( U( J, KMS+1 )+V( 2, M )*
+     $                        U( J, KMS+2 )+V( 3, M )*U( J, KMS+3 ) )
+                     U( J, KMS+1 ) = U( J, KMS+1 ) - REFSUM
+                     U( J, KMS+2 ) = U( J, KMS+2 ) -
+     $                               REFSUM*DCONJG( V( 2, M ) )
+                     U( J, KMS+3 ) = U( J, KMS+3 ) -
+     $                               REFSUM*DCONJG( V( 3, M ) )
+  110             CONTINUE
+  120          CONTINUE
+            ELSE IF( WANTZ ) THEN
+*
+*              ==== U is not accumulated, so update Z
+*              .    now by multiplying by reflections
+*              .    from the right. ====
+*
+               DO 140 M = MBOT, MTOP, -1
+                  K = KRCOL + 2*( M-1 )
+                  DO 130 J = ILOZ, IHIZ
+                     REFSUM = V( 1, M )*( Z( J, K+1 )+V( 2, M )*
+     $                        Z( J, K+2 )+V( 3, M )*Z( J, K+3 ) )
+                     Z( J, K+1 ) = Z( J, K+1 ) - REFSUM
+                     Z( J, K+2 ) = Z( J, K+2 ) -
+     $                             REFSUM*DCONJG( V( 2, M ) )
+                     Z( J, K+3 ) = Z( J, K+3 ) -
+     $                             REFSUM*DCONJG( V( 3, M ) )
+  130             CONTINUE
+  140          CONTINUE
+            END IF
 *
 *           ==== End of near-the-diagonal bulge chase. ====
 *
-  140    CONTINUE
+  145    CONTINUE
 *
 *        ==== Use U (if accumulated) to update far-from-diagonal
 *        .    entries in H.  If required, use U to update Z as
@@ -32593,220 +32425,45 @@
                JTOP = KTOP
                JBOT = KBOT
             END IF
-            IF( ( .NOT.BLK22 ) .OR. ( INCOL.LT.KTOP ) .OR.
-     $          ( NDCOL.GT.KBOT ) .OR. ( NS.LE.2 ) ) THEN
+            K1 = MAX( 1, KTOP-INCOL )
+            NU = ( KDU-MAX( 0, NDCOL-KBOT ) ) - K1 + 1
 *
-*              ==== Updates not exploiting the 2-by-2 block
-*              .    structure of U.  K1 and NU keep track of
-*              .    the location and size of U in the special
-*              .    cases of introducing bulges and chasing
-*              .    bulges off the bottom.  In these special
-*              .    cases and in case the number of shifts
-*              .    is NS = 2, there is no 2-by-2 block
-*              .    structure to exploit.  ====
+*           ==== Horizontal Multiply ====
 *
-               K1 = MAX( 1, KTOP-INCOL )
-               NU = ( KDU-MAX( 0, NDCOL-KBOT ) ) - K1 + 1
+            DO 150 JCOL = MIN( NDCOL, KBOT ) + 1, JBOT, NH
+               JLEN = MIN( NH, JBOT-JCOL+1 )
+               CALL ZGEMM( 'C', 'N', NU, JLEN, NU, ONE, U( K1, K1 ),
+     $                     LDU, H( INCOL+K1, JCOL ), LDH, ZERO, WH,
+     $                     LDWH )
+               CALL ZLACPY( 'ALL', NU, JLEN, WH, LDWH,
+     $                      H( INCOL+K1, JCOL ), LDH )
+  150       CONTINUE
 *
-*              ==== Horizontal Multiply ====
+*           ==== Vertical multiply ====
 *
-               DO 150 JCOL = MIN( NDCOL, KBOT ) + 1, JBOT, NH
-                  JLEN = MIN( NH, JBOT-JCOL+1 )
-                  CALL ZGEMM( 'C', 'N', NU, JLEN, NU, ONE, U( K1, K1 ),
-     $                        LDU, H( INCOL+K1, JCOL ), LDH, ZERO, WH,
-     $                        LDWH )
-                  CALL ZLACPY( 'ALL', NU, JLEN, WH, LDWH,
-     $                         H( INCOL+K1, JCOL ), LDH )
-  150          CONTINUE
+            DO 160 JROW = JTOP, MAX( KTOP, INCOL ) - 1, NV
+               JLEN = MIN( NV, MAX( KTOP, INCOL )-JROW )
+               CALL ZGEMM( 'N', 'N', JLEN, NU, NU, ONE,
+     $                     H( JROW, INCOL+K1 ), LDH, U( K1, K1 ),
+     $                     LDU, ZERO, WV, LDWV )
+               CALL ZLACPY( 'ALL', JLEN, NU, WV, LDWV,
+     $                      H( JROW, INCOL+K1 ), LDH )
+  160       CONTINUE
 *
-*              ==== Vertical multiply ====
+*           ==== Z multiply (also vertical) ====
 *
-               DO 160 JROW = JTOP, MAX( KTOP, INCOL ) - 1, NV
-                  JLEN = MIN( NV, MAX( KTOP, INCOL )-JROW )
+            IF( WANTZ ) THEN
+               DO 170 JROW = ILOZ, IHIZ, NV
+                  JLEN = MIN( NV, IHIZ-JROW+1 )
                   CALL ZGEMM( 'N', 'N', JLEN, NU, NU, ONE,
-     $                        H( JROW, INCOL+K1 ), LDH, U( K1, K1 ),
+     $                        Z( JROW, INCOL+K1 ), LDZ, U( K1, K1 ),
      $                        LDU, ZERO, WV, LDWV )
                   CALL ZLACPY( 'ALL', JLEN, NU, WV, LDWV,
-     $                         H( JROW, INCOL+K1 ), LDH )
-  160          CONTINUE
-*
-*              ==== Z multiply (also vertical) ====
-*
-               IF( WANTZ ) THEN
-                  DO 170 JROW = ILOZ, IHIZ, NV
-                     JLEN = MIN( NV, IHIZ-JROW+1 )
-                     CALL ZGEMM( 'N', 'N', JLEN, NU, NU, ONE,
-     $                           Z( JROW, INCOL+K1 ), LDZ, U( K1, K1 ),
-     $                           LDU, ZERO, WV, LDWV )
-                     CALL ZLACPY( 'ALL', JLEN, NU, WV, LDWV,
-     $                            Z( JROW, INCOL+K1 ), LDZ )
-  170             CONTINUE
-               END IF
-            ELSE
-*
-*              ==== Updates exploiting U's 2-by-2 block structure.
-*              .    (I2, I4, J2, J4 are the last rows and columns
-*              .    of the blocks.) ====
-*
-               I2 = ( KDU+1 ) / 2
-               I4 = KDU
-               J2 = I4 - I2
-               J4 = KDU
-*
-*              ==== KZS and KNZ deal with the band of zeros
-*              .    along the diagonal of one of the triangular
-*              .    blocks. ====
-*
-               KZS = ( J4-J2 ) - ( NS+1 )
-               KNZ = NS + 1
-*
-*              ==== Horizontal multiply ====
-*
-               DO 180 JCOL = MIN( NDCOL, KBOT ) + 1, JBOT, NH
-                  JLEN = MIN( NH, JBOT-JCOL+1 )
-*
-*                 ==== Copy bottom of H to top+KZS of scratch ====
-*                  (The first KZS rows get multiplied by zero.) ====
-*
-                  CALL ZLACPY( 'ALL', KNZ, JLEN, H( INCOL+1+J2, JCOL ),
-     $                         LDH, WH( KZS+1, 1 ), LDWH )
-*
-*                 ==== Multiply by U21**H ====
-*
-                  CALL ZLASET( 'ALL', KZS, JLEN, ZERO, ZERO, WH, LDWH )
-                  CALL ZTRMM( 'L', 'U', 'C', 'N', KNZ, JLEN, ONE,
-     $                        U( J2+1, 1+KZS ), LDU, WH( KZS+1, 1 ),
-     $                        LDWH )
-*
-*                 ==== Multiply top of H by U11**H ====
-*
-                  CALL ZGEMM( 'C', 'N', I2, JLEN, J2, ONE, U, LDU,
-     $                        H( INCOL+1, JCOL ), LDH, ONE, WH, LDWH )
-*
-*                 ==== Copy top of H to bottom of WH ====
-*
-                  CALL ZLACPY( 'ALL', J2, JLEN, H( INCOL+1, JCOL ), LDH,
-     $                         WH( I2+1, 1 ), LDWH )
-*
-*                 ==== Multiply by U21**H ====
-*
-                  CALL ZTRMM( 'L', 'L', 'C', 'N', J2, JLEN, ONE,
-     $                        U( 1, I2+1 ), LDU, WH( I2+1, 1 ), LDWH )
-*
-*                 ==== Multiply by U22 ====
-*
-                  CALL ZGEMM( 'C', 'N', I4-I2, JLEN, J4-J2, ONE,
-     $                        U( J2+1, I2+1 ), LDU,
-     $                        H( INCOL+1+J2, JCOL ), LDH, ONE,
-     $                        WH( I2+1, 1 ), LDWH )
-*
-*                 ==== Copy it back ====
-*
-                  CALL ZLACPY( 'ALL', KDU, JLEN, WH, LDWH,
-     $                         H( INCOL+1, JCOL ), LDH )
-  180          CONTINUE
-*
-*              ==== Vertical multiply ====
-*
-               DO 190 JROW = JTOP, MAX( INCOL, KTOP ) - 1, NV
-                  JLEN = MIN( NV, MAX( INCOL, KTOP )-JROW )
-*
-*                 ==== Copy right of H to scratch (the first KZS
-*                 .    columns get multiplied by zero) ====
-*
-                  CALL ZLACPY( 'ALL', JLEN, KNZ, H( JROW, INCOL+1+J2 ),
-     $                         LDH, WV( 1, 1+KZS ), LDWV )
-*
-*                 ==== Multiply by U21 ====
-*
-                  CALL ZLASET( 'ALL', JLEN, KZS, ZERO, ZERO, WV, LDWV )
-                  CALL ZTRMM( 'R', 'U', 'N', 'N', JLEN, KNZ, ONE,
-     $                        U( J2+1, 1+KZS ), LDU, WV( 1, 1+KZS ),
-     $                        LDWV )
-*
-*                 ==== Multiply by U11 ====
-*
-                  CALL ZGEMM( 'N', 'N', JLEN, I2, J2, ONE,
-     $                        H( JROW, INCOL+1 ), LDH, U, LDU, ONE, WV,
-     $                        LDWV )
-*
-*                 ==== Copy left of H to right of scratch ====
-*
-                  CALL ZLACPY( 'ALL', JLEN, J2, H( JROW, INCOL+1 ), LDH,
-     $                         WV( 1, 1+I2 ), LDWV )
-*
-*                 ==== Multiply by U21 ====
-*
-                  CALL ZTRMM( 'R', 'L', 'N', 'N', JLEN, I4-I2, ONE,
-     $                        U( 1, I2+1 ), LDU, WV( 1, 1+I2 ), LDWV )
-*
-*                 ==== Multiply by U22 ====
-*
-                  CALL ZGEMM( 'N', 'N', JLEN, I4-I2, J4-J2, ONE,
-     $                        H( JROW, INCOL+1+J2 ), LDH,
-     $                        U( J2+1, I2+1 ), LDU, ONE, WV( 1, 1+I2 ),
-     $                        LDWV )
-*
-*                 ==== Copy it back ====
-*
-                  CALL ZLACPY( 'ALL', JLEN, KDU, WV, LDWV,
-     $                         H( JROW, INCOL+1 ), LDH )
-  190          CONTINUE
-*
-*              ==== Multiply Z (also vertical) ====
-*
-               IF( WANTZ ) THEN
-                  DO 200 JROW = ILOZ, IHIZ, NV
-                     JLEN = MIN( NV, IHIZ-JROW+1 )
-*
-*                    ==== Copy right of Z to left of scratch (first
-*                    .     KZS columns get multiplied by zero) ====
-*
-                     CALL ZLACPY( 'ALL', JLEN, KNZ,
-     $                            Z( JROW, INCOL+1+J2 ), LDZ,
-     $                            WV( 1, 1+KZS ), LDWV )
-*
-*                    ==== Multiply by U12 ====
-*
-                     CALL ZLASET( 'ALL', JLEN, KZS, ZERO, ZERO, WV,
-     $                            LDWV )
-                     CALL ZTRMM( 'R', 'U', 'N', 'N', JLEN, KNZ, ONE,
-     $                           U( J2+1, 1+KZS ), LDU, WV( 1, 1+KZS ),
-     $                           LDWV )
-*
-*                    ==== Multiply by U11 ====
-*
-                     CALL ZGEMM( 'N', 'N', JLEN, I2, J2, ONE,
-     $                           Z( JROW, INCOL+1 ), LDZ, U, LDU, ONE,
-     $                           WV, LDWV )
-*
-*                    ==== Copy left of Z to right of scratch ====
-*
-                     CALL ZLACPY( 'ALL', JLEN, J2, Z( JROW, INCOL+1 ),
-     $                            LDZ, WV( 1, 1+I2 ), LDWV )
-*
-*                    ==== Multiply by U21 ====
-*
-                     CALL ZTRMM( 'R', 'L', 'N', 'N', JLEN, I4-I2, ONE,
-     $                           U( 1, I2+1 ), LDU, WV( 1, 1+I2 ),
-     $                           LDWV )
-*
-*                    ==== Multiply by U22 ====
-*
-                     CALL ZGEMM( 'N', 'N', JLEN, I4-I2, J4-J2, ONE,
-     $                           Z( JROW, INCOL+1+J2 ), LDZ,
-     $                           U( J2+1, I2+1 ), LDU, ONE,
-     $                           WV( 1, 1+I2 ), LDWV )
-*
-*                    ==== Copy the result back to Z ====
-*
-                     CALL ZLACPY( 'ALL', JLEN, KDU, WV, LDWV,
-     $                            Z( JROW, INCOL+1 ), LDZ )
-  200             CONTINUE
-               END IF
+     $                         Z( JROW, INCOL+K1 ), LDZ )
+  170          CONTINUE
             END IF
          END IF
-  210 CONTINUE
+  180 CONTINUE
 *
 *     ==== End of ZLAQR5 ====
 *
@@ -32920,17 +32577,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLARCM( M, N, A, LDA, B, LDB, C, LDC, RWORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            LDA, LDB, LDC, M, N
@@ -33119,17 +32773,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLARF( SIDE, M, N, V, INCV, TAU, C, LDC, WORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE
@@ -33391,8 +33042,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2013
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -33427,10 +33076,9 @@
       SUBROUTINE ZLARFB( SIDE, TRANS, DIRECT, STOREV, M, N, K, V, LDV,
      $                   T, LDT, C, LDC, WORK, LDWORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2013
 *
 *     .. Scalar Arguments ..
       CHARACTER          DIRECT, SIDE, STOREV, TRANS
@@ -34062,17 +33710,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2017
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLARFG( N, ALPHA, X, INCX, TAU )
 *
-*  -- LAPACK auxiliary routine (version 3.8.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            INCX, N
@@ -34296,8 +33941,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -34329,10 +33972,9 @@
 *  =====================================================================
       SUBROUTINE ZLARFT( DIRECT, STOREV, N, K, V, LDV, TAU, T, LDT )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          DIRECT, STOREV
@@ -34605,17 +34247,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLARFX( SIDE, M, N, V, TAU, C, LDC, WORK )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE
@@ -35191,256 +34830,6 @@
 *     End of ZLARFX
 *
       END
-*> \brief \b ZLARTG generates a plane rotation with real cosine and complex sine.
-*
-*  =========== DOCUMENTATION ===========
-*
-* Online html documentation available at
-*            http://www.netlib.org/lapack/explore-html/
-*
-*> \htmlonly
-*> Download ZLARTG + dependencies
-*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.tgz?format=tgz&filename=/lapack/lapack_routine/zlartg.f">
-*> [TGZ]</a>
-*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.zip?format=zip&filename=/lapack/lapack_routine/zlartg.f">
-*> [ZIP]</a>
-*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.txt?format=txt&filename=/lapack/lapack_routine/zlartg.f">
-*> [TXT]</a>
-*> \endhtmlonly
-*
-*  Definition:
-*  ===========
-*
-*       SUBROUTINE ZLARTG( F, G, CS, SN, R )
-*
-*       .. Scalar Arguments ..
-*       DOUBLE PRECISION   CS
-*       COMPLEX*16         F, G, R, SN
-*       ..
-*
-*
-*> \par Purpose:
-*  =============
-*>
-*> \verbatim
-*>
-*> ZLARTG generates a plane rotation so that
-*>
-*>    [  CS  SN  ]     [ F ]     [ R ]
-*>    [  __      ]  .  [   ]  =  [   ]   where CS**2 + |SN|**2 = 1.
-*>    [ -SN  CS  ]     [ G ]     [ 0 ]
-*>
-*> This is a faster version of the BLAS1 routine ZROTG, except for
-*> the following differences:
-*>    F and G are unchanged on return.
-*>    If G=0, then CS=1 and SN=0.
-*>    If F=0, then CS=0 and SN is chosen so that R is real.
-*> \endverbatim
-*
-*  Arguments:
-*  ==========
-*
-*> \param[in] F
-*> \verbatim
-*>          F is COMPLEX*16
-*>          The first component of vector to be rotated.
-*> \endverbatim
-*>
-*> \param[in] G
-*> \verbatim
-*>          G is COMPLEX*16
-*>          The second component of vector to be rotated.
-*> \endverbatim
-*>
-*> \param[out] CS
-*> \verbatim
-*>          CS is DOUBLE PRECISION
-*>          The cosine of the rotation.
-*> \endverbatim
-*>
-*> \param[out] SN
-*> \verbatim
-*>          SN is COMPLEX*16
-*>          The sine of the rotation.
-*> \endverbatim
-*>
-*> \param[out] R
-*> \verbatim
-*>          R is COMPLEX*16
-*>          The nonzero component of the rotated vector.
-*> \endverbatim
-*
-*  Authors:
-*  ========
-*
-*> \author Univ. of Tennessee
-*> \author Univ. of California Berkeley
-*> \author Univ. of Colorado Denver
-*> \author NAG Ltd.
-*
-*> \date December 2016
-*
-*> \ingroup complex16OTHERauxiliary
-*
-*> \par Further Details:
-*  =====================
-*>
-*> \verbatim
-*>
-*>  3-5-96 - Modified with a new algorithm by W. Kahan and J. Demmel
-*>
-*>  This version has a few statements commented out for thread safety
-*>  (machine parameters are computed on each entry). 10 feb 03, SJH.
-*> \endverbatim
-*>
-*  =====================================================================
-      SUBROUTINE ZLARTG( F, G, CS, SN, R )
-*
-*  -- LAPACK auxiliary routine (version 3.7.0) --
-*  -- LAPACK is a software package provided by Univ. of Tennessee,    --
-*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
-*
-*     .. Scalar Arguments ..
-      DOUBLE PRECISION   CS
-      COMPLEX*16         F, G, R, SN
-*     ..
-*
-*  =====================================================================
-*
-*     .. Parameters ..
-      DOUBLE PRECISION   TWO, ONE, ZERO
-      PARAMETER          ( TWO = 2.0D+0, ONE = 1.0D+0, ZERO = 0.0D+0 )
-      COMPLEX*16         CZERO
-      PARAMETER          ( CZERO = ( 0.0D+0, 0.0D+0 ) )
-*     ..
-*     .. Local Scalars ..
-*     LOGICAL            FIRST
-      INTEGER            COUNT, I
-      DOUBLE PRECISION   D, DI, DR, EPS, F2, F2S, G2, G2S, SAFMIN,
-     $                   SAFMN2, SAFMX2, SCALE
-      COMPLEX*16         FF, FS, GS
-*     ..
-*     .. External Functions ..
-      DOUBLE PRECISION   DLAMCH, DLAPY2
-      LOGICAL            DISNAN
-      EXTERNAL           DLAMCH, DLAPY2, DISNAN
-*     ..
-*     .. Intrinsic Functions ..
-      INTRINSIC          ABS, DBLE, DCMPLX, DCONJG, DIMAG, INT, LOG,
-     $                   MAX, SQRT
-*     ..
-*     .. Statement Functions ..
-      DOUBLE PRECISION   ABS1, ABSSQ
-*     ..
-*     .. Statement Function definitions ..
-      ABS1( FF ) = MAX( ABS( DBLE( FF ) ), ABS( DIMAG( FF ) ) )
-      ABSSQ( FF ) = DBLE( FF )**2 + DIMAG( FF )**2
-*     ..
-*     .. Executable Statements ..
-*
-      SAFMIN = DLAMCH( 'S' )
-      EPS = DLAMCH( 'E' )
-      SAFMN2 = DLAMCH( 'B' )**INT( LOG( SAFMIN / EPS ) /
-     $         LOG( DLAMCH( 'B' ) ) / TWO )
-      SAFMX2 = ONE / SAFMN2
-      SCALE = MAX( ABS1( F ), ABS1( G ) )
-      FS = F
-      GS = G
-      COUNT = 0
-      IF( SCALE.GE.SAFMX2 ) THEN
-   10    CONTINUE
-         COUNT = COUNT + 1
-         FS = FS*SAFMN2
-         GS = GS*SAFMN2
-         SCALE = SCALE*SAFMN2
-         IF( SCALE.GE.SAFMX2 )
-     $      GO TO 10
-      ELSE IF( SCALE.LE.SAFMN2 ) THEN
-         IF( G.EQ.CZERO.OR.DISNAN( ABS( G ) ) ) THEN
-            CS = ONE
-            SN = CZERO
-            R = F
-            RETURN
-         END IF
-   20    CONTINUE
-         COUNT = COUNT - 1
-         FS = FS*SAFMX2
-         GS = GS*SAFMX2
-         SCALE = SCALE*SAFMX2
-         IF( SCALE.LE.SAFMN2 )
-     $      GO TO 20
-      END IF
-      F2 = ABSSQ( FS )
-      G2 = ABSSQ( GS )
-      IF( F2.LE.MAX( G2, ONE )*SAFMIN ) THEN
-*
-*        This is a rare case: F is very small.
-*
-         IF( F.EQ.CZERO ) THEN
-            CS = ZERO
-            R = DLAPY2( DBLE( G ), DIMAG( G ) )
-*           Do complex/real division explicitly with two real divisions
-            D = DLAPY2( DBLE( GS ), DIMAG( GS ) )
-            SN = DCMPLX( DBLE( GS ) / D, -DIMAG( GS ) / D )
-            RETURN
-         END IF
-         F2S = DLAPY2( DBLE( FS ), DIMAG( FS ) )
-*        G2 and G2S are accurate
-*        G2 is at least SAFMIN, and G2S is at least SAFMN2
-         G2S = SQRT( G2 )
-*        Error in CS from underflow in F2S is at most
-*        UNFL / SAFMN2 .lt. sqrt(UNFL*EPS) .lt. EPS
-*        If MAX(G2,ONE)=G2, then F2 .lt. G2*SAFMIN,
-*        and so CS .lt. sqrt(SAFMIN)
-*        If MAX(G2,ONE)=ONE, then F2 .lt. SAFMIN
-*        and so CS .lt. sqrt(SAFMIN)/SAFMN2 = sqrt(EPS)
-*        Therefore, CS = F2S/G2S / sqrt( 1 + (F2S/G2S)**2 ) = F2S/G2S
-         CS = F2S / G2S
-*        Make sure abs(FF) = 1
-*        Do complex/real division explicitly with 2 real divisions
-         IF( ABS1( F ).GT.ONE ) THEN
-            D = DLAPY2( DBLE( F ), DIMAG( F ) )
-            FF = DCMPLX( DBLE( F ) / D, DIMAG( F ) / D )
-         ELSE
-            DR = SAFMX2*DBLE( F )
-            DI = SAFMX2*DIMAG( F )
-            D = DLAPY2( DR, DI )
-            FF = DCMPLX( DR / D, DI / D )
-         END IF
-         SN = FF*DCMPLX( DBLE( GS ) / G2S, -DIMAG( GS ) / G2S )
-         R = CS*F + SN*G
-      ELSE
-*
-*        This is the most common case.
-*        Neither F2 nor F2/G2 are less than SAFMIN
-*        F2S cannot overflow, and it is accurate
-*
-         F2S = SQRT( ONE+G2 / F2 )
-*        Do the F2S(real)*FS(complex) multiply with two real multiplies
-         R = DCMPLX( F2S*DBLE( FS ), F2S*DIMAG( FS ) )
-         CS = ONE / F2S
-         D = F2 + G2
-*        Do complex/real division explicitly with two real divisions
-         SN = DCMPLX( DBLE( R ) / D, DIMAG( R ) / D )
-         SN = SN*DCONJG( GS )
-         IF( COUNT.NE.0 ) THEN
-            IF( COUNT.GT.0 ) THEN
-               DO 30 I = 1, COUNT
-                  R = R*SAFMX2
-   30          CONTINUE
-            ELSE
-               DO 40 I = 1, -COUNT
-                  R = R*SAFMN2
-   40          CONTINUE
-            END IF
-         END IF
-      END IF
-      RETURN
-*
-*     End of ZLARTG
-*
-      END
 *> \brief \b ZLASCL multiplies a general rectangular matrix by a real scalar defined as cto/cfrom.
 *
 *  =========== DOCUMENTATION ===========
@@ -35579,17 +34968,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLASCL( TYPE, KL, KU, CFROM, CTO, M, N, A, LDA, INFO )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          TYPE
@@ -35910,17 +35296,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLASET( UPLO, M, N, ALPHA, BETA, A, LDA )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -36188,17 +35571,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLASR( SIDE, PIVOT, DIRECT, M, N, C, S, A, LDA )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          DIRECT, PIVOT, SIDE
@@ -36432,174 +35812,6 @@
 *     End of ZLASR
 *
       END
-*> \brief \b ZLASSQ updates a sum of squares represented in scaled form.
-*
-*  =========== DOCUMENTATION ===========
-*
-* Online html documentation available at
-*            http://www.netlib.org/lapack/explore-html/
-*
-*> \htmlonly
-*> Download ZLASSQ + dependencies
-*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.tgz?format=tgz&filename=/lapack/lapack_routine/zlassq.f">
-*> [TGZ]</a>
-*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.zip?format=zip&filename=/lapack/lapack_routine/zlassq.f">
-*> [ZIP]</a>
-*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.txt?format=txt&filename=/lapack/lapack_routine/zlassq.f">
-*> [TXT]</a>
-*> \endhtmlonly
-*
-*  Definition:
-*  ===========
-*
-*       SUBROUTINE ZLASSQ( N, X, INCX, SCALE, SUMSQ )
-*
-*       .. Scalar Arguments ..
-*       INTEGER            INCX, N
-*       DOUBLE PRECISION   SCALE, SUMSQ
-*       ..
-*       .. Array Arguments ..
-*       COMPLEX*16         X( * )
-*       ..
-*
-*
-*> \par Purpose:
-*  =============
-*>
-*> \verbatim
-*>
-*> ZLASSQ returns the values scl and ssq such that
-*>
-*>    ( scl**2 )*ssq = x( 1 )**2 +...+ x( n )**2 + ( scale**2 )*sumsq,
-*>
-*> where x( i ) = abs( X( 1 + ( i - 1 )*INCX ) ). The value of sumsq is
-*> assumed to be at least unity and the value of ssq will then satisfy
-*>
-*>    1.0 <= ssq <= ( sumsq + 2*n ).
-*>
-*> scale is assumed to be non-negative and scl returns the value
-*>
-*>    scl = max( scale, abs( real( x( i ) ) ), abs( aimag( x( i ) ) ) ),
-*>           i
-*>
-*> scale and sumsq must be supplied in SCALE and SUMSQ respectively.
-*> SCALE and SUMSQ are overwritten by scl and ssq respectively.
-*>
-*> The routine makes only one pass through the vector X.
-*> \endverbatim
-*
-*  Arguments:
-*  ==========
-*
-*> \param[in] N
-*> \verbatim
-*>          N is INTEGER
-*>          The number of elements to be used from the vector X.
-*> \endverbatim
-*>
-*> \param[in] X
-*> \verbatim
-*>          X is COMPLEX*16 array, dimension (1+(N-1)*INCX)
-*>          The vector x as described above.
-*>             x( i )  = X( 1 + ( i - 1 )*INCX ), 1 <= i <= n.
-*> \endverbatim
-*>
-*> \param[in] INCX
-*> \verbatim
-*>          INCX is INTEGER
-*>          The increment between successive values of the vector X.
-*>          INCX > 0.
-*> \endverbatim
-*>
-*> \param[in,out] SCALE
-*> \verbatim
-*>          SCALE is DOUBLE PRECISION
-*>          On entry, the value  scale  in the equation above.
-*>          On exit, SCALE is overwritten with the value  scl .
-*> \endverbatim
-*>
-*> \param[in,out] SUMSQ
-*> \verbatim
-*>          SUMSQ is DOUBLE PRECISION
-*>          On entry, the value  sumsq  in the equation above.
-*>          On exit, SUMSQ is overwritten with the value  ssq .
-*> \endverbatim
-*
-*  Authors:
-*  ========
-*
-*> \author Univ. of Tennessee
-*> \author Univ. of California Berkeley
-*> \author Univ. of Colorado Denver
-*> \author NAG Ltd.
-*
-*> \date December 2016
-*
-*> \ingroup complex16OTHERauxiliary
-*
-*  =====================================================================
-      SUBROUTINE ZLASSQ( N, X, INCX, SCALE, SUMSQ )
-*
-*  -- LAPACK auxiliary routine (version 3.7.0) --
-*  -- LAPACK is a software package provided by Univ. of Tennessee,    --
-*  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
-*
-*     .. Scalar Arguments ..
-      INTEGER            INCX, N
-      DOUBLE PRECISION   SCALE, SUMSQ
-*     ..
-*     .. Array Arguments ..
-      COMPLEX*16         X( * )
-*     ..
-*
-* =====================================================================
-*
-*     .. Parameters ..
-      DOUBLE PRECISION   ZERO
-      PARAMETER          ( ZERO = 0.0D+0 )
-*     ..
-*     .. Local Scalars ..
-      INTEGER            IX
-      DOUBLE PRECISION   TEMP1
-*     ..
-*     .. External Functions ..
-      LOGICAL            DISNAN
-      EXTERNAL           DISNAN
-*     ..
-*     .. Intrinsic Functions ..
-      INTRINSIC          ABS, DBLE, DIMAG
-*     ..
-*     .. Executable Statements ..
-*
-      IF( N.GT.0 ) THEN
-         DO 10 IX = 1, 1 + ( N-1 )*INCX, INCX
-            TEMP1 = ABS( DBLE( X( IX ) ) )
-            IF( TEMP1.GT.ZERO.OR.DISNAN( TEMP1 ) ) THEN
-               IF( SCALE.LT.TEMP1 ) THEN
-                  SUMSQ = 1 + SUMSQ*( SCALE / TEMP1 )**2
-                  SCALE = TEMP1
-               ELSE
-                  SUMSQ = SUMSQ + ( TEMP1 / SCALE )**2
-               END IF
-            END IF
-            TEMP1 = ABS( DIMAG( X( IX ) ) )
-            IF( TEMP1.GT.ZERO.OR.DISNAN( TEMP1 ) ) THEN
-               IF( SCALE.LT.TEMP1 ) THEN
-                  SUMSQ = 1 + SUMSQ*( SCALE / TEMP1 )**2
-                  SCALE = TEMP1
-               ELSE
-                  SUMSQ = SUMSQ + ( TEMP1 / SCALE )**2
-               END IF
-            END IF
-   10    CONTINUE
-      END IF
-*
-      RETURN
-*
-*     End of ZLASSQ
-*
-      END
 *> \brief \b ZLASWP performs a series of row interchanges on a general rectangular matrix.
 *
 *  =========== DOCUMENTATION ===========
@@ -36701,8 +35913,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -36717,10 +35927,9 @@
 *  =====================================================================
       SUBROUTINE ZLASWP( N, A, LDA, K1, K2, IPIV, INCX )
 *
-*  -- LAPACK auxiliary routine (version 3.7.1) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       INTEGER            INCX, K1, K2, LDA, N
@@ -36955,8 +36164,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2013
-*
 *> \ingroup complex16SYcomputational
 *
 *> \par Contributors:
@@ -36972,10 +36179,9 @@
 *  =====================================================================
       SUBROUTINE ZLASYF( UPLO, N, NB, KB, A, LDA, IPIV, W, LDW, INFO )
 *
-*  -- LAPACK computational routine (version 3.5.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2013
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -37759,8 +36965,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -37794,10 +36998,9 @@
       SUBROUTINE ZLATDF( IJOB, N, Z, LDZ, RHS, RDSUM, RDSCAL, IPIV,
      $                   JPIV )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IJOB, LDZ, N
@@ -38088,8 +37291,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -38147,10 +37348,9 @@
 *  =====================================================================
       SUBROUTINE ZLATRD( UPLO, N, NB, A, LDA, E, TAU, W, LDW )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -38219,7 +37419,7 @@
 *
                ALPHA = A( I-1, I )
                CALL ZLARFG( I-1, ALPHA, A( 1, I ), 1, TAU( I-1 ) )
-               E( I-1 ) = ALPHA
+               E( I-1 ) = DBLE( ALPHA )
                A( I-1, I ) = ONE
 *
 *              Compute W(1:i-1,i)
@@ -38273,7 +37473,7 @@
                ALPHA = A( I+1, I )
                CALL ZLARFG( N-I, ALPHA, A( MIN( I+2, N ), I ), 1,
      $                      TAU( I ) )
-               E( I ) = ALPHA
+               E( I ) = DBLE( ALPHA )
                A( I+1, I ) = ONE
 *
 *              Compute W(i+1:n,i)
@@ -38465,8 +37665,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2017
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *> \par Further Details:
@@ -38545,10 +37743,9 @@
       SUBROUTINE ZLATRS( UPLO, TRANS, DIAG, NORMIN, N, A, LDA, X, SCALE,
      $                   CNORM, INFO )
 *
-*  -- LAPACK auxiliary routine (version 3.8.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2017
 *
 *     .. Scalar Arguments ..
       CHARACTER          DIAG, NORMIN, TRANS, UPLO
@@ -39367,17 +38564,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLAUU2( UPLO, N, A, LDA, INFO )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -39437,7 +38631,7 @@
 *        Compute the product U * U**H.
 *
          DO 10 I = 1, N
-            AII = A( I, I )
+            AII = DBLE( A( I, I ) )
             IF( I.LT.N ) THEN
                A( I, I ) = AII*AII + DBLE( ZDOTC( N-I, A( I, I+1 ), LDA,
      $                     A( I, I+1 ), LDA ) )
@@ -39456,7 +38650,7 @@
 *        Compute the product L**H * L.
 *
          DO 20 I = 1, N
-            AII = A( I, I )
+            AII = DBLE( A( I, I ) )
             IF( I.LT.N ) THEN
                A( I, I ) = AII*AII + DBLE( ZDOTC( N-I, A( I+1, I ), 1,
      $                     A( I+1, I ), 1 ) )
@@ -39573,17 +38767,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZLAUUM( UPLO, N, A, LDA, INFO )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -39803,17 +38994,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16POcomputational
 *
 *  =====================================================================
       SUBROUTINE ZPOTF2( UPLO, N, A, LDA, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -39878,8 +39066,8 @@
 *
 *           Compute U(J,J) and test for non-positive-definiteness.
 *
-            AJJ = DBLE( A( J, J ) ) - ZDOTC( J-1, A( 1, J ), 1,
-     $            A( 1, J ), 1 )
+            AJJ = DBLE( A( J, J ) ) - DBLE( ZDOTC( J-1, A( 1, J ), 1,
+     $            A( 1, J ), 1 ) )
             IF( AJJ.LE.ZERO.OR.DISNAN( AJJ ) ) THEN
                A( J, J ) = AJJ
                GO TO 30
@@ -39905,8 +39093,8 @@
 *
 *           Compute L(J,J) and test for non-positive-definiteness.
 *
-            AJJ = DBLE( A( J, J ) ) - ZDOTC( J-1, A( J, 1 ), LDA,
-     $            A( J, 1 ), LDA )
+            AJJ = DBLE( A( J, J ) ) - DBLE( ZDOTC( J-1, A( J, 1 ), LDA,
+     $            A( J, 1 ), LDA ) )
             IF( AJJ.LE.ZERO.OR.DISNAN( AJJ ) ) THEN
                A( J, J ) = AJJ
                GO TO 30
@@ -40038,17 +39226,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16POcomputational
 *
 *  =====================================================================
       SUBROUTINE ZPOTRF( UPLO, N, A, LDA, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -40286,17 +39471,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16POcomputational
 *
 *  =====================================================================
       RECURSIVE SUBROUTINE ZPOTRF2( UPLO, N, A, LDA, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -40516,17 +39698,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16POcomputational
 *
 *  =====================================================================
       SUBROUTINE ZPOTRI( UPLO, N, A, LDA, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -40645,7 +39824,7 @@
 *> \param[in] INCX
 *> \verbatim
 *>          INCX is INTEGER
-*>          The increment between successive values of CY.  INCX <> 0.
+*>          The increment between successive values of CX.  INCX <> 0.
 *> \endverbatim
 *>
 *> \param[in,out] CY
@@ -40683,17 +39862,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZROT( N, CX, INCX, CY, INCY, C, S )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INCX, INCY, N
@@ -40947,8 +40123,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Contributors:
@@ -40961,10 +40135,9 @@
       SUBROUTINE ZSTEDC( COMPZ, N, D, E, Z, LDZ, WORK, LWORK, RWORK,
      $                   LRWORK, IWORK, LIWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.1) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       CHARACTER          COMPZ
@@ -41360,17 +40533,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZSTEQR( COMPZ, N, D, E, Z, LDZ, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          COMPZ
@@ -41961,17 +41131,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16SYauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZSYMV( UPLO, N, ALPHA, A, LDA, X, INCX, BETA, Y, INCY )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -42282,17 +41449,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16SYauxiliary
 *
 *  =====================================================================
       SUBROUTINE ZSYR( UPLO, N, ALPHA, X, INCX, A, LDA )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -42549,8 +41713,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16SYcomputational
 *
 *> \par Further Details:
@@ -42613,10 +41775,9 @@
 *  =====================================================================
       SUBROUTINE ZSYTF2( UPLO, N, A, LDA, IPIV, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -43168,8 +42329,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16SYcomputational
 *
 *> \par Further Details:
@@ -43215,10 +42374,9 @@
 *  =====================================================================
       SUBROUTINE ZSYTRF( UPLO, N, A, LDA, IPIV, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -43502,17 +42660,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16SYcomputational
 *
 *  =====================================================================
       SUBROUTINE ZSYTRI( UPLO, N, A, LDA, IPIV, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -43989,18 +43144,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16GEcomputational
 *
 *  =====================================================================
       SUBROUTINE ZTGEVC( SIDE, HOWMNY, SELECT, N, S, LDS, P, LDP, VL,
      $                   LDVL, VR, LDVR, MM, M, WORK, RWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          HOWMNY, SIDE
@@ -44668,8 +43820,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16GEauxiliary
 *
 *> \par Further Details:
@@ -44705,10 +43855,9 @@
       SUBROUTINE ZTGEX2( WANTQ, WANTZ, N, A, LDA, B, LDB, Q, LDQ, Z,
      $                   LDZ, J1, INFO )
 *
-*  -- LAPACK auxiliary routine (version 3.7.1) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       LOGICAL            WANTQ, WANTZ
@@ -44733,10 +43882,10 @@
       PARAMETER          ( WANDS = .TRUE. )
 *     ..
 *     .. Local Scalars ..
-      LOGICAL            DTRONG, WEAK
+      LOGICAL            STRONG, WEAK
       INTEGER            I, M
-      DOUBLE PRECISION   CQ, CZ, EPS, SA, SB, SCALE, SMLNUM, SS, SUM,
-     $                   THRESH, WS
+      DOUBLE PRECISION   CQ, CZ, EPS, SA, SB, SCALE, SMLNUM, SUM,
+     $                   THRESHA, THRESHB
       COMPLEX*16         CDUM, F, G, SQ, SZ
 *     ..
 *     .. Local Arrays ..
@@ -44763,7 +43912,7 @@
 *
       M = LDST
       WEAK = .FALSE.
-      DTRONG = .FALSE.
+      STRONG = .FALSE.
 *
 *     Make a local copy of selected block in (A, B)
 *
@@ -44778,8 +43927,12 @@
       SUM = DBLE( CONE )
       CALL ZLACPY( 'Full', M, M, S, LDST, WORK, M )
       CALL ZLACPY( 'Full', M, M, T, LDST, WORK( M*M+1 ), M )
-      CALL ZLASSQ( 2*M*M, WORK, 1, SCALE, SUM )
+      CALL ZLASSQ( M*M, WORK, 1, SCALE, SUM )
       SA = SCALE*SQRT( SUM )
+      SCALE = DBLE( CZERO )
+      SUM = DBLE( CONE )
+      CALL ZLASSQ( M*M, WORK(M*M+1), 1, SCALE, SUM )
+      SB = SCALE*SQRT( SUM )
 *
 *     THRES has been changed from
 *        THRESH = MAX( TEN*EPS*SA, SMLNUM )
@@ -44789,15 +43942,16 @@
 *     "Bug" reported by Ondra Kamenik, confirmed by Julie Langou, fixed by
 *     Jim Demmel and Guillaume Revy. See forum post 1783.
 *
-      THRESH = MAX( TWENTY*EPS*SA, SMLNUM )
+      THRESHA = MAX( TWENTY*EPS*SA, SMLNUM )
+      THRESHB = MAX( TWENTY*EPS*SB, SMLNUM )
 *
 *     Compute unitary QL and RQ that swap 1-by-1 and 1-by-1 blocks
 *     using Givens rotations and perform the swap tentatively.
 *
       F = S( 2, 2 )*T( 1, 1 ) - T( 2, 2 )*S( 1, 1 )
       G = S( 2, 2 )*T( 1, 2 ) - T( 2, 2 )*S( 1, 2 )
-      SA = ABS( S( 2, 2 ) )
-      SB = ABS( T( 2, 2 ) )
+      SA = ABS( S( 2, 2 ) ) * ABS( T( 1, 1 ) )
+      SB = ABS( S( 1, 1 ) ) * ABS( T( 2, 2 ) )
       CALL ZLARTG( G, F, CZ, SZ, CDUM )
       SZ = -SZ
       CALL ZROT( 2, S( 1, 1 ), 1, S( 1, 2 ), 1, CZ, DCONJG( SZ ) )
@@ -44810,17 +43964,20 @@
       CALL ZROT( 2, S( 1, 1 ), LDST, S( 2, 1 ), LDST, CQ, SQ )
       CALL ZROT( 2, T( 1, 1 ), LDST, T( 2, 1 ), LDST, CQ, SQ )
 *
-*     Weak stability test: |S21| + |T21| <= O(EPS F-norm((S, T)))
+*     Weak stability test: |S21| <= O(EPS F-norm((A)))
+*                          and  |T21| <= O(EPS F-norm((B)))
 *
-      WS = ABS( S( 2, 1 ) ) + ABS( T( 2, 1 ) )
-      WEAK = WS.LE.THRESH
+      WEAK = ABS( S( 2, 1 ) ).LE.THRESHA .AND. 
+     $ ABS( T( 2, 1 ) ).LE.THRESHB
       IF( .NOT.WEAK )
      $   GO TO 20
 *
       IF( WANDS ) THEN
 *
 *        Strong stability test:
-*           F-norm((A-QL**H*S*QR, B-QL**H*T*QR)) <= O(EPS*F-norm((A, B)))
+*           F-norm((A-QL**H*S*QR)) <= O(EPS*F-norm((A)))
+*           and
+*           F-norm((B-QL**H*T*QR)) <= O(EPS*F-norm((B)))
 *
          CALL ZLACPY( 'Full', M, M, S, LDST, WORK, M )
          CALL ZLACPY( 'Full', M, M, T, LDST, WORK( M*M+1 ), M )
@@ -44836,10 +43993,14 @@
    10    CONTINUE
          SCALE = DBLE( CZERO )
          SUM = DBLE( CONE )
-         CALL ZLASSQ( 2*M*M, WORK, 1, SCALE, SUM )
-         SS = SCALE*SQRT( SUM )
-         DTRONG = SS.LE.THRESH
-         IF( .NOT.DTRONG )
+         CALL ZLASSQ( M*M, WORK, 1, SCALE, SUM )
+         SA = SCALE*SQRT( SUM )
+         SCALE = DBLE( CZERO )
+         SUM = DBLE( CONE )
+         CALL ZLASSQ( M*M, WORK(M*M+1), 1, SCALE, SUM )
+         SB = SCALE*SQRT( SUM )
+         STRONG = SA.LE.THRESHA .AND. SB.LE.THRESHB
+         IF( .NOT.STRONG )
      $      GO TO 20
       END IF
 *
@@ -45045,8 +44206,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2017
-*
 *> \ingroup complex16GEcomputational
 *
 *> \par Contributors:
@@ -45082,10 +44241,9 @@
       SUBROUTINE ZTGEXC( WANTQ, WANTZ, N, A, LDA, B, LDB, Q, LDQ, Z,
      $                   LDZ, IFST, ILST, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.1) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2017
 *
 *     .. Scalar Arguments ..
       LOGICAL            WANTQ, WANTZ
@@ -45472,8 +44630,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date June 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Further Details:
@@ -45615,10 +44771,9 @@
      $                   ALPHA, BETA, Q, LDQ, Z, LDZ, M, PL, PR, DIF,
      $                   WORK, LWORK, IWORK, LIWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.1) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     June 2016
 *
 *     .. Scalar Arguments ..
       LOGICAL            WANTQ, WANTZ
@@ -46213,8 +45368,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16SYauxiliary
 *
 *> \par Contributors:
@@ -46228,10 +45381,9 @@
      $                   LDD, E, LDE, F, LDF, SCALE, RDSUM, RDSCAL,
      $                   INFO )
 *
-*  -- LAPACK auxiliary routine (version 3.7.0) --
+*  -- LAPACK auxiliary routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          TRANS
@@ -46658,7 +45810,7 @@
 *>          If 0 < SCALE < 1, C and F hold the solutions R and L, resp.,
 *>          to a slightly perturbed system but the input matrices A, B,
 *>          D and E have not been changed. If SCALE = 0, R and L will
-*>          hold the solutions to the homogenious system with C = F = 0.
+*>          hold the solutions to the homogeneous system with C = F = 0.
 *> \endverbatim
 *>
 *> \param[out] WORK
@@ -46701,8 +45853,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16SYcomputational
 *
 *> \par Contributors:
@@ -46736,10 +45886,9 @@
      $                   LDD, E, LDE, F, LDF, SCALE, DIF, WORK, LWORK,
      $                   IWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          TRANS
@@ -47267,18 +46416,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZTRCON( NORM, UPLO, DIAG, N, A, LDA, RCOND, WORK,
      $                   RWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          DIAG, NORM, UPLO
@@ -47617,8 +46763,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2017
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Further Details:
@@ -47639,10 +46783,9 @@
       SUBROUTINE ZTREVC( SIDE, HOWMNY, SELECT, N, T, LDT, VL, LDVL, VR,
      $                   LDVR, MM, M, WORK, RWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.8.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2017
 *
 *     .. Scalar Arguments ..
       CHARACTER          HOWMNY, SIDE
@@ -48129,10 +47272,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date November 2017
-*
-*  @precisions fortran z -> c
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Further Details:
@@ -48154,10 +47293,9 @@
      $                    LDVR, MM, M, WORK, LWORK, RWORK, LRWORK, INFO)
       IMPLICIT NONE
 *
-*  -- LAPACK computational routine (version 3.8.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     November 2017
 *
 *     .. Scalar Arguments ..
       CHARACTER          HOWMNY, SIDE
@@ -48198,13 +47336,13 @@
      $                   ZGEMM, DLABAD, ZLASET, ZLACPY
 *     ..
 *     .. Intrinsic Functions ..
-      INTRINSIC          ABS, DBLE, DCMPLX, CONJG, AIMAG, MAX
+      INTRINSIC          ABS, DBLE, DCMPLX, CONJG, DIMAG, MAX
 *     ..
 *     .. Statement Functions ..
       DOUBLE PRECISION   CABS1
 *     ..
 *     .. Statement Function definitions ..
-      CABS1( CDUM ) = ABS( DBLE( CDUM ) ) + ABS( AIMAG( CDUM ) )
+      CABS1( CDUM ) = ABS( DBLE( CDUM ) ) + ABS( DIMAG( CDUM ) )
 *     ..
 *     .. Executable Statements ..
 *
@@ -48657,17 +47795,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZTREXC( COMPQ, N, T, LDT, Q, LDQ, IFST, ILST, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          COMPQ
@@ -48961,8 +48096,6 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *> \par Further Details:
@@ -49043,10 +48176,9 @@
       SUBROUTINE ZTRSEN( JOB, COMPQ, SELECT, N, T, LDT, Q, LDQ, W, M, S,
      $                   SEP, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          COMPQ, JOB
@@ -49384,18 +48516,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16SYcomputational
 *
 *  =====================================================================
       SUBROUTINE ZTRSYL( TRANA, TRANB, ISGN, M, N, A, LDA, B, LDB, C,
      $                   LDC, SCALE, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          TRANA, TRANB
@@ -49792,17 +48921,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZTRTI2( UPLO, DIAG, N, A, LDA, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          DIAG, UPLO
@@ -50003,17 +49129,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZTRTRI( UPLO, DIAG, N, A, LDA, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          DIAG, UPLO
@@ -50276,18 +49399,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZTRTRS( UPLO, TRANS, DIAG, N, NRHS, A, LDA, B, LDB,
      $                   INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          DIAG, TRANS, UPLO
@@ -50478,17 +49598,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNG2L( M, N, K, A, LDA, TAU, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, K, LDA, M, N
@@ -50677,17 +49794,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNG2R( M, N, K, A, LDA, TAU, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, K, LDA, M, N
@@ -50921,17 +50035,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date April 2012
-*
 *> \ingroup complex16GBcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNGBR( VECT, M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     April 2012
 *
 *     .. Scalar Arguments ..
       CHARACTER          VECT
@@ -50993,8 +50104,8 @@
                CALL ZUNGQR( M, N, K, A, LDA, TAU, WORK, -1, IINFO )
             ELSE
                IF( M.GT.1 ) THEN
-                  CALL ZUNGQR( M-1, M-1, M-1, A( 2, 2 ), LDA, TAU, WORK,
-     $                         -1, IINFO )
+                  CALL ZUNGQR( M-1, M-1, M-1, A, LDA, TAU, WORK, -1,
+     $                         IINFO )
                END IF
             END IF
          ELSE
@@ -51002,12 +50113,12 @@
                CALL ZUNGLQ( M, N, K, A, LDA, TAU, WORK, -1, IINFO )
             ELSE
                IF( N.GT.1 ) THEN
-                  CALL ZUNGLQ( N-1, N-1, N-1, A( 2, 2 ), LDA, TAU, WORK,
-     $                         -1, IINFO )
+                  CALL ZUNGLQ( N-1, N-1, N-1, A, LDA, TAU, WORK, -1,
+     $                         IINFO )
                END IF
             END IF
          END IF
-         LWKOPT = WORK( 1 )
+         LWKOPT = DBLE( WORK( 1 ) )
          LWKOPT = MAX (LWKOPT, MN)
       END IF
 *
@@ -51228,17 +50339,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNGHR( N, ILO, IHI, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            IHI, ILO, INFO, LDA, LWORK, N
@@ -51456,17 +50564,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNGL2( M, N, K, A, LDA, TAU, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, K, LDA, M, N
@@ -51677,17 +50782,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNGLQ( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, K, LDA, LWORK, M, N
@@ -51967,17 +51069,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNGQL( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, K, LDA, LWORK, M, N
@@ -52263,17 +51362,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNGQR( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, K, LDA, LWORK, M, N
@@ -52539,17 +51635,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNGR2( M, N, K, A, LDA, TAU, WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, K, LDA, M, N
@@ -52758,17 +51851,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNGRQ( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       INTEGER            INFO, K, LDA, LWORK, M, N
@@ -53050,17 +52140,14 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNGTR( UPLO, N, A, LDA, TAU, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          UPLO
@@ -53341,18 +52428,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNM2L( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
      $                   WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE, TRANS
@@ -53622,18 +52706,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNM2R( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
      $                   WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE, TRANS
@@ -53945,18 +53026,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNMBR( VECT, SIDE, TRANS, M, N, K, A, LDA, TAU, C,
      $                   LDC, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE, TRANS, VECT
@@ -53998,13 +53076,10 @@
 *
       IF( LEFT ) THEN
          NQ = M
-         NW = N
+         NW = MAX( 1, N )
       ELSE
          NQ = N
-         NW = M
-      END IF
-      IF( M.EQ.0 .OR. N.EQ.0 ) THEN
-         NW = 0
+         NW = MAX( 1, M )
       END IF
       IF( .NOT.APPLYQ .AND. .NOT.LSAME( VECT, 'P' ) ) THEN
          INFO = -1
@@ -54024,12 +53099,12 @@
          INFO = -8
       ELSE IF( LDC.LT.MAX( 1, M ) ) THEN
          INFO = -11
-      ELSE IF( LWORK.LT.MAX( 1, NW ) .AND. .NOT.LQUERY ) THEN
+      ELSE IF( LWORK.LT.NW .AND. .NOT.LQUERY ) THEN
          INFO = -13
       END IF
 *
       IF( INFO.EQ.0 ) THEN
-         IF( NW.GT.0 ) THEN
+         IF( M.GT.0 .AND. N.GT.0 ) THEN
             IF( APPLYQ ) THEN
                IF( LEFT ) THEN
                   NB = ILAENV( 1, 'ZUNMQR', SIDE // TRANS, M-1, N, M-1,
@@ -54047,7 +53122,7 @@
      $                 -1 )
                END IF
             END IF
-            LWKOPT = MAX( 1, NW*NB )
+            LWKOPT = NW*NB
          ELSE
             LWKOPT = 1
          END IF
@@ -54306,18 +53381,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNMHR( SIDE, TRANS, M, N, ILO, IHI, A, LDA, TAU, C,
      $                   LDC, WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE, TRANS
@@ -54357,10 +53429,10 @@
 *
       IF( LEFT ) THEN
          NQ = M
-         NW = N
+         NW = MAX( 1, N )
       ELSE
          NQ = N
-         NW = M
+         NW = MAX( 1, M )
       END IF
       IF( .NOT.LEFT .AND. .NOT.LSAME( SIDE, 'R' ) ) THEN
          INFO = -1
@@ -54379,7 +53451,7 @@
          INFO = -8
       ELSE IF( LDC.LT.MAX( 1, M ) ) THEN
          INFO = -11
-      ELSE IF( LWORK.LT.MAX( 1, NW ) .AND. .NOT.LQUERY ) THEN
+      ELSE IF( LWORK.LT.NW .AND. .NOT.LQUERY ) THEN
          INFO = -13
       END IF
 *
@@ -54389,7 +53461,7 @@
          ELSE
             NB = ILAENV( 1, 'ZUNMQR', SIDE // TRANS, M, NH, NH, -1 )
          END IF
-         LWKOPT = MAX( 1, NW )*NB
+         LWKOPT = NW*NB
          WORK( 1 ) = LWKOPT
       END IF
 *
@@ -54581,18 +53653,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNML2( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
      $                   WORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE, TRANS
@@ -54879,18 +53948,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNMLQ( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
      $                   WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE, TRANS
@@ -54937,10 +54003,10 @@
 *
       IF( LEFT ) THEN
          NQ = M
-         NW = N
+         NW = MAX( 1, N )
       ELSE
          NQ = N
-         NW = M
+         NW = MAX( 1, M )
       END IF
       IF( .NOT.LEFT .AND. .NOT.LSAME( SIDE, 'R' ) ) THEN
          INFO = -1
@@ -54956,7 +54022,7 @@
          INFO = -7
       ELSE IF( LDC.LT.MAX( 1, M ) ) THEN
          INFO = -10
-      ELSE IF( LWORK.LT.MAX( 1, NW ) .AND. .NOT.LQUERY ) THEN
+      ELSE IF( LWORK.LT.NW .AND. .NOT.LQUERY ) THEN
          INFO = -12
       END IF
 *
@@ -54966,7 +54032,7 @@
 *
          NB = MIN( NBMAX, ILAENV( 1, 'ZUNMLQ', SIDE // TRANS, M, N, K,
      $        -1 ) )
-         LWKOPT = MAX( 1, NW )*NB + TSIZE
+         LWKOPT = NW*NB + TSIZE
          WORK( 1 ) = LWKOPT
       END IF
 *
@@ -54987,7 +54053,7 @@
       NBMIN = 2
       LDWORK = NW
       IF( NB.GT.1 .AND. NB.LT.K ) THEN
-         IF( LWORK.LT.NW*NB+TSIZE ) THEN
+         IF( LWORK.LT.LWKOPT ) THEN
             NB = (LWORK-TSIZE) / LDWORK
             NBMIN = MAX( 2, ILAENV( 2, 'ZUNMLQ', SIDE // TRANS, M, N, K,
      $              -1 ) )
@@ -55131,7 +54197,7 @@
 *> \verbatim
 *>          TRANS is CHARACTER*1
 *>          = 'N':  No transpose, apply Q;
-*>          = 'C':  Transpose, apply Q**H.
+*>          = 'C':  Conjugate transpose, apply Q**H.
 *> \endverbatim
 *>
 *> \param[in] M
@@ -55203,7 +54269,7 @@
 *>          The dimension of the array WORK.
 *>          If SIDE = 'L', LWORK >= max(1,N);
 *>          if SIDE = 'R', LWORK >= max(1,M).
-*>          For good performance, LWORK should genreally be larger.
+*>          For good performance, LWORK should generally be larger.
 *>
 *>          If LWORK = -1, then a workspace query is assumed; the routine
 *>          only calculates the optimal size of the WORK array, returns
@@ -55226,18 +54292,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNMQL( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
      $                   WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE, TRANS
@@ -55336,7 +54399,7 @@
       NBMIN = 2
       LDWORK = NW
       IF( NB.GT.1 .AND. NB.LT.K ) THEN
-         IF( LWORK.LT.NW*NB+TSIZE ) THEN
+         IF( LWORK.LT.LWKOPT ) THEN
             NB = (LWORK-TSIZE) / LDWORK
             NBMIN = MAX( 2, ILAENV( 2, 'ZUNMQL', SIDE // TRANS, M, N, K,
      $              -1 ) )
@@ -55565,18 +54628,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNMQR( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
      $                   WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE, TRANS
@@ -55622,10 +54682,10 @@
 *
       IF( LEFT ) THEN
          NQ = M
-         NW = N
+         NW = MAX( 1, N )
       ELSE
          NQ = N
-         NW = M
+         NW = MAX( 1, M )
       END IF
       IF( .NOT.LEFT .AND. .NOT.LSAME( SIDE, 'R' ) ) THEN
          INFO = -1
@@ -55641,7 +54701,7 @@
          INFO = -7
       ELSE IF( LDC.LT.MAX( 1, M ) ) THEN
          INFO = -10
-      ELSE IF( LWORK.LT.MAX( 1, NW ) .AND. .NOT.LQUERY ) THEN
+      ELSE IF( LWORK.LT.NW .AND. .NOT.LQUERY ) THEN
          INFO = -12
       END IF
 *
@@ -55651,7 +54711,7 @@
 *
          NB = MIN( NBMAX, ILAENV( 1, 'ZUNMQR', SIDE // TRANS, M, N, K,
      $        -1 ) )
-         LWKOPT = MAX( 1, NW )*NB + TSIZE
+         LWKOPT = NW*NB + TSIZE
          WORK( 1 ) = LWKOPT
       END IF
 *
@@ -55672,7 +54732,7 @@
       NBMIN = 2
       LDWORK = NW
       IF( NB.GT.1 .AND. NB.LT.K ) THEN
-         IF( LWORK.LT.NW*NB+TSIZE ) THEN
+         IF( LWORK.LT.LWKOPT ) THEN
             NB = (LWORK-TSIZE) / LDWORK
             NBMIN = MAX( 2, ILAENV( 2, 'ZUNMQR', SIDE // TRANS, M, N, K,
      $              -1 ) )
@@ -55909,18 +54969,15 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \date December 2016
-*
 *> \ingroup complex16OTHERcomputational
 *
 *  =====================================================================
       SUBROUTINE ZUNMTR( SIDE, UPLO, TRANS, M, N, A, LDA, TAU, C, LDC,
      $                   WORK, LWORK, INFO )
 *
-*  -- LAPACK computational routine (version 3.7.0) --
+*  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
 *  -- Univ. of California Berkeley, Univ. of Colorado Denver and NAG Ltd..--
-*     December 2016
 *
 *     .. Scalar Arguments ..
       CHARACTER          SIDE, TRANS, UPLO
@@ -55960,10 +55017,10 @@
 *
       IF( LEFT ) THEN
          NQ = M
-         NW = N
+         NW = MAX( 1, N )
       ELSE
          NQ = N
-         NW = M
+         NW = MAX( 1, M )
       END IF
       IF( .NOT.LEFT .AND. .NOT.LSAME( SIDE, 'R' ) ) THEN
          INFO = -1
@@ -55980,7 +55037,7 @@
          INFO = -7
       ELSE IF( LDC.LT.MAX( 1, M ) ) THEN
          INFO = -10
-      ELSE IF( LWORK.LT.MAX( 1, NW ) .AND. .NOT.LQUERY ) THEN
+      ELSE IF( LWORK.LT.NW .AND. .NOT.LQUERY ) THEN
          INFO = -12
       END IF
 *
@@ -56002,7 +55059,7 @@
      $              -1 )
             END IF
          END IF
-         LWKOPT = MAX( 1, NW )*NB
+         LWKOPT = NW*NB
          WORK( 1 ) = LWKOPT
       END IF
 *

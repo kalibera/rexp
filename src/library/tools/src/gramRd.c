@@ -67,7 +67,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2019  The R Core Team
+ *  Copyright (C) 1997--2022  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -91,7 +91,9 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Parse.h>
-#define STRICT_R_HEADERS
+#ifndef STRICT_R_HEADERS
+# define STRICT_R_HEADERS
+#endif
 #include <R_ext/RS.h>           /* for R_chk_* allocation */
 #include <ctype.h>
 #include <Rmath.h> /* for imax2(.),..*/
@@ -711,19 +713,19 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   230,   230,   231,   232,   235,   238,   241,   242,   244,
-     245,   246,   247,   248,   249,   250,   251,   252,   253,   254,
-     255,   256,   257,   259,   260,   262,   263,   264,   265,   266,
-     267,   268,   269,   270,   272,   273,   274,   275,   276,   277,
-     278,   279,   280,   281,   282,   283,   284,   285,   286,   287,
-     288,   290,   291,   292,   293,   295,   297,   299,   301,   303,
-     306,   309,   314,   316,   317,   326,   328,   330,   334,   335,
-     337,   339,   343,   344,   346,   349,   351,   353,   355,   357,
-     359,   361,   363,   365,   367,   368,   369,   370,   371,   373
+       0,   234,   234,   235,   236,   239,   242,   245,   246,   248,
+     249,   250,   251,   252,   253,   254,   255,   256,   257,   258,
+     259,   260,   261,   263,   264,   266,   267,   268,   269,   270,
+     271,   272,   273,   274,   276,   277,   278,   279,   280,   281,
+     282,   283,   284,   285,   286,   287,   288,   289,   290,   291,
+     292,   294,   295,   296,   297,   299,   301,   303,   305,   307,
+     310,   313,   318,   320,   321,   330,   332,   334,   338,   339,
+     341,   343,   347,   348,   350,   353,   355,   357,   359,   361,
+     363,   365,   367,   369,   371,   372,   373,   374,   375,   377
 };
 #endif
 
-#if YYDEBUG || YYERROR_VERBOSE || 0
+#if YYDEBUG || YYERROR_VERBOSE || 1
 /* YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
@@ -4609,7 +4611,7 @@ SEXP deparseRd(SEXP e, SEXP state)
 		break;
 	    case LBRACE:
 	    case RBRACE:
-		if (quoteBraces)
+		if (quoteBraces || parseState.xxmode == LATEXLIKE)
 		    escape = TRUE;
 		else if (!parseState.xxinRString && !parseState.xxinEqn && (parseState.xxmode == RLIKE || parseState.xxmode == VERBATIM)) {
 		    if (*c == LBRACE) parseState.xxbraceDepth++;

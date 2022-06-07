@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2020  The R Core Team
+ *  Copyright (C) 1995--2022  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
 #include <Fileio.h>
 #include <Rversion.h>
 #include <R_ext/Riconv.h>
-#include <R_ext/RS.h>           /* for CallocCharBuf, Free */
+#include <R_ext/RS.h>           /* for CallocCharBuf, R_Free */
 #include <errno.h>
 #include <ctype.h>		/* for isspace */
 #include <stdarg.h>
@@ -1622,7 +1622,7 @@ ConvertChar(void *obj, char *inp, size_t inplen, cetype_t enc)
 	} else {
 	    char *buf = CallocCharBuf(buflen);
 	    if (TryConvertString(obj, inp, inplen, buf, &bufleft) == -1) {
-		Free(buf);
+		R_Free(buf);
 		if (errno == E2BIG) {
 		    buflen *= 2;
 		    continue;
@@ -1630,7 +1630,7 @@ ConvertChar(void *obj, char *inp, size_t inplen, cetype_t enc)
 		    return R_NilValue;
 	    }
 	    SEXP ans = mkCharLenCE(buf, (int)(buflen - bufleft), enc);
-	    Free(buf);
+	    R_Free(buf);
 	    return ans;
 	}
     }
@@ -1881,6 +1881,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	}
 	SETCAR(s, ReadItem(ref_table, stream));
 	R_ReadItemDepth--; /* do this early because of the recursion. */
+	R_CheckStack();
 	SETCDR(s, ReadItem(ref_table, stream));
 	/* For reading closures and promises stored in earlier versions, convert NULL env to baseenv() */
 	if      (type == CLOSXP && CLOENV(s) == R_NilValue) SET_CLOENV(s, R_BaseEnv);
@@ -1934,7 +1935,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	    } else {
 		char *cbuf = CallocCharBuf(length);
 		PROTECT(s = ReadChar(stream, cbuf, length, levs));
-		Free(cbuf);
+		R_Free(cbuf);
 	    }
 	    break;
 	case LGLSXP:

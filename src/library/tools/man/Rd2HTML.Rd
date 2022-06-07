@@ -1,6 +1,6 @@
 % File src/library/tools/man/Rd2HTML.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 2008-2020 R Core Team
+% Copyright 2008-2022 R Core Team
 % Distributed under GPL 2 or later
 
 \name{Rd2HTML}
@@ -19,7 +19,9 @@ Rd2HTML(Rd, out = "", package = "", defines = .Platform$OS.type,
         Links = NULL, Links2 = NULL,
         stages = "render", outputEncoding = "UTF-8",
         dynamic = FALSE, no_links = FALSE, fragment = FALSE,
-        stylesheet = "R.css", ...)
+        stylesheet = if (dynamic) "/doc/html/R.css" else "R.css",
+        texmath = getOption("help.htmlmath"),
+        ...)
 
 Rd2txt(Rd, out = "", package = "", defines = .Platform$OS.type,
        stages = "render", outputEncoding = "",
@@ -52,6 +54,15 @@ Rd2ex(Rd, out = "", defines = .Platform$OS.type,
       notes below.}
   \item{stylesheet}{character: a URL for a stylesheet to be used in the header
       of the HTML output page.}
+  \item{texmath}{character: controls how mathematics in \verb{\eqn} and
+      \verb{\deqn} commands are typeset in HTML output. Useful values
+      are \code{"katex"} (default) and \code{"mathjax"} to use
+      \href{https://katex.org/}{KaTeX} or
+      \href{https://www.mathjax.org/}{MathJax} respectively, otherwise
+      basic substitutions are used. May be ignored under certain
+      circumstances, e.g., if the help page already uses macros from the
+      \code{\link[mathjaxr]{mathjaxr}} package.
+    }
   \item{Links, Links2}{\code{NULL} or a named (by topics) character vector of
     links, as returned by \code{\link{findHTMLlinks}}.}
   \item{options}{An optional named list of options to pass to
@@ -87,12 +98,13 @@ Rd2ex(Rd, out = "", defines = .Platform$OS.type,
   the rendering in versions of \R < 2.10.0.
 
   \code{Rd2txt} will use directional quotes (see \code{\link{sQuote}})
-  if option \code{"useFancyQuotes"} is true (the default) and
+  if option \code{"useFancyQuotes"} is true (usually the default,
+  see \code{\link{sQuote}}) and
 #ifdef unix
   the current encoding is UTF-8.
 #endif
 #ifdef windows
-  the current locale uses a single-byte encoding (except C).
+  the current encoding is UTF-8 or a single-byte encoding (except C).
   (Directional quotes are not attempted in East Asian locales as they are
   usually double-width, which looks wrong with English text.)
 #endif

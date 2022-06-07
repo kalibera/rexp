@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2021  The R Core Team.
+ *  Copyright (C) 1998--2022  The R Core Team.
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -760,10 +760,6 @@ void SET_SCALAR_BVAL(SEXP x, Rbyte v);
     } while (FALSE)
 #endif /* USE_RINTERNALS */
 
-void R_BadValueInRCode(SEXP value, SEXP call, SEXP rho, const char *rawmsg,
-        const char *errmsg, const char *warnmsg, const char *varname,
-        Rboolean warnByDefault);
-
 const char * Rf_translateCharFP(SEXP);
 const char * Rf_translateCharFP2(SEXP);
 const char * Rf_trCharUTF8(SEXP);
@@ -950,9 +946,13 @@ extern int putenv(char *string);
 
 /* Maximal length in bytes of an entire path name.
    POSIX has required this to be at least 255/256, and X/Open at least 1024.
-   Solaris has 1024, Linux glibc has 4192.
+   Solaris, macOS, *BSD have 1024, Linux glibc has 4192.
    File names are limited to FILENAME_MAX bytes (usually the same as PATH_MAX)
    or NAME_MAX (often 255/256).
+
+   POSIX requires PATH_MAX to be defined in limits.h (included above)
+   if independent of the file path (file system?).  However, if it can
+   vary by filepath, it is required to be undefined there.
  */
 #if !defined(PATH_MAX)
 # if defined(HAVE_SYS_PARAM_H)
@@ -1581,7 +1581,7 @@ extern0 int R_PCRE_limit_recursion;
 /*--- FUNCTIONS ------------------------------------------------------ */
 
 /* Internal type coercions */
-int Rf_asLogical2(SEXP x, int checking, SEXP call, SEXP rho);
+int Rf_asLogical2(SEXP x, int checking, SEXP call);
 
 
 typedef enum { iSILENT, iWARN, iERROR } warn_type;
@@ -2054,6 +2054,13 @@ SEXP R_GetTraceback(int);    // including deparse()ing
 SEXP R_GetTracebackOnly(int);// no        deparse()ing
 void NORET R_signalErrorCondition(SEXP cond, SEXP call);
 void NORET R_signalErrorConditionEx(SEXP cond, SEXP call, int exitOnly);
+SEXP R_vmakeErrorCondition(SEXP call,
+			   const char *classname, const char *subclassname,
+			   int nextra, const char *format, va_list ap);
+SEXP R_makeErrorCondition(SEXP call,
+			  const char *classname, const char *subclassname,
+			  int nextra, const char *format, ...);
+void R_setConditionField(SEXP cond, R_xlen_t idx, const char *name, SEXP val);
 SEXP R_makeNotSubsettableError(SEXP x, SEXP call);
 SEXP R_makeOutOfBoundsError(SEXP x, int subscript, SEXP sindex,
 			    SEXP call, const char *prefix);

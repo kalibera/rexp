@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2021  The R Core Team.
+ *  Copyright (C) 1998--2022  The R Core Team.
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -1124,7 +1124,10 @@ static void ReleaseLargeFreeVectors()
 	SEXP s = NEXT_NODE(R_GenHeap[node_class].New);
 	while (s != R_GenHeap[node_class].New) {
 	    SEXP next = NEXT_NODE(s);
-	    if (CHAR(s) != NULL) {
+	    if (1 /* CHAR(s) != NULL*/) {
+		/* Consecutive representation of large vectors with header followed
+		   by data. An alternative representation (currently not implemented)
+		   could have CHAR(s) == NULL. */
 		R_size_t size;
 #ifdef PROTECTCHECK
 		if (TYPEOF(s) == FREESXP)
@@ -1903,7 +1906,8 @@ static int RunGenCollect(R_size_t size_needed)
 		    /**** could also leave this alone and restore the old
 			  node type in ReleaseLargeFreeVectors before
 			  calculating size */
-		    if (CHAR(s) != NULL) {
+		    if (1 /* CHAR(s) != NULL*/) {
+			/* see comment in ReleaseLargeFreeVectors */
 			R_size_t size = getVecSizeInVEC(s);
 			SET_STDVEC_LENGTH(s, size);
 		    }
@@ -3468,7 +3472,7 @@ void *R_chk_calloc(size_t nelem, size_t elsize)
 #endif
     p = calloc(nelem, elsize);
     if(!p) /* problem here is that we don't have a format for size_t. */
-	error(_("'Calloc' could not allocate memory (%.0f of %u bytes)"),
+	error(_("'R_Calloc' could not allocate memory (%.0f of %u bytes)"),
 	      (double) nelem, elsize);
     return(p);
 }
@@ -3479,7 +3483,7 @@ void *R_chk_realloc(void *ptr, size_t size)
     /* Protect against broken realloc */
     if(ptr) p = realloc(ptr, size); else p = malloc(size);
     if(!p)
-	error(_("'Realloc' could not re-allocate memory (%.0f bytes)"),
+	error(_("'R_Realloc' could not re-allocate memory (%.0f bytes)"),
 	      (double) size);
     return(p);
 }
@@ -4678,6 +4682,13 @@ int Seql(SEXP a, SEXP b)
     /* Leave this to compiler to optimize */
     if (IS_CACHED(a) && IS_CACHED(b) && ENC_KNOWN(a) == ENC_KNOWN(b))
 	return 0;
+    else if (IS_BYTES(a) || IS_BYTES(b)) {
+	if (IS_BYTES(a) && IS_BYTES(b))
+	    /* only get here if at least one is not cached */
+	    return !strcmp(CHAR(a), CHAR(b));
+	else
+	    return 0;
+    }	    
     else {
 	SEXP vmax = R_VStack;
 	int result = !strcmp(translateCharUTF8(a), translateCharUTF8(b));

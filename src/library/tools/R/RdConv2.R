@@ -1,7 +1,7 @@
 #  File src/library/tools/R/RdConv2.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2021 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ stopRd <- function(block, Rdfile, ...)
     }
     if (missing(Rdfile) || is.null(Rdfile)) Rdfile <- ""
     else {
-        Rdfile <- sub("^man/", "", Rdfile) # for consistency with earlier reports
+        Rdfile <- basename(Rdfile) # Rdfile could be an absolute path (Rbuild tempdir)
         Rdfile <- paste0(Rdfile, ":")
     }
 
@@ -66,7 +66,7 @@ warnRd <- function(block, Rdfile, ...)
         if(missing(Rdfile) || is.null(Rdfile))
             ""
         else
-            paste0(sub("^man/", "", Rdfile), # for consistency with earlier reports
+            paste0(basename(Rdfile), # Rdfile could be an absolute path (Rbuild tempdir)
                    ":")
     msg <- if (is.null(srcref))
         paste0(Rdfile, " ", ...)
@@ -201,19 +201,21 @@ replaceRdSrcrefs <- function(Rd, srcref) {
     Rd
 }
 
-processRdChunk <- function(code, stage, options, env, Rdfile, macros)
+processRdChunk <- function(code, stage, options, env, macros)
 {
     if (is.null(opts <- attr(code, "Rd_option"))) opts <- ""
     codesrcref <- attr(code, "srcref")
+    Rdfile <- attr(codesrcref, "srcfile")$filename
     options <- utils:::SweaveParseOptions(opts, options, RweaveRdOptions)
     if (stage == options$stage) {
         #  The code below is very similar to RWeaveLatexRuncode, but simplified
 
         # Results as a character vector for now; convert to list later
         res <- character(0)
-        code <- code[RdTags(code) != "COMMENT"]
+        code <- code[RdTags(code) != "COMMENT"]  # list attributes are lost here
 	chunkexps <- tryCatch(parse(text = code), error = identity)
-	if (inherits(chunkexps, "error")) stopRd(code, Rdfile, chunkexps)
+	if (inherits(chunkexps, "error"))
+            stopRd(code, Rdfile, conditionMessage(chunkexps))
 
 	if(length(chunkexps) == 0L)
 	    return(tagged(code, "LIST"))
@@ -262,8 +264,8 @@ processRdChunk <- function(code, stage, options, env, Rdfile, macros)
 	    if(length(output) == 1L && output[1L] == "") output <- NULL
 
 	    if (inherits(err, "error")) {
-	    	code <- replaceRdSrcrefs(code, codesrcref)
-	    	stopRd(code, Rdfile, err$message)
+	    	attr(code, "srcref") <- codesrcref  # restore for error location
+	    	stopRd(code, Rdfile, conditionMessage(err))
 	    }
 
 	    if(length(output) && (options$results != "hide")) {
@@ -424,7 +426,7 @@ prepare_Rd <-
         Rd <- eval(substitute(parse_Rd(f, encoding = enc, fragment = frag, ...),
                               list(f = Rd, enc = encoding, frag = fragment)))
     } else if(inherits(Rd, "connection")) {
-        Rdfile <- summary(Rd)
+        Rdfile <- summary(Rd)$description
         Rd <- parse_Rd(Rd, encoding = encoding, fragment=fragment, ...)
     } else Rdfile <- attr(Rd, "Rdfile")
     srcref <- attr(Rd, "srcref")
@@ -628,7 +630,7 @@ checkRd <- function(Rd, defines=.Platform$OS.type, stages = "render",
 {
     warnRd <- function(block, Rdfile, ..., level = 0L)
     {
-        Rdfile <- sub("^man/", "", Rdfile)
+        Rdfile <- sub("^\\./man/", "", Rdfile)
         srcref <- attr(block, "srcref")
         msg <- if (is.null(srcref))
             paste0("file '", Rdfile, "': ", ...)
@@ -648,6 +650,34 @@ checkRd <- function(Rd, defines=.Platform$OS.type, stages = "render",
         get_link(block, tag, Rdfile) ## to do the same as Rd2HTML
     }
 
+    checkEmail <- function(block) {
+        pattern <- .make_RFC_2822_email_address_regexp()
+        if(length(block)) {
+            address <- lines2str(.Rd_deparse(block, tag = FALSE))
+            if(!grepl(re_anchor(pattern), address))
+                warnRd(block, Rdfile, level = 7,
+                       "invalid email address: ", address)
+        }
+    }
+
+    checkURL <- function(block, tag) {
+        pattern <- .make_RFC_2822_email_address_regexp()        
+        if(tag == "\\url")
+            u <- .Rd_deparse(block, tag = FALSE)
+        else
+            u <- .Rd_deparse(block[[1L]], tag = FALSE)
+        u <- lines2str(u)
+        parts <- parse_URI_reference(u)
+        if(nzchar(s <- parts[, "scheme"])) {
+            if(is.na(match(s, c(IANA_URI_scheme_db$URI_Scheme,
+                                "javascript"))) ||
+               ((s == "mailto") &&
+                !grepl(re_anchor(pattern), parts[, "path"])))
+                warnRd(block, Rdfile, level = 7,
+                       "invalid URL: ", u)
+        }
+    }
+            
     ## blocktag is unused
     checkBlock <- function(block, tag, blocktag)
     {
@@ -704,8 +734,14 @@ checkRd <- function(Rd, defines=.Platform$OS.type, stages = "render",
                "\\verb"= checkContent(block, tag),
                "\\linkS4class" =,
                "\\link" = checkLink(tag, block),
-               "\\email" =,
-               "\\url" = has_text <<- TRUE,
+               "\\email" = {
+                   checkEmail(block)
+                   has_text <<- TRUE
+               },
+               "\\url" = {
+                   checkURL(block, tag)
+                   has_text <<- TRUE
+               },
                "\\cr" ={},
                "\\dots" =,
                "\\ldots" =,
@@ -752,14 +788,16 @@ checkRd <- function(Rd, defines=.Platform$OS.type, stages = "render",
     		   unknown <- allow %w/o% c("", "latex", "example", "text",
                                             "html", "TRUE", "FALSE")
     		   if (length(unknown))
-    		       warnRd(block, Rdfile, "Unrecognized format: ", unknown)
+    		       warnRd(block, Rdfile, level = 7, "Unrecognized format: ", unknown)
                    checkContent(block[[2L]])
                    if (tag == "\\ifelse")
                        checkContent(block[[3L]])
                },
                "\\href" = {
                    if (!identical(RdTags(block[[1L]]), "VERB"))
-                   	stopRd(block, Rdfile, "First argument to \\href must be verbatim URL")
+                   	stopRd(block, Rdfile,
+                               "First argument to \\href must be verbatim URL")
+                   checkURL(block, tag)
                	   checkContent(block[[2L]], tag)
                },
                "\\out" = {
@@ -884,6 +922,12 @@ checkRd <- function(Rd, defines=.Platform$OS.type, stages = "render",
             switch(tag,
             "\\item" = {
     	    	if (!inlist) inlist <- TRUE
+                if((blocktag %in% c("\\describe", "\\arguments",
+                                    "\\value")) &&
+                    isBlankRd(block[[1L]]))
+                    warnRd(block, Rdfile, level = 5,
+                           "\\item in ", blocktag,
+                           " must have non-empty label")
     		switch(blocktag,
     		"\\arguments"= {
     		    checkContent(block[[1L]], tag)
@@ -947,6 +991,8 @@ checkRd <- function(Rd, defines=.Platform$OS.type, stages = "render",
         }
     }
 
+        
+
     dt <- which(RdTags(Rd) == "\\docType")
     docTypes <- character(length(dt))
     if (length(dt)) {
@@ -992,7 +1038,7 @@ checkRd <- function(Rd, defines=.Platform$OS.type, stages = "render",
                  "seealso", "examples", "author", "encoding"))
     for(tag in intersect(sections[duplicated(sections)], unique_tags))
         warnRd(Rd, Rdfile, level = 5,
-               sprintf("multiple sections named '%s' are not allowed", tag))
+               sprintf("Multiple sections named '%s' are not allowed", tag))
 
     for (i in seq_along(sections))
         checkSection(Rd[[i]], sections[i])

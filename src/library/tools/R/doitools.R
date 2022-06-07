@@ -19,9 +19,8 @@
 doi_db <-
 function(dois, parents)
 {
-    db <- data.frame(DOI = trimws(as.character(dois)),
-                     Parent = as.character(parents),
-                     stringsAsFactors = FALSE)
+    db <- list2DF(list(DOI = trimws(as.character(dois)),
+                       Parent = as.character(parents)))
     class(db) <- c("doi_db", "data.frame")
     db
 }
@@ -35,7 +34,10 @@ function(meta)
         m <- gregexpr(pattern, v)
         dois <- c(dois, .gregexec_at_pos(pattern, v, m, 3L))
     }
-    doi_db(dois, rep.int("DESCRIPTION", length(dois)))
+    ## DOI names may contain ">", but we need this as a delimiter when
+    ## writing the names in <doi:name> style.  So at least ">" and hence
+    ## also "%" must be percent encoded ...
+    doi_db(utils::URLdecode(dois), rep.int("DESCRIPTION", length(dois)))
 }
 
 doi_db_from_package_citation <-
@@ -141,9 +143,7 @@ function(db, verbose = FALSE, parallel = FALSE, pool = NULL)
                         p = list(),
                         s = rep.int("", length(d)),
                         m = rep.int("", length(d))) {
-        y <- data.frame(DOI = d, From = I(p), Status = s, Message = m,
-                        stringsAsFactors = FALSE)
-        y$From <- p
+        y <- list2DF(list(DOI = d, From = p, Status = s, Message = m))
         class(y) <- c("check_doi_db", "data.frame")
         y
     }
@@ -216,7 +216,8 @@ function(db, verbose = FALSE, parallel = FALSE, pool = NULL)
     pos <- which(!ind)
     if(length(pos)) {
         doispos <- dois[pos]
-        urlspos <- paste0("https://doi.org/", doispos)
+        urlspos <- paste0("https://doi.org/",
+                          vapply(doispos, urlify_doi, ""))
         ## Do we need to percent encode parts of the DOI name?
         headers <- .fetch_headers(urlspos, doispos)
         results <- do.call(rbind,

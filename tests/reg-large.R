@@ -320,7 +320,7 @@ mkDat <- function(n) {
     data.frame(x = x, y = sin(pi*x^2) * exp(-x/2) + rnorm(n)/8)
 }
 set.seed(1); dat <- mkDat(n = 42000)
-system.time( # 14.5 sec (on lynne ~ 2019)
+system.time( # 12.7 sec (lynne ~ 2021)
     fit <- loess(y~x, data=dat)
 )
 r <- tools::assertError(
@@ -336,9 +336,46 @@ system.time(x <- raw(i)) # ~ 0.8 sec ; needs 2 GB
 x [i]  <- r1 <- as.raw(1); stopifnot(x [i]  == r1)
 x[[i]] <- r2 <- as.raw(2); stopifnot(x[[i]] == r2)
 x[[i]] <- r3 <- as.raw(3); stopifnot(x[[i]] == r3)
-## failed in R <= 0.4.3 {even with large vectors}
+## last two failed in R <= 4.0.n {even with large vectors}
 
 
+## print()ing {up to max.print only!} of long vectors;
+## including named and "generic" (= list):
+stopifnot((n <- 2^31 + 352) > .Machine$integer.max)
+system.time(L <- integer(n))        #   5.8 sec {ada-20}
+system.time(LL <- vector("list", n))# ~15   sec {ada-20}
+system.time(nm <- c(LETTERS, letters, rep("xx", length(L) - 2*26)))
+## between 55 and 76 sec {ada-20, 2022-01-07}  user  system elapsed
+Ln <- L
+## FIXME? takes about 2 secs, but these are *not* seen by system.time (!!)
+system.time(names(Ln) <- nm)
+## user  system elapsed
+##    0       0       0
+op <- options(max.print = 300)
+L
+## now (after using %lld) gives
+## [ reached getOption("max.print") -- omitted 2147483700 entries ]
+## before, it gave   ..... -- omitted -2147483596 entries
+##                                   ^^^
+Ln # gave  Error: long vectors not supported yet: ...
+LL # gave  Error: long vect...
+options(op)
+
+## PR#17977 --- x[<fractional>] behavior should fulfill x[i] === x[as.integer(i)]
+## large (no overflow in index computations!) -- needs 2 GB
+LL <- matrix(as.raw(1:2), 2, 2^30)
+ca.half <- 0.5+ (eps <- unique(sort(outer(2^-c(16, 21, 26, 30), -1:1))))
+print(eps, digits=3)
+LL[cbind(2, ca.half)]   # should be of length 0, too: ca.half ~= 0.5
+LL[cbind(1, 1+ca.half)] # should be constantly == raw(1L) '01'
+LL[cbind(2+ca.half, 1)] # all 02
+LL[cbind(-ca.half, 1)] # raw(0) --- correct
+stopifnot(exprs = {
+    length(LL[cbind(2, ca.half)]) == 0
+    LL[cbind(1, 1+ca.half)] == as.raw(1L)
+    LL[cbind(2+ca.half, 1)] == as.raw(2L)
+    length(LL[cbind( -ca.half, 1)]) == 0
+})
 
 gc() # NB the "max used"
 proc.time() # total  [ ~ 40 minutes in full case, 2019-04-12]

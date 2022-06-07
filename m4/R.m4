@@ -1,6 +1,6 @@
 ### R.m4 -- extra macros for configuring R		-*- Autoconf -*-
 ###
-### Copyright (C) 1998-2020 R Core Team
+### Copyright (C) 1998-2022 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -2621,11 +2621,17 @@ if test "${acx_blas_ok}" = no; then
 fi
 
 dnl Taken from 2008 version of ax_blas.m4
-# BLAS in OpenBLAS library? (http://xianyi.github.com/OpenBLAS/)
+# BLAS in OpenBLAS library? (https://www.openblas.net/)
 if test "${acx_blas_ok}" = no; then
   AC_MSG_NOTICE([searching for OpenBLAS])
         AC_CHECK_LIB(openblas, $sgemm, [acx_blas_ok=yes
                                         BLAS_LIBS="-lopenblas"])
+fi
+
+# BLAS in BLIS library? (https://github.com/flame/blis)
+if test "${acx_blas_ok}" = no; then
+  AC_MSG_NOTICE([searching for BLIS])
+        AC_CHECK_LIB(blis, $sgemm, [acx_blas_ok=yes BLAS_LIBS="-lblis"])
 fi
 
 dnl BLAS in ATLAS library?  (http://math-atlas.sourceforge.net/)
@@ -2638,6 +2644,7 @@ if test "${acx_blas_ok}" = no; then
 			     [], [-latlas])])
 fi
 
+dnl Unable to find a URL for PhiPACK in 2022 ....
 dnl BLAS in PhiPACK libraries?  (requires generic BLAS lib, too)
 if test "${acx_blas_ok}" = no; then
   AC_MSG_NOTICE([searching for PhiPACK])
@@ -2648,6 +2655,21 @@ if test "${acx_blas_ok}" = no; then
                                             BLAS_LIBS="-lsgemm -ldgemm -lblas"],
 			                   [], [-lblas])],
 			     [], [-lblas])])
+fi
+
+dnl BLAS in Apple Accelerate?  Based on ax_blas.m4 #37
+if test $acx_blas_ok = no; then
+  case "${host_os}" in
+    darwin*)
+      AC_MSG_NOTICE([searching for Accelerate])
+      save_LIBS="$LIBS"; LIBS="-framework Accelerate $LIBS"
+      AC_MSG_CHECKING([for $dgemm in -framework Accelerate])
+      AC_LINK_IFELSE([AC_LANG_CALL([], [$dgemm])],
+	              [acx_blas_ok=yes;BLAS_LIBS="-framework Accelerate"])
+      AC_MSG_RESULT($acx_blas_ok)
+      LIBS="$save_LIBS"
+    ;;
+  esac
 fi
 
 dnl BLAS in Sun Performance library?
@@ -3034,6 +3056,7 @@ fi
 
 # We cannot use LAPACK if BLAS is not found
 if test "x${acx_blas_ok}" != xyes; then
+  AC_MSG_NOTICE([cannot use --with-lapack without --with-blas])
   acx_lapack_ok=noblas
 fi
 
@@ -3069,6 +3092,78 @@ LIBS="${acx_lapack_save_LIBS}"
 
 AC_SUBST(LAPACK_LIBS)
 ])# R_LAPACK_LIBS
+
+## R_LAPACK_SYSTEM_LIB
+## -------------------
+## New for R 4.2.0
+## Look for system -llapack of version at least 3.10.0.
+## We have to test with a system BLAS.
+## We don't want an external lapack which contains a BLAS.
+AC_DEFUN([R_LAPACK_SYSTEM_LIB],
+[AC_REQUIRE([R_PROG_FC_FLIBS])
+AC_REQUIRE([R_PROG_FC_APPEND_UNDERSCORE])
+
+acx_lapack_ok=no
+
+acx_lapack_save_LIBS="${LIBS}"
+
+dnl Generic LAPACK library?
+if test "${r_cv_prog_fc_append_underscore}" = yes; then
+  dgemm=dgemm_
+  lapack=dpstrf_
+  ilaver=ilaver_
+else
+  dgemm=dgemm
+  lapack=dpstrf
+  ilaver=ilaver
+fi
+acx_lapack_ok=yes
+LIBS="${FLIBS} ${LIBS}"
+AC_CHECK_LIB(lapack, ${dgemm}, [acx_lapack_ok=no])
+if test "${acx_lapack_ok}" = no; then
+  AC_MSG_NOTICE([Not using liblapack as it contains BLAS routines])
+fi
+
+if test "${acx_lapack_ok}" = yes; then
+LIBS="-lblas ${FLIBS} ${acx_lapack_save_LIBS}"
+AC_CHECK_LIB(lapack, ${lapack}, [acx_lapack_ok=yes])
+fi
+
+if test "${acx_lapack_ok}" = yes; then
+  LIBS="-lblas -llapack ${FLIBS} ${acx_lapack_save_LIBS}"
+
+AC_CACHE_CHECK([if LAPACK version >= 3.10.0], [r_cv_lapack_ver],
+[AC_RUN_IFELSE([AC_LANG_SOURCE([[
+extern void ${ilaver}(int *major, int *minor, int *patch);
+
+#include <stdlib.h>
+#include <stdio.h>
+int main() {
+  int major, minor, patch;
+  ${ilaver}(&major, &minor, &patch);
+  printf("%d.%d.%d, so ", major, minor, patch);
+  if (major < 3 || (major == 3 && minor < 10)) exit(1);
+  exit(0);
+}
+]])],
+[r_cv_lapack_ver=yes],
+[r_cv_lapack_ver=no],
+[r_cv_lapack_ver=no])])
+
+LIBS="${acx_lapack_save_LIBS}"
+
+if test "${r_cv_lapack_ver}" = no; then
+ acx_lapack_ok=no
+fi
+fi
+
+if test "${acx_lapack_ok}" = yes; then
+  LAPACK_LIBS=-llapack
+fi
+
+AC_SUBST(LAPACK_LIBS)
+])# R_LAPACK_SYSTEM_LIB
+
 
 ## R_XDR
 ## -----
@@ -4253,8 +4348,14 @@ if test -n "${CURL_CONFIG}"; then
   fi
   ## This should be correct for a static-only build, user will
   ## need to override to specify static linking (see config.site)
+  ## SU: No, it's not, unfortunately, we have to use --static-libs
+  ## for static-only builds as those provide incomplete flags with --libs
   if test -z "${CURL_LIBS}"; then
-    CURL_LIBS=`${CURL_CONFIG} --libs`
+    if test x`${CURL_CONFIG} --built-shared` = xno; then
+      CURL_LIBS=`${CURL_CONFIG} --static-libs`
+    else
+      CURL_LIBS=`${CURL_CONFIG} --libs`
+    fi
   fi
 fi
 r_save_CPPFLAGS="${CPPFLAGS}"

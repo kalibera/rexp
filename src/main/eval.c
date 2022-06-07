@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2021	The R Core Team.
+ *  Copyright (C) 1998--2022	The R Core Team.
  *  Copyright (C) 1995, 1996	Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -2187,17 +2187,8 @@ static R_INLINE Rboolean asLogicalNoNA(SEXP s, SEXP call, SEXP rho)
     }
 
     int len = length(s);
-    if (len > 1) {
-	/* PROTECT(s) needed as per PR#15990.  call gets protected by
-	   warningcall(). Now "s" is protected by caller and also
-	   R_BadValueInRCode disables GC. */
-	R_BadValueInRCode(s, call, rho,
-	    "the condition has length > 1",
-	    _("the condition has length > 1"),
-	    _("the condition has length > 1 and only the first element will be used"),
-	    "_R_CHECK_LENGTH_1_CONDITION_",
-	    TRUE /* by default issue warning */);
-    }
+    if (len > 1)
+	errorcall(call, _("the condition has length > 1"));
     if (len > 0) {
 	/* inline common cases for efficiency */
 	switch(TYPEOF(s)) {
@@ -4674,11 +4665,7 @@ static struct { const char *name; SEXP sym; double (*fun)(double); }
 
 	{"cospi", NULL, cospi},
 	{"sinpi", NULL, sinpi},
-#ifndef HAVE_TANPI
-	{"tanpi", NULL, tanpi}
-#else
 	{"tanpi", NULL, Rtanpi}
-#endif
     };
 
 static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
@@ -6097,8 +6084,8 @@ static R_INLINE void SUBASSIGN_N_PTR(R_bcstack_t *sx, int rank,
 			  _("invalid %s type in 'x %s y'"), arg, op);	\
 	    SETSTACK(-1, ScalarLogical(asLogical2(			\
 					   val, /*checking*/ 1,		\
-					   VECTOR_ELT(constants, callidx),	\
-					   rho)));			\
+					   VECTOR_ELT(constants, callidx) \
+					   )));				\
 	}								\
     } while(0)
 
@@ -7312,7 +7299,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (dispatched)
 	    SETSTACK(-1, value);
 	else
-	    SETSTACK(-1, R_subset3_dflt(x, PRINTNAME(symbol), R_NilValue));
+	    SETSTACK(-1, R_subset3_dflt(x, PRINTNAME(symbol), call));
 	R_Visible = TRUE;
 	NEXT();
       }

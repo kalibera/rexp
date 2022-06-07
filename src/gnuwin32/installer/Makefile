@@ -132,7 +132,7 @@ fixups:
 	$(RM) $(RPREFIX)/Tcl*/lib/*.lib
 ifneq ($(strip $(QPDF)),)
 	@for f in $(PDF_FILES); do \
-	  $(QPDF)/bin/qpdf $${f} tmp.pdf; \
+	  "$(QPDF)/bin/qpdf" $${f} tmp.pdf; \
 	  mv tmp.pdf $${f}; \
 	done
 endif
@@ -186,7 +186,7 @@ $(RPREFIX)-win.exe: R.iss
 uuidgen.exe: uuidgen.o
 	$(CC) -o $@ $< -lole32
 
-# currently use about 3500: allow for EXTRA_PKGS
+# currently use about 4200: allow for EXTRA_PKGS
 uuids: uuidgen.exe
 	./uuidgen 10000 > $@
 

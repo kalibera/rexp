@@ -1,7 +1,7 @@
 #  File src/library/tools/R/testing.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2021 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 # NB: also copyright date in Usage.
 #
@@ -173,9 +173,12 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE,
         txt <- txt[(cumsum(txt == "> ## IGNORE_RDIFF_BEGIN") <=
                     cumsum(txt == "> ## IGNORE_RDIFF_END"))]
         ## (Keeps the end markers, but that's ok.)
-        if (nullPointers)
+        if (nullPointers) {
             ## remove pointer addresses from listings
             txt <- gsub("<(environment|bytecode|pointer|promise): [x[:xdigit:]]+>", "<\\1: 0>", txt)
+            ## standardize hashtable, pro tem
+            txt <- sub("<hashtable.*>", "<hashtable output>", txt)
+        }
         ## regularize fancy quotes.  First UTF-8 ones:
         txt <- .canonicalize_quotes(txt)
         if(.Platform$OS.type == "windows") {
@@ -210,9 +213,9 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE,
     if (!useDiff && (length(left) == length(right))) {
         ## The idea is to emulate diff -b, as documented by POSIX:
         ## https://pubs.opengroup.org/onlinepubs/9699919799/utilities/diff.html
-        bleft <- gsub("[[:space:]]*$", "", left)
+        bleft  <- gsub("[[:space:]]*$", "", left)
         bright <- gsub("[[:space:]]*$", "", right)
-        bleft <- gsub("[[:space:]]+", " ", bleft)
+        bleft  <- gsub("[[:space:]]+", " ", bleft)
         bright <- gsub("[[:space:]]+", " ", bright)
         if(all(bleft == bright))
             return(if(Log) list(status = 0L, out = character()) else 0L)
@@ -248,6 +251,26 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE,
     }
 } ## {Rdiff}
 
+.is.writeable <- function(dir)
+{
+    # see packages2.R for comment on unreliability of file.access
+    ok <- TRUE
+    fn <- file.path(dir, paste0("_test_dir_", Sys.getpid()))
+    res <- try(dir.create(fn, showWarnings = FALSE))
+    if(inherits(res, "try-error") || !res)
+        ok <- FALSE
+    else
+        unlink(fn, recursive = TRUE)
+    if (ok) {
+        fn <- file.path(dir, paste0("_test_file_", Sys.getpid()))
+        res <- try(file.create(fn, showWarnings = FALSE))
+        if(inherits(res, "try-error") || !res)
+            ok <- FALSE
+        else
+            unlink(fn)
+    }
+    ok
+}
 
 testInstalledPackages <-
     function(outDir = ".", errorsAreFatal = TRUE,
@@ -255,6 +278,8 @@ testInstalledPackages <-
              types = c("examples", "tests", "vignettes"),
              srcdir = NULL, Ropts = "", ...)
 {
+    if (!.is.writeable(outDir))
+        stop("directory ", sQuote(outDir), " is not writeable ", domain = NA)
     ow <- options(warn = 1)
     on.exit(ow)
     scope <- match.arg(scope)
@@ -312,6 +337,7 @@ testInstalledPackage <-
     owd <- setwd(outDir)
     on.exit(setwd(owd))
     strict <- as.logical(Sys.getenv("R_STRICT_PACKAGE_CHECK", "FALSE"))
+    useDiff <- nzchar(Sys.which("diff"))
 
     if ("examples" %in% types) {
         message(gettextf("Testing examples for package %s", sQuote(pkg)),
@@ -345,8 +371,8 @@ testInstalledPackage <-
                                     sQuote(outfile), sQuote(basename(savefile))),
                            appendLF = FALSE, domain = NA)
                    cmd <-
-                       sprintf("invisible(tools::Rdiff('%s','%s',TRUE,TRUE))",
-                               outfile, savefile)
+                       sprintf("invisible(tools::Rdiff('%s','%s',%s,TRUE))",
+                               outfile, savefile, as.character(useDiff))
                    out <- R_runR(cmd, "--vanilla --no-echo")
                    if(length(out)) {
                        if(strict)
@@ -368,8 +394,8 @@ testInstalledPackage <-
                             sQuote(outfile), sQuote(basename(prevfile))),
                             appendLF = FALSE, domain = NA)
                     cmd <-
-                        sprintf("invisible(tools::Rdiff('%s','%s',TRUE,TRUE))",
-                                outfile, prevfile)
+                        sprintf("invisible(tools::Rdiff('%s','%s',%s,TRUE))",
+                                outfile, prevfile, as.character(useDiff))
                     out <- R_runR(cmd, "--vanilla --no-echo")
                     if(length(out)) {
                         message(" NOTE")
@@ -536,19 +562,16 @@ testInstalledPackage <-
     nfail <- 0L ## allow for later running all tests even if some fail.
     Rinfiles <- dir(".", pattern="\\.Rin$")
     for(f in Rinfiles) {
-        Rfile <- sub("\\.Rin$", ".R", f)
-        message("  Creating ", sQuote(Rfile), domain = NA)
+        message("  Processing ", sQuote(f), domain = NA)
         if (!is.null(Log))
-            cat("  Creating ", sQuote(Rfile), "\n", sep = "", file = Log)
+            cat("  Processing ", sQuote(f), "\n", sep = "", file = Log)
         cmd <- paste(shQuote(file.path(R.home("bin"), "R")),
-                     "CMD BATCH --no-timing --vanilla --no-echo", f)
+                     "CMD BATCH --no-timing --vanilla --no-echo", shQuote(f))
         if (system(cmd)) {
-            warning("creation of ", sQuote(Rfile), " failed", domain = NA)
-            if (!is.null(Log))
-                cat("Warning: creation of ", sQuote(Rfile), " failed\n",
-                    sep = "", file = Log)
-        } else if (file.exists(Rfile)) nfail <- nfail + runone(Rfile)
-        if (nfail > 0) return(nfail)
+            nfail <- nfail + 1L
+            file.rename(paste0(f, ".Rout"), paste0(f, ".Rout.fail"))
+            if (stop_on_error) return(1L)
+        }
     }
 
     Rfiles <- dir(".", pattern="\\.[rR]$")
@@ -611,7 +634,7 @@ testInstalledBasic <- function(scope = c("basic", "devel", "both", "internet"))
     tests1 <- c("eval-etc", "simple-true", "arith-true", "lm-tests",
                 "ok-errors", "method-dispatch", "array-subset",
                 "p-r-random-tests", "d-p-q-r-tst-2",
-                "any-all", "d-p-q-r-tests")
+                "any-all", "structure", "d-p-q-r-tests")
     ## "sloppy specific":
     tests2 <- c("complex", "print-tests", "lapack", "datasets", "datetime",
                 "iec60559")
@@ -622,6 +645,7 @@ testInstalledBasic <- function(scope = c("basic", "devel", "both", "internet"))
                 "p-qbeta-strict-tst",
                 "reg-IO", "reg-IO2", "reg-plot", "reg-S4", "reg-BLAS")
 
+    useDiff <- nzchar(Sys.which("diff"))  # only check once
     runone <- function(f, diffOK = FALSE, inC = TRUE)
     {
         f <- paste0(f, ".R")
@@ -650,6 +674,13 @@ testInstalledBasic <- function(scope = c("basic", "devel", "both", "internet"))
             Sys.setenv(R_DEFAULT_PACKAGES="")
             Sys.setenv(LC_COLLATE="C")
             Sys.setenv(SRCDIR=".")
+            ## FIXME: the above are currently not restored after testing
+            if (inC) { # breaks reg-plot-latin1, so restore between tests
+                oenv <- Sys.getenv("LC_CTYPE", unset = NA)
+                on.exit(if (is.na(oenv)) Sys.unsetenv("LC_CTYPE")
+                        else Sys.setenv(LC_CTYPE=oenv), add = TRUE)
+                Sys.setenv(LC_CTYPE="C")
+            }
             ## ignore all 'extra' (incl. 'inC')  and hope
         } else cmd <- paste(extra, cmd)
         res <- system(cmd)
@@ -663,7 +694,7 @@ testInstalledBasic <- function(scope = c("basic", "devel", "both", "internet"))
             message(gettextf("  comparing %s to %s ...",
                              sQuote(outfile), sQuote(savefile)),
                     appendLF = FALSE, domain = NA)
-            res <- Rdiff(outfile, savefile, TRUE)
+            res <- Rdiff(outfile, savefile, useDiff)
             if (!res) message(" OK")
             else if (!diffOK) return(1L)
         }
@@ -672,6 +703,9 @@ testInstalledBasic <- function(scope = c("basic", "devel", "both", "internet"))
 
     owd <- setwd(file.path(R.home(), "tests"))
     on.exit(setwd(owd), add=TRUE)
+    if (!.is.writeable("."))
+        stop("directory ", sQuote(file.path(R.home(), "tests")),
+              " is not writeable ", domain = NA)
 
     if (scope %in% c("basic", "both")) {
         message("running strict specific tests", domain = NA)
@@ -694,11 +728,12 @@ testInstalledBasic <- function(scope = c("basic", "devel", "both", "internet"))
         message("running tests of plotting Latin-1", domain = NA)
         message("  expect failure or some differences if not in a Latin or UTF-8 locale", domain = NA)
 
-        runone("reg-plot-latin1", TRUE, inC=FALSE)
-        message("  comparing 'reg-plot-latin1.pdf' to 'reg-plot-latin1.pdf.save' ...",
-                appendLF = FALSE, domain = NA)
-        res <- Rdiff("reg-plot-latin1.pdf", "reg-plot-latin1.pdf.save")
-        if(res != 0L) message("DIFFERED") else message("OK")
+        if (runone("reg-plot-latin1", TRUE, inC=FALSE) == 0L) {
+            message("  comparing 'reg-plot-latin1.pdf' to 'reg-plot-latin1.pdf.save' ...",
+                    appendLF = FALSE, domain = NA)
+            res <- Rdiff("reg-plot-latin1.pdf", "reg-plot-latin1.pdf.save")
+            if(res != 0L) message("DIFFERED") else message("OK")
+        }
     }
 
     if (scope %in% c("devel", "both")) {
@@ -777,7 +812,7 @@ detachPackages <- function(pkgs, verbose = TRUE)
     }
 }
 
-## Usage: Rscript --vanilla --default-packages=NULL args
+## Wrapper for  R CMD Rdiff   based on Rdiff() above :
 .Rdiff <- function(no.q = FALSE)
 {
     options(showErrorCalls=FALSE)
@@ -817,7 +852,7 @@ detachPackages <- function(pkgs, verbose = TRUE)
                 R.version[["major"]], ".",  R.version[["minor"]],
                 " (r", R.version[["svn rev"]], ")\n", sep = "")
             cat("",
-                "Copyright (C) 2000-2018 The R Core Team.",
+                .R_copyright_msg(2000),
                 "This is free software; see the GNU General Public License version 2",
                 "or later for copying conditions.  There is NO warranty.",
                 sep = "\n")
@@ -827,13 +862,13 @@ detachPackages <- function(pkgs, verbose = TRUE)
         do_exit(1L)
     }
 
-    if (length(args) < 2L) {
+    if (length(args) == 0L) {
         Usage()
         do_exit(1L)
     }
     exitstatus <- as.integer(args[3L])
-    if(is.na(exitstatus)) exitstatus <- 0L
-
+    if(is.na(exitstatus)) # default, also if length(args) == 2
+        exitstatus <- 0L
     left <- args[1L]
     if(left == "-") left <- "stdin"
     status <- Rdiff(left, args[2L], useDiff = TRUE)

@@ -76,6 +76,7 @@ struct _HashData {
     Rboolean useCache;
     Rboolean useCloEnv;
     Rboolean extptrAsRef;
+    Rboolean inHashtab;
 };
 
 #define HTDATA_INT(d) (INTEGER0((d)->HashTable))
@@ -190,7 +191,7 @@ static hlen chash(SEXP x, R_xlen_t indx, HashData *d)
    another process.
 
    Hash values are int, For 64bit pointers, we do (upper ^ lower) */
-static R_INLINE hlen PTRHASH(void *x)
+static R_INLINE unsigned int PTRHASH(void *x)
 {
     intptr_t z = (intptr_t) x;
     unsigned int z1 = (unsigned int)(z & 0xffffffff), z2 = 0;
@@ -210,6 +211,20 @@ static R_INLINE hlen shash(SEXP x, R_xlen_t indx, HashData *d)
 {
     unsigned int k;
     const char *p;
+    if (d->inHashtab) {
+	SEXP xi = STRING_ELT(x, indx);
+	int noTrans = (IS_BYTES(xi) || IS_ASCII(xi)) ? TRUE : FALSE;
+	if (d->useCache && noTrans)
+	    return scatter(PTRHASH(xi), d);
+	const void *vmax = vmaxget();
+	p = noTrans ? CHAR(xi) : translateCharUTF8(xi);
+	k = 0;
+	while (*p++)
+	    /* multiplier was 8 but 11 isn't a power of 2 */
+	    k = 11 * k + (unsigned int) *p;
+	vmaxset(vmax); /* discard any memory used by translateChar */
+	return scatter(k, d);
+    }
     if(!d->useUTF8 && d->useCache) return cshash(x, indx, d);
     const void *vmax = vmaxget();
     /* Not having d->useCache really should not happen anymore. */
@@ -366,6 +381,7 @@ static hlen vhash_one(SEXP _this, HashData *d)
 	}
 	break;
     case LANGSXP:
+    case LISTSXP:
 	R_CheckStack();
 	/* all attributes are ignored */
 	/* might be good to consider envirnments on formulas */
@@ -384,25 +400,14 @@ static hlen vhash_one(SEXP _this, HashData *d)
 	}
 	break;
     case SYMSXP:
-	/* at this point a symbol name should be guaranteed to have a
-	   hash value, but check just to be safe */
-	if (! HASHASH(PRINTNAME(_this)) ) {
-	    SET_HASHVALUE(PRINTNAME(_this),
-			  R_Newhashpjw(CHAR(PRINTNAME(_this))));
-	    SET_HASHASH(PRINTNAME(_this), 1);
-	}
-	key ^= HASHVALUE(PRINTNAME(_this));
+	key *= PTRHASH(_this);
 	key *= 97;
 	break;
     case CHARSXP:
-	/* encoding is ignored */
-	if( !HASHASH(_this) ) {
-	    /* could also use cshash here, but would need to deal with
-	       uncached strings */
-	    SET_HASHVALUE(_this, R_Newhashpjw(CHAR(_this)));
-	    SET_HASHASH(_this, 1);
-	}
-	key ^= HASHVALUE(_this);
+	if(!d->useUTF8 && d->useCache) key *= PTRHASH(_this);
+	/**** otherwise, do nothing for now */
+	/* this should only happen in C-leve hash tables */
+	/* eventually this should do what shash does */
 	key *= 97;
 	break;
     case EXTPTRSXP:
@@ -578,14 +583,24 @@ static Rboolean duplicatedInit(SEXP x, HashData *d)
 		break;
 	    }
 	}
-    } else if (TYPEOF(x) == VECSXP) {
+    } else if (TYPEOF(x) == VECSXP || TYPEOF(x) == EXPRSXP) {
 	R_xlen_t i, n = XLENGTH(x);
 	for(i = 0; i < n; i++)
 	    if (duplicatedInit(VECTOR_ELT(x, i), d)) {
 		stop = TRUE;
 		break;
 	    }
-    }
+    } else if (TYPEOF(x) == LANGSXP || TYPEOF(x) == LISTSXP) {
+	for(SEXP head = x; head != R_NilValue; head = CDR(head))
+	    if (duplicatedInit(CAR(head), d)) {
+		stop = TRUE;
+		break;
+	    }
+
+    } else if (TYPEOF(x) == CLOSXP) {
+	if (duplicatedInit(BODY_EXPR(x), d))
+	    stop = TRUE;
+    }	
     return stop;
 }
 
@@ -2232,10 +2247,14 @@ SEXP attribute_hidden do_sample2(SEXP call, SEXP op, SEXP args, SEXP env)
     checkArity(op, args);
     SEXP ans;
     double dn = asReal(CAR(args));
-    int k = asInteger(CADR(args));
-    if (!R_FINITE(dn) || dn < 0 || dn > 4.5e15 || (k > 0 && dn == 0))
+    SEXP sk = CADR(args);
+    if (length(sk) != 1)
+	error(_("invalid '%s' argument"), "size");
+    int k = asInteger(sk);
+    if  (length(CAR(args)) != 1 || !R_FINITE(dn) || dn < 0
+		|| dn > 4.5e15 || (k > 0 && dn == 0))
 	error(_("invalid first argument"));
-    if (k < 0) error(_("invalid '%s' argument"), "size");
+    if (k < 0) error(_("invalid '%s' argument"), "size"); // includes NA
     if (k > dn/2) error("This algorithm is for size <= n/2");
     HashData data = { 0 };
     GetRNGstate();
@@ -2289,6 +2308,7 @@ static int hash_identical(SEXP x, int K, int useCloEnv)
     HashData d = { .K = K, .useUTF8 = FALSE, .useCache = TRUE };
     d.useCloEnv = useCloEnv;
     d.extptrAsRef = TRUE;
+    d.inHashtab = TRUE;
 
     int val = (int) vhash_one(x, &d);
     if (val == NA_INTEGER) val = 0;
@@ -2302,7 +2322,7 @@ static int hash_address(SEXP x, int K)
 
     HashData d = { .K = K };
 
-    int val = scatter(PTRHASH(x), &d);
+    int val = (int) scatter(PTRHASH(x), &d);
     if (val == NA_INTEGER) val = 0;
     if (val < 0) val = -val;
     return val;
@@ -2329,7 +2349,7 @@ static R_INLINE SEXP INC_NMD(SEXP x) {
 #define HT_IS_VALID(h) (R_ExternalPtrAddr(HT_SEXP(h)) != NULL)
 #define HT_VALIDATE(h) R_SetExternalPtrAddr(HT_SEXP(h), HT_SEXP(h))
 
-static R_INLINE int HT_HASH(R_hashtab_t h, SEXP key)
+static R_INLINE int HT_HASH(R_hashtab_type h, SEXP key)
 {
     switch(HT_TYPE(h)) {
     case HT_TYPE_IDENTICAL:
@@ -2341,7 +2361,7 @@ static R_INLINE int HT_HASH(R_hashtab_t h, SEXP key)
     }
 }
 
-static R_INLINE int HT_EQUAL(R_hashtab_t h, SEXP x, SEXP y)
+static R_INLINE int HT_EQUAL(R_hashtab_type h, SEXP x, SEXP y)
 {
     switch(HT_TYPE(h)) {
     case HT_TYPE_IDENTICAL:
@@ -2359,7 +2379,7 @@ static R_INLINE int HT_EQUAL(R_hashtab_t h, SEXP x, SEXP y)
     }
 }
 
-static void rehash(R_hashtab_t h, int resize)
+static void rehash(R_hashtab_type h, int resize)
 {
     /* If the meta-data structure is changed then a saved hash table
        will be invalid. For now, just check and reject incompatible
@@ -2390,7 +2410,7 @@ static void rehash(R_hashtab_t h, int resize)
     UNPROTECT(1); /* old_table */
 }
 
-static SEXP getcell(R_hashtab_t h, SEXP key, int *pidx)
+static SEXP getcell(R_hashtab_type h, SEXP key, int *pidx)
 {
     SEXP table = HT_TABLE(h);
 
@@ -2417,7 +2437,7 @@ static SEXP getcell(R_hashtab_t h, SEXP key, int *pidx)
 /* initial size = 2 ^ HT_INIT_K */
 #define HT_INIT_K 3
 
-R_hashtab_t R_mkhashtab(int type, int K)
+R_hashtab_type R_mkhashtab(int type, int K)
 {
     if (K < 3 || K > 30) K = 3;
     int size = 1;
@@ -2430,7 +2450,7 @@ R_hashtab_t R_mkhashtab(int type, int K)
     }
     SEXP table = PROTECT(allocVector(VECSXP, size));
     SEXP meta = PROTECT(allocVector(INTSXP, HT_META_SIZE));
-    R_hashtab_t val = { .cell = R_MakeExternalPtr(NULL, meta, table) };
+    R_hashtab_type val = { .cell = R_MakeExternalPtr(NULL, meta, table) };
     HT_VALIDATE(val);
     HT_COUNT(val) = 0;
     HT_TYPE(val) = type;
@@ -2439,7 +2459,7 @@ R_hashtab_t R_mkhashtab(int type, int K)
     return val;
 }
 
-SEXP R_gethash(R_hashtab_t h, SEXP key, SEXP nomatch)
+SEXP R_gethash(R_hashtab_type h, SEXP key, SEXP nomatch)
 {
     int idx;
     PROTECT(HT_SEXP(h));
@@ -2453,7 +2473,7 @@ SEXP R_gethash(R_hashtab_t h, SEXP key, SEXP nomatch)
 	return CAR(cell);
 }
 
-SEXP R_sethash(R_hashtab_t h, SEXP key, SEXP value)
+SEXP R_sethash(R_hashtab_type h, SEXP key, SEXP value)
 {
     int idx;
     PROTECT(HT_SEXP(h));
@@ -2482,7 +2502,7 @@ SEXP R_sethash(R_hashtab_t h, SEXP key, SEXP value)
     return value;
 }
 
-int R_remhash(R_hashtab_t h, SEXP key)
+int R_remhash(R_hashtab_type h, SEXP key)
 {
     int idx;
     PROTECT(HT_SEXP(h));
@@ -2509,15 +2529,15 @@ int R_remhash(R_hashtab_t h, SEXP key)
     }
 }
 
-int R_numhash(R_hashtab_t h) { return HT_COUNT(h); }
-int R_typhash(R_hashtab_t h) { return HT_TYPE(h); }
+int R_numhash(R_hashtab_type h) { return HT_COUNT(h); }
+int R_typhash(R_hashtab_type h) { return HT_TYPE(h); }
 
 static R_INLINE void defvar(SEXP sym, SEXP val, SEXP env)
 {
     defineVar(sym, INC_NMD(val), env);
 }
 
-SEXP R_maphash(R_hashtab_t h, SEXP FUN)
+SEXP R_maphash(R_hashtab_type h, SEXP FUN)
 {
     PROTECT(HT_SEXP(h));
     PROTECT(FUN);
@@ -2546,7 +2566,7 @@ SEXP R_maphash(R_hashtab_t h, SEXP FUN)
     return R_NilValue;
 }
 
-void R_maphashC(R_hashtab_t h, void (*FUN)(SEXP, SEXP, void *), void *data)
+void R_maphashC(R_hashtab_type h, void (*FUN)(SEXP, SEXP, void *), void *data)
 {
     PROTECT(HT_SEXP(h));
     SEXP table = PROTECT(HT_TABLE(h)); // PROTECT in case FUN causes a rehash
@@ -2565,7 +2585,7 @@ void R_maphashC(R_hashtab_t h, void (*FUN)(SEXP, SEXP, void *), void *data)
     UNPROTECT(2); /* h, table */
 }
 
-void R_clrhash(R_hashtab_t h)
+void R_clrhash(R_hashtab_type h)
 {
     SEXP table = HT_TABLE(h);
     int size = LENGTH(table);
@@ -2587,18 +2607,18 @@ void R_clrhash(R_hashtab_t h)
  ** R Level Interface Support
  **/
 
-R_hashtab_t R_asHashtable(SEXP h)
+R_hashtab_type R_asHashtable(SEXP h)
 {
     if (TYPEOF(h) != VECSXP || LENGTH(h) != 1 || ! inherits(h, "hashtab"))
 	error("not a proper hash table object");
     SEXP p = VECTOR_ELT(h, 0);
     if (TYPEOF(p) != EXTPTRSXP)
 	error("hash table object is corrupted");
-    R_hashtab_t val = { .cell = p };
+    R_hashtab_type val = { .cell = p };
     return val;
 }
 
-SEXP R_HashtabSEXP(R_hashtab_t  h)
+SEXP R_HashtabSEXP(R_hashtab_type  h)
 {
     return HT_SEXP(h);
 }

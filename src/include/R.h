@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2000-2021 The R Core Team.
+ *  Copyright (C) 2000-2022 The R Core Team.
  *
  *  This header file is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License as published by
@@ -38,12 +38,16 @@
 #if defined(__cplusplus) && !defined(DO_NOT_USE_CXX_HEADERS)
 # include <cstdlib>
 # include <cstdio>
-# include <climits>
+# ifndef NO_S_TYPEDEFS
+#  include <climits>
+# endif
 # include <cmath>
 #else
 # include <stdlib.h> /* Not used by R itself, but widely assumed in packages */
 # include <stdio.h>  /* Used by ca 200 packages, but not in R itself */
-# include <limits.h> /* for INT_MAX */
+# ifndef NO_S_TYPEDEFS
+#   include <limits.h> /* for INT_MAX */
+# endif
 # include <math.h>
 #endif 
 /* 
@@ -71,20 +75,22 @@
 #include <R_ext/Arith.h>      /* R_FINITE, ISNAN, ... */
 #include <R_ext/Boolean.h>    /* Rboolean type */
 #include <R_ext/Complex.h>    /* Rcomplex type */
-#include <R_ext/Constants.h>  /* PI, DOUBLE_EPS, etc */
+#include <R_ext/Constants.h>  /* M_PI; DOUBLE_EPS, etc unless STRICT_R_HEADERS */
 #include <R_ext/Error.h>      /* error and warning */
 #include <R_ext/Memory.h>     /* R_alloc and S_alloc */
 #include <R_ext/Print.h>      /* Rprintf etc */
 #include <R_ext/Random.h>     /* RNG interface */
 #include <R_ext/Utils.h>      /* sort routines et al */
 #include <R_ext/RS.h>
-/* for PROBLEM ... Calloc, Realloc, Free, Memcpy, F77_xxxx */
+/* for R_Calloc, R_Realloc, R_Free, Memcpy, F77_xxxx */
 
 
+#ifndef NO_S_TYPEDEFS
 typedef double Sfloat;
 typedef int Sint;
-#define SINT_MAX INT_MAX
-#define SINT_MIN INT_MIN
+# define SINT_MAX INT_MAX
+# define SINT_MIN INT_MIN
+#endif
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,7 +1,7 @@
 #  File src/library/tools/R/utils.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2021 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -203,7 +203,7 @@ reQuote <-
 function(x)
 {
     escape <- function(s) paste0("\\", s)
-    re <- "[.*?+^$\\[]"
+    re <- "[.*?+^$\\()[]"
     m <- gregexpr(re, x)
     regmatches(x, m) <- lapply(regmatches(x, m), escape)
     x
@@ -557,7 +557,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 ### ** .BioC_version_associated_with_R_version
 
 .BioC_version_associated_with_R_version <-
-    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.14"))
+    function() numeric_version(Sys.getenv("R_BIOC_VERSION", "3.15"))
 ## Things are more complicated from R-2.15.x with still two BioC
 ## releases a year, so we do need to set this manually.
 
@@ -825,8 +825,8 @@ function(x, predicate = NULL, recursive = FALSE)
 
     f <- if(is.null(predicate))
         function(e) is.call(e)
-    else
-        function(e) is.call(e) && predicate(e)
+    else ## no check predicate returns a scalar, so any() added for 4.2.0
+        function(e) is.call(e) && any(predicate(e))
 
     if(!recursive) return(Filter(f, x))
 
@@ -1009,11 +1009,10 @@ function(package, lib.loc = NULL)
     if(!nzchar(path)) return(NULL)
     if(package == "base") {
         len <- nrow(.S3_methods_table)
-        return(data.frame(generic = .S3_methods_table[, 1L],
-                          home = rep_len("base", len),
-                          class = .S3_methods_table[, 2L],
-                          delayed = rep_len(FALSE, len),
-                          stringsAsFactors = FALSE))
+        return(list2DF(list(generic = .S3_methods_table[, 1L],
+                            home = rep_len("base", len),
+                            class = .S3_methods_table[, 2L],
+                            delayed = rep_len(FALSE, len))))
     }
     lib.loc <- dirname(path)
     nsinfo <- parseNamespaceFile(package, lib.loc)
@@ -1024,11 +1023,10 @@ function(package, lib.loc = NULL)
     if(!all(ind)) {
         ## Delayed registrations can be handled directly.
         pos <- which(!ind)
-        tab <- data.frame(generic = S3methods[pos, 1L],
-                          home = S3methods[pos, 4L],
-                          class = S3methods[pos, 2L],
-                          delayed = rep_len(TRUE, length(pos)),
-                          stringsAsFactors = FALSE)
+        tab <- list2DF(list(generic = S3methods[pos, 1L],
+                            home = S3methods[pos, 4L],
+                            class = S3methods[pos, 2L],
+                            delayed = rep_len(TRUE, length(pos))))
         S3methods <- S3methods[ind, , drop = FALSE]
     }
     generic <- S3methods[, 1L]
@@ -1046,11 +1044,10 @@ function(package, lib.loc = NULL)
                use.names = FALSE)
     ## S3 group generics belong to base.
     homes[!ind] <- "base"
-    home <- homes[match(generic, generics)]
-    class <- S3methods[, 2L]
-    delayed <- rep_len(FALSE, length(class))
-    rbind(data.frame(generic, home, class, delayed,
-                     stringsAsFactors = FALSE),
+    rbind(list2DF(list(generic = generic,
+                       home = homes[match(generic, generics)],
+                       class = S3methods[, 2L],
+                       delayed = rep_len(FALSE, length(generic)))),
           tab)
 }
 
@@ -1273,30 +1270,42 @@ function(reverse = FALSE, recursive = FALSE)
 
 ### ** .get_standard_repository_URLs
 
+## Usage in e.g. CRAN_baseurl_for_web_area assumes this returns a
+## valid CRAN mirror as its first element.
+## That used not to be guaranteed, and it is still unchecked.
 .get_standard_repository_URLs <-
-function()
-{
-    repos <- Sys.getenv("_R_CHECK_XREFS_REPOSITORIES_", "")
-    if(nzchar(repos)) {
-        repos <-
-            .expand_BioC_repository_URLs(strsplit(repos, " +")[[1L]])
-    } else {
-        nms <- c("CRAN", "BioCsoft", "BioCann", "BioCexp")
-        repos <- getOption("repos")
-        ## This is set by utils:::.onLoad(), hence may be NULL.
-        if(!is.null(repos) &&
-           !anyNA(repos[nms]) &&
-           (repos["CRAN"] != "@CRAN@"))
-            repos <- repos[nms]
-        else {
-            repos <- .get_repositories()[nms, "URL"]
-            names(repos) <- nms
-            if(repos["CRAN"] == "@CRAN@")
-                repos["CRAN"] <- "https://CRAN.R-project.org"
-        }
-    }
-    repos
+function(ForXrefs = FALSE)
+ {
+     if(ForXrefs &&
+        nzchar(repos <- Sys.getenv("_R_CHECK_XREFS_REPOSITORIES_", "")))
+         return(.expand_BioC_repository_URLs(strsplit(repos, " +")[[1L]]))
+
+     nms <- c("CRAN", "BioCsoft", "BioCann", "BioCexp")
+     repos <- getOption("repos")
+     ## This is set by utils:::.onLoad(), hence may be NULL.
+     if(!is.null(repos) && !anyNA(repos[nms]) && (repos["CRAN"] != "@CRAN@"))
+         repos <- repos[nms]
+     else {
+         repos <- .get_repositories()[nms, "URL"]
+         names(repos) <- nms
+         ## That might not contain an entry for CRAN
+         if(is.na(repos["CRAN"]) || repos["CRAN"] == "@CRAN@")
+             repos["CRAN"] <- "https://CRAN.R-project.org"
+     }
+     repos
 }
+
+.get_CRAN_repository_URL <-
+function()
+ {
+     repos <- getOption("repos")
+     if(!is.null(repos) && !is.na(cr <- repos["CRAN"]) && (cr != "@CRAN@"))
+         return(cr)
+     cr <- .get_repositories()["CRAN", "URL"]
+     ## That might not contain an entry for CRAN
+     if(is.na(cr) || cr == "@CRAN@") cr <- "https://CRAN.R-project.org"
+     cr
+ }
 
 ### ** .get_standard_repository_db_fields
 
@@ -2050,8 +2059,7 @@ function(x, dfile)
         asc <- iconv(x, "latin1", "ASCII")
         ## fields might have been NA to start with, so use identical.
         if(!identical(asc, x)) {
-            warning(gettext("Unknown encoding with non-ASCII data: converting to ASCII"),
-                    domain = NA)
+            warning("Unknown encoding with non-ASCII data: converting to ASCII")
 	    ind <- is.na(asc) | (asc != x)
             x[ind] <- iconv(x[ind], "latin1", "ASCII", sub = "byte")
         }
@@ -2398,18 +2406,26 @@ function(args, msg)
 
 R <-
 function(fun, args = list(), opts = character(), env = character(),
-         arch = "", timeout = 0)
+         arch = "", drop = TRUE, timeout = 0)
 {
+    .safe_repositories <- function() {
+        x <- getOption("repos")
+        y <- .get_standard_repository_URLs()
+        i <- which(names(x) == "CRAN")[1L]
+        if(is.na(i) || x[i] == "@CRAN@")
+            x[i] <- y["CRAN"]
+        c(x, y[match(names(y), names(x), 0L) == 0L])
+    }
+
     tfi <- tempfile("runri")
     tfo <- tempfile("runro")
-    ## FIXME: do a more safe repos
     wrk <- c(sprintf("x <- readRDS(\"%s\")", tfi),
              "options(repos = x$repos)",
              ## need quote = TRUE in case some of args are not self-evaluating
              ## could catch other conditions also
              "y <- tryCatch(list(do.call(x$fun, x$args, quote = TRUE)), error = identity)",
              sprintf("saveRDS(y, \"%s\")", tfo))
-    saveRDS(list(fun = fun, args = args, repos = getOption("repos")),
+    saveRDS(list(fun = fun, args = args, repos = .safe_repositories()),
             tfi)
     cmd <- if(.Platform$OS.type == "windows") {
                if(nzchar(arch))
@@ -2434,9 +2450,13 @@ function(fun, args = list(), opts = character(), env = character(),
                                 res = res,
                                 error = val))
         }
-        else
-            ## everything worked; don't need to see res
-            val[[1L]]
+        else {
+            val <- val[[1L]]
+            if(drop)
+                val
+            else
+                c(list(value = val), res)
+        }
     }
     else
         ## again maybe wrap in a classed error  and include some of res

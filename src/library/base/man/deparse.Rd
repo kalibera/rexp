@@ -1,6 +1,6 @@
 % File src/library/base/man/deparse.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2020 R Core Team
+% Copyright 1995-2022 R Core Team
 % Distributed under GPL 2 or later
 
 \name{deparse}
@@ -25,9 +25,9 @@ deparse1(expr, collapse = " ", width.cutoff = 500L, ...)
   \item{backtick}{logical indicating whether symbolic names should be
     enclosed in backticks if they do not follow the standard syntax.}
   \item{control}{character vector (or \code{NULL}) of deparsing options.
-    See \code{\link{.deparseOpts}}.}
-  \item{nlines}{integer: the maximum number of lines to produce.
-    Negative values indicate no limit.}
+    \code{control = "all"} is thorough, see \code{\link{.deparseOpts}}.}
+  \item{nlines}{integer: the maximum number of lines to produce.  Negative
+    values indicate no limit.} 
   \item{collapse}{a string, passed to \code{\link{paste}()}.}
   \item{\dots}{further arguments passed to \code{deparse()}.}
 }
@@ -48,18 +48,6 @@ deparse1(expr, collapse = " ", width.cutoff = 500L, ...)
   symbols but only composite expressions.  This is a compromise to
   avoid breaking existing code.
 
-  Using \code{control = c("all", "hexDigits")} comes closest to making \code{deparse()}
-  an inverse of \code{parse()} (but we have not yet seen an example where
-  \code{"all"}, now including \code{"digits17"}, would not have been as
-  good).  However, not all objects are deparse-able even with these options
-  and a warning will be issued if the function recognizes that it is being
-  asked to do the impossible.
-
-  Unless \code{control} contains \code{"digits17"} or \code{"hexDigits"},
-  (or \code{"all"} or \code{"exact"} which include one of these), numeric
-  and complex vectors are converted using 15 significant digits:
-  see \code{\link{as.character}} for more details.
-
   \code{width.cutoff} is a lower bound for the line lengths: deparsing a
   line proceeds until at least \code{width.cutoff} \emph{bytes} have
   been output and e.g.\sspace{}\code{arg = value} expressions will not be split
@@ -79,6 +67,12 @@ deparse1(expr, collapse = " ", width.cutoff = 500L, ...)
   graphics display list recorded by \code{\link{recordPlot}} is not
   intended to be deparsed and \code{.Internal} calls will be shown as
   primitive calls.
+
+  Prior to \R 4.2.0, attributes named \code{dim}, \code{dimnames},
+  \code{levels}, \code{names} and \code{tsp} were deparsed to
+  \code{.Dim}, \code{.Dimnames}, \code{.Label}, \code{.Names} and
+  \code{.Tsp} as part of calls to \code{\link{structure}}, apparently
+  for historical compatibility with S.
 }
 \references{
   Becker, R. A., Chambers, J. M. and Wilks, A. R. (1988)

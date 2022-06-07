@@ -1,7 +1,7 @@
 #  File src/library/base/R/sort.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2020 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -52,6 +52,7 @@
     }
 })
 ## temporary, for sort.int and sort.list captured as S4 default methods
+## .doWrap introduced in r74405 | 2018-03-14   replaced by .doSoftWrap in r74504 | 2018-04-02
 .doWrap <- .doSortWrap
 
 sort <- function(x, decreasing = FALSE, ...)
@@ -133,11 +134,21 @@ sort.int <-
         if(index.return || decreasing || isfact || method != "shell")
 	    stop("unsupported options for partial sorting")
         if(!all(is.finite(partial))) stop("non-finite 'partial'")
+	if(has.na && !is.na(na.last))
+	    partial <-
+		if(na.last) ## NA's will be appended; rm entries matching NA:
+		    partial[partial <= length(x)]
+		else { ## NA's will be prepended
+		    k <- sum(ina)
+		    partial[partial > k] - k
+		}
         y <- if(length(partial) <= 10L) {
-            partial <- .Internal(qsort(partial, FALSE))
-            .Internal(psort(x, partial))
-        } else if (is.double(x)) .Internal(qsort(x, FALSE))
-        else .Internal(sort(x, FALSE))
+		 partial <- .Internal(qsort(partial, FALSE))
+		 .Internal(psort(x, partial))
+	     } else if(is.double(x))
+                 .Internal(qsort(x, FALSE))
+	     else
+                 .Internal(sort(x, FALSE))
     } else {
         nms <- names(x)
 	switch(method,
@@ -203,6 +214,8 @@ order <- function(..., na.last = TRUE, decreasing = FALSE,
     }
 
     if(method != "radix" && !is.na(na.last)) {
+        if(length(decreasing) > 1L)
+            stop("'decreasing' of length > 1 is only for method = \"radix\"")
         return(.Internal(order(na.last, decreasing, ...)))
     }
 

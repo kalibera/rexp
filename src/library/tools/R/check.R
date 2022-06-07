@@ -1,7 +1,7 @@
 #  File src/library/tools/R/check.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2021 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -455,7 +455,7 @@ add_dummies <- function(dir, Log)
         xtra <- Sys.getenv("_R_CHECK_THINGS_IN_OTHER_DIRS_XTRA_", "")
         xtra <- if (nzchar(xtra)) strsplit(xtra, ";", fixed = TRUE)[[1L]]
                 else character()
-        dirs <- c(home, "/tmp",
+        dirs <- c(home, "/tmp", '/dev/shm',
                   ## taken from tools::R_user_dir, but package rappdirs
                   ## is similar with other possibilities on Windows.
                   if (.Platform$OS.type == "windows")
@@ -1751,7 +1751,7 @@ add_dummies <- function(dir, Log)
             ## that source files have the predefined extensions.
             ## </NOTE>
             if (!any(file.exists(file.path("src",
-                                           c("Makefile", "Makefile.win", 
+                                           c("Makefile", "Makefile.win",
 					     "Makefile.ucrt",
                                              "install.libs.R"))))) {
                 if (!length(dir("src", pattern = "\\.([cfmM]|cc|cpp|f90|f95|mm)"))) {
@@ -2066,7 +2066,7 @@ add_dummies <- function(dir, Log)
         out1 <- if (length(out1) && length(out1a)) c(out1, "", out1a)
                 else c(out1, out1a)
 
-        out2 <- out3 <- out4 <- out5 <- out6 <- out7 <- out8 <- out9 <- NULL
+        out2 <- out3 <- out4 <- out5 <- out6 <- out7 <- out8 <- out9 <- out10 <- NULL
 
         if (!is_base_pkg && R_check_unsafe_calls) {
             Rcmd <- paste(opWarn_string, "\n",
@@ -2158,12 +2158,20 @@ add_dummies <- function(dir, Log)
             out9 <- R_runR2(Rcmd, "R_DEFAULT_PACKAGES=")
         }
 
+        if(R_check_code_class_is_string) {
+            Rcmd <- paste(opWarn_string, "\n",
+                          sprintf("tools:::.check_package_code_class_is_string(dir = \"%s\")\n",
+                                  pkgdir))
+            out10 <- R_runR0(Rcmd, R_opts2, "R_DEFAULT_PACKAGES=NULL")
+        }
+
         t2 <- proc.time()
         print_time(t1, t2, Log)
 
         if (length(out1) || length(out2) || length(out3) ||
             length(out4) || length(out5) || length(out6) ||
-            length(out7) || length(out8) || length(out9)) {
+            length(out7) || length(out8) || length(out9) ||
+            length(out10)) {
             ini <- character()
             if(length(out4) ||
                (length(out8) &&
@@ -2227,6 +2235,10 @@ add_dummies <- function(dir, Log)
                 printLog0(Log, paste(c(ini, out9, ""), collapse = "\n"))
                 ini <- ""
             }
+            if(length(out10)) {
+                printLog0(Log, paste(c(ini, out10, ""), collapse = "\n"))
+                ini <- ""
+            }
         } else resultLog(Log, "OK")
     }
 
@@ -2247,8 +2259,10 @@ add_dummies <- function(dir, Log)
             t2 <- proc.time()
             print_time(t1, t2, Log)
             if (length(out)) {
-                if(length(grep("^prepare.*Dropping empty section", out,
-                               invert = TRUE)))
+                if(length(grep(paste("^prepare.*Dropping empty section",
+                                     "^check.*\\item.*must have non-empty label",
+                                     sep = "|"),
+                               out, invert = TRUE)))
                     warningLog(Log)
                 else noteLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
@@ -3533,6 +3547,9 @@ add_dummies <- function(dir, Log)
                                                  useBytes = TRUE)))
                 tokens <- gsub('["\']$', "", tokens,
                                perl = TRUE, useBytes = TRUE)
+                ## datasailr gets trailing )
+                tokens <- gsub('[)]$', "", tokens,
+                               perl = TRUE, useBytes = TRUE)
                 warns <- grep("^[-]W", tokens,
                               value = TRUE, perl = TRUE, useBytes = TRUE)
                 ## Not sure -Wextra and -Weverything are portable, though
@@ -4238,7 +4255,9 @@ add_dummies <- function(dir, Log)
                         lines <- readLines(f, warn = FALSE)
                         f <- file.path(test_dir, sub("out\\.fail$", "", f))
                         src_files <- dir(".", pattern = "\\.[rR]$")
-                        if (basename(f) %notin% src_files) {
+                        if (endsWith(basename(f), ".Rin.R")) {
+                            f <- sub("\\.R$", "", f)
+                        } else if (basename(f) %notin% src_files) {
                             f <- sub("R$", "r", f) # This assumes only one of foo.r and foo.R exists.
                             if (basename(f) %notin% src_files)
                                 f <- sub("r$", "[rR]", f) # Just in case the test script got deleted somehow, show the pattern.
@@ -4259,7 +4278,9 @@ add_dummies <- function(dir, Log)
                         if (R_check_suppress_RandR_message)
                             lines <- filtergrep('^Xlib: *extension "RANDR" missing on display',
                                                 lines, useBytes = TRUE)
-                        printLog(Log, sprintf("Running the tests in %s failed.\n",
+                        printLog(Log, sprintf(paste(if(endsWith(f, ".Rin")) "Processing"
+                                                    else "Running the tests in",
+                                                    "%s failed.\n"),
                                               sQuote(f)))
                         printLog(Log, if(keep > 0L && keep < ll)
                                  sprintf("Last %i lines of output:\n", keep)
@@ -4705,7 +4726,9 @@ add_dummies <- function(dir, Log)
                                     Sys.getenv("_R_CHECK_ELAPSED_TIMEOUT_")))
                 t1 <- proc.time()
                 outfile <- file.path(pkgoutdir, "build_vignettes.log")
-                status <- R_runR0(Rcmd, R_opts2,
+                status <- R_runR0(Rcmd,
+                                  if (use_valgrind) paste(R_opts2, "-d valgrind")
+                                  else R_opts2,
                                   c(jitstr,
                                     if(R_cdo_vignettes) elibs
                                     else character()),
@@ -4719,10 +4742,14 @@ add_dummies <- function(dir, Log)
                                       out, useBytes = TRUE)
                 warns <- grep("^Warning: file .* is not portable",
                               out, value = TRUE, useBytes = TRUE)
+                ltx_err <- any(grepl("LaTeX error", out, ignore.case = TRUE,
+                                     useBytes = TRUE))
                 if (status) {
                     keep <- as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_",
                                                   "25"))
-                    if(skip_run_maybe || !ran) warningLog(Log) else noteLog(Log)
+                    if(skip_run_maybe || !ran) {
+                        if(ltx_err) warningLog(Log) else errorLog(Log)
+                    } else noteLog(Log)
                     if(keep > 0  && length(out) < keep) {
                         out <- utils::tail(out, keep)
                         printLog0(Log,
@@ -4780,7 +4807,7 @@ add_dummies <- function(dir, Log)
             tlim <- get_timeout(Sys.getenv("_R_CHECK_PKGMAN_ELAPSED_TIMEOUT_",
                                 Sys.getenv("_R_CHECK_ELAPSED_TIMEOUT_")))
             topdir <- pkgdir
-            Rd2pdf_opts <- "--batch --no-preview"
+            Rd2pdf_opts <- "--no-preview"
             checkingLog(Log, "PDF version of manual")
             build_dir <- gsub("\\", "/", tempfile("Rd2pdf"), fixed = TRUE)
             man_file <- paste0(pkgname, "-manual.pdf ")
@@ -4817,8 +4844,7 @@ add_dummies <- function(dir, Log)
                 unlink(build_dir, recursive = TRUE)
                 ## for Windows' sake: errors can make it unwritable
                 build_dir <- gsub("\\", "/", tempfile("Rd2pdf"), fixed = TRUE)
-                checkingLog(Log, "PDF version of manual without hyperrefs or index")
-                ## Also turn off hyperrefs.
+                checkingLog(Log, "PDF version of manual without index")
                 Sys.setenv(R_RD4PDF = "times")
                 ## --force is used for the case when pdf file was created by
                 ## the previous run (seen with MiKTeX on Windows)
@@ -4863,6 +4889,82 @@ add_dummies <- function(dir, Log)
         }
     }
 
+    check_Rd2HTML <- function(pkgdir) {
+        ## require HTML Tidy, and not macOS's ancient version.
+        msg <- ""
+        Tidy <- Sys.getenv("R_TIDYCMD", "tidy")
+        OK <- nzchar(Sys.which(Tidy))
+        if(OK) {
+            ver <- system2(Tidy, "--version", stdout = TRUE)
+            OK <- startsWith(ver, "HTML Tidy")
+            if(OK) {
+                OK <- !grepl('Apple Inc. build 2649', ver)
+                if(!OK) msg <- ": 'tidy' is Apple's too old build"
+                ## Maybe we should also check version,
+                ## but e.g. Ubuntu 16.04 does not show one.
+            } else msg <- ": 'tidy' is not NTML Tidy"
+        } else msg <- ": no command 'tidy' found"
+        if(!OK) {
+            messageLog(Log, "skipping checking HTML version of manual", msg)
+            return()
+        }
+        db <- Rd_db(dir = pkgdir)
+        if(!length(db))
+            return()
+        ## For now only look at the Rd files not auto-generated by
+        ## roxygen2 (we could make this customizable).
+        ## So filter first, and only show the check if this leaves
+        ## something to check.
+        db <- db[vapply(file.path(pkgdir, "man", names(db)),
+                        function(f) {
+                            if(!file.exists(f))
+                                FALSE
+                            else
+                                (readChar(f, 23, useBytes = TRUE) !=
+                                 "% Generated by roxygen2")
+                        },
+                        NA)]
+        if(!length(db))
+            return()
+        checkingLog(Log, "HTML version of manual")
+        bad <- FALSE
+        out <- tempfile()
+        on.exit(unlink(out))
+        results <- lapply(db,
+                          function(x)
+                              tryCatch({
+                                  Rd2HTML(x, out)
+                                  tidy_validate(out, tidy = Tidy)
+                              },
+                              error = identity))
+        names(results) <- names(db)
+        ind <- vapply(results, inherits, NA, "error")
+        if(any(ind)) {
+            bad <- TRUE
+            noteLog(Log)
+            printLog0(Log,
+                      c("Encountered the following conversion/validation errors:\n",
+                        paste(unlist(lapply(results[ind],
+                                            conditionMessage)),
+                              collapse = "\n"),
+                        "\n"))
+            results <- results[!ind]
+        }
+        results <- tidy_validate_db(results, names(results))
+        if(NROW(results)) {
+            if(!bad) noteLog(Log) else printLog0(Log, "\n")
+            printLog0(Log,
+                      c("Found the following problems:\n",
+                        sprintf("%s:%s:%s: %s\n",
+                                results[, "path"],
+                                results[, "line"],
+                                results[, "col"],
+                                results[, "msg"])))
+        } else {
+            if(!bad) resultLog(Log, "OK")
+        }
+    }
+
     check_executables <- function()
     {
         owd <- setwd(pkgdir)
@@ -4872,9 +4974,6 @@ add_dummies <- function(dir, Log)
         ## this is tailored to the FreeBSD/Linux 'file',
         ## see http://www.darwinsys.com/file/
         ## (Solaris has a different 'file' without --version)
-        ## Most systems are now on >= 5.03, but macOS 10.5 had 4.17
-        ## version 4.21 writes to stdout,
-        ## 4.23 to stderr and sets an error status code
         FILE <- "file"
         lines <- suppressWarnings(tryCatch(system2(FILE, "--version", TRUE, TRUE), error = function(e) "error"))
         ## a reasonable check -- it does not identify itself well
@@ -4887,6 +4986,18 @@ add_dummies <- function(dir, Log)
         }
         if (have_free_file) {
             checkingLog(Log, "for executable files")
+
+            ## There is a bug mis-identifying DBF files from 2022
+            ## https://bugs.astron.com/view.php?id=316
+            pretest <- function(f)
+            {
+                ## The format is (in bytes) the version mumber,
+                ## year-1900 of last change, month#, day, ...
+                z <-  readBin(f, raw(), 2L)
+                identical(z, as.raw(c(3, 122)))
+            }
+            allfiles <- allfiles[!sapply(allfiles, pretest)]
+
             ## Watch out for spaces in file names here
             ## Do in parallel for speed on Windows, but in batches
             ## since there may be a line-length limit.
@@ -4908,11 +5019,8 @@ add_dummies <- function(dir, Log)
                 known <- rep.int(FALSE, length(execs))
                 pexecs <- file.path(pkgname, execs)
                 ## known false positives
-                for(fp in  c("foreign/tests/datefactor.dta",
-                             "msProcess/inst/data[12]/.*.txt",
-                             "WMBrukerParser/inst/Examples/C3ValidationExtractSmall/RobotRun1/2-100kDa/0_B1/1/1SLin/fid",
-                             "bayesLife/inst/ex-data/bayesLife.output/predictions/traj_country104.rda", # file 5.16
-                             "alm/inst/vign/cache/signposts1_c96f55a749822dd089b636087766def2.rdb" # Sparc Solaris, file 5.16
+                for(fp in  c("foreign/tests/datefactor.dta"
+                             ## "SunOS mc68020 pure executable not stripped"
                              ) )
                     known <- known | grepl(fp, pexecs)
                 execs <- execs[!known]
@@ -5219,6 +5327,9 @@ add_dummies <- function(dir, Log)
                              ": warning: .*\\[-Wanalyzer-file-leak\\]",
                              ": warning: .*\\[-Wanalyzer-use-after-free\\]",
                              ": warning: .*\\[-Wanalyzer-free-of-non-heap\\]",
+                             ": warning: .*\\[-Wint-in-bool-context\\]",
+                             ## gcc and clang
+                             ": warning: .*\\[-Wpointer-sign\\]",
                              ## gcc and clang reports on use of #warning
                              ## but not suppressing the warning itself.
                              "\\[-Wcpp\\] ",
@@ -5267,7 +5378,9 @@ add_dummies <- function(dir, Log)
                              "warning: .* \\[-Wnested-anon-types\\]",
                              "warning: .* is not needed and will not be emitted",
                              "warning: .* \\[-Wnon-literal-null-conversion\\]",
-                             "warning: .* \\[-Wignored-optimization-argument\\]"
+                             "warning: .* \\[-Wignored-optimization-argument\\]",
+                             ## LLVM clang 14, at least
+                             "warning: .* \\[-Wbitwise-instead-of-logical\\]"
                              )
 
                 warn_re <- paste0("(", paste(warn_re, collapse = "|"), ")")
@@ -5951,6 +6064,7 @@ add_dummies <- function(dir, Log)
             "      --run-donttest    do run \\donttest sections in the Rd files",
             "      --use-gct         use 'gctorture(TRUE)' when running examples/tests",
             "      --use-valgrind    use 'valgrind' when running examples/tests/vignettes",
+            "                        and when rebuilding vignettes",
             "      --timings         record timings for examples",
             "      --install-args=   command-line args to be passed to INSTALL",
             "      --test-dir=       look in this subdirectory for test scripts (default tests)",
@@ -6319,6 +6433,13 @@ add_dummies <- function(dir, Log)
     R_check_vignette_titles <-
         config_val_to_logical(Sys.getenv("_R_CHECK_VIGNETTE_TITLES_",
                                          "FALSE"))
+    R_check_code_class_is_string <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_CODE_CLASS_IS_STRING_",
+                                         "FALSE"))
+
+    tmp <- Sys.getenv("_R_CHECK_RD_VALIDATE_RD2HTML_", "unset")
+    R_check_Rd_validate_Rd2HTML <-
+        if(tmp == "unset") NA else config_val_to_logical(tmp)
 
     if (!nzchar(check_subdirs)) check_subdirs <- R_check_subdirs_strict
 
@@ -6357,9 +6478,9 @@ add_dummies <- function(dir, Log)
         Sys.setenv("_R_CHECK_SHLIB_OPENMP_FLAGS_" = "TRUE")
         Sys.setenv("_R_CHECK_FUTURE_FILE_TIMESTAMPS_" = "TRUE")
         Sys.setenv("_R_CHECK_RD_CONTENTS_KEYWORDS_" = "TRUE")
-        chkPkg.v <- "package:_R_CHECK_PACKAGE_NAME_,verbose" # not ",abort" here
-        Sys.setenv1("_R_CHECK_LENGTH_1_CONDITION_", chkPkg.v)
-        Sys.setenv1("_R_CHECK_LENGTH_1_LOGIC2_"   , chkPkg.v)
+#        ## CRAN incoming checks do use abort,verbose
+#        chkPkg.v <- "package:_R_CHECK_PACKAGE_NAME_,abort,verbose"
+#        Sys.setenv1("_R_CHECK_LENGTH_1_LOGIC2_"   , chkPkg.v)
         Sys.setenv("_R_CHECK_CODOC_VARIABLES_IN_USAGES_" = "TRUE")
         Sys.setenv("_R_CHECK_DATALIST_" = "TRUE")
         if(!WINDOWS) Sys.setenv("_R_CHECK_BASHISMS_" = "TRUE")
@@ -6372,6 +6493,7 @@ add_dummies <- function(dir, Log)
         ## allow this to be overridden if there is a problem elsewhere
         prev <- Sys.getenv("_R_CHECK_MATRIX_DATA_",  NA_character_)
         if(is.na(prev)) Sys.setenv("_R_CHECK_MATRIX_DATA_" = "TRUE")
+        Sys.setenv("_R_NO_S_TYPEDEFS_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
@@ -6390,6 +6512,10 @@ add_dummies <- function(dir, Log)
         R_check_things_in_temp_dir <- TRUE
         R_check_vignette_titles <- TRUE
         R_check_bogus_return <- TRUE
+        R_check_code_class_is_string <- TRUE
+        if(is.na(R_check_Rd_validate_Rd2HTML))
+            R_check_Rd_validate_Rd2HTML <- TRUE
+
     } else {
         ## do it this way so that INSTALL produces symbols.rds
         ## when called from check but not in general.
@@ -6410,6 +6536,8 @@ add_dummies <- function(dir, Log)
                                     R_check_unsafe_calls <-
                                         R_check_toplevel_files <- FALSE
         R_check_Rd_line_widths <- FALSE
+        R_check_code_class_is_string <- FALSE
+        R_check_Rd_validate_Rd2HTML <- FALSE
     }
 
     startdir <- getwd()
@@ -6777,6 +6905,9 @@ add_dummies <- function(dir, Log)
             else
                 check_pkg_manual(pkgdir, desc["Package"])
         }
+
+        if(!extra_arch && do_manual && isTRUE(R_check_Rd_validate_Rd2HTML))
+            check_Rd2HTML(pkgdir)
 
         if (!is_base_pkg && check_incoming && no_examples &&
             dir.exists(file.path(pkgdir, "R"))) {
