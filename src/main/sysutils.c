@@ -860,14 +860,15 @@ int Riconv_close (void *cd)
 }
 
 typedef enum {
-    NT_NONE        = 0, /* no translation to native encoding is needed */
+    NT_NONE        = 0, /* no translation is needed */
     NT_FROM_UTF8   = 1, /* need to translate from UTF8 */
     NT_FROM_LATIN1 = 2, /* need to translate from latin1 */
+    NT_FROM_NATIVE = 3, /* need to translate from native encoding */
 } nttype_t;
 
 /* Decides whether translation to native encoding is needed. */
-static R_INLINE nttype_t needsTranslation(SEXP x) {
-
+static R_INLINE nttype_t needsTranslation(SEXP x)
+{
     if (IS_ASCII(x)) return NT_NONE;
     if (IS_UTF8(x)) {
 	if (utf8locale || x == NA_STRING) return NT_NONE;
@@ -886,11 +887,10 @@ static void *latin1_obj = NULL, *utf8_obj=NULL, *ucsmb_obj=NULL,
     *ucsutf8_obj=NULL;
 
 /* Translates string in "ans" to native encoding returning it in string
-   buffer "cbuff" */
+   buffer "cbuff". */
 static int translateToNative(const char *ans, R_StringBuffer *cbuff,
 			     nttype_t ttype, int mustWork)
 {
-
     if (ttype == NT_NONE)
 	error(_("internal error: no translation needed"));
 
@@ -920,7 +920,7 @@ static int translateToNative(const char *ans, R_StringBuffer *cbuff,
 	    latin1_obj = obj;
 	}
 	obj = latin1_obj;
-    } else {
+    } else { /* ttype == NT_FROM_UTF8 */
 	if(!utf8_obj) {
 	    obj = Riconv_open("", "UTF-8");
 	    /* should never happen */
@@ -991,7 +991,7 @@ next_char:
     *outbuf = '\0';
     if (mustWork && failed) {
 	if (mustWork == 2) {
-	    warning(_("unable to translate '%s' to native encoding"), 
+	    warning(_("unable to translate '%s' to native encoding"),
 		    cbuff->data);
 	    return 1;
 	} else {
@@ -1009,7 +1009,6 @@ next_char:
     }
     return 0;
 }
-
 
 /* This may return a R_alloc-ed result, so the caller has to manage the
    R_alloc stack */
@@ -1064,7 +1063,10 @@ const char *translateCharFP2(SEXP x)
     if (t == NT_NONE) return ans;
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-    if (translateToNative(ans, &cbuff, t, 2)) return NULL;
+    if (translateToNative(ans, &cbuff, t, 2)) {
+	R_FreeStringBuffer(&cbuff);
+	return NULL;
+    }
 
     size_t res = strlen(cbuff.data) + 1;
     char *p = R_alloc(res, 1);
@@ -1114,97 +1116,38 @@ const char *translateChar0(SEXP x)
     return translateChar(x);
 }
 
-/* This may return a R_alloc-ed result, so the caller has to manage the
-   R_alloc stack */
-const char *translateCharUTF8(SEXP x)
+/* Decides whether translation to UTF-8 is needed. */
+static R_INLINE nttype_t needsTranslationUTF8(SEXP x)
 {
-    void *obj;
-    const char *inbuf, *ans = CHAR(x);
-    char *outbuf, *p, *from = "";
-    size_t inb, outb, res;
-    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
-
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "translateCharUTF8", type2char(TYPEOF(x)));
-    if(x == NA_STRING) return ans;
-    if(IS_UTF8(x)) return ans;
-    if(IS_ASCII(x)) return ans;
-    if(IS_BYTES(x))
+    if (IS_UTF8(x) || IS_ASCII(x) || x == NA_STRING) return NT_NONE;
+    if (IS_BYTES(x))
 	error(_("translating strings with \"bytes\" encoding is not allowed"));
-
-    if (IS_LATIN1(x))
-#ifdef HAVE_ICONV_CP1252
-	from = "CP1252";
-#else
-	from = "latin1";
-#endif
-    obj = Riconv_open("UTF-8", from);
-    if(obj == (void *)(-1))
-#ifdef Win32
-	error(_("unsupported conversion from '%s' in codepage %d"),
-	      from, localeCP);
-#else
-	error(_("unsupported conversion from '%s' to '%s'"),
-	      from, "UTF-8");
-#endif
-    R_AllocStringBuffer(0, &cbuff);
-top_of_loop:
-    inbuf = ans; inb = strlen(inbuf);
-    outbuf = cbuff.data; outb = cbuff.bufsize - 1;
-    /* First initialize output */
-    Riconv (obj, NULL, NULL, &outbuf, &outb);
-next_char:
-    /* Then convert input  */
-    res = Riconv(obj, &inbuf , &inb, &outbuf, &outb);
-    if(res == -1 && errno == E2BIG) {
-	R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
-	goto top_of_loop;
-    } else if(res == -1 && (errno == EILSEQ || errno == EINVAL)) {
-	if(outb < 5) {
-	    R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
-	    goto top_of_loop;
-	}
-	snprintf(outbuf, 5, "<%02x>", (unsigned char)*inbuf);
-	outbuf += 4; outb -= 4;
-	inbuf++; inb--;
-	goto next_char;
-    }
-    *outbuf = '\0';
-    Riconv_close(obj);
-    res = strlen(cbuff.data) + 1;
-    p = R_alloc(res, 1);
-    memcpy(p, cbuff.data, res);
-    R_FreeStringBuffer(&cbuff);
-    return p;
+    if (IS_LATIN1(x) || latin1locale) return NT_FROM_LATIN1;
+    if (utf8locale) return NT_NONE;
+    return NT_FROM_NATIVE;
 }
 
-/* Variant which does not return escaped string */
-attribute_hidden
-const char *trCharUTF8(SEXP x)
+/* Translates string in "ans" to UTF-8 returning it in string
+   buffer "cbuff". */
+static int translateToUTF8(const char *ans, R_StringBuffer *cbuff,
+			     nttype_t ttype, int mustWork)
 {
+    if (ttype == NT_NONE)
+	error(_("internal error: no translation needed"));
+
     void *obj;
-    const char *inbuf, *ans = CHAR(x);
-    char *outbuf, *p, *from = "";
+    const char *inbuf, *from;
+    char *outbuf;
     size_t inb, outb, res;
-    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
     Rboolean failed = FALSE;
 
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "translateCharUTF8", type2char(TYPEOF(x)));
-    if(x == NA_STRING) return ans;
-    if(IS_UTF8(x)) return ans;
-    if(IS_ASCII(x)) return ans;
-    if(IS_BYTES(x))
-	error(_("translating strings with \"bytes\" encoding is not allowed"));
-
-    if (IS_LATIN1(x))
+    if (ttype == NT_FROM_LATIN1)
 #ifdef HAVE_ICONV_CP1252
 	from = "CP1252";
 #else
 	from = "latin1";
 #endif
+    /* else (ttype == NT_FROM_NATIVE) */
     obj = Riconv_open("UTF-8", from);
     if(obj == (void *)(-1))
 #ifdef Win32
@@ -1214,21 +1157,21 @@ const char *trCharUTF8(SEXP x)
 	error(_("unsupported conversion from '%s' to '%s'"),
 	      from, "UTF-8");
 #endif
-    R_AllocStringBuffer(0, &cbuff);
+    R_AllocStringBuffer(0, cbuff);
 top_of_loop:
     inbuf = ans; inb = strlen(inbuf);
-    outbuf = cbuff.data; outb = cbuff.bufsize - 1;
+    outbuf = cbuff->data; outb = cbuff->bufsize - 1;
     /* First initialize output */
     Riconv (obj, NULL, NULL, &outbuf, &outb);
 next_char:
     /* Then convert input  */
     res = Riconv(obj, &inbuf , &inb, &outbuf, &outb);
     if(res == -1 && errno == E2BIG) {
-	R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
+	R_AllocStringBuffer(2*cbuff->bufsize, cbuff);
 	goto top_of_loop;
     } else if(res == -1 && (errno == EILSEQ || errno == EINVAL)) {
 	if(outb < 5) {
-	    R_AllocStringBuffer(2*cbuff.bufsize, &cbuff);
+	    R_AllocStringBuffer(2*cbuff->bufsize, cbuff);
 	    goto top_of_loop;
 	}
 	failed = TRUE;
@@ -1239,15 +1182,79 @@ next_char:
     }
     *outbuf = '\0';
     Riconv_close(obj);
-    if (failed)
-	error(_("unable to translate '%s' to UTF-8"),  cbuff.data);
-    res = strlen(cbuff.data) + 1;
-    p = R_alloc(res, 1);
+    if (mustWork && failed) {
+	if (mustWork == 2) {
+	    warning(_("unable to translate '%s' to UTF-8"),
+		    cbuff->data);
+	    return 1;
+	} else {
+	    char err_buff[256];
+	    if (strlen(cbuff->data) > 255) {
+		strncpy(err_buff, cbuff->data, 252);
+		err_buff[252] = '\0';
+		mbcsTruncateToValid(err_buff);
+		strcat(err_buff, "...");
+	    } else
+		strcpy(err_buff, cbuff->data);
+	    R_FreeStringBuffer(cbuff);
+	    error(_("unable to translate '%s' to UTF-8"), err_buff);
+	}
+    }
+    return 0;
+}
+
+/* This may return a R_alloc-ed result, so the caller has to manage the
+   R_alloc stack */
+const char *translateCharUTF8(SEXP x)
+{
+    if(TYPEOF(x) != CHARSXP)
+	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
+	      "translateCharUTF8", type2char(TYPEOF(x)));
+    nttype_t t = needsTranslationUTF8(x);
+    const char *ans = CHAR(x);
+    if (t == NT_NONE) return ans;
+
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    translateToUTF8(ans, &cbuff, t, 0);
+
+    size_t res = strlen(cbuff.data) + 1;
+    char *p = R_alloc(res, 1);
     memcpy(p, cbuff.data, res);
     R_FreeStringBuffer(&cbuff);
     return p;
 }
 
+/* Variant which does not return escaped string (which must work) */
+attribute_hidden
+const char *trCharUTF8(SEXP x)
+{
+    if(TYPEOF(x) != CHARSXP)
+	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
+	      "trCharUTF8", type2char(TYPEOF(x)));
+    nttype_t t = needsTranslationUTF8(x);
+    const char *ans = CHAR(x);
+    if (t == NT_NONE) return ans;
+
+    R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
+    translateToUTF8(ans, &cbuff, t, 1);
+
+    size_t res = strlen(cbuff.data) + 1;
+    char *p = R_alloc(res, 1);
+    memcpy(p, cbuff.data, res);
+    R_FreeStringBuffer(&cbuff);
+    return p;
+}
+
+/* Decides type of translation needed to get wchar_t*. */
+static R_INLINE nttype_t wneedsTranslation(SEXP x)
+{
+    if (IS_BYTES(x))
+	error(_("translating strings with \"bytes\" encoding is not allowed"));
+    if (IS_UTF8(x)) return NT_FROM_UTF8;
+    if (IS_LATIN1(x) || latin1locale) return NT_FROM_LATIN1;
+    if (utf8locale) return NT_FROM_UTF8;
+    return NT_FROM_NATIVE;
+}
 
 #ifdef Win32
 static const char TO_WCHAR[] = "UCS-2LE";
@@ -1270,7 +1277,7 @@ static void *latin1_wobj = NULL, *utf8_wobj=NULL;
 const wchar_t *wtransChar(SEXP x)
 {
     void * obj;
-    const char *inbuf, *ans = CHAR(x), *from;
+    const char *inbuf, *from;
     char *outbuf;
     wchar_t *p;
     size_t inb, outb, res, top;
@@ -1278,12 +1285,12 @@ const wchar_t *wtransChar(SEXP x)
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
     if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP"), "wtransChar");
+	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
+	      "wtransChar", type2char(TYPEOF(x)));
+    nttype_t t = wneedsTranslation(x);
+    const char *ans = CHAR(x);
 
-    if(IS_BYTES(x))
-	error(_("translating strings with \"bytes\" encoding is not allowed"));
-
-    if(IS_LATIN1(x)) {
+    if(t == NT_FROM_LATIN1) {
 	if(!latin1_wobj) {
 #ifdef HAVE_ICONV_CP1252
 	    from = "CP1252";
@@ -1298,7 +1305,7 @@ const wchar_t *wtransChar(SEXP x)
 	} else
 	    obj = latin1_wobj;
 	knownEnc = TRUE;
-    } else if(IS_UTF8(x)) {
+    } else if(t == NT_FROM_UTF8) {
 	if(!utf8_wobj) {
 	    obj = Riconv_open(TO_WCHAR, "UTF-8");
 	    if(obj == (void *)(-1))
@@ -1308,7 +1315,7 @@ const wchar_t *wtransChar(SEXP x)
 	} else
 	    obj = utf8_wobj;
 	knownEnc = TRUE;
-    } else {
+    } else { /* t == NT_FROM_NATIVE */
 	obj = Riconv_open(TO_WCHAR, "");
 	if(obj == (void *)(-1))
 #ifdef Win32
