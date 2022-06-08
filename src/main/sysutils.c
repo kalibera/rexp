@@ -803,10 +803,16 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
+#define CHECK_CHARSXP(x) do { \
+    SEXP __x__ = (x);            \
+    if(TYPEOF(__x__) != CHARSXP) \
+	error(_("'%s' must be called on a CHARSXP, but got '%s'"), \
+	      __func__, type2char(TYPEOF(__x__)));                 \
+} while(0);
+
 cetype_t getCharCE(SEXP x)
 {
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP"), "getCharCE");
+    CHECK_CHARSXP(x);
     if(IS_UTF8(x)) return CE_UTF8;
     else if(IS_LATIN1(x)) return CE_LATIN1;
     else if(IS_BYTES(x)) return CE_BYTES;
@@ -1010,54 +1016,47 @@ next_char:
     return 0;
 }
 
+static const char *copyAndFreeStringBuffer(R_StringBuffer *cbuff)
+{
+    size_t res = strlen(cbuff->data) + 1;
+    char *p = R_alloc(res, 1);
+    memcpy(p, cbuff->data, res);
+    R_FreeStringBuffer(cbuff);
+    return p;
+}
+
 /* This may return a R_alloc-ed result, so the caller has to manage the
    R_alloc stack */
 const char *translateChar(SEXP x)
 {
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "translateChar", type2char(TYPEOF(x)));
+    CHECK_CHARSXP(x);
     nttype_t t = needsTranslation(x);
     const char *ans = CHAR(x);
     if (t == NT_NONE) return ans;
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
     translateToNative(ans, &cbuff, t, 0);
-
-    size_t res = strlen(cbuff.data) + 1;
-    char *p = R_alloc(res, 1);
-    memcpy(p, cbuff.data, res);
-    R_FreeStringBuffer(&cbuff);
-    return p;
+    return copyAndFreeStringBuffer(&cbuff);
 }
 
 /* Variant which must work, used for file paths, including devices */
 const char *translateCharFP(SEXP x)
 {
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "translateChar", type2char(TYPEOF(x)));
+    CHECK_CHARSXP(x);
     nttype_t t = needsTranslation(x);
     const char *ans = CHAR(x);
     if (t == NT_NONE) return ans;
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
     translateToNative(ans, &cbuff, t, 1);
-
-    size_t res = strlen(cbuff.data) + 1;
-    char *p = R_alloc(res, 1);
-    memcpy(p, cbuff.data, res);
-    R_FreeStringBuffer(&cbuff);
-    return p;
+    return copyAndFreeStringBuffer(&cbuff);
 }
 
 /* Variant which may return NULL, used for file paths */
 attribute_hidden
 const char *translateCharFP2(SEXP x)
 {
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "translateChar", type2char(TYPEOF(x)));
+    CHECK_CHARSXP(x);
     nttype_t t = needsTranslation(x);
     const char *ans = CHAR(x);
     if (t == NT_NONE) return ans;
@@ -1066,20 +1065,13 @@ const char *translateCharFP2(SEXP x)
     if (translateToNative(ans, &cbuff, t, 2)) {
 	R_FreeStringBuffer(&cbuff);
 	return NULL;
-    }
-
-    size_t res = strlen(cbuff.data) + 1;
-    char *p = R_alloc(res, 1);
-    memcpy(p, cbuff.data, res);
-    R_FreeStringBuffer(&cbuff);
-    return p;
+    } else
+	return copyAndFreeStringBuffer(&cbuff);
 }
 
 SEXP installTrChar(SEXP x)
 {
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "installTrChar", type2char(TYPEOF(x)));
+    CHECK_CHARSXP(x);
     nttype_t t = needsTranslation(x);
     if (t == NT_NONE) return installNoTrChar(x);
 
@@ -1110,8 +1102,7 @@ SEXP Rf_installChar(SEXP x)
 */
 const char *translateChar0(SEXP x)
 {
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP"), "translateChar0");
+    CHECK_CHARSXP(x);
     if(IS_BYTES(x)) return CHAR(x);
     return translateChar(x);
 }
@@ -1136,7 +1127,7 @@ static int translateToUTF8(const char *ans, R_StringBuffer *cbuff,
 	error(_("internal error: no translation needed"));
 
     void *obj;
-    const char *inbuf, *from;
+    const char *inbuf, *from = "";
     char *outbuf;
     size_t inb, outb, res;
     Rboolean failed = FALSE;
@@ -1207,42 +1198,28 @@ next_char:
    R_alloc stack */
 const char *translateCharUTF8(SEXP x)
 {
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "translateCharUTF8", type2char(TYPEOF(x)));
+    CHECK_CHARSXP(x);
     nttype_t t = needsTranslationUTF8(x);
     const char *ans = CHAR(x);
     if (t == NT_NONE) return ans;
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
     translateToUTF8(ans, &cbuff, t, 0);
-
-    size_t res = strlen(cbuff.data) + 1;
-    char *p = R_alloc(res, 1);
-    memcpy(p, cbuff.data, res);
-    R_FreeStringBuffer(&cbuff);
-    return p;
+    return copyAndFreeStringBuffer(&cbuff);
 }
 
 /* Variant which does not return escaped string (which must work) */
 attribute_hidden
 const char *trCharUTF8(SEXP x)
 {
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "trCharUTF8", type2char(TYPEOF(x)));
+    CHECK_CHARSXP(x);
     nttype_t t = needsTranslationUTF8(x);
     const char *ans = CHAR(x);
     if (t == NT_NONE) return ans;
 
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
     translateToUTF8(ans, &cbuff, t, 1);
-
-    size_t res = strlen(cbuff.data) + 1;
-    char *p = R_alloc(res, 1);
-    memcpy(p, cbuff.data, res);
-    R_FreeStringBuffer(&cbuff);
-    return p;
+    return copyAndFreeStringBuffer(&cbuff);
 }
 
 /* Decides type of translation needed to get wchar_t*. */
@@ -1284,9 +1261,7 @@ const wchar_t *wtransChar(SEXP x)
     Rboolean knownEnc = FALSE;
     R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
-    if(TYPEOF(x) != CHARSXP)
-	error(_("'%s' must be called on a CHARSXP, but got '%s'"),
-	      "wtransChar", type2char(TYPEOF(x)));
+    CHECK_CHARSXP(x);
     nttype_t t = wneedsTranslation(x);
     const char *ans = CHAR(x);
 
