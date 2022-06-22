@@ -175,9 +175,11 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE,
         ## (Keeps the end markers, but that's ok.)
         if (nullPointers) {
             ## remove pointer addresses from listings
-            txt <- gsub("<(environment|bytecode|pointer|promise): [x[:xdigit:]]+>", "<\\1: 0>", txt)
+            txt <- gsub("<(environment|bytecode|pointer|promise): [x[:xdigit:]]+>", "<\\1: 0>", txt,
+                        useBytes = TRUE)
             ## standardize hashtable, pro tem
-            txt <- sub("<hashtable.*>", "<hashtable output>", txt)
+            txt <- sub("<hashtable.*>", "<hashtable output>", txt,
+                       useBytes = TRUE)
         }
         ## regularize fancy quotes.  First UTF-8 ones:
         txt <- .canonicalize_quotes(txt)
