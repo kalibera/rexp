@@ -638,19 +638,19 @@ stopifnot(identical(check2(one, , three), c(FALSE, TRUE, FALSE)))
 
 ### envRefClass check moved to methods package
 
-
+### This is an error in R 4.2.0
 ## takes too long with JIT enabled:
-.jit.lev <- compiler::enableJIT(0)
-Sys.getenv("_R_CHECK_LENGTH_1_CONDITION_") -> oldV
-Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = "false") # only *warn*
-## while did not protect its argument, which caused an error
-## under gctorture, PR#15990
-gctorture()
-suppressWarnings(while(c(FALSE, TRUE)) 1)
-gctorture(FALSE)
-## gave an error because the test got released when the warning was generated.
-compiler::enableJIT(.jit.lev)# revert
-Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = oldV)
+## .jit.lev <- compiler::enableJIT(0)
+## Sys.getenv("_R_CHECK_LENGTH_1_CONDITION_") -> oldV
+## Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = "false") # only *warn*
+## ## while did not protect its argument, which caused an error
+## ## under gctorture, PR#15990
+## gctorture()
+## suppressWarnings(while(c(FALSE, TRUE)) 1)
+## gctorture(FALSE)
+## ## gave an error because the test got released when the warning was generated.
+## compiler::enableJIT(.jit.lev)# revert
+## Sys.setenv("_R_CHECK_LENGTH_1_CONDITION_" = oldV)
 
 
 ## hist(x, breaks =) with too large bins, PR#15988
@@ -1071,14 +1071,14 @@ stopifnot(identical(names(myD), names(format(head(myD)))),
 		    data.frame(X2.1 = 2:1, X1.2 = 1:2)))
 ## format.data.frame() did not show "stringsAsFactors" in R <= 3.2.2
 ## Follow up: the new as.data.frame.list() must be careful with 'AsIs' columns:
-desc <- structure( c("a", NA, "z"), .Names = c("A", NA, "Z"))
+desc <- structure( c("a", NA, "z"), names = c("A", NA, "Z"))
 tools::assertError( data.frame(desc = desc, stringsAsFactors = FALSE) )
 ## however
 dd <- data.frame(desc = structure(desc, class="AsIs"),
                  row.names = c("A","M","Z"), stringsAsFactors = FALSE)
 ## is "legal" (because "AsIs" can be 'almost anything')
 dd ## <- did not format nor print correctly in R-devel early Nov.2015
-fdesc <- structure(c("a", "NA", "z"), .Names=names(desc), class="AsIs")
+fdesc <- structure(c("a", "NA", "z"), names=names(desc), class="AsIs")
 stopifnot(identical(format(dd),
                     data.frame(desc = fdesc, row.names = c("A", "M", "Z"))),
           identical(capture.output(dd),
@@ -1604,6 +1604,8 @@ stopifnot(identical(w8, 141:142),# exactly 1941:1942 had CEST on Jan.1
 ## for R-devel Jan.2016 to Mar.14 -- *AND* for R 3.2.4 -- the above gave
 ## integer(0)  and  c(41:42, 99:100, ..., 389:390)  respectively
 
+## the above gives 1:142 and 1:42 respectively on Solaris 10 when not using
+## --with-internal-tzcode; R-Admin recommends --with-internal-tzcode.
 
 ## tsp<- did not remove mts class
 z <- ts(cbind(1:5,1:5))

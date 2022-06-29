@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2007  R Core Team
+ *  Copyright (C) 1998--2022  R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -37,11 +37,12 @@
    frequently. See rterm.c and ../system.c for one approach using
    a separate thread for input.
 */
-int myReadConsole(const char *prompt, char *buf, int len, int addtohistory)
+int myReadConsole(const char *prompt, unsigned char *buf, int len,
+                  int addtohistory)
 {
     fputs(prompt, stdout);
     fflush(stdout);
-    if(fgets(buf, len, stdin)) return 1;
+    if(fgets((char *)buf, len, stdin)) return 1;
     else return 0;
 }
 
@@ -79,7 +80,7 @@ int main (int argc, char **argv)
     }
 
     R_setStartTime();
-    R_DefParams(Rp);
+    R_DefParamsEx(Rp, RSTART_VERSION);
     if((RHome = get_R_HOME()) == NULL) {
 	fprintf(stderr, 
 		"R_HOME must be set in the environment or Registry\n");
@@ -88,6 +89,7 @@ int main (int argc, char **argv)
     Rp->rhome = RHome;
     Rp->home = getRUser();
     Rp->CharacterMode = LinkDLL;
+    Rp->EmitEmbeddedUTF8 = FALSE;
     Rp->ReadConsole = myReadConsole;
     Rp->WriteConsole = NULL; /* for illustration purposes we use more flexible WriteConsoleEx */
     Rp->WriteConsoleEx = myWriteConsoleEx;

@@ -1,7 +1,7 @@
 #  File src/library/tools/R/CRANtools.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 2014-2019 The R Core Team
+#  Copyright (C) 2014-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 #  A copy of the GNU General Public License is available at
 #  https://www.R-project.org/Licenses/
 
+## exported
 summarize_CRAN_check_status <-
 function(packages, results = NULL, details = NULL, issues = NULL)
 {
@@ -55,8 +56,8 @@ function(packages, results = NULL, details = NULL, issues = NULL)
 
     summarize_results <- function(p, r) {
         if(!NROW(r)) return(character())
-        tab <- table(r$Status)[c("FAIL", "ERROR", "WARN", "NOTE", "OK")]
-        tab <- tab[!is.na(tab)]
+        tab <- table(r$Status)[c("OK", "NOTE", "WARNING", "ERROR", "FAILURE")]
+        tab <- tab[!is.na(tab) & (tab > 0)]
         paste(c(sprintf("Current CRAN status: %s",
                         paste(sprintf("%s: %s", names(tab), tab),
                               collapse = ", ")),
@@ -193,13 +194,13 @@ function(db = CRAN_package_db(),
 
 CRAN_baseurl_for_src_area <-
 function()
-    Sys.getenv("R_CRAN_SRC", .get_standard_repository_URLs()[1L])
+    Sys.getenv("R_CRAN_SRC", .get_CRAN_repository_URL())
 
 ## This allows for partial local mirrors, or to look at a
-## more-freqently-updated mirror.
+## more-freqently-updated mirror.  Exposed as utils::findCRANmirror
 CRAN_baseurl_for_web_area <-
 function()
-    Sys.getenv("R_CRAN_WEB", .get_standard_repository_URLs()[1L])
+    Sys.getenv("R_CRAN_WEB", .get_CRAN_repository_URL())
 
 read_CRAN_object <-
 function(cran, path)
@@ -210,6 +211,7 @@ function(cran, path)
     readRDS(con)
 }
 
+## exported
 CRAN_check_results <-
 function(flavors = NULL)
 {
@@ -220,6 +222,7 @@ function(flavors = NULL)
     db
 }
 
+## exported
 CRAN_check_details <-
 function(flavors = NULL)
 {
@@ -234,15 +237,16 @@ function(flavors = NULL)
     db
 }
 
-## Deprecated in 3.4.1
-CRAN_memtest_notes <-
-function()
-{
-    .Deprecated("CRAN_check_issues")
-    read_CRAN_object(CRAN_baseurl_for_web_area(),
-                     "web/checks/memtest_notes.rds")
-}
+## Deprecated in 3.4.1, removed in 4.3.0
+## CRAN_memtest_notes <-
+## function()
+## {
+##     .Deprecated("CRAN_check_issues")
+##     read_CRAN_object(CRAN_baseurl_for_web_area(),
+##                      "web/checks/memtest_notes.rds")
+## }
 
+## exported
 CRAN_check_issues <-
 function()
     read_CRAN_object(CRAN_baseurl_for_web_area(),
@@ -549,10 +553,9 @@ function(db = CRAN_package_db())
     maintainer <- db[, "Maintainer"]
     address <- tolower(sub(".*<(.*)>.*", "\\1", maintainer))
     maintainer <- gsub("\n", " ", maintainer, fixed=TRUE)
-    data.frame(Package = db[, "Package"],
-               Address = address,
-               Maintainer = maintainer,
-               stringsAsFactors = FALSE)
+    list2DF(list(Package = db[, "Package"],
+                 Address = address,
+                 Maintainer = maintainer))
 }
 
 CRAN_package_maintainers_info <-
@@ -605,16 +608,16 @@ function(packages)
 {
     repos <- getOption("repos")
     ## Alternatively, use .get_standard_repository_URLs()
-    
+
     a <- utils::available.packages(filters = list(), repos = repos)
 
     v <- read_CRAN_object(CRAN_baseurl_for_src_area(),
                           "src/contrib/Views.rds")
-    v <- do.call("rbind",
+    v <- do.call(rbind,
                  mapply(cbind,
                         Package =
                         lapply(v, function(e) e$packagelist$name),
-                        View = vapply(v, "[[", "name", FUN.VALUE = "")))
+                        View = vapply(v, `[[`, "name", FUN.VALUE = "")))
     v <- split(v[, 2L], v[, 1L])
 
     r <- package_dependencies(packages, a, reverse = TRUE)
@@ -721,8 +724,7 @@ function(packages, which = "most", recursive = FALSE,
                }
                d <- as.Date(d)
                o <- order(d, decreasing = TRUE)
-               data.frame(Package = e[o], Date = d[o],
-                          stringsAsFactors = FALSE)
+               list2DF(list(Package = e[o], Date = d[o]))
            })
 }
 
@@ -758,7 +760,7 @@ CRAN_package_check_URL <- function(p)
             p)
 
 BioC_package_db <-
-function()     
+function()
 {
     urls <- .get_standard_repository_URLs()
     urls <- urls[startsWith(names(urls), "BioC")]

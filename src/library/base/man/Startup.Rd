@@ -49,10 +49,15 @@
   (it contains settings from the installer in a \sQuote{factory-fresh}
   installation).
 #endif
-  This code is sourced into the \pkg{base} package.  Users need to be
-  careful not to unintentionally overwrite objects in \pkg{base}, and it
-  is normally advisable to use \code{\link{local}} if code needs to be
-  executed: see the examples.
+  This code is sourced into the workspace (global environment).  Users need
+  to be careful not to unintentionally create objects in the workspace, and
+  it is normally advisable to use \code{\link{local}} if code needs to be
+  executed: see the examples.  \code{.Library.site} may be assigned to and
+  the assignment will effectively modify the value of the variable in the
+  base namespace where \code{\link{.libPaths}()} finds it.  One may also
+  assign to \code{.First} and \code{.Last}, but assigning to other variables
+  in the execution environment is not recommended and does not work in
+  some older versions of \R.
 
   Then, unless \option{--no-init-file} was given, \R searches for a user
   profile, a file of \R code.  The path of this file can be specified by
@@ -127,8 +132,18 @@
 
   Leading and trailing white space in \code{\var{value}} are stripped.
   \code{\var{value}} is then processed in a similar way to a Unix shell:
-  in particular the outermost level of (single or double) quotes is
-  stripped, and backslashes are removed except inside quotes.
+  in particular (single or double) quotes not preceded by backslash
+  are removed and backslashes are removed except inside such quotes.
+
+  For readability and future compatibility it is recommended to only use
+  constructs that have the same behavior as in a Unix shell.  Hence,
+  expansions of variables should be in double quotes (e.g. 
+  \code{"${HOME}"}, in case they may contain a backslash) and literals
+  including a backslash should be in single quotes. If a variable value
+  may end in a backslash, such as \code{PATH} on Windows, it may be
+  necessary to protect the following quote from it, e.g. \code{"${PATH}/"}.
+  It is recommended to use forward slashes instead of backslashes.
+  It is ok to mix text in single and double quotes, see examples below.
 
   On systems with sub-architectures (mainly Windows), the
   files \file{Renviron.site} and \file{Rprofile.site} are looked for
@@ -223,6 +238,9 @@ PAGER=/usr/local/bin/less
 ## Example .Renviron on Windows
 R_LIBS=C:/R/library
 MY_TCLTK="c:/Program Files/Tcl/bin"
+# Variable expansion in double quotes, string literals with backslashes in
+# single quotes.
+R_LIBS_USER="${APPDATA}"'\R-library'
 
 ## Example of setting R_DEFAULT_PACKAGES (from R CMD check)
 R_DEFAULT_PACKAGES='utils,grDevices,graphics,stats'

@@ -40,7 +40,7 @@
   locations of the site libraries.
 
   \code{.libPaths} is used for getting or setting the library trees that \R
-  knows about and hence uses when looking for packages (library search
+  knows about and hence uses when looking for packages (the library search
   path).  If called with argument \code{new}, by default, the library search
   path is set to the existing directories in \code{unique(c(new,
   .Library.site, .Library))} and this is returned.  If \code{include.site}
@@ -52,14 +52,18 @@
   How paths in \code{new} with a trailing slash are treated is
   OS-dependent.  On a POSIX filesystem existing directories can usually
   be specified with a trailing slash. On Windows filepaths with a
-  trailing slash (or backslash) are invalid and so will never be added
-  to the library search path.
+  trailing slash (or backslash) are invalid and existing directories
+  specified with a trailing slash may not be added to the library search path.
 
   At startup, the library search path is initialized from the
   environment variables \env{R_LIBS}, \env{R_LIBS_USER} and
   \env{R_LIBS_SITE}, which if set should give lists of directories where
   \R library trees are rooted, colon-separated on Unix-alike systems and
-  semicolon-separated on Windows.
+  semicolon-separated on Windows.  For the latter two, a value of
+  \code{NULL} indicates an empty list of directories. (Note that as from
+  \R 4.2.0, both are set by \R start-up code if not already set or empty
+  so can be interrogated from an \R session to find the their defaults:
+  in earlier versions this was true only for \env{R_LIBS_USER}.)
 
   First, \code{.Library.site} is initialized from \env{R_LIBS_SITE}.  If
   this is unset or empty, the \file{site-library} subdirectory of
@@ -68,13 +72,17 @@
   Then, \code{.libPaths()} is called with the combination of the
   directories given by \env{R_LIBS} and \env{R_LIBS_USER}.
   By default \env{R_LIBS} is unset, and
-  \env{R_LIBS_USER} is set to directory
+  if \env{R_LIBS_USER} is unset or empty, it is set to directory
   \file{R/\var{R.version$platform}-library/\var{x.y}} of the home directory
-  on Unix-alike systems (or \file{Library/R/\var{arch}/\var{x.y}/library} for CRAN macOS
-  builds) and \file{R/win-library/\var{x.y}} on Windows, for \R \var{x.y.z}.
+  on Unix-alike systems
+  (or \file{Library/R/\var{m}/\var{x.y}/library} for CRAN macOS
+  builds, with \var{m} \code{\link{Sys.info}()["machine"]})
+  and \file{R/win-library/\var{x.y}} subdirectory of \env{LOCALAPPDATA} on Windows
+  (before \R 4.2.0, it was a subdirectory of the home directory even on
+  Windows), for \R \var{x.y.z}.
 
   Both \env{R_LIBS_USER} and \env{R_LIBS_SITE} feature possible
-  expansion of specifiers for \R version specific information as part of
+  expansion of specifiers for \R-version-specific information as part of
   the startup process.  The possible conversion specifiers all start
   with a \samp{\%} and are followed by a single letter (use \samp{\%\%}
   to obtain \samp{\%}), with currently available conversion
@@ -92,6 +100,8 @@
       value of \code{\link{R.version}$arch}.}
   }
   (See \code{\link{version}} for details on R version information.)
+  In addition, \samp{\%U} and \samp{\%S} expand to the \R defaults for,
+  respectively, \env{R_LIBS_USER} and \env{R_LIBS_SITE}.
 
   Function \code{.libPaths} always uses the values of \code{.Library}
   and \code{.Library.site} in the base namespace.  \code{.Library.site}
@@ -101,6 +111,10 @@
 
   For consistency, the paths are always normalized by
   \code{\link{normalizePath}(winslash = "/")}.
+
+  \env{LOCALAPPDATA} (usually \code{C:\\Users\\username\\AppData\\Local}) on
+  Windows is a hidden directory and may not be viewed by some software. It
+  may be opened by \code{shell.exec(Sys.getenv("LOCALAPPDATA"))}.
 }
 \value{
   A character vector of file paths.

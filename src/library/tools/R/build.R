@@ -446,17 +446,17 @@ inRbuildignore <- function(files, pkgdir) {
             messageLog(Log, "cleaning src")
             if (WINDOWS) {
                 have_make <- nzchar(Sys.which(Sys.getenv("MAKE", "make")))
-                if (file.exists("Makefile.win")) {
+                if (file.exists(fn <- "Makefile.ucrt") || file.exists(fn <- "Makefile.win")) {
                     if (have_make)
-                        Ssystem(Sys.getenv("MAKE", "make"), "-f Makefile.win clean")
+                        Ssystem(Sys.getenv("MAKE", "make"), paste0("-f ", fn, " clean"))
                     else warning("unable to run 'make clean' in 'src'",
                                  domain = NA)
                 } else {
-                    if (file.exists("Makevars.win")) {
+                    if (file.exists(fn <- "Makevars.ucrt") || file.exists(fn <- "Makevars.win")) {
                         if (have_make) {
                             makefiles <- paste("-f",
                                                shQuote(file.path(R.home("share"), "make", "clean.mk")),
-                                           "-f Makevars.win")
+                                           "-f", fn)
                             Ssystem(Sys.getenv("MAKE", "make"),
                                     c(makefiles, "clean"))
                         } else warning("unable to run 'make clean' in 'src'",
@@ -501,14 +501,20 @@ inRbuildignore <- function(files, pkgdir) {
         ## to 'Writing R Extensions', but were not in Perl version (nor
         ## was cleanup.win used).
         if (WINDOWS) {
-            if (file.exists("cleanup.win")) {
+            has_cleanup_ucrt <- file.exists("cleanup.ucrt")
+            if (has_cleanup_ucrt || file.exists("cleanup.win")) {
                 ## check we have sh.exe first
                 if (nzchar(Sys.which("sh.exe"))) {
                     Sys.setenv(R_PACKAGE_NAME = pkgname)
                     Sys.setenv(R_PACKAGE_DIR = pkgdir)
                     Sys.setenv(R_LIBRARY_DIR = dirname(pkgdir))
-                    messageLog(Log, "running 'cleanup.win'")
-                    Ssystem("sh", "./cleanup.win")
+                    if (has_cleanup_ucrt) {
+                        messageLog(Log, "running 'cleanup.ucrt'")
+                        Ssystem("sh", "./cleanup.ucrt")
+                    } else {
+                        messageLog(Log, "running 'cleanup.win'")
+                        Ssystem("sh", "./cleanup.win")
+                    }
                 }
             }
         } else if (file_test("-x", "cleanup")) {
@@ -518,6 +524,7 @@ inRbuildignore <- function(files, pkgdir) {
             messageLog(Log, "running 'cleanup'")
             Ssystem("./cleanup")
         }
+        revert_install_time_patches()
     }
 
     update_Rd_index <- function(oldindex, Rd_files, Log)
@@ -573,14 +580,29 @@ inRbuildignore <- function(files, pkgdir) {
                            os = c("unix", "windows"), step = 1)
     	if (!length(db)) return(FALSE)
 
-    	# Strip the pkgdir off the names
+    	## Strip the pkgdir off the names
     	names(db) <- substring(names(db),
                                nchar(file.path(pkgdir, "man")) + 2L)
 
-	containsSexprs <-
-            which(sapply(db, function(Rd) getDynamicFlags(Rd)["\\Sexpr"]))
-	if (!length(containsSexprs)) return(FALSE)
-
+        btinfo <- do.call(rbind,
+                          lapply(db, .Rd_get_Sexpr_build_time_info))
+        if(!any(btinfo[, "\\Sexpr"])) {
+            return(FALSE)
+        } else {
+            ## <FIXME>
+            ## Remove eventually.
+            ## If we only have Sexprs we never process when building,
+            ## for now create an empty partial db to make older versions
+            ## of the CRAN incoming check code happy.
+            if(!any(btinfo[, c("build", "later")])) {
+                dir.create("build", showWarnings = FALSE)
+                saveRDS(structure(list(), names = character()),
+                        build_partial_Rd_db_path, version = 2L)
+                return(FALSE)
+            }
+            ## </FIXME>
+        }
+                    
 	messageLog(Log, "installing the package to process help pages")
 
         dir.create(libdir, mode = "0755", showWarnings = FALSE)
@@ -590,13 +612,16 @@ inRbuildignore <- function(files, pkgdir) {
 
         temp_install_pkg(pkgdir, libdir)
 
-	containsBuildSexprs <-
-            which(sapply(db, function(Rd) getDynamicFlags(Rd)["build"]))
+        containsBuildSexprs <- which(btinfo[, "build"])
 
 	if (length(containsBuildSexprs)) {
-	    for (i in containsBuildSexprs)
+	    for (i in containsBuildSexprs) {
 		db[[i]] <- prepare_Rd(db[[i]], stages = "build",
                                       stage2 = FALSE, stage3 = FALSE)
+                ## There could be build Sexprs giving install/render
+                ## Sexprs ...
+                btinfo[i, ] <- .Rd_get_Sexpr_build_time_info(db[[i]])
+            }
 	    messageLog(Log, "saving partial Rd database")
 	    partial <- db[containsBuildSexprs]
 	    dir.create("build", showWarnings = FALSE)
@@ -605,14 +630,11 @@ inRbuildignore <- function(files, pkgdir) {
 	}
 	needRefman <- manual &&
             parse_description_field(desc, "BuildManual", TRUE) &&
-            any(vapply(db,
-                       function(Rd)
-                           any(getDynamicFlags(Rd)[c("install", "render")]),
-                       NA))
+            any(btinfo[, "later"])
 	if (needRefman) {
 	    messageLog(Log, "building the PDF package manual")
 	    dir.create("build", showWarnings = FALSE)
-	    ..Rd2pdf(c("--force", "--no-preview",
+	    ..Rd2pdf(c("--force", "--no-preview", "--quiet",
 	               paste0("--output=", build_refman_path),
 	               pkgdir), quit = FALSE)
         }
@@ -640,8 +662,8 @@ inRbuildignore <- function(files, pkgdir) {
     fix_nonLF_in_make_files <- function(pkgname, Log) {
         fix_nonLF_in_files(pkgname,
                            paste0("^(",
-                                  paste(c("Makefile", "Makefile.in", "Makefile.win",
-                                          "Makevars", "Makevars.in", "Makevars.win"),
+                                  paste(c("Makefile", "Makefile.in", "Makefile.win", "Makefile.ucrt",
+                                          "Makevars", "Makevars.in", "Makevars.win", "Makevars.ucrt"),
                                         collapse = "|"), ")$"), Log)
         ## Other Makefiles
         makes <- dir(pkgname, pattern = "^Makefile$",

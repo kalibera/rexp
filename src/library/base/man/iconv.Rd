@@ -1,6 +1,6 @@
 % File src/library/base/man/iconv.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2019 R Core Team
+% Copyright 1995-2022 R Core Team
 % Distributed under GPL 2 or later
 
 \name{iconv}
@@ -28,7 +28,9 @@ iconvlist()
     any non-convertible bytes in the input.  (This would normally be a
     single character, but can be more.)  If \code{"byte"}, the indication is
     \code{"<xx>"} with the hex code of the byte.  If \code{"Unicode"}
-    and converting from UTF-8, the Unicode point in the form \code{"<U+xxxx>"}.}
+    and converting from UTF-8, the Unicode point in the form
+    \code{"<U+xxxx>"}, or if \code{c99}, a C99-style escape
+    \code{"\\uxxxx"}.}
   \item{mark}{logical, for expert use.  Should encodings be marked?}
   \item{toRaw}{logical.  Should a list of raw vectors be returned rather
     than a character vector?}
@@ -67,18 +69,18 @@ iconvlist()
   validity checking and will often mis-convert inputs which are invalid
   in encoding \code{from}.
 
-  If \code{sub = "Unicode"} is used for a non-UTF-8 input it is the same
-  as \code{sub = "byte"}.
+  If \code{sub = "Unicode"} or \code{sub = "c99"} is used for a
+  non-UTF-8 input it is the same as \code{sub = "byte"}.
 }
 
 \section{Implementation Details}{
-  There are three main implementations of \code{iconv} in use.
-  Linux's C runtime \samp{glibc} contains one.  Several platforms
-  supply GNU \samp{libiconv}, including macOS, FreeBSD and Cygwin, in
+  There are three main implementations of \code{iconv} in use.  Linux's
+  most common C runtime, \samp{glibc}, contains one.  Several platforms
+  supply GNU \samp{libiconv}, including macOS and FreeBSD, in
   some cases with additional encodings.  On Windows we use a version of
   Yukihiro Nakadaira's \samp{win_iconv}, which is based on Windows'
-  codepages.  (We have added many encoding names for compatibility
-  with other systems.)  All three have \code{iconvlist}, ignore case in
+  codepages.  (We have added many encoding names for compatibility with
+  other systems.)  All three have \code{iconvlist}, ignore case in
   encoding names and support \samp{//TRANSLIT} (but with different
   results, and for \samp{win_iconv} currently a \sQuote{best fit}
   strategy is used except for \code{to = "ASCII"}).
@@ -88,6 +90,13 @@ iconvlist()
   the \sQuote{R Installation and Administration} manual recommends
   installing GNU \samp{libiconv} on Solaris and AIX, for example.
 
+  %% https://wiki.musl-libc.org/functional-differences-from-glibc.html
+  %% https://wiki.musl-libc.org/projects-using-musl.html
+  Some Linux distributions use \samp{musl} as their C runtime.  This is
+  less comprehensive than \samp{glibc}: it does not support
+  \samp{//TRANSLIT} but does inexact conversions (currently using
+  \samp{*}).
+
   There are other implementations, e.g.\sspace{} NetBSD has used one from the
   Citrus project (which does not support \samp{//TRANSLIT}) and there is
   an older FreeBSD port (\samp{libiconv} is usually used there): it has
@@ -95,7 +104,8 @@ iconvlist()
 
   Note that you cannot rely on invalid inputs being detected, especially
   for \code{to = "ASCII"} where some implementations allow 8-bit
-  characters and pass them through unchanged or with transliteration.
+  characters and pass them through unchanged or with transliteration or
+  substitution.
 
   Some of the implementations have interesting extra encodings: for
   example GNU \samp{libiconv} allows \code{to = "C99"} to use
@@ -179,6 +189,7 @@ iconv(x, "latin1", "ASCII", "?")     # "fa?ile"
 iconv(x, "latin1", "ASCII", "")      # "faile"
 iconv(x, "latin1", "ASCII", "byte")  # "fa<e7>ile"
 iconv(xx, "UTF-8", "ASCII", "Unicode") # "fa<U+00E7>ile"
+iconv(xx, "UTF-8", "ASCII", "c99")   # "fa\u00E7ile"
 
 ## Extracts from old R help files (they are nowadays in UTF-8)
 x <- c("Ekstr\xf8m", "J\xf6reskog", "bi\xdfchen Z\xfcrcher")

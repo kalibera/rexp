@@ -1,7 +1,7 @@
 #  File src/library/utils/R/iconv.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2021 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -54,6 +54,9 @@ localeToCharset <- function(locale = Sys.getlocale("LC_CTYPE"))
     if(.Platform$OS.type == "windows") {
         x <- strsplit(locale, ".", fixed=TRUE)[[1L]]
         if(length(x) != 2) return(NA_character_)
+        ## see https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/setlocale-wsetlocale?view=msvc-160#utf-8-support
+        if (x[2L] %in% c("UTF8", "UTF-8", "utf8", "utf-8", "Utf-8"))
+            return("UTF-8")
         ## PUTTY suggests mapping Windows code pages as
         ## 1250 -> ISO 8859-2
         ## 1251 -> KOI8-U
@@ -132,6 +135,7 @@ localeToCharset <- function(locale = Sys.getlocale("LC_CTYPE"))
             if(enc == "utf8") return(c("UTF-8", guess(ll)))
             else return(guess(ll))
         }
+        if (enc == "utf8") return("UTF-8") # fallback for ???.UTF-8
         return(NA_character_)
     }
 }

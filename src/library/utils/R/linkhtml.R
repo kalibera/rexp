@@ -1,7 +1,7 @@
 #  File src/library/utils/R/linkhtml.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ make.packages.html <-
 {
     add_lib_index <- function(libs)
     {
-        cat('<div align="left">\n<ul>\n', file = out)
+        cat('<div style="text-align: left;">\n<ul>\n', file = out)
         for (i in seq_along(libs)) {
             nm <- libs[i]
             if (nm == .Library) {
@@ -61,7 +61,7 @@ make.packages.html <-
     }
     file.append(f.tg,
                 file.path(R.home("doc"), "html", "packages-head-utf8.html"))
-    out <- file(f.tg, open = "a")
+    out <- file(f.tg, open = "a", encoding = "UTF-8")
     on.exit(close(out))
     if(WINDOWS) {
         rh <- chartr("\\", "/", R.home())
@@ -88,7 +88,7 @@ make.packages.html <-
         lib <- lib.loc[ii]
         libname <-
             if (identical(lib, .Library)) "the standard library" else if (WINDOWS) chartr("/", "\\", lib) else lib
-        cat("<p><h3 id=\"lib-",ii,"\">Packages in ", libname, "</h3>\n", sep = "", file = out)
+        cat("<h3 id=\"lib-",ii,"\">Packages in ", libname, "</h3>\n", sep = "", file = out)
         lib0 <- "../../library"
         if (!temp) {
             if (WINDOWS) {
@@ -109,11 +109,11 @@ make.packages.html <-
         first <- toupper(substr(pg, 1, 1))
         nm <- sort(names(table(first)))
         if(use_alpha) {
-            writeLines("<p align=\"center\">", out)
+            writeLines("<p style=\"text-align: center;\">", out)
             writeLines(paste0("<a href=\"#pkgs-", nm, "\">", nm, "</a>"), out)
             writeLines("</p>\n", out)
         }
-        cat('<p><table width="100%" summary="R Package list">\n', file = out)
+        cat('<table style="width: 100%;">\n', file = out)
         for (a in nm) {
             if(use_alpha)
                 cat("<tr id=\"pkgs-", a, "\"> <td></td>\n", sep = "", file = out)
@@ -121,10 +121,11 @@ make.packages.html <-
                 title <- packageDescription(i, lib.loc = lib, fields = "Title",
                                             encoding = "UTF-8")
                 if (is.na(title)) title <- "-- Title is missing --"
-                cat('<tr align="left" valign="top" id="lib-', i, '">\n',
-                    '<td width="25%"><a href="', lib0, '/', i,
-                    '/html/00Index.html">', i, "</a></td><td>", title,
-                    "</td></tr>\n", file = out, sep = "")
+                cat('<tr style="text-align: left; vertical-align: top;" id="lib-', i, '">\n',
+                    '<td style="width: 25%;"><a href="', lib0, '/', i,
+                    '/html/00Index.html">', i, "</a></td><td>",
+                    gsub("&", "&amp;", title), "</td></tr>\n",
+                    file = out, sep = "")
                 if (WINDOWS) {
                     npkgs <- npkgs + 1L
                     if(verbose) setWinProgressBar(pb, npkgs)
@@ -134,7 +135,7 @@ make.packages.html <-
         cat("</table>\n\n", file=out)
     }
     if (length(lib.loc) > 1L) add_lib_index(lib.loc)
-    cat("</body></html>\n", file=out)
+    cat("</div></body>\n</html>\n", file=out)
     if (verbose) { message(" ", "done"); flush.console() }
     if (temp) saveRDS(lib.loc, op)
     invisible(TRUE)

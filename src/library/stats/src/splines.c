@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2017  The R Core Team
+ *  Copyright (C) 1998--2021  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@
  *	------------------------
  *	A special LU decomposition for symmetric tridiagonal matrices
  *	is used for all computations, except for periodic splines where
- *	Choleski is more efficient.
+ *	Cholesky is more efficient.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -48,7 +48,7 @@
 
 #include <R.h>
 #include <R_ext/Applic.h>
-#include <Rinternals.h> // for R_xlen_t
+#include <Defn.h> // for R_xlen_t, UNIMPLEMENTED_TYPE
 
 /*
  *	Natural Splines
@@ -57,7 +57,7 @@
  *	derivative of the spline at the end-points to equal to zero.
  *
  *	There are n-2 unknowns (y[i]'' at x[2], ..., x[n-1]) and n-2
- *	equations to determine them.  Either Choleski or Gaussian
+ *	equations to determine them.  Either Cholesky or Gaussian
  *	elimination could be used.
  */
 
@@ -276,7 +276,7 @@ periodic_spline(R_xlen_t n, double *x, double *y, double *b, double *c, double *
 	C[i] = (y[i+1] - y[i])/B[i] - (y[i] - y[i-1])/B[i-1];
     }
 
-    /* Choleski decomposition */
+    /* Cholesky decomposition */
 
 #define L	b
 #define M	d
@@ -438,7 +438,6 @@ spline_eval(int method, R_xlen_t nu, double *u, double *v,
 }
 
 // TODO: move to ../../../main/coerce.c
-#include <Defn.h> /* for UNIMPLEMENTED_TYPE */
 static R_xlen_t asXlen(SEXP x) {
     if (isVectorAtomic(x) && XLENGTH(x) >= 1) {
 	switch (TYPEOF(x)) {

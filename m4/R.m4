@@ -1,6 +1,6 @@
 ### R.m4 -- extra macros for configuring R		-*- Autoconf -*-
 ###
-### Copyright (C) 1998-2020 R Core Team
+### Copyright (C) 1998-2022 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -457,7 +457,7 @@ fi
 ## ----------
 ## modified version of AC_C_INLINE to use R_INLINE not inline
 AC_DEFUN([R_C_INLINE],
-[AC_REQUIRE([AC_PROG_CC_STDC])dnl
+[AC_REQUIRE([AC_PROG_CC])dnl
 AC_CACHE_CHECK([for inline], r_cv_c_inline,
 [r_cv_c_inline=""
 for ac_kw in inline __inline__ __inline; do
@@ -805,7 +805,7 @@ fi
 ## on at least one system the latter actually used -lgfortran
 ## (which was broken) and the previous test here did not.
 AC_DEFUN([R_PROG_FC_CAN_RUN],
-[AC_REQUIRE([AC_CHECK_LIBM])
+[AC_REQUIRE([LT_LIB_M])
 AC_MSG_CHECKING([whether mixed C/Fortran code can be run])
 AC_CACHE_VAL([r_cv_prog_fc_can_run],
 [cat > conftestf.f <<EOF
@@ -874,7 +874,7 @@ fi
 ## --------------------
 ## Check whether the Fortran and C compilers agree on int and double.
 AC_DEFUN([R_PROG_FC_CC_COMPAT],
-[AC_REQUIRE([AC_CHECK_LIBM])
+[AC_REQUIRE([LT_LIB_M])
 AC_MSG_CHECKING([whether ${FC} and ${CC} agree on int and double])
 AC_CACHE_VAL([r_cv_prog_fc_cc_compat],
 [cat > conftestf.f <<EOF
@@ -963,7 +963,7 @@ fi
 ## ----------------------------
 ## Check whether the Fortran and C compilers agree on double complex.
 AC_DEFUN([R_PROG_FC_CC_COMPAT_COMPLEX],
-[AC_REQUIRE([AC_CHECK_LIBM])
+[AC_REQUIRE([LT_LIB_M])
 AC_MSG_CHECKING([whether ${FC} and ${CC} agree on double complex])
 AC_CACHE_VAL([r_cv_prog_fc_cc_compat_complex],
 [cat > conftestf.f <<EOF
@@ -1327,11 +1327,10 @@ dnl we don't use AC_LANG_xx because ObjC++ is not defined as a language (yet)
 dnl (the test program is from the gcc test suite)
 dnl but it needed an #undef (PR#15107)
 cat << \EOF > conftest.mm
-#undef __OBJC2__
-#include <objc/Object.h>
+#include <Foundation/Foundation.h>
 #include <iostream>
 
-@interface Greeter : Object
+@interface Greeter : NSObject
 - (void) greet: (const char *)msg;
 @end
 
@@ -2600,9 +2599,8 @@ if test "${acx_blas_ok}" = no; then
   if test "x${BLAS_LIBS}" != x; then
     r_save_LIBS="${LIBS}"; LIBS="${BLAS_LIBS} ${LIBS}"
     AC_MSG_CHECKING([for ${dgemm} in ${BLAS_LIBS}])
-    AC_TRY_LINK([void ${xerbla}(char *srname, int *info){}
-                 void ${dgemm}();],
-		${dgemm}(), [acx_blas_ok=yes], [BLAS_LIBS=""])
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[void ${xerbla}(char *srname, int *info){}
+                 void ${dgemm}();]], [[${dgemm}()]])],[acx_blas_ok=yes],[BLAS_LIBS=""])
     AC_MSG_RESULT([${acx_blas_ok}])
     LIBS="${r_save_LIBS}"
     dnl from 2020-11 make failure an error: used to fallback to search
@@ -2623,11 +2621,17 @@ if test "${acx_blas_ok}" = no; then
 fi
 
 dnl Taken from 2008 version of ax_blas.m4
-# BLAS in OpenBLAS library? (http://xianyi.github.com/OpenBLAS/)
+# BLAS in OpenBLAS library? (https://www.openblas.net/)
 if test "${acx_blas_ok}" = no; then
   AC_MSG_NOTICE([searching for OpenBLAS])
         AC_CHECK_LIB(openblas, $sgemm, [acx_blas_ok=yes
                                         BLAS_LIBS="-lopenblas"])
+fi
+
+# BLAS in BLIS library? (https://github.com/flame/blis)
+if test "${acx_blas_ok}" = no; then
+  AC_MSG_NOTICE([searching for BLIS])
+        AC_CHECK_LIB(blis, $sgemm, [acx_blas_ok=yes BLAS_LIBS="-lblis"])
 fi
 
 dnl BLAS in ATLAS library?  (http://math-atlas.sourceforge.net/)
@@ -2640,6 +2644,7 @@ if test "${acx_blas_ok}" = no; then
 			     [], [-latlas])])
 fi
 
+dnl Unable to find a URL for PhiPACK in 2022 ....
 dnl BLAS in PhiPACK libraries?  (requires generic BLAS lib, too)
 if test "${acx_blas_ok}" = no; then
   AC_MSG_NOTICE([searching for PhiPACK])
@@ -2650,6 +2655,21 @@ if test "${acx_blas_ok}" = no; then
                                             BLAS_LIBS="-lsgemm -ldgemm -lblas"],
 			                   [], [-lblas])],
 			     [], [-lblas])])
+fi
+
+dnl BLAS in Apple Accelerate?  Based on ax_blas.m4 #37
+if test $acx_blas_ok = no; then
+  case "${host_os}" in
+    darwin*)
+      AC_MSG_NOTICE([searching for Accelerate])
+      save_LIBS="$LIBS"; LIBS="-framework Accelerate $LIBS"
+      AC_MSG_CHECKING([for $dgemm in -framework Accelerate])
+      AC_LINK_IFELSE([AC_LANG_CALL([], [$dgemm])],
+	              [acx_blas_ok=yes;BLAS_LIBS="-framework Accelerate"])
+      AC_MSG_RESULT($acx_blas_ok)
+      LIBS="$save_LIBS"
+    ;;
+  esac
 fi
 
 dnl BLAS in Sun Performance library?
@@ -2745,9 +2765,9 @@ if ${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_
   ## Also, to be defensive there should be a similar test with SHLIB_LD
   ## and SHLIB_LDFLAGS (and note that on HP-UX with native cc we have to
   ## use ld for SHLIB_LD) ...
-  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
-       conftest.${ac_objext} conftestf.${ac_objext} ${FLIBS} \
-       ${LIBM} ${BLAS_LIBS} 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
+  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} \
+      -o conftest${ac_exeext} conftest.${ac_objext} conftestf.${ac_objext} \
+      ${BLAS_LIBS} ${FLIBS} ${LIBM} 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
   ## </NOTE>
   then
     ## redirect error messages to config.log
@@ -2962,9 +2982,9 @@ if ${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_
   ## Also, to be defensive there should be a similar test with SHLIB_LD
   ## and SHLIB_LDFLAGS (and note that on HP-UX with native cc we have to
   ## use ld for SHLIB_LD) ...
-  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
-       conftest.${ac_objext} ${FLIBS} \
-       ${LIBM} ${BLAS_LIBS} 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
+  if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} \
+       -o conftest${ac_exeext} conftest.${ac_objext} \
+       ${BLAS_LIBS} ${FLIBS} ${LIBM} 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD;
   ## </NOTE>
   then
     r_cv_complete_blas=yes
@@ -3036,6 +3056,7 @@ fi
 
 # We cannot use LAPACK if BLAS is not found
 if test "x${acx_blas_ok}" != xyes; then
+  AC_MSG_NOTICE([cannot use --with-lapack without --with-blas])
   acx_lapack_ok=noblas
 fi
 
@@ -3071,6 +3092,78 @@ LIBS="${acx_lapack_save_LIBS}"
 
 AC_SUBST(LAPACK_LIBS)
 ])# R_LAPACK_LIBS
+
+## R_LAPACK_SYSTEM_LIB
+## -------------------
+## New for R 4.2.0
+## Look for system -llapack of version at least 3.10.0.
+## We have to test with a system BLAS.
+## We don't want an external lapack which contains a BLAS.
+AC_DEFUN([R_LAPACK_SYSTEM_LIB],
+[AC_REQUIRE([R_PROG_FC_FLIBS])
+AC_REQUIRE([R_PROG_FC_APPEND_UNDERSCORE])
+
+acx_lapack_ok=no
+
+acx_lapack_save_LIBS="${LIBS}"
+
+dnl Generic LAPACK library?
+if test "${r_cv_prog_fc_append_underscore}" = yes; then
+  dgemm=dgemm_
+  lapack=dpstrf_
+  ilaver=ilaver_
+else
+  dgemm=dgemm
+  lapack=dpstrf
+  ilaver=ilaver
+fi
+acx_lapack_ok=yes
+LIBS="${FLIBS} ${LIBS}"
+AC_CHECK_LIB(lapack, ${dgemm}, [acx_lapack_ok=no])
+if test "${acx_lapack_ok}" = no; then
+  AC_MSG_NOTICE([Not using liblapack as it contains BLAS routines])
+fi
+
+if test "${acx_lapack_ok}" = yes; then
+LIBS="-lblas ${FLIBS} ${acx_lapack_save_LIBS}"
+AC_CHECK_LIB(lapack, ${lapack}, [acx_lapack_ok=yes])
+fi
+
+if test "${acx_lapack_ok}" = yes; then
+  LIBS="-lblas -llapack ${FLIBS} ${acx_lapack_save_LIBS}"
+
+AC_CACHE_CHECK([if LAPACK version >= 3.10.0], [r_cv_lapack_ver],
+[AC_RUN_IFELSE([AC_LANG_SOURCE([[
+extern void ${ilaver}(int *major, int *minor, int *patch);
+
+#include <stdlib.h>
+#include <stdio.h>
+int main() {
+  int major, minor, patch;
+  ${ilaver}(&major, &minor, &patch);
+  printf("%d.%d.%d, so ", major, minor, patch);
+  if (major < 3 || (major == 3 && minor < 10)) exit(1);
+  exit(0);
+}
+]])],
+[r_cv_lapack_ver=yes],
+[r_cv_lapack_ver=no],
+[r_cv_lapack_ver=no])])
+
+LIBS="${acx_lapack_save_LIBS}"
+
+if test "${r_cv_lapack_ver}" = no; then
+ acx_lapack_ok=no
+fi
+fi
+
+if test "${acx_lapack_ok}" = yes; then
+  LAPACK_LIBS=-llapack
+fi
+
+AC_SUBST(LAPACK_LIBS)
+])# R_LAPACK_SYSTEM_LIB
+
 
 ## R_XDR
 ## -----
@@ -3208,10 +3301,10 @@ int main() {
 #endif
 }
 ]])], [r_cv_have_pcre832=yes], [r_cv_have_pcre832=no], [r_cv_have_pcre832=no])])
-fi
 if test "x${r_cv_have_pcre832}" != xyes; then
   have_pcre=no
   LIBS="${r_save_LIBS}"
+fi
 fi
 else
   have_pcre=no
@@ -3234,8 +3327,8 @@ fi
 AC_DEFUN([R_PCRE2],
 [have_pcre2=no
 if test "x${use_pcre2}" = xyes; then
-## FIXME: Maybe these should be the other way around?
-## Maybe there should be a way to use pkg-config --static
+dnl FIXME: Maybe these should be the other way around?
+dnl Maybe there should be a way to use pkg-config --static
 if "${PKG_CONFIG}" --exists libpcre2-8; then
   PCRE2_CPPFLAGS=`"${PKG_CONFIG}" --cflags libpcre2-8`
   PCRE2_LIBS=`"${PKG_CONFIG}" --libs libpcre2-8`
@@ -3495,25 +3588,21 @@ dnl need to ignore cache for this as it may set LIBS
 unset ac_cv_func_iconv
 AC_CACHE_CHECK(for iconv, ac_cv_func_iconv, [
   ac_cv_func_iconv="no"
-  AC_TRY_LINK([#include <stdlib.h>
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
 #ifdef HAVE_ICONV_H
 #include <iconv.h>
-#endif],
-      [iconv_t cd = iconv_open("","");
+#endif]], [[iconv_t cd = iconv_open("","");
        iconv(cd,NULL,NULL,NULL,NULL);
-       iconv_close(cd);],
-      ac_cv_func_iconv=yes)
+       iconv_close(cd);]])],[ac_cv_func_iconv=yes],[])
   if test "$ac_cv_func_iconv" != yes; then
     r_save_LIBS="$LIBS"
     LIBS="$LIBS -liconv"
-    AC_TRY_LINK([#include <stdlib.h>
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
 #ifdef HAVE_ICONV_H
 #include <iconv.h>
-#endif],
-        [iconv_t cd = iconv_open("","");
+#endif]], [[iconv_t cd = iconv_open("","");
          iconv(cd,NULL,NULL,NULL,NULL);
-         iconv_close(cd);],
-        ac_cv_func_iconv="in libiconv")
+         iconv_close(cd);]])],[ac_cv_func_iconv="in libiconv"],[])
       if test "$ac_cv_func_iconv" = no; then
         LIBS="$r_save_LIBS"
       fi
@@ -3640,14 +3729,12 @@ fi
 dnl if the iconv we are using was in libiconv we have already included -liconv
 AC_CACHE_CHECK(for iconvlist, ac_cv_func_iconvlist, [
   ac_cv_func_iconvlist="no"
-  AC_TRY_LINK([#include <stdlib.h>
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
 #ifdef HAVE_ICONV_H
 #include <iconv.h>
 #endif
 static int count_one (unsigned int namescount, const char * const *names, void *data)
-{return 0;}],
-    [iconvlist(count_one, NULL);],
-      ac_cv_func_iconvlist=yes)
+{return 0;}]], [[iconvlist(count_one, NULL);]])],[ac_cv_func_iconvlist=yes],[])
    ])
 if test "$ac_cv_func_iconvlist" = yes; then
   AC_DEFINE(HAVE_ICONVLIST, 1, [Define if you have the `iconvlist' function.])
@@ -3757,8 +3844,7 @@ AS_VAR_POPDEF([ac_Symbol])dnl
 ## --------------------------------------------------------
 ## Defines HAVE_SYMBOL if declared.  SYMBOLS is an m4 list.
 AC_DEFUN([R_CHECK_FUNCS],
-[AC_FOREACH([AC_Func], [$1],
-  [AH_TEMPLATE(AS_TR_CPP(HAVE_[]AC_Func),
+[m4_foreach_w([AC_Func],[$1],[AH_TEMPLATE(AS_TR_CPP(HAVE_[]AC_Func),
                [Define to 1 if you have the `]AC_Func[' function.])])dnl
 for ac_func in $1
 do
@@ -4262,8 +4348,14 @@ if test -n "${CURL_CONFIG}"; then
   fi
   ## This should be correct for a static-only build, user will
   ## need to override to specify static linking (see config.site)
+  ## SU: No, it's not, unfortunately, we have to use --static-libs
+  ## for static-only builds as those provide incomplete flags with --libs
   if test -z "${CURL_LIBS}"; then
-    CURL_LIBS=`${CURL_CONFIG} --libs`
+    if test x`${CURL_CONFIG} --built-shared` = xno; then
+      CURL_LIBS=`${CURL_CONFIG} --static-libs`
+    else
+      CURL_LIBS=`${CURL_CONFIG} --libs`
+    fi
   fi
 fi
 r_save_CPPFLAGS="${CPPFLAGS}"

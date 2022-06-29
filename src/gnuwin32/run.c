@@ -2,7 +2,7 @@
  *  R : A Computer Language for Statistical Data Analysis
  *  file run.c: a simple 'reading' pipe (and a command executor)
  *  Copyright  (C) 1999-2001  Guido Masarotto and Brian Ripley
- *             (C) 2007-2020  The R Core Team
+ *             (C) 2007-2022  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@
 
 #define WIN32_LEAN_AND_MEAN 1
 #include <windows.h>
+#include <versionhelpers.h>
 #include <mmsystem.h> /* for timeGetTime */
 #include <string.h>
 #include <stdlib.h>
@@ -44,13 +45,14 @@ static char RunError[501] = "";
 
 /* This might be given a command line (whole = 0) or just the
    executable (whole = 1).  In the later case the path may or may not
-   be quoted */
+   be quoted. */
 static char *expandcmd(const char *cmd, int whole)
 {
     char c = '\0';
     char *s, *p, *q = NULL, *f, *dest, *src;
     int   d, ext, len = strlen(cmd)+1;
     char buf[len], fl[len], fn[MAX_PATH];
+    DWORD res = 0;
 
     /* make a copy as we manipulate in place */
     strcpy(buf, cmd);
@@ -119,8 +121,15 @@ static char *expandcmd(const char *cmd, int whole)
       since SearchPath already returns 'short names'. However,
       this is not documented so I prefer to be explicit.
     */
-    /* NOTE: short names are not always enabled */
-    GetShortPathName(fn, s, MAX_PATH);
+    /* NOTE: short names are not always enabled/available. In that case,
+       GetShortPathName may succeed and return the original (long) name. */
+    res = GetShortPathName(fn, s, MAX_PATH);
+    if (res == 0) 
+	/* Use full name if GetShortPathName fails, i.e. due to insufficient
+	   permissions for some component of the path. */
+        strncpy(s, fn, d + 1);
+
+    /* FIXME: warn if the path contains space? */
     if (!whole) {
 	*q = c;
 	strcat(s, q);
@@ -248,16 +257,20 @@ static void pcreate(const char* cmd, cetype_t enc,
 
        In addition, we try to be easy on applications coded to rely on that
        they do not run in a job, when running in old Windows that do not
-       support nested jobs. With nested jobs support, it might make sense
-       to not breakaway to better support nested R processes.
+       support nested jobs. On newer versions of Windows, we use nested jobs.
     */
 
     /* Creating the process with CREATE_BREAKAWAY_FROM_JOB is safe when
        the process is not in any job or when it is in a job that allows it.
        The documentation does not say what would happen if we set the flag,
-       but run in a job that does not allow it, so better don't. */
+       but run in a job that does not allow it, so better don't.
+
+       Do not consider breakaway on Windows 8 (Windows Server 2012) and newer,
+       but instead use nested jobs.
+    */
     breakaway = FALSE;
-    if (IsProcessInJob(GetCurrentProcess(), NULL, &inJob) && inJob) {
+    if (!IsWindows8OrGreater() &&
+        IsProcessInJob(GetCurrentProcess(), NULL, &inJob) && inJob) {
 	/* The documentation does not say that it would be ok to use
 	   QueryInformationJobObject when the process is not in the job,
 	   so we have better tested that upfront. */
@@ -277,7 +290,11 @@ static void pcreate(const char* cmd, cetype_t enc,
     job = CreateJobObject(NULL, NULL);
     if (job) {
 	ZeroMemory(&jeli, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
-	jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_BREAKAWAY_OK;
+	jeli.BasicLimitInformation.LimitFlags =
+	    /* JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE helps to terminate grand
+	       child processes when the child process executed is R
+	       and breakaway is used. */
+	    JOB_OBJECT_LIMIT_BREAKAWAY_OK | JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 	ret = SetInformationJobObject(
 		job,
 		JobObjectExtendedLimitInformation,
@@ -524,8 +541,10 @@ static void terminate_process(void *p)
 	TerminateProcess(pi->pi.hProcess, 99);
     }
 
-    if (pi->job)
+    if (pi->job) {
+	TerminateJobObject(pi->job, 99);
 	waitForJob(pi, 2000, NULL);
+    }
 }
 
 static int pwait2(pinfo *pi, DWORD timeoutMillis, int* timedout)
@@ -546,6 +565,8 @@ static int pwait2(pinfo *pi, DWORD timeoutMillis, int* timedout)
 		    *timedout = 1;
 		/* wait up to 10s for the process to actually terminate */
 		WaitForSingleObject(pi->pi.hProcess, 10000);
+		if (pi->job)
+		    TerminateJobObject(pi->job, 124);
 		break;
 	    }
 	}
@@ -1023,7 +1044,9 @@ SEXP do_syswhich(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP nm, ans;
     int i, n;
+    const void *vmax = NULL;
 
+    vmax = vmaxget();
     checkArity(op, args);
     nm = CAR(args);
     if(!isString(nm))
@@ -1034,13 +1057,14 @@ SEXP do_syswhich(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (STRING_ELT(nm, i) == NA_STRING) {
 	    SET_STRING_ELT(ans, i, NA_STRING);
 	} else {
-	    const char *this = CHAR(STRING_ELT(nm, i));
+	    const char *this = translateChar(STRING_ELT(nm, i));
 	    char *that = expandcmd(this, 1);
 	    SET_STRING_ELT(ans, i, mkChar(that ? that : ""));
 	    free(that);
 	}
     }
     setAttrib(ans, R_NamesSymbol, nm);
+    vmaxset(vmax);
     UNPROTECT(1);
     return ans;
 }

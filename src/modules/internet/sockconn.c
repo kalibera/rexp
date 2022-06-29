@@ -29,18 +29,8 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Rconnections.h>
-#include <R-ftp-http.h>
 #include "sock.h"
 #include <errno.h>
-
-#ifdef Win32
-# ifndef EINTR
-#  define EINTR                   WSAEINTR
-# endif
-# ifndef EWOULDBLOCK
-#  define EWOULDBLOCK             WSAEWOULDBLOCK
-# endif
-#endif
 
 static void listencleanup(void *data)
 {
@@ -145,10 +135,11 @@ static ssize_t sock_read_helper(Rconnection con, void *ptr, size_t size)
 	    do
 		res = R_SockRead(this->fd, this->inbuf, 4096, 
 				 con->blocking, this->timeout);
-	    while (-res == EINTR);
 #ifdef Win32
-	    if (! con->blocking && -res == EAGAIN) {
+	    while (-res == WSAEINTR);
+	    if (! con->blocking && -res == WSAEWOULDBLOCK) {
 #else
+	    while (-res == EINTR);
 	    if (! con->blocking && (-res == EAGAIN || -res == EWOULDBLOCK)) {
 #endif
 		con->incomplete = TRUE;
@@ -196,7 +187,7 @@ static size_t sock_write(const void *ptr, size_t size, size_t nitems,
 			 Rconnection con)
 {
     Rsockconn this = (Rsockconn)con->private;
-    ssize_t n = R_SockWrite(this->fd, ptr, (int)(size * nitems),
+    ssize_t n = R_SockWrite(this->fd, ptr, (size_t)(size * nitems),
 			    this->timeout)/((ssize_t)size);
     return n > 0 ? n : 0;
 }

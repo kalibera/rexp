@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2019  R Core Team
+ *  Copyright (C) 1998--2022  R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 #define WIN32_LEAN_AND_MEAN 1
 #include <windows.h>
 #include <shlwapi.h> /* for PathFindOnPath */
+#include <stdlib.h>
 #include <stdio.h>
 #include <io.h> /* for isatty */
 #include <Rversion.h>
@@ -56,6 +57,15 @@ static void my_onintr(int nSig)
 {
   UserBreak = 1;
   PostThreadMessage(mainThreadId,0,0,0);
+}
+
+static UINT oldConsoleCP = 0;
+static UINT oldConsoleOutputCP = 0;
+
+static void restore_cp(void)
+{
+    if (oldConsoleCP) SetConsoleCP(oldConsoleCP);
+    if (oldConsoleOutputCP) SetConsoleOutputCP(oldConsoleOutputCP);
 }
 
 /* Used also by Rscript */
@@ -110,6 +120,17 @@ int AppMain(int argc, char **argv)
 	    return res;
 	}
 	/* fall back to RTerm without support for line editing */
+    }
+
+    if (GetACP() == 65001 /* UTF-8 */) {
+	/* Typically the console code page would be something else and then
+	   characters not representable in that code page would be displayed
+	   as question marks (regardless of whether the fonts support them). */
+	atexit(restore_cp);
+	oldConsoleCP = GetConsoleCP();
+	oldConsoleOutputCP = GetConsoleOutputCP();
+	SetConsoleOutputCP(65001);
+	SetConsoleCP(65001); /* not clear if needed */
     }
 
     CharacterMode = RTerm;

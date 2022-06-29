@@ -1,7 +1,7 @@
 #  File src/library/base/R/stop.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2021 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -109,9 +109,9 @@ warning <- function(..., call. = TRUE, immediate. = FALSE,
                           .makeMessage(..., domain = domain)))
 }
 
-gettext <- function(..., domain = NULL) {
-    args <- lapply(list(...), as.character)
-    .Internal(gettext(domain, unlist(args)))
+gettext <- function(..., domain = NULL, trim = TRUE) {
+    char <- unlist(lapply(list(...), as.character))
+    .Internal(gettext(domain, char, trim))
 }
 
 bindtextdomain <- function(domain, dirname = NULL)
@@ -120,5 +120,22 @@ bindtextdomain <- function(domain, dirname = NULL)
 ngettext <- function(n, msg1, msg2, domain = NULL)
     .Internal(ngettext(n, msg1, msg2, domain))
 
-gettextf <- function(fmt, ..., domain = NULL)
-    sprintf(gettext(fmt, domain = domain), ...)
+gettextf <- function(fmt, ..., domain = NULL, trim = TRUE)
+    sprintf(gettext(fmt, domain=domain, trim=trim), ...)
+
+## Could think of using *several* domains, i.e. domain = vector; but seems complicated;
+## the default domain="R"  seems to work for all of base R: {"R", "R-base", "RGui"}
+Sys.setLanguage <- function(lang, unset = "en")
+{
+    stopifnot(is.character(lang), length(lang) == 1L, # e.g., "es" , "fr_CA"
+              lang == "C" || grepl("^[a-z][a-z]", lang))
+    curLang <- Sys.getenv("LANGUAGE", unset = NA) # so it can be reset
+    if(is.na(curLang) || !nzchar(curLang))
+        curLang <- unset # "factory" default
+    ok <- Sys.setenv(LANGUAGE=lang)
+    if(!ok)
+        warning(gettextf('Sys.setenv(LANGUAGE="%s") may have failed', lang), domain=NA)
+    ok. <- capabilities("NLS") &&
+        isTRUE(bindtextdomain(NULL)) # only flush the cache (of already translated strings)
+    invisible(structure(curLang, ok = ok && ok.))
+}

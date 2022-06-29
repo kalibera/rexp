@@ -1,6 +1,6 @@
 % File src/library/utils/man/data.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2021 R Core Team
+% Copyright 1995-2022 R Core Team
 % Distributed under GPL 2 or later
 
 \name{data}
@@ -73,12 +73,11 @@ data(\dots, list = character(), package = NULL, lib.loc = NULL,
   as the data set.
 
   If no data sets are specified, \code{data} lists the available data
-  sets.  It looks for a new-style data index in the \file{Meta} or, if
-  this is not found, an old-style \file{00Index} file in the \file{data}
-  directory of each specified package, and uses these files to prepare a
-  listing.  If there is a \file{data} area but no index, available data
-  files for loading are computed and included in the listing, and a
-  warning is given: such packages are incomplete.  The information about
+  sets.  For each package,
+  it looks for a data index in the \file{Meta} subdirectory or, if
+  this is not found, scans the \file{data} subdirectory for data files
+  using \code{\link{list_files_with_type}}.
+  The information about
   available data sets is returned in an object of class
   \code{"packageIQR"}.  The structure of this class is experimental.
   Where the datasets have a different name from the argument that should
@@ -157,11 +156,11 @@ data(\dots, list = character(), package = NULL, lib.loc = NULL,
   appropriate labels.  Thus, the \file{.R} file can effectively contain
   a metadata specification for the plaintext formats.
 
-  In older versions of \R, up to 3.6.x, both \code{package = "base"} and
-  \code{package = "stats"} were using \code{package = "datasets"}, (with a
-  warning), as before 2004, (most of) the datasets in \pkg{datasets} were
-  either in \pkg{base} or \pkg{stats}.  For these packages, the result
-  is now empty as they contain no data sets.
+  %% In older versions of \R, up to 3.6.x, both \code{package = "base"} and
+  %% \code{package = "stats"} were using \code{package = "datasets"}, (with a
+  %% warning), as before 2004, (most of) the datasets in \pkg{datasets} were
+  %% either in \pkg{base} or \pkg{stats}.  For these packages, the result
+  %% is now empty as they contain no data sets.
 }
 \section{Warning}{
   This function creates objects in the \code{envir} environment (by

@@ -2,7 +2,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2019  The R Core Team
+ *  Copyright (C) 1997--2022  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,7 +26,9 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Parse.h>
-#define STRICT_R_HEADERS
+#ifndef STRICT_R_HEADERS
+# define STRICT_R_HEADERS
+#endif
 #include <R_ext/RS.h>           /* for R_chk_* allocation */
 #include <ctype.h>
 #include <Rmath.h> /* for imax2(.),..*/
@@ -195,6 +197,8 @@ static SEXP R_MacroSymbol = NULL;
 #define YYSTYPE		SEXP
 
 %}
+/* token-table is needed for yytname[] to be defined in recent bison versions */
+%token-table
 
 %token		END_OF_INPUT ERROR
 %token		SECTIONHEADER RSECTIONHEADER VSECTIONHEADER
@@ -2041,7 +2045,7 @@ SEXP deparseRd(SEXP e, SEXP state)
 		break;
 	    case LBRACE:
 	    case RBRACE:
-		if (quoteBraces)
+		if (quoteBraces || parseState.xxmode == LATEXLIKE)
 		    escape = TRUE;
 		else if (!parseState.xxinRString && !parseState.xxinEqn && (parseState.xxmode == RLIKE || parseState.xxmode == VERBATIM)) {
 		    if (*c == LBRACE) parseState.xxbraceDepth++;

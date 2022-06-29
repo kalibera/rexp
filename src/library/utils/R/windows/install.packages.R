@@ -1,7 +1,7 @@
 #  File src/library/utils/R/windows/install.packages.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2019 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -170,6 +170,8 @@ unpackPkgZip <- function(pkg, pkgname, lib, libs_only = FALSE,
                                    paste(basename(dirs), collapse=", "))
                              )
                 writeLines(newdesc, descfile, useBytes = TRUE)
+                saveRDS(tools:::.split_description(tools:::.read_description(descfile)),
+                        file.path(instPath, "Meta", "package.rds"))
             }
         } else {
             ## If the package is already installed, remove it.  If it

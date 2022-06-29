@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2001-3 Paul Murrell
- *                2003-2019 The R Core Team
+ *                2003-2022 The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -189,14 +189,14 @@ SEXP doSetViewport(SEXP vp,
     /*
      * Establish the clipping region for this viewport
      */
-    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGCLIP))[0]) {
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
         /*
          * Clipping settings are (silently) ignored during resolution of 
-         * a clipping path
+         * a (clipping) path
          */
         if (!isClipPath(viewportClipSXP(vp)) &&
             (viewportClip(vp) == NA_LOGICAL || viewportClip(vp))) {
-            warning(_("Turning clipping on or off within a clipping path is no honoured"));
+            warning(_("Turning clipping on or off within a (clipping) path is no honoured"));
         }
     } else if (isClipPath(viewportClipSXP(vp))) {
         SEXP currentClip, parentClip;
@@ -355,7 +355,7 @@ SEXP doSetViewport(SEXP vp,
     /*
      * Establish the mask for this viewport
      */
-    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGCLIP))[0]) {
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
         /* Masks are (silently) ignored during resolution of a 
          * clipping path
          */
@@ -431,9 +431,10 @@ SEXP L_setviewport(SEXP invp, SEXP hasParent)
         SEXP vpgp = PROTECT(VECTOR_ELT(pushedvp, VP_GP));
         SEXP fill = getListElement(vpgp, "fill");
         if (fill != R_NilValue) {
-            /* Do not keep resolved fill because cannot release it
-               * (until grid.newpage()) 
-               */
+            /* Do not keep resolved fill reference because cannot release fill
+             * (until grid.newpage()) 
+             * NOTE that resolveGPar() stores the resolved fill in 'vpgp'
+             */
             resolveGPar(vpgp);
             /* Record the resolved fill for subsequent up/down/pop */
             SET_VECTOR_ELT(VECTOR_ELT(pushedvp, PVP_GPAR),
@@ -451,8 +452,8 @@ SEXP L_setviewport(SEXP invp, SEXP hasParent)
         SEXP clip, resolvedclip;
         PROTECT(clip = viewportClipSXP(pushedvp));
         if (isClipPath(clip)) {
-            if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGCLIP))[0]) {
-                warning(_("Clipping paths within a clipping path are not honoured"));
+            if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
+                warning(_("Clipping paths within a (clipping) path are not honoured"));
                 SET_VECTOR_ELT(pushedvp, PVP_CLIPPATH, R_NilValue);
             } else {
                 /* Record the resolved clip path for subsequent up/down/pop */
@@ -470,8 +471,8 @@ SEXP L_setviewport(SEXP invp, SEXP hasParent)
         SEXP mask, resolvedmask;
         PROTECT(mask = viewportMaskSXP(pushedvp));
         if (isMask(mask)) {
-            if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGCLIP))[0]) {
-                warning(_("Masks within a clipping path are not honoured"));
+            if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
+                warning(_("Masks within a (clipping) path are not honoured"));
                 SET_VECTOR_ELT(pushedvp, PVP_MASK, R_NilValue);
             } else {
                 /* Record resolved mask for subsequent up/down/pop */
@@ -957,9 +958,11 @@ SEXP L_unsetviewport(SEXP n)
     if (deviceChanged(devWidthCM, devHeightCM, newvp))
 	calcViewportTransform(newvp, viewportParent(newvp), 1, dd);
     /* 
-     * Enforce the current viewport settings
+     * Enforce the stored parent gpar settings
+     * (not necessarily the parent viewport settings if this viewport
+     *  is a childrenvp of a gTree, where the gTree has gpar settings)
      */
-    setGridStateElement(dd, GSS_GPAR, viewportgpar(newvp));
+    setGridStateElement(dd, GSS_GPAR, VECTOR_ELT(gvp, PVP_PARENTGPAR));
     /* Set the value of the current viewport for the current device
      * Need to do this in here so that redrawing via R BASE display
      * list works 
@@ -973,7 +976,7 @@ SEXP L_unsetviewport(SEXP n)
     setGridStateElement(dd, GSS_VP, newvp);
     /* Set the clipping region to the parent's cur.clip
      */
-    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGCLIP))[0]) {
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
         /* Clipping is (silently) ignored during resolution of 
          * a clipping path
          */
@@ -994,7 +997,7 @@ SEXP L_unsetviewport(SEXP n)
         }
         UNPROTECT(2);
     }
-    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGCLIP))[0]) {
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
         /* Masks are (silently) ignored during resolution of 
          * a clipping path
          */
@@ -1068,7 +1071,7 @@ SEXP L_upviewport(SEXP n)
     setGridStateElement(dd, GSS_VP, newvp);
     /* Set the clipping region to the parent's cur.clip
      */
-    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGCLIP))[0]) {
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
         /* Clipping is (silently) ignored during resolution of 
          * a clipping path
          */
@@ -1089,7 +1092,7 @@ SEXP L_upviewport(SEXP n)
         }
         UNPROTECT(2);
     }
-    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGCLIP))[0]) {
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
         /* Masks are (silently) ignored during resolution of 
          * a clipping path
          */
@@ -1293,14 +1296,23 @@ SEXP L_newpage()
 	GENewPage(&gc, dd);
     }
     
+    return R_NilValue;
+}
+
+SEXP L_clearDefinitions(SEXP clearGroups) {
+    pGEDevDesc dd = getDevice();
     /* Clear all device patterns */
     dd->dev->releasePattern(R_NilValue, dd->dev);
     /* Clear all clip paths */
-    setGridStateElement(dd, GSS_RESOLVINGCLIP, ScalarLogical(FALSE));
+    setGridStateElement(dd, GSS_RESOLVINGPATH, ScalarLogical(FALSE));
     dd->dev->releaseClipPath(R_NilValue, dd->dev);
     /* Clear all masks */
     dd->dev->releaseMask(R_NilValue, dd->dev);
-
+    if (LOGICAL(clearGroups)[0] && 
+        dd->dev->deviceVersion > R_GE_group) {
+        /* Clear all groups */
+        dd->dev->releaseGroup(R_NilValue, dd->dev);
+    }
     return R_NilValue;
 }
 
@@ -1397,6 +1409,14 @@ SEXP L_convert(SEXP x, SEXP whatfrom,
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* Duplicate current gp so we can modify current gp WITHOUT
+     * touching current gp in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* We are not drawing, we are calculating a transformation so set
+     * gp$fill to transparent to avoid infinite loop when gp$fill is a
+     * pattern (resolving a pattern may involve calculating a
+     * transformation) */
+    setListElement(currentgp, "fill", mkString("black"));
     /* 
      * We do not need the current transformation, but
      * we need the side effects of calculating it in
@@ -1410,7 +1430,7 @@ SEXP L_convert(SEXP x, SEXP whatfrom,
     nx = unitLength(x);
     PROTECT(answer = allocVector(REALSXP, nx));
     for (i=0; i<nx; i++) {
-        updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
+	updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
         TOunit = INTEGER(unitto)[i % LENGTH(unitto)];
         FROMaxis = INTEGER(whatfrom)[0];
         TOaxis = INTEGER(whatto)[0];
@@ -1559,7 +1579,7 @@ SEXP L_convert(SEXP x, SEXP whatfrom,
             }
         }
     }
-    UNPROTECT(1);
+    UNPROTECT(2);
     return answer;
 }
 
@@ -1581,6 +1601,9 @@ SEXP L_devLoc(SEXP x, SEXP y, SEXP device) {
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* See L_convert() for detailed comments */
+    currentgp = PROTECT(duplicate(currentgp));
+    setListElement(currentgp, "fill", mkString("black"));
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -1609,7 +1632,7 @@ SEXP L_devLoc(SEXP x, SEXP y, SEXP device) {
     }
     SET_VECTOR_ELT(result, 0, devx);
     SET_VECTOR_ELT(result, 1, devy);
-    UNPROTECT(3);
+    UNPROTECT(4);
     return result;
 }
 
@@ -1628,6 +1651,9 @@ SEXP L_devDim(SEXP x, SEXP y, SEXP device) {
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* See L_convert() for detailed comments */
+    currentgp = PROTECT(duplicate(currentgp));
+    setListElement(currentgp, "fill", mkString("black"));
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -1655,7 +1681,7 @@ SEXP L_devDim(SEXP x, SEXP y, SEXP device) {
     }
     SET_VECTOR_ELT(result, 0, devx);
     SET_VECTOR_ELT(result, 1, devy);
-    UNPROTECT(3);
+    UNPROTECT(4);
     return result;
 }
 
@@ -1810,10 +1836,10 @@ static void polygonEdge(double *x, double *y, int n,
 			double *edgex, double *edgey) {
     int i, v1, v2;
     double xm, ym;
-    double xmin = DOUBLE_XMAX;
-    double xmax = -DOUBLE_XMAX;
-    double ymin = DOUBLE_XMAX;
-    double ymax = -DOUBLE_XMAX;
+    double xmin = DBL_MAX;
+    double xmax = -DBL_MAX;
+    double ymin = DBL_MAX;
+    double ymax = -DBL_MAX;
     int found = 0;
     double angle = theta/180*M_PI;
     double vangle1, vangle2;
@@ -2125,6 +2151,12 @@ SEXP L_moveTo(SEXP x, SEXP y)
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to modify gp$fill to avoid
+     * stupid amounts of pattern resolving WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* This shape has no fill so set gp$fill to transparent */
+    SET_VECTOR_ELT(currentgp, GP_FILL, mkString("transparent"));
     PROTECT(prevloc = gridStateElement(dd, GSS_PREVLOC));
     PROTECT(devloc = gridStateElement(dd, GSS_CURRLOC));
     getViewportTransform(currentvp, dd, 
@@ -2167,6 +2199,16 @@ SEXP L_lineTo(SEXP x, SEXP y, SEXP arrow)
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to modify gp$fill to avoid
+     * stupid amounts of pattern resolving WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* Fill may be used by arrow head, but disallow pattern fill
+     * within arrow head. */
+    if (Rf_inherits(gpFillSXP(currentgp), "GridPattern") ||
+        Rf_inherits(gpFillSXP(currentgp), "GridPatternList")) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("transparent"));
+    }
     PROTECT(prevloc = gridStateElement(dd, GSS_PREVLOC));
     PROTECT(devloc = gridStateElement(dd, GSS_CURRLOC));
     getViewportTransform(currentvp, dd, 
@@ -2231,6 +2273,16 @@ SEXP L_lines(SEXP x, SEXP y, SEXP index, SEXP arrow)
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to modify gp$fill to avoid
+     * stupid amounts of pattern resolving WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* Fill may be used by arrow head, but disallow pattern fill
+     * within arrow head. */
+    if (Rf_inherits(gpFillSXP(currentgp), "GridPattern") ||
+        Rf_inherits(gpFillSXP(currentgp), "GridPatternList")) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("transparent"));
+    }
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -2327,23 +2379,44 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
     SEXP tracePts = R_NilValue;
     SEXP result = R_NilValue;
     double edgex, edgey;
-    double xmin = DOUBLE_XMAX;
-    double xmax = -DOUBLE_XMAX;
-    double ymin = DOUBLE_XMAX;
-    double ymax = -DOUBLE_XMAX;
-    SEXP resolvedFill = R_NilValue;
+    double xmin = DBL_MAX;
+    double xmax = -DBL_MAX;
+    double ymin = DBL_MAX;
+    double ymax = -DBL_MAX;
     /* Get the current device 
      */
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to store/cache resolved gp$fill to avoid
+     * stupid amounts of pattern resolving (resolving a resolved
+     * pattern is basically a no-op), WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* If not drawing (calculating size), set gp$fill to transparent
+     * to avoid infinite loop when gp$fill is a pattern 
+     * (resolving a pattern involves calculating size) */
+    if (!draw) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
+    /* If recording a path, set gp$fill to black because only
+     * the path boundary matters.  This avoids unnecessary fill
+     * pattern resolution. */
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
+    /* If xspline is open ...
+     * fill may be used by arrow head, but disallow pattern fill
+     * within arrow head. */
+    if (LOGICAL(o)[0] && 
+        (Rf_inherits(gpFillSXP(currentgp), "GridPattern") ||
+         Rf_inherits(gpFillSXP(currentgp), "GridPatternList"))) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("transparent"));
+    }
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
-    if (!LOGICAL(o)[0] && draw) {
-        PROTECT(resolvedFill = resolveGPar(currentgp));
-    }
     initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     /* 
      * Number of xsplines
@@ -2495,14 +2568,6 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
 	    GEMode(0, dd);
 	vmaxset(vmax);
     }
-    if (!LOGICAL(o)[0] && draw) {
-        if (resolvedFill != R_NilValue &&
-            Rf_inherits(resolvedFill, "GridGrobPattern")) {
-            SEXP patternRef = getListElement(resolvedFill, "index");
-            dd->dev->releasePattern(patternRef, dd->dev);
-        }
-        UNPROTECT(1); /* resolvedFill */
-    }
 
     if (!draw && !trace && nloc > 0) {
 	PROTECT(result = allocVector(REALSXP, 4));
@@ -2530,7 +2595,7 @@ SEXP gridXspline(SEXP x, SEXP y, SEXP s, SEXP o, SEXP a, SEXP rep, SEXP index,
     } else if (trace) {
         result = tracePts;
     }
-    UNPROTECT(1); /* tracePts */
+    UNPROTECT(2); /* tracePts and currentgp */
     return result;
 }
 
@@ -2569,6 +2634,16 @@ SEXP L_segments(SEXP x0, SEXP y0, SEXP x1, SEXP y1, SEXP arrow)
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to modify gp$fill to avoid
+     * stupid amounts of pattern resolving WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* Fill may be used by arrow head, but disallow pattern fill
+     * within arrow head. */
+    if (Rf_inherits(gpFillSXP(currentgp), "GridPattern") ||
+        Rf_inherits(gpFillSXP(currentgp), "GridPatternList")) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("transparent"));
+    }
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -2590,7 +2665,7 @@ SEXP L_segments(SEXP x0, SEXP y0, SEXP x1, SEXP y1, SEXP arrow)
     GEMode(1, dd);
     for (i=0; i<maxn; i++) {
 	double xx0, yy0, xx1, yy1;
-    updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
+        updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
 	transformLocn(x0, y0, i, vpc, &gc, 
 		      vpWidthCM, vpHeightCM,
 		      dd, transform, &xx0, &yy0);
@@ -2619,6 +2694,7 @@ SEXP L_segments(SEXP x0, SEXP y0, SEXP x1, SEXP y1, SEXP arrow)
 	}
     }
     GEMode(0, dd);
+    UNPROTECT(1);
     return R_NilValue;
 }
 
@@ -2684,6 +2760,16 @@ SEXP L_arrows(SEXP x1, SEXP x2, SEXP xnm1, SEXP xn,
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to modify gp$fill to avoid
+     * stupid amounts of pattern resolving WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* Fill may be used by arrow head, but disallow pattern fill
+     * within arrow head. */
+    if (Rf_inherits(gpFillSXP(currentgp), "GridPattern") ||
+        Rf_inherits(gpFillSXP(currentgp), "GridPatternList")) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("transparent"));
+    }
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -2768,10 +2854,14 @@ SEXP L_arrows(SEXP x1, SEXP x2, SEXP xnm1, SEXP xn,
 	    UNPROTECT(1);
     }
     GEMode(0, dd);
+    UNPROTECT(1);
 
     return R_NilValue;
 }
 
+/* This one only gets called for drawing - L_locnBounds() is used for
+ * x/y/width/height 
+ */
 SEXP L_polygon(SEXP x, SEXP y, SEXP index)
 {
     int i, j, nx, np, start=0;
@@ -2784,17 +2874,26 @@ SEXP L_polygon(SEXP x, SEXP y, SEXP index)
     R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
-    SEXP resolvedFill = R_NilValue;
     /* Get the current device 
      */
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to store/cache resolved gp$fill to avoid
+     * stupid amounts of pattern resolving (resolving a resolved
+     * pattern is basically a no-op), WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* If recording a path, set gp$fill to black because only
+     * the path boundary matters.  This avoids unnecessary fill
+     * pattern resolution. */
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
-    PROTECT(resolvedFill = resolveGPar(currentgp));
     initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     GEMode(1, dd);
     /* 
@@ -2846,12 +2945,7 @@ SEXP L_polygon(SEXP x, SEXP y, SEXP index)
 	vmaxset(vmax);
     }
     GEMode(0, dd);
-    if (resolvedFill != R_NilValue &&
-        Rf_inherits(resolvedFill, "GridGrobPattern")) {
-        SEXP patternRef = getListElement(resolvedFill, "index");
-        dd->dev->releasePattern(patternRef, dd->dev);
-    }
-    UNPROTECT(1); /* resolvedFill */
+    UNPROTECT(1);
 
     return R_NilValue;
 }
@@ -2869,24 +2963,37 @@ static SEXP gridCircle(SEXP x, SEXP y, SEXP r,
     LTransform transform;
     SEXP currentvp, currentgp;
     SEXP result = R_NilValue;
-    double xmin = DOUBLE_XMAX;
-    double xmax = -DOUBLE_XMAX;
-    double ymin = DOUBLE_XMAX;
-    double ymax = -DOUBLE_XMAX;
+    double xmin = DBL_MAX;
+    double xmax = -DBL_MAX;
+    double ymin = DBL_MAX;
+    double ymax = -DBL_MAX;
     double edgex, edgey;
-    SEXP resolvedFill = R_NilValue;
     /* Get the current device 
      */
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to store/cache resolved gp$fill to avoid
+     * stupid amounts of pattern resolving (resolving a resolved
+     * pattern is basically a no-op), WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* If not drawing (calculating size), set gp$fill to transparent
+     * to avoid infinite loop when gp$fill is a pattern 
+     * (resolving a pattern involves calculating size) */
+    if (!draw) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
+    /* If recording a path, set gp$fill to black because only
+     * the path boundary matters.  This avoids unnecessary fill
+     * pattern resolution. */
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
-    if (draw) {
-        PROTECT(resolvedFill = resolveGPar(currentgp));
-    }
     initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     nx = unitLength(x); 
     ny = unitLength(y);
@@ -2964,12 +3071,6 @@ static SEXP gridCircle(SEXP x, SEXP y, SEXP r,
     }
     if (draw) {
 	GEMode(0, dd);
-        if (resolvedFill != R_NilValue &&
-            Rf_inherits(resolvedFill, "GridGrobPattern")) {
-            SEXP patternRef = getListElement(resolvedFill, "index");
-            dd->dev->releasePattern(patternRef, dd->dev);
-        }
-        UNPROTECT(1); /* resolvedFill */
 
     } else if (ncirc > 0) {
 	result = allocVector(REALSXP, 4);
@@ -2998,6 +3099,7 @@ static SEXP gridCircle(SEXP x, SEXP y, SEXP r,
 	REAL(result)[3] = (ymax - ymin) / 
 	    REAL(gridStateElement(dd, GSS_SCALE))[0];
     } 
+    UNPROTECT(1);
     return result;
 }
 
@@ -3029,23 +3131,36 @@ static SEXP gridRect(SEXP x, SEXP y, SEXP w, SEXP h,
     SEXP currentvp, currentgp;
     SEXP result = R_NilValue;
     double edgex, edgey;
-    double xmin = DOUBLE_XMAX;
-    double xmax = -DOUBLE_XMAX;
-    double ymin = DOUBLE_XMAX;
-    double ymax = -DOUBLE_XMAX;
-    SEXP resolvedFill = R_NilValue;
+    double xmin = DBL_MAX;
+    double xmax = -DBL_MAX;
+    double ymin = DBL_MAX;
+    double ymax = -DBL_MAX;
     /* Get the current device 
      */
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to store/cache resolved gp$fill to avoid
+     * stupid amounts of pattern resolving (resolving a resolved
+     * pattern is basically a no-op), WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* If not drawing (calculating size), set gp$fill to transparent
+     * to avoid infinite loop when gp$fill is a pattern 
+     * (resolving a pattern involves calculating size) */
+    if (!draw) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
+    /* If recording a path, set gp$fill to black because only
+     * the path boundary matters.  This avoids unnecessary fill
+     * pattern resolution. */
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
-    if (draw) {
-        PROTECT(resolvedFill = resolveGPar(currentgp));
-    }
     initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     maxn = unitLength(x); 
     ny = unitLength(y); 
@@ -3211,12 +3326,6 @@ static SEXP gridRect(SEXP x, SEXP y, SEXP w, SEXP h,
     }
     if (draw) {
 	GEMode(0, dd);
-        if (resolvedFill != R_NilValue &&
-            Rf_inherits(resolvedFill, "GridGrobPattern")) {
-            SEXP patternRef = getListElement(resolvedFill, "index");
-            dd->dev->releasePattern(patternRef, dd->dev);
-        }
-        UNPROTECT(1); /* resolvedFill */
     }
     if (nrect > 0) {
 	result = allocVector(REALSXP, 4);
@@ -3241,6 +3350,7 @@ static SEXP gridRect(SEXP x, SEXP y, SEXP w, SEXP h,
 	REAL(result)[3] = (ymax - ymin) / 
 	    REAL(gridStateElement(dd, GSS_SCALE))[0];
     } 
+    UNPROTECT(1);
     return result;
 }
 
@@ -3256,8 +3366,6 @@ SEXP L_rectBounds(SEXP x, SEXP y, SEXP w, SEXP h, SEXP hjust, SEXP vjust,
     return gridRect(x, y, w, h, hjust, vjust, REAL(theta)[0], FALSE);
 }
 
-/* FIXME: need to add L_pathBounds ? */
-
 SEXP L_path(SEXP x, SEXP y, SEXP index, SEXP rule)
 {
     int i, j, k, h, npoly, *nper, ntot;
@@ -3270,17 +3378,26 @@ SEXP L_path(SEXP x, SEXP y, SEXP index, SEXP rule)
     R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
-    SEXP resolvedFill = R_NilValue;
     /* Get the current device 
      */
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to store/cache resolved gp$fill to avoid
+     * stupid amounts of pattern resolving (resolving a resolved
+     * pattern is basically a no-op), WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* If recording a path, set gp$fill to black because only
+     * the path boundary matters.  This avoids unnecessary fill
+     * pattern resolution. */
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
-    PROTECT(resolvedFill = resolveGPar(currentgp));
     initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     GEMode(1, dd);
     /*
@@ -3330,12 +3447,7 @@ SEXP L_path(SEXP x, SEXP y, SEXP index, SEXP rule)
     	vmaxset(vmax);
     }
     GEMode(0, dd);
-    if (resolvedFill != R_NilValue &&
-        Rf_inherits(resolvedFill, "GridGrobPattern")) {
-        SEXP patternRef = getListElement(resolvedFill, "index");
-        dd->dev->releasePattern(patternRef, dd->dev);
-    }
-    UNPROTECT(1); /* resolvedFill */
+    UNPROTECT(1); /* currentgp */
     return R_NilValue;
 }
 
@@ -3363,6 +3475,12 @@ SEXP L_raster(SEXP raster, SEXP x, SEXP y, SEXP w, SEXP h,
     unsigned int *image;
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to modify gp$fill to avoid
+     * stupid amounts of pattern resolving WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* This shape has no fill so set gp$fill to transparent */
+    SET_VECTOR_ELT(currentgp, GP_FILL, mkString("transparent"));
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -3462,6 +3580,7 @@ SEXP L_raster(SEXP raster, SEXP x, SEXP y, SEXP w, SEXP h,
     }
     GEMode(0, dd);
     vmaxset(vmax);
+    UNPROTECT(1);
     return R_NilValue;
 }
 
@@ -3525,10 +3644,10 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
     LTransform transform;
     SEXP txt, result = R_NilValue;
     double edgex, edgey;
-    double xmin = DOUBLE_XMAX;
-    double xmax = -DOUBLE_XMAX;
-    double ymin = DOUBLE_XMAX;
-    double ymax = -DOUBLE_XMAX;
+    double xmin = DBL_MAX;
+    double xmax = -DBL_MAX;
+    double ymin = DBL_MAX;
+    double ymax = -DBL_MAX;
     /* 
      * Bounding rectangles for checking overlapping
      * Initialised to shut up compiler
@@ -3544,6 +3663,12 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to modify gp$fill to avoid
+     * stupid amounts of pattern resolving WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* This shape has no fill so set gp$fill to transparent */
+    SET_VECTOR_ELT(currentgp, GP_FILL, mkString("transparent"));
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -3705,7 +3830,7 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
 	    GEMode(0, dd);
 	}
 	if (ntxt > 0) {
-	    result = allocVector(REALSXP, 4);
+	    result = allocVector(REALSXP, 6);
 	    /*
 	     * If there is more than one text, just produce edge
 	     * based on bounding rect of all text
@@ -3729,10 +3854,14 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
 		REAL(gridStateElement(dd, GSS_SCALE))[0];
 	    REAL(result)[3] = (ymax - ymin) / 
 		REAL(gridStateElement(dd, GSS_SCALE))[0];
+            REAL(result)[4] = xmin /
+		REAL(gridStateElement(dd, GSS_SCALE))[0];
+            REAL(result)[5] = ymin / 
+		REAL(gridStateElement(dd, GSS_SCALE))[0];
 	}
     }
     vmaxset(vmax);
-    UNPROTECT(1);
+    UNPROTECT(2);
     return result;
 }
 
@@ -3748,7 +3877,7 @@ SEXP L_text(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
  * of multiple pieces of text, unaligned, and/or rotated) 
  * in INCHES.
  *
- * Result is (xmin, xmax, ymin, ymax)
+ * Result is (edgex, edgey, width, height, xmin, ymax)
  *
  * Return NULL if no text to draw;  R code will generate unit from that
  */
@@ -3761,9 +3890,1052 @@ SEXP L_textBounds(SEXP label, SEXP x, SEXP y,
 		    REAL(theta)[0], FALSE);
 }
 
-SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
+static SEXP symbolCoords(double *x, double *y, int n, pGEDevDesc dd)
 {
-    int i, nx, npch, nss;
+    SEXP result = PROTECT(allocVector(VECSXP, 2));
+    SEXP xs = PROTECT(allocVector(REALSXP, n));
+    SEXP ys = PROTECT(allocVector(REALSXP, n));
+    int i;
+    for (i=0; i<n; i++) {
+        REAL(xs)[i] = x[i];
+        REAL(ys)[i] = y[i];
+    }
+    SET_VECTOR_ELT(result, 0, xs);
+    SET_VECTOR_ELT(result, 1, ys);
+    UNPROTECT(3);
+    return result;
+}
+
+/* How many separate sets of coordinates (shapes) are drawn for a symbol.
+ * NOTE that MINIMUM value is 1, even if no coordinates are returned
+ * (coordinates are NULL) */
+
+static int symbolNumCoords(int pch, Rboolean closed) {
+    int result = 1;
+    /* Only need to worry about SOME pch=<int> */
+    switch(pch) {
+    case 0: /* S square */
+    case 1: /* S octahedron ( circle) */
+    case 2:	/* S triangle - point up */
+        break;
+    case 3: /* S plus */
+        if (!closed) result = 2;
+	break;
+    case 4: /* S times */
+        if (!closed) result = 2;
+	break;
+    case 5: /* S diamond */
+    case 6: /* S triangle - point down */
+        break;
+    case 7:	/* S square and times superimposed */
+        if (closed) 
+            result = 1;
+        else 
+            result = 2;
+        break;
+    case 8: /* S plus and times superimposed */
+        if (!closed) result = 4;
+	break;
+    case 9: /* S diamond and plus superimposed */
+        if (closed) 
+            result = 1;
+        else 
+            result = 2;
+        break;
+    case 10: /* S hexagon (circle) and plus superimposed */
+        if (closed) 
+            result = 1;
+        else 
+            result = 2;
+        break;
+    case 11: /* S superimposed triangles */
+        if (closed) result = 2;
+	break;
+    case 12: /* S square and plus superimposed */
+        if (closed) 
+            result = 1;
+        else 
+            result = 2;
+        break;
+    case 13: /* S octagon (circle) and times superimposed */
+        if (closed) 
+            result = 1;
+        else 
+            result = 2;
+        break;
+    case 14: /* S square and point-up triangle superimposed */
+        if (closed) result = 2;
+	break;
+    case 15: /* S filled square */
+    case 16: /* S filled octagon (circle) */
+    case 17: /* S filled point-up triangle */
+    case 18: /* S filled diamond */
+    case 19: /* R filled circle */
+    case 20: /* R `Dot' (small circle) */
+    case 21: /* circles */
+    case 22: /* squares */
+    case 23: /* diamonds */
+    case 24: /* triangle (point up) */
+    case 25: /* triangle (point down) */
+        break;
+    }
+    return result;
+}
+
+/*
+ * In many ways a duplicate of GESymbol, but with the ability
+ * to rotate symbols AND the ability to return symbol 
+ * outlines and/or bounding boxes
+ */
+#define SMALL	0.25
+#define RADIUS	0.375
+#define SQRC	0.88622692545275801364		/* sqrt(pi / 4) */
+#define DMDC	1.25331413731550025119		/* sqrt(pi / 4) * sqrt(2) */
+#define TRC0	1.55512030155621416073		/* sqrt(4 * pi/(3 * sqrt(3))) */
+#define TRC1	1.34677368708859836060		/* TRC0 * sqrt(3) / 2 */
+#define TRC2	0.77756015077810708036		/* TRC0 / 2 */
+
+/* Draw one of the R special symbols. */
+/* "size" is in device coordinates and is assumed to be a width
+ * rather than a height.
+ * This could cause a problem for devices which have ipr[0] != ipr[1]
+ * The problem would be evident where calculations are done on
+ * angles -- in those cases, a conversion to and from GE_INCHES is done
+ * to preserve angles.
+ */
+/* If 'draw', render the symbol, else return symbol coordinates 
+ * Return R_NilValue if no coordinates. 
+ */
+SEXP gridSymbol(double x, double y, int pch, double size, 
+                Rboolean draw, Rboolean closed, int numCoords,
+                const pGEcontext gc, pGEDevDesc dd)
+{
+    double r, xc, yc;
+    double xx[4], yy[4];
+    unsigned int maxchar;
+
+    SEXP result, coords; 
+
+    if (draw) {
+        result = R_NilValue;
+    } else {
+        /* Default is a list of one component which is NULL */
+        PROTECT(result = allocVector(VECSXP, numCoords));
+        SET_VECTOR_ELT(result, 0, R_NilValue);
+    }
+
+    maxchar = (mbcslocale && gc->fontface != 5) ? 127 : 255;
+    /* Special cases for plotting pch="." or pch=<character>
+     */
+    if (pch == NA_INTEGER) {
+        /* do nothing */
+
+    } else if(pch < 0) {
+	size_t res;
+	char str[16]; // probably 7 would do
+	if(gc->fontface == 5)
+	    error("use of negative pch with symbol font is invalid");
+	res = Rf_ucstoutf8(str, -pch); // throws error if unsuccessful 
+	str[res] = '\0';
+        if (draw) {
+            GEText(x, y, str, CE_UTF8, NA_REAL, NA_REAL, 0., gc, dd);
+        } else {
+            warning(_("Coordinates for text pch not yet supported"));
+        }
+
+    } else if(' ' <= pch && pch <= maxchar) {
+	if (pch == '.') {
+	    /*
+	     * NOTE:  we are *filling* a rect with the current
+	     * colour (we are not drawing the border AND we are
+	     * not using the current fill colour)
+	     */
+	    gc->fill = gc->col;
+	    gc->col = R_TRANWHITE;
+            gc->patternFill = R_NilValue;
+	    /*
+	       The idea here is to use a 0.01" square, but to be of
+	       at least one device unit in each direction,
+	       assuming that corresponds to pixels. That may be odd if
+	       pixels are not square, but only on low resolution
+	       devices where we can do nothing better.
+
+	       For this symbol only, size is cex (see engine.c).
+
+	       Prior to 2.1.0 the offsets were always 0.5.
+	    */
+            if (draw) {
+                xc = size * fabs(toDeviceWidth(0.005, GE_INCHES, dd));
+                yc = size * fabs(toDeviceHeight(0.005, GE_INCHES, dd));
+                if(size > 0 && xc < 0.5) xc = 0.5;
+                if(size > 0 && yc < 0.5) yc = 0.5;
+                GERect(x-xc, y-yc, x+xc, y+yc, gc, dd);
+            } else {
+                if (closed) {
+                    xc = size * .005;
+                    yc = size * .005;
+                    xx[0] = x-xc;
+                    xx[1] = x-xc;
+                    xx[2] = x+xc;
+                    xx[3] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    yy[2] = y+yc;
+                    yy[3] = y-yc;
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	} else {
+	    char str[2];
+	    str[0] = (char) pch;
+	    str[1] = '\0';
+            if (draw) {
+                GEText(x, y, str,
+                       (gc->fontface == 5) ? CE_SYMBOL : CE_NATIVE,
+                       NA_REAL, NA_REAL, 0., gc, dd);
+            } else {
+                warning(_("Coordinates for text pch not yet supported"));
+            }
+	}
+    }
+    else if(pch > maxchar)
+	    warning(_("pch value '%d' is invalid in this locale"), pch);
+    else {
+	double GSTR_0;
+        if (draw) {
+            GSTR_0 = fromDeviceWidth(size, GE_INCHES, dd);
+        } else {
+            GSTR_0 = size;
+        }
+
+	switch(pch) {
+
+	case 0: /* S square */
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GERect(x-xc, y-yc, x+xc, y+yc, gc, dd);
+            } else {
+                if (closed) {
+                    xx[0] = x-xc;
+                    xx[1] = x-xc;
+                    xx[2] = x+xc;
+                    xx[3] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    yy[2] = y+yc;
+                    yy[3] = y-yc;
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 1: /* S octahedron ( circle) */
+	    xc = RADIUS * size; /* NB: could be zero */
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GECircle(x, y, xc, gc, dd);
+            } else {
+                if (closed) {
+                    double cx[100];
+                    double cy[100];
+                    int i;
+                    for (i=0; i<100; i++) {
+                        cx[i] = x + xc*cos(i/100.0*2.0*M_PI);
+                        cy[i] = y + xc*sin(i/100.0*2.0*M_PI);
+                    }
+                    PROTECT(coords = symbolCoords(cx, cy, 100, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 2:	/* S triangle - point up */
+	    xc = RADIUS * GSTR_0;
+	    r = TRC0 * xc;
+	    yc = TRC2 * xc;
+	    xc = TRC1 * xc;
+            if (draw) {
+                r = toDeviceHeight(r, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+            }
+	    xx[0] = x; yy[0] = y+r;
+	    xx[1] = x+xc; yy[1] = y-yc;
+	    xx[2] = x-xc; yy[2] = y-yc;
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GEPolygon(3, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 3, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 3: /* S plus */
+	    xc = M_SQRT2*RADIUS*GSTR_0;
+	    yc = M_SQRT2*RADIUS*GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                GELine(x-xc, y, x+xc, y, gc, dd);
+                GELine(x, y-yc, x, y+yc, gc, dd);
+            } else {
+                if (!closed) {
+                    SEXP h, v;
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y;
+                    yy[1] = y;
+                    PROTECT(h = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 0, h);
+                    xx[0] = x;
+                    xx[1] = x;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    PROTECT(v = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 1, v);
+                    UNPROTECT(2);
+                }
+            }
+	    break;
+
+	case 4: /* S times */
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                GELine(x-xc, y-yc, x+xc, y+yc, gc, dd);
+                GELine(x-xc, y+yc, x+xc, y-yc, gc, dd);
+            } else {
+                if (!closed) {
+                    SEXP u, d;
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    PROTECT(u = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 0, u);
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y+yc;
+                    yy[1] = y-yc;
+                    PROTECT(d = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 1, d);
+                    UNPROTECT(2);
+                }
+            }
+	    break;
+
+	case 5: /* S diamond */
+	    xc = M_SQRT2 * RADIUS * GSTR_0;
+	    yc = M_SQRT2 * RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+	    xx[0] = x-xc; yy[0] = y;
+	    xx[1] = x; yy[1] = y+yc;
+	    xx[2] = x+xc; yy[2] = y;
+	    xx[3] = x; yy[3] = y-yc;
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GEPolygon(4, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 6: /* S triangle - point down */
+	    xc = RADIUS * GSTR_0;
+	    r = TRC0 * xc;
+	    yc = TRC2 * xc;
+	    xc = TRC1 * xc;
+            if (draw) {
+                r = toDeviceHeight(r, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+            }
+	    xx[0] = x; yy[0] = y-r;
+	    xx[1] = x+xc; yy[1] = y+yc;
+	    xx[2] = x-xc; yy[2] = y+yc;
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GEPolygon(3, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 3, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 7:	/* S square and times superimposed */
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GERect(x-xc, y-yc, x+xc, y+yc, gc, dd);
+                GELine(x-xc, y-yc, x+xc, y+yc, gc, dd);
+                GELine(x-xc, y+yc, x+xc, y-yc, gc, dd);
+            } else {
+                if (closed) {
+                    xx[0] = x-xc;
+                    xx[1] = x-xc;
+                    xx[2] = x+xc;
+                    xx[3] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    yy[2] = y+yc;
+                    yy[3] = y-yc;
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);                    
+                } else {
+                    SEXP u, d;
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    PROTECT(u = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 0, u);
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y+yc;
+                    yy[1] = y-yc;
+                    PROTECT(d = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 1, d);
+                    UNPROTECT(2);
+                }
+            }
+	    break;
+
+	case 8: /* S plus and times superimposed */
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                GELine(x-xc, y-yc, x+xc, y+yc, gc, dd);
+                GELine(x-xc, y+yc, x+xc, y-yc, gc, dd);
+            } else {
+                if (!closed) {
+                    SEXP u, d;
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    PROTECT(u = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 0, u);
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y+yc;
+                    yy[1] = y-yc;
+                    PROTECT(d = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 1, d);
+                    UNPROTECT(2);
+                }
+            }
+            xc = M_SQRT2*RADIUS*GSTR_0;
+            yc = M_SQRT2*RADIUS*GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                GELine(x-xc, y, x+xc, y, gc, dd);
+                GELine(x, y-yc, x, y+yc, gc, dd);
+            } else {
+                if (!closed) {
+                    SEXP h, v;
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y;
+                    yy[1] = y;
+                    PROTECT(h = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 2, h);
+                    xx[0] = x;
+                    xx[1] = x;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    PROTECT(v = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 3, v);
+                    UNPROTECT(2);
+                }
+            }
+	    break;
+
+	case 9: /* S diamond and plus superimposed */
+	    xc = M_SQRT2 * RADIUS * GSTR_0;
+	    yc = M_SQRT2 * RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                GELine(x-xc, y, x+xc, y, gc, dd);
+                GELine(x, y-yc, x, y+yc, gc, dd);
+            } else {
+                if (!closed) {
+                    SEXP h, v;
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y;
+                    yy[1] = y;
+                    PROTECT(h = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 0, h);
+                    xx[0] = x;
+                    xx[1] = x;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    PROTECT(v = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 1, v);
+                    UNPROTECT(2);
+                }
+            }
+	    xx[0] = x-xc; yy[0] = y;
+	    xx[1] = x; yy[1] = y+yc;
+	    xx[2] = x+xc; yy[2] = y;
+	    xx[3] = x; yy[3] = y-yc;
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GEPolygon(4, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 10: /* S hexagon (circle) and plus superimposed */
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GECircle(x, y, xc, gc, dd);
+                GELine(x-xc, y, x+xc, y, gc, dd);
+                GELine(x, y-yc, x, y+yc, gc, dd);
+            } else {
+                if (closed) {
+                    double cx[100];
+                    double cy[100];
+                    int i;
+                    for (i=0; i<100; i++) {
+                        cx[i] = x + xc*cos(i/100.0*2.0*M_PI);
+                        cy[i] = y + xc*sin(i/100.0*2.0*M_PI);
+                    }
+                    PROTECT(coords = symbolCoords(cx, cy, 100, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                } else {
+                    SEXP h, v;
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y;
+                    yy[1] = y;
+                    PROTECT(h = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 0, h);
+                    xx[0] = x;
+                    xx[1] = x;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    PROTECT(v = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 1, v);
+                    UNPROTECT(2);
+                }
+            }
+	    break;
+
+	case 11: /* S superimposed triangles */
+	    xc = RADIUS * GSTR_0;
+	    r = TRC0 * xc;
+	    yc = TRC2 * xc;
+	    xc = TRC1 * xc;
+            if (draw) {
+                r = toDeviceHeight(r, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+            }
+	    yc = 0.5 * (yc + r);
+	    xx[0] = x; yy[0] = y-r;
+	    xx[1] = x+xc; yy[1] = y+yc;
+	    xx[2] = x-xc; yy[2] = y+yc;
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GEPolygon(3, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 3, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    xx[0] = x; yy[0] = y+r;
+	    xx[1] = x+xc; yy[1] = y-yc;
+	    xx[2] = x-xc; yy[2] = y-yc;
+            if (draw) {
+                GEPolygon(3, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 3, dd));
+                    SET_VECTOR_ELT(result, 1, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 12: /* S square and plus superimposed */
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                GELine(x-xc, y, x+xc, y, gc, dd);
+                GELine(x, y-yc, x, y+yc, gc, dd);
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GERect(x-xc, y-yc, x+xc, y+yc, gc, dd);
+            } else {
+                if (closed) {
+                    xx[0] = x-xc;
+                    xx[1] = x-xc;
+                    xx[2] = x+xc;
+                    xx[3] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    yy[2] = y+yc;
+                    yy[3] = y-yc;
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);                    
+                } else {
+                    SEXP h, v;
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y;
+                    yy[1] = y;
+                    PROTECT(h = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 0, h);
+                    xx[0] = x;
+                    xx[1] = x;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    PROTECT(v = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 1, v);
+                    UNPROTECT(2);
+                }
+            }
+	    break;
+
+	case 13: /* S octagon (circle) and times superimposed */
+	    xc = RADIUS * size;
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GECircle(x, y, xc, gc, dd);
+            } else {
+                if (closed) {
+                    double cx[100];
+                    double cy[100];
+                    int i;
+                    for (i=0; i<100; i++) {
+                        cx[i] = x + xc*cos(i/100.0*2.0*M_PI);
+                        cy[i] = y + xc*sin(i/100.0*2.0*M_PI);
+                    }
+                    PROTECT(coords = symbolCoords(cx, cy, 100, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                GELine(x-xc, y-yc, x+xc, y+yc, gc, dd);
+                GELine(x-xc, y+yc, x+xc, y-yc, gc, dd);
+            } else {
+                if (!closed) {
+                    SEXP u, d;
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    PROTECT(u = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 0, u);
+                    xx[0] = x-xc;
+                    xx[1] = x+xc;
+                    yy[0] = y+yc;
+                    yy[1] = y-yc;
+                    PROTECT(d = symbolCoords(xx, yy, 2, dd));
+                    SET_VECTOR_ELT(result, 1, d);
+                    UNPROTECT(2);
+                }
+            }
+	    break;
+
+	case 14: /* S square and point-up triangle superimposed */
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+	    xx[0] = x; yy[0] = y+yc;
+	    xx[1] = x+xc; yy[1] = y-yc;
+	    xx[2] = x-xc; yy[2] = y-yc;
+            if (draw) {
+                gc->fill = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GEPolygon(3, xx, yy, gc, dd);
+                GERect(x-xc, y-yc, x+xc, y+yc, gc, dd);
+            } else {
+                if (closed) {
+                    xx[0] = x-xc;
+                    xx[1] = x-xc;
+                    xx[2] = x+xc;
+                    xx[3] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    yy[2] = y+yc;
+                    yy[3] = y-yc;
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);                    
+                    xx[0] = x; yy[0] = y+yc;
+                    xx[1] = x+xc; yy[1] = y-yc;
+                    xx[2] = x-xc; yy[2] = y-yc;
+                    PROTECT(coords = symbolCoords(xx, yy, 3, dd));
+                    SET_VECTOR_ELT(result, 1, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 15: /* S filled square */
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+	    xx[0] = x-xc; yy[0] = y-yc;
+	    xx[1] = x+xc; yy[1] = y-yc;
+	    xx[2] = x+xc; yy[2] = y+yc;
+	    xx[3] = x-xc; yy[3] = y+yc;
+            if (draw) {
+                gc->fill = gc->col;
+                gc->col = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GEPolygon(4, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 16: /* S filled octagon (circle) */
+	    xc = RADIUS * size;
+            if (draw) {
+                gc->fill = gc->col;
+                gc->col = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GECircle(x, y, xc, gc, dd);
+            } else {
+                if (closed) {
+                    double cx[100];
+                    double cy[100];
+                    int i;
+                    for (i=0; i<100; i++) {
+                        cx[i] = x + xc*cos(i/100.0*2.0*M_PI);
+                        cy[i] = y + xc*sin(i/100.0*2.0*M_PI);
+                    }
+                    PROTECT(coords = symbolCoords(cx, cy, 100, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 17: /* S filled point-up triangle */
+	    xc = RADIUS * GSTR_0;
+	    r = TRC0 * xc;
+	    yc = TRC2 * xc;
+	    xc = TRC1 * xc;
+            if (draw) {
+                r = toDeviceHeight(r, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+            }
+	    xx[0] = x; yy[0] = y+r;
+	    xx[1] = x+xc; yy[1] = y-yc;
+	    xx[2] = x-xc; yy[2] = y-yc;
+            if (draw) {
+                gc->fill = gc->col;
+                gc->col = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GEPolygon(3, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 3, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 18: /* S filled diamond */
+	    xc = RADIUS * GSTR_0;
+	    yc = RADIUS * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+	    xx[0] = x-xc; yy[0] = y;
+	    xx[1] = x; yy[1] = y+yc;
+	    xx[2] = x+xc; yy[2] = y;
+	    xx[3] = x; yy[3] = y-yc;
+            if (draw) {
+                gc->fill = gc->col;
+                gc->col = R_TRANWHITE;
+                gc->patternFill = R_NilValue;
+                GEPolygon(4, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 19: /* R filled circle */
+	    xc = RADIUS * size;
+            if (draw) {
+                gc->fill = gc->col;
+                gc->patternFill = R_NilValue;
+                GECircle(x, y, xc, gc, dd);
+            } else {
+                if (closed) {
+                    double cx[100];
+                    double cy[100];
+                    int i;
+                    for (i=0; i<100; i++) {
+                        cx[i] = x + xc*cos(i/100.0*2.0*M_PI);
+                        cy[i] = y + xc*sin(i/100.0*2.0*M_PI);
+                    }
+                    PROTECT(coords = symbolCoords(cx, cy, 100, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+
+	case 20: /* R `Dot' (small circle) */
+	    xc = SMALL * size;
+            if (draw) {
+                gc->fill = gc->col;
+                gc->patternFill = R_NilValue;
+                GECircle(x, y, xc, gc, dd);
+            } else {
+                if (closed) {
+                    double cx[100];
+                    double cy[100];
+                    int i;
+                    for (i=0; i<100; i++) {
+                        cx[i] = x + xc*cos(i/100.0*2.0*M_PI);
+                        cy[i] = y + xc*sin(i/100.0*2.0*M_PI);
+                    }
+                    PROTECT(coords = symbolCoords(cx, cy, 100, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+
+	case 21: /* circles */
+	    xc = RADIUS * size;
+            if (draw) {
+                GECircle(x, y, xc, gc, dd);
+            } else {
+                if (closed) {
+                    double cx[100];
+                    double cy[100];
+                    int i;
+                    for (i=0; i<100; i++) {
+                        cx[i] = x + xc*cos(i/100.0*2.0*M_PI);
+                        cy[i] = y + xc*sin(i/100.0*2.0*M_PI);
+                    }
+                    PROTECT(coords = symbolCoords(cx, cy, 100, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case  22: /* squares */
+	    xc = RADIUS * SQRC * GSTR_0;
+	    yc = RADIUS * SQRC * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+            if (draw) {
+                GERect(x-xc, y-yc, x+xc, y+yc, gc, dd);
+            } else {
+                if (closed) {
+                    xx[0] = x-xc;
+                    xx[1] = x-xc;
+                    xx[2] = x+xc;
+                    xx[3] = x+xc;
+                    yy[0] = y-yc;
+                    yy[1] = y+yc;
+                    yy[2] = y+yc;
+                    yy[3] = y-yc;
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);                    
+                }
+            }
+	    break;
+
+	case 23: /* diamonds */
+	    xc = RADIUS * DMDC * GSTR_0;
+	    yc = RADIUS * DMDC * GSTR_0;
+            if (draw) {
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+            }
+	    xx[0] = x	  ; yy[0] = y-yc;
+	    xx[1] = x+xc; yy[1] = y;
+	    xx[2] = x	  ; yy[2] = y+yc;
+	    xx[3] = x-xc; yy[3] = y;
+            if (draw) {
+                GEPolygon(4, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 4, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 24: /* triangle (point up) */
+	    xc = RADIUS * GSTR_0;
+	    r = TRC0 * xc;
+	    yc = TRC2 * xc;
+	    xc = TRC1 * xc;
+            if (draw) {
+                r = toDeviceHeight(r, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+            }
+	    xx[0] = x; yy[0] = y+r;
+	    xx[1] = x+xc; yy[1] = y-yc;
+	    xx[2] = x-xc; yy[2] = y-yc;
+            if (draw) {
+                GEPolygon(3, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 3, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+
+	case 25: /* triangle (point down) */
+	    xc = RADIUS * GSTR_0;
+	    r = TRC0 * xc;
+	    yc = TRC2 * xc;
+	    xc = TRC1 * xc;
+            if (draw) {
+                r = toDeviceHeight(r, GE_INCHES, dd);
+                yc = toDeviceHeight(yc, GE_INCHES, dd);
+                xc = toDeviceWidth(xc, GE_INCHES, dd);
+            }
+	    xx[0] = x; yy[0] = y-r;
+	    xx[1] = x+xc; yy[1] = y+yc;
+	    xx[2] = x-xc; yy[2] = y+yc;
+            if (draw) {
+                GEPolygon(3, xx, yy, gc, dd);
+            } else {
+                if (closed) {
+                    PROTECT(coords = symbolCoords(xx, yy, 3, dd));
+                    SET_VECTOR_ELT(result, 0, coords);
+                    UNPROTECT(1);
+                }
+            }
+	    break;
+	default:
+	    warning(_("unimplemented pch value '%d'"), pch);
+	}
+    }
+
+    if (!draw)
+        UNPROTECT(1); /* result */
+
+    return result;
+}
+
+static SEXP gridPoints(SEXP x, SEXP y, SEXP pch, SEXP size, 
+                       Rboolean draw, Rboolean closed) 
+{
+    int i, nx, npch, nss, ncoords, coordIndex;
     /*    double *xx, *yy;*/
     double *xx, *yy, *ss;
     int *ps;
@@ -3777,17 +4949,35 @@ SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
     R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP currentvp, currentgp;
-    SEXP resolvedFill = R_NilValue;
+    SEXP savedFill;
+    SEXP result = R_NilValue;
+    SEXP resultNames = R_NilValue;
     /* Get the current device 
      */
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* This copy is used to store/cache resolved gp$fill to avoid
+     * stupid amounts of pattern resolving (resolving a resolved
+     * pattern is basically a no-op), WITHOUT touching current gp
+     * in 'grid' state. */
+    currentgp = PROTECT(duplicate(currentgp));
+    /* If not drawing (calculating size), set gp$fill to transparent
+     * to avoid infinite loop when gp$fill is a pattern 
+     * (resolving a pattern involves calculating size) */
+    if (!draw) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
+    /* If recording a path, set gp$fill to black because only
+     * the path boundary matters.  This avoids unnecessary fill
+     * pattern resolution. */
+    if (LOGICAL(gridStateElement(dd, GSS_RESOLVINGPATH))[0]) {
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
     getViewportContext(currentvp, &vpc);
-    PROTECT(resolvedFill = resolveGPar(currentgp));
     initGContext(currentgp, &gc, dd, gpIsScalar, &gcCache);
     nx = unitLength(x); 
     npch = LENGTH(pch);
@@ -3799,28 +4989,50 @@ SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
         LENGTH(VECTOR_ELT(currentgp, GP_CEX)) * 
         LENGTH(VECTOR_ELT(currentgp, GP_LINEHEIGHT));
     nss = nss > nx ? nx : nss;
+    if (draw) {
+        /* Save copy of fill and set currentgp$fill to "black" 
+         * for transformations 
+         * (to avoid unnecessary resolving of pattern fills)
+         */
+        PROTECT(savedFill = duplicate(VECTOR_ELT(currentgp, GP_FILL)));
+        SET_VECTOR_ELT(currentgp, GP_FILL, mkString("black"));
+    }
     /* Convert the x and y values to CM locations */
     vmax = vmaxget();
     xx = (double *) R_alloc(nx, sizeof(double));
     yy = (double *) R_alloc(nx, sizeof(double));
     for (i=0; i<nx; i++) {
 	updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
-	transformLocn(x, y, i, vpc, &gc,
-		      vpWidthCM, vpHeightCM,
-		      dd,
-		      transform,
-		      &(xx[i]), &(yy[i]));
-	/* The graphics engine only takes device coordinates
+	/*
+	 * If drawing, convert to INCHES on device
+	 * If just calculating bounds, convert to INCHES within current vp
 	 */
-	xx[i] = toDeviceX(xx[i], GE_INCHES, dd);
-	yy[i] = toDeviceY(yy[i], GE_INCHES, dd);
+        if (draw) {
+            transformLocn(x, y, i, vpc, &gc,
+                          vpWidthCM, vpHeightCM,
+                          dd,
+                          transform,
+                          &(xx[i]), &(yy[i]));
+            /* The graphics engine only takes device coordinates
+             */
+            xx[i] = toDeviceX(xx[i], GE_INCHES, dd);
+            yy[i] = toDeviceY(yy[i], GE_INCHES, dd);
+        } else {
+	    xx[i] = transformXtoINCHES(x, i, vpc, &gc,
+                                       vpWidthCM, vpHeightCM, 
+                                       dd);
+	    yy[i] = transformYtoINCHES(y, i, vpc, &gc,
+                                       vpWidthCM, vpHeightCM, 
+                                       dd);	    
+        }
     }
     ss = (double *) R_alloc(nss, sizeof(double));
     for (i=0; i < nss; i++) {
         updateGContext(currentgp, i, &gc, dd, gpIsScalar, &gcCache);
         ss[i] = transformWidthtoINCHES(size, i, vpc, &gc,
                                        vpWidthCM, vpHeightCM, dd);
-        ss[i] = toDeviceWidth(ss[i], GE_INCHES, dd);
+        if (draw)
+            ss[i] = toDeviceWidth(ss[i], GE_INCHES, dd);
     }
     ps = (int *) R_alloc(npch, sizeof(int));
     if (isString(pch)) pType = 0;
@@ -3845,8 +5057,20 @@ SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
             break;
         }
     }
-    GEMode(1, dd);
-
+    if (draw) {
+        GEMode(1, dd);
+        /* Restore currentgp$fill for drawing */
+        SET_VECTOR_ELT(currentgp, GP_FILL, savedFill);
+        UNPROTECT(1); /* savedFill */
+    } else {
+        ncoords = 0;
+        for (i=0; i<nx; i++) {
+            ncoords += symbolNumCoords(ps[i % npch], closed);
+        }
+        PROTECT(result = allocVector(VECSXP, ncoords));
+        PROTECT(resultNames = allocVector(INTSXP, ncoords));
+    }
+    coordIndex = 0;
     for (i=0; i<nx; i++)
 	if (R_FINITE(xx[i]) && R_FINITE(yy[i])) {
 	    /* FIXME:  The symbols will not respond to viewport
@@ -3864,24 +5088,48 @@ SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
 	         * special case for pch = "."
 	         */
 	        if (ipch == 46) symbolSize = gpCex(currentgp, i);
-            /*
-             * FIXME: 
-             * For character-based symbols, we need to modify
-             * gc->cex so that the FONT size corresponds to
-             * the specified symbolSize.
-             */
-	        GESymbol(xx[i], yy[i], ipch, symbolSize, &gc, dd);
+                /*
+                 * FIXME: 
+                 * For character-based symbols, we need to modify
+                 * gc->cex so that the FONT size corresponds to
+                 * the specified symbolSize.
+                 */
+                if (draw)
+                    gridSymbol(xx[i], yy[i], ipch, symbolSize, 
+                               TRUE, closed, 0, &gc, dd);
+                else {
+                    int j, nc = symbolNumCoords(ipch, closed);
+                    SEXP coords;
+                    PROTECT(coords = gridSymbol(xx[i], yy[i], ipch, symbolSize,
+                                                FALSE, closed, nc, &gc, dd));
+                    for (j=0; j<nc; j++) {
+                        INTEGER(resultNames)[coordIndex] = i + 1;
+                        SET_VECTOR_ELT(result, coordIndex++, 
+                                       VECTOR_ELT(coords, j));
+                    }
+                    UNPROTECT(1);
+                }
 	    }
 	}
-    GEMode(0, dd);
-    if (resolvedFill != R_NilValue &&
-        Rf_inherits(resolvedFill, "GridGrobPattern")) {
-        SEXP patternRef = getListElement(resolvedFill, "index");
-        dd->dev->releasePattern(patternRef, dd->dev);
+    if (draw) 
+        GEMode(0, dd);
+    else {
+        setAttrib(result, install("coordNames"), resultNames);
+        UNPROTECT(2); /* result and resultNames */
     }
-    UNPROTECT(1); /* resolvedFill */
     vmaxset(vmax);
-    return R_NilValue;
+    UNPROTECT(1); 
+    return result;
+}
+
+SEXP L_points(SEXP x, SEXP y, SEXP pch, SEXP size)
+{
+    return gridPoints(x, y, pch, size, TRUE, NA_LOGICAL);
+}
+
+SEXP L_pointsPoints(SEXP x, SEXP y, SEXP pch, SEXP size, SEXP closed)
+{
+    return gridPoints(x, y, pch, size, FALSE, LOGICAL(closed)[0]);
 }
 
 SEXP L_clip(SEXP x, SEXP y, SEXP w, SEXP h, SEXP hjust, SEXP vjust) 
@@ -3957,9 +5205,15 @@ SEXP L_clip(SEXP x, SEXP y, SEXP w, SEXP h, SEXP hjust, SEXP vjust)
     return R_NilValue;    
 }
 
+// for API back compatibility:
 SEXP L_pretty(SEXP scale) {
+    /* Default preferred number of ticks hard coded ! */
+    return L_pretty2(scale, ScalarInteger(5));
+}
+SEXP L_pretty2(SEXP scale, SEXP n_) {
     double min = numeric(scale, 0);
     double max = numeric(scale, 1);
+    int n = asInteger(n_);
     double temp;
     /* FIXME:  This is just a dummy pointer because we do not have
      * log scales.  This will cause death and destruction if it is 
@@ -3967,8 +5221,6 @@ SEXP L_pretty(SEXP scale) {
      */
     double *usr = NULL;
     double axp[3];
-    /* FIXME:  Default preferred number of ticks hard coded ! */
-    int n = 5;
     Rboolean swap = min > max;
     /* 
      * Feature: 
@@ -4041,7 +5293,7 @@ SEXP L_locator() {
  * Return four values representing boundary of set of locations
  * in INCHES.
  *
- * Result is (xmin, xmax, ymin, ymax)
+ * Result is (edgex, edgey, width, height, xmin, ymax)
  *
  * Used for lines, segments, polygons
  */
@@ -4058,16 +5310,21 @@ SEXP L_locnBounds(SEXP x, SEXP y, SEXP theta)
     SEXP currentvp, currentgp;
     SEXP result = R_NilValue;
     const void *vmax;
-    double xmin = DOUBLE_XMAX;
-    double xmax = -DOUBLE_XMAX;
-    double ymin = DOUBLE_XMAX;
-    double ymax = -DOUBLE_XMAX;
+    double xmin = DBL_MAX;
+    double xmax = -DBL_MAX;
+    double ymin = DBL_MAX;
+    double ymax = -DBL_MAX;
     double edgex, edgey;
     /* Get the current device 
      */
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* If not drawing (calculating size), NULL gp$fill to avoid 
+     * infinite loop when gp$fill is a pattern 
+     * (resolving a pattern involves calculating size) */
+    currentgp = PROTECT(duplicate(currentgp));
+    setListElement(currentgp, "fill", R_NilValue);
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -4108,7 +5365,7 @@ SEXP L_locnBounds(SEXP x, SEXP y, SEXP theta)
     }
     if (nloc > 0) {
 	hullEdge(xx, yy, nx, REAL(theta)[0], &edgex, &edgey);
-	result = allocVector(REALSXP, 4);
+	result = allocVector(REALSXP, 6);
 	/*
 	 * Reverse the scale adjustment (zoom factor)
 	 * when calculating physical value to return to user-level
@@ -4121,8 +5378,13 @@ SEXP L_locnBounds(SEXP x, SEXP y, SEXP theta)
 	    REAL(gridStateElement(dd, GSS_SCALE))[0];
 	REAL(result)[3] = (ymax - ymin) / 
 	    REAL(gridStateElement(dd, GSS_SCALE))[0];
+        REAL(result)[4] = xmin /
+            REAL(gridStateElement(dd, GSS_SCALE))[0];
+        REAL(result)[5] = ymin / 
+            REAL(gridStateElement(dd, GSS_SCALE))[0];
     } 
     vmaxset(vmax);
+    UNPROTECT(1);
     return result;
 }
 
@@ -4154,6 +5416,11 @@ SEXP L_stringMetric(SEXP label)
     pGEDevDesc dd = getDevice();
     currentvp = gridStateElement(dd, GSS_VP);
     currentgp = gridStateElement(dd, GSS_GPAR);
+    /* If not drawing (calculating size), NULL gp$fill to avoid 
+     * infinite loop when gp$fill is a pattern 
+     * (resolving a pattern involves calculating size) */
+    currentgp = PROTECT(duplicate(currentgp));
+    setListElement(currentgp, "fill", R_NilValue);
     getViewportTransform(currentvp, dd, 
 			 &vpWidthCM, &vpHeightCM, 
 			 transform, &rotationAngle);
@@ -4201,7 +5468,7 @@ SEXP L_stringMetric(SEXP label)
     SET_VECTOR_ELT(result, 1, descent);
     SET_VECTOR_ELT(result, 2, width);    
     vmaxset(vmax);
-    UNPROTECT(5);
+    UNPROTECT(6);
     return result;
 }
 

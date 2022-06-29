@@ -15,7 +15,7 @@
 #  https://www.R-project.org/Licenses/
 
 # Statlib code by John Chambers, Bell Labs, 1994
-# Changes Copyright (C) 1998-2021 The R Core Team
+# Changes Copyright (C) 1998-2022 The R Core Team
 
 
 ## As from R 2.4.0, row.names can be either character or integer.
@@ -125,7 +125,7 @@ is.na.data.frame <- function (x)
 {
     ## need to special-case no columns
     y <- if (length(x)) {
-        do.call("cbind", lapply(x, "is.na")) # gives a matrix
+        do.call(cbind, lapply(x, is.na)) # gives a matrix
     } else matrix(FALSE, length(row.names(x)), 0)
     if(.row_names_info(x) > 0L) rownames(y) <- row.names(x)
     y
@@ -282,15 +282,6 @@ as.data.frame.logical <- as.data.frame.vector
 as.data.frame.numeric <- as.data.frame.vector
 as.data.frame.complex <- as.data.frame.vector
 
-
-default.stringsAsFactors <- function()
-{
-    val <- getOption("stringsAsFactors")
-    if(is.null(val)) val <- FALSE
-    if(!is.logical(val) || is.na(val) || length(val) != 1L)
-        stop('options("stringsAsFactors") not set to TRUE or FALSE')
-    val
-}
 
 ## in case someone passes 'nm'
 as.data.frame.character <-
@@ -1448,11 +1439,16 @@ rbind.data.frame <- function(..., deparse.level = 1, make.row.names = TRUE,
         }
     }
 
-    for(i in seq_len(n)) { ## add arg [[i]] to result
+    for(i in seq_len(n)) { ## add arg [[i]] to result  (part 2)
 	xi <- unclass(allargs[[i]])
 	if(!is.list(xi))
-	    if(length(xi) != nvar)
-		xi <- rep(xi, length.out = nvar)
+	    if((ni <- length(xi)) != nvar) {
+		if(ni && nvar %% ni != 0)
+		    warning(gettextf(
+		"number of columns of result, %d, is not a multiple of vector length %d of arg %d",
+                		nvar, ni, i), domain = NA)
+		xi <- rep_len(xi, nvar)
+            }
 	ri <- rows[[i]]
 	pi <- perm[[i]]
 	if(is.null(pi)) pi <- pseq
@@ -1718,13 +1714,12 @@ xtfrm.data.frame <- function(x) {
 }
 
 list2DF <-
-function(x = list(), nrow = NULL)
+function(x = list(), nrow = 0L)
 {
     stopifnot(is.list(x), is.null(nrow) || nrow >= 0L)
     if(n <- length(x)) {
-        if(is.null(nrow))
-            nrow <- max(lengths(x), 0L)
-        x <- lapply(x, rep_len, nrow)
+        if(length(nrow <- unique(lengths(x))) > 1L)
+            stop("all variables should have the same length")
     } else {
         if(is.null(nrow))
             nrow <- 0L

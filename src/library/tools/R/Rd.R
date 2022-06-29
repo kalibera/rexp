@@ -75,15 +75,14 @@ function(db)
     ## NB: Encoding is the encoding declared in the file, not
     ## that after parsing.
     if(!length(db)) {
-        out <- data.frame(File = character(),
-                          Name = character(),
-                          Type = character(),
-                          Title = character(),
-                          Encoding = character(),
-                          stringsAsFactors = FALSE)
-        out$Aliases <- list()
-        out$Concepts <- list()
-        out$Keywords <- list()
+        out <- list2DF(list(File = character(),
+                            Name = character(),
+                            Type = character(),
+                            Title = character(),
+                            Encoding = character(),
+                            Aliases = list(),
+                            Concepts = list(),
+                            Keywords = list()))
         return(out)
     }
 
@@ -97,17 +96,14 @@ function(db)
     colnames(contents) <- entries
 
     title <- .Rd_format_title(unlist(contents[ , "Title"]))
-    out <- data.frame(File = basename(names(db)),
-                      Name = unlist(contents[ , "Name"]),
-                      Type = unlist(contents[ , "Type"]),
-                      Title = title,
-                      Encoding = unlist(contents[ , "Encoding"]),
-                      row.names = NULL, # avoid trying to compute row
-                                        # names
-                      stringsAsFactors = FALSE)
-    out$Aliases <- contents[ , "Aliases"]
-    out$Concepts <- contents[ , "Concepts"]
-    out$Keywords <- contents[ , "Keywords"]
+    out <- list2DF(list(File = basename(names(db)),
+                        Name = unlist(contents[ , "Name"]),
+                        Type = unlist(contents[ , "Type"]),
+                        Title = title,
+                        Encoding = unlist(contents[ , "Encoding"]),
+                        Aliases = contents[ , "Aliases"],
+                        Concepts = contents[ , "Concepts"],
+                        Keywords = contents[ , "Keywords"]))
     out
 }
 
@@ -199,10 +195,10 @@ function(contents, type = NULL)
         ## If a \name is not a valid \alias, replace it by the first
         ## alias.
         aliases <- contents[idx, "Aliases"]
-        bad <- which(!mapply("%in%", index[, 1L], aliases))
+        bad <- which(!mapply(`%in%`, index[, 1L], aliases))
         if(any(bad)) {
             ## was [[, but that applies to lists not char vectors
-            tmp <- sapply(aliases[bad], "[", 1L)
+            tmp <- sapply(aliases[bad], `[`, 1L)
             tmp[is.na(tmp)] <- ""
             index[bad, 1L] <- tmp
         }
@@ -304,7 +300,7 @@ function(package, dir, lib.loc = NULL, stages = "build")
         ## INSTALL, information on source file names is available, and
         ## we use it for the names of the Rd db.  Otherwise, remove the
         ## artificial names attribute.
-        paths <- as.character(sapply(db, "[", 1L))
+        paths <- as.character(sapply(db, `[`, 1L))
         names(db) <-
             if(length(paths)
                && all(grepl("^% --- Source file: (.+) ---$", paths)))
@@ -568,13 +564,108 @@ function(x)
 function(x, tags)
 {
     recurse <- function(e) {
-        if(is.list(e))
-            structure(lapply(e[is.na(match(RdTags(e), tags))], recurse),
-                      Rd_tag = attr(e, "Rd_tag"))
-        else
-            e
+        if(is.list(e)) {
+            a <- attributes(e)
+            e <- lapply(e[is.na(match(RdTags(e), tags))], recurse)
+            attributes(e) <- a
+        }
+        e
     }
     recurse(x)
+}
+
+### * .Rd_drop_nodes
+
+.Rd_drop_nodes <-
+function(x, predicate)
+{
+    recurse <- function(e) {
+        if(is.list(e)) {
+            a <- attributes(e)
+            e <- lapply(e[!vapply(e, predicate, NA)], recurse)
+            attributes(e) <- a
+        }
+        e
+    }
+    recurse(x)
+}
+
+### * .Rd_find_nodes_with_tags
+
+.Rd_find_nodes_with_tags <-
+function(x, tags)
+{
+    nodes <- list()
+    recurse <- function(e) {
+        if(any(attr(e, "Rd_tag") == tags))
+            nodes <<- c(nodes, list(e))
+        if(is.list(e))
+            lapply(e, recurse)
+    }
+    lapply(x, recurse)
+    nodes
+}
+
+### * .Rd_find_nodes
+
+.Rd_find_nodes <-
+function(x, predicate)
+{
+    nodes <- list()
+    recurse <- function(e) {
+        if(predicate(e)) 
+            nodes <<- c(nodes, list(e))
+        if(is.list(e)) 
+            lapply(e, recurse)
+    }
+    lapply(x, recurse)
+    nodes
+}
+
+### * .Rd_get_Sexpr_build_time_info
+
+## Determine whether Rd has \Sexprs which R CMD build needs to handle at
+## build stage (expand into the partial Rd db), "later" (build
+## refman.pdf) or "never" (\Sexprs from \PR or \doi can always safely
+## be expanded).
+
+.Rd_get_Sexpr_build_time_info <-
+function(x)
+{
+    y <- getDynamicFlags(x)
+    if(!y["\\Sexpr"])
+        c("\\Sexpr" = FALSE,
+          build = FALSE,
+          later = FALSE,
+          never = FALSE)
+    else if(!any(y[c("install", "render")]))
+        c("\\Sexpr" = TRUE,
+          build = TRUE,
+          later = FALSE,
+          never = FALSE)
+    else {
+        nodes <- .Rd_find_nodes_with_tags(x, "\\Sexpr")
+        btinfo <-
+            vapply(nodes,
+                   function(e) {
+                       flags <- getDynamicFlags(e)
+                       if(flags["build"])
+                           "build"
+                       else if(flags["install"]) {
+                           s <- trimws(paste(as.character(e),
+                                             collapse = ""))
+                           if(startsWith(s, "tools:::Rd_expr_PR(") ||
+                              startsWith(s, "tools:::Rd_expr_doi("))
+                               return("never")
+                       }
+                       "later"
+                   },
+                   "")
+        c("\\Sexpr" = TRUE,
+          y["build"],
+          later = any(btinfo == "later"),
+          never = any(btinfo == "never"))
+    }
 }
 
 ### * .Rd_get_argument_names
@@ -816,7 +907,6 @@ function(x)
     ## Also remove leading and trailing whitespace.
     trimws(x)
 }
-
 
 ### * fetchRdDB
 

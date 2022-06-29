@@ -68,7 +68,7 @@ static SEXP row_names_gets(SEXP vec, SEXP val)
 	    PROTECT(vec);
 	    PROTECT(val = allocVector(INTSXP, 2));
 	    INTEGER(val)[0] = NA_INTEGER;
-	    INTEGER(val)[1] = n;
+	    INTEGER(val)[1] = n; // +n:  compacted *and* automatic row names
 	    ans =  installAttrib(vec, R_RowNamesSymbol, val);
 	    UNPROTECT(2); /* vec, val */
 	    return ans;
@@ -298,6 +298,8 @@ void copyMostAttrib(SEXP inp, SEXP ans)
 void copyMostAttribNoTs(SEXP inp, SEXP ans)
 {
     SEXP s;
+    int is_object = OBJECT(inp);
+    int is_s4_object = IS_S4_OBJECT(inp);
 
     if (ans == R_NilValue)
 	error(_("attempt to set an attribute on NULL"));
@@ -322,6 +324,9 @@ void copyMostAttribNoTs(SEXP inp, SEXP ans)
 		}
 	    if (!ists) installAttrib(ans, TAG(s), cl);
 	    else if(LENGTH(cl) <= 1) {
+		/* dropping class attribute */
+		is_object = 0;
+		is_s4_object = 0;
 	    } else {
 		SEXP new_cl;
 		int i, j, l = LENGTH(cl);
@@ -334,8 +339,8 @@ void copyMostAttribNoTs(SEXP inp, SEXP ans)
 	    }
 	}
     }
-    SET_OBJECT(ans, OBJECT(inp));
-    IS_S4_OBJECT(inp) ?  SET_S4_OBJECT(ans) : UNSET_S4_OBJECT(ans);
+    SET_OBJECT(ans, is_object);
+    is_s4_object ? SET_S4_OBJECT(ans) : UNSET_S4_OBJECT(ans);
     UNPROTECT(2);
 }
 
@@ -499,6 +504,9 @@ SEXP attribute_hidden do_comment(SEXP call, SEXP op, SEXP args, SEXP env)
     return getAttrib(CAR(args), R_CommentSymbol);
 }
 
+/* *Not* called from  class(.) <- v,  nor  oldClass(.) <- v,  but
+ * e.g. from  attr(x, "class") <- value   plus our own C, e.g. ./connections.c
+ */
 SEXP classgets(SEXP vec, SEXP klass)
 {
     if (isNull(klass) || isString(klass)) {
@@ -557,10 +565,10 @@ SEXP classgets(SEXP vec, SEXP klass)
 	    }
 #endif
 	}
-	return R_NilValue;
     }
-    error(_("attempt to set invalid 'class' attribute"));
-    return R_NilValue;/*- just for -Wall */
+    else
+	error(_("attempt to set invalid 'class' attribute"));
+    return R_NilValue;
 }
 
 /* oldClass<-(), primitive */
@@ -1160,18 +1168,23 @@ SEXP attribute_hidden do_dimnames(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env)
-{
+SEXP R_dim(SEXP call, SEXP op, SEXP args, SEXP env)
+{ 
     SEXP ans;
-    checkArity(op, args);
-    check1arg(args, call, "x");
     /* DispatchOrEval internal generic: dim */
-    if (DispatchOrEval(call, op, "dim", args, env, &ans, 0, 1))
+    if (DispatchOrEval(call, op, "dim", args, env, &ans, 0, /* argsevald: */ 1))
 	return(ans);
     PROTECT(args = ans);
     ans = getAttrib(CAR(args), R_DimSymbol);
     UNPROTECT(1);
     return ans;
+}
+
+SEXP attribute_hidden do_dim(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    checkArity(op, args);
+    check1arg(args, call, "x");
+    return R_dim(call, op, args, env);
 }
 
 SEXP attribute_hidden do_dimgets(SEXP call, SEXP op, SEXP args, SEXP env)

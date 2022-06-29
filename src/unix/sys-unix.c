@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2020  The R Core Team
+ *  Copyright (C) 1997--2022  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -154,9 +154,16 @@ static const char *R_ExpandFileName_unix(const char *s, char *buff)
     if (temp == NULL) { // ~name
 	strcpy(buff, home);
     } else { // ~name/path
-	size_t len = strlen(home) + 1 + strlen(s2) + 1;
-	if (len >= PATH_MAX) return s;
-	(void)snprintf(buff, len, "%s/%s", home, s2);
+	// ask snprintf to compute the length, as GCC 12 complains otherwise.
+	size_t len = snprintf(NULL, 0, "%s/%s", home, s2);
+	// buff is passed from R_ExpandFileName, uses static array of
+	// size PATH_MAX.
+	if (len >= PATH_MAX) {
+	    warning(_("expanded path length %d would be too long for\n%s\n"),
+		       len, s);
+	    return s;
+	}
+	(void)snprintf(buff, len + 1,  "%s/%s", home, s2);
     }
 
     return buff;
@@ -673,6 +680,28 @@ static void warn_status(const char *cmd, int res)
 	warning(_("running command '%s' had status %d"), cmd, res);
 }
 
+static void NORET cmdError(const char *cmd, const char *format, ...)
+{
+    SEXP call = R_CurrentExpression;
+    int nextra = errno ? 3 : 1;
+
+    va_list(ap);
+    va_start(ap, format);
+    SEXP cond = R_vmakeErrorCondition(call, "cmdError", NULL,
+				      nextra, format, ap);
+    va_end(ap);
+
+    PROTECT(cond);
+    R_setConditionField(cond, 2, "cmd", mkString(cmd));
+    if (errno) {
+	R_setConditionField(cond, 3, "errno", ScalarInteger(errno));
+	R_setConditionField(cond, 4, "error", mkString(strerror(errno)));
+    }
+
+    R_signalErrorCondition(cond, call);
+    UNPROTECT(1); /* cond; not reached */
+}
+
 #define INTERN_BUFSIZE 8096
 SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -730,8 +759,8 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 	else
 	    fp = R_popen_timeout(cmd, x, timeout);
 	if(!fp)
-	    error(_("cannot popen '%s', probable reason '%s'"),
-		  cmd, strerror(errno));
+	    cmdError(cmd, _("cannot popen '%s', probable reason '%s'"),
+		     cmd, strerror(errno));
 #ifdef HAVE_GETLINE
         size_t read;
         for(i = 0; (read = getline(&buf, &buf_len, fp)) != (size_t)-1; i++) {
@@ -790,9 +819,10 @@ SEXP attribute_hidden do_system(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
 	if ((res & 0xff)  == 127) {/* 127, aka -1 */
 	    if (errno)
-		error(_("error in running command: '%s'"), strerror(errno));
+		cmdError(cmd, _("error in running command: '%s'"),
+			 strerror(errno));
 	    else
-		error(_("error in running command"));
+		cmdError(cmd, _("error in running command"));
 	}
 
 	if (timeout && tost.timedout) {
@@ -931,27 +961,8 @@ void R_ProcessEvents(void)
     if (ptr_R_ProcessEvents) ptr_R_ProcessEvents();
 #endif
     R_PolledEvents();
-    if (cpuLimit > 0.0 || elapsedLimit > 0.0) {
-	double cpu, data[5];
-	R_getProcTime(data);
-	cpu = data[0] + data[1] + data[3] + data[4];
-	if (elapsedLimit > 0.0 && data[2] > elapsedLimit) {
-	    cpuLimit = elapsedLimit = -1;
-	    if (elapsedLimit2 > 0.0 && data[2] > elapsedLimit2) {
-		elapsedLimit2 = -1.0;
-		error(_("reached session elapsed time limit"));
-	    } else
-		error(_("reached elapsed time limit"));
-	}
-	if (cpuLimit > 0.0 && cpu > cpuLimit) {
-	    cpuLimit = elapsedLimit = -1;
-	    if (cpuLimit2 > 0.0 && cpu > cpuLimit2) {
-		cpuLimit2 = -1.0;
-		error(_("reached session CPU time limit"));
-	    } else
-		error(_("reached CPU time limit"));
-	}
-    }
+    if (cpuLimit > 0.0 || elapsedLimit > 0.0)
+	R_CheckTimeLimits();
 }
 
 

@@ -1,6 +1,6 @@
 
-R Under development (unstable) (2021-05-13 r80290) -- "Unsuffered Consequences"
-Copyright (C) 2021 The R Foundation for Statistical Computing
+R Under development (unstable) (2022-03-19 r81942) -- "Unsuffered Consequences"
+Copyright (C) 2022 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -2901,12 +2901,12 @@ Warning: not plotting observations with leverage one:
 
 data:  extra[group == 1] and extra[group == 2]
 t = -4.0621, df = 9, p-value = 0.002833
-alternative hypothesis: true difference in means is not equal to 0
+alternative hypothesis: true mean difference is not equal to 0
 95 percent confidence interval:
  -2.4598858 -0.7001142
 sample estimates:
-mean of the differences 
-                  -1.58 
+mean difference 
+          -1.58 
 
 > 
 > ## The sleep *prolongations*
@@ -3512,7 +3512,7 @@ c0   -5.14
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  2.879 0.07 2.962 0 0 
+Time elapsed:  5.453 0.122 5.614 0 0 
 > grDevices::dev.off()
 null device 
           1 

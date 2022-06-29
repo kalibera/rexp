@@ -38,7 +38,8 @@ split.default <- function(x, f, drop = FALSE, sep = ".", lex.order = FALSE, ...)
 split.data.frame <- function(x, f, drop = FALSE, ...)
 {
     ## If formula, maybe should check that there is no LHS?
-    if (inherits(f, "formula")) f <- eval(attr(stats::terms(f), "variables"), x, environment(f))
+    if (inherits(f, "formula"))
+        f <- eval(attr(stats::terms(f), "variables"), x, environment(f))
     lapply(split(x = seq_len(nrow(x)), f = f, drop = drop, ...),
            function(ind) x[ind, , drop = FALSE])
 }

@@ -1,7 +1,7 @@
 #  File src/library/tools/R/urltools.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 2015-2021 The R Core Team
+#  Copyright (C) 2015-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,6 +16,9 @@
 #  A copy of the GNU General Public License is available at
 #  https://www.R-project.org/Licenses/
 
+## See RFC 3986 <https://tools.ietf.org/html/rfc3986> and
+## <https://url.spec.whatwg.org/>.
+
 get_IANA_URI_scheme_db <-
 function()
 {
@@ -25,13 +28,13 @@ function()
     db <- utils::read.csv(url(paste0(baseurl, "uri-schemes-1.csv")),
                           stringsAsFactors = FALSE, encoding = "UTF-8")
     names(db) <- chartr(".", "_", names(db))
+    db$URI_Scheme <- sub(" .*", "", db$URI_Scheme)
     db
 }
 
 parse_URI_reference <-
 function(x)
 {
-    ## See RFC_3986 <http://www.ietf.org/rfc/rfc3986.txt>.
     re <- "^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?"
     if(length(x)) {
         y <- do.call(rbind, regmatches(x, regexec(re, x)))
@@ -111,9 +114,8 @@ url_db <-
 function(urls, parents)
 {
     ## Some people get leading LFs in URLs, so trim before checking.
-    db <- data.frame(URL = trimws(as.character(urls)),
-                     Parent = as.character(parents),
-                     stringsAsFactors = FALSE)
+    db <- list2DF(list(URL = trimws(as.character(urls)),
+                       Parent = as.character(parents)))
     class(db) <- c("url_db", "data.frame")
     db
 }
@@ -152,8 +154,6 @@ function(dir, recursive = FALSE, files = NULL, verbose = FALSE)
         files <- list.files(dir, pattern = "[.]pdf$",
                             full.names = TRUE,
                             recursive = recursive)
-    ## FIXME: this is simpler to do with full.names = FALSE and without
-    ## tools:::.file_path_relative_to_dir().
     urls <-
         lapply(files,
                function(f) {
@@ -412,10 +412,8 @@ function(db, remote = TRUE, verbose = FALSE, parallel = FALSE, pool = NULL)
                         cran = rep.int("", length(u)),
                         spaces = rep.int("", length(u)),
                         R = rep.int("", length(u))) {
-        y <- data.frame(URL = u, From = I(p), Status = s, Message = m,
-                        New = new, CRAN = cran, Spaces = spaces, R = R,
-                        row.names = NULL, stringsAsFactors = FALSE)
-        y$From <- p
+        y <- list2DF(list(URL = u, From = p, Status = s, Message = m,
+                          New = new, CRAN = cran, Spaces = spaces, R = R))
         class(y) <- c("check_url_db", "data.frame")
         y
     }
@@ -495,9 +493,19 @@ function(db, remote = TRUE, verbose = FALSE, parallel = FALSE, pool = NULL)
                 ## 301s. 
                 ## (Alternatively, could try reporting the 301 but no
                 ## new location.)
-                if(nzchar(parse_URI_reference(loc)[1L, "scheme"]))
+                newParts <- parse_URI_reference(loc)
+                if(nzchar(newParts[1L, "scheme"])) {
                     newLoc <- loc
-                ## (Note also that fragments would need extra care.)
+                    ## Handle fragments. If the new URL does have one,
+                    ## use it. Otherwise, if the old has one, use that.
+                    ## (From section 7.1.2).
+                    if (newParts[1L, "fragment"] == "") {
+                        uParts <- parse_URI_reference(u)
+                        if (nzchar(uFragment <- uParts[1L, "fragment"])) {
+                            newLoc <- paste0(newLoc, "#", uFragment)
+                        }
+                    }
+                }
             }
         }
         ##
@@ -639,7 +647,14 @@ function(x, ...)
     u <- x$URL
     new <- x$New
     ind <- nzchar(new)
-    u[ind] <- sprintf("%s (moved to %s)", u[ind], new[ind])
+    if(any(ind)) {
+        u[ind] <- sprintf("%s (moved to %s)", u[ind], new[ind])
+        if(config_val_to_logical(Sys.getenv("_R_CHECK_URLS_SHOW_301_STATUS_",
+                                            "FALSE"))) {
+            x$Message[ind] <- "Moved Permanently"
+            x$Status[ind] <- "301"
+        }
+    }
 
     paste0(sprintf("URL: %s", u),
            sprintf("\nFrom: %s",
@@ -696,10 +711,7 @@ function(x, ...)
         if(is.null(length)) {
             length <- 0L
         }
-        ## <FIXME>
-        ## make codetools happy
-        done <- fmt <- NULL
-        ## </FIXME>
+        done <- fmt <- NULL             # make codetools happy
         bar$length <- length
         bar$done <- -1L
         digits <- trunc(log10(length)) + 1L

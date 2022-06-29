@@ -497,7 +497,10 @@ function(x)
     restricts_use <- NA
 
     ## Try splitting into the individual components.
-    components <- trimws(unlist(strsplit(x, "|", fixed = TRUE)))
+    components <-
+        trimws(unlist(strsplit(gsub("[[:space:]]*\\+[[:space:]]*",
+                                    " + ", x),
+                               "|", fixed = TRUE)))
 
     ## Now analyze the individual components.
     ok <- grepl(R_license_db_vars()$re_component, components)
@@ -705,7 +708,7 @@ function(dir, unpacked = FALSE)
     ## old versions in the "main" src/contrib directory.  But let's not
     ## worry about this for now ...
 
-    db <- do.call("rbind", db)
+    db <- do.call(rbind, db)
 
     ## Retain what is needed ...
     data.frame(db[ , c("Package", "Version", fields)],

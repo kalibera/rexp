@@ -2,7 +2,7 @@
 ###
 ### Process this file with autoconf to produce a configure script.
 ###
-### Copyright (C) 1998-2021 R Core Team
+### Copyright (C) 1998-2022 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -97,6 +97,9 @@ esac
 R_PLATFORM="${host}"
 AC_SUBST(R_PLATFORM)
 
+dnl config.guess deliberately overrides the cpu/arch as repoorted by
+dnl uname -m (or -p) to use one almost unknown to Mac users. So
+dnl we need a macro for a more familiar name.
 MAC_CPU=
 case "${host_os}" in
   darwin*)
@@ -409,14 +412,12 @@ AC_ARG_WITH([blas],
 [AS_HELP_STRING([--with-blas],[use system BLAS library (if available), or specify it @<:@no@:>@])],
 [R_ARG_USE(blas)],
 [use_blas=unset])
-# default is "no" except on macOS
 
 ## LAPACK.
 AC_ARG_WITH([lapack],
 [AS_HELP_STRING([--with-lapack],[use system LAPACK library (if available), or specify it @<:@no@:>@])],
 [R_ARG_USE(lapack)],
 [use_lapack=unset])
-# default is "no" except on macOS
 
 ## Readline.
 AC_ARG_WITH([readline],
@@ -735,7 +736,8 @@ AC_ARG_VAR([PKG_CONFIG_LIBDIR], [path overriding pkg-config's default search pat
 
 AC_PROG_CC
 AC_PROG_GCC_TRADITIONAL
-AC_GNU_SOURCE ## see note above
+dnl AC_GNU_SOURCE ## see note above
+AC_USE_SYSTEM_EXTENSIONS ## see note above
 
 AC_PROG_CPP
 R_PROG_CPP_CPPFLAGS
@@ -858,10 +860,10 @@ AC_SUBST(STRIP_STATIC_LIB)
 
 ## <NOTE>
 ## This actually comes from libtool.m4.
-AC_CHECK_LIBM
+LT_LIB_M
 AC_SUBST(LIBM)
 ## </NOTE>
-## AC_CHECK_LIBM computes LIBM but does not add to LIBS, hence we do
+## LT_LIB_M computes LIBM but does not add to LIBS, hence we do
 ## the following as well.
 ## This gives: 'sin' is a builtin with type 'double (double)'
 AC_CHECK_LIB(m, sin)
@@ -881,8 +883,9 @@ if test "${use_readline}" = yes; then
     ## only need ncurses if libreadline is not statically linked against it
     unset ac_cv_lib_readline_rl_callback_read_char
     AC_CHECK_LIB(ncurses, main, [],
-                 AC_CHECK_LIB(termcap, main, [],
-                              AC_CHECK_LIB(termlib, main)))
+                 AC_CHECK_LIB(tinfo, main, [],
+                              AC_CHECK_LIB(termcap, main, [],
+                                           AC_CHECK_LIB(termlib, main))))
     AC_CHECK_LIB(readline, rl_callback_read_char)
     use_readline="${ac_cv_lib_readline_rl_callback_read_char}"
     if test "${use_readline}" = yes; then
@@ -912,7 +915,6 @@ AC_SUBST(READLINE_LIBS)
 
 ### * Checks for header files.
 
-AC_HEADER_STDC
 AC_HEADER_DIRENT
 ## we also assume readdir and closedir
 if test "${ac_cv_search_opendir}" = "no"; then
@@ -951,9 +953,6 @@ R_HEADER_GLIBC2
 
 ### * Checks for types.
 
-## clang complains when checking return type
-##   indirection requires pointer operand ('void' invalid)
-AC_TYPE_SIGNAL
 ## liblzma uses uint64_t: used unconditionally in src/main/util.c
 AC_TYPE_UINT64_T
 AC_CHECK_TYPES([int64_t, int_fast64_t])
@@ -1168,22 +1167,23 @@ fi
 ## -fno-optimize-sibling-calls to avoid recent gfortran optimizations
 ## that break with LAPACK/BLAS-style passing of length-1 strings
 ## (without hidden arguments giving their lengths).
-AC_MSG_CHECKING([if need -fno-optimize-sibling-calls for gfortran])
-AC_CACHE_VAL([r_cv_have_gfortran7],
-[r_cv_have_gfortran7=no
-if test "x${GFC}" = xyes; then
-  gfortran_version_maj=`echo "__GNUC__" | ${FC} -E -P - | ${SED} 's/ //g'`
-  if test ${gfortran_version_maj} -ge 7; then
-    r_cv_have_gfortran7=yes
-  fi
-fi])
+## No longer used once all packages are passing char lengths.
+dnl AC_MSG_CHECKING([if need -fno-optimize-sibling-calls for gfortran])
+dnl AC_CACHE_VAL([r_cv_have_gfortran7],
+dnl [r_cv_have_gfortran7=no
+dnl if test "x${GFC}" = xyes; then
+dnl   gfortran_version_maj=`echo "__GNUC__" | ${FC} -E -P - | ${SED} 's/ //g'`
+dnl   if test ${gfortran_version_maj} -ge 7; then
+dnl     r_cv_have_gfortran7=yes
+dnl   fi
+dnl fi])
 
-if test "x${r_cv_have_gfortran7}" = xyes; then
-  AC_MSG_RESULT([yes])
-  R_XTRA_FFLAGS="-fno-optimize-sibling-calls"
-else
-  AC_MSG_RESULT([no])
-fi
+dnl if test "x${r_cv_have_gfortran7}" = xyes; then
+dnl   AC_MSG_RESULT([yes])
+dnl   R_XTRA_FFLAGS="-fno-optimize-sibling-calls"
+dnl else
+dnl   AC_MSG_RESULT([no])
+dnl fi
 
 ### type for Fortran 'hidden' character lengths, if any
 AC_MSG_CHECKING([for type of 'hidden' Fortran character lengths])
@@ -1316,7 +1316,8 @@ if test "${GCC}" = yes; then
 ## has 32k and so can use -fpic.
 ## However, although the gcc docs do not mention it, it seems s390/s390x
 ## also supports and needs -fPIC
-    sparc*|ppc64*|powerpc64*|s390*)
+## See <https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1004747> for alpha.
+    alpha*|sparc*|ppc64*|powerpc64*|s390*)
       cpicflags="-fPIC"
       ;;
     *)
@@ -1327,7 +1328,7 @@ if test "${GCC}" = yes; then
 fi
 if test "${ac_cv_fc_compiler_gnu}" = yes; then
   case "${host_cpu}" in
-    sparc*|ppc64*|powerpc64*|s390*)
+    alpha*|sparc*|ppc64*|powerpc64*|s390*)
       fpicflags="-fPIC"
       ;;
     *)
@@ -1343,7 +1344,7 @@ case "${FC}" in
 esac
 if test "${GXX}" = yes; then
   case "${host_cpu}" in
-    sparc*|ppc64*|powerpc64*|s390*)
+    alpha*|sparc*|ppc64*|powerpc64*|s390*)
       cxxpicflags="-fPIC"
       ;;
     *)
@@ -2364,13 +2365,15 @@ AM_CONDITIONAL(USE_VECLIB_G95FIX, [test "x${use_veclib_g95fix}" = xyes])
 AM_CONDITIONAL(USE_EXTERNAL_BLAS, [test "${acx_blas_ok}" = "yes"])
 
 ## LAPACK.
-## The default has already been set on macOS: otherwise it is "no"
-## and so this test fails.
-if test "${use_lapack}" = "yes"; then
+## The default is "unset"
+if test "${use_lapack}" = "unset"; then
+  R_LAPACK_SYSTEM_LIB
+elif test "${use_lapack}" = "yes"; then
   R_LAPACK_LIBS
 fi
 if test "${acx_lapack_ok}" != "yes"; then
   LAPACK_LIBS="-L\"\$(R_HOME)/lib\$(R_ARCH)\" -lRlapack"
+  AC_MSG_NOTICE([using internal LAPACK sources])
 fi
 AC_SUBST(LAPACK_LIBS)
 AM_CONDITIONAL(USE_EXTERNAL_LAPACK, [test "${acx_lapack_ok}" = "yes"])
@@ -2565,9 +2568,9 @@ AC_SUBST(R_BATCHSAVE)
 ## Java support
 ## R_JAVA
 custom_JAVA_HOME="${JAVA_HOME}"
-: ${JAVA_LIBS=~autodetect~}
-: ${JAVA_CPPFLAGS=~autodetect~}
-: ${JAVA_LD_LIBRARY_PATH=~autodetect~}
+: ${JAVA_LIBS='~autodetect~'}
+: ${JAVA_CPPFLAGS='~autodetect~'}
+: ${JAVA_LD_LIBRARY_PATH='~autodetect~'}
 custom_JAVA_LIBS="${JAVA_LIBS}"
 custom_JAVA_CPPFLAGS="${JAVA_CPPFLAGS}"
 custom_JAVA_LD_LIBRARY_PATH="${JAVA_LD_LIBRARY_PATH}"
@@ -2598,11 +2601,10 @@ AC_SUBST(R_JAVA_LD_LIBRARY_PATH)
 AC_LANG_PUSH(Fortran)
 ## The next two are needed to get IBM's xlf* and Intel's ifc
 ## to accept these extensions (but neither are current).
-## They set FCFLAGS_F9x used in etc/Makeconf.in
+## They set FCFLAGS_f9x used in etc/Makeconf.in
 AC_FC_SRCEXT(f90, [dummy=1], [dummy=0])
 AC_FC_SRCEXT(f95, [dummy=1], [dummy=0])
 ## We probably should be calling AC_FC_FREEFORM: adds to FCFLAGS
-## We could call AC_FC_FIXEDFORM: adds to FCFLAGS
 R_OPENMP
 AC_LANG_POP()
 
@@ -2930,12 +2932,13 @@ if test "${acx_blas_ok}" = "yes"; then
     *-latlas*) r_blas=ATLAS ;;
     *-lgoto*) r_blas=Goto ;;
     *-lopenblas*) r_blas=OpenBLAS ;;
-    *-lacml*) r_blas=ACML ;;
     *-lmkl*) r_blas=MKL ;;
     *-lsgemm*) r_blas=PhiPack ;;
     *sunperf*) r_blas=SunPerf ;;
     *-lessl*)  r_blas=ESSL ;;
     *Accelerate*)  r_blas=Accelerate ;;
+    *-lflexiblas*)  r_blas=FlexiBlas ;;
+    *-lblis*)  r_blas=BLIS ;;
     "")        r_blas=none ;;
     *)         r_blas=generic ;;
   esac

@@ -1,7 +1,7 @@
 #  File src/library/utils/R/head.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2020 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -31,7 +31,9 @@
 checkHT <- function(n, d) {
     len <- length(n)
     msg <- if(len == 0 || all(is.na(n)))
-        gettext("invalid 'n' -  must contain at least one non-missing element, got none.")
+        gettext("invalid 'n' - must contain at least one non-missing element, got none.")
+    else if(!(is.numeric(n) || is.logical(n)))
+        gettext("invalid 'n' - must be numeric, possibly NA.")
     else if(is.null(d) && len > 1L)
         gettextf("invalid 'n' - must have length one when dim(x) is NULL, got %d", len)
     else if(!is.null(d) && len > length(d))
@@ -69,7 +71,7 @@ head.array <- function(x, n = 6L, ...)
     ii <- which(!is.na(n[seq_along(d)]))
     args[1L + ii] <- lapply(ii, function(i)
         seq_len(if((ni <- n[i]) < 0L) max(d[i] + ni, 0L) else min(ni, d[i]) ))
-    do.call("[", args)
+    do.call(`[`, args)
 }
 ## ../NAMESPACE defines  data.frame  method via head.array, too :
 ## S3method(head, data.frame, head.array)
@@ -131,7 +133,7 @@ tail.array <- function(x, n = 6L, keepnums = TRUE, addrownums, ...)
         })
     args <- rep(alist(x, , drop = FALSE), c(1L, length(d), 1L))
     args[1L + ii] <- sel
-    ans <- do.call("[", args)
+    ans <- do.call(`[`, args)
     if (keepnums && length(d) > 1L) {
         jj <- if(!is.null(adnms <- dimnames(ans)[ii]))
                   which(vapply(adnms, is.null, NA)) else seq_along(ii)

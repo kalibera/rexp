@@ -116,18 +116,32 @@ shtmlify <- function(s) {
     s
 }
 
-## URL encode anything other than alphanumeric, . - _ $ and reserved
-## characters in URLs.
-urlify <- function(x) {
-    ## Like utils::URLencode(reserved = FALSE), but with '&' replaced by
-    ## '&amp;' and hence directly usable for href attributes.
-    ## See
-    ##   <http://www.w3.org/TR/html4/appendix/notes.html#h-B.2.1>
-    ##   <http://www.w3.org/TR/html4/appendix/notes.html#h-B.2.2>
-    ##   RFC 3986 <http://tools.ietf.org/html/rfc3986>
-
-    ## We do not want to mess with already-encoded URLs
-    if(grepl("%[[:xdigit:]]{2}", x, useBytes = TRUE)) {
+## URL encode for use in href attributes.
+urlify <- function(x, reserved = FALSE, repeated = FALSE) {
+    ## When reserved is a logical, like
+    ##   utils::URLencode(x, reserved)
+    ## with '&' replaced by '&amp;' and hence directly usable for href
+    ## attributes.  Equivalently, one could use
+    ##   escapeAmpersand(utils::URLencode(x, reserved))
+    ## Alternatively, reserved can be a string giving the reserved chars
+    ## not to percent encode if it starts with a '^', and to percent
+    ## encode otherwise (perhaps utils::URLencode() should be enhanced
+    ## accordingly?).
+    ##
+    ## According to RFC 3986 <https://tools.ietf.org/html/rfc3986>, the
+    ## reserved characters are
+    ##   c(gendelims, subdelims)
+    ## with
+    ##   gendelims <- c(":", "/", "?", "#", "[", "]", "@")
+    ##   subdelims <- c("!", "$", "&", "'", "(", ")", "*", "+", ",", ";", "=")
+    ## The following is
+    ##   paste(c(gendelims, subdelims), collapse = "")
+    ## re-arranged for convenient use in regexp (negated) character
+    ## classes:
+    alldelims <- "][!$&'()*+,;=:/?@#"
+    ## See also <https://url.spec.whatwg.org/#valid-url-string>.
+    
+    if(!repeated && grepl("%[[:xdigit:]]{2}", x, useBytes = TRUE)) {
         gsub("&", "&amp;", x, fixed = TRUE)
     } else {
         chars <- unlist(strsplit(x, ""))
@@ -136,16 +150,53 @@ urlify <- function(x) {
                       paste0("%", toupper(as.character(charToRaw(x))),
                              collapse = ""),
                       "")
+        if(is.character(reserved)) {
+            reserved <- paste(reserved, collapse = "")
+            reserved <- if(startsWith(reserved, "^"))
+                            substring(reserved, 2L)
+                        else      
+                            rawToChar(setdiff(charToRaw(alldelims),
+                                              charToRaw(reserved)))
+            escape <- any(charToRaw(reserved) == charToRaw("&"))
+        } else if(!reserved) {
+            reserved <- alldelims
+            escape <- TRUE
+        } else {
+            reserved <- ""
+            escape <- FALSE
+        }
         todo <- paste0("[^",
-                       "][!$&'()*+,;=:/?@ #",
+                       reserved,
                        "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
                        "abcdefghijklmnopqrstuvwxyz0123456789._~-",
                        "]")
-        mixed <- ifelse(grepl(todo, chars), hex, chars)
-        gsub("&", "&amp;", paste(mixed, collapse = ""), fixed = TRUE)
+        x <- paste(ifelse(grepl(todo, chars), hex, chars), collapse = "")
+        if(escape)
+            x <- gsub("&", "&amp;", x, fixed = TRUE)
+        x
     }
 }
-## (Equivalently, could use escapeAmpersand(utils::URLencode(x)).)
+
+urlify_email_address <- function(x) {
+    ## As per RFC 6068
+    ## <https://datatracker.ietf.org/doc/html/rfc6068#section-2> we must
+    ## percent encode
+    ##   "%"
+    ##   from gendelims:   c("/", "?", "#", "[", "]")  
+    ##   from subdelims:   c("&", ";", "=")
+    urlify(x, reserved = "][#?/&;=%", repeated = TRUE)
+}
+
+urlify_doi <- function(x) {
+    ## According to
+    ##   <https://www.doi.org/doi_handbook/2_Numbering.html#2.2>
+    ## a DOI name can "incorporate any printable characters from the
+    ## legal graphic characters of Unicode".  The subsequent
+    ##   <https://www.doi.org/doi_handbook/2_Numbering.html#htmlencoding>
+    ## discussed encoding issues but is a bit vague.
+    ## For now, percent encode all reserved characters but the slash.
+    urlify(x, reserved = "^/", repeated = TRUE)
+}
 
 ## Ampersands should be escaped in proper HTML URIs
 escapeAmpersand <- function(x) gsub("&", "&amp;", x, fixed = TRUE)
@@ -153,20 +204,42 @@ escapeAmpersand <- function(x) gsub("&", "&amp;", x, fixed = TRUE)
 invalid_HTML_chars_re <-
     "[\u0001-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]"
 
+## topics can contain weird characters like % / & !, so need to be
+## encoded. We allow for different encodings for URLs and filenames
+## (although mostly the same for now).
+
+## & -> %26F is OK, & -> &amp; is NOT OK with dynamic help
+topic2url <- function(x)
+{
+    if(config_val_to_logical(Sys.getenv("_R_HELP_USE_URLENCODE_",
+                                        "FALSE")))
+        utils::URLencode(x, reserved = TRUE)
+    else
+        vapply(x, urlify, "", reserved = TRUE) # to vectorize (used in toHTML.R)
+}
+topic2filename <- function(x)
+    gsub("%", "+", utils::URLencode(x, reserved = TRUE))
 
 ## Create HTTP redirect files for aliases; called only during package
-## installation if static help files are enabled.
+## installation if static help files are enabled. Files are named
+## after aliases, which may contain 'undesirable' characters. These
+## are escaped using topic2filename(). Analogous escaping needs to be
+## done when creating links in HTML output as well, but ONLY for
+## static HTML (dynamic help is already capable of handling such
+## links)
 createRedirects <- function(file, Rdobj)
 {
     linksToTopics <-
         config_val_to_logical(Sys.getenv("_R_HELP_LINKS_TO_TOPICS_", "TRUE"))
     if (!linksToTopics) return(invisible()) # do nothing
     ## create a HTTP redirect for each 'alias' in .../pkg/help/
-    redirHTML <- sprintf("<html><head><meta http-equiv='refresh' content='0; url=../html/%s'></head></html>\n", urlify(basename(file)))
+    redirHTML <-
+        sprintf("<!DOCTYPE html>\n<html><head><meta http-equiv='refresh' content='0; url=../html/%s'><title>HTTP redirect</title></head><body></body></html>\n",
+                urlify(basename(file), reserved = TRUE))
     toProcess <- which(RdTags(Rdobj) == "\\alias")
     helpdir <- paste0(dirname(dirname(file)), "/help") # .../pkg/help/
-    aliasName <- function(i) Rdobj[[i]][[1]]
-    aliasFile <- function(i) file.path(helpdir, sprintf("%s.html", aliasName(i)))
+    aliasName <- function(i) trimws(Rdobj[[i]][[1]])
+    aliasFile <- function(i) file.path(helpdir, sprintf("%s.html", topic2filename(aliasName(i))))
     redirMsg <- function(type, src, dest, status) {
         ## change sprintf to gettextf to make translatable, but seems unnecessary
         msg <- sprintf("\nREDIRECT:%s\t %s -> %s [ %s ]", type, src, dest, status)
@@ -185,16 +258,16 @@ createRedirects <- function(file, Rdobj)
             message(msg, appendLF = FALSE)
         }
         try(suppressWarnings(cat(redirHTML, file = afile)), silent = TRUE) # Fails for \alias{%/%}
-        ## redirMsg("topic", aname, basename(file), if (file.exists(afile)) "SUCCESS" else "FAIL")
-        if (!file.exists(afile)) redirMsg("topic", aname, basename(file), "FAIL")
+        ## redirMsg("topic", aname, basename(file), if (file.exists(afile)) "SUCCESS" else "FAILURE")
+        if (!file.exists(afile)) redirMsg("topic", aname, basename(file), "FAILURE")
     }
     ## Also add .../pkg/help/file.html -> ../pkg/html/file.html as fallback
     ## when topic is not found (but do not overwrite)
     file.fallback <- file.path(helpdir, basename(file))
     if (!file.exists(file.fallback)) {
         try(cat(redirHTML, file = file.fallback), silent = TRUE)
-        ## redirMsg("file", basename(file), basename(file), if (file.exists(file.fallback)) "SUCCESS" else "FAIL")
-        if (!file.exists(file.fallback)) redirMsg("file", basename(file), basename(file),  "FAIL")
+        ## redirMsg("file", basename(file), basename(file), if (file.exists(file.fallback)) "SUCCESS" else "FAILURE")
+        if (!file.exists(file.fallback)) redirMsg("file", basename(file), basename(file),  "FAILURE")
     }
 }
 
@@ -224,7 +297,9 @@ Rd2HTML <-
              Links = NULL, Links2 = NULL,
              stages = "render", outputEncoding = "UTF-8",
              dynamic = FALSE, no_links = FALSE, fragment=FALSE,
-             stylesheet = "R.css", ...)
+             stylesheet = if (dynamic) "/doc/html/R.css" else "R.css",
+             texmath = getOption("help.htmlmath"),
+             ...)
 {
     ## Is this package help, as opposed to from Rdconv or similar?
     ## Used to decide whether redirect files should be created when
@@ -233,6 +308,8 @@ Rd2HTML <-
     if (missing(no_links) && is.null(Links) && !dynamic) no_links <- TRUE
     linksToTopics <-
         config_val_to_logical(Sys.getenv("_R_HELP_LINKS_TO_TOPICS_", "TRUE"))
+    enhancedHTML <-
+        config_val_to_logical(Sys.getenv("_R_HELP_ENABLE_ENHANCED_HTML_", "TRUE"))
     version <- ""
     if(!identical(package, "")) {
         if(length(package) > 1L) {
@@ -298,26 +375,26 @@ Rd2HTML <-
     		     "\\dots"="...",
     		     "\\ldots"="...")
     ## These correspond to idiosyncratic wrappers
-    HTMLLeft <- c("\\acronym"='<acronym><span class="acronym">',
+    HTMLLeft <- c("\\acronym"='<abbr><span class="acronym">',
     		  "\\donttest"="",
     		  "\\env"='<span class="env">',
                   "\\file"='&lsquo;<span class="file">',
                   "\\option"='<span class="option">',
                   "\\pkg"='<span class="pkg">',
-                  "\\samp"='<span class="samp">',
+                  "\\samp"='&lsquo;<span class="samp">&#8288;',
                   "\\sQuote"="&lsquo;",
                   "\\dQuote"="&ldquo;",
-                  "\\verb"='<code style="white-space: pre;">')
-    HTMLRight <- c("\\acronym"='</span></acronym>',
+                  "\\verb"='<code style="white-space: pre;">&#8288;')
+    HTMLRight <- c("\\acronym"='</span></abbr>',
     		   "\\donttest"="",
     		   "\\env"="</span>",
                    "\\file"='</span>&rsquo;',
                    "\\option"="</span>",
                    "\\pkg"="</span>",
-                   "\\samp"="</span>",
+                   "\\samp"="&#8288;</span>&rsquo;",
                    "\\sQuote"="&rsquo;",
                    "\\dQuote"="&rdquo;",
-                   "\\verb"="</code>")
+                   "\\verb"="&#8288;</code>")
 
     addParaBreaks <- function(x) {
 	if (isBlankLineRd(x) && isTRUE(inPara)) {
@@ -380,7 +457,7 @@ Rd2HTML <-
             ## ---------------- \link{topic} and \link[=topic]{foo}
             topic <- parts$dest
     	    if (dynamic) { # never called with package=""
-                htmlfile <- paste0("../../", urlify(package), "/help/", urlify(topic))
+                htmlfile <- paste0("../../", urlify(package), "/help/", topic2url(topic))
                 writeHref()
                 return()
             }
@@ -391,7 +468,7 @@ Rd2HTML <-
                 ## package, but also those in base+recommended
                 ## packages. We do this branch only if this is a
                 ## within-package link
-                htmlfile <- paste0("../../", urlify(package), "/help/", urlify(topic), ".html")
+                htmlfile <- paste0("../../", urlify(package), "/help/", topic2filename(topic), ".html")
                 writeHref()
                 return()
 
@@ -422,9 +499,12 @@ Rd2HTML <-
             }
     	} else {
             ## ----------------- \link[pkg]{file} and \link[pkg:file]{bar}
-            htmlfile <- paste0(urlify(parts$targetfile), ".html")
             if (!dynamic && !linksToTopics && !no_links &&
-               nzchar(pkgpath <- system.file(package = parts$pkg))) {
+                nzchar(pkgpath <- system.file(package = parts$pkg))) {
+                ## old-style static HTML: prefer filename over topic,
+                ## so treat as filename and topic2url() instead of
+                ## topic2filename()
+                htmlfile <- paste0(topic2url(parts$targetfile), ".html")
                 ## check the link, only if the package is found
                 OK <- FALSE
                 if (!file.exists(file.path(pkgpath, "html", htmlfile))) {
@@ -452,20 +532,23 @@ Rd2HTML <-
             }
             if (parts$pkg == package) { # within same package
                 if (linksToTopics)
-                    htmlfile <- paste0("../help/", urlify(parts$targetfile),
-                                       if (!dynamic) ".html" else "")
-                ## else # not needed as htmlfile already defined
-                ## ## use href = "file.html"
-                ##     htmlfile <- paste0(urlify(parts$targetfile), ".html")
+                    htmlfile <-
+                        if (dynamic) paste0("../help/", topic2url(parts$targetfile))
+                        else paste0("../help/", topic2filename(parts$targetfile), ".html")
+                else # use href = "file.html"
+                    htmlfile <- paste0(topic2url(parts$targetfile), ".html")
                 writeHref()
             } else {  # link to different package
                 ## href = "../../pkg/html/file.html"
                 if (linksToTopics)
-                    htmlfile <- paste0("../../", urlify(parts$pkg), "/help/",
-                                       urlify(parts$targetfile),
-                                       if (!dynamic) ".html" else "")
+                    htmlfile <-
+                        if (dynamic) paste0("../../", urlify(parts$pkg), "/help/",
+                                            topic2url(parts$targetfile))
+                        else paste0("../../", urlify(parts$pkg), "/help/",
+                                    topic2filename(parts$targetfile), ".html")
                 else
-                    htmlfile <- paste0("../../", urlify(parts$pkg), "/html/", htmlfile)
+                    htmlfile <- paste0("../../", urlify(parts$pkg), "/html/",
+                                       topic2url(parts$targetfile), ".html") # FIXME Is this always OK ??
                 writeHref()
             }
         }
@@ -524,7 +607,8 @@ Rd2HTML <-
                "\\email" = if (length(block)) {
                    url <- lines2str(as.character(block))
                    enterPara(doParas)
-                   of0('<a href="mailto:', urlify(url), '">',
+                   ## FIXME: urlify
+                   of0('<a href="mailto:', urlify_email_address(url), '">',
                        htmlify(url), '</a>')},
                ## watch out for empty URLs (TeachingDemos had one)
                "\\url" = if(length(block)) {
@@ -568,24 +652,36 @@ Rd2HTML <-
                "\\dontrun"= writeDR(block, tag),
                "\\enc" = writeContent(block[[1L]], tag),
                "\\eqn" = {
-                   enterPara(doParas)
-                   inEqn <<- TRUE
-                   of1("<i>")
-                   block <- block[[length(block)]];
-                   ## FIXME: space stripping needed: see Special.html
-                   writeContent(block, tag)
-                   of1("</i>")
-                   inEqn <<- FALSE
+                   block <-
+                       if (doTexMath) block[[1L]]
+                       else block[[length(block)]]
+                   if(length(block)) {
+                       enterPara(doParas)
+                       inEqn <<- !doTexMath
+                       if (doTexMath) of1('<code class="reqn">') # safer than of1('\\(') etc.
+                       else of1("<i>")
+                       ## FIXME: space stripping needed: see Special.html
+                       writeContent(block, tag)
+                       if (doTexMath) of1('</code>') # of1('\\)')
+                       else of1("</i>")
+                       inEqn <<- FALSE
+                   }
                },
                "\\deqn" = {
-                   inEqn <<- TRUE
-                   leavePara(TRUE)
-                   of1('<p style="text-align: center;"><i>')
-                   block <- block[[length(block)]];
-                   writeContent(block, tag)
-                   of0('</i>')
-                   leavePara(FALSE)
-                   inEqn <<- FALSE
+                   block <-
+                       if (doTexMath) block[[1L]]
+                       else block[[length(block)]]
+                   if(length(block)) {
+                       inEqn <<- !doTexMath
+                       leavePara(TRUE)
+                       if (doTexMath) of1('<p style="text-align: center;"><code class="reqn">')
+                       else of1('<p style="text-align: center;"><i>')
+                       writeContent(block, tag)
+                       if (doTexMath) of1('</code>\n')
+                       else of0('</i>')
+                       leavePara(FALSE)
+                       inEqn <<- FALSE
+                   }
                },
                "\\figure" = {
                    enterPara(doParas)
@@ -596,10 +692,19 @@ Rd2HTML <-
                    of1('" ')
                	   if (length(block) > 1L
                	       && length(imgoptions <- .Rd_get_latex(block[[2]]))
-		       && startsWith(imgoptions, "options: ")) {
-		       # There may be escaped percent signs within
-		       imgoptions <- gsub("\\%", "%", imgoptions, fixed=TRUE)
+		       && startsWith(imgoptions[1L], "options: ")) {
+		       ## There may be escaped percent signs within
+		       imgoptions <- gsub("\\%", "%",
+                                          paste(imgoptions,
+                                                collapse = " "),
+                                          fixed=TRUE)
                        of1(sub("^options: ", "", imgoptions))
+                       ## Expert use may have forgotten alt ...
+                       if(!grepl("\\balt *=", imgoptions)) {
+                           of1(' alt="')
+                           writeContent(block[[1L]], tag)
+                           of1('"')
+                       }
 	           } else {
 		       of1('alt="')
 		       writeContent(block[[length(block)]], tag)
@@ -642,7 +747,7 @@ Rd2HTML <-
         tags <- RdTags(content)
 
 	leavePara(NA)
-	of1('\n<table summary="Rd table">\n')
+	of1('\n<table>\n')
         newrow <- TRUE
         newcol <- TRUE
         for (i in seq_along(tags)) {
@@ -721,8 +826,8 @@ Rd2HTML <-
     	    	leavePara(FALSE)
     	    	if (!inlist) {
     	    	    switch(blocktag,
-                           "\\value" =  of1('<table summary="R valueblock">\n'),
-                           "\\arguments" = of1('<table summary="R argblock">\n'),
+                           "\\value" =  of1('<table>\n'),
+                           "\\arguments" = of1('<table>\n'),
                            "\\itemize" = of1("<ul>\n"),
                            "\\enumerate" = of1("<ol>\n"),
                            "\\describe" = of1("<dl>\n"))
@@ -736,11 +841,19 @@ Rd2HTML <-
     		}
     		switch(blocktag,
    		"\\value"=,
-     		"\\arguments"={
-    		    of1('<tr valign="top"><td><code>')
+     		"\\arguments"= {
+    		    of1('<tr style="vertical-align: top;"><td>')
     		    inPara <<- NA
-    		    writeContent(block[[1L]], tag)
-    		    of1('</code></td>\n<td>\n')
+                    ## Argh.  Quite a few packages put the items in
+                    ## their value section inside \code.
+                    if(identical(RdTags(block[[1L]])[1L], "\\code")) {
+                        writeContent(block[[1L]], tag)
+                    } else {
+                        of1('<code>')
+                        writeContent(block[[1L]], tag)
+                        of1('</code>')
+                    }
+    		    of1('</td>\n<td>\n')
     		    inPara <<- FALSE
     		    writeContent(block[[2L]], tag)
     		    leavePara(FALSE)
@@ -813,7 +926,10 @@ Rd2HTML <-
     	    of1(sectionTitles[tag])
         of1(paste0("</h", sectionLevel+2L, ">\n\n"))
         if (tag %in% c("\\examples", "\\usage")) {
-            of1("<pre>")
+            if (dynamic && enhancedHTML && tag == "\\examples" && !is.null(firstAlias))
+                of1(sprintf("<p><a href='../Example/%s'>Run examples</a></p>",
+                            topic2url(firstAlias)))
+            of1("<pre><code class='language-R'>")
             inPara <<- NA
             pre <- TRUE
         } else {
@@ -823,11 +939,11 @@ Rd2HTML <-
     	if (length(section)) {
 	    ## There may be an initial \n, so remove that
 	    s1 <- section[[1L]][1L]
-	    if (RdTags(section)[1] == "TEXT" && s1 == "\n") section <- section[-1L]
+	    if (RdTags(section)[1] %in% c("TEXT", "RCODE") && s1 == "\n") section <- section[-1L]
 	    writeContent(section, tag)
 	}
 	leavePara(FALSE)
-	if (pre) of0("</pre>\n")
+	if (pre) of0("</code></pre>\n")
     	sectionLevel <<- save
     }
 
@@ -848,6 +964,72 @@ Rd2HTML <-
 
     Rd <- prepare_Rd(Rd, defines = defines, stages = stages,
                      fragment = fragment, ...)
+    ## Check if man page already uses mathjaxr package
+    ## (then skip mathjax processing)
+    uses_mathjaxr <- function(rd)
+    {
+        done <- TRUE
+        ## go through one by one until we hit \description
+        for (frag in rd) {
+            if (attr(frag, "Rd_tag") == "\\description") {
+                done <- FALSE
+                break
+            }
+        }
+        if (done) return(FALSE)
+        ## go through one by one until we hit \loadmathjax
+        for (subfrag in frag) {
+            if (identical(attr(subfrag, "Rd_tag"), "USERMACRO") &&
+                identical(attr(subfrag, "macro"), "\\loadmathjax"))
+                return(TRUE)
+        }
+        return(FALSE)
+    }
+    ## Both katex and mathjax need custom config scripts. For dynamic
+    ## HTML these are in /doc/html/*-config.js (as well as the main
+    ## katex script and CSS), but for static HTML, the appropriate
+    ## relative path is not computable in general. So, for static HTML
+    ## we only support katex, using a CDN for the main files and
+    ## embedding the config in the output file itself
+    if (is.null(texmath)) texmath <- "katex"
+    if (texmath == "mathjax" && !dynamic) texmath <- "katex"
+    doTexMath <- enhancedHTML && !uses_mathjaxr(Rd) &&
+        texmath %in% c("katex", "mathjax")
+
+    ## KaTeX / Mathjax resources (if they are used)
+    if (doTexMath && texmath == "katex") {
+        KATEX_JS <-
+            if (dynamic) "/doc/html/katex/katex.js"
+            else "https://cdn.jsdelivr.net/npm/katex@0.15.3/dist/katex.min.js"
+        KATEX_CSS <- if (dynamic) "/doc/html/katex/katex.css"
+                     else "https://cdn.jsdelivr.net/npm/katex@0.15.3/dist/katex.min.css"
+        KATEX_CONFIG <-
+            if (dynamic) "/doc/html/katex-config.js"
+            else c("const macros = { \"\\\\R\": \"\\\\textsf{R}\", \"\\\\code\": \"\\\\texttt\"};", 
+                   "function processMathHTML() {",
+                   "    var l = document.getElementsByClassName('reqn');", 
+                   "    for (let e of l) { katex.render(e.textContent, e, { throwOnError: false, macros }); }", 
+                   "    return;",
+                   "}")
+    }
+    if (doTexMath && texmath == "mathjax") {
+        MATHJAX_JS <-
+            if (dynamic && requireNamespace("mathjaxr", quietly = TRUE))
+                "/library/mathjaxr/doc/mathjax/es5/tex-chtml-full.js"
+            else
+                "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+        MATHJAX_CONFIG <-
+            if (dynamic) "/doc/html/mathjax-config.js"
+            else "../../../doc/html/mathjax-config.js"
+    }
+    if (enhancedHTML) {
+        PRISM_JS <- 
+            if (dynamic) "/doc/html/prism.js"
+            else NULL # "../../../doc/html/prism.js"
+        PRISM_CSS <- 
+            if (dynamic) "/doc/html/prism.css"
+            else NULL # "../../../doc/html/prism.css"
+    }
     Rdfile <- attr(Rd, "Rdfile")
     sections <- RdTags(Rd)
     if (fragment) {
@@ -860,9 +1042,10 @@ Rd2HTML <-
     } else {
         if (create_redirects) createRedirects(out, Rd)
 	name <- htmlify(Rd[[2L]][[1L]])
-
-        of0('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">',
-            '<html xmlns="http://www.w3.org/1999/xhtml">',
+        firstAlias <-
+            trimws(Rd[[ which(sections == "\\alias")[1] ]][[1]])
+        of0('<!DOCTYPE html>',
+            "<html>",
 	    '<head><title>')
 	headtitle <- strwrap(.Rd_format_title(.Rd_get_title(Rd)),
 	                     width=65, initial="R: ")
@@ -873,16 +1056,29 @@ Rd2HTML <-
 	    mime_canonical_encoding(outputEncoding),
 	    '" />\n')
         of1('<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />\n')
-
+        ## include CSS from prismjs.com for code highlighting
+        if (enhancedHTML && length(PRISM_CSS) == 1L) of0('<link href="', urlify(PRISM_CSS), '" rel="stylesheet" />\n')
+        if (doTexMath) {
+            if (texmath == "katex") {
+                of0('<link rel="stylesheet" href="', urlify(KATEX_CSS), '">\n',
+                    if (dynamic) paste0('<script type="text/javascript" src="', urlify(KATEX_CONFIG), '"></script>\n')
+                    else paste0('<script type="text/javascript">\n', paste(KATEX_CONFIG, collapse = "\n"), '</script>\n'),
+                    '<script defer src="', urlify(KATEX_JS), '"\n    onload="processMathHTML();"></script>\n')
+            }
+            else if (texmath == "mathjax") {
+                of0('<script type="text/javascript" src="', urlify(MATHJAX_CONFIG), '"></script>\n',
+                    '<script type="text/javascript" async src="', urlify(MATHJAX_JS), '"></script>\n')
+            }
+        }
 	of0('<link rel="stylesheet" type="text/css" href="',
 	    urlify(stylesheet),
 	    '" />\n',
 	    '</head><body><div class="container">\n\n',
-	    '<table width="100%" summary="page for ', htmlify(name))
+	    '<table style="width: 100%;">',
+            '<tr><td>',
+            name)
 	if (nchar(package))
-	    of0(' {', package, '}"><tr><td>',name,' {', package,'}')
-	else
-	    of0('"><tr><td>',name)
+	    of0(' {', package, '}')
 	of0('</td><td style="text-align: right;">R Documentation</td></tr></table>\n\n')
 
 	of1("<h2>")
@@ -902,11 +1098,17 @@ Rd2HTML <-
 	    of0('<hr /><div style="text-align: center;">[', version,
 		if (!no_links) '<a href="00Index.html">Index</a>',
 		']</div>')
-	of0('\n',
-	    '</div></body></html>\n')
+	of0('\n</div>\n')
+        ## include JS from prismjs.com for code highlighting
+        if (enhancedHTML && length(PRISM_JS) == 1L) of0('<script src="', urlify(PRISM_JS), '"></script>\n')
+        of0('</body></html>\n')
     }
     invisible(out)
 } ## Rd2HTML()
+
+
+## The following functions return 'relative' links assuming that all
+## packages are installed in the same virtual library tree.
 
 findHTMLlinks <- function(pkgDir = "", lib.loc = NULL, level = 0:2)
 {
@@ -937,23 +1139,38 @@ findHTMLlinks <- function(pkgDir = "", lib.loc = NULL, level = 0:2)
     gsub("[Rr]d$", "html", Links)
 }
 
+## These helper functions can optionally return the absolute path as
+## well (in the local file system)
+
 .find_HTML_links_in_package <-
-function(dir)
+function(dir, absolute = FALSE)
 {
-    if (file_test("-f", f <- file.path(dir, "Meta", "links.rds")))
-        readRDS(f)
-    else if (file_test("-f", f <- file.path(dir, "Meta", "Rd.rds")))
-        .build_links_index(readRDS(f), basename(dir))
-    else character()
+    ans <- 
+        if (file_test("-f", f <- file.path(dir, "Meta", "links.rds")))
+            readRDS(f)
+        else if (file_test("-f", f <- file.path(dir, "Meta", "Rd.rds")))
+            .build_links_index(readRDS(f), basename(dir))
+        else character()
+    if (absolute)
+        structure(file.path(dir, "html", basename(ans), fsep = "/"),
+                  names = names(ans))
+    else
+        ans
 }
 
 .find_HTML_links_in_library <-
-function(dir)
+function(dir, absolute = FALSE)
 {
-    if (file_test("-f", f <- file.path(dir, ".Meta", "links.rds")))
-        readRDS(f)
+    ans <- 
+        if (file_test("-f", f <- file.path(dir, ".Meta", "links.rds")))
+            readRDS(f)
+        else
+            .build_library_links_index(dir)
+    if (absolute)
+        structure(file.path(dir, substring(ans, first = 7), fsep = "/"), # drop initial "../../"
+                  names = names(ans))
     else
-        .build_library_links_index(dir)
+        ans
 }
 
 .build_library_links_index <-

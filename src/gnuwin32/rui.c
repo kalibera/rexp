@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1998--2005  Guido Masarotto and Brian Ripley
- *  Copyright (C) 2004--2021  The R Foundation
+ *  Copyright (C) 2004--2022  The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -659,11 +659,11 @@ static void menurwFAQ(control m)
 
 static void menuabout(control m)
 {
-    char  s[256], s2[256];
+    char  s[400], s2[256];
 
 
     PrintVersionString(s2, 256);
-    snprintf(s, 256, "%s\n%s %s %s",
+    snprintf(s, 400, "%s\n%s %s %s",
 	     s2,
 	     "Copyright (C)", R_YEAR,
 	     "The R Foundation for Statistical Computing");
@@ -1024,6 +1024,9 @@ int setupui(void)
     initapp(0, 0);
 
     /* set locale before doing anything with menus */
+    /* localeCP is used for the current locale when translating text in ui */
+
+    /* FIXME: sync this with R_check_locale/setup_Rmainloop */
     setlocale(LC_CTYPE, ""); /* necessary in case next fails to set
 				a valid locale */
     if((p = getenv("LC_ALL")))
@@ -1035,7 +1038,13 @@ int setupui(void)
     mbcslocale = MB_CUR_MAX > 1;
     ctype = setlocale(LC_CTYPE, NULL);
     p = strrchr(ctype, '.');
-    if(p && isdigit(p[1])) localeCP = atoi(p+1); else localeCP = 1252;
+    localeCP = 1252;
+    if(p) {
+	if (isdigit(p[1]))
+	    localeCP = atoi(p+1);
+	else if (!strcasecmp(p+1, "UTF-8") || !strcasecmp(p+1, "UTF8"))
+	    localeCP = 65001;
+    } 
 
     readconsolecfg();
     int flags = StandardWindow | Document | Menubar;
@@ -1252,7 +1261,7 @@ menuItems *wingetmenuitems(const char *mname, char *errmsg) {
     }
 
     q = (char *)malloc(1000 * sizeof(char));
-    r = (char *)malloc(1000 * sizeof(char));
+    r = (char *)malloc(1002 * sizeof(char));
 
     items = (menuItems *)malloc(sizeof(menuItems));
     if(nitems > 0)
@@ -1276,7 +1285,7 @@ menuItems *wingetmenuitems(const char *mname, char *errmsg) {
 	/* determined if this is say item 'foo' from menu 'Blah/bar' */
 	/* or item 'bar/foo' from menu 'Blah'.  Check this manually */
 	/* by adding the item label to the menu we're looking for. */
-	snprintf(r, 1000, "%s%s", mitem, umitems[i]->m->text);
+	snprintf(r, 1002, "%s%s", mitem, umitems[i]->m->text);
 	if (strcmp(r, p) != 0)
 	    continue;
 

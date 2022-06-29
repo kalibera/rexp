@@ -85,9 +85,32 @@ function(dir, outDir, builtStamp=character())
     ## But in any case, it is true for fields obtained from expanding R
     ## fields (Authors@R): these should not be reformatted.
 
+    ## ExperimentalWindowsRuntime field is used during the transition from
+    ## MSVCRT to UCRT to reduce the risk of accidental installation of
+    ## packages built for MSVCRT into R built for UCRT. It is important
+    ## particularly when using multiple package repositories where the
+    ## initial ones in the list replace (incompatible) binary packages
+    ## provided in the repositories later.
+    ##
+    ## No longer checker on installation and to be removed, soon.
+
+    ExperimentalWindowsRuntime <- NULL
+    if(.Platform$OS.type == "windows") {
+        if("ExperimentalWindowsRuntime" %in% nm) {
+            db <- db[-match("ExperimentalWindowsRuntime", nm)]
+            warning(gettextf("*** someone has corrupted the ExperimentalWindowsRuntime field in package '%s' ***",
+                             db["Package"]),
+                    domain = NA,
+                    call. = FALSE)
+        }
+        if(db["NeedsCompilation"] %in% "yes")
+            ExperimentalWindowsRuntime <- "ucrt"
+    }
+
     db <- c(db,
             .expand_package_description_db_R_fields(db),
-            Built = Built)
+            Built = Built,
+            ExperimentalWindowsRuntime = ExperimentalWindowsRuntime)
 
     ## <FIXME>
     ## This should no longer be necessary?
@@ -483,10 +506,13 @@ function(dir, outDir)
 }
 
 ### * .install_package_vignettes2
-## called from R CMD INSTALL for pre 3.0.2-built tarballs, and for base packages
+## called from R CMD INSTALL for pre 3.0.2-built tarballs
+## and for installation from package sources (missing build/vignette.rds),
+## including for the temporary package installation during R CMD build,
+## and when building base packages (where we need to tangle vignettes)
 
 .install_package_vignettes2 <-
-function(dir, outDir, encoding = "")
+function(dir, outDir, encoding = "", tangle = FALSE)
 {
     dir <- file_path_as_absolute(dir)
     subdirs <- c("vignettes", file.path("inst", "doc"))
@@ -501,7 +527,7 @@ function(dir, outDir, encoding = "")
     outDir <- file_path_as_absolute(outDir)
     packageName <- basename(outDir)
     outVignetteDir <- file.path(outDir, "doc")
-    ## --fake  and --no-inst installs do not have a outVignetteDir.
+    ## --no-inst installs do not have a outVignetteDir.
     if(!dir.exists(outVignetteDir)) return(invisible())
 
     ## If there is an HTML index in the @file{inst/doc} subdirectory of
@@ -534,7 +560,7 @@ function(dir, outDir, encoding = "")
     })
 
     vignetteIndex <- .build_vignette_index(vigns)
-    if(NROW(vignetteIndex) > 0L) {
+    if(tangle && NROW(vignetteIndex) > 0L) {
         cwd <- getwd()
         if (is.null(cwd))
             stop("current working directory cannot be ascertained")
@@ -542,10 +568,7 @@ function(dir, outDir, encoding = "")
 
 	loadVignetteBuilder(dir, mustwork = FALSE)
 
-        ## install tangled versions of Sweave vignettes.  FIXME:  Vignette
-        ## *.R files should have been included when the package was built,
-        ## but in the interim before they are all built with the new code,
-        ## this is needed.
+        ## install tangled versions of Sweave vignettes.
         for(i in seq_along(vigns$docs)) {
             file <- vigns$docs[i]
             if (!is.null(vigns$sources) && !is.null(vigns$sources[file][[1]]))
@@ -557,6 +580,9 @@ function(dir, outDir, encoding = "")
                 if(nzchar(enc)) paste("using", sQuote(enc)), "\n")
 
 	    engine <- try(vignetteEngine(vigns$engines[i]), silent = TRUE)
+	    ## tangling in outVignetteDir would fail if the vignette relied
+	    ## on SweaveInput/child documents (not copied over),
+	    ## but base packages currently don't do that
 	    if (!inherits(engine, "try-error"))
             	engine$tangle(file, quiet = TRUE, encoding = enc)
             setwd(outVignetteDir) # just in case some strange tangle function changed it
@@ -753,13 +779,16 @@ function(dir, outDir, keep.source = TRUE)
                           outVignetteDir),
                  domain = NA)
     }
+
+    compactPDF(outVignetteDir, gs_quality = "ebook")
+
     ## Need to change out of this dir before we delete it,
     ## at least on Windows.
     setwd(cwd)
     unlink(buildDir, recursive = TRUE)
     ## Now you need to update the HTML index!
     ## This also creates the .R files
-    .install_package_vignettes2(dir, outDir)
+    .install_package_vignettes2(dir, outDir, tangle = TRUE)
     invisible()
 }
 

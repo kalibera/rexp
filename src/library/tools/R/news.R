@@ -358,7 +358,7 @@ function(f, pdf_file)
              outputEncoding = "UTF-8", writeEncoding = FALSE,
              macros = file.path(R.home("share"), "Rd", "macros", "system.Rd"))
     cat("\\documentclass[", Sys.getenv("R_PAPERSIZE"), "paper]{book}\n",
-        "\\usepackage[ae,hyper]{Rd}\n",
+        "\\usepackage[hyper]{Rd}\n",
         "\\usepackage[utf8]{inputenc}\n",
         "\\usepackage{graphicx}\n",
         "\\setkeys{Gin}{width=0.7\\textwidth}\n",
@@ -664,8 +664,13 @@ function(x)
     y <- do.call(rbind, y)
     ## Sanitze HTML.
     s <- trimws(y[, "HTML"])
-    i <- startsWith(s, "<p>") & !endsWith(s, "</p>")
-    s[i] <- paste0(s[i], "</p>")
+    i <- which(startsWith(s, "<p>") & !endsWith(s, "</p>"))
+    if(length(i)) {
+        z <- s[i]
+        j <- which((lengths(gregexpr("</?p>", z)) %% 2L) > 0L)
+        if(length(j))
+            s[i[j]] <- paste0(z[j], "</p>")
+    }
     y[, "HTML"] <- s
 
     y
@@ -676,6 +681,8 @@ function(x)
 function(f)
 {
     md <- readLines(f, encoding = "UTF-8", warn = FALSE)
+    ## Maybe complain?
+    if(!length(md)) return()
 
     ## Handle YAML header.
     if(md[1L] == "---") {

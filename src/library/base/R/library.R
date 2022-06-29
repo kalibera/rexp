@@ -1,7 +1,7 @@
 #  File src/library/base/R/library.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2020 The R Core Team
+#  Copyright (C) 1995-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -77,10 +77,10 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
     stopOnConflict <- isTRUE(conf.ctrl$error)
 
     if (missing(warn.conflicts))
-        warn.conflicts <- if (isFALSE(conf.ctrl$warn)) FALSE else TRUE
-    if ((! missing(include.only)) && (! missing(exclude)))
-        stop(gettext("only one of 'include.only' and 'exclude' can be used"),
-             call. = FALSE, domain = NA)
+        warn.conflicts <- !isFALSE(conf.ctrl$warn)
+    if (!missing(include.only) && !missing(exclude))
+        stop("only one of 'include.only' and 'exclude' can be used",
+             call. = FALSE)
 
     testRversion <- function(pkgInfo, pkgname, pkgpath)
     {
@@ -269,7 +269,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                 }
             }
         }
-    }
+    } # {checkConflicts()}
 
     if(verbose && quietly)
 	message("'verbose' and 'quietly' are both true; being verbose then ..")
@@ -348,8 +348,8 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
             else canMaskEnv <- NULL
 
             if (attach.required)
-                .getRequiredPackages2(pkgInfo, quietly = quietly)
-
+                .getRequiredPackages2(pkgInfo, quietly = quietly,
+                                      lib.loc = c(lib.loc, .libPaths()))
             cr <- conflictRules(package)
             if (missing(mask.ok))
                 mask.ok <- cr$mask.ok
@@ -826,7 +826,7 @@ function(package = NULL, lib.loc = NULL, quiet = FALSE,
                         info
                 }
             })
-            db <- do.call("rbind", db)
+            db <- do.call(rbind, db)
             ok <- (apply(!is.na(db), 1L, all)
                    & (db[, "Package"] == pkg)
                    & (grepl(valid_package_version_regexp, db[, "Version"])))
@@ -988,9 +988,27 @@ function(x)
 {
     v <- paste(R.version[c("major", "minor")], collapse = ".")
 
-    expand <- function(x, spec, expansion)
-        gsub(paste0("(^|[^%])(%%)*%", spec),
-             sprintf("\\1\\2%s", expansion), x)
+    s <- Sys.info()
+
+    R_LIBS_USER_default <- function() {
+        home <- normalizePath("~")
+        ## FIXME: could re-use v from "above".
+        x.y <- paste0(R.version$major, ".",
+                      sub("[.].*", "", R.version$minor))
+        if(.Platform$OS.type == "windows")
+            file.path(Sys.getenv("LOCALAPPDATA"), "R", "win-library", x.y)
+        else if(s["sysname"] == "Darwin")
+            file.path(home, "Library", "R", s["machine"], x.y, "library")
+        else
+            file.path(home, "R", paste0(R.version$platform, "-library"), x.y)
+    }
+
+    R_LIBS_SITE_default <- file.path(R.home(), "site-library")
+
+    expand <- function(x, spec, expansion) {
+        replace <- sprintf("\\1\\2%s", gsub("([\\])", "\\\\\\1", expansion))
+        gsub(paste0("(^|[^%])(%%)*%", spec), replace, x)
+    }
 
     ## %V => version x.y.z
     x <- expand(x, "V", v)
@@ -1002,6 +1020,10 @@ function(x)
     x <- expand(x, "a", R.version$arch)
     ## %o => os
     x <- expand(x, "o", R.version$os)
+    ## %U => R_LIBS_USER default
+    x <- expand(x, "U", R_LIBS_USER_default())
+    ## %S => R_LIBS_SITE default
+    x <- expand(x, "S", R_LIBS_SITE_default)
 
-    gsub("%%", "%", x, fixed=TRUE)
+    gsub("%%", "%", x, fixed = TRUE)
 }

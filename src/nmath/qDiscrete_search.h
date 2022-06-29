@@ -5,7 +5,7 @@
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 3 of the License, or
+ *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
  *
  *  This program is distributed in the hope that it will be useful,
@@ -164,8 +164,6 @@ static double DO_SEARCH_FUN(_dist_PARS_DECL_)
     R_DBG_printf(" Cornish-Fisher: initial z = qnorm(p, l.t, log)= %g,  y = %g;\n", z,y); \
 									\
     q_DISCR_CHECK_BOUNDARY(y);						\
-									\
-    if(y < 0) y = 0.;/* e.g., for qnbinom(0.5, mu = 3, size = 1e-10) */	\
 									\
     z = P_DIST(y, _dist_PARS_);						\
 									\

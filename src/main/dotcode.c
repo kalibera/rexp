@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2020  The R Core Team
+ *  Copyright (C) 1997--2022  The R Core Team
  *  Copyright (C) 2003	      The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -575,6 +575,9 @@ SEXP attribute_hidden do_External(SEXP call, SEXP op, SEXP args, SEXP env)
 	R_ExternalRoutine fun = (R_ExternalRoutine) ofun;
 	retval = fun(args);
     }
+
+    R_try_clear_args_refcnt(args);
+
     vmaxset(vmax);
     return check_retval(call, retval);
 }
@@ -2576,7 +2579,11 @@ SEXP attribute_hidden do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
+#define NO_CALL_R
+
 #ifndef NO_CALL_R
+// call_R was deprecated in R 2.15.0 and removed from RS.h in R 4.2.0
+
 static const struct {
     const char *name;
     const SEXPTYPE type;
@@ -2656,8 +2663,6 @@ static void *RObjToCPtr2(SEXP s)
 	return (void*) s;
     }
 }
-
-
 
 void call_R(char *func, long nargs, void **arguments, char **modes,
 	    long *lengths, char **names, long nres, char **results)

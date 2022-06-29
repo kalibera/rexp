@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997--2018  The R Core Team
+ *  Copyright (C) 1997--2022  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 2003--2018  The R Foundation
  *
@@ -27,7 +27,7 @@
 
 #include <R_ext/Itermacros.h>
 #include <R_ext/Random.h>
-#include <R_ext/RS.h>		/* for Calloc() */
+#include <R_ext/RS.h>		/* for R_Calloc() */
 #include <Rmath.h>		/* for rxxx functions */
 #include <errno.h>
 
@@ -361,8 +361,8 @@ walker_ProbSampleReplace(int n, double *p, int *a, int nans, int *ans)
 	q = (double *) alloca(n * sizeof(double));
     } else {
 	/* Slow enough anyway not to risk overflow */
-	HL = Calloc(n, int);
-	q = Calloc(n, double);
+	HL = R_Calloc(n, int);
+	q = R_Calloc(n, double);
     }
     H = HL - 1; L = HL + n;
     for (i = 0; i < n; i++) {
@@ -395,8 +395,8 @@ walker_ProbSampleReplace(int n, double *p, int *a, int nans, int *ans)
 	ans[i] = (rU < q[k]) ? k+1 : a[k]+1;
     }
     if(n > SMALL) {
-	Free(HL);
-	Free(q);
+	R_Free(HL);
+	R_Free(q);
     }
 }
 
@@ -465,6 +465,8 @@ SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     sn = CAR(args); args = CDR(args);
     sk = CAR(args); args = CDR(args); /* size */
+    if (length(sk) != 1)
+	error(_("invalid '%s' argument"), "size");
     sreplace = CAR(args); args = CDR(args);
     if(length(sreplace) != 1)
 	 error(_("invalid '%s' argument"), "replace");
@@ -506,7 +508,7 @@ SEXP attribute_hidden do_sample(SEXP call, SEXP op, SEXP args, SEXP rho)
 	R_xlen_t k = asVecSize(sk);
 	if (!R_FINITE(dn) || dn < 0 || dn > 4.5e15 || (k > 0 && dn == 0))
 	    error(_("invalid first argument"));
-	if (k < 0) error(_("invalid '%s' argument"), "size");
+	if (k < 0) error(_("invalid '%s' argument"), "size"); // includes NA
 	if (!replace && k > dn)
 	    error(_("cannot take a sample larger than the population when 'replace = FALSE'"));
 	if (dn > INT_MAX || k > INT_MAX) {

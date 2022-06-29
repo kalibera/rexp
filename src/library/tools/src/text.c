@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2003-2016   The R Core Team.
+ *  Copyright (C) 2003-2022   The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,6 +28,8 @@
 #include <stdlib.h> /* for MB_CUR_MAX */
 #include <wchar.h>
 LibExtern Rboolean mbcslocale;
+LibExtern int R_MB_CUR_MAX;
+
 size_t Rf_mbrtowc(wchar_t *wc, const char *s, size_t n, mbstate_t *ps);
 
 /* .Call, so manages R_alloc stack */
@@ -57,7 +59,7 @@ delim_match(SEXP x, SEXP delims)
 
     char c;
     const char *s, *delim_start, *delim_end;
-    Sint n, i, pos, start, end, delim_depth;
+    int n, i, pos, start, end, delim_depth;
     int lstart, lend;
     Rboolean is_escaped, equal_start_and_end_delims;
     SEXP ans, matchlen;
@@ -93,7 +95,7 @@ delim_match(SEXP x, SEXP delims)
 	    else if(c == '%') {
 		while((c != '\0') && (c != '\n')) {
 		    if(mbcslocale) {
-			used = (int) Rf_mbrtowc(NULL, s, MB_CUR_MAX, &mb_st);
+			used = (int) Rf_mbrtowc(NULL, s, R_MB_CUR_MAX, &mb_st);
 			if(used == 0) break;
 			s += used; c = *s;
 		    } else
@@ -117,7 +119,7 @@ delim_match(SEXP x, SEXP delims)
 		delim_depth++;
 	    }
 	    if(mbcslocale) {
-		used = (int) Rf_mbrtowc(NULL, s, MB_CUR_MAX, &mb_st);
+		used = (int) Rf_mbrtowc(NULL, s, R_MB_CUR_MAX, &mb_st);
 		if(used == 0) break;
 		s += used;
 	    } else
@@ -190,7 +192,7 @@ SEXP check_nonASCII2(SEXP text)
     const char *p;
 
     if(TYPEOF(text) != STRSXP) error("invalid input");
-    ind = Calloc(m_all, int);
+    ind = R_Calloc(m_all, int);
     for (i = 0; i < LENGTH(text); i++) {
 	p = CHAR(STRING_ELT(text, i));
 	yes = 0;
@@ -202,7 +204,7 @@ SEXP check_nonASCII2(SEXP text)
 	if(yes) {
 	    if(m >= m_all) {
 		m_all *= 2;
-		ind = Realloc(ind, m_all, int);
+		ind = R_Realloc(ind, m_all, int);
 	    }
 	    ind[m++] = i + 1; /* R is 1-based */
 	}
@@ -212,7 +214,7 @@ SEXP check_nonASCII2(SEXP text)
 	ians = INTEGER(ans);
 	for(i = 0; i < m; i++) ians[i] = ind[i];
     }
-    Free(ind);
+    R_Free(ind);
     return ans;
 }
 

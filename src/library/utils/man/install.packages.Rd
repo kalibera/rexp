@@ -1,6 +1,6 @@
 % File src/library/utils/man/install.packages.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2020 R Core Team
+% Copyright 1995-2022 R Core Team
 % Distributed under GPL 2 or later
 
 \name{install.packages}
@@ -28,7 +28,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
 
     If \code{repos = NULL}, a character vector of file paths,
     \describe{
-      \item{on windows,}{
+      \item{on Windows,}{
     file paths of \file{.zip} files containing binary builds of
     packages.  (\code{http://} and \code{file://} URLs are also accepted
     and the files will be downloaded and installed from local copies.)
@@ -67,7 +67,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   \item{contriburl}{
     URL(s) of the contrib sections of the repositories.  Use this
     argument if your repository mirror is incomplete, e.g., because
-    you burned only the \file{contrib} section on a CD, or only have
+    you mirrored only the \file{contrib} section, or only have
     binary packages.  Overrides argument \code{repos}.
     Incompatible with \code{type = "both"}.
   }
@@ -246,7 +246,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   package contains no C/C++/Fortran code that needs compilation.
   Otherwise,
   \describe{
-    \item{on Windows}{you will need to have installed the Rtools
+    \item{on Windows,}{you will need to have installed the Rtools
   collection as described in the \sQuote{R for Windows FAQ} \emph{and}
   you must have the \env{PATH} environment variable set up as required
   by Rtools.
@@ -265,7 +265,8 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   problem, but the installation may fail as Windows locks files in use.
     }
     \item{On Unix-alikes,}{when the package contains C/C++/Fortran code
-      that needs compilation, on macOS you need to have installed the
+      that needs compilation, suitable compilers and related tools need
+      to be installed.  On macOS you need to have installed the
       \sQuote{Command-line tools for Xcode} (see the
       \sQuote{R Installation and Administration} manual) and if needed
       by the package a Fortran compiler, and have them in your path.
@@ -339,7 +340,10 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   installs \emph{via} the OS's \command{timeout} command.  (The one
   tested is from GNU \pkg{coreutils}, commonly available on Linux but
   not other Unix-alikes.  If no such command is available the timeout
-  request is ignored, with a warning.)  For parallel installs a
+  request is ignored, with a warning. On Windows, one needs to specify
+  a suitable \command{timeout} command via environment variable
+  \env{R_TIMEOUT}, because \file{c:/Windows/system32/timeout.exe} is
+  not.)  For parallel installs a
   \samp{Error 124} message from \command{make} indicates that timeout
   occurred.
 

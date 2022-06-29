@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
+ *  Copyright (C) 1997--2022  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2021  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -52,12 +52,34 @@
 
 #include "win-nls.h"
 
+/* Callbacks also available under Unix */
+static void (*ptr_Busy) (int);
+static void (*ptr_CleanUp) (SA_TYPE, int, int);
+static void (*ptr_ClearerrConsole) (void);
+static void (*ptr_FlushConsole) (void);
+static void (*ptr_ProcessEvents) (void); /* aka CallBack on Windows */
+static int  (*ptr_ReadConsole) (const char *, unsigned char *, int, int);
+static void (*ptr_ResetConsole) (void);
+static void (*ptr_ShowMessage) (const char *s);
+static void (*ptr_Suicide) (const char *s);
+static void (*ptr_WriteConsole) (const char *, int);
+static void (*ptr_WriteConsoleEx) (const char *, int, int);
+
+/* Windows-specific callbacks */
+static int R_YesNoCancel(const char *s);
+static int (*ptr_YesNoCancel)(const char *s);
+
+/* Default implementations of callbacks added in version 1 of structRstart */
+static void Rstd_CleanUp(SA_TYPE saveact, int status, int runLast);
+static void Rstd_ClearerrConsole(void);
+static void Rstd_FlushConsole(void);
+static void Rstd_ResetConsole(void);
+static void Rstd_Suicide(const char *s);
+
 void R_CleanTempDir(void);		/* from platform.c */
 void editorcleanall(void);                  /* from editor.c */
 
 int Rwin_graphicsx = -25, Rwin_graphicsy = 0;
-
-R_size_t R_max_memory = R_SIZE_T_MAX;
 
 extern SA_TYPE SaveAction; /* from ../main/startup.c */
 Rboolean DebugMenuitem = FALSE;  /* exported for rui.c */
@@ -71,7 +93,6 @@ void set_workspace_name(const char *fn); /* ../main/startup.c */
 
 /* used to avoid some flashing during cleaning up */
 Rboolean AllDevicesKilled = FALSE;
-static int (*R_YesNoCancel)(const char *s);
 
 static DWORD mainThreadId;
 
@@ -80,9 +101,7 @@ static char oldtitle[512];
 __declspec(dllexport) Rboolean UserBreak = FALSE;
 
 /* callbacks */
-static void (*R_CallBackHook) (void);
 static void R_DoNothing(void) {}
-static void (*my_R_Busy)(int);
 
 /*
  *   Called at I/O, during eval etc to process GUI events.
@@ -113,6 +132,10 @@ void R_ProcessEvents(void)
 {
     while (peekevent()) doevent();
     if (cpuLimit > 0.0 || elapsedLimit > 0.0) {
+#ifdef HAVE_CHECK_TIME_LIMITS
+	/* switch to using R_CheckTimeLimits after testing on Windows */
+	R_CheckTimeLimits();
+#else
 	double cpu, data[5];
 	R_getProcTime(data);
 	cpu = data[0] + data[1];  /* children? */
@@ -132,12 +155,13 @@ void R_ProcessEvents(void)
 	    } else
 		error(_("reached CPU time limit"));
 	}
+#endif
     }
     if (UserBreak) {
 	UserBreak = FALSE;
 	onintr();
     }
-    R_CallBackHook();
+    ptr_ProcessEvents();
     if(R_Tcl_do) R_Tcl_do();
 }
 
@@ -152,6 +176,12 @@ void R_WaitEvent(void)
  */
 
 void R_Suicide(const char *s)
+{
+    ptr_Suicide(s); /* should not return */
+    exit(2); 
+}
+
+static void Rstd_Suicide(const char *s)
 {
     char  pp[1024];
 
@@ -181,7 +211,7 @@ void R_Suicide(const char *s)
  * thread
  *
  * All works in this way:
- * R_ReadConsole calls TrueReadConsole which points to:
+ * R_ReadConsole calls ptr_ReadConsole which points to:
  * case 1: GuiReadConsole
  * case 2 and 3: ThreadedReadConsole
  * case 4: FileReadConsole
@@ -193,13 +223,12 @@ void R_Suicide(const char *s)
 */
 
 /* Global variables */
-static int (*TrueReadConsole) (const char *, char *, int, int);
-static int (*InThreadReadConsole) (const char *, char *, int, int);
-static void (*TrueWriteConsole) (const char *, int);
-static void (*TrueWriteConsoleEx) (const char *, int, int);
+static int (*InThreadReadConsole) (const char *, unsigned char *, int, int);
+
+
 HANDLE EhiWakeUp;
 static const char *tprompt;
-static char *tbuf;
+static unsigned char *tbuf;
 static  int tlen, thist, lineavailable;
 
  /* Fill a text buffer with user typed console input. */
@@ -208,7 +237,7 @@ R_ReadConsole(const char *prompt, unsigned char *buf, int len,
 	      int addtohistory)
 {
     R_ProcessEvents();
-    return TrueReadConsole(prompt, (char *) buf, len, addtohistory);
+    return ptr_ReadConsole(prompt, buf, len, addtohistory);
 }
 
 	/* Write a text buffer to the console. */
@@ -217,16 +246,16 @@ R_ReadConsole(const char *prompt, unsigned char *buf, int len,
 void R_WriteConsole(const char *buf, int len)
 {
     R_ProcessEvents();
-    if (TrueWriteConsole) TrueWriteConsole(buf, len);
-    else TrueWriteConsoleEx(buf, len, 0);
+    if (ptr_WriteConsole) ptr_WriteConsole(buf, len);
+    else ptr_WriteConsoleEx(buf, len, 0);
 }
 
 
 void R_WriteConsoleEx(const char *buf, int len, int otype)
 {
     R_ProcessEvents();
-    if (TrueWriteConsole) TrueWriteConsole(buf, len);
-    else TrueWriteConsoleEx(buf, len, otype);
+    if (ptr_WriteConsole) ptr_WriteConsole(buf, len);
+    else ptr_WriteConsoleEx(buf, len, otype);
 }
 
 
@@ -241,7 +270,8 @@ void Rconsolesetwidth(int cols)
 }
 
 static int
-GuiReadConsole(const char *prompt, char *buf, int len, int addtohistory)
+GuiReadConsole(const char *prompt, unsigned char *buf, int len,
+               int addtohistory)
 {
     int res;
     const char *NormalPrompt =
@@ -252,7 +282,7 @@ GuiReadConsole(const char *prompt, char *buf, int len, int addtohistory)
 	Rconsolesetwidth(consolecols(RConsole));
     }
     ConsoleAcceptCmd = !strcmp(prompt, NormalPrompt);
-    res = consolereads(RConsole, prompt, buf, len, addtohistory);
+    res = consolereads(RConsole, prompt, (char *)buf, len, addtohistory);
     ConsoleAcceptCmd = 0;
     return !res;
 }
@@ -273,7 +303,8 @@ static void __cdecl ReaderThread(void *unused)
 }
 
 static int
-ThreadedReadConsole(const char *prompt, char *buf, int len, int addtohistory)
+ThreadedReadConsole(const char *prompt, unsigned char *buf, int len,
+                    int addtohistory)
 {
     sighandler_t oldint,oldbreak;
     /*
@@ -306,10 +337,11 @@ ThreadedReadConsole(const char *prompt, char *buf, int len, int addtohistory)
 
 /*2: from character console with getline (only used as InThreadReadConsole)*/
 static int
-CharReadConsole(const char *prompt, char *buf, int len, int addtohistory)
+CharReadConsole(const char *prompt, unsigned char *buf, int len,
+                int addtohistory)
 {
-    int res = getline(prompt, buf, len);
-    if (addtohistory) gl_histadd(buf);
+    int res = getline(prompt, (char *)buf, len);
+    if (addtohistory) gl_histadd((char *)buf);
     return !res;
 }
 
@@ -317,7 +349,7 @@ CharReadConsole(const char *prompt, char *buf, int len, int addtohistory)
 static void *cd = NULL;
 
 static int
-FileReadConsole(const char *prompt, char *buf, int len, int addhistory)
+FileReadConsole(const char *prompt, unsigned char *buf, int len, int addhistory)
 {
     int ll, err = 0;
 
@@ -325,11 +357,11 @@ FileReadConsole(const char *prompt, char *buf, int len, int addhistory)
 	fputs(prompt, stdout);
 	fflush(stdout);
     }
-    if (fgets(buf, len, ifp ? ifp : stdin) == NULL) return 0;
+    if (fgets((char *)buf, len, ifp ? ifp : stdin) == NULL) return 0;
     /* translate if necessary */
     if(strlen(R_StdinEnc) && strcmp(R_StdinEnc, "native.enc")) {
-	size_t res, inb = strlen(buf), onb = len;
-	const char *ib = buf; 
+	size_t res, inb = strlen((char *)buf), onb = len;
+	const char *ib = (char *)buf; 
 	char obuf[len+1], *ob = obuf;
 	if(!cd) {
 	    cd = Riconv_open("", R_StdinEnc);
@@ -341,19 +373,19 @@ FileReadConsole(const char *prompt, char *buf, int len, int addhistory)
 	/* errors lead to part of the input line being ignored */
 	if(err) printf(_("<ERROR: re-encoding failure from encoding '%s'>\n"),
 		       R_StdinEnc);
-	strncpy(buf, obuf, len);
+	strncpy((char *)buf, obuf, len);
     }
 
 /* according to system.txt, should be terminated in \n, so check this
    at eof or error */
-    ll = strlen(buf);
+    ll = strlen((char *)buf);
     if ((err || feof(ifp ? ifp: stdin))
 	&& buf[ll - 1] != '\n' && ll < len) {
 	buf[ll++] = '\n'; buf[ll] = '\0';
     }
 
     if (!R_Interactive && !R_NoEcho) {
-	fputs(buf, stdout);
+	fputs((char *)buf, stdout);
 	fflush(stdout);
     }
     return 1;
@@ -383,12 +415,21 @@ TermWriteConsole(const char *buf, int len)
 
 void R_ResetConsole(void)
 {
+    ptr_ResetConsole();
 }
 
+static void Rstd_ResetConsole(void)
+{
+}
 
 	/* Stdio support to ensure the console file buffer is flushed */
 
 void R_FlushConsole(void)
+{
+    ptr_FlushConsole();
+}
+
+static void Rstd_FlushConsole(void)
 {
     if (CharacterMode == RTerm && R_Interactive) fflush(stdout);
     else if (CharacterMode == RGui && RConsole) consoleflush(RConsole);
@@ -399,9 +440,13 @@ void R_FlushConsole(void)
 
 void R_ClearerrConsole(void)
 {
-    if (CharacterMode == RTerm)  clearerr(stdin);
+    ptr_ClearerrConsole();
 }
 
+static void Rstd_ClearerrConsole(void)
+{
+    if (CharacterMode == RTerm) clearerr(stdin);
+}
 
 /*
  *  3) ACTIONS DURING (LONG) COMPUTATIONS
@@ -419,7 +464,7 @@ static void CharBusy(int which)
 
 void R_Busy(int which)
 {
-    my_R_Busy(which);
+    ptr_Busy(which);
 }
 
 
@@ -439,6 +484,12 @@ void R_Busy(int which)
  */
 
 void R_CleanUp(SA_TYPE saveact, int status, int runLast)
+{
+    ptr_CleanUp(saveact, status, runLast); /* should not return */
+    exit(status);
+}
+
+static void Rstd_CleanUp(SA_TYPE saveact, int status, int runLast)
 {
     if(saveact == SA_DEFAULT) /* The normal case apart from R_Suicide */
 	saveact = SaveAction;
@@ -641,14 +692,16 @@ int R_ChooseFile(int new, char *buf, int len)
 }
 #endif
 
-/* code for R_ShowMessage, R_YesNoCancel */
 
-void (*pR_ShowMessage)(const char *s);
 void R_ShowMessage(const char *s)
 {
-    (*pR_ShowMessage)(s);
+    ptr_ShowMessage(s);
 }
 
+static int R_YesNoCancel(const char *s)
+{
+    return ptr_YesNoCancel(s);
+}
 
 static void char_message(const char *s)
 {
@@ -688,6 +741,24 @@ static char UserRHome[MAX_PATH + 7];
 extern char *getRHOME(int), *getRUser(void); /* in rhome.c */
 void R_setStartTime(void);
 
+void R_DefCallbacks(Rstart Rp, int RstartVersion)
+{
+    Rp->ReadConsole = NULL;
+    Rp->WriteConsole = NULL;
+    Rp->WriteConsoleEx = NULL;
+    Rp->CallBack = NULL;
+    Rp->ShowMessage = NULL;
+    Rp->YesNoCancel = NULL;
+    Rp->Busy = NULL;
+
+    if (RstartVersion > 0) {
+	Rp->CleanUp = Rstd_CleanUp;
+	Rp->ClearerrConsole = Rstd_ClearerrConsole;
+	Rp->FlushConsole = Rstd_FlushConsole;
+	Rp->ResetConsole = Rstd_ResetConsole;
+	Rp->Suicide = Rstd_Suicide;
+    }
+}
 
 void R_SetWin32(Rstart Rp)
 {
@@ -752,26 +823,46 @@ void R_SetWin32(Rstart Rp)
        line below */
 
     CharacterMode = Rp->CharacterMode;
+
+    /* Be careful when relying on Rp->EmitEmbeddedUTF8 due to potential
+       embedding applications using old structRstart. */
     switch(CharacterMode) {
     case RGui:
 	R_GUIType = "Rgui";
-	Rp->EmitEmbeddedUTF8 = TRUE;
+	EmitEmbeddedUTF8 = TRUE;
 	break;
     case RTerm:
 	R_GUIType = "RTerm";
-	Rp->EmitEmbeddedUTF8 = FALSE;
+	EmitEmbeddedUTF8 = FALSE;
 	break;
     default:
 	R_GUIType = "unknown";
+	EmitEmbeddedUTF8 = (GetACP() != 65001) &&
+	                   (Rp->EmitEmbeddedUTF8 == TRUE);
     }
+
+    ptr_CleanUp = Rstd_CleanUp;
+    ptr_ClearerrConsole = Rstd_ClearerrConsole;
+    ptr_FlushConsole = Rstd_FlushConsole;
+    ptr_ResetConsole = Rstd_ResetConsole;
+    ptr_Suicide = Rstd_Suicide;
+
+    if (Rp->RstartVersion == 1) {
+	ptr_CleanUp = Rp->CleanUp;
+	ptr_ClearerrConsole = Rp->ClearerrConsole;
+	ptr_FlushConsole = Rp->FlushConsole;
+	ptr_ResetConsole = Rp->ResetConsole;
+	ptr_Suicide = Rp->Suicide;
+    }
+
     EmitEmbeddedUTF8 = Rp->EmitEmbeddedUTF8;
-    TrueReadConsole = Rp->ReadConsole;
-    TrueWriteConsole = Rp->WriteConsole;
-    TrueWriteConsoleEx = Rp->WriteConsoleEx;
-    R_CallBackHook = Rp->CallBack;
-    pR_ShowMessage = Rp->ShowMessage;
-    R_YesNoCancel = Rp->YesNoCancel;
-    my_R_Busy = Rp->Busy;
+    ptr_ReadConsole = Rp->ReadConsole;
+    ptr_WriteConsole = Rp->WriteConsole;
+    ptr_WriteConsoleEx = Rp->WriteConsoleEx;
+    ptr_ProcessEvents = Rp->CallBack;
+    ptr_ShowMessage = Rp->ShowMessage;
+    ptr_YesNoCancel = Rp->YesNoCancel;
+    ptr_Busy = Rp->Busy;
     /* Process R_HOME/etc/Renviron.site, then
        .Renviron or ~/.Renviron, if it exists.
        Only used here in embedded versions */
@@ -829,7 +920,7 @@ char *PrintUsage(void)
 	msg2[] =
 	"  --vanilla             Combine --no-save, --no-restore, --no-site-file,\n                          --no-init-file and --no-environ\n",
 	msg2b[] =
-	"  --max-mem-size=N      Set limit for memory to be used by R\n  --max-ppsize=N        Set max size of protect stack to N\n",
+	"  --max-ppsize=N        Set max size of protect stack to N\n",
 	msg3[] =
 	"  -q, --quiet           Don't print startup message\n  --silent              Same as --quiet\n  --no-echo             Make R run as quietly as possible\n  --verbose             Print more information about progress\n  --args                Skip the rest of the command line\n",
 	msg4[] =
@@ -901,11 +992,8 @@ static Rboolean use_workspace(Rstart Rp, char *name, Rboolean usedRdata)
 
 int cmdlineoptions(int ac, char **av)
 {
-    int   i, ierr;
-    R_size_t value;
-    char *p;
+    int   i;
     char  s[1024], cmdlines[10000];
-    R_size_t Virtual;
     structRstart rstart;
     Rstart Rp = &rstart;
     Rboolean usedRdata = FALSE, processing = TRUE;
@@ -928,25 +1016,7 @@ int cmdlineoptions(int ac, char **av)
     */
     R_set_command_line_arguments(ac, av);
 
-
-    /* set defaults for R_max_memory. This is set here so that
-       embedded applications get no limit */
-    {
-	MEMORYSTATUSEX ms;
-	ms.dwLength = sizeof(MEMORYSTATUSEX);
-	GlobalMemoryStatusEx(&ms); /* Win2k or later */
-	Virtual = ms.ullTotalVirtual; /* uint64 = DWORDLONG */
-#ifdef _WIN64
-	R_max_memory = ms.ullTotalPhys;
-#else
-	R_max_memory = min(Virtual - 512*Mega, ms.ullTotalPhys);
-#endif
-
-	/* need enough to start R, with some head room */
-	R_max_memory = max(32 * Mega, R_max_memory);
-    }
-
-    R_DefParams(Rp);
+    R_DefParamsEx(Rp, RSTART_VERSION);
     Rp->CharacterMode = CharacterMode;
     for (i = 1; i < ac; i++)
 	if (!strcmp(av[i], "--no-environ") || !strcmp(av[i], "--vanilla"))
@@ -1019,11 +1089,11 @@ int cmdlineoptions(int ac, char **av)
 	Rp->Busy = GuiBusy;
     }
 
-    pR_ShowMessage = Rp->ShowMessage; /* used here */
-    TrueWriteConsole = Rp->WriteConsole;
+    ptr_ShowMessage = Rp->ShowMessage; /* used here */
+    ptr_WriteConsole = Rp->WriteConsole;
     /* Rp->WriteConsole is guaranteed to be set above,
        so we know WriteConsoleEx is not used */
-    R_CallBackHook = Rp->CallBack;
+    ptr_ProcessEvents = Rp->CallBack;
 
     /* process environment variables
      * precedence:  command-line, .Renviron, inherited
@@ -1039,16 +1109,6 @@ int cmdlineoptions(int ac, char **av)
     env_command_line(&ac, av);
 
     R_common_command_line(&ac, av, Rp);
-
-    char *q = getenv("R_MAX_MEM_SIZE");
-    if (q && q[0]) {
-	value = R_Decode2Long(q, &ierr);
-	if(ierr || value < 32 * Mega || value > Virtual) {
-	    snprintf(s, 1024,
-		     _("WARNING: R_MAX_MEM_SIZE value is invalid: ignored\n"));
-	    R_ShowMessage(s);
-	} else R_max_memory = value;
-    }
 
     cmdlines[0] = '\0';
     while (--ac) {
@@ -1072,41 +1132,6 @@ int cmdlineoptions(int ac, char **av)
 		MDIset = 1;
 	    } else if (!strcmp(*av, "--sdi") || !strcmp(*av, "--no-mdi")) {
 		MDIset = -1;
-	    } else if (!strncmp(*av, "--max-mem-size", 14)) {
-		if(strlen(*av) < 16) {
-		    ac--; av++; p = *av;
-		}
-		else
-		    p = &(*av)[15];
-		if (p == NULL) {
-		    R_ShowMessage(_("WARNING: no max-mem-size given\n"));
-		    break;
-		}
-		value = R_Decode2Long(p, &ierr);
-		if(ierr) {
-		    if(ierr < 0)
-			snprintf(s, 1024,
-				 _("WARNING: --max-mem-size value is invalid: ignored\n"));
-		    else
-			snprintf(s, 1024,
-				 _("WARNING: --max-mem-size=%lu%c: too large and ignored\n"),
-				(unsigned long) value,
-				(ierr == 1) ? 'M': ((ierr == 2) ? 'K': 'G'));
-		    R_ShowMessage(s);
-		} else if (value < 32 * Mega) {
-		    snprintf(s, 1024,
-			     _("WARNING: --max-mem-size=%4.1fM: too small and ignored\n"),
-			     value/(1024.0 * 1024.0));
-		    R_ShowMessage(s);
-		} else if (value > Virtual) {
-		    snprintf(s, 1024,
-			     _("WARNING: --max-mem-size=%4.0fM: too large and taken as %uM\n"),
-			     value/(1024.0 * 1024.0),
-			     (unsigned int) (Virtual/(1024.0 * 1024.0)));
-		    R_max_memory = Virtual;
-		    R_ShowMessage(s);
-		} else
-		    R_max_memory = value;
 	    } else if(!strcmp(*av, "--debug")) {
 		DebugMenuitem = TRUE;
 		breaktodebugger();
@@ -1192,6 +1217,7 @@ int cmdlineoptions(int ac, char **av)
 		     (unsigned int) GetTickCount());
 	    ifp = fopen(ifile, "w+b");
 	    if(!ifp) R_Suicide(_("creation of tmpfile failed -- set TMPDIR suitably?"));
+	    /* Unix does unlink(ifile) here, but Windows cannot delete open files */
 	}
 	fwrite(cmdlines, strlen(cmdlines)+1, 1, ifp);
 	fflush(ifp);

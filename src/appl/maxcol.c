@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
 
- *  Copyright (C) 2007-2019  The R Core Team
+ *  Copyright (C) 2007-2021  The R Core Team
  *  Copyright (C) 1994-9 W. N. Venables and B. D. Ripley
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -33,8 +33,9 @@
 #include <R_ext/Arith.h>	/* NA handling */
 #include <Rmath.h>		/* fmax2 */
 #include <R_ext/Random.h>	/* ..RNGstate */
+#include <R_ext/Error.h>	/* for error */
 
-#include <R_ext/Applic.h>	/* NA handling */
+#include <R_ext/Applic.h>
 
 #define RELTOL 1e-5
 

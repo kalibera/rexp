@@ -1,6 +1,6 @@
 % File src/library/base/man/readLines.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2018 R Core Team
+% Copyright 1995-2021 R Core Team
 % Distributed under GPL 2 or later
 
 \name{readLines}
@@ -26,10 +26,8 @@ readLines(con = stdin(), n = -1L, ok = TRUE, warn = TRUE,
     used to mark character strings as known to be in
     Latin-1 or UTF-8: it is not used to re-encode the input.  To do the
     latter, specify the encoding as part of the connection \code{con} or
-    via \code{\link{options}(encoding=)}: see the examples.
-#ifdef windows
-    See also \sQuote{Details}.
-#endif
+    via \code{\link{options}(encoding=)}: see the examples
+    and \sQuote{Details}.
   }
   \item{skipNul}{logical: should nuls be skipped?}
 }
@@ -37,6 +35,7 @@ readLines(con = stdin(), n = -1L, ok = TRUE, warn = TRUE,
   If the \code{con} is a character string, the function calls
   \code{\link{file}} to obtain a file connection which is opened for
   the duration of the function call.  This can be a compressed file.
+  (\link{tilde expansion} of the file path is done by \code{file}.)
 
   If the connection is open it is read from its current position.  If it
   is not open, it is opened in \code{"rt"} mode for the duration of
@@ -85,10 +84,10 @@ unlink(fil) # tidy up
 ## difference in blocking
 fil <- tempfile("test")
 cat("123\nabc", file = fil)
-readLines(fil) # line with a warning
+\donttest{readLines(fil) # line with a warning}
 
 con <- file(fil, "r", blocking = FALSE)
-readLines(con) # empty
+readLines(con) # "123"
 cat(" def\n", file = fil, append = TRUE)
 readLines(con) # gets both
 close(con)

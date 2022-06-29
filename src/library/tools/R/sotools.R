@@ -1,7 +1,7 @@
 #  File src/library/tools/R/sotools.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 2011-2020 The R Core Team
+#  Copyright (C) 2011-2022 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ read_symbols_from_object_file <- function(f)
     if(!nzchar(nm)) {
         ## reasonable to assume nm is on the path
         nm <- Sys.which("nm")
-        if(!nzchar(nm)) nm <- shQuote(nm)
+        if(nzchar(nm)) nm <- shQuote(nm)
     }
     if(!nzchar(nm)) {
         warning("this requires 'nm' to be on the PATH")
@@ -419,13 +419,14 @@ nonAPI <- c("chol_", "chol2inv_", "cg_", "ch_", "rg_",
             "locale2charset", "match5", "matherr",
             "max_contour_segments", "mbcsToUcs2", "memtrace_report",
             "parseError", "pythag_", "rs_", "rwarnc_",
-            "signrank_free", "tql2_", "tqlrat_", "tred1_", "tred2_",
-            "utf8locale", "wilcox_free", "yylloc",
+            "tql2_", "tqlrat_", "tred1_", "tred2_", "utf8locale", "yylloc",
+            # "signrank_free", "wilcox_free" are API only from 4.2.0
 
 ## Rinterface.h, Rembedded.h, R_ext/{RStartup,eventloop}.h
             "AllDevicesKilled", "R_CStackLimit", "R_CStackStart",
             "R_ClearerrConsole", "R_CleanTempDir", "R_Consolefile",
-            "R_DefParams", "R_DirtyImage", "R_GUIType", "R_GlobalContext",
+            "R_DefCallbacks", "R_DefParams", "R_DefParamsEx",
+            "R_DirtyImage", "R_GUIType", "R_GlobalContext",
             "R_HistoryFile", "R_HistorySize", "R_Home", "R_HomeDir",
             "R_InputHandlers", "R_Interactive", "R_Outputfile",
             "R_PolledEvents", "R_ReplDLLdo1", "R_ReplDLLinit",
@@ -454,6 +455,9 @@ nonAPI <- c("chol_", "chol2inv_", "cg_", "ch_", "rg_",
             "ptr_do_selectlist", "readconsolecfg", "removeInputHandler",
             "run_Rmainloop", "setup_Rmainloop",
 
+## non-API and long deprecated in R_ext/RS.h (and as call_S in S.h)
+            "call_R",
+
 ## in the non-API header R_ext/Connections.h
             "R_new_custom_connection", "R_ReadConnection",
             "R_WriteConnection", "R_GetConnection")
@@ -461,6 +465,7 @@ nonAPI <- c("chol_", "chol2inv_", "cg_", "ch_", "rg_",
 ## non-API in Applic.h
 ## future <- c("dqrcf_", "dqrdc2_", "dqrls_", "dqrqty_", "dqrqy_", "optif9")
 ## d1mach_ and i1mach_ are mentioned (since R 2.15.3) in R-exts.
+
 
 ## grDevices uses R_Home R_InputHandlers R_TempDir R_Visible R_cairoCdynload R_fopen R_gzclose R_gzgets R_gzopen R_isForkedChild Rf_envlength Rf_strIsASCII Rf_utf8towcs Rg_set_col_ptrs Ri18n_wcwidth addInputHandler do_X11 do_contourLines do_getGraphicsEventEnv do_getSnapshot do_playSnapshot do_saveplot locale2charset mbcsToUcs2 ptr_R_ProcessEvents
 

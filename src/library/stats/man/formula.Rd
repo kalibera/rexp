@@ -1,6 +1,6 @@
 % File src/library/stats/man/formula.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2019 R Core Team
+% Copyright 1995-2022 R Core Team
 % Distributed under GPL 2 or later
 
 \name{formula}
@@ -39,9 +39,9 @@ as.formula(object, env = parent.frame())
     as well.}
 }
 \details{
-  The models fit by, e.g., the \code{\link{lm}} and \code{\link{glm}} functions
-  are specified in a compact symbolic form.
-  The \code{~} operator is basic in the formation of such models.
+  The models fitted by, e.g., the \code{\link{lm}} and \code{\link{glm}}
+  functions are specified in a compact symbolic form.
+  The \code{\link{~}} operator is basic in the formation of such models.
   An expression of the form \code{y ~ model} is interpreted
   as a specification that the response \code{y} is modelled
   by a linear predictor specified symbolically by \code{model}.
@@ -53,20 +53,27 @@ as.formula(object, env = parent.frame())
   all the variables and factors appearing in the term.
 
   In addition to \code{+} and \code{:}, a number of other operators are
-  useful in model formulae.  The \code{*} operator denotes factor
-  crossing: \code{a*b} interpreted as \code{a+b+a:b}.  The \code{^}
+  useful in model formulae.
+ \itemize{
+  \item The \code{*} operator denotes factor crossing: \code{a*b} is
+  interpreted as \code{a + b + a:b}.
+  \item The \code{^}
   operator indicates crossing to the specified degree.  For example
   \code{(a+b+c)^2} is identical to \code{(a+b+c)*(a+b+c)} which in turn
   expands to a formula containing the main effects for \code{a},
   \code{b} and \code{c} together with their second-order interactions.
-  The \code{\%in\%} operator indicates that the terms on its left are
+  \item The \code{\%in\%} operator indicates that the terms on its left are
   nested within those on the right.  For example \code{a + b \%in\% a}
-  expands to the formula \code{a + a:b}.  The \code{-} operator removes
-  the specified terms, so that \code{(a+b+c)^2 - a:b} is identical to
-  \code{a + b + c + b:c + a:c}.  It can also used to remove the
-  intercept term: when fitting a linear model \code{y ~ x - 1} specifies
-  a line through the origin.  A model with no intercept can be also
-  specified as \code{y ~ x + 0} or \code{y ~ 0 + x}.
+  expands to the formula \code{a + a:b}.
+  \item The \code{/} operator provides a shorthand, so that
+  \code{a / b} is equivalent to \code{a + b \%in\% a}.
+  \item The \code{-} operator removes the specified terms, hence
+  \code{(a+b+c)^2 - a:b} is identical to \code{a + b + c + b:c + a:c}.
+  It can also used to remove the intercept term: when fitting a linear
+  model \code{y ~ x - 1} specifies a line through the origin.
+  A model with no intercept can be also specified as \code{y ~ x + 0}
+  or \code{y ~ 0 + x}.
+ }
 
   While formulae usually involve just variable and factor
   names, they can also involve arithmetic expressions.
@@ -156,11 +163,12 @@ as.formula(object, env = parent.frame())
   eds J. M. Chambers and T. J. Hastie, Wadsworth & Brooks/Cole.
 }
 \seealso{
-  \code{\link{I}}, \code{\link{offset}}.
+  \code{\link{~}}, \code{\link{I}}, \code{\link{offset}}.
 
-  For formula manipulation: \code{\link{terms}}, and \code{\link{all.vars}};
-  for typical use: \code{\link{lm}}, \code{\link{glm}}, and
+  For formula manipulation: \code{\link{terms}}, and \code{\link{all.vars}}.
+  For typical use: \code{\link{lm}}, \code{\link{glm}}, and
   \code{\link{coplot}}.
+  For formula construction: \code{\link{reformulate}}.
 }
 \examples{
 class(fo <- y ~ x1*x2) # "formula"
@@ -176,5 +184,8 @@ environment(as.formula("y ~ x", env = new.env()))
 ## Create a formula for a model with a large number of variables:
 xnam <- paste0("x", 1:25)
 (fmla <- as.formula(paste("y ~ ", paste(xnam, collapse= "+"))))
+## Equivalent with reformulate():
+fmla2 <- reformulate(xnam, response = "y")
+stopifnot(identical(fmla, fmla2))
 }
 \keyword{models}

@@ -26,7 +26,7 @@ include $(srcdir)/Makefile.common
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 
-DISTFILES = Makefile.in Makefile.win Makefile.install Makefile.common \
+DISTFILES = Makefile.in Makefile.win Makefile.install Makefile.install.win Makefile.common \
 	$(INSTFILES) gct-foot.R reg-win.R eval-fns.R \
 	testit.Rd testit.txt.save testit.html.save \
 	testit.tex.save testit-Ex.R.save \
@@ -117,7 +117,7 @@ install-tests:
 	@$(ECHO) "installing specific tests"
 	@$(MKINSTALLDIRS) "$(DESTDIR)$(rhome)/tests"
 	@$(MKINSTALLDIRS) "$(DESTDIR)$(rhome)/tests/Packages"
-	@for f in Makefile.common $(INSTFILES) eval-fns.R; do \
+	@for f in Makefile.common $(INSTFILES) eval-fns.R reg-translation.R; do \
 	  $(INSTALL_DATA) $(srcdir)/$${f} "$(DESTDIR)$(rhome)/tests"; \
 	done
 	@$(INSTALL_DATA) $(srcdir)/Makefile.install \
