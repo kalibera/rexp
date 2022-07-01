@@ -155,27 +155,39 @@ static void NORET reg_report(int rc,  regex_t *reg, const char *pat)
 	error(_("invalid regular expression, reason '%s'"), errbuf);
 }
 
-/* FIXME: make more robust, and public */
-static SEXP mkCharWLen(const wchar_t *wc, int nc)
+/* wc must be zero-terminated, nc = wsclen(wc), maybe_ascii is TRUE if the input
+   is probably pure ASCII. maybe_ascii is useful for regular expressions over
+   long vectors (lines of text) where most lines are ASCII, but not all, to
+   reduce the overhead of encoding conversions. */
+static SEXP mkCharWLenASCII(const wchar_t *wc, int nc, Rboolean maybe_ascii)
 {
-    size_t nb; char *xi; wchar_t *wt;
-    R_CheckStack2(sizeof(wchar_t)*(nc+1));
-    wt = (wchar_t *) alloca((nc+1)*sizeof(wchar_t));
-    wcsncpy(wt, wc, nc); wt[nc] = 0;
-    nb = wcstoutf8(NULL, wt, INT_MAX);
-    R_CheckStack2(sizeof(char)*nb);
-    xi = (char *) alloca(nb*sizeof(char));
-    wcstoutf8(xi, wt, nb);
-    return mkCharLenCE(xi, (int)nb-1, CE_UTF8);
-}
+    if (maybe_ascii) {
+	char *xi = R_Calloc(nc, char);
+	for(int i = 0; i < nc ; i++) {
+	    unsigned int u = (unsigned int) wc[i];
+	    if (u > 127) {
+		R_Free(xi);
+		return mkCharWLenASCII(wc, nc, FALSE);
+	    }
+	    xi[i] = (char) u;
+	}
+	SEXP ans = mkCharLenCE(xi, nc, CE_UTF8);
+	R_Free(xi);
+	return ans;
+    }
 
-static SEXP mkCharW(const wchar_t *wc)
-{
-    size_t nb = wcstoutf8(NULL, wc, INT_MAX);
-    char *xi = (char *) R_Calloc(nb, char);
-    SEXP ans;
-    wcstoutf8(xi, wc, nb);
-    ans = mkCharCE(xi, CE_UTF8);
+    /* possibly not ASCII */
+    size_t nb = (nc + 1) * 4;
+    if (nb <= 8192) {
+	char xi[8192];
+	nb = wcstoutf8(xi, wc, nb);
+	return mkCharLenCE(xi, (int)nb-1, CE_UTF8);
+    }
+
+    nb = wcstoutf8(NULL, wc, INT_MAX);
+    char *xi = R_Calloc(nb, char);
+    nb = wcstoutf8(xi, wc, nb);
+    SEXP ans = mkCharLenCE(xi, (int)nb-1, CE_UTF8);
     R_Free(xi);
     return ans;
 }
@@ -868,6 +880,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		error(_("'split' string %d is invalid"), itok+1);
 	    if ((rc = tre_regwcomp(&reg, wsplit, cflags)))
 		reg_report(rc, &reg, translateChar(STRING_ELT(tok, itok)));
+	    Rboolean ascii_split = IS_ASCII(STRING_ELT(tok, itok));
 
 	    vmax2 = vmaxget();
 	    for (i = itok; i < len; i += tlen) {
@@ -877,6 +890,7 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		    continue;
 		}
 		wbuf = wtransChar2(STRING_ELT(x, i));
+		Rboolean ascii_xi = IS_ASCII(STRING_ELT(x, i));
 		if (!wbuf) {
 		    if(nwarn++ < NWARN)
 			warning(_("input string %d is invalid"), i+1);
@@ -915,11 +929,13 @@ SEXP attribute_hidden do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 			wbufp++;
 		    }
 		    SET_STRING_ELT(t, j,
-				   mkCharWLen(wpt, regmatch[0].rm_so));
+				   mkCharWLenASCII(wpt, regmatch[0].rm_so,
+				                   ascii_split && ascii_xi));
 		}
 		if (*wbufp)
 		    SET_STRING_ELT(t, ntok,
-				   mkCharWLen(wbufp, (int) wcslen(wbufp)));
+				   mkCharWLenASCII(wbufp, (int) wcslen(wbufp),
+				                   ascii_split && ascii_xi));
 		vmaxset(vmax2);
 	    }
 	    tre_regfree(&reg);
@@ -1948,6 +1964,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
     const char *spat = NULL, *srep = NULL, *s = NULL;
     size_t patlen = 0, replen = 0;
     Rboolean use_UTF8 = FALSE, use_WC = FALSE;
+    Rboolean ascii_patrep = FALSE;
     const wchar_t *wpat = NULL, *wrep = NULL, *ws = NULL;
     const unsigned char *tables = NULL;
 #ifdef HAVE_PCRE2
@@ -2034,6 +2051,8 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (!wpat) error(_("'pattern' is invalid"));
 	wrep = wtransChar2(STRING_ELT(rep, 0));
 	if (!wrep) error(_("'replacement' is invalid"));
+	ascii_patrep = (IS_ASCII(STRING_ELT(pat, 0)) &&
+	                IS_ASCII(STRING_ELT(rep, 0)));
     } else if (use_UTF8) {
 	spat = trCharUTF82(STRING_ELT(pat, 0));
 	if (!spat || !utf8Valid(spat)) error(_("'pattern' is invalid UTF-8"));
@@ -2319,6 +2338,7 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	    /* extended regexp in wchar_t */
 	    wchar_t *u, *cbuf;
 	    int maxrep;
+	    Rboolean ascii_texti = IS_ASCII(STRING_ELT(text, i));
 
 	    ns = (int) wcslen(ws);
 	    maxrep = (int)(replen + (ns-2) * wcount_subs(wrep));
@@ -2371,7 +2391,9 @@ SEXP attribute_hidden do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 		}
 		for (j = offset ; ws[j] ; j++) *u++ = ws[j];
 		*u = L'\0';
-		SET_STRING_ELT(ans, i, mkCharW(cbuf));
+		SET_STRING_ELT(ans, i,
+		               mkCharWLenASCII(cbuf, (u-cbuf),
+		                               ascii_patrep && ascii_texti));
 	    }
 	    R_Free(cbuf);
 	}
