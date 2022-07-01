@@ -1082,12 +1082,12 @@ static int fgrep_one(const char *pat, const char *target,
 	    int ib = (int) (pos-target);
 	    int jb;
 
-		if (next != NULL) *next = ib + plen;
+	    if (next != NULL) *next = ib + plen;
 	    for (jb = 0, i = 0; jb < ib; jb++)
 		/* count leading UTF-8 bytes */
 		if ((target[jb] & 0xc0) != 0x80) i++;
-		return i;
-	    }
+	    return i;
+	}
     } else if (!useBytes && mbcslocale) { /* skip along by chars */
 	mbstate_t mb_st;
 	int ib, used;
@@ -1105,9 +1105,9 @@ static int fgrep_one(const char *pat, const char *target,
 	char *pos = strstr(target, pat);
 	if (pos) {
 	    i = (int) (pos-target);
-		if (next != NULL) *next = i + plen;
-		return i;
-	    }
+	    if (next != NULL) *next = i + plen;
+	    return i;
+	}
     }
     return -1;
 }
