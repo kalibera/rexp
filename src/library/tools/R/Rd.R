@@ -884,6 +884,41 @@ function(db)
     unlist(Rd_names)
 }
 
+### * ..Rd_get_equations_from_Rd
+
+.Rd_get_equations_from_Rd <-
+function(x)
+{
+    y <- .Rd_find_nodes_with_tags(x, c("\\eqn", "\\deqn"))
+    if(!length(y)) return(matrix(character(), 0L, 5L))
+    z <- lapply(y, function(e) {
+        c(attr(e, "Rd_tag"),
+          ## % is treated verbatim in the first arg of equations as per
+          ## "Exceptions to special character handling" in parseRd.pdf.
+          .Rd_deparse(e[[1L]], tag = FALSE),
+          if(length(e) > 1L)
+              trimws(.Rd_deparse(e[[2L]], tag = FALSE))
+          else
+              NA_character_,
+          if(!is.null(loc <- attr(e, "srcref")))
+              loc[c(1L, 3L)]
+          else
+              rep.int(NA_character_, 2L))
+    })
+    do.call(rbind, z)
+}
+
+### * .Rd_get_equations_from_Rd_db
+
+.Rd_get_equations_from_Rd_db <-
+function(x)
+{
+    if(!length(x)) return(matrix(character(), 0L, 6L))
+    m <- lapply(x, .Rd_get_equations_from_Rd)
+    cbind(rep.int(names(m), vapply(m, nrow, 0L)),
+          do.call(rbind, m))
+}
+
 ### * .Rd_format_title
 
 .Rd_format_title <-
@@ -987,7 +1022,7 @@ initialRdMacros <- function(pkglist = NULL,
                                  p),
                         call. = FALSE)
             else if(dir.exists(file.path(fp, "help", "macros")))
-    	    	macros <- loadPkgRdMacros(system.file(package = p), macros)
+    	    	macros <- loadPkgRdMacros(fp, macros)
     	    else
     	    	warning(gettextf("No Rd macros in package '%s'.", p),
                         call. = FALSE)
@@ -998,18 +1033,7 @@ initialRdMacros <- function(pkglist = NULL,
 }
 
 loadPkgRdMacros <- function(pkgdir, macros = NULL) {
-    ## this does get called on any directory,
-    ## e.g. a man directory in package 'diveMove'.
-    pkglist <- try(.read_description(file.path(pkgdir, "DESCRIPTION")),
-                   silent = TRUE)
-    if (inherits(pkglist, "try-error"))
-    	pkglist <-  try(.read_description(file.path(pkgdir, "DESCRIPTION.in")),
-                        silent = TRUE)
-    ## may check for 'macros' subdirectory?
-    if (inherits(pkglist, "try-error")) return(macros)
-
-    pkglist <- pkglist["RdMacros"]
-
+    pkglist <- .get_package_metadata(pkgdir)["RdMacros"]
     if (is.na(pkglist))
         pkglist <- NULL
 

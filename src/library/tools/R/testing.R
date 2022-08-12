@@ -143,6 +143,10 @@ massageExamples <-
 }
 
 ## compares 2 files
+## 2022-07: it is reasonable to assume that almost all users will
+## have diff (it is part of Rtools), and currently only GNU diff
+## (from 2022 on macOS) and FreeBSD versions semm to be in use.
+## So the support without diff is minimal.
 Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE,
                   nullPointers = TRUE, Log = FALSE)
 {
@@ -197,52 +201,84 @@ Rdiff <- function(from, to, useDiff = FALSE, forEx = FALSE,
         ## platforms.
         txt <- txt[!grepl('options(pager = "console")', txt,
                           fixed = TRUE, useBytes = TRUE)]
-        pat <- '(^Time |^Loading required package|^Package [A-Za-z][A-Za-z0-9]+ loaded|^<(environment|promise|pointer|bytecode):|^/CreationDate |^/ModDate |^/Producer |^End.Don\'t show)'
+        pat <- '(^Time |^Loading required package|^Package [A-Za-z][A-Za-z0-9]+ loaded|^<(environment|promise|pointer|bytecode):|^End.Don\'t show)'
         txt[!grepl(pat, txt, perl = TRUE, useBytes = TRUE)]
     }
     clean2 <- function(txt)
     {
-        ## useBytes=TRUE as some tests intentionally use invalid strings        
+        ## useBytes=TRUE as some tests intentionally use invalid strings
         eoh <- grep("^> options\\(warn = 1\\)$", txt, useBytes = TRUE)
         if(length(eoh)) txt[-(1L:eoh[1L])] else txt
     }
-
-    left <- clean(readLines(from))
-    right <- clean(readLines(to))
-    if (forEx) {
-        left <- clean2(left)
-        ## remove lines from R CMD check --timings
-        left <- filtergrep("[.](format_|)ptime", left, useBytes = TRUE)
-        right <- clean2(right)
+    trimPDF <- function(txt)
+    {
+        ## drop the PDF header
+        if (length(txt) < 2L || !startsWith(txt[1L], "%PDF"))
+            stop("not a PDF file")
+        ## drop second line if comment, often non-ASCII
+        txt <- if(startsWith(txt[1L], "%")) txt[-(1:2)] else txt[-1L]
+        ## Remove variable parts of the header
+        pat <- '(^/CreationDate |^/ModDate |^/Producer)'
+        txt[!grepl(pat, txt, perl = TRUE, useBytes = TRUE)]
     }
-    if (!useDiff && (length(left) == length(right))) {
-        ## The idea is to emulate diff -b, as documented by POSIX:
-        ## https://pubs.opengroup.org/onlinepubs/9699919799/utilities/diff.html
-        bleft  <- gsub("[[:space:]]*$", "", left)
-        bright <- gsub("[[:space:]]*$", "", right)
-        bleft  <- gsub("[[:space:]]+", " ", bleft)
-        bright <- gsub("[[:space:]]+", " ", bright)
-        if(all(bleft == bright))
-            return(if(Log) list(status = 0L, out = character()) else 0L)
-        cat("\n")
-        diff <- bleft != bright
-        ## FIXME do run lengths here
-        for(i in which(diff))
-            cat(i,"c", i, "\n< ", left[i], "\n", "---\n> ", right[i], "\n",
-                sep = "")
-        if (Log) {
-            i <- which(diff)
-            out <- paste0(i,"c", i, "\n< ", left[i], "\n", "---\n> ", right[i])
-            list(status = 1L, out = out)
-        } else 1L
-    } else {
-        ## FIXME: use C code, or something like merge?
-        ## The files can be very big.
-        out <- character()
+
+    useDiff0 <- useDiff
+
+    left <- readLines(from)
+    right <- readLines(to)
+    asPDF <- length(left) >= 1L && startsWith(left[1L], "%PDF")
+    if (useDiff && !nzchar(Sys.which("diff"))) {
+        if(!asPDF)
+            warning("'diff' is not available so useDiff = FALSE will be used")
+        useDiff <- FALSE
+    }
+
+    if(asPDF) {
         if(!useDiff) {
-            cat("\nfiles differ in number of lines:\n")
-            out <- "files differ in number of lines"
+            out <- if(!useDiff0) "comparing PDF files requires useDiff = TRUE"
+                   else "comparing PDF files requires 'diff'"
+            if (Log) return(list(status = 0L, out = out))
+            else {message(out); return(invisible(0L))}
         }
+        left <- trimPDF(left); right <- trimPDF(right)
+    } else {
+        left <- clean(left); right <- clean(right)
+        if (forEx) {
+            left <- clean2(left)
+            ## remove lines from R CMD check --timings
+            left <- filtergrep("[.](format_|)ptime", left, useBytes = TRUE)
+            right <- clean2(right)
+        }
+    }
+
+    if (!useDiff) {
+        if(length(left) == length(right)) {
+            ## The idea is to emulate diff -b, as documented by POSIX:
+            ## https://pubs.opengroup.org/onlinepubs/9699919799/utilities/diff.html
+            bleft  <- gsub("[[:space:]]*$", "", left)
+            bright <- gsub("[[:space:]]*$", "", right)
+            bleft  <- gsub("[[:space:]]+", " ", bleft)
+            bright <- gsub("[[:space:]]+", " ", bright)
+            if(all(bleft == bright))
+                return(if(Log) list(status = 0L, out = character()) else 0L)
+            cat("\n")
+            diff <- bleft != bright
+            ## FIXME do run lengths here
+            for(i in which(diff))
+                cat(i,"c", i, "\n< ", left[i], "\n", "---\n> ", right[i], "\n",
+                    sep = "")
+            if (Log) {
+                i <- which(diff)
+                out <- paste0(i,"c", i, "\n< ", left[i], "\n", "---\n> ", right[i])
+                list(status = 1L, out = out)
+            } else invisible(1L)
+        } else { ## no diff, different lengths
+            out <- "files differ in number of lines"
+            if (Log) list(status = 2L, out = out)
+            else {message(out); invisible(2L)}
+        }
+    } else {
+        out <- character()
         a <- tempfile("Rdiffa")
         writeLines(left, a)
         b <- tempfile("Rdiffb")

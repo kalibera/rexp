@@ -38,13 +38,25 @@
       Such a warning can be specifically suppressed or caught otherwise.
 
       \item Regular expression functions now check more thoroughly whether
-      their inputs are valid strings (in their encoding, e.g. UTF-8).
+      their inputs are valid strings (in their encoding, e.g.\sspace{}in UTF-8).
+
+      \item The performance of \code{grep}, \code{sub}, \code{gsub} and
+      \code{strsplit} has been improved, particularly with \code{perl =
+      TRUE} and \code{fixed = TRUE}.  Use of \code{useBytes = TRUE} for
+      performance reasons should no longer be needed and is discouraged.
+      It may lead to incorrect results.
+
+      \item \code{apropos()} gains an argument \code{dot_internals} which
+      is used by the completion (\code{help(rcompgen)}) engine to also
+      see \pkg{base} internals such as \code{.POSIXct()}.
+
+      \item Support in \code{tools::Rdiff()} for comparing uncompressed
+      PDF files is further reduced -- see its help page.
     }
   }
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
     \itemize{
-
       \item The included LAPACK sources have been updated to include the
       four Fortran 90 routines rather than their Fortran 77
       predecessors.  This may give some different signs in SVDs or
@@ -64,6 +76,20 @@
 
       Packages using LAPACK will need to be reinstalled if this changes
       to using an external library.
+
+      \item On \samp{aarch64} (aka \samp{arm64}) platforms such as Macs with
+      \dQuote{Apple silicon} (\sQuote{M1}), \command{configure} now chooses
+      \option{-fPIC} by default (instead of \option{-fpic}), as desired in
+      \PR{18326}.
+    }
+  }
+
+  \subsection{PACKAGE INSTALLATION}{
+    \itemize{
+      \item \code{USE_FC_LEN_T} is the default: this uses the
+      correct (compiler-dependent) prototypes for Fortran BLAS/LAPACK
+      routines called from C/C++, and requires adjustment of many such
+      calls -- see \sQuote{Writing R Extensions} §6.6.1.
     }
   }
 
@@ -79,15 +105,6 @@
     }
   }
 
-  \subsection{PACKAGE INSTALLATION}{
-    \itemize{
-      \item \code{USE_FC_LEN_T} is the default: this uses the
-      correct (compiler-dependent) prototypes for Fortran BLAS/LAPACK
-      routines called from C/C++, and requires adjustment of many such
-      calls -- see \sQuote{Writing R Extensions} §6.6.1.
-    }
-  }
-
   \subsection{C-LEVEL FACILITIES}{
     \itemize{
       \item The deprecated S-compatibility macros \code{DOUBLE_*} in
@@ -95,16 +112,9 @@
       removed.
 
       \item The deprecated legacy typedefs of \code{Sint} and
-      \code{Sfloat} in header \file{R.h} can be excluded by defining
-      macro \code{NO_S_TYPEDEFS} before including the header.  This is
-      defined when using \command{R CMD check --as-cran} or by defining the
-      environment variable \env{_R_NO_S_TYPEDEFS_} to a true value when
-      running \command{R CMD check}.
-
-      If these are excluded, \file{R.h} no longer includes header
-      \file{limits.h} (nor \file{climits} from C++).
-
-      [This is intended to become the default before release.]
+      \code{Sfloat} in header \file{R.h} are no longer defined, and that
+      header no longer includes header \file{limits.h} from C nor
+      \file{climits} from C++.
     }
   }
 
@@ -113,13 +123,17 @@
       \item \command{R CMD check} does more checking of package \file{.Rd}
       files, warning about invalid email addresses and (some) invalid
       URIs and noting empty \samp{\item} labels in description lists.
+
+      \item \command{R CMD check} now also reports problems when reading
+      package news in md (file \file{NEWS.md}) and (optionally) plain
+      text (file \file{NEWS}) formats.
     }
   }
 
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item \code{default.stringsAsFactors()} is defunct.
-    }
+   }
   }
 
   \subsection{BUG FIXES}{
@@ -143,22 +157,83 @@
       sometimes returning all of \code{x}.  Reported and discussed by Colin
       Fay, in \PR{18357}.
 
-      \item \code{summary.lm()} now gives the correct F-statistic when
-      the model contains an offset. Reported in \PR{18008}.
-      
+      \item The \code{"lm"} method for \code{summary()} now gives the
+      correct F-statistic when the model contains an offset.  Reported in
+      \PR{18008}.
+
       \item \code{C()} and \code{`contrasts<-`()} now preserve factor
       level names when given a function object (as opposed a function
       name which did preserve names). Reported in \PR{17616}.
+
+      \item \code{c(a=1, 2)[[]]} no longer matches \code{2} but rather
+      signals a \emph{classed} error.  Reported and analysed by David Vaughan in
+      \PR{18367}, a duplicate of \PR{18004}, by Jan Meis et al.
+      For consistency, \code{NULL[[]]} is also erroneous now.
+      \code{x[[]] <- v} gives an error of the same class \code{"MissingSubscriptError"}.
+
+      %% possibly back port to 4.2.z branch
+      \item The \code{relist()} function of \pkg{utils} now supports
+      \code{NULL} elements in the skeleton (\PR{15854}).
+
+      \item \code{poly(x, n)} now works again, now documented, when \code{x} is a
+      \code{"Date"} or \code{"POSIXct"} object, or of another class while
+      fulfilling \code{mode(x) == "numeric"}.  This also enables
+      \code{poly(x, *, raw=TRUE)} for such variables.  Reported by Michael
+      Chirico to R-devel.
+
+      \item \code{source("")} and \code{source(character())} now give more
+      helpful error messages.
     }
   }
 }
 
 \section{\Rlogo CHANGES IN R 4.2.1 patched}{
-    \subsection{INSTALLATION on a UNIX-ALIKE}{
+  \subsection{NEW FEATURES}{
     \itemize{
-      \item THe PDF manuals (if built) can be compacted by the new
+      \item \code{tools::Rdiff(useDiff = TRUE)} checks for the presence
+      of an external \command{diff} command and switches to
+      \code{useDiff = FALSE} if none is found.
+      This allows \command{R CMD Rdiff} to always work.
+
+      \item On Windows, environment variable
+      \env{R_LIBCURL_SSL_REVOKE_BEST_EFFORT} can be used to switch to only
+      best-effort revocation checks with the default \code{"libcurl"}
+      download method.  This reduces security, but may be needed for
+      downloads to work with MITM proxies (\PR{18379}).
+    }
+  }
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item The PDF manuals (if built) can be compacted by the new
       target \command{make compact-pdf} (at the top level or in
       directory \file{doc/manual}).
+    }
+  }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{qt(*, log.p=TRUE)} in outer tails no longer produces
+      \code{NaN} in its final steps, thus fixing \PR{18360}.
+
+      \item \code{tools::Rd2latex()} now escapes hashes and ampersands
+      when writing URLs, fixing LaTeX errors with such URLs in \verb{\tabular}.
+
+      \item When \code{isGeneric(f, fdef=*)} is used with mismatching
+      names, the warning is better understandable; reported (with fix) in
+      \PR{18370} by Gabe Becker.
+
+      \item \code{write.table()}, \code{write.csv()} and
+      \code{write.csv2()} restore their numerical precision (internal
+      equivalent of \code{digits = 15}) after an interrupt (\PR{18384}).
+
+      \item One can now read also byte \code{FF} from a clipboard connection
+      (\PR{18385}).
+
+      \item Non-ASCII characters are now properly displayed on Windows in
+      windows created using GraphApp via e.g.  \code{winDialogString} thanks
+      to a workaround for an at least surprising Windows behavior with UTF-8
+      as the system encoding (\PR{18382}).
     }
   }
 }
@@ -772,7 +847,7 @@
       \item \command{R CMD check} can optionally (but included in
       \option{--as-cran}) validate the HTML produced from the packages
       \file{.Rd} files.  See
-      \url{https://blog.r-project.org/2022/04/08/enhancements-to-html-documentation/index.html}:
+      \url{https://blog.r-project.org/2022/04/08/enhancements-to-html-documentation/}:
       this needs a fairly recent version of HTML Tidy to be available.
     }
   }

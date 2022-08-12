@@ -320,7 +320,7 @@ add_dummies <- function(dir, Log)
         text <- paste(..., collapse = " ")
         ## strwrap expects paras separated by blank lines.
         ## Perl's wrap split on \n
-        text <- strsplit(text, "\n", useBytes = TRUE)[[1L]]
+        text <- strsplit(text, "\n")[[1L]]
         printLog(Log, paste(strwrap(text), collapse = "\n"), "\n")
     }
 
@@ -1752,7 +1752,7 @@ add_dummies <- function(dir, Log)
             ## </NOTE>
             if (!any(file.exists(file.path("src",
                                            c("Makefile", "Makefile.win",
-					     "Makefile.ucrt",
+                                             "Makefile.ucrt",
                                              "install.libs.R"))))) {
                 if (!length(dir("src", pattern = "\\.([cfmM]|cc|cpp|f90|f95|mm)"))) {
                     if (!any) warningLog(Log)
@@ -1792,38 +1792,6 @@ add_dummies <- function(dir, Log)
             }
         }
 
-        ## Valid NEWS.Rd?
-        nfile <- file.path("inst", "NEWS.Rd")
-        if(file.exists(nfile)) {
-            ## Catch all warning and error messages.
-            ## We use the same construction in at least another place,
-            ## so maybe factor out a common utility function
-            ##   .try_catch_all_warnings_and_errors
-            ## eventually.
-            ## For testing package NEWS.Rd files, we really need a real
-            ## QC check function eventually ...
-            .warnings <- NULL
-            .error <- NULL
-            withCallingHandlers(tryCatch(.build_news_db_from_package_NEWS_Rd(nfile),
-                                         error = function(e)
-                                         .error <<- conditionMessage(e)),
-                                warning = function(e) {
-                                    .warnings <<- c(.warnings,
-                                                    conditionMessage(e))
-                                    tryInvokeRestart("muffleWarning")
-                                })
-            msg <- c(.warnings, .error)
-            if(length(msg)) {
-                if(!any) warningLog(Log)
-                any <- TRUE
-                printLog(Log, "Problems with news in 'inst/NEWS.Rd':\n")
-                printLog0(Log,
-                          paste0("  ",
-                                 unlist(strsplit(msg, "\n", fixed = TRUE)),
-                                 collapse = "\n"),
-                          "\n")
-            }
-        }
 
         ## Valid CITATION metadata?
         if (file.exists(file.path("inst", "CITATION"))) {
@@ -1862,6 +1830,71 @@ add_dummies <- function(dir, Log)
             wrapLog(msg)
             printLog0(Log, .format_lines_with_indent(files), "\n")
             wrapLog("Most likely 'inst/CITATION' should be used instead.\n")
+        }
+
+        ## Valid package news?
+        ## This used to only look at inst/NEWS.Rd and warn about
+        ## problems found in these.  For simplicity, when adding support
+        ## for checking news in md or plain text, consistently only NOTE
+        ## problems.
+        ## Gather errors and warnings when reading the news.  We
+        ## currently report all these together.
+        .messages <- NULL
+        .ehandler <- function(e) {
+            .messages <<- conditionMessage(e)
+        }
+        .whandler <- function(e) {
+            .messages <<- c(.messages, conditionMessage(e))
+            tryInvokeRestart("muffleWarning")
+        }
+        ## (Could also gather the conditions, and get the messages from
+        ## these.)
+
+        nread <- NULL
+        if(file.exists(nfile <- file.path("inst", "NEWS.Rd")))
+            nread <- .build_news_db_from_package_NEWS_Rd
+        else if(file.exists(nfile <- "NEWS.md") &&
+                ## The news in md reader needs commonmark and xml2.
+                requireNamespace("commonmark", quietly = TRUE) &&
+                requireNamespace("xml2", quietly = TRUE))
+            nread <- .build_news_db_from_package_NEWS_md
+        else if(file.exists(nfile <- "NEWS") &&
+                config_val_to_logical(Sys.getenv("_R_CHECK_NEWS_IN_PLAIN_TEXT_",
+                                                 "FALSE")))
+            nread <- .news_reader_default
+
+        if(!is.null(nread)) {
+            bad <- FALSE
+            news <- withCallingHandlers(tryCatch(nread(nfile),
+                                                 error = .ehandler),
+                                        warning = .whandler)
+            if(length(.messages)) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                printLog(Log,
+                         sprintf("Problems with news in '%s':\n", nfile))
+                bad <- TRUE
+                printLog0(Log,
+                          paste0("  ",
+                                 unlist(strsplit(.messages, "\n", fixed = TRUE)),
+                                 collapse = "\n"),
+                          "\n")
+            } else {
+                ## No complaints from the reader, but did it actually
+                ## read anything?
+                if(!inherits(news, "news_db") || !nrow(news)) {
+                    if(!any) noteLog(Log)
+                    any <- TRUE
+                    if(!bad)
+                        printLog(Log,
+                                 sprintf("Problems with news in '%s':\n",
+                                         nfile))
+                    bad <- TRUE
+                    printLog(Log, "No news entries found.\n")
+                }
+                ## Could also check whether the current package version
+                ## has a corresponding news entry.
+            }
         }
 
         if(!any) resultLog(Log, "OK")
@@ -2540,7 +2573,8 @@ add_dummies <- function(dir, Log)
                 if(file.info(sv <- file.path("data", "datalist"))$isdir) {
                     warn <- TRUE
                     msgs <- c(msgs, sprintf("%s is a directory\n",
-                                            sQuote("data/datalist"), "\n"))
+                                            sQuote("data/datalist")),
+                              "\n")
                 }  else {
                     ## Now check it has the right format:
                     ## it is read in list_data_in_pkg()
@@ -3160,7 +3194,7 @@ add_dummies <- function(dir, Log)
         makefiles <- Sys.glob(file.path("src",
                                         c("Makevars", "Makevars.in",
                                           "Makefile", "Makefile.win",
-					  "Makefile.ucrt")))
+                                          "Makefile.ucrt")))
         if(length(makefiles)) {
             checkingLog(Log, "for portable use of $(BLAS_LIBS) and $(LAPACK_LIBS)")
             any <- FALSE
@@ -3208,7 +3242,7 @@ add_dummies <- function(dir, Log)
                                         c("Makevars", "Makevars.in",
                                           "Makevars.win", "Makevars.ucrt",
                                           "Makefile", "Makefile.win",
-					  "Makefile.ucrt")))
+                                          "Makefile.ucrt")))
 
         if(length(makefiles)) {
             checkingLog(Log, "use of PKG_*FLAGS in Makefiles")
@@ -3912,6 +3946,8 @@ add_dummies <- function(dir, Log)
                 ## defensive about the prompt ...
                 chunks <- strsplit(txt,
                                    "> ### \\* [^\n]+\n> \n> flush[^\n]+\n> \n", useBytes = TRUE)[[1L]]
+                ## convert "bytes" to string, with <xx> for invalid bytes
+                chunks <- iconv(chunks, sub="byte")
                 if((ll <- length(chunks)) >= 2) {
                     printLog(Log, "The error most likely occurred in:\n\n")
                     printLog0(Log, chunks[ll], "\n")
@@ -4371,7 +4407,7 @@ add_dummies <- function(dir, Log)
             if (nb <- length(bad_vignettes)) {
                 any <- TRUE
                 warningLog(Log)
-		if (length(.msg)) printLog0(Log, .msg, "\n")
+                if (length(.msg)) printLog0(Log, .msg, "\n")
                 msg <- ngettext(nb,
                                 "Package vignette without corresponding single PDF/HTML:\n",
                                 "Package vignettes without corresponding single PDF/HTML:\n", domain = NA)
@@ -4806,7 +4842,7 @@ add_dummies <- function(dir, Log)
             tlim <- get_timeout(Sys.getenv("_R_CHECK_PKGMAN_ELAPSED_TIMEOUT_",
                                 Sys.getenv("_R_CHECK_ELAPSED_TIMEOUT_")))
             topdir <- pkgdir
-            Rd2pdf_opts <- "--no-preview"
+            Rd2pdf_opts <- "--no-preview --internals"
             checkingLog(Log, "PDF version of manual")
             build_dir <- gsub("\\", "/", tempfile("Rd2pdf"), fixed = TRUE)
             man_file <- paste0(pkgname, "-manual.pdf ")
@@ -4889,82 +4925,131 @@ add_dummies <- function(dir, Log)
     }
 
     check_Rd2HTML <- function(dir, installed = FALSE) {
-        ## require HTML Tidy, and not macOS's ancient version.
-        msg <- ""
-        Tidy <- Sys.getenv("R_TIDYCMD", "tidy")
-        OK <- nzchar(Sys.which(Tidy))
-        if(OK) {
-            ver <- system2(Tidy, "--version", stdout = TRUE)
-            OK <- startsWith(ver, "HTML Tidy")
-            if(OK) {
-                OK <- !grepl('Apple Inc. build 2649', ver)
-                if(!OK) msg <- ": 'tidy' is Apple's too old build"
-                ## Maybe we should also check version,
-                ## but e.g. Ubuntu 16.04 does not show one.
-            } else msg <- ": 'tidy' is not HTML Tidy"
-        } else msg <- ": no command 'tidy' found"
-        if(!OK) {
-            messageLog(Log, "skipping checking HTML version of manual", msg)
-            return()
-        }
+
         db <- if(installed)
                   Rd_db(basename(dir), lib.loc = dirname(dir))
               else
                   Rd_db(dir = dir)
         if(!length(db))
             return()
-        ## For now only look at the Rd files not auto-generated by
-        ## roxygen2 (we could make this customizable).
-        ## So filter first, and only show the check if this leaves
-        ## something to check.
-        db <- db[vapply(file.path(pkgdir, "man", names(db)),
-                        function(f) {
-                            if(!file.exists(f))
-                                FALSE
-                            else
-                                (readChar(f, 23, useBytes = TRUE) !=
-                                 "% Generated by roxygen2")
-                        },
-                        NA)]
-        if(!length(db))
+
+        eq <- .Rd_get_equations_from_Rd_db(db)
+
+        i1 <- (length(db) && isTRUE(R_check_Rd_validate_Rd2HTML))
+        i2 <- (length(eq) && isTRUE(R_check_Rd_math_rendering))
+        if(!i1 && !i2)
             return()
+
         checkingLog(Log, "HTML version of manual")
-        bad <- FALSE
-        out <- tempfile()
-        on.exit(unlink(out))
-        results <- lapply(db,
-                          function(x)
-                              tryCatch({
-                                  Rd2HTML(x, out)
-                                  tidy_validate(out, tidy = Tidy)
-                              },
-                              error = identity))
-        names(results) <- names(db)
-        ind <- vapply(results, inherits, NA, "error")
-        if(any(ind)) {
-            bad <- TRUE
-            noteLog(Log)
-            printLog0(Log,
-                      c("Encountered the following conversion/validation errors:\n",
-                        paste(unlist(lapply(results[ind],
-                                            conditionMessage)),
-                              collapse = "\n"),
-                        "\n"))
-            results <- results[!ind]
+        any <- FALSE
+
+        if(i1) {
+            ## require HTML Tidy, and not macOS's ancient version.
+            msg <- ""
+            Tidy <- Sys.getenv("R_TIDYCMD", "tidy")
+            OK <- nzchar(Sys.which(Tidy))
+            if(OK) {
+                ver <- system2(Tidy, "--version", stdout = TRUE)
+                OK <- startsWith(ver, "HTML Tidy")
+                if(OK) {
+                    OK <- !grepl('Apple Inc. build 2649', ver)
+                    if(!OK) msg <- ": 'tidy' is Apple's too old build"
+                    ## Maybe we should also check version,
+                    ## but e.g. Ubuntu 16.04 does not show one.
+                } else msg <- ": 'tidy' is not HTML Tidy"
+            } else msg <- ": no command 'tidy' found"
+            if(!OK) {
+                noteLog(Log)
+                any <- TRUE
+                printLog0(Log,
+                          c("Skipping checking HTML validation",
+                            msg,
+                            "\n"))
+            } else {
+                out <- tempfile()
+                on.exit(unlink(out))
+                results <- lapply(db,
+                                  function(x)
+                                      tryCatch({
+                                          Rd2HTML(x, out)
+                                          tidy_validate(out, tidy = Tidy)
+                                      },
+                                      error = identity))
+                names(results) <- names(db)
+                ind <- vapply(results, inherits, NA, "error")
+                if(any(ind)) {
+                    noteLog(Log)
+                    any <- TRUE
+                    printLog0(Log,
+                              c("Encountered the following conversion/validation errors:\n",
+                                paste(unlist(lapply(results[ind],
+                                                    conditionMessage)),
+                                      collapse = "\n"),
+                                "\n"))
+                    results <- results[!ind]
+                }
+                results <- tidy_validate_db(results, names(results))
+                if(NROW(results)) {
+                    if(!any) noteLog(Log)
+                    any <- TRUE
+                    printLog0(Log,
+                              c("Found the following HTML validation problems:\n",
+                                sprintf("%s:%s:%s: %s\n",
+                                        sub("[Rr]d$", "html",
+                                            results[, "path"]),
+                                        results[, "line"],
+                                        results[, "col"],
+                                        results[, "msg"])))
+                }
+            }
         }
-        results <- tidy_validate_db(results, names(results))
-        if(NROW(results)) {
-            if(!bad) noteLog(Log) else printLog0(Log, "\n")
-            printLog0(Log,
-                      c("Found the following problems:\n",
-                        sprintf("%s:%s:%s: %s\n",
-                                results[, "path"],
-                                results[, "line"],
-                                results[, "col"],
-                                results[, "msg"])))
-        } else {
-            if(!bad) resultLog(Log, "OK")
+
+        if(i2) {
+            if(is.null(.katex <- .make_KaTeX_checker())) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                printLog0(Log,
+                          "Skipping checking math rendering: package 'V8' unavailable\n")
+            } else {
+                results <- lapply(eq[, 3L], .katex)
+                msg <- vapply(results, `[[`, "", "error")
+                ind <- nzchar(msg)
+                if(any(ind)) {
+                    if(!any) noteLog(Log)
+                    any <- TRUE
+                    msg <- msg[ind]
+                    msg <- sub("^KaTeX parse error: (.*) at position.*:",
+                               "\\1 in",
+                               msg)
+                    msg <- sub("^KaTeX parse error: ", "", msg)
+                    ## KaTeX uses
+                    ##   COMBINING LOW LINE  (U+0332)
+                    ##   HORIZONTAL ELLIPSIS (U+2026)
+                    ## for formatting parse errors.  These will not work
+                    ## in non-UTF-8 locales and not well in UTF-8 ones,
+                    ## so change as necessary ...
+                    msg <- gsub("\u2026", "...", msg)
+                    msg <- gsub("\u0332", "", msg)
+                    l1 <- eq[ind, 5L]
+                    l2 <- eq[ind, 6L]
+                    tst <- (l1 == l2)
+                    pos <- is.na(tst)
+                    l1[pos] <- ""
+                    pos <- which(!pos)
+                    l1[pos] <- paste0(":", l1[pos])
+                    pos <- which(!tst[pos])
+                    l1[pos] <- paste0(l1[pos], "-", l2[pos])
+                    printLog0(Log,
+                              c("Found the following math rendering problems:\n",
+                                sprintf("%s%s: %s\n",
+                                        eq[ind, 1L],
+                                        l1,
+                                        gsub("\n", "\n  ", msg))))
+                }
+            }
         }
+
+        if(!any) resultLog(Log, "OK")
     }
 
     check_executables <- function()
@@ -4974,7 +5059,7 @@ add_dummies <- function(dir, Log)
                         recursive = TRUE)
         allfiles <- sub("^./","", allfiles)
         ## this is tailored to the FreeBSD/Linux 'file',
-        ## see http://www.darwinsys.com/file/
+        ## see <http://www.darwinsys.com/file/>
         ## (Solaris has a different 'file' without --version)
         FILE <- "file"
         lines <- suppressWarnings(tryCatch(system2(FILE, "--version", TRUE, TRUE), error = function(e) "error"))
@@ -4990,7 +5075,7 @@ add_dummies <- function(dir, Log)
             checkingLog(Log, "for executable files")
 
             ## There is a bug mis-identifying DBF files from 2022
-            ## https://bugs.astron.com/view.php?id=316
+            ## <https://bugs.astron.com/view.php?id=316>
             pretest <- function(f)
             {
                 ## The format is (in bytes) the version mumber,
@@ -5395,7 +5480,7 @@ add_dummies <- function(dir, Log)
                               value = TRUE, useBytes = TRUE, invert = TRUE)
 
                 ## Filter out boost/armadillo header warnings
-                ex_re <- "(BH/include/boost|RcppArmadillo/include/armadillo_bits)/.*\\[-Wtautological-overlap-compare\\]"
+                ex_re <- "(BH/include/boost|RcppArmadillo/include/armadillo_bits)/.*\\[-W(tautological-overlap-compare|class-memaccess)\\]"
                 lines <- filtergrep(ex_re, lines, useBytes = TRUE)
 
                 ## Filter out Eigen header warnings
@@ -5951,7 +6036,7 @@ add_dummies <- function(dir, Log)
                 setwd(srcd)
                 if (!file.exists("Makefile") &&
                     !file.exists("Makefile.win") &&
-		    !file.exists("Makefile.ucrt") &&
+                    !file.exists("Makefile.ucrt") &&
                     !(file.exists("Makefile.in") && spec_install)) {
                     ## Recognized extensions for sources or headers.
                     srcfiles <- dir(".", all.files = TRUE)
@@ -6442,6 +6527,9 @@ add_dummies <- function(dir, Log)
     tmp <- Sys.getenv("_R_CHECK_RD_VALIDATE_RD2HTML_", "unset")
     R_check_Rd_validate_Rd2HTML <-
         if(tmp == "unset") NA else config_val_to_logical(tmp)
+    R_check_Rd_math_rendering <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_RD_MATH_RENDERING_",
+                                         "FALSE"))
 
     if (!nzchar(check_subdirs)) check_subdirs <- R_check_subdirs_strict
 
@@ -6480,9 +6568,6 @@ add_dummies <- function(dir, Log)
         Sys.setenv("_R_CHECK_SHLIB_OPENMP_FLAGS_" = "TRUE")
         Sys.setenv("_R_CHECK_FUTURE_FILE_TIMESTAMPS_" = "TRUE")
         Sys.setenv("_R_CHECK_RD_CONTENTS_KEYWORDS_" = "TRUE")
-#        ## CRAN incoming checks do use abort,verbose
-#        chkPkg.v <- "package:_R_CHECK_PACKAGE_NAME_,abort,verbose"
-#        Sys.setenv1("_R_CHECK_LENGTH_1_LOGIC2_"   , chkPkg.v)
         Sys.setenv("_R_CHECK_CODOC_VARIABLES_IN_USAGES_" = "TRUE")
         Sys.setenv("_R_CHECK_DATALIST_" = "TRUE")
         if(!WINDOWS) Sys.setenv("_R_CHECK_BASHISMS_" = "TRUE")
@@ -6495,7 +6580,8 @@ add_dummies <- function(dir, Log)
         ## allow this to be overridden if there is a problem elsewhere
         prev <- Sys.getenv("_R_CHECK_MATRIX_DATA_",  NA_character_)
         if(is.na(prev)) Sys.setenv("_R_CHECK_MATRIX_DATA_" = "TRUE")
-        Sys.setenv("_R_NO_S_TYPEDEFS_" = "TRUE")
+##        Sys.setenv("_R_NO_S_TYPEDEFS_" = "TRUE")
+        Sys.setenv("_R_CHECK_NEWS_IN_PLAIN_TEXT_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
@@ -6908,7 +6994,9 @@ add_dummies <- function(dir, Log)
                 check_pkg_manual(pkgdir, desc["Package"])
         }
 
-        if(!extra_arch && do_manual && isTRUE(R_check_Rd_validate_Rd2HTML)) {
+        if(!extra_arch && do_manual &&
+           (isTRUE(R_check_Rd_validate_Rd2HTML) ||
+            isTRUE(R_check_Rd_math_rendering))) {
             if(do_install)
                 check_Rd2HTML(file.path(if(is_base_pkg) .Library else libdir,
                                         pkgname),
@@ -6984,7 +7072,7 @@ add_dummies <- function(dir, Log)
             ff <- ff[!(poss & dir)]
             patt <- Sys.getenv("_R_CHECK_THINGS_IN_TEMP_DIR_EXCLUDE_")
             if (nzchar(patt)) ff <- ff[!grepl(patt, ff, useBytes = TRUE)]
-	    ff <- ff[!is.na(ff)]
+            ff <- ff[!is.na(ff)]
             if (length(ff)) {
                 noteLog(Log)
                 msg <- c("Found the following files/directories:",

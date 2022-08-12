@@ -3894,6 +3894,11 @@ function(dfile, dir)
             status$miss_extension <- status$components[ind]
             ok <- FALSE
         }
+        if(any(ind <- status$components %in% "ACM") &&
+           !(db["Package"] %in% c("akima", "tripack"))) {
+            status$ACM <- status$components[ind]
+            ok <- FALSE
+        }
         ## Could always return the analysis results and not print them
         ## if ok, but it seems more standard to only return trouble.
         if(!ok)
@@ -3945,6 +3950,9 @@ function(x, ...)
       if(length(y <- x$miss_extension)) {
           c(gettext("License components which are templates and need '+ file LICENSE':"),
             paste0("  ", y))
+      },
+      if(length(y <- x$ACM)) {
+          gettext("Uses ACM license: only appropriate for pre-2013 ACM TOMS code")
       }
       )
 }
@@ -7199,8 +7207,7 @@ function(dir, localOnly = FALSE, pkgSize = NA)
         out$fields <- nms
 
 
-    uses <- character()
-    BUGS <- character()
+    uses <-  BUGS <- ACM <- character()
     for (field in c("Depends", "Imports", "Suggests")) {
         p <- strsplit(meta[field], " *, *")[[1L]]
         p2 <- grep("^(multicore|snow|igraph0|doSNOW)( |\\(|$)", p, value = TRUE)
@@ -7208,11 +7215,16 @@ function(dir, localOnly = FALSE, pkgSize = NA)
         p2 <- grep("^(BRugs|R2OpenBUGS|R2WinBUGS|mzR|xcms|MSnbase)( |\\(|$)",
                    p, value = TRUE)
         BUGS <- c(BUGS, p2)
+        p2 <- grep("^(Akima|tripack)( |\\(|$)",
+                   p, value = TRUE)
+        ACM <- c(ACM, p2)
     }
     if (length(uses))
         out$uses <- sort(unique(gsub("[[:space:]]+", " ", uses)))
     if (length(BUGS))
         out$BUGS <- sort(unique(gsub("[[:space:]]+", " ", BUGS)))
+    if (length(ACM))
+        out$ACM <- sort(unique(gsub("[[:space:]]+", " ", ACM)))
 
     ## Check for non-Sweave vignettes (as indicated by the presence of a
     ## 'VignetteBuilder' field in DESCRIPTION) without
@@ -8346,6 +8358,12 @@ function(x, ...)
           paste(if(length(y) > 1L)
 		"Uses the non-portable packages:" else
 		"Uses the non-portable package:",
+                paste(sQuote(y), collapse = ", "))
+      },
+      if(length(y <- x$ACM)) {
+          paste(if(length(y) > 1L)
+		"Uses the ACM-licensed packages:" else
+		"Uses the ACM-licensed package:",
                 paste(sQuote(y), collapse = ", "))
       },
       if(length(y <- x$authors_at_R_calls)) {

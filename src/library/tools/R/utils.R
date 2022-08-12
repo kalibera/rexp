@@ -253,9 +253,11 @@ function(x, delim = c("{", "}"), syntax = "Rd")
 
 ### ** lines2str
 lines2str <-
-function(txt, sep = "")
-    trimws(gsub("\n", sep, paste(txt, collapse = sep),
-                fixed = TRUE, useBytes = TRUE))
+function(txt, sep = "") {
+    bytes <- gsub("\n", sep, paste(txt, collapse = sep),
+                  fixed = TRUE, useBytes = TRUE)
+    trimws(iconv(bytes, to = "UTF-8", sub = "byte"))
+}
 
 
 ### * LaTeX utilities
@@ -711,10 +713,8 @@ function(txt)
     txt <- as.character(txt)
     if(!length(txt)) return(txt)
     enc <- Encoding(txt)
-    txt <- gsub(paste0("(", intToUtf8(0x2018), "|", intToUtf8(0x2019), ")"),
-                "'", txt, perl = TRUE, useBytes = TRUE)
-    txt <- gsub(paste0("(", intToUtf8(0x201c), "|", intToUtf8(0x201d), ")"),
-                '"', txt, perl = TRUE, useBytes = TRUE)
+    txt <- gsub("(\u2018|\u2019)", "'", txt, perl = TRUE, useBytes = TRUE)
+    txt <- gsub("(\u201c|\u201d)", '"', txt, perl = TRUE, useBytes = TRUE)
     Encoding(txt) <- enc
     txt
 }
@@ -1245,7 +1245,7 @@ local({
     out <- strsplit(sub("^R_PKGS_[[:upper:]]+ *= *", "", lines), " +")
     names(out) <-
         tolower(sub("^R_PKGS_([[:upper:]]+) *=.*", "\\1", lines))
-    eval(substitute(function() {out}, list(out=out)), envir=NULL)
+    eval(substitute(function() {out}, list(out=out)), envir = topenv())
     })
 
 ### ** .get_standard_package_dependencies
@@ -1717,6 +1717,26 @@ function(parent = parent.frame())
     list2env(as.list(base::.ArgsEnv, all.names=TRUE),
              hash=TRUE, parent=parent)
 }
+
+### ** .make_KaTeX_checker
+
+.make_KaTeX_checker <- local({
+    fun <- NULL
+    ctx <- NULL
+    function() {
+        if(is.null(fun) && requireNamespace("V8", quietly = TRUE)) {
+            dir <- file.path(R.home(), "doc", "html")
+            ctx <<- V8::v8("window")
+            ctx$source(file.path(dir, "katex", "katex.js"))
+            ## Provides additional macros:
+            ctx$source(file.path(dir, "katex-config.js"))
+            ## Provides checkTex():
+            ctx$source(file.path(dir, "katex-check.js"))
+            fun <<- function(tex) ctx$call('checkTex', tex)
+        }
+        fun
+    }
+})
 
 ### ** nonS3methods [was .make_S3_methods_stop_list ]
 

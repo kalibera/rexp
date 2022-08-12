@@ -1090,7 +1090,7 @@ choose for @code{CXX14STD} a flag@footnote{This was a valid option for
 compilers.  For earlier versions of @command{g++} one could try
 @option{-std=c++1y}.} such as @option{-std=c++14} for C++14 support,
 @option{-std=c++17} or @option{-std=c++1z} for support for C++17 and
-@option{-std=c++20} or @option{-std=c++2a} for support for C++20..  The
+@option{-std=c++20} or @option{-std=c++2a} for support for C++20.  The
 inferred values can be overridden in file @file{config.site} or on the
 @command{configure} command line: user-supplied values will be tested by
 compiling some C++11/14/17/20 code.
@@ -1746,7 +1746,7 @@ sudo rm -Rf /Library/Frameworks/R.framework /Applications/R.app \
 
 The installation consists of up to four Apple packages:@footnote{At the
 time of writing: use @command{pkgutil --pkgs | grep -i org.r-project} to
-check..} for the Intel build, @code{org.R-project.R.fw.pkg},
+check.} for the Intel build, @code{org.R-project.R.fw.pkg},
 @code{org.R-project.R.GUI.pkg}, @code{org.r-project.x86_64.tcltk.x11}
 and @code{org.r-project.x86_64.texinfo}. You can use @code{sudo pkgutil
 --forget} if you want the Apple Installer to forget about the package
@@ -2375,12 +2375,18 @@ example
 CFLAGS = -g -O -mtune=native
 ## @r{for C++ code}
 CXXFLAGS = -g -O -mtune=native
+## @r{for C++11 code}
+CXX11FLAGS = -g -O -mtune=native
 ## @r{for fixed-form Fortran code}
 FFLAGS = -g -O -mtune=native
 @end example
 
+@noindent
+Note that if you have specified a non-default C++ standard, you need to
+set the flag(s) appropriate to that standard.
+
 Another use is to override the settings in a binary installation of R.
-For example, to use a different Fortran compiler on macOS
+For example, to use a different Fortran compiler on Intel macOS
 
 @example
 FC = /usr/local/gfortran/bin/gfortran
@@ -3381,7 +3387,7 @@ Debian/Ubuntu like @pkg{texlive-fonts-extra}.
 
 Programs @command{qpdf} and ghostscript (@command{gs}) are desirable as
 these will be used to compact the installed PDF vignettes and any PDF
-manuals..
+manuals.
 
 @enindex PATH
 The essential programs should be in your @env{PATH} at the time
@@ -3520,11 +3526,13 @@ At the time of writing a full installation on Fedora Linux used the
 following packages and their development versions, and this may provide
 a useful checklist for other systems:
 @example
-bzip2 cairo fontconfig freetype fribidi glib2 harfbuzz libX11 libXext
-libXt libcurl libicu libjpeg libpng libtiff libtirpc libxcrypt ncurses
-pango pkgconf-pkg-config pcre2 readline tcl tk xz zlib
+bzip2 cairo fontconfig freetype fribidi gcc gcc-gfortran gcc-c++ glib2
+glibc harfbuzz libX11 libXext libXt libcurl libicu libjpeg libpng
+libtiff libtirpc libxcrypt ncurses pango pkgconf-pkg-config pcre2
+readline tcl tk xz zlib
 @end example
-
+@noindent
+plus, preferably a TeX installation, Java and LAPACK >= 3.10.0.
 
 @menu
 * Tcl/Tk::
@@ -3679,9 +3687,9 @@ these variables.
 @end menu
 
 The linear algebra routines in @R{} make use of @acronym{BLAS} (Basic
-Linear Algebra Subprograms, @uref{https://www.netlib.org/blas/faq.html})
+Linear Algebra Subprograms, @uref{https://netlib.org/blas/faq.html})
 routines, and most make use of routines from @acronym{LAPACK} (Linear
-Algebra PACKage, @uref{https://www.netlib.org/lapack}).  The @R{}
+Algebra PACKage, @uref{https://netlib.org/lapack/}).  The @R{}
 sources contain reference (Fortran) implementations of these, but they
 can be replaced by external libraries, usually those tuned for speed on
 specific CPUs.  These libraries normally contain all of the BLAS
@@ -4156,13 +4164,14 @@ On some systems it has been necessary that an external
 @acronym{BLAS}/LAPACK was built with the same Fortran compiler used to
 build @R{}.
 
-BLAS and LAPACK libraries built with @command{gfortran}@tie{}9 and later
-(and versions 8.4, 7.5 and later in those series) require calls from
-C/C++ to handle `hidden' character lengths --- @R{} itself does so but
-many packages used not to and some have segfaulted.  This has been
-largely circumvented by using the Fortran flag
-@option{-fno-optimize-sibling-calls} (currently set by
-@command{configure} if it detects @command{gfortran}@tie{}7 or later).
+BLAS and LAPACK libraries built with recent versions of
+@command{gfortran} require calls from C/C++ to handle `hidden' character
+lengths --- @R{} itself does so but many packages used not to and some
+have segfaulted.  This was largely circumvented by using the Fortran
+flag @option{-fno-optimize-sibling-calls} (formerly set by
+@command{configure} if it detected @command{gfortran}@tie{}7 or later):
+however use of the @R{} headers which include those character-length
+arguments is no longer optional in packages.
 
 LAPACK 3.9.0 (and probably earlier) had a bug in which the DCOMBSSQ
 subroutine may cause NA to be interpreted as zero. This is fixed in the
@@ -4792,7 +4801,11 @@ directory or elsewhere, for example,
 Linux is the main development platform for @R{}, so compilation from the
 sources is normally straightforward with the most common compilers and
 libraries.@footnote{For example, @code{glibc}: other C libraries such as
-@code{musl} have been used but are not routinely tested.}
+@code{musl} (as used by Alpine Linux) have been used but are not
+routinely tested.}
+
+This section is about the GCC compilers:
+@command{gcc}/@command{gfortran}/@command{g++}.
 
 Recall that some package management systems (such as @acronym{RPM} and
 deb) make a distinction between the user version of a package and the
@@ -4836,8 +4849,9 @@ versions of the compilers this has caused problems in at least one
 @acronym{CRAN} package.
 
 Do not use @option{-O3} with @command{gcc} 11.0 or 11.1: it mis-compiles
-code including in package @CRANpkg{MASS} resulting in plausible but
-incorrect results.
+code resulting in plausible but
+incorrect results.  (This was seen in package @CRANpkg{MASS} but has
+been worked around there as from version 3.1-57.)
 
 For platforms with both 64- and 32-bit support, it is likely that
 
@@ -5323,7 +5337,7 @@ manual.
 For Intel Big Sur and later there is
 @uref{https://github.com/fxcoudert/gfortran-for-macOS/releases/download/11.2-bigsur-intel/gfortran-Intel-11.2-BigSur.dmg}
 and for Intel Monterey there is
-@uref{https://github.com/fxcoudert/gfortran-for-macOS/releases/download/11.3-monterey-intel/gfortran-Intel-11.3-Monterey.dmg}.
+@uref{https://github.com/fxcoudert/gfortran-for-macOS/releases/download/11.3-monterey/gfortran-Intel-11.3-Monterey.dmg}.
 
 
 For @cputype{arm64}, we use the fork of @command{gfortran} from
@@ -5592,7 +5606,7 @@ Mac users.  Earlier versions of macOS came with an Aqua Tcl/Tk
 distribution but these were often not at all recent versions of Tcl/Tk.
 It is better to install Tcl/Tk 8.6.x from the sources@footnote{Configure
 Tk with @option{--enable-aqua}.} or a binary distribution from
-@uref{https://www.activestate.com/activetcl/downloads}.  For the latter,
+@uref{https://www.activestate.com/products/tcl/}.  For the latter,
 configure @R{} with
 @example
 --with-tcl-config=/Library/Frameworks/Tcl.framework/tclConfig.sh 
@@ -5628,9 +5642,10 @@ writing for @cputype{arm64}.}  Builds of OpenJDK may also be available,
 e.g.@: from @uref{https://adoptium.net, Adoptium},
 @uref{https://www.azul.com/downloads/zulu-community/, Azul} or
 @uref{https://jdk.java.net/}.  We recommend you install a version with
-long-term support, e.g.@: 11 or 17 but not 12--16 or 18 which have/had a
-6-month lifetime.  (Note that these sources may use unusual designations
-for Intel macOS builds such as @code{x86 64-bit} and @code{x64}.)
+long-term support, e.g.@: 11 or 17 or (in 2023) 21 but not 12--16 nor
+18--20 which have/had a 6-month lifetime.  (Note that these sources may
+use unusual designations for Intel macOS builds such as @code{x86
+64-bit} and @code{x64}.)
 
 Binary distributions of @R{} are built against a specific version
 (e.g.@: 11.0.6 or 17.0.1) of Java so @command{sudo R CMD javareconf}
@@ -6012,7 +6027,7 @@ To set the correct architecture (which will be auto-detected as
 @subsection Installer
 
 The scripts for the @acronym{CRAN} packaging of @R{} can be found under
-@uref{https://svn.r-project.org/R-dev-web/trunk/QA/Simon/R4}: start
+@uref{https://svn.r-project.org/R-dev-web/trunk/QA/Simon/R4/}: start
 with the @file{README} file in that directory.
 
 
