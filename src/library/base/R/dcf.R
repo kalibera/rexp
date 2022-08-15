@@ -128,6 +128,7 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
                    c(1L, pos[-length(pos)] + 1L), pos)
     vals[fold] <- trimws(vals[fold])
     Encoding(vals) <- "unknown" ## for back-compatibility (to be removed)
+    Encoding(tags) <- "unknown" ## for back-compatibility (to be removed)
 
     out <- .assemble_things_into_a_data_frame(tags, vals, nums[pos])
 
