@@ -127,10 +127,44 @@ function(file, fields = NULL, all = FALSE, keep.white = NULL)
                                             collapse = "\n"),
                    c(1L, pos[-length(pos)] + 1L), pos)
     vals[fold] <- trimws(vals[fold])
-    Encoding(vals) <- "unknown" ## for back-compatibility (to be removed)
-    Encoding(tags) <- "unknown" ## for back-compatibility (to be removed)
 
-    out <- .assemble_things_into_a_data_frame(tags, vals, nums[pos])
+    ## fix encoding
+    ## keep in step with do_readDCF/dcf.c
+    recidx <- nums[pos]
+    for(i in unique(recidx)) {
+        recsel <- (recidx == i)
+        recvals <- vals[recsel]
+        rectags <- tags[recsel]
+
+        if (!any(Encoding(recvals) == "bytes") &&
+            !any(Encoding(rectags) == "bytes")) next
+
+        enc <- unique(recvals[rectags == "Encoding"])
+        if (length(enc) == 1) {
+            if (enc == "UTF-8") {
+	        Encoding(recvals) <- "UTF-8"
+                Encoding(rectags) <- "UTF-8"
+            } else if (enc %in% c("latin1", "ISO8859-1")) {
+	        Encoding(recvals) <- "latin1"
+                Encoding(rectags) <- "latin1"
+            } else {
+                ## FIXME: throw error on invalid strings?
+                recvals <- iconv(recvals, from = enc, to = "UTF-8",
+                                 sub = "bytes")
+                rectags <- iconv(rectags, from = enc, to = "UTF-8",
+                                 sub = "bytes")
+                recvals[rectags == "Encoding"] <- "UTF-8"
+            }
+        } else {
+            ## for back-compatibility not "bytes"
+            Encoding(recvals) <- "unknown"
+            Encoding(rectags) <- "unknown"
+        }
+        vals[recsel] <- recvals
+        tags[recsel] <- rectags
+    }
+
+    out <- .assemble_things_into_a_data_frame(tags, vals, recidx)
 
     if(!is.null(fields))
         out <- out[fields]

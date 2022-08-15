@@ -60,7 +60,7 @@ static char *Rconn_getline2(Rconnection con, char *buf, int bufsize)
     if (!nbuf)
     	return NULL;
     /* Make sure it is null-terminated even if file did not end with
-     *  newline.
+     * newline.
      */
     if(buf[nbuf-1]) buf[nbuf] = '\0';
     return buf;
@@ -132,7 +132,7 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(strlen(line) == 0 ||
 	   tre_regexecb(&blankline, line, 0, 0, 0) == 0) {
 	    /* A blank line.  The first one after a record ends a new
-	     * record, subsequent ones are skipped */
+	     * record, subsequent ones are skipped. */
 	    if(!blank_skip) {
 		k++;
 		if(k > nret - 1){
@@ -201,11 +201,12 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 			}
 			strcat(buf, line + offset);
 		    }
-		    SET_STRING_ELT(retval, lastm + nwhat * k, mkChar(buf));
+		    SET_STRING_ELT(retval, lastm + nwhat * k,
+		                   mkCharLenCE(buf, strlen(buf), CE_BYTES));
 		}
 	    } else {
 		if(tre_regexecb(&regline, line, 1, regmatch, 0) == 0) {
-		    for(m = 0; m < nwhat; m++){
+		    for(m = 0; m < nwhat; m++) {
 			whatlen = (int) strlen(CHAR(STRING_ELT(what, m)));
 			if(strlen(line) > whatlen &&
 			   line[whatlen] == ':' &&
@@ -228,17 +229,19 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 				    line[regmatch[0].rm_so] = '\0';
 			    }
 			    SET_STRING_ELT(retval, m + nwhat * k,
-					   mkChar(line + offset));
+					   mkCharLenCE(line + offset,
+			                               strlen(line+offset),
+			                               CE_BYTES));
 			    break;
 			} else {
-			    /* This is a field, but not one prespecified */
+			    /* This is a field, but not one prespecified. */
 			    lastm = -1;
 			    field_skip = TRUE;
 			}
 		    }
 		    if(dynwhat && (lastm == -1)) {
 			/* A previously unseen field and we are
-			 * recording all fields */
+			 * recording all fields. */
 			field_skip = FALSE;
 			PROTECT(what2 = allocVector(STRSXP, nwhat+1));
 			PROTECT(retval2 = allocMatrixNA(STRSXP,
@@ -260,7 +263,7 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 			PROTECT(what);
 			PROTECT(fold_excludes);
 			PROTECT(retval);
-			/* Make sure enough space was used */
+			/* Make sure enough space was used. */
 			need = (int) (Rf_strchr(line, ':') - line + 1);
 			if(buflen < need){
 			    char *tmp = (char *) realloc(buf, need);
@@ -272,7 +275,9 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 			}
 			strncpy(buf, line, Rf_strchr(line, ':') - line);
 			buf[Rf_strchr(line, ':') - line] = '\0';
-			SET_STRING_ELT(what, nwhat, mkChar(buf));
+			SET_STRING_ELT(what, nwhat, mkCharLenCE(buf,
+			                                        strlen(buf),
+			                                        CE_BYTES));
 			nwhat++;
 			/* lastm uses C indexing, hence nwhat - 1 */
 			lastm = nwhat - 1;
@@ -290,7 +295,9 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 				line[regmatch[0].rm_so] = '\0';
 			}
 			SET_STRING_ELT(retval, lastm + nwhat * k,
-				       mkChar(line + offset));
+				       mkCharLenCE(line + offset,
+			                           strlen(line + offset),
+			                           CE_BYTES));
 		    }
 		} else {
 		    /* Must be a regular line with no tag ... */
@@ -311,9 +318,63 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 
     if(!blank_skip) k++;
 
-    /* and now transpose the whole matrix */
+    /* and now transpose the whole matrix and fix encodings */
     PROTECT(retval2 = allocMatrixNA(STRSXP, k, LENGTH(what)));
-    copyMatrix(retval2, retval, 1);
+
+    /* keep in step with read.dcf/dcf.R */
+    int encidx = -1;
+    for(m = 0; m < nwhat; m++) {
+	if (!strcmp(CHAR(STRING_ELT(what, m)), "Encoding")) {
+	    encidx = m;
+	    break;
+	}
+    }
+    for(nc = 0; nc < k; nc++) { /* records */
+	SEXP senc = NA_STRING;
+	const char *enc = NULL;
+	if (encidx != -1)
+	    senc = STRING_ELT(retval, encidx + nc * nwhat);
+	Rboolean markNative = FALSE;
+	Rboolean markUTF8 = FALSE;
+	Rboolean markLatin1 = FALSE;
+	Rboolean convertFromEnc = FALSE;
+	if (senc == NA_STRING)
+	    markNative = TRUE;
+	else {
+	    enc = CHAR(senc);
+	    if (!strcmp(enc, "UTF-8"))
+		markUTF8 = TRUE;
+	    else if (!strcmp(enc, "latin1")
+		     || !strcmp(enc, "ISO8859-1"))
+		markLatin1 = TRUE;
+	    else
+		convertFromEnc = TRUE;
+	}
+	for(nr = 0; nr < nwhat ; nr++) { /* fields */
+	    /* retval has records as columns, retval2 has records as rows */
+	    SEXP s = STRING_ELT(retval, nr + nc * nwhat);
+	    if (nr == encidx) {
+		if (convertFromEnc)
+		    s = mkChar("UTF-8");
+		else if (markLatin1)
+		    s = mkChar("latin1");
+	    } else if (IS_BYTES(s)) {
+		if (markNative)
+		    s = mkCharLenCE(CHAR(s), LENGTH(s), CE_NATIVE);
+		else if (markUTF8)
+		    s = mkCharLenCE(CHAR(s), LENGTH(s), CE_UTF8);
+		else if (markLatin1)
+		    s = mkCharLenCE(CHAR(s), LENGTH(s), CE_LATIN1);
+		else if (convertFromEnc) {
+		    /* FIXME: throw error on invalid strings? */
+		    const char *sutf8 = reEnc3(CHAR(s), enc, "UTF-8", 1);
+		    s = mkCharLenCE(sutf8, strlen(sutf8), CE_UTF8);
+		}
+	    }
+	    SET_STRING_ELT(retval2, nc + nr * k, s);
+	}
+    }
+    vmaxset(vmax); /* reEnc3 */
 
     PROTECT(dimnames = allocVector(VECSXP, 2));
     PROTECT(dims = allocVector(INTSXP, 2));
