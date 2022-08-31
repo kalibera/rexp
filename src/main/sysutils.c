@@ -606,7 +606,6 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 	int mark, toRaw;
 	const char *from, *to;
 	Rboolean isLatin1 = FALSE, isUTF8 = FALSE;
-	Rboolean fromUTF8 = FALSE, fromLatin1 = FALSE;
 
 	args = CDR(args);
 	if(!isString(CAR(args)) || length(CAR(args)) != 1)
@@ -631,11 +630,6 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 	    error(_("invalid '%s' argument"), "toRaw");
 	/* some iconv's allow "UTF8", but libiconv does not */
 	if(streql(from, "UTF8") || streql(from, "utf8") ) from = "UTF-8";
-	if(streql(from, "UTF-8") || (streql(from, "") && known_to_be_utf8))
-	    fromUTF8 = TRUE;
-	if(streql(from, "latin1") || streql(from, "ISO_8859-1")
-	    || streql(from, "CP1252")
-	    || (streql(from, "") && known_to_be_latin1)) fromLatin1 = TRUE;
 	if(streql(to, "UTF8") || streql(to, "utf8") ) to = "UTF-8";
 	if(streql(to, "UTF-8")) isUTF8 = TRUE;
 	if(streql(to, "latin1") || streql(to, "ISO_8859-1")
@@ -676,13 +670,14 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 		}
 	    }
 	    void * obj = (iconv_t)-1;
+	    Rboolean fromUTF8 = FALSE;
 
 	    /* With 'from = ""', encoding flags are used in preference
 	       of native encoding.
 
 	       FIXME: Should we go further and ignore "from" with any non-bytes,
 	              non-raw input? */
-	    if (!isRawlist && IS_UTF8(si) && !fromUTF8 && streql(from, "")) {
+	    if (!isRawlist && IS_UTF8(si) && streql(from, "")) {
 		if (utf8_obj == (iconv_t)-1) {
 		    utf8_obj = Riconv_open(to, "UTF-8");
 		    if(utf8_obj == (iconv_t)(-1))
@@ -695,8 +690,8 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 		#endif
 		}
 		obj = utf8_obj;
-	    } else if (!isRawlist && IS_LATIN1(si) && !fromLatin1
-	               && streql(from, "")) {
+		fromUTF8 = TRUE;
+	    } else if (!isRawlist && IS_LATIN1(si) && streql(from, "")) {
 		if (latin1_obj == (iconv_t)-1) {
 		    latin1_obj = Riconv_open(to, "latin1");
 		    if(latin1_obj == (iconv_t)(-1))
@@ -722,6 +717,10 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 		#endif
 		}
 		obj = arg_obj;
+		fromUTF8 = streql(from, "UTF-8")
+		           || (streql(from, "") && known_to_be_utf8);
+		           /* FIXME: utf8locale? as Riconv doesn't handle
+		                     known_to_be_utf8 */
 	    }
 	top_of_loop:
 	    inbuf = isRawlist ? (const char *) RAW(si) : CHAR(si);
@@ -839,9 +838,9 @@ SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 		} else SET_STRING_ELT(ans, i, NA_STRING);
 	    }
 	}
-	if (latin1_obj == (iconv_t)-1) Riconv_close(latin1_obj);
-	if (utf8_obj == (iconv_t)-1) Riconv_close(utf8_obj);
-	if (arg_obj == (iconv_t)-1) Riconv_close(arg_obj);
+	if (latin1_obj != (iconv_t)-1) Riconv_close(latin1_obj);
+	if (utf8_obj != (iconv_t)-1) Riconv_close(utf8_obj);
+	if (arg_obj != (iconv_t)-1) Riconv_close(arg_obj);
 	R_FreeStringBuffer(&cbuff);
     }
     UNPROTECT(1);
