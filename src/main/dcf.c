@@ -356,8 +356,6 @@ SEXP attribute_hidden do_readDCF(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (nr == encidx) {
 		if (convertFromEnc)
 		    s = mkChar("UTF-8");
-		else if (markLatin1)
-		    s = mkChar("latin1");
 	    } else if (IS_BYTES(s)) {
 		if (markNative)
 		    s = mkCharLenCE(CHAR(s), LENGTH(s), CE_NATIVE);
