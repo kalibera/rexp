@@ -9,16 +9,19 @@ function(f, tidy = "tidy") {
                                     ##   "--drop-empty-elements no",
                                     ## To allow experimenting for now:
                                     Sys.getenv("_R_CHECK_RD_VALIDATE_RD2HTML_OPTS_",
-                                               ""),
+                                               "--drop-empty-elements no"),
                                     ## </FIXME>
                                     f),
                                   stdout = TRUE, stderr = TRUE))
     if(!length(z)) return(NULL)
+    ## Strip trailing \r from HTML Tidy output on Windows:
+    z <- trimws(z, which = "right")
+    ## (Alternatively, replace '$' by '[ \t\r\n]+$' in the regexp below.)
     s <- readLines(f, warn = FALSE)
     m <- regmatches(z,
                     regexec("^line ([0-9]+) column ([0-9]+) - (.+)$",
                             z))
-    m <- do.call(rbind, m[lengths(m) == 4L])
+    m <- unique(do.call(rbind, m[lengths(m) == 4L]))
     p <- m[, 2L]
     cbind(line = p, col = m[, 3L], msg = m[, 4L], txt = s[as.numeric(p)])
 }

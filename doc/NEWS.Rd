@@ -127,6 +127,17 @@
       \item \command{R CMD check} now also reports problems when reading
       package news in md (file \file{NEWS.md}) and (optionally) plain
       text (file \file{NEWS}) formats.
+
+      \item \env{_R_CHECK_TIMINGS_} defaults to a value from the
+      environment even for \command{R CMD check --as-cran}; this allows
+      for exceptionally fast or slow platforms.
+
+      It now applies to checking PDF and HTML versions of the manuals,
+      and \sQuote{checking CRAN incoming feasibility}.
+
+      \item \command{R CMD check} can optionally (but included in
+      \option{--as-cran}) check whether HTML math rendering via KaTeX
+      works for the package \file{.Rd} files.
     }
   }
 
@@ -171,18 +182,16 @@
       For consistency, \code{NULL[[]]} is also erroneous now.
       \code{x[[]] <- v} gives an error of the same class \code{"MissingSubscriptError"}.
 
-      %% possibly back port to 4.2.z branch
       \item The \code{relist()} function of \pkg{utils} now supports
       \code{NULL} elements in the skeleton (\PR{15854}).
 
-      \item \code{poly(x, n)} now works again, now documented, when \code{x} is a
-      \code{"Date"} or \code{"POSIXct"} object, or of another class while
-      fulfilling \code{mode(x) == "numeric"}.  This also enables
-      \code{poly(x, *, raw=TRUE)} for such variables.  Reported by Michael
-      Chirico to R-devel.
+      \item \code{ordered(levels = *)} (missing \code{x}) now works
+      analogously to \code{factor(, ordered=TRUE)}; reported (with fix)
+      by Achim Zeileis in \PR{18389}.
 
-      \item \code{source("")} and \code{source(character())} now give more
-      helpful error messages.
+      \item User-defined Rd macro definitions can now span multiple lines,
+      thanks to a patch from Duncan Murdoch. Previously, the Rd parser
+      silently ignored everything after the first line.
     }
   }
 }
@@ -196,10 +205,15 @@
       This allows \command{R CMD Rdiff} to always work.
 
       \item On Windows, environment variable
-      \env{R_LIBCURL_SSL_REVOKE_BEST_EFFORT} can be used to switch to only
-      best-effort revocation checks with the default \code{"libcurl"}
-      download method.  This reduces security, but may be needed for
-      downloads to work with MITM proxies (\PR{18379}).
+      \env{R_LIBCURL_SSL_REVOKE_BEST_EFFORT} can be used to switch to
+      only \sQuote{best-effort} SSL certificate revocation checks with
+      the default \code{"libcurl"} download method.  This reduces
+      security, but may be needed for downloads to work with MITM
+      proxies (\PR{18379}).
+
+      \item (macOS) The run-time check for libraries from XQuartz for
+      X11 and Tcl/Tk no longer uses \code{otool} from the Apple
+      Developer Tools (PR#18400).
     }
   }
 
@@ -223,6 +237,12 @@
       names, the warning is better understandable; reported (with fix) in
       \PR{18370} by Gabe Becker.
 
+      \item \code{poly(x, n)} now works again (and is now documented)
+      when \code{x} is a \code{"Date"} or \code{"POSIXct"} object, or of
+      another class while fulfilling \code{mode(x) == "numeric"}.  This
+      also enables \code{poly(x, *, raw=TRUE)} for such variables.
+      Reported by Michael Chirico to R-devel.
+
       \item \code{write.table()}, \code{write.csv()} and
       \code{write.csv2()} restore their numerical precision (internal
       equivalent of \code{digits = 15}) after an interrupt (\PR{18384}).
@@ -230,10 +250,30 @@
       \item One can now read also byte \code{FF} from a clipboard connection
       (\PR{18385}).
 
-      \item Non-ASCII characters are now properly displayed on Windows in
-      windows created using GraphApp via e.g.  \code{winDialogString} thanks
-      to a workaround for an at least surprising Windows behavior with UTF-8
-      as the system encoding (\PR{18382}).
+      \item \code{source("")} and \code{source(character())} now give more
+      helpful error messages.
+
+      \item Non-ASCII characters are now properly displayed on Windows
+      in windows created using GraphApp via
+      e.g. \sspace{}\code{winDialogString} thanks to a workaround for an
+      at least surprising Windows behavior with UTF-8 as the system
+      encoding (\PR{18382}).
+
+      \item \command{R CMD check --as-cran} set \env{_R_CHECK_TIMINGS_}
+      too late to have the intended effect.
+
+      \item Find and replace operations work again in the script editor in
+      \command{Rgui} on Windows.
+
+      \item Computation of window size based on requested client size in
+      GraphApp when running in a multi-byte locale on Windows has been fixed
+      (regression in \R 4.2.0 for users of systems where \R 4.1 used a
+      single-byte locale).  \command{Rgui} again respects the number of
+      console rows and columns given in \file{Rconsole} file.
+
+      \item \command{Rterm} support for \code{Alt+xxx} sequences has been
+      fixed to produce the corresponding character (only) once. This fixes
+      pasting text with tilde on Italian keyboard (PR#18391).
     }
   }
 }

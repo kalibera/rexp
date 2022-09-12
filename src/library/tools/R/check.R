@@ -519,7 +519,7 @@ add_dummies <- function(dir, Log)
                     as.POSIXct(gsub(".*\"datetime\":\"([^Z]*).*", "\\1", foo),
                                "UTC", "%Y-%m-%dT%H:%M:%S")
                 }, error = function(e) NA)
-                if (is.na(now)) {
+                if(identical(NA, now)) {
                     now <- tryCatch({
                         foo <- suppressWarnings(readLines("http://worldtimeapi.org/api/timezone/etc/UTC",
                                                           warn = FALSE))
@@ -528,7 +528,7 @@ add_dummies <- function(dir, Log)
                                    "UTC", "%Y-%m-%dT%H:%M:%S")
                     }, error = function(e) NA)
                 }
-                if (FALSE && is.na(now)) { ## seems permanently stopped
+                if (FALSE && identical(NA, now)) { ## seems permanently stopped
                     now <- tryCatch({
                         foo <- suppressWarnings(readLines("http://worldclockapi.com/api/json/utc/now",
                                                           warn = FALSE))
@@ -537,7 +537,7 @@ add_dummies <- function(dir, Log)
                                    "UTC", "%Y-%m-%dT%H:%M")
                     }, error = function(e) NA)
                 }
-                if (is.na(now)) {
+                if(identical(NA, now)) {
                     any <- TRUE
                     noteLog(Log, "unable to verify current time")
                 } else {
@@ -1978,7 +1978,7 @@ add_dummies <- function(dir, Log)
                                     "Found the following apparent S3 methods"))
             if(!length(pos)) {
                 out1 <- out
-                out2 <- character()
+                out2 <-character()
             } else {
                 pos <- pos[1L]
                 out1 <- out[seq_len(pos - 1L)]
@@ -3707,7 +3707,10 @@ add_dummies <- function(dir, Log)
         opts <- if(nzchar(arch)) R_opts4 else R_opts2
         env <- "R_DEFAULT_PACKAGES=NULL"
         env1 <- if(nzchar(arch)) env0 else character()
+        t1 <- proc.time()
         out <- R_runR0(Rcmd, opts, env1, arch = arch)
+        t2 <- proc.time()
+        print_time(t1, t2, Log)
         if(length(st <- attr(out, "status"))) {
             errorLog(Log)
             wrapLog("Loading this package had a fatal error",
@@ -3729,7 +3732,10 @@ add_dummies <- function(dir, Log)
         } else resultLog(Log, "OK")
 
         checkingLog(Log, "whether the package can be loaded with stated dependencies")
+        t1 <- proc.time()
         out <- R_runR0(Rcmd, opts, c(env, env1), arch = arch)
+        t2 <- proc.time()
+        print_time(t1, t2, Log)
         if (any(startsWith(out, "Error")) || length(attr(out, "status"))) {
             printLog0(Log, paste(c(out, ""), collapse = "\n"))
             wrapLog("\nIt looks like this package",
@@ -3743,7 +3749,10 @@ add_dummies <- function(dir, Log)
         checkingLog(Log, "whether the package can be unloaded cleanly")
         Rcmd <- sprintf("suppressMessages(library(%s)); cat('\n---- unloading\n'); detach(\"package:%s\")",
                         pkgname, pkgname)
+        t1 <- proc.time()
         out <- R_runR0(Rcmd, opts, c(env, env1), arch = arch)
+        t2 <- proc.time()
+        print_time(t1, t2, Log)
         if (any(grepl("^(Error|\\.Last\\.lib failed)", out)) ||
             length(attr(out, "status"))) {
             warningLog(Log)
@@ -3765,7 +3774,10 @@ add_dummies <- function(dir, Log)
             env2 <- Sys.getenv("_R_LOAD_CHECK_S4_EXPORTS_", "NA")
             env2 <- paste0("_R_LOAD_CHECK_S4_EXPORTS_=",
                            if(env2 == "all") env else pkgname)
+            t1 <- proc.time()
             out <- R_runR0(Rcmd, opts, c(env, env1, env2), arch = arch)
+            t2 <- proc.time()
+            print_time(t1, t2, Log)
             any <- FALSE
             if (any(startsWith(out, "Error")) || length(attr(out, "status"))) {
                 warningLog(Log)
@@ -3807,9 +3819,12 @@ add_dummies <- function(dir, Log)
                         "whether the namespace can be unloaded cleanly")
             Rcmd <- sprintf("invisible(suppressMessages(loadNamespace(\"%s\"))); cat('\n---- unloading\n'); unloadNamespace(\"%s\")",
                             pkgname, pkgname)
+            t1 <- proc.time()
             out <- if (is_base_pkg && pkgname != "stats4")
                 R_runR0(Rcmd, opts, "R_DEFAULT_PACKAGES=NULL", arch = arch)
             else R_runR0(Rcmd, opts, env1)
+            t2 <- proc.time()
+            print_time(t1, t2, Log)
             if (any(grepl("^(Error|\\.onUnload failed)", out)) ||
                 length(attr(out, "status"))) {
                 warningLog(Log)
@@ -3830,7 +3845,10 @@ add_dummies <- function(dir, Log)
             env <- setRlibs(pkgdir = pkgdir, libdir = libdir,
                             self2 = FALSE, quote = TRUE)
             if(nzchar(arch)) env <- c(env, "R_DEFAULT_PACKAGES=NULL")
+            t1 <- proc.time()
             out <- R_runR0(Rcmd, opts, env, arch = arch)
+            t2 <- proc.time()
+            print_time(t1, t2, Log)
             if (any(startsWith(out, "Error"))) {
                 warningLog(Log)
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
@@ -4851,7 +4869,10 @@ add_dummies <- function(dir, Log)
             args <- c( "Rd2pdf ", Rd2pdf_opts,
                       paste0("--build-dir=", shQuote(build_dir)),
                       "--no-clean", "-o ", man_file , shQuote(topdir))
+            t1 <- proc.time()
             res <- run_Rcmd(args,  "Rdlatex.log", timeout = tlim)
+            t2 <- proc.time()
+            print_time(t1, t2, Log)
             latex_log <- file.path(build_dir, "Rd2.log")
             if (file.exists(latex_log))
                 file.copy(latex_log, paste0(pkgname, "-manual.log"))
@@ -4936,6 +4957,7 @@ add_dummies <- function(dir, Log)
         eq <- .Rd_get_equations_from_Rd_db(db)
 
         i1 <- (length(db) && isTRUE(R_check_Rd_validate_Rd2HTML))
+        i1 <- (length(db) && isTRUE(R_check_Rd_validate_Rd2HTML))
         i2 <- (length(eq) && isTRUE(R_check_Rd_math_rendering))
         if(!i1 && !i2)
             return()
@@ -4943,7 +4965,8 @@ add_dummies <- function(dir, Log)
         checkingLog(Log, "HTML version of manual")
         any <- FALSE
 
-        if(i1) {
+        t1 <- proc.time()
+        if(i1) { ## validate
             ## require HTML Tidy, and not macOS's ancient version.
             msg <- ""
             Tidy <- Sys.getenv("R_TIDYCMD", "tidy")
@@ -4958,16 +4981,15 @@ add_dummies <- function(dir, Log)
                     ## but e.g. Ubuntu 16.04 does not show one.
                 } else msg <- ": 'tidy' is not HTML Tidy"
             } else msg <- ": no command 'tidy' found"
-            if(!OK) {
-                noteLog(Log)
-                any <- TRUE
-                printLog0(Log,
-                          c("Skipping checking HTML validation",
-                            msg,
-                            "\n"))
-            } else {
+            if(OK) {
                 out <- tempfile()
                 on.exit(unlink(out))
+                if(installed) {
+                    ## May need libdir for stage=render Sexprs.
+                    libpaths <- .libPaths()
+                    .libPaths(c(libdir, libpaths))
+                    on.exit(.libPaths(libpaths), add = TRUE)
+                }
                 results <- lapply(db,
                                   function(x)
                                       tryCatch({
@@ -4977,61 +4999,33 @@ add_dummies <- function(dir, Log)
                                       error = identity))
                 names(results) <- names(db)
                 ind <- vapply(results, inherits, NA, "error")
-                if(any(ind)) {
-                    noteLog(Log)
-                    any <- TRUE
-                    printLog0(Log,
-                              c("Encountered the following conversion/validation errors:\n",
-                                paste(unlist(lapply(results[ind],
-                                                    conditionMessage)),
-                                      collapse = "\n"),
-                                "\n"))
-                    results <- results[!ind]
-                }
-                results <- tidy_validate_db(results, names(results))
-                if(NROW(results)) {
-                    if(!any) noteLog(Log)
-                    any <- TRUE
-                    printLog0(Log,
-                              c("Found the following HTML validation problems:\n",
-                                sprintf("%s:%s:%s: %s\n",
-                                        sub("[Rr]d$", "html",
-                                            results[, "path"]),
-                                        results[, "line"],
-                                        results[, "col"],
-                                        results[, "msg"])))
-                }
+                results2 <- results[!ind]
+                results2 <- tidy_validate_db(results2, names(results2))
             }
         }
 
-        if(i2) {
-            if(is.null(.katex <- .make_KaTeX_checker())) {
-                if(!any) noteLog(Log)
-                any <- TRUE
-                printLog0(Log,
-                          "Skipping checking math rendering: package 'V8' unavailable\n")
-            } else {
-                results <- lapply(eq[, 3L], .katex)
-                msg <- vapply(results, `[[`, "", "error")
-                ind <- nzchar(msg)
-                if(any(ind)) {
-                    if(!any) noteLog(Log)
-                    any <- TRUE
-                    msg <- msg[ind]
-                    msg <- sub("^KaTeX parse error: (.*) at position.*:",
+        if(i2) { ## math rendering
+            OK2 <- !is.null(.katex <- .make_KaTeX_checker())
+            if(OK2) {
+                results3 <- lapply(eq[, 3L], .katex)
+                msg2 <- vapply(results3, `[[`, "", "error")
+                ind2 <- nzchar(msg2)
+                if(any(ind2)) {
+                    msg2 <- msg2[ind2]
+                    msg2 <- sub("^KaTeX parse error: (.*) at position.*:",
                                "\\1 in",
-                               msg)
-                    msg <- sub("^KaTeX parse error: ", "", msg)
+                               msg2)
+                    msg2 <- sub("^KaTeX parse error: ", "", msg2)
                     ## KaTeX uses
                     ##   COMBINING LOW LINE  (U+0332)
                     ##   HORIZONTAL ELLIPSIS (U+2026)
                     ## for formatting parse errors.  These will not work
                     ## in non-UTF-8 locales and not well in UTF-8 ones,
                     ## so change as necessary ...
-                    msg <- gsub("\u2026", "...", msg)
-                    msg <- gsub("\u0332", "", msg)
-                    l1 <- eq[ind, 5L]
-                    l2 <- eq[ind, 6L]
+                    msg2 <- gsub("\u2026", "...", msg2)
+                    msg2 <- gsub("\u0332", "", msg2)
+                    l1 <- eq[ind2, 5L]
+                    l2 <- eq[ind2, 6L]
                     tst <- (l1 == l2)
                     pos <- is.na(tst)
                     l1[pos] <- ""
@@ -5039,13 +5033,61 @@ add_dummies <- function(dir, Log)
                     l1[pos] <- paste0(":", l1[pos])
                     pos <- which(!tst[pos])
                     l1[pos] <- paste0(l1[pos], "-", l2[pos])
-                    printLog0(Log,
-                              c("Found the following math rendering problems:\n",
-                                sprintf("%s%s: %s\n",
-                                        eq[ind, 1L],
-                                        l1,
-                                        gsub("\n", "\n  ", msg))))
                 }
+            }
+        }
+
+        t2 <- proc.time()
+        print_time(t1, t2, Log)
+
+        if(i1) { ## report on validation
+            if(!OK) {
+                noteLog(Log)
+                any <- TRUE
+                printLog0(Log,
+                          c("Skipping checking HTML validation",
+                            msg,
+                            "\n"))
+            }
+            if(OK && any(ind)) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                printLog0(Log,
+                          c("Encountered the following conversion/validation errors:\n",
+                            paste(unlist(lapply(results[ind],
+                                                conditionMessage)),
+                                  collapse = "\n"),
+                            "\n"))
+            }
+            if(OK && NROW(results2)) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                printLog0(Log,
+                          c("Found the following HTML validation problems:\n",
+                            sprintf("%s:%s:%s: %s\n",
+                                    sub("[Rr]d$", "html", results2[, "path"]),
+                                    results2[, "line"],
+                                    results2[, "col"],
+                                    results2[, "msg"])))
+            }
+        }
+
+        if(i2) { ## report on math rendering
+            if(!OK2) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                printLog0(Log,
+                          "Skipping checking math rendering: package 'V8' unavailable\n")
+            }
+            if(OK2 && any(ind2)) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                printLog0(Log,
+                          c("Found the following math rendering problems:\n",
+                            sprintf("%s%s: %s\n",
+                                    eq[ind2, 1L],
+                                    l1,
+                                    gsub("\n", "\n  ", msg2))))
             }
         }
 
@@ -5466,6 +5508,8 @@ add_dummies <- function(dir, Log)
                              "warning: .* is not needed and will not be emitted",
                              "warning: .* \\[-Wnon-literal-null-conversion\\]",
                              "warning: .* \\[-Wignored-optimization-argument\\]",
+                             ## thinkos like <- for = or == for =
+                             "warning: .* \\[-Wunused-comparison\\]",
                              ## LLVM clang 14, at least
                              "warning: .* \\[-Wbitwise-instead-of-logical\\]"
                              )
@@ -5808,7 +5852,10 @@ add_dummies <- function(dir, Log)
     check_CRAN_incoming <- function(localOnly, pkgSize)
     {
         checkingLog(Log, "CRAN incoming feasibility")
+        t1 <- proc.time()
         res <- .check_package_CRAN_incoming(pkgdir, localOnly, pkgSize)
+        t2 <- proc.time()
+        print_time(t1, t2, Log)
         if(length(res)) {
             bad <- FALSE
             out <- format(res)
@@ -6199,9 +6246,6 @@ add_dummies <- function(dir, Log)
             readRenviron(Renv)
     }
 
-    td0 <- as.numeric(Sys.getenv("_R_CHECK_TIMINGS_"))
-    if (is.na(td0)) td0 <- Inf
-
     ## A user might have turned on JIT compilation.  That does not
     ## work well, so mostly disable it.
     jit <- Sys.getenv("R_ENABLE_JIT")
@@ -6538,7 +6582,8 @@ add_dummies <- function(dir, Log)
             message("'--as-cran' turns off '--extra-arch'")
             extra_arch <- FALSE
         }
-        Sys.setenv("_R_CHECK_TIMINGS_" = "10")
+        prev <- Sys.getenv("_R_CHECK_TIMINGS_", NA_character_)
+        if(is.na(prev)) Sys.setenv("_R_CHECK_TIMINGS_" = "10")
         Sys.setenv("_R_CHECK_INSTALL_DEPENDS_" = "TRUE")
         Sys.setenv("_R_CHECK_NO_RECOMMENDED_" = "TRUE")
         Sys.setenv("_R_SHLIB_BUILD_OBJECTS_SYMBOL_TABLES_" = "TRUE")
@@ -6603,6 +6648,7 @@ add_dummies <- function(dir, Log)
         R_check_code_class_is_string <- TRUE
         if(is.na(R_check_Rd_validate_Rd2HTML))
             R_check_Rd_validate_Rd2HTML <- TRUE
+        R_check_Rd_math_rendering <- TRUE
 
     } else {
         ## do it this way so that INSTALL produces symbols.rds
@@ -6612,6 +6658,9 @@ add_dummies <- function(dir, Log)
             Sys.setenv("_R_SHLIB_BUILD_OBJECTS_SYMBOL_TABLES_" = "TRUE")
     }
 
+    ## needs to be after --as-cran
+    td0 <- as.numeric(Sys.getenv("_R_CHECK_TIMINGS_"))
+    if (is.na(td0)) td0 <- Inf
 
     if (extra_arch) {
         R_check_Rd_contents <- R_check_all_non_ISO_C <-
