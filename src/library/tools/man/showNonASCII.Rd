@@ -40,6 +40,7 @@ out <- c(
 "   This has an \xfcmlaut in it.",
 "   OK again.",
 "}")
+Encoding(out) <- "latin1"
 f <- tempfile()
 cat(out, file = f, sep = "\n")
 

@@ -156,9 +156,7 @@ Encoding(x98) <- "bytes"
 split.a <- c("\xf0", "\x9f", "\x98", "\x80")
 Encoding(split.a) <- "unknown"
 split.b <- c("\xf0", "\x98")
-Encoding(split.b) <- "unknown"
 split.c <- c("\xf0\x9f", "\x80")
-Encoding(split.c) <- "unknown"
 ## Are two character vectors truly identical?
 identichr <- function(x, y) {
     if (is.character(x) &&

@@ -3380,8 +3380,9 @@ static SEXP mkString2(const char *s, size_t len, Rboolean escaped)
     SEXP t;
     cetype_t enc = CE_NATIVE;
 
-    if(known_to_be_latin1) enc = CE_LATIN1;
-    else if(!escaped && known_to_be_utf8) enc = CE_UTF8;
+    if (escaped) enc = CE_BYTES;
+    else if(known_to_be_latin1) enc = CE_LATIN1;
+    else if(known_to_be_utf8) enc = CE_UTF8;
 
     PROTECT(t = allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharLenCE(s, (int) len, enc));

@@ -2709,7 +2709,9 @@ substitute(f(x), list(f = quote(g(y))))
 
 ## PR#15247 : str() on invalid data frame names (where print() works):
 d <- data.frame(1:3, "B", 4, stringsAsFactors=TRUE)
-names(d) <- c("A", "B\xba","C\xabcd")
+invnames <- c("A", "B\xba","C\xabcd")
+Encoding(invnames) <- "unknown"
+names(d) <- invnames
 str(d)
 ## gave an error in R <= 3.0.0
 

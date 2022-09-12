@@ -1,7 +1,7 @@
 
-R Under development (unstable) (2022-05-29 r82419) -- "Unsuffered Consequences"
+R Under development (unstable) (2022-09-12 r82838) -- "Unsuffered Consequences"
 Copyright (C) 2022 The R Foundation for Statistical Computing
-Platform: aarch64-apple-darwin21.5.0 (64-bit)
+Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -204,7 +204,7 @@ Error in assertWarning(ff()) :
 > bibstyle("unsorted", sortKeys = function(refs) seq_along(refs),
 +     fmtPrefix = function(paper) paste0("[", paper$.index, "]"),
 +        .init = TRUE)
-<environment: 0x12a8be408>
+<environment: 0x55a6535ccb60>
 > print(refs, .bibstyle = "unsorted")
 [1] R Core Team (2013). _R: A Language and Environment for Statistical
 Computing_. R Foundation for Statistical Computing, Vienna, Austria.
@@ -836,12 +836,13 @@ function (x, ...)
 + "   This has an \xfcmlaut in it.",
 + "   OK again.",
 + "}")
+> Encoding(out) <- "latin1"
 > f <- tempfile()
 > cat(out, file = f, sep = "\n")
 > 
 > showNonASCIIfile(f)
-1: fa<e7>ile test of showNonASCII():
-4:    This has an <fc>mlaut in it.
+1: fa<c3><a7>ile test of showNonASCII():
+4:    This has an <c3><bc>mlaut in it.
 > unlink(f)
 > 
 > 
@@ -973,7 +974,7 @@ An illustration of lexical scoping.
 > 
 > ## IGNORE_RDIFF_BEGIN
 > R_user_dir("FOO", "cache")
-[1] "/Users/ripley/Library/Caches/org.R-project.R/R/FOO"
+[1] "/home/tomas/.cache/R/FOO"
 > ## IGNORE_RDIFF_END
 > 
 > 
@@ -1113,7 +1114,7 @@ sqrt(x) is
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  0.135 0.011 0.147 0 0 
+Time elapsed:  0.136 0 0.137 0 0 
 > grDevices::dev.off()
 null device 
           1 
