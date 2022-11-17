@@ -68,7 +68,7 @@ SEXP L_initGrid(SEXP GridEvalEnv)
     return R_NilValue;
 }
 
-SEXP L_killGrid() 
+SEXP L_killGrid(void) 
 {
     GEunregisterSystem(gridRegisterIndex);
     return R_NilValue;
@@ -76,7 +76,7 @@ SEXP L_killGrid()
 
 /* Get the current device (the graphics engine creates one if nec.)
  */
-pGEDevDesc getDevice() 
+pGEDevDesc getDevice(void) 
 {
     return GEcurrentDevice();
 }
@@ -114,7 +114,7 @@ void dirtyGridDevice(pGEDevDesc dd) {
     }
 }
 
-SEXP L_gridDirty()
+SEXP L_gridDirty(void)
 {
     /* Get the current device 
      */
@@ -128,7 +128,7 @@ void getViewportContext(SEXP vp, LViewportContext *vpc)
     fillViewportContextFromViewport(vp, vpc);
 }
 
-SEXP L_currentViewport() 
+SEXP L_currentViewport(void) 
 {
     /* Get the current device 
      */
@@ -937,13 +937,13 @@ SEXP L_unsetviewport(SEXP n)
      */
     PROTECT(gvp); PROTECT(newvp);
     {
-	SEXP fcall, false, t;
-	PROTECT(false = allocVector(LGLSXP, 1));
-	LOGICAL(false)[0] = FALSE;
+	SEXP fcall, false0, t;
+	PROTECT(false0 = allocVector(LGLSXP, 1));
+	LOGICAL(false0)[0] = FALSE;
 	PROTECT(fcall = lang4(install("remove"), 
 			      VECTOR_ELT(gvp, VP_NAME),
 			      VECTOR_ELT(newvp, PVP_CHILDREN),
-			      false));
+			      false0));
 	t = fcall;
 	t = CDR(CDR(t));
 	SET_TAG(t, install("envir")); 
@@ -1103,7 +1103,7 @@ SEXP L_upviewport(SEXP n)
     return R_NilValue;
 }
 
-SEXP L_getDisplayList() 
+SEXP L_getDisplayList(void) 
 {
     /* Get the current device 
      */
@@ -1150,7 +1150,7 @@ SEXP L_setDLelt(SEXP value)
     return R_NilValue;
 }
 
-SEXP L_getDLindex()
+SEXP L_getDLindex(void)
 {
     /* Get the current device 
      */
@@ -1167,7 +1167,7 @@ SEXP L_setDLindex(SEXP index)
     return R_NilValue;
 }
 
-SEXP L_getDLon()
+SEXP L_getDLon(void)
 {
     /* Get the current device 
      */
@@ -1186,7 +1186,7 @@ SEXP L_setDLon(SEXP value)
     return prev;
 }
 
-SEXP L_getEngineDLon()
+SEXP L_getEngineDLon(void)
 {
     /* Get the current device 
      */
@@ -1203,7 +1203,7 @@ SEXP L_setEngineDLon(SEXP value)
     return R_NilValue;
 }
 
-SEXP L_getCurrentGrob() 
+SEXP L_getCurrentGrob(void) 
 {
     pGEDevDesc dd = getDevice();
     return gridStateElement(dd, GSS_CURRGROB);
@@ -1216,7 +1216,7 @@ SEXP L_setCurrentGrob(SEXP value)
     return R_NilValue;
 }
 
-SEXP L_getEngineRecording() 
+SEXP L_getEngineRecording(void) 
 {
     pGEDevDesc dd = getDevice();
     return gridStateElement(dd, GSS_ENGINERECORDING);
@@ -1229,7 +1229,7 @@ SEXP L_setEngineRecording(SEXP value)
     return R_NilValue;
 }
 
-SEXP L_currentGPar()
+SEXP L_currentGPar(void)
 {
     /* Get the current device 
      */
@@ -1237,7 +1237,7 @@ SEXP L_currentGPar()
     return gridStateElement(dd, GSS_GPAR);
 }
 
-SEXP L_newpagerecording()
+SEXP L_newpagerecording(void)
 {
     pGEDevDesc dd = getDevice();
     if (dd->ask) {
@@ -1257,7 +1257,7 @@ SEXP L_newpagerecording()
     return R_NilValue;
 }
 
-SEXP L_newpage()
+SEXP L_newpage(void)
 {
     pGEDevDesc dd = getDevice();
     R_GE_gcontext gc;
@@ -1316,21 +1316,21 @@ SEXP L_clearDefinitions(SEXP clearGroups) {
     return R_NilValue;
 }
 
-SEXP L_initGPar()
+SEXP L_initGPar(void)
 {
     pGEDevDesc dd = getDevice();
     initGPar(dd);
     return R_NilValue;
 }
 
-SEXP L_initViewportStack()
+SEXP L_initViewportStack(void)
 {
     pGEDevDesc dd = getDevice();
     initVP(dd);
     return R_NilValue;
 }
 
-SEXP L_initDisplayList()
+SEXP L_initDisplayList(void)
 {
     pGEDevDesc dd = getDevice();
     initDL(dd);
@@ -1859,19 +1859,21 @@ static void polygonEdge(double *x, double *y, int n,
     xm = (xmin + xmax)/2;
     ym = (ymin + ymax)/2;
     /*
-     * Special case zero-width or zero-height
+     * Special case VERY tall and narrow or VERY short and wide
      */ 
-    if (fabs(xmin - xmax) < 1e-6) {
-        *edgex = xmin;
-        if (theta == 90) 
-	    *edgey = ymax;
-	else if (theta == 270)
-	    *edgey = ymin;
-	else
-	    *edgey = ym;
-	return;
-    }
-    if (fabs(ymin - ymax) < 1e-6) {
+    if (fabs(xmin - xmax) < 1e-6 || 
+        fabs(ymin - ymax)/fabs(xmin - xmax) > 1000) {
+        *edgex = xmin;                                                         
+        if (theta == 90)                                                       
+            *edgey = ymax;                                                     
+        else if (theta == 270)                                                 
+            *edgey = ymin;                                                     
+        else                                                                   
+            *edgey = ym;                                                       
+        return;                                                                
+    }                                                                          
+    if (fabs(ymin - ymax) < 1e-6 || 
+        fabs(xmin - xmax)/fabs(ymin - ymax) > 1000) {
         *edgey = ymin;
         if (theta == 0) 
 	    *edgex = xmax;
@@ -1879,7 +1881,7 @@ static void polygonEdge(double *x, double *y, int n,
 	    *edgex = xmin;
 	else
 	    *edgex = xm;
-	return;
+        return;
     }	    
     /*
      * Find edge that intersects line from centre at angle theta
@@ -3585,7 +3587,7 @@ SEXP L_raster(SEXP raster, SEXP x, SEXP y, SEXP w, SEXP h,
     return R_NilValue;
 }
 
-SEXP L_cap()
+SEXP L_cap(void)
 {
     int i, col, row, nrow, ncol, size;
     /* Get the current device 
@@ -3644,7 +3646,7 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
     R_GE_gcontext gc, gcCache;
     LTransform transform;
     SEXP txt, result = R_NilValue;
-    double edgex, edgey;
+    double edgex = 0, edgey = 0;
     double xmin = DBL_MAX;
     double xmax = -DBL_MAX;
     double ymin = DBL_MAX;
@@ -3811,7 +3813,7 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
 		     * Calculate edgex and edgey for case where this is 
 		     * the only rect
 		     */
-		    {
+                    if (R_FINITE(theta)) {
 			double xxx[4], yyy[4];
 			/*
 			 * Must be in clock-wise order for polygonEdge
@@ -3836,7 +3838,7 @@ static SEXP gridText(SEXP label, SEXP x, SEXP y, SEXP hjust, SEXP vjust,
 	     * If there is more than one text, just produce edge
 	     * based on bounding rect of all text
 	     */
-	    if (ntxt > 1) {
+	    if (ntxt > 1 && R_FINITE(theta)) {
 		/*
 		 * Produce edge of rect bounding all text
 		 */
@@ -5258,7 +5260,7 @@ SEXP L_pretty2(SEXP scale, SEXP n_) {
  * The answer is in INCHES
  */
 
-SEXP L_locator() {
+SEXP L_locator(void) {
     double x = 0;
     double y = 0;
     SEXP answer;

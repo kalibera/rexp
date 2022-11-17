@@ -78,7 +78,6 @@ static int ParseBrowser(SEXP, SEXP);
 static void R_ReplFile(FILE *fp, SEXP rho)
 {
     ParseStatus status;
-    int count=0;
     int savestack;
     RCNTXT cntxt;
 
@@ -94,7 +93,6 @@ static void R_ReplFile(FILE *fp, SEXP rho)
 	    R_Visible = FALSE;
 	    R_EvalDepth = 0;
 	    resetTimeLimits();
-	    count++;
 	    PROTECT(R_CurrentExpr);
 	    R_CurrentExpr = eval(R_CurrentExpr, rho);
 	    SET_SYMVALUE(R_LastvalueSymbol, R_CurrentExpr);
@@ -325,7 +323,7 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
 static unsigned char DLLbuf[CONSOLE_BUFFER_SIZE+1], *DLLbufp;
 
-static void check_session_exit()
+static void check_session_exit(void)
 {
     if (! R_Interactive) {
 	/* This funtion will be called again after a LONGJMP if an
@@ -745,7 +743,7 @@ void attribute_hidden BindDomain(char *R_Home)
    than the detection itself. */
 
 #ifdef DEBUG_STACK_DETECTION
-static uintptr_t almostFillStack() {
+static uintptr_t attribute_no_sanitizer_instrumentation almostFillStack() {
     volatile uintptr_t dummy;
 
     dummy = (uintptr_t) &dummy;
@@ -840,6 +838,8 @@ void setup_Rmainloop(void)
 	 */
 	printf("almost filling up stack...\n");
 	printf("filled stack up to %lx\n", almostFillStack());
+	/* the loop below writes outside the local variables and the frame,
+	   which is detected e.g. by ASAN as stack-buffer-overflow */
 	printf("accessing all bytes...\n");
 	for(uintptr_t o = 0; o < R_CStackLimit; o++)
 	    /* with exact bounds, o==-1 and o==R_CStackLimit will segfault */

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2007-2020  The R Foundation
+ *  Copyright (C) 2007-2022  The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -657,6 +657,10 @@ CGFontRef RQuartz_Font(CTXDESC)
         atsFont = RQuartz_CacheGetFont(fontName, 0); /* face is 0 because we are passing a true font name */
         if (!atsFont) { /* not in the cache, get it */
             CFStringRef cfFontName = CFStringCreateWithCString(NULL, fontName, kCFStringEncodingUTF8);
+	    /* ATSFontFindFromName and ATSFontFindFromPostScriptName
+	     * are unavailable with the macOS 13 SDK when targetting
+	     * macOS 13.  They will be removed for macOS 14, according to
+	     * https://developer.apple.com/documentation/macos-release-notes/macos-13-release-notes */
             atsFont = ATSFontFindFromName(cfFontName, kATSOptionFlagsDefault);
             if (!atsFont)
                 atsFont = ATSFontFindFromPostScriptName(cfFontName, kATSOptionFlagsDefault);
@@ -1374,7 +1378,7 @@ SEXP Quartz(SEXP args)
     SEXP tmps, bgs, canvass;
     double   width, height, ps;
     Rboolean antialias;
-    int      quartzpos, bg, canvas, module = 0;
+    int      bg, canvas, module = 0;
     double   mydpi[2], *dpi = 0;
     const char *type, *mtype = 0, *family, *title;
     char *file = NULL;
@@ -1444,7 +1448,7 @@ SEXP Quartz(SEXP args)
 	}
     }
 
-    quartzpos = 1;
+//    quartzpos = 1;
 
     R_GE_checkVersionOrDie(R_GE_version);
     R_CheckDeviceAvailable();
@@ -1636,7 +1640,7 @@ SEXP Quartz(SEXP args)
     return R_NilValue;
 }
 
-SEXP makeQuartzDefault() {
+SEXP makeQuartzDefault(void) {
     return ScalarLogical(FALSE);
 }
 
@@ -1647,7 +1651,7 @@ Quartz_C(QuartzParameters_t *par, quartz_create_fn_t q_create, int *errorCode)
     return NULL;
 }
 
-void *getQuartzAPI()
+void *getQuartzAPI(void)
 {
     return NULL;
 }

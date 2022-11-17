@@ -116,7 +116,7 @@ void R_FlushConsole(void) {
 #endif
 
 
-void R_setupHistory()
+void R_setupHistory(void)
 {
     int value, ierr;
     char *p;
@@ -484,7 +484,7 @@ int Rf_initialize_R(int ac, char **av)
 	}
 	snprintf(ifile, PATH_MAX, "%s/Rscript%x.XXXXXX", tm, getpid());
 	ifd = mkstemp(ifile);
-	if (ifd > 0)
+	if (ifd >= 0) /* -1 on error, can be 0 if stdin is closed */
 	    ifp = fdopen(ifd, "w+");
 	if(!ifp) R_Suicide(_("creating temporary file for '-e' failed"));
 	unlink(ifile);
@@ -591,7 +591,7 @@ int R_EditFiles(int nfile, const char **file, const char **title,
 
 /* Returns the limit on the number of open files. On error or when no
    limit is known, returns a negative number. */
-int R_GetFDLimit() {
+int R_GetFDLimit(void) {
 
 #if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRLIMIT)
     struct rlimit rlim;

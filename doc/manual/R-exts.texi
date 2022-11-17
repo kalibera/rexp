@@ -566,7 +566,7 @@ The @samp{UseLTO} logical field is used on a Unix-alike to indicate if
 source code in the package is to be compiled with Link-Time Optimization
 (@pxref{Using Link-time Optimization}) if @R{} was installed with
 @option{--enable-lto} (default true) or @option{--enable-lto=R} (default
-false). This can be overridden by by the flags @option{--use-LTO} and
+false). This can be overridden by the flags @option{--use-LTO} and
 @option{--no-use-LTO}.  LTO is said to give most size and performance
 improvements for large and complex (heavily templated) C++ projects.
 
@@ -666,7 +666,7 @@ A @samp{Language} field can be used to indicate if the package
 documentation is not in English: this should be a comma-separated list
 of standard (not private use or grandfathered) IETF language tags as
 currently defined by RFC 5646
-(@uref{https://tools.ietf.org/html/rfc5646}, see also
+(@uref{https://www.rfc-editor.org/rfc/rfc5646}, see also
 @uref{https://en.wikipedia.org/wiki/IETF_language_tag}), i.e., use
 language subtags which in essence are 2-letter ISO 639-1
 (@uref{https://en.wikipedia.@/org/wiki/ISO_639-1}) or 3-letter ISO
@@ -1451,7 +1451,7 @@ Data files can have one of three types as indicated by their extension:
 plain @R{} code (@file{.R} or @file{.r}), tables (@file{.tab},
 @file{.txt}, or @file{.csv}, see @code{?data} for the file formats, and
 note that @file{.csv} is @strong{not} the standard@footnote{e.g.@:
-@uref{https://tools.ietf.org/html/rfc4180}.} CSV format), or
+@uref{https://www.rfc-editor.org/rfc/rfc4180}.} CSV format), or
 @code{save()} images (@file{.RData} or @file{.rda}).  The files should
 not be hidden (have names starting with a dot).  Note that @R{} code
 should be if possible ``self-sufficient'' and not make use of extra
@@ -2021,7 +2021,7 @@ recipes they give actually work.  (This is especially necessary for
 platforms which use static linking.)
 
 If using Autoconf it is good practice to include all the Autoconf
-sources in the the package (and required for an Open Source package and
+sources in the package (and required for an Open Source package and
 tested by @command{R CMD check --as-cran}).  This will include the file
 @file{configure.ac}@footnote{a decade ago Autoconf used
 @file{configure.in}: this is still accepted but should be renamed and
@@ -2845,25 +2845,34 @@ from
 @uref{https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations}:
 there were also additional deprecations.} (`C++14') was published in
 December 2014 and will be used by default as from @R{} 4.1.0 if
-supported.  Further revisions `C++17' (in December 2017), and `C++20'
+supported.  Further revisions `C++17' (in December 2017) and `C++20'
 (with many new features in December 2020) have been published since.
+The next revision, `C++23', is expected in 2023 and several compilers
+already have extensive partial support for the current drafts.
 
 What standard a C++ compiler aims to support can be hard to determine:
-the value@footnote{Values @code{201103L}, @code{201402L} and
-@code{201703L} are most commonly used for C++11, C++14 and C++17
-respectively, but some compilers set @code{1L}.  At the time of writing
-there was no official value for C++20, but some compilers are using
-@code{202002L}, others @code{201703L}.} of @code{__cplusplus} may help
-but some compilers use it to denote a standard which is partially
-supported and some the latest standard which is (almost) fully
-supported.
+the value@footnote{Values @code{201103L}, @code{201402L}, @code{201703L}
+and @code{202002L} are most commonly used for C++11, C++14, C++17 and
+C++20 respectively, but some compilers set @code{1L}. For C++23 all that
+can currently be assumed is a value greater than that for C++20: for
+example @command{g++} 12 uses @code{202100L} and @command{clang++} (LLVM
+15, Apple 14) uses @code{202101L}.}  of @code{__cplusplus} may help but
+some compilers use it to denote a standard which is partially supported
+and some the latest standard which is (almost) fully supported.  On a
+Unix-alike @command{configure} will try to identify a compiler and flags
+for each of the standards: this relies heavily on the reported values of
+@code{__cplusplus}.
 
 The webpage
 @uref{https://en.cppreference.com/w/cpp/compiler_support} gives
 some information on which compilers are known to support recent C++
 features.
 
-Different versions of @R{} have specified different minimum C++
+C++ standards have deprecated and later removed features.  Be aware that
+some current compilers still accept removed features in C++17 mode,
+such as @code{unary_function} (deprecated in C++11, removed in C++17).
+
+Different versions of @R{} have specified different default C++
 standards, so for maximal portability a package should specify the
 standard it requires.  In order to specify C++11 code in a package,
 @file{Makevars} file (or @file{Makevars.win} or @file{Makevars.ucrt} on Windows) should include
@@ -2952,45 +2961,56 @@ using std::make_unique;
 #endif
 @end example
 
-Note that Windows builds prior to @R{} 4.0.0 used @command{g++} 4.9.x
-which had only partial C++14 support, and the flag to obtain that
-support was not included in the default Windows build of @R{} --- one
-could try something like
+@c Note that Windows builds prior to @R{} 4.0.0 used @command{g++} 4.9.x
+@c which had only partial C++14 support, and the flag to obtain that
+@c support was not included in the default Windows build of @R{} --- one
+@c could try something like
 
-@example
-CXX14="$(BINPREF)g++ $(M_ARCH)"
-CXX14FLAGS="-O2 -Wall" 
-CXX14STD=-std=gnu1y 
-@end example
+@c @example
+@c CXX14="$(BINPREF)g++ $(M_ARCH)"
+@c CXX14FLAGS="-O2 -Wall" 
+@c CXX14STD=-std=gnu1y 
+@c @end example
 
-@noindent
-in @file{@var{HOME}/.R/Makevars.win}.  The @command{g++} version used
-from @R{} 4.0.0 supports C++14 with flag @option{-std=gnu14} and for
-back-compatibility @option{-std=gnu1y}.
+@c @noindent
+@c in @file{@var{HOME}/.R/Makevars.win}.  The @command{g++} version used
+@c from @R{} 4.0.0 supports C++14 with flag @option{-std=gnu14} and for
+@c back-compatibility @option{-std=gnu1y}.
 
 @c Ubuntu 16.04LTS (5.4, ESM support until 2024-04)
 @c Ubuntu 14.04LTS (4.8, ESM support until 2022-04)
 @c RHEL 7 (4.8, end of all support in 2028) are examples.
-C++17 (as from @R{} 3.4.0) and C++20 (as from @R{} 4.0.0) can be
-specified in an analogous way (replacing @code{14} by @code{17} or
-@code{20}) but compiler/OS support is platform-dependent.  Some C++17
-and C++20 support is available with the default builds of @R{} on macOS
-and Windows as from @R{} 4.0.0.  Much of @command{g++}'s support for
-C++17 needs version 7 or later: that is more recent than some
-still-current Linux distributions and the OpenCSW compilers for
-Solaris.
+C++17 (as from @R{} 3.4.0), C++20 (as from @R{} 4.0.0) and C++23 (as
+from @R{} 4.3.0) can be specified in an analogous way (replacing
+@code{14} by @code{17}, @code{20} or @code{23}) but compiler/OS support
+is platform-dependent.  Some C++17 and C++20 support is available with
+the default builds of @R{} on macOS and Windows as from @R{} 4.0.0.
+Much of @command{g++}'s support for C++17 needs version 7 or later: that
+is more recent than some still-current Linux distributions and also than
+the OpenCSW compilers for Solaris.
 
-Note that C++17 or C++20 `support' does not mean complete support: use
+Note that C++17 or later `support' does not mean complete support: use
 feature tests as well as resources such as
 @uref{https://en.cppreference.com/w/cpp/compiler_support},
 @uref{https://gcc.gnu.org/projects/cxx-status.html} and
-@uref{https://clang.llvm.org/cxx_status.html} to see if the
-features you want to use are widely implemented.
+@uref{https://clang.llvm.org/cxx_status.html} to see if the features you
+want to use are widely implemented.
 
 A requirement of C++17 or later should always be declared in the
 @samp{SystemRequirements} field (as well as in @file{src/Makevars} or
 @file{src/Makefile}) so this is shown on the package's summary pages on
 @acronym{CRAN} or similar.
+
+Attempts to specify an unknown C++ standard are silently ignored: recent
+versions of @R{} throw an error for C++98 and for known standards for
+which no compiler+flags has been detected.
+
+The discussion above is about the standard @R{} ways of compiling C++:
+it will not apply to packages using @file{src/Makefile} or
+@command{configure} or building in a subdirectory that do not set the
+C++ standard.  And the default C++ standard varies widely and gets
+changed frequently by vendors -- for example Apple clang 14 defaults to
+C++98, LLVM clang 14 to C++14 and @command{g++} 12 to C++17.
 
 
 @node Using @command{cmake},  , Using C++ code, Configure and cleanup
@@ -3002,7 +3022,7 @@ done by including (or unpacking) the sources in a subdirectory of
 @file{src}, as considered above.
 
 Further issues arise when the external software uses another build
-system such as @command{cmake}, principally to ensure that that
+system such as @command{cmake}, principally to ensure that
 @emph{all} the settings for compilers, include and load paths @emph{etc}
 are made.  This section has already mentioned the need to set
 at least some of
@@ -5186,7 +5206,7 @@ be for binary packages).  Java 8 is available for fewer platforms than
 Java 7 was, and Java 11 for fewer still (at the time of writing, only
 @cputype{x86_64} Linux, macOS, 64-bit Windows and 64-bit Solaris 11 from
 Oracle; Linux on several 64-bit CPUs, Intel and ARM macOS, 32- and
-64-bit Windows and AIX from from @uref{https://adoptium.net/} -- several
+64-bit Windows and AIX from @uref{https://adoptium.net/} -- several
 OSes provide builds of OpenJDK including FreeBSD and most Linux
 distributions).
 
@@ -5453,7 +5473,7 @@ and suitable options might be
 @end example
 
 @noindent
-See @uref{https://www.ghostscript.com/doc/current/VectorDevices.htm} for
+See @uref{https://ghostscript.readthedocs.io/en/latest/VectorDevices.html} for
 more such and consider all the options for image downsampling).  There
 have been examples in @acronym{CRAN} packages for which current versions
 of Ghostscript produced much bigger reductions than earlier ones (e.g.@:
@@ -5913,7 +5933,7 @@ run-time path to the library.
 @item
 Package authors commonly assume things are part of C/C++ when they are
 not: the most common example is POSIX@footnote{Although this is expected
-to be part of C23, full support of that is years away,} function
+to be part of C23, full support of that is years away.} function
 @code{strdup}.  The most common C library on Linux, @code{glibc}, will
 hide the declarations of such extensions unless a `feature-test macro'
 is defined @strong{before} (almost) any system header is included.  So
@@ -5975,6 +5995,12 @@ them. Examples include @code{bind1st}/@code{bind2nd} (use
 lambdas@footnote{@uref{https://stackoverflow.com/questions/32739018/a-replacement-for-stdbind2nd}})
 @code{std::auto_ptr} (replaced by @code{std::unique_ptr}),
 @code{std:;mem_fun_ref} and @code{std::ptr_fun}.
+
+@item
+Later versions of standards may add reserved words: for example
+@code{bool}, @code{false} and @code{true} became keywords in C23 and are
+no longer available as variable names.  So avoid common words and
+keywords in other programming languages.
 
 @item
 Be careful about including C headers in C++ code.  Issues include
@@ -6041,6 +6067,31 @@ almost always easier to use @R{}'s @code{R_Calloc}, which does check.
 Second, the first argument is of type @code{size_t} and recent compilers
 are warning about passing signed arguments (which could get promoted to
 ridiculously large values).
+
+@item
+For C code, consider using the flag @option{-Wstrict-prototypes} which
+is supported by @command{gcc} and LLVM and Apple @command{clang}.  This
+has found quite a number of errors where functions have been declared
+without arguments (a function without arguments should have prototype
+@code{fn(void)}) and is likely to become the default in future
+compilers.  (It already is for LLVM @command{clang} in C23 mode.)
+
+LLVM @command{clang} has a separate warning
+@option{-Wdeprecated-non-prototype} which is enabled by
+@option{-Wstrict-prototypes}.  This warns on K&R-style usage, which will
+not be accepted in C23.
+
+@item
+Several C entry points are warned against in their @command{man} pages
+on most systems, often in very strong terms such as '@strong{Do not use
+these functions}'.  macOS has started to warn@footnote{when using the
+macOS 13 SDK with a deployment target of macOS 13.} if these are used
+for @code{sprintf}, @code{vsprintf}, @code{gets}, @code{mktemp},
+@code{tempmam} and @code{tmpnam}.  It is highly recommended that you use
+safer alternatives (on any platform) but the warning can be avoided by
+defining @samp{_POSIX_C_SOURCE} to for example @samp{200809L} before
+including the (C or C++) header which defines them.  (However, this may
+hide other extensions.)
 
 @end itemize
 
@@ -7918,12 +7969,12 @@ See the @file{system.Rd} file in @file{share/Rd/macros} for more details
 and macro definitions, including macros @code{\packageTitle},
 @code{\packageDescription}, @code{\packageAuthor}, @code{\packageMaintainer},
 @code{\packageDESCRIPTION} and @code{\packageIndices}.
-@findex @code{\packageTitle}
-@findex @code{\packageDescription}
-@findex @code{\packageAuthor}
-@findex @code{\packageMaintainer}
-@findex @code{\packageDESCRIPTION}
-@findex @code{\packageIndices}
+@findex \packageTitle
+@findex \packageDescription
+@findex \packageAuthor
+@findex \packageMaintainer
+@findex \packageDESCRIPTION
+@findex \packageIndices
 
 
 Packages may also define their own common macros; these would be stored
@@ -8439,35 +8490,8 @@ Options include using @command{sprof} for a shared object, and
 @command{oprofile} (see @uref{https://oprofile.sourceforge.io/news/}) and
 @command{perf} (see
 @uref{https://perf.wiki.kernel.org/index.php/Tutorial}) for any
-executable or shared object.
-
-@subsubsection sprof
-
-You can select shared objects to be profiled with @command{sprof} by
-setting the environment variable @env{LD_PROFILE}.  For example
-
-@example
-% setenv LD_PROFILE /path/to/R_HOME/library/stats/libs/stats.so
-R
-... run the boot example
-% sprof /path/to/R_HOME/library/stats/libs/stats.so \
-  /var/tmp/path/to/R_HOME/library/stats/libs/stats.so.profile
-
-Flat profile:
-
-Each sample counts as 0.01 seconds.
-  %   cumulative   self              self     total
- time   seconds   seconds    calls  us/call  us/call  name
- 76.19      0.32     0.32        0     0.00           numeric_deriv
- 16.67      0.39     0.07        0     0.00           nls_iter
-  7.14      0.42     0.03        0     0.00           getListElement
-
-rm /var/tmp/path/to/R_HOME/library/stats/libs/stats.so.profile
-... to clean up ...
-@end example
-
-It is possible that root access is needed to create the directories used
-for the profile data.
+executable or shared object.  These seem less widely supplied than they
+used to be (for example Fedoara 36 only has @command{perf}).
 
 @subsubsection oprofile and operf
 
@@ -8569,6 +8593,10 @@ The profiling data is by default stored in sub-directory
 @file{oprofile_data} of the current directory, which can be removed at
 the end of the session.
 
+Another way to use this is to run @command{operf -s} as root, run the
+@R{} session in another terminal then shut down @command{operf} and
+analyse as above.
+
 Another example, from @CRANpkg{sm} version 2.2-5.4.  The example for
 @code{sm.variogram} took a long time:
 @example
@@ -8644,6 +8672,34 @@ samples  %        symbol name
 
 Shutting down the profiler and clearing the records needs to be done as
 root.
+
+@subsubsection sprof
+
+You can select shared objects to be profiled with @command{sprof} by
+setting the environment variable @env{LD_PROFILE}.  For example
+
+@example
+% setenv LD_PROFILE /path/to/R_HOME/library/stats/libs/stats.so
+R
+... run the boot example
+% sprof /path/to/R_HOME/library/stats/libs/stats.so \
+  /var/tmp/path/to/R_HOME/library/stats/libs/stats.so.profile
+
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total
+ time   seconds   seconds    calls  us/call  us/call  name
+ 76.19      0.32     0.32        0     0.00           numeric_deriv
+ 16.67      0.39     0.07        0     0.00           nls_iter
+  7.14      0.42     0.03        0     0.00           getListElement
+
+rm /var/tmp/path/to/R_HOME/library/stats/libs/stats.so.profile
+... to clean up ...
+@end example
+
+It is possible that root access is needed to create the directories used
+for the profile data.
 
 @node macOS,  , Linux, Profiling compiled code
 @subsection macOS
@@ -9320,7 +9376,8 @@ will give more legible reports.  It has a runtime penalty of 2--3x,
 extended compilation times and uses substantially more memory, often
 1--2GB, at run time.  On 64-bit platforms it reserves (but does not
 allocate) 16--20TB of virtual memory: restrictive shell settings can
-cause problems.
+cause problems.  It can be helpful to increase the stack size, for
+example to 40MB.
 
 By comparison with @command{valgrind}, ASan can
 detect misuse of stack and global variables but not the use of
@@ -9965,7 +10022,8 @@ R CMD INSTALL --dsym @var{pkgname}
 as macOS does not store debugging symbols in the @file{.so} file.  (It
 is not necessary to have @R{} built with debugging symbols, although
 compiling the package should be done including @option{-g} in
-@code{CFLAGS} / @code{CXXFLAGS} / @code{FCFLAGS} as appropriate.)
+@code{CFLAGS} / @code{CXXFLAGS} / @code{FFLAGS} / @code{FCFLAGS} as
+appropriate.)
 
 Security measures may prevent running a @acronym{CRAN} binary
 distribution of @R{} under @command{lldb} or attaching this as a
@@ -10919,7 +10977,8 @@ is easy to specify the arguments for @code{.Call} (all @code{SEXP}) and
 @code{.External} (one @code{SEXP}) and as the arguments for @code{.C}
 and @code{.Fortran} are all pointers, specifying them as @code{void *}
 suffices. (For most platforms one can omit all the arguments, although
-link-time optimization will warn.)
+link-time optimization will warn, as will compilers set up to warn on
+strict prototypes -- and C23 will require correct arguments.)
 
 Using @option{-fc-prototypes-external} will give a prototype using
 @code{int_least32_t *lgl} for Fortran @code{LOGICAL LGL}, but this is
@@ -11122,6 +11181,16 @@ pointer with a call of the form
 
 @example
 p_myCfun = R_GetCCallable("packA", "myCfun");
+@end example
+@noindent
+As the type @code{DL_FUNC} is only appropriate for functions with no
+arguments, other users will need to cast to an appropriate type.  For
+example
+@example
+typedef SEXP (*na_omit_xts_func) (SEXP x);
+...
+  na_omit_xts_func fun = (na_omit_xts_func) R_GetCCallable("xts", "na_omit_xts");
+  return fun(x);
 @end example
 
 The author of @pkg{packB} is responsible for ensuring that
@@ -14023,7 +14092,7 @@ conveniently from an @code{on.exit} action in the calling @R{} function
 
 Do not assume that memory allocated by @code{R_Calloc}/@code{R_Realloc}
 comes from the same pool as used by @code{malloc}:@footnote{That was not
-the case on Windows prior to @R{} 4.2.0.}in particular do not use
+the case on Windows prior to @R{} 4.2.0.} in particular do not use
 @code{free} or @code{strdup} with it.
 
 Memory obtained by these macros should be aligned in the same way as
@@ -14822,7 +14891,7 @@ The (complete) Beta function and its natural logarithm.
 
 @deftypefun double choose (double @var{n}, double @var{k})
 @deftypefunx double lchoose (double @var{n}, double @var{k})
-The number of combinations of @var{k} items chosen from from @var{n} and
+The number of combinations of @var{k} items chosen from @var{n} and
 the natural logarithm of its absolute value, generalized to arbitrary real
 @var{n}.  @var{k} is rounded to the nearest integer (with a warning if
 needed).

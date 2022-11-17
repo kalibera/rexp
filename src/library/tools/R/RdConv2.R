@@ -415,20 +415,32 @@ processRdSexprs <-
     expandDynamicFlags(recurse(block), options)
 }
 
+# Get rid of parts of the path up to first, if any
+stripPathTo <- function(path, first) {
+    pattern <- paste0("^.*[/\\]", first, "[/\\]")
+    sub(pattern, "", path)
+}
+
 prepare_Rd <-
     function(Rd, encoding = "unknown", defines = NULL, stages = NULL,
              fragment = FALSE, options = RweaveRdDefaults,
              stage2 = TRUE, stage3 = TRUE, ..., msglevel = 0)
 {
+    concordance <- NULL
     if (is.character(Rd)) {
         Rdfile <- Rd
+        srcfile <- srcfile(stripPathTo(Rdfile, "man"))
         ## do it this way to get info in internal warnings
-        Rd <- eval(substitute(parse_Rd(f, encoding = enc, fragment = frag, ...),
-                              list(f = Rd, enc = encoding, frag = fragment)))
+        Rd <- eval(substitute(parse_Rd(f, encoding = enc, fragment = frag, srcfile = src, ...),
+                              list(f = Rd, enc = encoding, frag = fragment, src = srcfile)))
     } else if(inherits(Rd, "connection")) {
         Rdfile <- summary(Rd)$description
-        Rd <- parse_Rd(Rd, encoding = encoding, fragment=fragment, ...)
-    } else Rdfile <- attr(Rd, "Rdfile")
+        srcfile <- srcfile(stripPathTo(Rdfile, "man"))
+        Rd <- parse_Rd(Rd, srcfile = srcfile, encoding = encoding, fragment=fragment, ...)
+    } else {
+    	Rdfile <- attr(Rd, "Rdfile")
+    	concordance <- attr(Rd, "concordance")
+    }
     srcref <- attr(Rd, "srcref")
     if (is.null(Rdfile) && !is.null(srcref))
     	Rdfile <- attr(srcref, "srcfile")$filename
@@ -443,6 +455,11 @@ prepare_Rd <-
 	for (stage in c("install", "render"))
 	    if (stage %in% stages)
 		Rd <- processRdSexprs(Rd, stage, options, macros=attr(Rd, "macros"))
+	if (is.null(concordance)) {
+	    concordance <- try(as.Rconcordance(unlist(Rd[RdTags(Rd) == "COMMENT"]), silent = TRUE))
+	    if (inherits(concordance, "try-error"))
+	    	concordance <- NULL
+	}
 	if (pratt < 2L && stage2)
 	    Rd <- prepare2_Rd(Rd, Rdfile, stages)
 	meta <- attr(Rd, "meta")
@@ -453,7 +470,7 @@ prepare_Rd <-
 	Rd <- setDynamicFlags(Rd, apply(sapply(Rd, getDynamicFlags), 1, any))
     }
     structure(Rd, Rdfile = Rdfile, class = "Rd", meta = meta,
-              srcref = srcref)
+              srcref = srcref, concordance = concordance)
 }
 
 ## auxiliary, currently called only from prepare_Rd(*, stage2 = TRUE)

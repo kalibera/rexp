@@ -1000,7 +1000,7 @@ typedef struct EncList {
 /*
  * Various constructors and destructors
  */
-static cidfontinfo makeCIDFont()
+static cidfontinfo makeCIDFont(void)
 {
     cidfontinfo font = (CIDFontInfo *) malloc(sizeof(CIDFontInfo));
     if (!font)
@@ -1008,7 +1008,7 @@ static cidfontinfo makeCIDFont()
     return font;
 }
 
-static type1fontinfo makeType1Font()
+static type1fontinfo makeType1Font(void)
 {
     type1fontinfo font = (Type1FontInfo *) malloc(sizeof(Type1FontInfo));
     if (font) {
@@ -1036,7 +1036,7 @@ static void freeType1Font(type1fontinfo font)
     free(font);
 }
 
-static encodinginfo makeEncoding()
+static encodinginfo makeEncoding(void)
 {
     encodinginfo encoding = (EncodingInfo *) malloc(sizeof(EncodingInfo));
     if (!encoding)
@@ -1049,7 +1049,7 @@ static void freeEncoding(encodinginfo encoding)
     free(encoding);
 }
 
-static cidfontfamily makeCIDFontFamily()
+static cidfontfamily makeCIDFontFamily(void)
 {
     cidfontfamily family = (CIDFontFamily *) malloc(sizeof(CIDFontFamily));
     if (family) {
@@ -1062,7 +1062,7 @@ static cidfontfamily makeCIDFontFamily()
     return family;
 }
 
-static type1fontfamily makeFontFamily()
+static type1fontfamily makeFontFamily(void)
 {
     type1fontfamily family = (Type1FontFamily *) malloc(sizeof(Type1FontFamily));
     if (family) {
@@ -1103,7 +1103,7 @@ static void freeFontFamily(type1fontfamily family)
     free(family);
 }
 
-static cidfontlist makeCIDFontList()
+static cidfontlist makeCIDFontList(void)
 {
     cidfontlist fontlist = (CIDFontList *) malloc(sizeof(CIDFontList));
     if (fontlist) {
@@ -1114,7 +1114,7 @@ static cidfontlist makeCIDFontList()
     return fontlist;
 }
 
-static type1fontlist makeFontList()
+static type1fontlist makeFontList(void)
 {
     type1fontlist fontlist = (Type1FontList *) malloc(sizeof(Type1FontList));
     if (fontlist) {
@@ -1165,7 +1165,7 @@ static void freeDeviceFontList(type1fontlist fontlist) {
     }
 }
 
-static encodinglist makeEncList()
+static encodinglist makeEncList(void)
 {
     encodinglist enclist = (EncodingList *) malloc(sizeof(EncodingList));
     if (enclist) {
@@ -7198,7 +7198,7 @@ static void writeRasterXObject(rasterImage raster, int n,
     }
     uLong outlen = inlen;
     if (pd->useCompression) {
-	outlen = (int)(1.001*inlen + 20);
+        outlen += (inlen >> 10) + 20; // (1.001*inlen + 20) warns [-Wconversion]; 2^(-10) ~= 0.001
 	buf2 = R_Calloc(outlen, Bytef);
 	int res = compress(buf2, &outlen, buf, inlen);
 	if(res != Z_OK) error("internal error %d in writeRasterXObject", res);
@@ -7246,9 +7246,9 @@ static void writeMaskXObject(rasterImage raster, int n, PDFDesc *pd)
     uLong inlen = raster.w * raster.h, outlen = inlen;
     p = buf = R_Calloc(outlen, Bytef);
     for(int i = 0; i < raster.w * raster.h; i++) 
-	*p++ = R_ALPHA(raster.raster[i]);
+        *p++ = (Bytef)R_ALPHA(raster.raster[i]);
     if (pd->useCompression) {
-	outlen = (uLong)(1.001*inlen + 20);
+        outlen += (inlen >> 10) + 20;
 	buf2 = R_Calloc(outlen, Bytef);
 	int res = compress(buf2, &outlen, buf, inlen);
 	if(res != Z_OK) error("internal error %d in writeRasterXObject", res);

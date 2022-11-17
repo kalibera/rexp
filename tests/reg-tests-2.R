@@ -2009,7 +2009,7 @@ x[2, invisible(3)]
 
 
 ## tests of deparsing
-x <-list(a = NA, b = as.integer(NA), c=0+NA, d=0i+NA,
+x <-list(a = NA, b = NA_integer_, c = NA_real_, d = NA_complex_,
          e = 1, f = 1:1, g = 1:3, h = c(NA, 1:3),
          i = as.character(NA), j = c("foo", NA, "bar")
          )
@@ -2188,7 +2188,7 @@ stopifnot(identical(pmax(x, y, na.rm=TRUE), pmax(y, x, na.rm=TRUE)))
 
 x <- as.POSIXlt(x, tz="GMT"); y <- as.POSIXlt(y, tz="GMT")
 format(pmin(x, y), tz="GMT")
-class(pmin(x, y))
+class (pmin(y, x))  ## (updating "filled")
 stopifnot(identical(pmin(x, y), pmin(y, x)))
 format(pmin(x, y, na.rm=TRUE), tz="GMT")
 stopifnot(identical(pmin(x, y, na.rm=TRUE), pmin(y, x, na.rm=TRUE)))
@@ -2196,7 +2196,7 @@ format(pmax(x, y), tz="GMT")
 stopifnot(identical(pmax(x, y), pmax(y, x)))
 format(pmax(x, y, na.rm=TRUE), tz="GMT")
 stopifnot(identical(pmax(x, y, na.rm=TRUE), pmax(y, x, na.rm=TRUE)))
-## regresion tests
+## regression tests
 
 
 ## regression tests on names of 1D arrays

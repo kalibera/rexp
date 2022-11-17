@@ -1131,21 +1131,21 @@ void attribute_hidden Rstd_WriteConsoleEx(const char *buf, int len, int otype)
 
 	/* Indicate that input is coming from the console */
 
-void attribute_hidden Rstd_ResetConsole()
+void attribute_hidden Rstd_ResetConsole(void)
 {
 }
 
 
 	/* Stdio support to ensure the console file buffer is flushed */
 
-void attribute_hidden Rstd_FlushConsole()
+void attribute_hidden Rstd_FlushConsole(void)
 {
     /* fflush(stdin);  really work on Solaris on pipes */
 }
 
 	/* Reset stdin if the user types EOF on the console. */
 
-void attribute_hidden Rstd_ClearerrConsole()
+void attribute_hidden Rstd_ClearerrConsole(void)
 {
     clearerr(stdin);
 }
@@ -1339,6 +1339,7 @@ Rstd_ShowFiles(int nfile,		/* number of files */
     */
 
 
+#include <ctype.h>  /* for isspace */
 
 int attribute_hidden Rstd_ChooseFile(int _new, char *buf, int len)
 {

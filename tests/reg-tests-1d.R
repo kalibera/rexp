@@ -1,4 +1,4 @@
-## Regression tests for R >= 3.4.0
+## Regression tests for R 3.4.0 to 4.2.x
 
 .pt <- proc.time()
 tryCid <- function(expr) tryCatch(expr, error = identity)
@@ -18,8 +18,8 @@ onWindows <- .Platform$OS.type == "windows"
 .M <- .Machine
 str(.M[grep("^sizeof", names(.M))]) ## also differentiate long-double..
 b64 <- .M$sizeof.pointer == 8
-options(nwarnings = 10000) # (rather than just 50)
-
+options(nwarnings = 10000, # (rather than just 50)
+        width = 99) # instead of 80
 
 ## body() / formals() notably the replacement versions
 x <- NULL; tools::assertWarning(   body(x) <-    body(mean))	# to be error
@@ -511,6 +511,8 @@ stopifnot(
 
 
 ## format()ing invalid hand-constructed  POSIXlt  objects
+if(FALSE) {
+    ## These become an error in 4.3.0.
 if(hasTZ <- nzchar(.TZ <- Sys.getenv("TZ"))) cat(sprintf("env.var. TZ='%s'\n",.TZ))
 d <- as.POSIXlt("2016-12-06", tz = "Europe/Vienna")
 hasGMTOFF <- !is.null(d$gmtoff)
@@ -531,6 +533,7 @@ for(EX in expression({}, Sys.setenv(TZ = "UTC"), Sys.unsetenv("TZ"))) {
       cat("Skipping timezone amd gmtoff dependent POSIXlt formatting\n")
 }
 if(hasTZ) Sys.setenv(TZ = .TZ); options(op)# revert
+}
 
 dlt <- structure(
     list(sec = 52, min = 59L, hour = 18L, mday = 6L, mon = 11L, year = 116L,
@@ -666,20 +669,6 @@ stopifnot(exprs = {
 ##
 
 
-## format.POSIX[cl]t() after print.POSIXct()
-dt <- "2012-12-12 12:12:12"
-x <- as.POSIXct(dt, tz = "GMT")
-stopifnot(identical(format(x), dt))
-op <- options(warn=1)# allow
-(Sys.t <- Sys.timezone()) # may occasionally warn (and work)
-options(op)
-someCET <- paste("Europe", c("Berlin", "Brussels", "Copenhagen", "Madrid",
-                             "Paris", "Rome", "Vienna", "Zurich"), sep="/")
-if(Sys.t %in% someCET)
-    stopifnot(print(TRUE), identical(format(x, tz = ""), "2012-12-12 13:12:12"))
-## had failed for almost a month in R-devel & R-patched
-
-
 ## xtabs() , notably with NA's :
 asArr <- function(x) {
     attributes(x) <- list(dim=dim(x), dimnames=dimnames(x)); x }
@@ -714,10 +703,14 @@ tools::assertError(# 'na.fail' should fail :
 xt. <- xtabs(Freq ~ Gender + Admit, DN)
 xtp <- xtabs(Freq ~ Gender + Admit, DN, na.action = na.pass)
 xtN <- xtabs(Freq ~ Gender + Admit, DN, addNA = TRUE)
+res1 <- xt - xtp
+res1[is.na(res1)] <- NA ## xtabs (tapply/sum) may turn NAs into NaNs
+res2 <- -xtN + rbind(cbind(xt, 0), 0)
+res2[is.na(res2)] <- NA ## xtabs (tapply/sum) may turn NAs into NaNs
 stopifnot(exprs = {
     identical(asArr(xt - xt.), as_A(c(120,17, 207, 8 ), xt))
-    identical(asArr(xt - xtp), as_A(c(120,17, 207, NA), xt)) # not ok in R <= 3.3.2
-    identical(asArr(-xtN + rbind(cbind(xt, 0), 0)),
+    identical(asArr(res1), as_A(c(120,17, 207, NA), xt)) # not ok in R <= 3.3.2
+    identical(asArr(res2),
               as_A(c(120, 17, -17, 207, NA, 0, -327, 0, 0), xtN))
 })
 ## 'sparse = TRUE requires recommended package Matrix
@@ -907,20 +900,6 @@ stopifnot(all.equal(cfs, matrix(c(2,  1), 49, 2, byrow=TRUE), tol = 1e-14), # ty
           all.equal(cf2, matrix(c(1, -2), 49, 2, byrow=TRUE), tol = 1e-14))
 ## had incorrect medians of the left/right third of the data (x_L, x_R), in R < 3.5.0
 
-
-## 0-length Date and POSIX[cl]t:  PR#71290
-D <- structure(17337, class = "Date") # Sys.Date() of "now"
-D; D[0]; D[c(1,2,1)] # test printing of NA too
-stopifnot(identical(capture.output(D[0]), "Date of length 0"))
-D <- structure(1497973313.62798, class = c("POSIXct", "POSIXt")) # Sys.time()
-D; D[0]; D[c(1,2,1)] # test printing of NA too
-stopifnot(identical(capture.output(D[0]), "POSIXct of length 0"))
-D <- as.POSIXlt(D)
-D; D[0]; D[c(1,2,1)] # test printing of NA too
-stopifnot(identical(capture.output(D[0]), "POSIXlt of length 0"))
-## They printed as   '[1] "Date of length 0"'  etc in R < 3.5.0
-
-
 ## aggregate.data.frame() producing spurious names  PR#17283
 dP <- state.x77[,"Population", drop=FALSE]
 by <- list(Region = state.region, Cold = state.x77[,"Frost"] > 130)
@@ -1100,7 +1079,8 @@ assertErrV(plot.new())
 if(no.grid <- !("grid" %in% loadedNamespaces())) requireNamespace("grid")
 assertErrV(grid::grid.newpage())
 if(no.grid) unloadNamespace("grid") ; options(op)
-pdf("reg-tests-1d.pdf", encoding = "ISOLatin1.enc")# revert to reasonable device
+if(!dev.interactive(orNone = TRUE))
+   pdf("reg-tests-1d.pdf", encoding = "ISOLatin1.enc")# revert to reasonable device
 ## both errors gave segfaults in R <= 3.4.1
 
 
@@ -1333,13 +1313,6 @@ fn <- function() {
     identity(sys.on.exit())
 }
 stopifnot(identical(fn(), "foo"))
-
-
-## rep.POSIXt(*, by="n  DSTdays") - PR#17342
-x <- seq(as.POSIXct("1982-04-15 05:00", tz="US/Central"),
-         as.POSIXct("1994-10-15",       tz="US/Central"), by="360 DSTdays")
-stopifnot(length(x) == 13, diff((as.numeric(x) - 39600)/86400) == 360)
-## length(x) was 1802 and ended in many NA's in R <= 3.4.2
 
 
 ## 0-length logic with raw()
@@ -2159,20 +2132,6 @@ stopifnot(exprs = {
     identical(anyDuplicated(d[1:3,]), 0L)
 })
 ## gave error from do.call(Map, ..) as Map()'s first arg. is 'f'
-
-
-## print.POSIX[cl]t() - not correctly obeying "max.print" option
-op <- options(max.print = 50, width = 85)
-cc <- capture.output(print(dt <- .POSIXct(154e7 + (0:200)*60)))
-c2 <- capture.output(print(dt, max = 6))
-writeLines(tail(cc, 4))
-writeLines(c2)
-stopifnot(expr = {
-    grepl("omitted 151 entries", tail(cc, 1))
-                  !anyDuplicated(tail(cc, 2))
-    grepl("omitted 195 entries", tail(c2, 1))
-}); options(op)
-## the omission had been reported twice because of a typo in R <= 3.5.1
 
 
 ## <data.frame>[ <empty>, ] <- v                    should be a no-op and
@@ -5400,19 +5359,6 @@ stopifnot(exprs = {
 ## in R <= 4.1.0, Error in density..: 'x' and 'weights' have unequal length
 
 
-## as.Date() from POSIXct and POSIXlt should retain names
-(ch <- setNames(paste0("1994-10-", 11:15), letters[1:5]))
-d1 <- as.Date(ch, tz = "UTC")
-ct <- as.POSIXct(ch)
-d2 <- as.Date(ct, tz = "UTC") # fast path
-lt <- as.POSIXlt(ch, tz = "UTC")
-(d3 <- as.Date(lt))
-stopifnot(identical(names(ch), names(d1)),
-          identical(names(ch), names(d2)),
-          identical(names(ch), names(d3)))
-## in R <= 4.1.1, names got lost whenever as.Date.POSIXlt() was called
-
-
 ## residuals(<lm-with-AsIs>) were is.object(.) & failed in qqline()
 x <- sort(runif(20))
 y <- (2*x^(1/3) + rnorm(x)/16)^3
@@ -5432,17 +5378,20 @@ qqline(I(1:12))
 ## More "rational" as.character() for <octmode> and <hexmode>,
 ## fulfilling the "law"   as.<vector>(x)[j]  ===  as.<vector>(x[j])
 i <- matrix(0:21, 2)
-hi <- as.character(as.hexmode(i))
-oi <- as.character(as.octmode(i))
+FT <- c(FALSE,TRUE); names(FT) <- c("F", "T")
+hiL <- lapply(FT, function(kp) as.character(as.hexmode(i), keepStr = kp))
+oiL <- lapply(FT, function(kp) as.character(as.octmode(i), keepStr = kp))
 stopifnot(exprs = {
-    identical(dim (hi), dim(i))
-    identical(nrow(oi), nrow(i))
+    identical(dim (hiL[["T"]]), dim(i))
+    identical(nrow(oiL[["T"]]), nrow(i))
+    identical(hi <- hiL[["F"]], as.vector(hiL[["T"]])) ; is.null(dim(hi))
+    identical(oi <- oiL[["F"]], as.vector(oiL[["T"]])) ; is.null(dim(oi))
     hi[1:8] == as.character(0:7)
     oi[1:8] == hi[1:8]
   c(nchar(hi)) == rep(1:2, c(16,6))
   c(nchar(oi)) == rep(1:2, c(8,14))
 })
-## as.character.*() methods had used format() previously
+## as.character.*() methods had used format() previously; now by default drop, dim() etc
 
 
 ## within.list() & within.data.frame() assumed setdiff(a, b) to always eval 'b'
@@ -5639,13 +5588,6 @@ stopifnot(all.equal(SSfol, SSfol))
 if(englishMsgs)
     stopifnot(grepl("must be a character string", msg))
 ## was 'Error in doWithOneRestart(return(expr), restart) : bad error message'
-
-
-## hist() of a single date or date-time
-dt <- as.POSIXlt("2021-10-13", "UTC")
-hist(dt,          "secs", plot = FALSE)
-hist(as.Date(dt), "days", plot = FALSE)
-## failed in R <= 4.1.2 with Error in seq_len(1L + max(which(breaks < maxx)))
 
 
 ### globalCallingHandlers() when being called inside withCallingHandlers(),  PR#18257
@@ -5845,254 +5787,7 @@ plot(lm(y~    c, dd), which = 5)  # gave empty plot, noting missing factors
 stopifnot("plot(<lm>, which=5) gave message and no plot" = is.null(r))
 ## failed for character predictors in R <= 4.1.x
 
-
-## very small size hashed environments
-n <- 123
-l <- setNames(vector("list", n), seq_len(n))
-ehLs <- lapply(1:6, function(sz) list2env(l, hash=TRUE, size = sz))
-(nch <- vapply(ehLs, \(.) env.profile(.)$nchains, 0))# gave  1 2 3 4 109 109
-stopifnot(nch >= 24) # seeing  106 .. 106 111
-## hashed environments did not grow for size <= 4 in  R <= 4.1.x
-
-
-## as.character.Rd(deparse = TRUE) with curly braces in TEXT -- PR#18324
-rd <- tools::parse_Rd(textConnection(txt0 <- r"(\link[=Paren]{\{})"),
-                      fragment = TRUE)
-cat(txt1 <- paste0(as.character(rd, deparse = TRUE), collapse = ""))
-stopifnot(identical(paste0(txt0, "\n"), txt1))
-## failed to re-escape curly brace in R <= 4.2.x
-## curly braces used for grouping tokens are not escaped:
-rdgroup <- tools::parse_Rd(textConnection(r"(a {b} c)"), fragment = TRUE)
-stopifnot(identical(as.character(rdgroup, deparse = TRUE),
-                    as.character(rdgroup, deparse = FALSE)))
-##
-
-
-## Errors from parsing (notably with |> ) now return *classed* errors with line numbers
-## From  PR#18328 - by Duncan Murdoch
-txts <- setNames(, c(
-    "f <- function(x, x) {}"
-  , "123 |> str"
-  , "123 |> return()"
-  , "123 |> `+`(_, 4)"
-  , "123 |> (_ + 4)"
-  , "123 |> f(a = _, b = _)"
-  , "123 |> (\\(x) foo(bar = _))()"
-  , "123 |> x => log(x)"
-  , "'\\uh'"
-  , "'\\Uh'"
-  , "'\\xh'"
-  , "'\\c'"
-  , "'\\0'"
-  , "'\\U{badf00d}"
-  , "'\\Ubadf00d"
-))
-errs <- lapply(txts, function(ch) tryCatch(parse(text = ch), error=identity))
-## nicely print them
-msgs <- lapply(errs, `[[`, "message") ; str(msgs)
-(cls <- t(sapply(errs, class)))
-uerrs <- unname(errs) # (speed)
-nL <- vapply(uerrs, `[[`, 0L, "lineno")
-nC <- vapply(uerrs, `[[`, 0L, "colno")
-stopifnot(exprs = {
-    vapply(uerrs, inherits, NA, what = "error")
-    vapply(uerrs, inherits, NA, what = "parseError")
-    nL == 1L
-    nC == c(18L, rep(8L, 6), 10L, rep(3L, 5), 12L, 10L)
-    ## see all "<l>:<n>" strings as part of the message:
-    mapply(grepl, paste(nL, nC, sep = ":"), msgs)
-})
-## gave just simpleError s; no line:column numbers in R <= 4.2.0
-
-
-## fisher.test() with "too full" table:  PR#18336
-d <- matrix(c(1,0,5,2,1,90
-             ,2,1,0,2,3,89
-             ,0,0,0,1,0,14
-             ,0,0,0,0,0, 5
-             ,0,0,0,0,0, 2
-             ,0,0,0,0,0, 2
-              ), nrow=6, byrow = TRUE)
-(r <- tryCid(fisher.test(d)))
-stopifnot(inherits(r, "error"))
-if(englishMsgs)
-    stopifnot(grepl("hash key .* > INT_MAX", conditionMessage(r)))
-## gave a seg.fault in R <= 4.2.0
-
-
-## Testing fix for PR#18344 [ tar() warning about illegal uid/gid ]:
-sys <- Sys.info() # Only 'root' can create files with illegal uid/gid
-if(sys[["sysname"]] == "Linux" & sys[["effective_user"]] == "root"
-   ## not a "weakened root" {TODO: more reliable check}
-   && !identical(Sys.getenv("container"), "podman")
-   ) {
-    dir.create(mdir <- file.path(tempdir(),"stuff"))
-    for(f in letters[1:3])
-        writeLines("first line", file.path(mdir, f))
-    owd <- setwd(tempdir())
-    system(paste("chown 654321 stuff/a")) ## system(paste("chgrp 123456 stuff/b"))
-    r <- tryCatch( tar('stuff.tar', "stuff"), warning = identity)
-    stopifnot(inherits(r, "warning"))
-    if(englishMsgs)
-        stopifnot(grepl("^invalid uid ", conditionMessage(r)))
-    ## cat("Inside directory ", getwd(),":\n"); system("ls -l stuff.tar")
-    setwd(owd)# go back
-} else
-    message("You are not root, hence cannot change uid / gid to invalid values")
-## gave 2 warnings per wrong file; the first being    In sprintf(gettext(....):
-##    "one argument not used by format 'invalid uid value replaced .... 'nobody''"
-
-
-## sort(x, partial, *) notably for na.last=FALSE and TRUE -- PR#18335
-chkSortP <- function(x, partial) {
-    stopifnot(partial == as.integer(partial),
-              1 <= partial, partial <= length(x))
-    nok <- sum(!is.na(x))
-    if(anyNA(x) && any(partial > nok)) ## cannot use na.last=NA
-         Ls <- c(   FALSE,TRUE)
-    else Ls <- c(NA,FALSE,TRUE)
-    S <- lapply(Ls, function(v) sort(x, na.last=v))
-    P <- lapply(Ls, function(v) sort(x, na.last=v, partial=partial))
-    ok1 <- identical(lapply(S, `[`, partial),
-                     lapply(P, `[`, partial))
-    ## test "ones below" and "ones above" the (min and max) partials
-    mip <- min(partial)
-    map <- max(partial)
-    noNA <- function(u) u[!is.na(u)]
-    chkPord <- function(y) {
-        n <- length(y)
-        all(noNA(y[if(mip > 1) 1L:(mip-1L)]) <= noNA(y[mip])) &&
-        all(noNA(y[if(map < n)  (map+1L):n]) >= noNA(y[map]))
-    }
-    ok1 && all(vapply(P, chkPord, logical(1)))
-}
-
-x <- c(7, 2, 4, 5, 3, 6, NA)
-x1 <- c( 2,3,1, NA)
-x2 <- c(NA,3,1, NA)
-x14 <- c(7, 2, 0, 8, -1, -2, 9, 4, 5, 3, 6, 1, NA,NA)
-stopifnot(exprs = {
-    chkSortP(x, partial = 3)
-    chkSortP(x, partial = c(3,5))
-    chkSortP(x1, partial = 3)
-    chkSortP(x1, partial = 4)
-    chkSortP(x1, partial = 3:4)
-    chkSortP(x2, partial = 4)
-    chkSortP(x2, partial = 3)
-    chkSortP(x2, partial = 2:4)
-    sapply(seq_along(x14), function(p) chkSortP(x14, partial = p))
-    chkSortP(x14, partial = c(10, 13))
-    chkSortP(x14, partial = c(2, 14))
-})
-set.seed(17)
-for(i in 1:128) { # tested for 1:12800
-    x <- runif(rpois(1, 100))
-    x[sample(length(x), 12)] <- NA
-    p <- sample(seq_along(x), size = max(1L, rpois(1, 3)))
-    stopifnot(chkSortP(x, partial = p))
-}
-## several of these failed for na.last=FALSE and TRUE
-
-
-## head(letters, "7") should not silently do nonsense; PR#18357
-assertErrV( head(letters, "3") )
-## returned complete 'letters' w/o a warning
-stopifnot(identical("a", head(letters, TRUE)))
-## keep treating <logical> n  as integer
-
-
-## x[[]] should give error in all cases, even for NULL;  PR#18367
-(E <- tryCid(c(a = 1, 2)[[]]))
-xx <- c(a = 1, 2:3)
-E2 <- tryCid(xx[[]])
-EN <- tryCid(NULL[[]]) # <=> c()[[]]
-stopifnot(exprs = {
-    inherits(E, "error")
-    inherits(E, "MissingSubscriptError")
-    identical(quote(c(a = 1, 2)[[]]), E$call)
-    identical(class(E), class(E2))
-    identical(class(E), class(EN))
-    identical(msg <- "missing subscript", conditionMessage(E2))
-    identical(msg, conditionMessage(EN))
-    (nm <- c("call","object")) %in% names(EN)
-    identical(EN[nm], list(call = quote(NULL[[]]), object = NULL))
-})
-## [[]]  matched '2' as which has name ""
-E <- tryCid(xx[[]] <- pi)
-stopifnot(inherits(E, "MissingSubscriptError"))
-## using new error class
-
-
-## PR#18375, use PRIMNAME not *VAL in message:
-(M <- tryCmsg(date > 1))
-stopifnot(grepl("(>)", M, fixed=TRUE))
-## showed '(6)' previously
-
-
-## isGeneric() with wrong name -- correct warning msg (PR#18370)
-setGeneric("size", function(x) standardGeneric("size"))
-tryCatch(stopifnot(!isGeneric("haha", fdef = size)),
-         warning = conditionMessage) -> msg
-msg; if(englishMsgs)
-    stopifnot(grepl("name .size. instead of .haha.", msg))
-## msg was confusing
-
-
-### poly(<Date>,*) etc:  lm(... ~ poly(<Date>, .)) should work :
-d. <- data.frame(x = (1:20)/20, f = gl(4,5), D = .Date(17000 + c(1:7, 1:13 + 100)))
-cf0 <- c(Int=100, x=10, f = 5*(1:3))
-nD <- as.numeric(d.[,"D"])
-y0 <- model.matrix(~x+f, d.) %*% cf0  +   10*(nD - 17000) - 20*((nD - 17000)/10)^2
-set.seed(123)
-head(d. <- cbind(d., y = y0 + rnorm(20)))
-fm1  <- lm(y ~ x + f + poly(D,3), data = d.)
-fm1r <- lm(y ~ x + f + poly(D,2, raw=TRUE), data = d.)
-newd <- data.frame(x = seq(1/3, 1/2, length=5), f = gl(4,5)[5:9], D = .Date(17000 + 51:55))
-yhat <- unname(predict(fm1,  newdata = newd))
-yh.r <- unname(predict(fm1r, newdata = newd))
-cbind(yhat, yh.r)
-stopifnot(all.equal(yhat, c(96.8869, 92.3821, 81.9967, 71.2076, 60.0147), tol=1e-6), # 3e-7
-          all.equal(yh.r, c(97.7595, 93.0218, 82.3533, 71.2806, 59.8036), tol=1e-6))
-## poly(D, 3) failed since R 4.1.x,  poly(.., raw=TRUE) in all earlier R versions
-
-
-## as.difftime() tweaks: coerce to "double", keep names
-stopifnot(
-    identical(as.difftime(c(x = 1L), units="secs"),
-                .difftime(c(x = 1.), units="secs")))
-## integers where kept (and difftime arithmetic could overflow) in R <= 4.2.x
-
-
-## ordered() with missing 'x' -- PR#18389
-factor( levels = c("a", "b"), ordered=TRUE) -> o1
-ordered(levels = c("a", "b")) -> o2
-stopifnot(identical(o1,o2))
-## the ordered() call has failed in R <= 4.2.x
-
-
-## source() with multiple encodings
-if (l10n_info()$"UTF-8" || l10n_info()$"Latin-1") {
-    writeLines('x <- "fa\xE7ile"', tf <- tempfile(), useBytes = TRUE)
-    tools::assertError(source(tf, encoding = "UTF-8"))
-    source(tf, encoding = c("UTF-8", "latin1"))
-    ## in R 4.2.{0,1} gave Warning (that would now be an error):
-    ##   'length(x) = 2 > 1' in coercion to 'logical(1)'
-    if (l10n_info()$"UTF-8") stopifnot(identical(Encoding(x), "UTF-8"))
-}
-
-
-## multi-line Rd macro definition
-rd <- tools::parse_Rd(textConnection(r"(
-\newcommand{\mylongmacro}{
-  \LaTeX
-}
-\mylongmacro
-)"), fragment = TRUE)
-tools::Rd2txt(rd, out <- textConnection(NULL, "w"), fragment = TRUE)
-stopifnot(any(as.character(rd) != "\n"),
-          identical(textConnectionValue(out)[2L], "LaTeX")); close(out)
-## empty output in R <= 4.2.x
-
+### contined in reg-tests-1e.R for R >- 4.3.0
 
 ## keep at end
 rbind(last =  proc.time() - .pt,

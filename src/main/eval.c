@@ -29,7 +29,7 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 #include <R_ext/Print.h>
-
+#include <errno.h>
 
 static SEXP bcEval(SEXP, SEXP, Rboolean);
 
@@ -184,6 +184,12 @@ static void lineprof(char* buf, SEXP srcref)
 static pthread_t R_profiled_thread;
 #endif
 
+#if defined(__APPLE__)
+#include <mach/mach_init.h>
+#include <mach/mach_port.h>
+static mach_port_t R_profiled_thread_id;
+#endif
+
 static RCNTXT * findProfContext(RCNTXT *cptr)
 {
     if (! R_Filter_Callframes)
@@ -221,14 +227,28 @@ static void doprof(int sig)  /* sig is ignored in Windows */
     size_t bigv, smallv, nodes;
     size_t len;
     int prevnum = R_Line_Profiling;
+    int old_errno = errno;
 
     buf[0] = '\0';
 
 #ifdef Win32
     SuspendThread(MainThread);
+#elif defined(__APPLE__)
+    /* Using Mach thread API to detect whether we are on the main thread,
+       because pthread_self() sometimes crashes R due to a page fault when
+       the signal handler runs just after the new thread is created, but
+       before pthread initialization has been finished. */
+    mach_port_t id = mach_thread_self();
+    mach_port_deallocate(mach_task_self(), id);
+    if (id != R_profiled_thread_id) {
+	pthread_kill(R_profiled_thread, sig);
+	errno = old_errno;
+	return;
+    }
 #elif defined(HAVE_PTHREAD)
     if (! pthread_equal(pthread_self(), R_profiled_thread)) {
 	pthread_kill(R_profiled_thread, sig);
+	errno = old_errno;
 	return;
     }
 #endif /* Win32 */
@@ -344,7 +364,7 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 #ifndef Win32
     signal(SIGPROF, doprof);
 #endif /* not Win32 */
-
+    errno = old_errno;
 }
 
 #ifdef Win32
@@ -456,6 +476,12 @@ static void R_InitProfiling(SEXP filename, int append, double dinterval,
     R_profiled_thread = pthread_self();
 #else
     error("profiling requires 'pthread' support");
+#endif
+
+#if defined(__APPLE__)
+    /* see comment in doprof for why R_profiled_thread is not enough */
+    R_profiled_thread_id = mach_thread_self();
+    mach_port_deallocate(mach_task_self(), R_profiled_thread_id);
 #endif
 
     signal(SIGPROF, doprof);
@@ -601,7 +627,7 @@ static R_INLINE void INCLNK_stack(R_bcstack_t *top)
     R_BCProtTop = top;
 }
 
-static R_INLINE void INCLNK_stack_commit()
+static R_INLINE void INCLNK_stack_commit(void)
 {
     if (R_BCProtCommitted < R_BCProtTop) {
 	R_bcstack_t *base = R_BCProtCommitted;
@@ -4886,7 +4912,7 @@ static R_INLINE SEXP getForLoopSeq(int offset, Rboolean *iscompact)
 
 #define BCCONSTS(e) BCODE_CONSTS(e)
 
-static void NORET nodeStackOverflow()
+static void NORET nodeStackOverflow(void)
 {
     /* condiiton is pre-allocated and protected with R_PreserveObject */
     SEXP cond = R_getNodeStackOverflowError();
@@ -4913,7 +4939,7 @@ static R_INLINE void* BCNALLOC(int nelems) {
 
 #define BCNALLOC_CNTXT() (RCNTXT *)BCNALLOC(RCNTXT_ELEMS)
 
-static R_INLINE void BCNPOP_AND_END_CNTXT() {
+static R_INLINE void BCNPOP_AND_END_CNTXT(void) {
     RCNTXT* cntxt = (RCNTXT *)(R_BCNodeStackTop - RCNTXT_ELEMS);
     endcontext(cntxt);
     R_BCNodeStackTop -= RCNTXT_ELEMS + 1;
@@ -5269,7 +5295,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 #define CALL_FRAME_FTYPE() TYPEOF(CALL_FRAME_FUN())
 #define CALL_FRAME_SIZE() (3)
 
-static R_INLINE SEXP BUILTIN_CALL_FRAME_ARGS()
+static R_INLINE SEXP BUILTIN_CALL_FRAME_ARGS(void)
 {
     SEXP args = CALL_FRAME_ARGS();
     for (SEXP a = args; a  != R_NilValue; a = CDR(a))
@@ -5277,7 +5303,7 @@ static R_INLINE SEXP BUILTIN_CALL_FRAME_ARGS()
     return args;
 }
 
-static R_INLINE SEXP CLOSURE_CALL_FRAME_ARGS()
+static R_INLINE SEXP CLOSURE_CALL_FRAME_ARGS(void)
 {
     SEXP args = CALL_FRAME_ARGS();
     /* it would be better not to build this arglist with CONS_NR in
@@ -5531,7 +5557,7 @@ static int current_opcode = NO_CURRENT_OPCODE;
 static int opcode_counts[OPCOUNT];
 #endif
 
-static void bc_check_sigint()
+static void bc_check_sigint(void)
 {
     R_CheckUserInterrupt();
 #ifndef IMMEDIATE_FINALIZERS
@@ -6308,12 +6334,12 @@ SEXP attribute_hidden R_findBCInterpreterSrcref(RCNTXT *cptr)
     return R_findBCInterpreterLocation(cptr, "srcrefsIndex");
 }
 
-static SEXP R_findBCInterpreterExpression()
+static SEXP R_findBCInterpreterExpression(void)
 {
     return R_findBCInterpreterLocation(NULL, "expressionsIndex");
 }
 
-SEXP attribute_hidden R_getCurrentSrcref()
+SEXP attribute_hidden R_getCurrentSrcref(void)
 {
     if (R_Srcref != R_InBCInterpreter)
 	return R_Srcref;
@@ -6412,7 +6438,7 @@ static SEXP inflateAssignmentCall(SEXP expr) {
 }
 
 /* Get the current expression being evaluated by the byte-code interpreter. */
-SEXP attribute_hidden R_getBCInterpreterExpression()
+SEXP attribute_hidden R_getBCInterpreterExpression(void)
 {
     SEXP exp = R_findBCInterpreterExpression();
     if (TYPEOF(exp) == PROMSXP) {

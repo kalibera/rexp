@@ -1409,7 +1409,7 @@ primitive/@code{.Internal} .  This is exactly what one wants for a
 @code{.Internal}, and so may not correspond to any @R{} function.)
 However, it is unlikely to be what is needed for a primitive.
 
-The upshot is that that @code{warningcall} and @code{errorcall} should
+The upshot is that @code{warningcall} and @code{errorcall} should
 normally be used for code called from a primitive, and @code{warning}
 and @code{error} should be used for code called from a @code{.Internal}
 (and necessarily from @code{.Call}, @code{.C} and so on, where the call
@@ -4287,13 +4287,12 @@ unsafe).
 Environment variable @env{_R_CHECK_COMPILATION_FLAGS_KNOWN_} can be set
 to a space-separated set of flags which come from the @R{} build used
 for testing (flags such as @option{-Wall} and @option{-Wextra} are
-already known).  For example, for CRAN build of @R{} >= 4.0.0 on macOS
+already known).  For example, for CRAN builds of @R{} >= 4.0.0 on macOS
 one could use
 @example
 _R_CHECK_COMPILATION_FLAGS_KNOWN_="-mmacosx-version-min=10.13" 
 @end example
-@noindent
-Default: false (but true for CRAN submission checks).
+Default: unset.
 
 @item _R_CHECK_R_DEPENDS_
 Check that any dependence on R is not on a recent patch-level version
@@ -4520,6 +4519,17 @@ Default: false (but true for CRAN submission checks).
 Check whether @code{news()} can successfully read package news in plain
 text (file @file{NEWS}) format.
 Default: false (but true for CRAN submission checks).
+
+@item _R_WIN_CHECK_INVALID_PARAMETERS_
+Check whether arguments passed to the Windows C runtime are valid. When
+enabled and a C runtime function is called with an invalid parameter, R
+prints diagnostic information and unconditionally terminates. By default,
+R for Windows following MinGW-W64 default causes UCRT to ignore invalid
+parameters, but they may cause R to abort e.g. when R is embedded into
+applications built with a different compiler toolchain. One may set the
+value to @code{"watson"} for interactive debugging on Windows via
+@code{_invoke_watson}.
+Default: disabled.
 @end vtable
 
 The following variables control checks for undeclared/unconditional use
@@ -4856,7 +4866,7 @@ if you change internal structures.]
 
 Various dialects of TeX are used for different purposes in @R{}.  The
 policy is that manuals be written in @samp{texinfo}, and for convenience
-the main and Windows FAQs are also.  This has the advantage that is is
+the main and Windows FAQs are also.  This has the advantage that it is
 easy to produce @HTML{} and plain text versions as well as typeset manuals.
 
 @LaTeX{} is not used directly, but rather as an intermediate format for

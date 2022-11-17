@@ -3112,7 +3112,7 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE,
         av <- utils::installed.packages()[, dependencies, drop = FALSE]
         rn <- row.names(av)
         new <- strict0 <- strict
-        ex <- "bit" # since an update is promised.
+        ex <- character()
         repeat {
             new <- intersect(new, rn) # avoid NAs in the next line
             need <- unname(unlist(apply(av[new, , drop = FALSE], 1L,
@@ -3989,7 +3989,7 @@ function(dir, makevars = c("Makevars.in", "Makevars"))
         return(bad_flags)
 
     prefixes <- c("CPP", "C", "CXX", "CXX98", "CXX11", "CXX14", "CXX17",
-                  "CXX20", "F", "FC", "OBJC", "OBJCXX")
+                  "CXX20", "CXX23", "F", "FC", "OBJC", "OBJCXX")
 
     uflags_re <- sprintf("^(%s)FLAGS: *(.*)$",
                          paste(prefixes, collapse = "|"))
@@ -4427,6 +4427,7 @@ function(package, dir, lib.loc = NULL)
                                          "FALSE"))
     if(use_aliases_from_CRAN) {
         aliases_db <- NULL
+        tried_aliases_db <- FALSE
     }
 
     anchors <- unique(thispkg[have_anchor])
@@ -4483,8 +4484,19 @@ function(package, dir, lib.loc = NULL)
 
         } else if(use_aliases_from_CRAN) {
             if(is.null(aliases_db)) {
+                if (tried_aliases_db) {
+                    unknown <- c(unknown, pkg)
+                    next
+                }
+                tried_aliases_db <- TRUE
                 ## Not yet read in.
-                aliases_db <- CRAN_aliases_db()
+                ## This can fail if e.g. CRAN is updating DB
+                aliases_db <- tryCatch(CRAN_aliases_db(),
+                                       error = function(e) NULL)
+                if (is.null(aliases_db)) {
+                    unknown <- c(unknown, pkg)
+                    next
+                }
             }
             aliases <- aliases_db[[pkg]]
             if(is.null(aliases)) {
@@ -7676,7 +7688,8 @@ function(dir, localOnly = FALSE, pkgSize = NA)
                                          "FALSE"))
     if(!capabilities("libcurl") && remote)
         out$no_url_checks <- TRUE
-    else {
+    else if(is.null(out$Rd_db_build_error)) {
+        ## Skip if building the Rd db failed.
         udb <- url_db_from_package_sources(dir)
         bad <- tryCatch(check_url_db(udb,
                                      remote = remote,
@@ -7865,7 +7878,7 @@ function(dir, localOnly = FALSE, pkgSize = NA)
     con <- url(sprintf("%s/src/contrib/PACKAGES.in", CRAN))
     odb <- read.dcf(con)
     close(con)
-    ## For now (2012-11-28), PACKAGES.in is all ASCII, so there is no
+    ## For now (2022-09-22), PACKAGES.in is all ASCII, so there is no
     ## need to re-encode.  Eventually, it might be in UTF-8 ...
     entry <- odb[odb[, "Package"] == meta["Package"], ]
     entry <- entry[!is.na(entry) &
@@ -9299,10 +9312,10 @@ function(x, collapse = " ", q = getOption("useFancyQuotes"))
 .pretty_format2 <-
 function(msg, x, collapse = ", ", useFancyQuotes = FALSE)
 {
-    xx <- strwrap(paste(sQuote(x, q=q), collapse=collapse), exdent = 2L)
+    xx <- strwrap(paste(sQuote(x, q=useFancyQuotes), collapse=collapse), exdent = 2L)
     if (length(xx) > 1L || nchar(msg) + nchar(xx) + 1L > 75L)
         ## trash 'xx', instead wrap w/ 'indent' :
-        c(msg, .pretty_format(x, collapse=collapse, q=q))
+        c(msg, .pretty_format(x, collapse=collapse, q=useFancyQuotes))
     else paste(msg, xx)
 }
 

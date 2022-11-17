@@ -1,6 +1,6 @@
 % File src/library/base/man/options.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2020 R Core Team
+% Copyright 1995-2022 R Core Team
 % Distributed under GPL 2 or later
 
 \name{options}
@@ -141,7 +141,8 @@ getOption(x, default = NULL)
 
     \item{\code{digits.secs}:}{controls the maximum number of digits to
       print when formatting time values in seconds.  Valid values
-      are 0\dots6 with default 0.  See \code{\link{strftime}}.}
+      are 0\dots6 with default 0 (equivalent to \code{NULL} which is used
+      when it is undefined as on vanilla startup).  See \code{\link{strftime}}.}
 
     \item{\code{download.file.extra}:}{Extra command-line argument(s) for
       non-default methods: see \code{\link{download.file}}.}
@@ -730,7 +731,7 @@ getOption(x, default = NULL)
 	  \code{"both"} (the default for CRAN macOS builds).
 	  (\code{"mac.binary.el-capitan"},
 	  \code{"mac.binary.mavericks"}, \code{"mac.binary.leopard"}
-	  and \code{"mac.binary.universal"} are no longer in use.)} 
+	  and \code{"mac.binary.universal"} are no longer in use.)}
       }
       Value \code{"binary"} is a synonym for the native binary type (if
       there is one); \code{"both"} is used by
@@ -739,15 +740,23 @@ getOption(x, default = NULL)
     }
 
     \item{\code{repos}:}{URLs of the repositories for use by
-      \code{\link{update.packages}}.  Defaults to
+      \code{\link{update.packages}}.  Initially set from entries marked as
+      default in the \file{repositories} file, see \link{R_REPOSITORIES}.
+      The \sQuote{factory-fresh} setting from \file{etc/repositories} is
       \code{c(CRAN="@CRAN@")}, a value that causes some utilities to
       prompt for a CRAN mirror.  To avoid this do set the CRAN mirror,
-      by something like
-      \code{local({r <- getOption("repos"); r["CRAN"] <- "http://my.local.cran";
-                   options(repos = r)})}.
+      by something like \preformatted{
+local({
+    r <- getOption("repos")
+    r["CRAN"] <- "https://my.local.cran"
+    options(repos = r)
+})
+}
+      in your \file{\link{.Rprofile}},
+      or use a personal \file{repositories} file.
 
       Note that you can add more repositories (Bioconductor,
-      R-Forge, Rforge.net \dots)
+      R-Forge, RForge.net, \dots) for the current session
       using \code{\link{setRepositories}}.
     }
     \item{\code{SweaveHooks}, \code{SweaveSyntax}:}{

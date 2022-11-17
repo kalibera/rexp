@@ -781,6 +781,13 @@ ALLOCA
 R_OPENMP_FFLAGS
 R_OPENMP_CFLAGS
 OPENMP_CXXFLAGS
+SHLIB_CXX23LDFLAGS
+SHLIB_CXX23LD
+CXX23PICFLAGS
+CXX23FLAGS
+CXX23STD
+CXX23
+HAVE_CXX23
 SHLIB_CXX20LDFLAGS
 SHLIB_CXX20LD
 CXX20PICFLAGS
@@ -837,6 +844,7 @@ R_XTRA_CFLAGS
 FFLAGS
 SHLIB_CXXFLAGS
 CXXSTD
+FPIEFLAGS
 FOUNDATION_LIBS
 FOUNDATION_CPPFLAGS
 OPENMP_FCFLAGS
@@ -1191,6 +1199,12 @@ CXX20FLAGS
 CXX20PICFLAGS
 SHLIB_CXX20LD
 SHLIB_CXX20LDFLAGS
+CXX23
+CXX23STD
+CXX23FLAGS
+CXX23PICFLAGS
+SHLIB_CXX23LD
+SHLIB_CXX23LDFLAGS
 XMKMF'
 
 
@@ -2038,6 +2052,18 @@ Some influential environment variables:
               from the C++20 compiler
   SHLIB_CXX20LDFLAGS
               special flags used by SHLIB_CXX20LD
+  CXX23       C++23 compiler command
+  CXX23STD    special flag for compiling and for linking C++23 code, e.g.
+              -std=c++23
+  CXX23FLAGS  C++23 compiler flags
+  CXX23PICFLAGS
+              special flags for compiling C++23 code to be turned into a
+              shared object
+  SHLIB_CXX23LD
+              command for linking shared objects which contain object files
+              from the C++23 compiler
+  SHLIB_CXX23LDFLAGS
+              special flags used by SHLIB_CXX23LD
   XMKMF       Path to xmkmf, Makefile generator for X Window System
 
 Use these variables to override the choices made by `configure' or to help
@@ -6211,7 +6237,7 @@ test -n "$R_BZIPCMD" || R_BZIPCMD=""""
 
 ## Browser
 if test -z "${R_BROWSER}"; then
-  for ac_prog in firefox mozilla galeon opera xdg-open kfmclient gnome-moz-remote open
+  for ac_prog in xdg-open firefox mozilla epiphany galeon opera kfmclient gnome-moz-remote open lynx links
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -6273,7 +6299,7 @@ fi
 
 
 ## PDF viewer
-for ac_prog in ${R_PDFVIEWER} acroread acroread4 xdg-open evince xpdf gv gnome-gv ggv okular kpdf open gpdf kghostview
+for ac_prog in ${R_PDFVIEWER} xdg-open acroread acroread4 evince atril xpdf gv gnome-gv ggv okular kpdf open gpdf kghostview
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -13159,7 +13185,7 @@ then :
 else $as_nop
   lt_cv_ld_force_load=no
       cat > conftest.c << _LT_EOF
-int forced_loaded() { return 2;}
+int forced_loaded(void) { return 2;}
 _LT_EOF
       echo "$LTCC $LTCFLAGS -c -o conftest.o conftest.c" >&5
       $LTCC $LTCFLAGS -c -o conftest.o conftest.c 2>&5
@@ -25353,7 +25379,7 @@ else $as_nop
 #endif
 
 int
-main() {
+main(int argc, const char * argv[]) {
 #ifndef SIZE_MAX
   char *p = (char *) SIZE_MAX;
 #endif
@@ -25933,7 +25959,16 @@ then :
 else $as_nop
   cat > conftest.c <<EOF
 /* based on gnulib, alloca.c */
-int find_stack_direction(int *addr, int depth) {
+
+#define attribute_no_sanitizer_instrumentation
+#ifdef __has_attribute
+# undef attribute_no_sanitizer_instrumentation
+# define attribute_no_sanitizer_instrumentation \
+    __attribute__((disable_sanitizer_instrumentation))
+#endif
+
+int attribute_no_sanitizer_instrumentation
+find_stack_direction(int *addr, int depth) {
   int dir, dummy = 0;
   if (! addr)
     addr = &dummy;
@@ -26652,7 +26687,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_verb"
-(eval echo $as_me:26655: \"$ac_link\") >&5
+(eval echo $as_me:26690: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -26728,7 +26763,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_cv_prog_c_v"
-(eval echo $as_me:26731: \"$ac_link\") >&5
+(eval echo $as_me:26766: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -28603,6 +28638,7 @@ fi
 
 
 ### type for Fortran 'hidden' character lengths, if any
+### Try setting FPIFLAGS if not already set.
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for type of 'hidden' Fortran character lengths" >&5
 printf %s "checking for type of 'hidden' Fortran character lengths... " >&6; }
 if test "x${FC_LEN_T}" != "x"; then
@@ -28618,7 +28654,6 @@ else $as_nop
       call xerbla('abcde', -10)
       end
 EOF
-${FC} ${FFLAGS} -c conftestf.f 1>&5 2>&5
 cat > conftest.c <<EOF
 /* A C function calling a Fortran subroutine which calls xerbla
    written in C, emulating how R calls BLAS/LAPACK routines */
@@ -28632,7 +28667,7 @@ cat > conftest.c <<EOF
 # define F77_SYMBOL(x)   x
 #endif
 
-extern void F77_SYMBOL(testit)();
+extern void F77_SYMBOL(testit)(void);
 
 void F77_SYMBOL(xerbla)(const char *srname, int *info,
 			const size_t srname_len)
@@ -28643,12 +28678,16 @@ void F77_SYMBOL(xerbla)(const char *srname, int *info,
     if (*info != -10) exit(-3);
 }
 
-int main()
+int main(int argc, const char * argv[])
 {
     F77_SYMBOL(testit)();
     return 0;
 }
 EOF
+r_cv_prog_fc_char_len_t=unknown
+for fpieflags in "${FPIEFLAGS}" "-fPIE"; do
+echo "Trying FPIEFLAGS = ${fpieflags}" 1>&5
+${FC} ${FFLAGS} ${fpieflags} -c conftestf.f 1>&5 2>&5
 if ${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&5 2>&5; then
   if ${CC} ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} ${MAIN_LDFLAGS} -o conftest${ac_exeext} \
        conftest.${ac_objext} conftestf.${ac_objext} ${FLIBS} \
@@ -28658,24 +28697,36 @@ if ${CC} ${CPPFLAGS} ${CFLAGS} -c conftest.c 1>&5 2>&5; then
     output=`./conftest${ac_exeext} 2>&5`
     if test ${?} = 0; then
       r_cv_prog_fc_char_len_t=size_t
+      FPIEFLAGS="${fpieflags}"
+    else
+      break
     fi
   fi
 fi
+done
 
 fi
 
 rm -Rf conftest conftest.* conftestf.* core
 
-  fc_len_t=${r_cv_prog_fc_char_len_t}
+  if test "${r_cv_prog_fc_char_len_t}" != "xunknown" ; then
+    fc_len_t=${r_cv_prog_fc_char_len_t}
+  fi
 fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ${fc_len_t}" >&5
 printf "%s\n" "${fc_len_t}" >&6; }
 
-if test "x${fc_len_t}" != "xunknown"; then
+if test "x${fc_len_t}" = "x" ; then
+  as_fn_error $? "FC_LEN_T must be non-empty." "$LINENO" 5
+fi
+
+if test "x${fc_len_t}" != "xunknown" ; then
 
 printf "%s\n" "#define FC_LEN_T ${fc_len_t}" >>confdefs.h
 
 fi
+
+
 
 
 
@@ -29048,7 +29099,7 @@ printf "%s\n" "$as_me: WARNING: Use of flat namespace is requested by user." >&2
       *icc*)
         cpicflags="-fpic"
         ;;
-      ## Portland Group
+      ## Nvidia (formerly Portland Group)
       *pgcc*)
         cpicflags="-fpic"
 	;;
@@ -29058,7 +29109,7 @@ printf "%s\n" "$as_me: WARNING: Use of flat namespace is requested by user." >&2
       *ifc|*ifort)
         fpicflags="-fpic"
         ;;
-      ## Portland Group
+      ## Nvidia (formerly Portland Group)
       *pgf77|*pgf90|*pgf95)
         fpicflags="-fpic"
         ;;
@@ -29068,7 +29119,7 @@ printf "%s\n" "$as_me: WARNING: Use of flat namespace is requested by user." >&2
       *icpc|*icc)
         cxxpicflags="-fpic"
         ;;
-      ## Portland Group
+      ## Nvidia (formerly Portland Group)
       *pgCC)
         cxxpicflags="-fpic"
         ;;
@@ -29420,6 +29471,7 @@ else $as_nop
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -29436,11 +29488,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -29495,7 +29549,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -29735,6 +29789,7 @@ else $as_nop
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -29751,11 +29806,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -29810,7 +29867,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -30057,6 +30114,7 @@ else $as_nop
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -30073,11 +30131,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -30132,7 +30192,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -30378,6 +30438,7 @@ else $as_nop
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -30394,11 +30455,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -30453,7 +30516,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -30768,6 +30831,7 @@ else $as_nop
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -30784,11 +30848,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -30843,7 +30909,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -31188,6 +31254,7 @@ else $as_nop
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -31204,11 +31271,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -31263,7 +31332,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -31615,6 +31684,7 @@ else $as_nop
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -31631,11 +31701,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -31690,7 +31762,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -32041,6 +32113,7 @@ else $as_nop
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -32057,11 +32130,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -32116,7 +32191,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -32529,11 +32604,14 @@ else $as_nop
 #error "This is not a C++ compiler"
 #elif __cplusplus < 201703L
 #error "This is not a C++17 compiler"
+#elif __cplusplus >= 202002L
+# error "This is a C++20 compiler"
 #else
 
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -32550,11 +32628,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -32609,7 +32689,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -32912,23 +32992,6 @@ namespace cxx14
 
 
 
-/* We don't want compiler-specific tests for R so these conditional
-   tests are commented out.
-
-   For C++17 features supported by compiler see
-   https://gcc.gnu.org/projects/cxx-status.html#cxx1z  for gcc
-   http://clang.llvm.org/cxx_status.html               for clang
-   http://en.cppreference.com/w/cpp/compiler_support   for an overview
-
-#if defined(__clang__)
-  #define REALLY_CLANG
-#else
-  #if defined(__GNUC__)
-    #define REALLY_GCC
-  #endif
-#endif
-*/
-
 #include <initializer_list>
 #include <utility>
 #include <type_traits>
@@ -32936,18 +32999,12 @@ namespace cxx14
 namespace cxx17
 {
 
-/* Not listed as supported by clang 4 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_constexpr_lambdas
   {
-
-    // TODO: test it with clang++ from git
 
     constexpr int foo = [](){return 42;}();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test::nested_namespace::definitions
   {
@@ -33182,12 +33239,8 @@ namespace cxx17
 
   }
 
-/* P0091R3 not supported by clang 4.0.0 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_template_argument_deduction_for_class_templates
   {
-
-    // TODO: test it with clang++ from git
 
     template <typename T1, typename T2>
     struct pair
@@ -33207,8 +33260,6 @@ namespace cxx17
     }
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test_non_type_auto_template_parameters
   {
@@ -33222,13 +33273,8 @@ namespace cxx17
 
   }
 
-/* P0217R3 should be supported in clang 4.0.0, but test code dumps core
-   In addition, gcc 7.0.1 fails on the last test - MTP
-#if !defined(REALLY_CLANG)
   namespace test_structured_bindings
   {
-
-    // TODO: test it with clang++ from git
 
     int arr[2] = { 1, 2 };
     std::pair<int, int> pr = { 1, 2 };
@@ -33261,14 +33307,9 @@ namespace cxx17
     const auto [ x3, y3 ] = f3();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
-  // P0012R1: clang >= 4
   namespace test_exception_spec_type_system
   {
-
-    // TODO: test it with clang++ from git
 
     struct Good {};
     struct Bad {};
@@ -33349,11 +33390,14 @@ else $as_nop
 #error "This is not a C++ compiler"
 #elif __cplusplus < 201703L
 #error "This is not a C++17 compiler"
+#elif __cplusplus >= 202002L
+# error "This is a C++20 compiler"
 #else
 
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -33370,11 +33414,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -33429,7 +33475,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -33732,23 +33778,6 @@ namespace cxx14
 
 
 
-/* We don't want compiler-specific tests for R so these conditional
-   tests are commented out.
-
-   For C++17 features supported by compiler see
-   https://gcc.gnu.org/projects/cxx-status.html#cxx1z  for gcc
-   http://clang.llvm.org/cxx_status.html               for clang
-   http://en.cppreference.com/w/cpp/compiler_support   for an overview
-
-#if defined(__clang__)
-  #define REALLY_CLANG
-#else
-  #if defined(__GNUC__)
-    #define REALLY_GCC
-  #endif
-#endif
-*/
-
 #include <initializer_list>
 #include <utility>
 #include <type_traits>
@@ -33756,18 +33785,12 @@ namespace cxx14
 namespace cxx17
 {
 
-/* Not listed as supported by clang 4 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_constexpr_lambdas
   {
-
-    // TODO: test it with clang++ from git
 
     constexpr int foo = [](){return 42;}();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test::nested_namespace::definitions
   {
@@ -34002,12 +34025,8 @@ namespace cxx17
 
   }
 
-/* P0091R3 not supported by clang 4.0.0 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_template_argument_deduction_for_class_templates
   {
-
-    // TODO: test it with clang++ from git
 
     template <typename T1, typename T2>
     struct pair
@@ -34027,8 +34046,6 @@ namespace cxx17
     }
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test_non_type_auto_template_parameters
   {
@@ -34042,13 +34059,8 @@ namespace cxx17
 
   }
 
-/* P0217R3 should be supported in clang 4.0.0, but test code dumps core
-   In addition, gcc 7.0.1 fails on the last test - MTP
-#if !defined(REALLY_CLANG)
   namespace test_structured_bindings
   {
-
-    // TODO: test it with clang++ from git
 
     int arr[2] = { 1, 2 };
     std::pair<int, int> pr = { 1, 2 };
@@ -34081,14 +34093,9 @@ namespace cxx17
     const auto [ x3, y3 ] = f3();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
-  // P0012R1: clang >= 4
   namespace test_exception_spec_type_system
   {
-
-    // TODO: test it with clang++ from git
 
     struct Good {};
     struct Bad {};
@@ -34176,11 +34183,14 @@ else $as_nop
 #error "This is not a C++ compiler"
 #elif __cplusplus < 201703L
 #error "This is not a C++17 compiler"
+#elif __cplusplus >= 202002L
+# error "This is a C++20 compiler"
 #else
 
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -34197,11 +34207,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -34256,7 +34268,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -34559,23 +34571,6 @@ namespace cxx14
 
 
 
-/* We don't want compiler-specific tests for R so these conditional
-   tests are commented out.
-
-   For C++17 features supported by compiler see
-   https://gcc.gnu.org/projects/cxx-status.html#cxx1z  for gcc
-   http://clang.llvm.org/cxx_status.html               for clang
-   http://en.cppreference.com/w/cpp/compiler_support   for an overview
-
-#if defined(__clang__)
-  #define REALLY_CLANG
-#else
-  #if defined(__GNUC__)
-    #define REALLY_GCC
-  #endif
-#endif
-*/
-
 #include <initializer_list>
 #include <utility>
 #include <type_traits>
@@ -34583,18 +34578,12 @@ namespace cxx14
 namespace cxx17
 {
 
-/* Not listed as supported by clang 4 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_constexpr_lambdas
   {
-
-    // TODO: test it with clang++ from git
 
     constexpr int foo = [](){return 42;}();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test::nested_namespace::definitions
   {
@@ -34829,12 +34818,8 @@ namespace cxx17
 
   }
 
-/* P0091R3 not supported by clang 4.0.0 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_template_argument_deduction_for_class_templates
   {
-
-    // TODO: test it with clang++ from git
 
     template <typename T1, typename T2>
     struct pair
@@ -34854,8 +34839,6 @@ namespace cxx17
     }
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test_non_type_auto_template_parameters
   {
@@ -34869,13 +34852,8 @@ namespace cxx17
 
   }
 
-/* P0217R3 should be supported in clang 4.0.0, but test code dumps core
-   In addition, gcc 7.0.1 fails on the last test - MTP
-#if !defined(REALLY_CLANG)
   namespace test_structured_bindings
   {
-
-    // TODO: test it with clang++ from git
 
     int arr[2] = { 1, 2 };
     std::pair<int, int> pr = { 1, 2 };
@@ -34908,14 +34886,9 @@ namespace cxx17
     const auto [ x3, y3 ] = f3();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
-  // P0012R1: clang >= 4
   namespace test_exception_spec_type_system
   {
-
-    // TODO: test it with clang++ from git
 
     struct Good {};
     struct Bad {};
@@ -35002,11 +34975,14 @@ else $as_nop
 #error "This is not a C++ compiler"
 #elif __cplusplus < 201703L
 #error "This is not a C++17 compiler"
+#elif __cplusplus >= 202002L
+# error "This is a C++20 compiler"
 #else
 
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -35023,11 +34999,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -35082,7 +35060,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -35385,23 +35363,6 @@ namespace cxx14
 
 
 
-/* We don't want compiler-specific tests for R so these conditional
-   tests are commented out.
-
-   For C++17 features supported by compiler see
-   https://gcc.gnu.org/projects/cxx-status.html#cxx1z  for gcc
-   http://clang.llvm.org/cxx_status.html               for clang
-   http://en.cppreference.com/w/cpp/compiler_support   for an overview
-
-#if defined(__clang__)
-  #define REALLY_CLANG
-#else
-  #if defined(__GNUC__)
-    #define REALLY_GCC
-  #endif
-#endif
-*/
-
 #include <initializer_list>
 #include <utility>
 #include <type_traits>
@@ -35409,18 +35370,12 @@ namespace cxx14
 namespace cxx17
 {
 
-/* Not listed as supported by clang 4 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_constexpr_lambdas
   {
-
-    // TODO: test it with clang++ from git
 
     constexpr int foo = [](){return 42;}();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test::nested_namespace::definitions
   {
@@ -35655,12 +35610,8 @@ namespace cxx17
 
   }
 
-/* P0091R3 not supported by clang 4.0.0 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_template_argument_deduction_for_class_templates
   {
-
-    // TODO: test it with clang++ from git
 
     template <typename T1, typename T2>
     struct pair
@@ -35680,8 +35631,6 @@ namespace cxx17
     }
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test_non_type_auto_template_parameters
   {
@@ -35695,13 +35644,8 @@ namespace cxx17
 
   }
 
-/* P0217R3 should be supported in clang 4.0.0, but test code dumps core
-   In addition, gcc 7.0.1 fails on the last test - MTP
-#if !defined(REALLY_CLANG)
   namespace test_structured_bindings
   {
-
-    // TODO: test it with clang++ from git
 
     int arr[2] = { 1, 2 };
     std::pair<int, int> pr = { 1, 2 };
@@ -35734,14 +35678,9 @@ namespace cxx17
     const auto [ x3, y3 ] = f3();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
-  // P0012R1: clang >= 4
   namespace test_exception_spec_type_system
   {
-
-    // TODO: test it with clang++ from git
 
     struct Good {};
     struct Bad {};
@@ -35895,13 +35834,14 @@ else $as_nop
 /* end confdefs.h.  */
 #ifndef __cplusplus
 #error "This is not a C++ compiler"
-#elif __cplusplus < 201703L
+#elif __cplusplus < 202002L
 #error "This is not a C++20 compiler"
 #else
 
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -35918,11 +35858,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -35977,7 +35919,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -36280,23 +36222,6 @@ namespace cxx14
 
 
 
-/* We don't want compiler-specific tests for R so these conditional
-   tests are commented out.
-
-   For C++17 features supported by compiler see
-   https://gcc.gnu.org/projects/cxx-status.html#cxx1z  for gcc
-   http://clang.llvm.org/cxx_status.html               for clang
-   http://en.cppreference.com/w/cpp/compiler_support   for an overview
-
-#if defined(__clang__)
-  #define REALLY_CLANG
-#else
-  #if defined(__GNUC__)
-    #define REALLY_GCC
-  #endif
-#endif
-*/
-
 #include <initializer_list>
 #include <utility>
 #include <type_traits>
@@ -36304,18 +36229,12 @@ namespace cxx14
 namespace cxx17
 {
 
-/* Not listed as supported by clang 4 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_constexpr_lambdas
   {
-
-    // TODO: test it with clang++ from git
 
     constexpr int foo = [](){return 42;}();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test::nested_namespace::definitions
   {
@@ -36550,12 +36469,8 @@ namespace cxx17
 
   }
 
-/* P0091R3 not supported by clang 4.0.0 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_template_argument_deduction_for_class_templates
   {
-
-    // TODO: test it with clang++ from git
 
     template <typename T1, typename T2>
     struct pair
@@ -36575,8 +36490,6 @@ namespace cxx17
     }
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test_non_type_auto_template_parameters
   {
@@ -36590,13 +36503,8 @@ namespace cxx17
 
   }
 
-/* P0217R3 should be supported in clang 4.0.0, but test code dumps core
-   In addition, gcc 7.0.1 fails on the last test - MTP
-#if !defined(REALLY_CLANG)
   namespace test_structured_bindings
   {
-
-    // TODO: test it with clang++ from git
 
     int arr[2] = { 1, 2 };
     std::pair<int, int> pr = { 1, 2 };
@@ -36629,14 +36537,9 @@ namespace cxx17
     const auto [ x3, y3 ] = f3();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
-  // P0012R1: clang >= 4
   namespace test_exception_spec_type_system
   {
-
-    // TODO: test it with clang++ from git
 
     struct Good {};
     struct Bad {};
@@ -36715,13 +36618,14 @@ else $as_nop
 /* end confdefs.h.  */
 #ifndef __cplusplus
 #error "This is not a C++ compiler"
-#elif __cplusplus < 201703L
+#elif __cplusplus < 202002L
 #error "This is not a C++20 compiler"
 #else
 
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -36738,11 +36642,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -36797,7 +36703,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -37100,23 +37006,6 @@ namespace cxx14
 
 
 
-/* We don't want compiler-specific tests for R so these conditional
-   tests are commented out.
-
-   For C++17 features supported by compiler see
-   https://gcc.gnu.org/projects/cxx-status.html#cxx1z  for gcc
-   http://clang.llvm.org/cxx_status.html               for clang
-   http://en.cppreference.com/w/cpp/compiler_support   for an overview
-
-#if defined(__clang__)
-  #define REALLY_CLANG
-#else
-  #if defined(__GNUC__)
-    #define REALLY_GCC
-  #endif
-#endif
-*/
-
 #include <initializer_list>
 #include <utility>
 #include <type_traits>
@@ -37124,18 +37013,12 @@ namespace cxx14
 namespace cxx17
 {
 
-/* Not listed as supported by clang 4 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_constexpr_lambdas
   {
-
-    // TODO: test it with clang++ from git
 
     constexpr int foo = [](){return 42;}();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test::nested_namespace::definitions
   {
@@ -37370,12 +37253,8 @@ namespace cxx17
 
   }
 
-/* P0091R3 not supported by clang 4.0.0 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_template_argument_deduction_for_class_templates
   {
-
-    // TODO: test it with clang++ from git
 
     template <typename T1, typename T2>
     struct pair
@@ -37395,8 +37274,6 @@ namespace cxx17
     }
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test_non_type_auto_template_parameters
   {
@@ -37410,13 +37287,8 @@ namespace cxx17
 
   }
 
-/* P0217R3 should be supported in clang 4.0.0, but test code dumps core
-   In addition, gcc 7.0.1 fails on the last test - MTP
-#if !defined(REALLY_CLANG)
   namespace test_structured_bindings
   {
-
-    // TODO: test it with clang++ from git
 
     int arr[2] = { 1, 2 };
     std::pair<int, int> pr = { 1, 2 };
@@ -37449,14 +37321,9 @@ namespace cxx17
     const auto [ x3, y3 ] = f3();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
-  // P0012R1: clang >= 4
   namespace test_exception_spec_type_system
   {
-
-    // TODO: test it with clang++ from git
 
     struct Good {};
     struct Bad {};
@@ -37542,13 +37409,14 @@ else $as_nop
 /* end confdefs.h.  */
 #ifndef __cplusplus
 #error "This is not a C++ compiler"
-#elif __cplusplus < 201703L
+#elif __cplusplus < 202002L
 #error "This is not a C++20 compiler"
 #else
 
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -37565,11 +37433,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -37624,7 +37494,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -37927,23 +37797,6 @@ namespace cxx14
 
 
 
-/* We don't want compiler-specific tests for R so these conditional
-   tests are commented out.
-
-   For C++17 features supported by compiler see
-   https://gcc.gnu.org/projects/cxx-status.html#cxx1z  for gcc
-   http://clang.llvm.org/cxx_status.html               for clang
-   http://en.cppreference.com/w/cpp/compiler_support   for an overview
-
-#if defined(__clang__)
-  #define REALLY_CLANG
-#else
-  #if defined(__GNUC__)
-    #define REALLY_GCC
-  #endif
-#endif
-*/
-
 #include <initializer_list>
 #include <utility>
 #include <type_traits>
@@ -37951,18 +37804,12 @@ namespace cxx14
 namespace cxx17
 {
 
-/* Not listed as supported by clang 4 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_constexpr_lambdas
   {
-
-    // TODO: test it with clang++ from git
 
     constexpr int foo = [](){return 42;}();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test::nested_namespace::definitions
   {
@@ -38197,12 +38044,8 @@ namespace cxx17
 
   }
 
-/* P0091R3 not supported by clang 4.0.0 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_template_argument_deduction_for_class_templates
   {
-
-    // TODO: test it with clang++ from git
 
     template <typename T1, typename T2>
     struct pair
@@ -38222,8 +38065,6 @@ namespace cxx17
     }
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test_non_type_auto_template_parameters
   {
@@ -38237,13 +38078,8 @@ namespace cxx17
 
   }
 
-/* P0217R3 should be supported in clang 4.0.0, but test code dumps core
-   In addition, gcc 7.0.1 fails on the last test - MTP
-#if !defined(REALLY_CLANG)
   namespace test_structured_bindings
   {
-
-    // TODO: test it with clang++ from git
 
     int arr[2] = { 1, 2 };
     std::pair<int, int> pr = { 1, 2 };
@@ -38276,14 +38112,9 @@ namespace cxx17
     const auto [ x3, y3 ] = f3();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
-  // P0012R1: clang >= 4
   namespace test_exception_spec_type_system
   {
-
-    // TODO: test it with clang++ from git
 
     struct Good {};
     struct Bad {};
@@ -38368,13 +38199,14 @@ else $as_nop
 /* end confdefs.h.  */
 #ifndef __cplusplus
 #error "This is not a C++ compiler"
-#elif __cplusplus < 201703L
+#elif __cplusplus < 202002L
 #error "This is not a C++20 compiler"
 #else
 
 
 namespace cxx11
 {
+
   namespace test_static_assert
   {
 
@@ -38391,11 +38223,13 @@ namespace cxx11
 
     struct Base
     {
+      virtual ~Base() {}
       virtual void f() {}
     };
 
     struct Derived : public Base
     {
+      virtual ~Derived() override {}
       virtual void f() override {}
     };
 
@@ -38450,7 +38284,7 @@ namespace cxx11
     }
 
     int
-    test(const int c, volatile int v)
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
     {
       static_assert(is_same<int, decltype(0)>::value == true, "");
       static_assert(is_same<int, decltype(c)>::value == false, "");
@@ -38753,23 +38587,6 @@ namespace cxx14
 
 
 
-/* We don't want compiler-specific tests for R so these conditional
-   tests are commented out.
-
-   For C++17 features supported by compiler see
-   https://gcc.gnu.org/projects/cxx-status.html#cxx1z  for gcc
-   http://clang.llvm.org/cxx_status.html               for clang
-   http://en.cppreference.com/w/cpp/compiler_support   for an overview
-
-#if defined(__clang__)
-  #define REALLY_CLANG
-#else
-  #if defined(__GNUC__)
-    #define REALLY_GCC
-  #endif
-#endif
-*/
-
 #include <initializer_list>
 #include <utility>
 #include <type_traits>
@@ -38777,18 +38594,12 @@ namespace cxx14
 namespace cxx17
 {
 
-/* Not listed as supported by clang 4 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_constexpr_lambdas
   {
-
-    // TODO: test it with clang++ from git
 
     constexpr int foo = [](){return 42;}();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test::nested_namespace::definitions
   {
@@ -39023,12 +38834,8 @@ namespace cxx17
 
   }
 
-/* P0091R3 not supported by clang 4.0.0 - MTP
-#if !defined(REALLY_CLANG)
   namespace test_template_argument_deduction_for_class_templates
   {
-
-    // TODO: test it with clang++ from git
 
     template <typename T1, typename T2>
     struct pair
@@ -39048,8 +38855,6 @@ namespace cxx17
     }
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
   namespace test_non_type_auto_template_parameters
   {
@@ -39063,13 +38868,8 @@ namespace cxx17
 
   }
 
-/* P0217R3 should be supported in clang 4.0.0, but test code dumps core
-   In addition, gcc 7.0.1 fails on the last test - MTP
-#if !defined(REALLY_CLANG)
   namespace test_structured_bindings
   {
-
-    // TODO: test it with clang++ from git
 
     int arr[2] = { 1, 2 };
     std::pair<int, int> pr = { 1, 2 };
@@ -39102,14 +38902,9 @@ namespace cxx17
     const auto [ x3, y3 ] = f3();
 
   }
-#endif // !defined(REALLY_CLANG)
-*/
 
-  // P0012R1: clang >= 4
   namespace test_exception_spec_type_system
   {
-
-    // TODO: test it with clang++ from git
 
     struct Good {};
     struct Bad {};
@@ -39220,6 +39015,3230 @@ if test -z "${SHLIB_CXX20LD}"; then
 fi
 
 : ${SHLIB_CXX20LDFLAGS=${SHLIB_CXX17LDFLAGS}}
+
+
+
+
+
+
+
+
+
+r_save_CXX="${CXX}"
+r_save_CXXFLAGS="${CXXFLAGS}"
+
+: ${CXX23=${CXX20}}
+: ${CXX23FLAGS=${CXX20FLAGS}}
+: ${CXX23PICFLAGS=${CXX20PICFLAGS}}
+
+CXX="${CXX23} ${CXX23STD}"
+CXXFLAGS="${CXX23FLAGS} ${CXX23PICFLAGS}"
+ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+  ax_cxx_compile_alternatives="23 2b"    ax_cxx_compile_cxx23_required=false
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+  ac_success=no
+  switch=""
+
+  if test "x${CXX23STD}" !=  x;  then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports C++23 features" >&5
+printf %s "checking whether $CXX supports C++23 features... " >&6; }
+if test ${ax_cv_cxx_compile_cxx23+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifndef __cplusplus
+#error "This is not a C++ compiler"
+#elif __cplusplus <= 202002L
+#error "This is not a C++23 compiler"
+#else
+
+
+namespace cxx11
+{
+
+  namespace test_static_assert
+  {
+
+    template <typename T>
+    struct check
+    {
+      static_assert(sizeof(int) <= sizeof(T), "not big enough");
+    };
+
+  }
+
+  namespace test_final_override
+  {
+
+    struct Base
+    {
+      virtual ~Base() {}
+      virtual void f() {}
+    };
+
+    struct Derived : public Base
+    {
+      virtual ~Derived() override {}
+      virtual void f() override {}
+    };
+
+  }
+
+  namespace test_double_right_angle_brackets
+  {
+
+    template < typename T >
+    struct check {};
+
+    typedef check<void> single_type;
+    typedef check<check<void>> double_type;
+    typedef check<check<check<void>>> triple_type;
+    typedef check<check<check<check<void>>>> quadruple_type;
+
+  }
+
+  namespace test_decltype
+  {
+
+    int
+    f()
+    {
+      int a = 1;
+      decltype(a) b = 2;
+      return a + b;
+    }
+
+  }
+
+  namespace test_type_deduction
+  {
+
+    template < typename T1, typename T2 >
+    struct is_same
+    {
+      static const bool value = false;
+    };
+
+    template < typename T >
+    struct is_same<T, T>
+    {
+      static const bool value = true;
+    };
+
+    template < typename T1, typename T2 >
+    auto
+    add(T1 a1, T2 a2) -> decltype(a1 + a2)
+    {
+      return a1 + a2;
+    }
+
+    int
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
+    {
+      static_assert(is_same<int, decltype(0)>::value == true, "");
+      static_assert(is_same<int, decltype(c)>::value == false, "");
+      static_assert(is_same<int, decltype(v)>::value == false, "");
+      auto ac = c;
+      auto av = v;
+      auto sumi = ac + av + 'x';
+      auto sumf = ac + av + 1.0;
+      static_assert(is_same<int, decltype(ac)>::value == true, "");
+      static_assert(is_same<int, decltype(av)>::value == true, "");
+      static_assert(is_same<int, decltype(sumi)>::value == true, "");
+      static_assert(is_same<int, decltype(sumf)>::value == false, "");
+      static_assert(is_same<int, decltype(add(c, v))>::value == true, "");
+      return (sumf > 0.0) ? sumi : add(c, v);
+    }
+
+  }
+
+  namespace test_noexcept
+  {
+
+    int f() { return 0; }
+    int g() noexcept { return 0; }
+
+    static_assert(noexcept(f()) == false, "");
+    static_assert(noexcept(g()) == true, "");
+
+  }
+
+  namespace test_constexpr
+  {
+
+    template < typename CharT >
+    unsigned long constexpr
+    strlen_c_r(const CharT *const s, const unsigned long acc) noexcept
+    {
+      return *s ? strlen_c_r(s + 1, acc + 1) : acc;
+    }
+
+    template < typename CharT >
+    unsigned long constexpr
+    strlen_c(const CharT *const s) noexcept
+    {
+      return strlen_c_r(s, 0UL);
+    }
+
+    static_assert(strlen_c("") == 0UL, "");
+    static_assert(strlen_c("1") == 1UL, "");
+    static_assert(strlen_c("example") == 7UL, "");
+    static_assert(strlen_c("another\0example") == 7UL, "");
+
+  }
+
+  namespace test_rvalue_references
+  {
+
+    template < int N >
+    struct answer
+    {
+      static constexpr int value = N;
+    };
+
+    answer<1> f(int&)       { return answer<1>(); }
+    answer<2> f(const int&) { return answer<2>(); }
+    answer<3> f(int&&)      { return answer<3>(); }
+
+    void
+    test()
+    {
+      int i = 0;
+      const int c = 0;
+      static_assert(decltype(f(i))::value == 1, "");
+      static_assert(decltype(f(c))::value == 2, "");
+      static_assert(decltype(f(0))::value == 3, "");
+    }
+
+  }
+
+  namespace test_uniform_initialization
+  {
+
+    struct test
+    {
+      static const int zero {};
+      static const int one {1};
+    };
+
+    static_assert(test::zero == 0, "");
+    static_assert(test::one == 1, "");
+
+  }
+
+  namespace test_lambdas
+  {
+
+    void
+    test1()
+    {
+      auto lambda1 = [](){};
+      auto lambda2 = lambda1;
+      lambda1();
+      lambda2();
+    }
+
+    int
+    test2()
+    {
+      auto a = [](int i, int j){ return i + j; }(1, 2);
+      auto b = []() -> int { return '0'; }();
+      auto c = [=](){ return a + b; }();
+      auto d = [&](){ return c; }();
+      auto e = [a, &b](int x) mutable {
+        const auto identity = [](int y){ return y; };
+        for (auto i = 0; i < a; ++i)
+          a += b--;
+        return x + identity(a + b);
+      }(0);
+      return a + b + c + d + e;
+    }
+
+    int
+    test3()
+    {
+      const auto nullary = [](){ return 0; };
+      const auto unary = [](int x){ return x; };
+      using nullary_t = decltype(nullary);
+      using unary_t = decltype(unary);
+      const auto higher1st = [](nullary_t f){ return f(); };
+      const auto higher2nd = [unary](nullary_t f1){
+        return [unary, f1](unary_t f2){ return f2(unary(f1())); };
+      };
+      return higher1st(nullary) + higher2nd(nullary)(unary);
+    }
+
+  }
+
+  namespace test_variadic_templates
+  {
+
+    template <int...>
+    struct sum;
+
+    template <int N0, int... N1toN>
+    struct sum<N0, N1toN...>
+    {
+      /*
+        Original test code used the auto keyword instead of declaring
+        the type of "value" to be int. This causes Oracle Solaris Studio
+        12.4 to fail. This is possibly a compiler bug but in any case
+        current test code works around it by an explicit declaration.
+      */
+      static constexpr int value = N0 + sum<N1toN...>::value;
+    };
+
+    template <>
+    struct sum<>
+    {
+      static constexpr auto value = 0;
+    };
+
+    static_assert(sum<>::value == 0, "");
+    static_assert(sum<1>::value == 1, "");
+    static_assert(sum<23>::value == 23, "");
+    static_assert(sum<1, 2>::value == 3, "");
+    static_assert(sum<5, 5, 11>::value == 21, "");
+    static_assert(sum<2, 3, 5, 7, 11, 13>::value == 41, "");
+
+  }
+
+  // http://stackoverflow.com/questions/13728184/template-aliases-and-sfinae
+  // Clang 3.1 fails with headers of libstd++ 4.8.3 when using std::function
+  // because of this.
+  namespace test_template_alias_sfinae
+  {
+
+    struct foo {};
+
+    template<typename T>
+    using member = typename T::member_type;
+
+    template<typename T>
+    void func(...) {}
+
+    template<typename T>
+    void func(member<T>*) {}
+
+    void test();
+
+    void test() { func<foo>(0); }
+
+  }
+
+}  // namespace cxx11
+
+
+
+
+namespace cxx14
+{
+
+  namespace test_polymorphic_lambdas
+  {
+
+    int
+    test()
+    {
+      const auto lambda = [](auto&&... args){
+        const auto istiny = [](auto x){
+          return (sizeof(x) == 1UL) ? 1 : 0;
+        };
+        const int aretiny[] = { istiny(args)... };
+        return aretiny[0];
+      };
+      return lambda(1, 1L, 1.0f, '1');
+    }
+
+  }
+
+  namespace test_binary_literals
+  {
+
+    constexpr auto ivii = 0b0000000000101010;
+    static_assert(ivii == 42, "wrong value");
+
+  }
+
+  namespace test_generalized_constexpr
+  {
+
+    template < typename CharT >
+    constexpr unsigned long
+    strlen_c(const CharT *const s) noexcept
+    {
+      auto length = 0UL;
+      for (auto p = s; *p; ++p)
+        ++length;
+      return length;
+    }
+
+    static_assert(strlen_c("") == 0UL, "");
+    static_assert(strlen_c("x") == 1UL, "");
+    static_assert(strlen_c("test") == 4UL, "");
+    static_assert(strlen_c("another\0test") == 7UL, "");
+
+  }
+
+  namespace test_lambda_init_capture
+  {
+
+    int
+    test()
+    {
+      auto x = 0;
+      const auto lambda1 = [a = x](int b){ return a + b; };
+      const auto lambda2 = [a = lambda1(x)](){ return a; };
+      return lambda2();
+    }
+
+  }
+
+  namespace test_digit_separators
+  {
+
+    constexpr auto ten_million = 100'000'000;
+    static_assert(ten_million == 100000000, "");
+
+  }
+
+  namespace test_return_type_deduction
+  {
+
+    auto f(int& x) { return x; }
+    decltype(auto) g(int& x) { return x; }
+
+    template < typename T1, typename T2 >
+    struct is_same
+    {
+      static constexpr auto value = false;
+    };
+
+    template < typename T >
+    struct is_same<T, T>
+    {
+      static constexpr auto value = true;
+    };
+
+    int
+    test()
+    {
+      auto x = 0;
+      static_assert(is_same<int, decltype(f(x))>::value, "");
+      static_assert(is_same<int&, decltype(g(x))>::value, "");
+      return x;
+    }
+
+  }
+
+}  // namespace cxx14
+
+
+
+
+#include <initializer_list>
+#include <utility>
+#include <type_traits>
+
+namespace cxx17
+{
+
+  namespace test_constexpr_lambdas
+  {
+
+    constexpr int foo = [](){return 42;}();
+
+  }
+
+  namespace test::nested_namespace::definitions
+  {
+
+  }
+
+  namespace test_fold_expression
+  {
+
+    template<typename... Args>
+    int multiply(Args... args)
+    {
+      return (args * ... * 1);
+    }
+
+    template<typename... Args>
+    bool all(Args... args)
+    {
+      return (args && ...);
+    }
+
+  }
+
+  namespace test_extended_static_assert
+  {
+
+    static_assert (true);
+
+  }
+
+  namespace test_auto_brace_init_list
+  {
+
+    auto foo = {5};
+    auto bar {5};
+
+    static_assert(std::is_same<std::initializer_list<int>, decltype(foo)>::value);
+    static_assert(std::is_same<int, decltype(bar)>::value);
+  }
+
+  namespace test_typename_in_template_template_parameter
+  {
+
+    template<template<typename> typename X> struct D;
+
+  }
+
+  namespace test_fallthrough_nodiscard_maybe_unused_attributes
+  {
+
+    int f1()
+    {
+      return 42;
+    }
+
+    [[nodiscard]] int f2()
+    {
+      [[maybe_unused]] auto unused = f1();
+
+      switch (f1())
+      {
+      case 17:
+        f1();
+        [[fallthrough]];
+      case 42:
+        f1();
+      }
+      return f1();
+    }
+
+  }
+
+  namespace test_extended_aggregate_initialization
+  {
+
+    struct base1
+    {
+      int b1, b2 = 42;
+    };
+
+    struct base2
+    {
+      base2() {
+        b3 = 42;
+      }
+      int b3;
+    };
+
+    struct derived : base1, base2
+    {
+        int d;
+    };
+
+    derived d1 {{1, 2}, {}, 4};  // full initialization
+    derived d2 {{}, {}, 4};      // value-initialized bases
+
+  }
+
+  namespace test_general_range_based_for_loop
+  {
+
+    struct iter
+    {
+      int i;
+
+      int& operator* ()
+      {
+        return i;
+      }
+
+      const int& operator* () const
+      {
+        return i;
+      }
+
+      iter& operator++()
+      {
+        ++i;
+        return *this;
+      }
+    };
+
+    struct sentinel
+    {
+      int i;
+    };
+
+    bool operator== (const iter& i, const sentinel& s)
+    {
+      return i.i == s.i;
+    }
+
+    bool operator!= (const iter& i, const sentinel& s)
+    {
+      return !(i == s);
+    }
+
+    struct range
+    {
+      iter begin() const
+      {
+        return {0};
+      }
+
+      sentinel end() const
+      {
+        return {5};
+      }
+    };
+
+    void f()
+    {
+      range r {};
+
+      for (auto i : r)
+      {
+        [[maybe_unused]] auto v = i;
+      }
+    }
+
+  }
+
+  namespace test_lambda_capture_asterisk_this_by_value
+  {
+
+    struct t
+    {
+      int i;
+      int foo()
+      {
+        return [*this]()
+        {
+          return i;
+        }();
+      }
+    };
+
+  }
+
+  namespace test_enum_class_construction
+  {
+
+    enum class byte : unsigned char
+    {};
+
+    byte foo {42};
+
+  }
+
+  namespace test_constexpr_if
+  {
+
+    template <bool cond>
+    int f ()
+    {
+      if constexpr(cond)
+      {
+        return 13;
+      }
+      else
+      {
+        return 42;
+      }
+    }
+
+  }
+
+  namespace test_selection_statement_with_initializer
+  {
+
+    int f()
+    {
+      return 13;
+    }
+
+    int f2()
+    {
+      if (auto i = f(); i > 0)
+      {
+        return 3;
+      }
+
+      switch (auto i = f(); i + 4)
+      {
+      case 17:
+        return 2;
+
+      default:
+        return 1;
+      }
+    }
+
+  }
+
+  namespace test_template_argument_deduction_for_class_templates
+  {
+
+    template <typename T1, typename T2>
+    struct pair
+    {
+      pair (T1 p1, T2 p2)
+        : m1 {p1},
+          m2 {p2}
+      {}
+
+      T1 m1;
+      T2 m2;
+    };
+
+    void f()
+    {
+      [[maybe_unused]] auto p = pair{13, 42u};
+    }
+
+  }
+
+  namespace test_non_type_auto_template_parameters
+  {
+
+    template <auto n>
+    struct B
+    {};
+
+    B<5> b1;
+    B<'a'> b2;
+
+  }
+
+  namespace test_structured_bindings
+  {
+
+    int arr[2] = { 1, 2 };
+    std::pair<int, int> pr = { 1, 2 };
+
+    auto f1() -> int(&)[2]
+    {
+      return arr;
+    }
+
+    auto f2() -> std::pair<int, int>&
+    {
+      return pr;
+    }
+
+    struct S
+    {
+      int x1 : 2;
+      volatile double y1;
+    };
+
+    S f3()
+    {
+      return {};
+    }
+
+    auto [ x1, y1 ] = f1();
+    auto& [ xr1, yr1 ] = f1();
+    auto [ x2, y2 ] = f2();
+    auto& [ xr2, yr2 ] = f2();
+    const auto [ x3, y3 ] = f3();
+
+  }
+
+  namespace test_exception_spec_type_system
+  {
+
+    struct Good {};
+    struct Bad {};
+
+    void g1() noexcept;
+    void g2();
+
+    template<typename T>
+    Bad
+    f(T*, T*);
+
+    template<typename T1, typename T2>
+    Good
+    f(T1*, T2*);
+
+    static_assert (std::is_same_v<Good, decltype(f(g1, g2))>);
+
+  }
+
+  namespace test_inline_variables
+  {
+
+    template<class T> void f(T)
+    {}
+
+    template<class T> inline T g(T)
+    {
+      return T{};
+    }
+
+    template<> inline void f<>(int)
+    {}
+
+    template<> int g<>(int)
+    {
+      return 5;
+    }
+
+  }
+
+}  // namespace cxx17
+
+
+#endif
+
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"
+then :
+  ax_cv_cxx_compile_cxx23=yes
+else $as_nop
+  ax_cv_cxx_compile_cxx23=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cxx_compile_cxx23" >&5
+printf "%s\n" "$ax_cv_cxx_compile_cxx23" >&6; }
+     if test x$ax_cv_cxx_compile_cxx23 = xyes; then
+       ac_success=yes
+     fi
+  fi
+
+
+    if test x$ac_success = xno; then
+    for alternative in ${ax_cxx_compile_alternatives}; do
+      switch="-std=gnu++${alternative}"
+      cachevar=`printf "%s\n" "ax_cv_cxx_compile_cxx23_$switch" | $as_tr_sh`
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports C++23 features with $switch" >&5
+printf %s "checking whether $CXX supports C++23 features with $switch... " >&6; }
+if eval test \${$cachevar+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_save_CXX="$CXX"
+         CXX="$CXX $switch"
+         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifndef __cplusplus
+#error "This is not a C++ compiler"
+#elif __cplusplus <= 202002L
+#error "This is not a C++23 compiler"
+#else
+
+
+namespace cxx11
+{
+
+  namespace test_static_assert
+  {
+
+    template <typename T>
+    struct check
+    {
+      static_assert(sizeof(int) <= sizeof(T), "not big enough");
+    };
+
+  }
+
+  namespace test_final_override
+  {
+
+    struct Base
+    {
+      virtual ~Base() {}
+      virtual void f() {}
+    };
+
+    struct Derived : public Base
+    {
+      virtual ~Derived() override {}
+      virtual void f() override {}
+    };
+
+  }
+
+  namespace test_double_right_angle_brackets
+  {
+
+    template < typename T >
+    struct check {};
+
+    typedef check<void> single_type;
+    typedef check<check<void>> double_type;
+    typedef check<check<check<void>>> triple_type;
+    typedef check<check<check<check<void>>>> quadruple_type;
+
+  }
+
+  namespace test_decltype
+  {
+
+    int
+    f()
+    {
+      int a = 1;
+      decltype(a) b = 2;
+      return a + b;
+    }
+
+  }
+
+  namespace test_type_deduction
+  {
+
+    template < typename T1, typename T2 >
+    struct is_same
+    {
+      static const bool value = false;
+    };
+
+    template < typename T >
+    struct is_same<T, T>
+    {
+      static const bool value = true;
+    };
+
+    template < typename T1, typename T2 >
+    auto
+    add(T1 a1, T2 a2) -> decltype(a1 + a2)
+    {
+      return a1 + a2;
+    }
+
+    int
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
+    {
+      static_assert(is_same<int, decltype(0)>::value == true, "");
+      static_assert(is_same<int, decltype(c)>::value == false, "");
+      static_assert(is_same<int, decltype(v)>::value == false, "");
+      auto ac = c;
+      auto av = v;
+      auto sumi = ac + av + 'x';
+      auto sumf = ac + av + 1.0;
+      static_assert(is_same<int, decltype(ac)>::value == true, "");
+      static_assert(is_same<int, decltype(av)>::value == true, "");
+      static_assert(is_same<int, decltype(sumi)>::value == true, "");
+      static_assert(is_same<int, decltype(sumf)>::value == false, "");
+      static_assert(is_same<int, decltype(add(c, v))>::value == true, "");
+      return (sumf > 0.0) ? sumi : add(c, v);
+    }
+
+  }
+
+  namespace test_noexcept
+  {
+
+    int f() { return 0; }
+    int g() noexcept { return 0; }
+
+    static_assert(noexcept(f()) == false, "");
+    static_assert(noexcept(g()) == true, "");
+
+  }
+
+  namespace test_constexpr
+  {
+
+    template < typename CharT >
+    unsigned long constexpr
+    strlen_c_r(const CharT *const s, const unsigned long acc) noexcept
+    {
+      return *s ? strlen_c_r(s + 1, acc + 1) : acc;
+    }
+
+    template < typename CharT >
+    unsigned long constexpr
+    strlen_c(const CharT *const s) noexcept
+    {
+      return strlen_c_r(s, 0UL);
+    }
+
+    static_assert(strlen_c("") == 0UL, "");
+    static_assert(strlen_c("1") == 1UL, "");
+    static_assert(strlen_c("example") == 7UL, "");
+    static_assert(strlen_c("another\0example") == 7UL, "");
+
+  }
+
+  namespace test_rvalue_references
+  {
+
+    template < int N >
+    struct answer
+    {
+      static constexpr int value = N;
+    };
+
+    answer<1> f(int&)       { return answer<1>(); }
+    answer<2> f(const int&) { return answer<2>(); }
+    answer<3> f(int&&)      { return answer<3>(); }
+
+    void
+    test()
+    {
+      int i = 0;
+      const int c = 0;
+      static_assert(decltype(f(i))::value == 1, "");
+      static_assert(decltype(f(c))::value == 2, "");
+      static_assert(decltype(f(0))::value == 3, "");
+    }
+
+  }
+
+  namespace test_uniform_initialization
+  {
+
+    struct test
+    {
+      static const int zero {};
+      static const int one {1};
+    };
+
+    static_assert(test::zero == 0, "");
+    static_assert(test::one == 1, "");
+
+  }
+
+  namespace test_lambdas
+  {
+
+    void
+    test1()
+    {
+      auto lambda1 = [](){};
+      auto lambda2 = lambda1;
+      lambda1();
+      lambda2();
+    }
+
+    int
+    test2()
+    {
+      auto a = [](int i, int j){ return i + j; }(1, 2);
+      auto b = []() -> int { return '0'; }();
+      auto c = [=](){ return a + b; }();
+      auto d = [&](){ return c; }();
+      auto e = [a, &b](int x) mutable {
+        const auto identity = [](int y){ return y; };
+        for (auto i = 0; i < a; ++i)
+          a += b--;
+        return x + identity(a + b);
+      }(0);
+      return a + b + c + d + e;
+    }
+
+    int
+    test3()
+    {
+      const auto nullary = [](){ return 0; };
+      const auto unary = [](int x){ return x; };
+      using nullary_t = decltype(nullary);
+      using unary_t = decltype(unary);
+      const auto higher1st = [](nullary_t f){ return f(); };
+      const auto higher2nd = [unary](nullary_t f1){
+        return [unary, f1](unary_t f2){ return f2(unary(f1())); };
+      };
+      return higher1st(nullary) + higher2nd(nullary)(unary);
+    }
+
+  }
+
+  namespace test_variadic_templates
+  {
+
+    template <int...>
+    struct sum;
+
+    template <int N0, int... N1toN>
+    struct sum<N0, N1toN...>
+    {
+      /*
+        Original test code used the auto keyword instead of declaring
+        the type of "value" to be int. This causes Oracle Solaris Studio
+        12.4 to fail. This is possibly a compiler bug but in any case
+        current test code works around it by an explicit declaration.
+      */
+      static constexpr int value = N0 + sum<N1toN...>::value;
+    };
+
+    template <>
+    struct sum<>
+    {
+      static constexpr auto value = 0;
+    };
+
+    static_assert(sum<>::value == 0, "");
+    static_assert(sum<1>::value == 1, "");
+    static_assert(sum<23>::value == 23, "");
+    static_assert(sum<1, 2>::value == 3, "");
+    static_assert(sum<5, 5, 11>::value == 21, "");
+    static_assert(sum<2, 3, 5, 7, 11, 13>::value == 41, "");
+
+  }
+
+  // http://stackoverflow.com/questions/13728184/template-aliases-and-sfinae
+  // Clang 3.1 fails with headers of libstd++ 4.8.3 when using std::function
+  // because of this.
+  namespace test_template_alias_sfinae
+  {
+
+    struct foo {};
+
+    template<typename T>
+    using member = typename T::member_type;
+
+    template<typename T>
+    void func(...) {}
+
+    template<typename T>
+    void func(member<T>*) {}
+
+    void test();
+
+    void test() { func<foo>(0); }
+
+  }
+
+}  // namespace cxx11
+
+
+
+
+namespace cxx14
+{
+
+  namespace test_polymorphic_lambdas
+  {
+
+    int
+    test()
+    {
+      const auto lambda = [](auto&&... args){
+        const auto istiny = [](auto x){
+          return (sizeof(x) == 1UL) ? 1 : 0;
+        };
+        const int aretiny[] = { istiny(args)... };
+        return aretiny[0];
+      };
+      return lambda(1, 1L, 1.0f, '1');
+    }
+
+  }
+
+  namespace test_binary_literals
+  {
+
+    constexpr auto ivii = 0b0000000000101010;
+    static_assert(ivii == 42, "wrong value");
+
+  }
+
+  namespace test_generalized_constexpr
+  {
+
+    template < typename CharT >
+    constexpr unsigned long
+    strlen_c(const CharT *const s) noexcept
+    {
+      auto length = 0UL;
+      for (auto p = s; *p; ++p)
+        ++length;
+      return length;
+    }
+
+    static_assert(strlen_c("") == 0UL, "");
+    static_assert(strlen_c("x") == 1UL, "");
+    static_assert(strlen_c("test") == 4UL, "");
+    static_assert(strlen_c("another\0test") == 7UL, "");
+
+  }
+
+  namespace test_lambda_init_capture
+  {
+
+    int
+    test()
+    {
+      auto x = 0;
+      const auto lambda1 = [a = x](int b){ return a + b; };
+      const auto lambda2 = [a = lambda1(x)](){ return a; };
+      return lambda2();
+    }
+
+  }
+
+  namespace test_digit_separators
+  {
+
+    constexpr auto ten_million = 100'000'000;
+    static_assert(ten_million == 100000000, "");
+
+  }
+
+  namespace test_return_type_deduction
+  {
+
+    auto f(int& x) { return x; }
+    decltype(auto) g(int& x) { return x; }
+
+    template < typename T1, typename T2 >
+    struct is_same
+    {
+      static constexpr auto value = false;
+    };
+
+    template < typename T >
+    struct is_same<T, T>
+    {
+      static constexpr auto value = true;
+    };
+
+    int
+    test()
+    {
+      auto x = 0;
+      static_assert(is_same<int, decltype(f(x))>::value, "");
+      static_assert(is_same<int&, decltype(g(x))>::value, "");
+      return x;
+    }
+
+  }
+
+}  // namespace cxx14
+
+
+
+
+#include <initializer_list>
+#include <utility>
+#include <type_traits>
+
+namespace cxx17
+{
+
+  namespace test_constexpr_lambdas
+  {
+
+    constexpr int foo = [](){return 42;}();
+
+  }
+
+  namespace test::nested_namespace::definitions
+  {
+
+  }
+
+  namespace test_fold_expression
+  {
+
+    template<typename... Args>
+    int multiply(Args... args)
+    {
+      return (args * ... * 1);
+    }
+
+    template<typename... Args>
+    bool all(Args... args)
+    {
+      return (args && ...);
+    }
+
+  }
+
+  namespace test_extended_static_assert
+  {
+
+    static_assert (true);
+
+  }
+
+  namespace test_auto_brace_init_list
+  {
+
+    auto foo = {5};
+    auto bar {5};
+
+    static_assert(std::is_same<std::initializer_list<int>, decltype(foo)>::value);
+    static_assert(std::is_same<int, decltype(bar)>::value);
+  }
+
+  namespace test_typename_in_template_template_parameter
+  {
+
+    template<template<typename> typename X> struct D;
+
+  }
+
+  namespace test_fallthrough_nodiscard_maybe_unused_attributes
+  {
+
+    int f1()
+    {
+      return 42;
+    }
+
+    [[nodiscard]] int f2()
+    {
+      [[maybe_unused]] auto unused = f1();
+
+      switch (f1())
+      {
+      case 17:
+        f1();
+        [[fallthrough]];
+      case 42:
+        f1();
+      }
+      return f1();
+    }
+
+  }
+
+  namespace test_extended_aggregate_initialization
+  {
+
+    struct base1
+    {
+      int b1, b2 = 42;
+    };
+
+    struct base2
+    {
+      base2() {
+        b3 = 42;
+      }
+      int b3;
+    };
+
+    struct derived : base1, base2
+    {
+        int d;
+    };
+
+    derived d1 {{1, 2}, {}, 4};  // full initialization
+    derived d2 {{}, {}, 4};      // value-initialized bases
+
+  }
+
+  namespace test_general_range_based_for_loop
+  {
+
+    struct iter
+    {
+      int i;
+
+      int& operator* ()
+      {
+        return i;
+      }
+
+      const int& operator* () const
+      {
+        return i;
+      }
+
+      iter& operator++()
+      {
+        ++i;
+        return *this;
+      }
+    };
+
+    struct sentinel
+    {
+      int i;
+    };
+
+    bool operator== (const iter& i, const sentinel& s)
+    {
+      return i.i == s.i;
+    }
+
+    bool operator!= (const iter& i, const sentinel& s)
+    {
+      return !(i == s);
+    }
+
+    struct range
+    {
+      iter begin() const
+      {
+        return {0};
+      }
+
+      sentinel end() const
+      {
+        return {5};
+      }
+    };
+
+    void f()
+    {
+      range r {};
+
+      for (auto i : r)
+      {
+        [[maybe_unused]] auto v = i;
+      }
+    }
+
+  }
+
+  namespace test_lambda_capture_asterisk_this_by_value
+  {
+
+    struct t
+    {
+      int i;
+      int foo()
+      {
+        return [*this]()
+        {
+          return i;
+        }();
+      }
+    };
+
+  }
+
+  namespace test_enum_class_construction
+  {
+
+    enum class byte : unsigned char
+    {};
+
+    byte foo {42};
+
+  }
+
+  namespace test_constexpr_if
+  {
+
+    template <bool cond>
+    int f ()
+    {
+      if constexpr(cond)
+      {
+        return 13;
+      }
+      else
+      {
+        return 42;
+      }
+    }
+
+  }
+
+  namespace test_selection_statement_with_initializer
+  {
+
+    int f()
+    {
+      return 13;
+    }
+
+    int f2()
+    {
+      if (auto i = f(); i > 0)
+      {
+        return 3;
+      }
+
+      switch (auto i = f(); i + 4)
+      {
+      case 17:
+        return 2;
+
+      default:
+        return 1;
+      }
+    }
+
+  }
+
+  namespace test_template_argument_deduction_for_class_templates
+  {
+
+    template <typename T1, typename T2>
+    struct pair
+    {
+      pair (T1 p1, T2 p2)
+        : m1 {p1},
+          m2 {p2}
+      {}
+
+      T1 m1;
+      T2 m2;
+    };
+
+    void f()
+    {
+      [[maybe_unused]] auto p = pair{13, 42u};
+    }
+
+  }
+
+  namespace test_non_type_auto_template_parameters
+  {
+
+    template <auto n>
+    struct B
+    {};
+
+    B<5> b1;
+    B<'a'> b2;
+
+  }
+
+  namespace test_structured_bindings
+  {
+
+    int arr[2] = { 1, 2 };
+    std::pair<int, int> pr = { 1, 2 };
+
+    auto f1() -> int(&)[2]
+    {
+      return arr;
+    }
+
+    auto f2() -> std::pair<int, int>&
+    {
+      return pr;
+    }
+
+    struct S
+    {
+      int x1 : 2;
+      volatile double y1;
+    };
+
+    S f3()
+    {
+      return {};
+    }
+
+    auto [ x1, y1 ] = f1();
+    auto& [ xr1, yr1 ] = f1();
+    auto [ x2, y2 ] = f2();
+    auto& [ xr2, yr2 ] = f2();
+    const auto [ x3, y3 ] = f3();
+
+  }
+
+  namespace test_exception_spec_type_system
+  {
+
+    struct Good {};
+    struct Bad {};
+
+    void g1() noexcept;
+    void g2();
+
+    template<typename T>
+    Bad
+    f(T*, T*);
+
+    template<typename T1, typename T2>
+    Good
+    f(T1*, T2*);
+
+    static_assert (std::is_same_v<Good, decltype(f(g1, g2))>);
+
+  }
+
+  namespace test_inline_variables
+  {
+
+    template<class T> void f(T)
+    {}
+
+    template<class T> inline T g(T)
+    {
+      return T{};
+    }
+
+    template<> inline void f<>(int)
+    {}
+
+    template<> int g<>(int)
+    {
+      return 5;
+    }
+
+  }
+
+}  // namespace cxx17
+
+
+#endif
+
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"
+then :
+  eval $cachevar=yes
+else $as_nop
+  eval $cachevar=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+         CXX="$ac_save_CXX"
+fi
+eval ac_res=\$$cachevar
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
+      if eval test x\$$cachevar = xyes; then
+        CXX="$CXX $switch"
+        if test -n "$CXXCPP" ; then
+          CXXCPP="$CXXCPP $switch"
+        fi
+        ac_success=yes
+        break
+      fi
+    done
+  fi
+
+    if test x$ac_success = xno; then
+                    for alternative in ${ax_cxx_compile_alternatives}; do
+      for switch in -std=c++${alternative} -std=sun${alternative}; do
+        cachevar=`printf "%s\n" "ax_cv_cxx_compile_cxx23_$switch" | $as_tr_sh`
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports C++23 features with $switch" >&5
+printf %s "checking whether $CXX supports C++23 features with $switch... " >&6; }
+if eval test \${$cachevar+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_save_CXX="$CXX"
+           CXX="$CXX $switch"
+           cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifndef __cplusplus
+#error "This is not a C++ compiler"
+#elif __cplusplus <= 202002L
+#error "This is not a C++23 compiler"
+#else
+
+
+namespace cxx11
+{
+
+  namespace test_static_assert
+  {
+
+    template <typename T>
+    struct check
+    {
+      static_assert(sizeof(int) <= sizeof(T), "not big enough");
+    };
+
+  }
+
+  namespace test_final_override
+  {
+
+    struct Base
+    {
+      virtual ~Base() {}
+      virtual void f() {}
+    };
+
+    struct Derived : public Base
+    {
+      virtual ~Derived() override {}
+      virtual void f() override {}
+    };
+
+  }
+
+  namespace test_double_right_angle_brackets
+  {
+
+    template < typename T >
+    struct check {};
+
+    typedef check<void> single_type;
+    typedef check<check<void>> double_type;
+    typedef check<check<check<void>>> triple_type;
+    typedef check<check<check<check<void>>>> quadruple_type;
+
+  }
+
+  namespace test_decltype
+  {
+
+    int
+    f()
+    {
+      int a = 1;
+      decltype(a) b = 2;
+      return a + b;
+    }
+
+  }
+
+  namespace test_type_deduction
+  {
+
+    template < typename T1, typename T2 >
+    struct is_same
+    {
+      static const bool value = false;
+    };
+
+    template < typename T >
+    struct is_same<T, T>
+    {
+      static const bool value = true;
+    };
+
+    template < typename T1, typename T2 >
+    auto
+    add(T1 a1, T2 a2) -> decltype(a1 + a2)
+    {
+      return a1 + a2;
+    }
+
+    int
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
+    {
+      static_assert(is_same<int, decltype(0)>::value == true, "");
+      static_assert(is_same<int, decltype(c)>::value == false, "");
+      static_assert(is_same<int, decltype(v)>::value == false, "");
+      auto ac = c;
+      auto av = v;
+      auto sumi = ac + av + 'x';
+      auto sumf = ac + av + 1.0;
+      static_assert(is_same<int, decltype(ac)>::value == true, "");
+      static_assert(is_same<int, decltype(av)>::value == true, "");
+      static_assert(is_same<int, decltype(sumi)>::value == true, "");
+      static_assert(is_same<int, decltype(sumf)>::value == false, "");
+      static_assert(is_same<int, decltype(add(c, v))>::value == true, "");
+      return (sumf > 0.0) ? sumi : add(c, v);
+    }
+
+  }
+
+  namespace test_noexcept
+  {
+
+    int f() { return 0; }
+    int g() noexcept { return 0; }
+
+    static_assert(noexcept(f()) == false, "");
+    static_assert(noexcept(g()) == true, "");
+
+  }
+
+  namespace test_constexpr
+  {
+
+    template < typename CharT >
+    unsigned long constexpr
+    strlen_c_r(const CharT *const s, const unsigned long acc) noexcept
+    {
+      return *s ? strlen_c_r(s + 1, acc + 1) : acc;
+    }
+
+    template < typename CharT >
+    unsigned long constexpr
+    strlen_c(const CharT *const s) noexcept
+    {
+      return strlen_c_r(s, 0UL);
+    }
+
+    static_assert(strlen_c("") == 0UL, "");
+    static_assert(strlen_c("1") == 1UL, "");
+    static_assert(strlen_c("example") == 7UL, "");
+    static_assert(strlen_c("another\0example") == 7UL, "");
+
+  }
+
+  namespace test_rvalue_references
+  {
+
+    template < int N >
+    struct answer
+    {
+      static constexpr int value = N;
+    };
+
+    answer<1> f(int&)       { return answer<1>(); }
+    answer<2> f(const int&) { return answer<2>(); }
+    answer<3> f(int&&)      { return answer<3>(); }
+
+    void
+    test()
+    {
+      int i = 0;
+      const int c = 0;
+      static_assert(decltype(f(i))::value == 1, "");
+      static_assert(decltype(f(c))::value == 2, "");
+      static_assert(decltype(f(0))::value == 3, "");
+    }
+
+  }
+
+  namespace test_uniform_initialization
+  {
+
+    struct test
+    {
+      static const int zero {};
+      static const int one {1};
+    };
+
+    static_assert(test::zero == 0, "");
+    static_assert(test::one == 1, "");
+
+  }
+
+  namespace test_lambdas
+  {
+
+    void
+    test1()
+    {
+      auto lambda1 = [](){};
+      auto lambda2 = lambda1;
+      lambda1();
+      lambda2();
+    }
+
+    int
+    test2()
+    {
+      auto a = [](int i, int j){ return i + j; }(1, 2);
+      auto b = []() -> int { return '0'; }();
+      auto c = [=](){ return a + b; }();
+      auto d = [&](){ return c; }();
+      auto e = [a, &b](int x) mutable {
+        const auto identity = [](int y){ return y; };
+        for (auto i = 0; i < a; ++i)
+          a += b--;
+        return x + identity(a + b);
+      }(0);
+      return a + b + c + d + e;
+    }
+
+    int
+    test3()
+    {
+      const auto nullary = [](){ return 0; };
+      const auto unary = [](int x){ return x; };
+      using nullary_t = decltype(nullary);
+      using unary_t = decltype(unary);
+      const auto higher1st = [](nullary_t f){ return f(); };
+      const auto higher2nd = [unary](nullary_t f1){
+        return [unary, f1](unary_t f2){ return f2(unary(f1())); };
+      };
+      return higher1st(nullary) + higher2nd(nullary)(unary);
+    }
+
+  }
+
+  namespace test_variadic_templates
+  {
+
+    template <int...>
+    struct sum;
+
+    template <int N0, int... N1toN>
+    struct sum<N0, N1toN...>
+    {
+      /*
+        Original test code used the auto keyword instead of declaring
+        the type of "value" to be int. This causes Oracle Solaris Studio
+        12.4 to fail. This is possibly a compiler bug but in any case
+        current test code works around it by an explicit declaration.
+      */
+      static constexpr int value = N0 + sum<N1toN...>::value;
+    };
+
+    template <>
+    struct sum<>
+    {
+      static constexpr auto value = 0;
+    };
+
+    static_assert(sum<>::value == 0, "");
+    static_assert(sum<1>::value == 1, "");
+    static_assert(sum<23>::value == 23, "");
+    static_assert(sum<1, 2>::value == 3, "");
+    static_assert(sum<5, 5, 11>::value == 21, "");
+    static_assert(sum<2, 3, 5, 7, 11, 13>::value == 41, "");
+
+  }
+
+  // http://stackoverflow.com/questions/13728184/template-aliases-and-sfinae
+  // Clang 3.1 fails with headers of libstd++ 4.8.3 when using std::function
+  // because of this.
+  namespace test_template_alias_sfinae
+  {
+
+    struct foo {};
+
+    template<typename T>
+    using member = typename T::member_type;
+
+    template<typename T>
+    void func(...) {}
+
+    template<typename T>
+    void func(member<T>*) {}
+
+    void test();
+
+    void test() { func<foo>(0); }
+
+  }
+
+}  // namespace cxx11
+
+
+
+
+namespace cxx14
+{
+
+  namespace test_polymorphic_lambdas
+  {
+
+    int
+    test()
+    {
+      const auto lambda = [](auto&&... args){
+        const auto istiny = [](auto x){
+          return (sizeof(x) == 1UL) ? 1 : 0;
+        };
+        const int aretiny[] = { istiny(args)... };
+        return aretiny[0];
+      };
+      return lambda(1, 1L, 1.0f, '1');
+    }
+
+  }
+
+  namespace test_binary_literals
+  {
+
+    constexpr auto ivii = 0b0000000000101010;
+    static_assert(ivii == 42, "wrong value");
+
+  }
+
+  namespace test_generalized_constexpr
+  {
+
+    template < typename CharT >
+    constexpr unsigned long
+    strlen_c(const CharT *const s) noexcept
+    {
+      auto length = 0UL;
+      for (auto p = s; *p; ++p)
+        ++length;
+      return length;
+    }
+
+    static_assert(strlen_c("") == 0UL, "");
+    static_assert(strlen_c("x") == 1UL, "");
+    static_assert(strlen_c("test") == 4UL, "");
+    static_assert(strlen_c("another\0test") == 7UL, "");
+
+  }
+
+  namespace test_lambda_init_capture
+  {
+
+    int
+    test()
+    {
+      auto x = 0;
+      const auto lambda1 = [a = x](int b){ return a + b; };
+      const auto lambda2 = [a = lambda1(x)](){ return a; };
+      return lambda2();
+    }
+
+  }
+
+  namespace test_digit_separators
+  {
+
+    constexpr auto ten_million = 100'000'000;
+    static_assert(ten_million == 100000000, "");
+
+  }
+
+  namespace test_return_type_deduction
+  {
+
+    auto f(int& x) { return x; }
+    decltype(auto) g(int& x) { return x; }
+
+    template < typename T1, typename T2 >
+    struct is_same
+    {
+      static constexpr auto value = false;
+    };
+
+    template < typename T >
+    struct is_same<T, T>
+    {
+      static constexpr auto value = true;
+    };
+
+    int
+    test()
+    {
+      auto x = 0;
+      static_assert(is_same<int, decltype(f(x))>::value, "");
+      static_assert(is_same<int&, decltype(g(x))>::value, "");
+      return x;
+    }
+
+  }
+
+}  // namespace cxx14
+
+
+
+
+#include <initializer_list>
+#include <utility>
+#include <type_traits>
+
+namespace cxx17
+{
+
+  namespace test_constexpr_lambdas
+  {
+
+    constexpr int foo = [](){return 42;}();
+
+  }
+
+  namespace test::nested_namespace::definitions
+  {
+
+  }
+
+  namespace test_fold_expression
+  {
+
+    template<typename... Args>
+    int multiply(Args... args)
+    {
+      return (args * ... * 1);
+    }
+
+    template<typename... Args>
+    bool all(Args... args)
+    {
+      return (args && ...);
+    }
+
+  }
+
+  namespace test_extended_static_assert
+  {
+
+    static_assert (true);
+
+  }
+
+  namespace test_auto_brace_init_list
+  {
+
+    auto foo = {5};
+    auto bar {5};
+
+    static_assert(std::is_same<std::initializer_list<int>, decltype(foo)>::value);
+    static_assert(std::is_same<int, decltype(bar)>::value);
+  }
+
+  namespace test_typename_in_template_template_parameter
+  {
+
+    template<template<typename> typename X> struct D;
+
+  }
+
+  namespace test_fallthrough_nodiscard_maybe_unused_attributes
+  {
+
+    int f1()
+    {
+      return 42;
+    }
+
+    [[nodiscard]] int f2()
+    {
+      [[maybe_unused]] auto unused = f1();
+
+      switch (f1())
+      {
+      case 17:
+        f1();
+        [[fallthrough]];
+      case 42:
+        f1();
+      }
+      return f1();
+    }
+
+  }
+
+  namespace test_extended_aggregate_initialization
+  {
+
+    struct base1
+    {
+      int b1, b2 = 42;
+    };
+
+    struct base2
+    {
+      base2() {
+        b3 = 42;
+      }
+      int b3;
+    };
+
+    struct derived : base1, base2
+    {
+        int d;
+    };
+
+    derived d1 {{1, 2}, {}, 4};  // full initialization
+    derived d2 {{}, {}, 4};      // value-initialized bases
+
+  }
+
+  namespace test_general_range_based_for_loop
+  {
+
+    struct iter
+    {
+      int i;
+
+      int& operator* ()
+      {
+        return i;
+      }
+
+      const int& operator* () const
+      {
+        return i;
+      }
+
+      iter& operator++()
+      {
+        ++i;
+        return *this;
+      }
+    };
+
+    struct sentinel
+    {
+      int i;
+    };
+
+    bool operator== (const iter& i, const sentinel& s)
+    {
+      return i.i == s.i;
+    }
+
+    bool operator!= (const iter& i, const sentinel& s)
+    {
+      return !(i == s);
+    }
+
+    struct range
+    {
+      iter begin() const
+      {
+        return {0};
+      }
+
+      sentinel end() const
+      {
+        return {5};
+      }
+    };
+
+    void f()
+    {
+      range r {};
+
+      for (auto i : r)
+      {
+        [[maybe_unused]] auto v = i;
+      }
+    }
+
+  }
+
+  namespace test_lambda_capture_asterisk_this_by_value
+  {
+
+    struct t
+    {
+      int i;
+      int foo()
+      {
+        return [*this]()
+        {
+          return i;
+        }();
+      }
+    };
+
+  }
+
+  namespace test_enum_class_construction
+  {
+
+    enum class byte : unsigned char
+    {};
+
+    byte foo {42};
+
+  }
+
+  namespace test_constexpr_if
+  {
+
+    template <bool cond>
+    int f ()
+    {
+      if constexpr(cond)
+      {
+        return 13;
+      }
+      else
+      {
+        return 42;
+      }
+    }
+
+  }
+
+  namespace test_selection_statement_with_initializer
+  {
+
+    int f()
+    {
+      return 13;
+    }
+
+    int f2()
+    {
+      if (auto i = f(); i > 0)
+      {
+        return 3;
+      }
+
+      switch (auto i = f(); i + 4)
+      {
+      case 17:
+        return 2;
+
+      default:
+        return 1;
+      }
+    }
+
+  }
+
+  namespace test_template_argument_deduction_for_class_templates
+  {
+
+    template <typename T1, typename T2>
+    struct pair
+    {
+      pair (T1 p1, T2 p2)
+        : m1 {p1},
+          m2 {p2}
+      {}
+
+      T1 m1;
+      T2 m2;
+    };
+
+    void f()
+    {
+      [[maybe_unused]] auto p = pair{13, 42u};
+    }
+
+  }
+
+  namespace test_non_type_auto_template_parameters
+  {
+
+    template <auto n>
+    struct B
+    {};
+
+    B<5> b1;
+    B<'a'> b2;
+
+  }
+
+  namespace test_structured_bindings
+  {
+
+    int arr[2] = { 1, 2 };
+    std::pair<int, int> pr = { 1, 2 };
+
+    auto f1() -> int(&)[2]
+    {
+      return arr;
+    }
+
+    auto f2() -> std::pair<int, int>&
+    {
+      return pr;
+    }
+
+    struct S
+    {
+      int x1 : 2;
+      volatile double y1;
+    };
+
+    S f3()
+    {
+      return {};
+    }
+
+    auto [ x1, y1 ] = f1();
+    auto& [ xr1, yr1 ] = f1();
+    auto [ x2, y2 ] = f2();
+    auto& [ xr2, yr2 ] = f2();
+    const auto [ x3, y3 ] = f3();
+
+  }
+
+  namespace test_exception_spec_type_system
+  {
+
+    struct Good {};
+    struct Bad {};
+
+    void g1() noexcept;
+    void g2();
+
+    template<typename T>
+    Bad
+    f(T*, T*);
+
+    template<typename T1, typename T2>
+    Good
+    f(T1*, T2*);
+
+    static_assert (std::is_same_v<Good, decltype(f(g1, g2))>);
+
+  }
+
+  namespace test_inline_variables
+  {
+
+    template<class T> void f(T)
+    {}
+
+    template<class T> inline T g(T)
+    {
+      return T{};
+    }
+
+    template<> inline void f<>(int)
+    {}
+
+    template<> int g<>(int)
+    {
+      return 5;
+    }
+
+  }
+
+}  // namespace cxx17
+
+
+#endif
+
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"
+then :
+  eval $cachevar=yes
+else $as_nop
+  eval $cachevar=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+           CXX="$ac_save_CXX"
+fi
+eval ac_res=\$$cachevar
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
+        if eval test x\$$cachevar = xyes; then
+          CXX="$CXX $switch"
+          if test -n "$CXXCPP" ; then
+            CXXCPP="$CXXCPP $switch"
+          fi
+          ac_success=yes
+          break
+        fi
+      done
+      if test x$ac_success = xyes; then
+        break
+      fi
+    done
+  fi
+
+  if test x$ac_success = xno; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports C++23 features by default" >&5
+printf %s "checking whether $CXX supports C++23 features by default... " >&6; }
+if test ${ax_cv_cxx_compile_cxx23+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifndef __cplusplus
+#error "This is not a C++ compiler"
+#elif __cplusplus <= 202002L
+#error "This is not a C++23 compiler"
+#else
+
+
+namespace cxx11
+{
+
+  namespace test_static_assert
+  {
+
+    template <typename T>
+    struct check
+    {
+      static_assert(sizeof(int) <= sizeof(T), "not big enough");
+    };
+
+  }
+
+  namespace test_final_override
+  {
+
+    struct Base
+    {
+      virtual ~Base() {}
+      virtual void f() {}
+    };
+
+    struct Derived : public Base
+    {
+      virtual ~Derived() override {}
+      virtual void f() override {}
+    };
+
+  }
+
+  namespace test_double_right_angle_brackets
+  {
+
+    template < typename T >
+    struct check {};
+
+    typedef check<void> single_type;
+    typedef check<check<void>> double_type;
+    typedef check<check<check<void>>> triple_type;
+    typedef check<check<check<check<void>>>> quadruple_type;
+
+  }
+
+  namespace test_decltype
+  {
+
+    int
+    f()
+    {
+      int a = 1;
+      decltype(a) b = 2;
+      return a + b;
+    }
+
+  }
+
+  namespace test_type_deduction
+  {
+
+    template < typename T1, typename T2 >
+    struct is_same
+    {
+      static const bool value = false;
+    };
+
+    template < typename T >
+    struct is_same<T, T>
+    {
+      static const bool value = true;
+    };
+
+    template < typename T1, typename T2 >
+    auto
+    add(T1 a1, T2 a2) -> decltype(a1 + a2)
+    {
+      return a1 + a2;
+    }
+
+    int
+    test(const int c, volatile int v) // 'volatile is deprecated in C++20'
+    {
+      static_assert(is_same<int, decltype(0)>::value == true, "");
+      static_assert(is_same<int, decltype(c)>::value == false, "");
+      static_assert(is_same<int, decltype(v)>::value == false, "");
+      auto ac = c;
+      auto av = v;
+      auto sumi = ac + av + 'x';
+      auto sumf = ac + av + 1.0;
+      static_assert(is_same<int, decltype(ac)>::value == true, "");
+      static_assert(is_same<int, decltype(av)>::value == true, "");
+      static_assert(is_same<int, decltype(sumi)>::value == true, "");
+      static_assert(is_same<int, decltype(sumf)>::value == false, "");
+      static_assert(is_same<int, decltype(add(c, v))>::value == true, "");
+      return (sumf > 0.0) ? sumi : add(c, v);
+    }
+
+  }
+
+  namespace test_noexcept
+  {
+
+    int f() { return 0; }
+    int g() noexcept { return 0; }
+
+    static_assert(noexcept(f()) == false, "");
+    static_assert(noexcept(g()) == true, "");
+
+  }
+
+  namespace test_constexpr
+  {
+
+    template < typename CharT >
+    unsigned long constexpr
+    strlen_c_r(const CharT *const s, const unsigned long acc) noexcept
+    {
+      return *s ? strlen_c_r(s + 1, acc + 1) : acc;
+    }
+
+    template < typename CharT >
+    unsigned long constexpr
+    strlen_c(const CharT *const s) noexcept
+    {
+      return strlen_c_r(s, 0UL);
+    }
+
+    static_assert(strlen_c("") == 0UL, "");
+    static_assert(strlen_c("1") == 1UL, "");
+    static_assert(strlen_c("example") == 7UL, "");
+    static_assert(strlen_c("another\0example") == 7UL, "");
+
+  }
+
+  namespace test_rvalue_references
+  {
+
+    template < int N >
+    struct answer
+    {
+      static constexpr int value = N;
+    };
+
+    answer<1> f(int&)       { return answer<1>(); }
+    answer<2> f(const int&) { return answer<2>(); }
+    answer<3> f(int&&)      { return answer<3>(); }
+
+    void
+    test()
+    {
+      int i = 0;
+      const int c = 0;
+      static_assert(decltype(f(i))::value == 1, "");
+      static_assert(decltype(f(c))::value == 2, "");
+      static_assert(decltype(f(0))::value == 3, "");
+    }
+
+  }
+
+  namespace test_uniform_initialization
+  {
+
+    struct test
+    {
+      static const int zero {};
+      static const int one {1};
+    };
+
+    static_assert(test::zero == 0, "");
+    static_assert(test::one == 1, "");
+
+  }
+
+  namespace test_lambdas
+  {
+
+    void
+    test1()
+    {
+      auto lambda1 = [](){};
+      auto lambda2 = lambda1;
+      lambda1();
+      lambda2();
+    }
+
+    int
+    test2()
+    {
+      auto a = [](int i, int j){ return i + j; }(1, 2);
+      auto b = []() -> int { return '0'; }();
+      auto c = [=](){ return a + b; }();
+      auto d = [&](){ return c; }();
+      auto e = [a, &b](int x) mutable {
+        const auto identity = [](int y){ return y; };
+        for (auto i = 0; i < a; ++i)
+          a += b--;
+        return x + identity(a + b);
+      }(0);
+      return a + b + c + d + e;
+    }
+
+    int
+    test3()
+    {
+      const auto nullary = [](){ return 0; };
+      const auto unary = [](int x){ return x; };
+      using nullary_t = decltype(nullary);
+      using unary_t = decltype(unary);
+      const auto higher1st = [](nullary_t f){ return f(); };
+      const auto higher2nd = [unary](nullary_t f1){
+        return [unary, f1](unary_t f2){ return f2(unary(f1())); };
+      };
+      return higher1st(nullary) + higher2nd(nullary)(unary);
+    }
+
+  }
+
+  namespace test_variadic_templates
+  {
+
+    template <int...>
+    struct sum;
+
+    template <int N0, int... N1toN>
+    struct sum<N0, N1toN...>
+    {
+      /*
+        Original test code used the auto keyword instead of declaring
+        the type of "value" to be int. This causes Oracle Solaris Studio
+        12.4 to fail. This is possibly a compiler bug but in any case
+        current test code works around it by an explicit declaration.
+      */
+      static constexpr int value = N0 + sum<N1toN...>::value;
+    };
+
+    template <>
+    struct sum<>
+    {
+      static constexpr auto value = 0;
+    };
+
+    static_assert(sum<>::value == 0, "");
+    static_assert(sum<1>::value == 1, "");
+    static_assert(sum<23>::value == 23, "");
+    static_assert(sum<1, 2>::value == 3, "");
+    static_assert(sum<5, 5, 11>::value == 21, "");
+    static_assert(sum<2, 3, 5, 7, 11, 13>::value == 41, "");
+
+  }
+
+  // http://stackoverflow.com/questions/13728184/template-aliases-and-sfinae
+  // Clang 3.1 fails with headers of libstd++ 4.8.3 when using std::function
+  // because of this.
+  namespace test_template_alias_sfinae
+  {
+
+    struct foo {};
+
+    template<typename T>
+    using member = typename T::member_type;
+
+    template<typename T>
+    void func(...) {}
+
+    template<typename T>
+    void func(member<T>*) {}
+
+    void test();
+
+    void test() { func<foo>(0); }
+
+  }
+
+}  // namespace cxx11
+
+
+
+
+namespace cxx14
+{
+
+  namespace test_polymorphic_lambdas
+  {
+
+    int
+    test()
+    {
+      const auto lambda = [](auto&&... args){
+        const auto istiny = [](auto x){
+          return (sizeof(x) == 1UL) ? 1 : 0;
+        };
+        const int aretiny[] = { istiny(args)... };
+        return aretiny[0];
+      };
+      return lambda(1, 1L, 1.0f, '1');
+    }
+
+  }
+
+  namespace test_binary_literals
+  {
+
+    constexpr auto ivii = 0b0000000000101010;
+    static_assert(ivii == 42, "wrong value");
+
+  }
+
+  namespace test_generalized_constexpr
+  {
+
+    template < typename CharT >
+    constexpr unsigned long
+    strlen_c(const CharT *const s) noexcept
+    {
+      auto length = 0UL;
+      for (auto p = s; *p; ++p)
+        ++length;
+      return length;
+    }
+
+    static_assert(strlen_c("") == 0UL, "");
+    static_assert(strlen_c("x") == 1UL, "");
+    static_assert(strlen_c("test") == 4UL, "");
+    static_assert(strlen_c("another\0test") == 7UL, "");
+
+  }
+
+  namespace test_lambda_init_capture
+  {
+
+    int
+    test()
+    {
+      auto x = 0;
+      const auto lambda1 = [a = x](int b){ return a + b; };
+      const auto lambda2 = [a = lambda1(x)](){ return a; };
+      return lambda2();
+    }
+
+  }
+
+  namespace test_digit_separators
+  {
+
+    constexpr auto ten_million = 100'000'000;
+    static_assert(ten_million == 100000000, "");
+
+  }
+
+  namespace test_return_type_deduction
+  {
+
+    auto f(int& x) { return x; }
+    decltype(auto) g(int& x) { return x; }
+
+    template < typename T1, typename T2 >
+    struct is_same
+    {
+      static constexpr auto value = false;
+    };
+
+    template < typename T >
+    struct is_same<T, T>
+    {
+      static constexpr auto value = true;
+    };
+
+    int
+    test()
+    {
+      auto x = 0;
+      static_assert(is_same<int, decltype(f(x))>::value, "");
+      static_assert(is_same<int&, decltype(g(x))>::value, "");
+      return x;
+    }
+
+  }
+
+}  // namespace cxx14
+
+
+
+
+#include <initializer_list>
+#include <utility>
+#include <type_traits>
+
+namespace cxx17
+{
+
+  namespace test_constexpr_lambdas
+  {
+
+    constexpr int foo = [](){return 42;}();
+
+  }
+
+  namespace test::nested_namespace::definitions
+  {
+
+  }
+
+  namespace test_fold_expression
+  {
+
+    template<typename... Args>
+    int multiply(Args... args)
+    {
+      return (args * ... * 1);
+    }
+
+    template<typename... Args>
+    bool all(Args... args)
+    {
+      return (args && ...);
+    }
+
+  }
+
+  namespace test_extended_static_assert
+  {
+
+    static_assert (true);
+
+  }
+
+  namespace test_auto_brace_init_list
+  {
+
+    auto foo = {5};
+    auto bar {5};
+
+    static_assert(std::is_same<std::initializer_list<int>, decltype(foo)>::value);
+    static_assert(std::is_same<int, decltype(bar)>::value);
+  }
+
+  namespace test_typename_in_template_template_parameter
+  {
+
+    template<template<typename> typename X> struct D;
+
+  }
+
+  namespace test_fallthrough_nodiscard_maybe_unused_attributes
+  {
+
+    int f1()
+    {
+      return 42;
+    }
+
+    [[nodiscard]] int f2()
+    {
+      [[maybe_unused]] auto unused = f1();
+
+      switch (f1())
+      {
+      case 17:
+        f1();
+        [[fallthrough]];
+      case 42:
+        f1();
+      }
+      return f1();
+    }
+
+  }
+
+  namespace test_extended_aggregate_initialization
+  {
+
+    struct base1
+    {
+      int b1, b2 = 42;
+    };
+
+    struct base2
+    {
+      base2() {
+        b3 = 42;
+      }
+      int b3;
+    };
+
+    struct derived : base1, base2
+    {
+        int d;
+    };
+
+    derived d1 {{1, 2}, {}, 4};  // full initialization
+    derived d2 {{}, {}, 4};      // value-initialized bases
+
+  }
+
+  namespace test_general_range_based_for_loop
+  {
+
+    struct iter
+    {
+      int i;
+
+      int& operator* ()
+      {
+        return i;
+      }
+
+      const int& operator* () const
+      {
+        return i;
+      }
+
+      iter& operator++()
+      {
+        ++i;
+        return *this;
+      }
+    };
+
+    struct sentinel
+    {
+      int i;
+    };
+
+    bool operator== (const iter& i, const sentinel& s)
+    {
+      return i.i == s.i;
+    }
+
+    bool operator!= (const iter& i, const sentinel& s)
+    {
+      return !(i == s);
+    }
+
+    struct range
+    {
+      iter begin() const
+      {
+        return {0};
+      }
+
+      sentinel end() const
+      {
+        return {5};
+      }
+    };
+
+    void f()
+    {
+      range r {};
+
+      for (auto i : r)
+      {
+        [[maybe_unused]] auto v = i;
+      }
+    }
+
+  }
+
+  namespace test_lambda_capture_asterisk_this_by_value
+  {
+
+    struct t
+    {
+      int i;
+      int foo()
+      {
+        return [*this]()
+        {
+          return i;
+        }();
+      }
+    };
+
+  }
+
+  namespace test_enum_class_construction
+  {
+
+    enum class byte : unsigned char
+    {};
+
+    byte foo {42};
+
+  }
+
+  namespace test_constexpr_if
+  {
+
+    template <bool cond>
+    int f ()
+    {
+      if constexpr(cond)
+      {
+        return 13;
+      }
+      else
+      {
+        return 42;
+      }
+    }
+
+  }
+
+  namespace test_selection_statement_with_initializer
+  {
+
+    int f()
+    {
+      return 13;
+    }
+
+    int f2()
+    {
+      if (auto i = f(); i > 0)
+      {
+        return 3;
+      }
+
+      switch (auto i = f(); i + 4)
+      {
+      case 17:
+        return 2;
+
+      default:
+        return 1;
+      }
+    }
+
+  }
+
+  namespace test_template_argument_deduction_for_class_templates
+  {
+
+    template <typename T1, typename T2>
+    struct pair
+    {
+      pair (T1 p1, T2 p2)
+        : m1 {p1},
+          m2 {p2}
+      {}
+
+      T1 m1;
+      T2 m2;
+    };
+
+    void f()
+    {
+      [[maybe_unused]] auto p = pair{13, 42u};
+    }
+
+  }
+
+  namespace test_non_type_auto_template_parameters
+  {
+
+    template <auto n>
+    struct B
+    {};
+
+    B<5> b1;
+    B<'a'> b2;
+
+  }
+
+  namespace test_structured_bindings
+  {
+
+    int arr[2] = { 1, 2 };
+    std::pair<int, int> pr = { 1, 2 };
+
+    auto f1() -> int(&)[2]
+    {
+      return arr;
+    }
+
+    auto f2() -> std::pair<int, int>&
+    {
+      return pr;
+    }
+
+    struct S
+    {
+      int x1 : 2;
+      volatile double y1;
+    };
+
+    S f3()
+    {
+      return {};
+    }
+
+    auto [ x1, y1 ] = f1();
+    auto& [ xr1, yr1 ] = f1();
+    auto [ x2, y2 ] = f2();
+    auto& [ xr2, yr2 ] = f2();
+    const auto [ x3, y3 ] = f3();
+
+  }
+
+  namespace test_exception_spec_type_system
+  {
+
+    struct Good {};
+    struct Bad {};
+
+    void g1() noexcept;
+    void g2();
+
+    template<typename T>
+    Bad
+    f(T*, T*);
+
+    template<typename T1, typename T2>
+    Good
+    f(T1*, T2*);
+
+    static_assert (std::is_same_v<Good, decltype(f(g1, g2))>);
+
+  }
+
+  namespace test_inline_variables
+  {
+
+    template<class T> void f(T)
+    {}
+
+    template<class T> inline T g(T)
+    {
+      return T{};
+    }
+
+    template<> inline void f<>(int)
+    {}
+
+    template<> int g<>(int)
+    {
+      return 5;
+    }
+
+  }
+
+}  // namespace cxx17
+
+
+#endif
+
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"
+then :
+  ax_cv_cxx_compile_cxx23=yes
+else $as_nop
+  ax_cv_cxx_compile_cxx23=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cxx_compile_cxx23" >&5
+printf "%s\n" "$ax_cv_cxx_compile_cxx23" >&6; }
+    if test x$ax_cv_cxx_compile_cxx23 = xyes; then
+      ac_success=yes
+    fi
+  fi
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+  if test x$ax_cxx_compile_cxx23_required = xtrue; then
+    if test x$ac_success = xno; then
+      as_fn_error $? "*** A compiler with support for C++23 language features is required." "$LINENO" 5
+    fi
+  fi
+  if test x$ac_success = xno; then
+    HAVE_CXX23=0
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: No compiler with C++23 support was found" >&5
+printf "%s\n" "$as_me: No compiler with C++23 support was found" >&6;}
+  else
+    HAVE_CXX23=1
+  fi
+
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+CXX="${r_save_CXX}"
+CXXFLAGS="${r_save_CXXFLAGS}"
+if test "${HAVE_CXX23}" = "1"; then
+  if test "${CXX23STD}"x = "x";  then
+    CXX23STD="${switch}"
+  else
+    CXX23STD="${CXX23STD} ${switch}"
+  fi
+else
+  CXX23=""
+  CXX23STD=""
+  CXX23FLAGS=""
+  CXX23PICFLAGS=""
+fi
+
+
+
+
+
+if test -z "${SHLIB_CXX23LD}"; then
+  SHLIB_CXX23LD="\$(CXX23) \$(CXX23STD)"
+fi
+
+: ${SHLIB_CXX23LDFLAGS=${SHLIB_CXX20LDFLAGS}}
 
 
 
@@ -41504,7 +44523,7 @@ else $as_nop
 #include "confdefs.h"
 #include <stdlib.h>
 #include <string.h>
-int main()
+int main(int argc, const char * argv[])
 {
     char *p;
 #ifdef HAVE_PUTENV
@@ -41557,7 +44576,7 @@ else $as_nop
 #include "confdefs.h"
 #include <stdlib.h>
 #include <string.h>
-int main()
+int main(int argc, const char * argv[])
 {
     char *p;
 #ifdef HAVE_PUTENV
@@ -42099,7 +45118,7 @@ else $as_nop
 # include <unistd.h> // for unlink
 #endif
 
-int main() {
+int main(int argc, const char * argv[]) {
     FILE *fp;
     long pos;
 
@@ -42193,6 +45212,182 @@ case "${host_os}" in
 esac
 fi
 if test "${use_internal_tzcode}" != yes; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether mktime, gmtime, localtime work correctly in 2020" >&5
+printf %s "checking whether mktime, gmtime, localtime work correctly in 2020... " >&6; }
+if test ${r_cv_working_mktime+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  if test "$cross_compiling" = yes
+then :
+  r_cv_working_mktime=no
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <stdlib.h>
+#include <time.h>
+#include <stdio.h>
+
+//#define PRINT
+
+int main(int argc, const char * argv[]) {
+    struct tm tm, *stm;
+    time_t res;
+    putenv("TZ=UTC");
+    tm.tm_sec = tm.tm_min = 0; tm.tm_hour = 12;
+    tm.tm_mday = 1; tm.tm_mon = 0; tm.tm_year = 120; tm.tm_isdst = 0;
+    // test 2020-01-01
+    res = mktime(&tm);
+#ifdef PRINT
+    printf("day %ld\n", res);
+#else
+    if(res != 1577880000L) exit(1);
+#endif
+    // and can we go back to POSIXlt?
+#ifdef HAVE_GMTIME_R
+    stm = gmtime_r(&res, &tm);
+#else
+    stm = gmtime(&res);
+#endif
+#ifdef PRINT
+    printf("%d-%02d-%02d %02d:%02d:%02d\n",
+	   1900+stm->tm_year, 1+stm->tm_mon, stm->tm_mday,
+	   stm->tm_hour, stm->tm_min, stm->tm_sec);
+#else
+    if(stm->tm_year != 120 || stm->tm_mon != 0 || stm->tm_mday != 1
+      || stm->tm_hour != 12 || stm-> tm_isdst != 0) exit(10);
+#endif
+    tm.tm_mon = 6; tm.tm_isdst = 0;
+    // test 2020-07-01
+    res = mktime(&tm);
+#ifdef PRINT
+    printf("res %ld\n", res);
+#else
+    if(res != 1593604800L) exit(2);
+#endif
+#ifdef HAVE_GMTIME_R
+    stm = gmtime_r(&res, &tm);
+#else
+    stm = gmtime(&res);
+#endif
+#ifdef PRINT
+    printf("%d-%02d-%02d %02d:%02d:%02d\n",
+	   1900+stm->tm_year, 1+stm->tm_mon, stm->tm_mday,
+	   stm->tm_hour, stm->tm_min, stm->tm_sec);
+#else
+    if(stm->tm_year != 120 || stm->tm_mon != 6 || stm->tm_mday != 1
+      || stm->tm_hour != 12 || stm-> tm_isdst != 0) exit(20);
+#endif
+
+    putenv("TZ=Europe/London");
+    tm.tm_sec = tm.tm_min = 0; tm.tm_hour = 12;
+    tm.tm_mday = 1; tm.tm_mon = 0; tm.tm_year = 120; tm.tm_isdst = -1;
+    // test 2020-01-01, whoch is assumed to be in GMT
+    res = mktime(&tm);
+#ifdef PRINT
+    printf("res %ld\n", res);
+#else
+    if(res != 1577880000L) exit(3);
+#endif
+#ifdef HAVE_LOCALTIME_R
+    stm = localtime_r(&res, &tm);
+#else
+    stm = localtime(&res);
+#endif
+#ifdef PRINT
+    printf("%d-%02d-%02d %02d:%02d:%02d\n",
+	   1900+stm->tm_year, 1+stm->tm_mon, stm->tm_mday,
+	   stm->tm_hour, stm->tm_min, stm->tm_sec);
+#else
+    if(stm->tm_year != 120 || stm->tm_mon != 0 || stm->tm_mday != 1
+       || stm->tm_hour != 12 || stm-> tm_isdst != 0) exit(30);
+#endif
+    tm.tm_mon = 6; tm.tm_isdst = -1;
+    // test 2020-07-01 which is assumed to be in BST
+    res = mktime(&tm);
+#ifdef PRINT
+    printf("res %ld\n", res);
+#else
+    if(res != 1593601200L) exit(4);
+#endif
+#ifdef HAVE_LOCALTIME_R
+    stm = localtime_r(&res, &tm);
+#else
+    stm = localtime(&res);
+#endif
+#ifdef PRINT
+    printf("%d-%02d-%02d %02d:%02d:%02d\n",
+	   1900+stm->tm_year, 1+stm->tm_mon, stm->tm_mday,
+	   stm->tm_hour, stm->tm_min, stm->tm_sec);
+#else
+    if(stm->tm_year != 120 || stm->tm_mon != 6 || stm->tm_mday != 1
+      || stm->tm_hour != 12 || stm-> tm_isdst != 1) exit(40);
+#endif
+    putenv("TZ=Pacific/Auckland");
+    tm.tm_sec = tm.tm_min = 0; tm.tm_hour = 12;
+    tm.tm_mday = 1; tm.tm_mon = 0; tm.tm_year = 120; tm.tm_isdst = -1;
+    res = mktime(&tm);
+#ifdef PRINT
+    printf("res %ld\n", res);
+#else
+    if(res != 1577833200L) exit(5);
+#endif
+#ifdef HAVE_LOCALTIME_R
+    stm = localtime_r(&res, &tm);
+#else
+    stm = localtime(&res);
+#endif
+#ifdef PRINT
+    printf("%d-%02d-%02d %02d:%02d:%02d\n",
+	   1900+stm->tm_year, 1+stm->tm_mon, stm->tm_mday,
+	   stm->tm_hour, stm->tm_min, stm->tm_sec);
+#else
+    if(stm->tm_year != 120 || stm->tm_mon != 0 || stm->tm_mday != 1
+      || stm->tm_hour != 12 || stm-> tm_isdst != 1) exit(50);
+#endif
+    tm.tm_mon = 6; tm.tm_isdst = -1;
+    res = mktime(&tm);
+#ifdef PRINT
+    printf("res %ld\n", res);
+#else
+    if(res != 1593561600L) exit(6);
+#endif
+#ifdef HAVE_LOCALTIME_R
+    stm = localtime_r(&res, &tm);
+#else
+    stm = localtime(&res);
+#endif
+#ifdef PRINT
+    printf("%d-%02d-%02d %02d:%02d:%02d\n",
+	   1900+stm->tm_year, 1+stm->tm_mon, stm->tm_mday,
+	   stm->tm_hour, stm->tm_min, stm->tm_sec);
+#else
+    if(stm->tm_year != 120 || stm->tm_mon != 6 || stm->tm_mday != 1
+       || stm->tm_hour != 12 || stm-> tm_isdst != 0) exit(60);
+#endif
+
+    exit(0);
+}
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"
+then :
+  r_cv_working_mktime=yes
+else $as_nop
+  r_cv_working_mktime=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $r_cv_working_mktime" >&5
+printf "%s\n" "$r_cv_working_mktime" >&6; }
+
+  if test "x${r_cv_working_mktime}" != xyes; then
+    as_fn_error $? "date-time conversions do not work in 2020 -- is tzdata installed?" "$LINENO" 5
+  fi
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether mktime sets errno" >&5
 printf %s "checking whether mktime sets errno... " >&6; }
 if test ${r_cv_mktime_errno+y}
@@ -42210,7 +45405,7 @@ else $as_nop
 #include <time.h>
 #include <errno.h>
 
-int main()
+int main(int argc, const char * argv[])
 {
     struct tm tm;
     /* It's hard to know what is an error, since mktime is allowed to
@@ -42239,19 +45434,19 @@ fi
 printf "%s\n" "$r_cv_mktime_errno" >&6; }
 if test "${r_cv_mktime_errno}" = yes; then
 
-printf "%s\n" "#define MKTIME_SETS_ERRNO /**/" >>confdefs.h
+printf "%s\n" "#define MKTIME_SETS_ERRNO 1" >>confdefs.h
 
 fi
 
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether mktime works correctly outside 1902-2037" >&5
-printf %s "checking whether mktime works correctly outside 1902-2037... " >&6; }
-if test ${r_cv_working_mktime+y}
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether mktime works correctly after 2037" >&5
+printf %s "checking whether mktime works correctly after 2037... " >&6; }
+if test ${r_cv_working_mktime1+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
   if test "$cross_compiling" = yes
 then :
-  r_cv_working_mktime=no
+  r_cv_working_mktime1=no
 else $as_nop
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -42259,23 +45454,19 @@ else $as_nop
 #include <stdlib.h>
 #include <time.h>
 
-int main() {
+int main(int argc, const char * argv[]) {
     if(sizeof(time_t) < 8) exit(1);
 
     struct tm tm;
     time_t res;
     putenv("TZ=Europe/London");
     tm.tm_sec = tm.tm_min = 0; tm.tm_hour = 12;
-    tm.tm_mday = 1; tm.tm_mon = 0; tm.tm_year = 80; tm.tm_isdst = 0;
-    res = mktime(&tm);
-    if(res == (time_t)-1) exit(2);
-    tm.tm_mday = 1; tm.tm_year = 01; tm.tm_isdst = 0;
-    res = mktime(&tm);
-    if(res == (time_t)-1) exit(3);
-    tm.tm_year = 140;
+    tm.tm_mday = 1; tm.tm_mon = 0; tm.tm_year = 140; tm.tm_isdst = 0;
+    // test 2040-01-01, whoch is assumed to be in GMT
     res = mktime(&tm);
     if(res != 2209032000L) exit(4);
     tm.tm_mon = 6; tm.tm_isdst = 1;
+    // test 2040-07-01 which is assumed to be in BST
     res = mktime(&tm);
     if(res != 2224753200L) exit(5);
 
@@ -42285,22 +45476,144 @@ int main() {
 _ACEOF
 if ac_fn_c_try_run "$LINENO"
 then :
-  r_cv_working_mktime=yes
+  r_cv_working_mktime1=yes
 else $as_nop
-  r_cv_working_mktime=no
+  r_cv_working_mktime1=no
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
   conftest.$ac_objext conftest.beam conftest.$ac_ext
 fi
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $r_cv_working_mktime" >&5
-printf "%s\n" "$r_cv_working_mktime" >&6; }
-if test "x${r_cv_working_mktime}" = xyes; then
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $r_cv_working_mktime1" >&5
+printf "%s\n" "$r_cv_working_mktime1" >&6; }
+if test "x${r_cv_working_mktime1}" = xyes; then
 
-printf "%s\n" "#define HAVE_WORKING_64BIT_MKTIME 1" >>confdefs.h
+printf "%s\n" "#define HAVE_WORKING_MKTIME_AFTER_2037 1" >>confdefs.h
 
 fi
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether mktime works correctly before 1902" >&5
+printf %s "checking whether mktime works correctly before 1902... " >&6; }
+if test ${r_cv_working_mktime2+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  if test "$cross_compiling" = yes
+then :
+  r_cv_working_mktime2=no
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <stdlib.h>
+#include <time.h>
+
+int main(int argc, const char * argv[]) {
+    if(sizeof(time_t) < 8) exit(1);
+
+    struct tm tm;
+    time_t res;
+    putenv("TZ=Europe/London");
+    // test 1901-01-01 12:00:00
+    tm.tm_sec = tm.tm_min = 0; tm.tm_hour = 12;
+    tm.tm_mday = 1; tm.tm_mon = 0; tm.tm_isdst = 0;
+    tm.tm_year = 01;
+    // test 1901-01-01, where 32-bit time_t may fail.
+    res = mktime(&tm);
+    if(res == (time_t)-1) exit(3);
+    tm.tm_year = -52; // macOS 13 fails for 1848.
+    res = mktime(&tm);
+    if(res == (time_t)-1) exit(4);
+    tm.tm_year = -1; // and for 1899
+    res = mktime(&tm);
+    if(res == (time_t)-1) exit(5);
+
+    exit(0);
+}
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"
+then :
+  r_cv_working_mktime2=yes
+else $as_nop
+  r_cv_working_mktime2=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $r_cv_working_mktime2" >&5
+printf "%s\n" "$r_cv_working_mktime2" >&6; }
+if test "x${r_cv_working_mktime2}" = xyes; then
+
+printf "%s\n" "#define HAVE_WORKING_MKTIME_BEFORE_1902 1" >>confdefs.h
+
+fi
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether mktime works correctly in 1969" >&5
+printf %s "checking whether mktime works correctly in 1969... " >&6; }
+if test ${r_cv_working_mktime3+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  if test "$cross_compiling" = yes
+then :
+  r_cv_working_mktime3=no
+else $as_nop
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <stdlib.h>
+#include <time.h>
+
+int main(int argc, const char * argv[]) {
+    struct tm tm;
+    time_t res;
+    putenv("TZ=Europe/London");
+    // test 1969-01-01 12:00:00
+    tm.tm_sec = tm.tm_min = 0; tm.tm_hour = 12;
+    tm.tm_mday = 1; tm.tm_mon = 0; tm.tm_year = 69; tm.tm_isdst = 0;
+    tm.tm_year = 69; // TK says Windows UCRT fails prior to 1970
+    res = mktime(&tm);
+    if(res == (time_t)-1) exit(4);
+
+    exit(0);
+}
+
+_ACEOF
+if ac_fn_c_try_run "$LINENO"
+then :
+  r_cv_working_mktime3=yes
+else $as_nop
+  r_cv_working_mktime3=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $r_cv_working_mktime3" >&5
+printf "%s\n" "$r_cv_working_mktime3" >&6; }
+if test "x${r_cv_working_mktime3}" = xyes; then
+
+printf "%s\n" "#define HAVE_WORKING_MKTIME_BEFORE_1970 1" >>confdefs.h
+
+fi
+
+else
+
+printf "%s\n" "#define MKTIME_SETS_ERRNO 1" >>confdefs.h
+
+
+printf "%s\n" "#define HAVE_WORKING_MKTIME_AFTER_2037 1" >>confdefs.h
+
+
+printf "%s\n" "#define HAVE_WORKING_MKTIME_BEFORE_1902 1" >>confdefs.h
+
+
+printf "%s\n" "#define HAVE_WORKING_MKTIME_BEFORE_1970 1" >>confdefs.h
 
 fi
 
@@ -43881,7 +47194,7 @@ extern void ${ilaver}(int *major, int *minor, int *patch);
 
 #include <stdlib.h>
 #include <stdio.h>
-int main() {
+int main(int argc, const char * argv[]) {
   int major, minor, patch;
   ${ilaver}(&major, &minor, &patch);
   printf("%d.%d.%d, so ", major, minor, patch);
@@ -47194,7 +50507,7 @@ else $as_nop
 #include <stdlib.h>
 #include <string.h>
 #include <zlib.h>
-int main() {
+int main(int argc, const char * argv[]) {
 #ifdef ZLIB_VERNUM
   if (ZLIB_VERNUM < 0x1250) {
     exit(1);
@@ -47325,7 +50638,7 @@ else $as_nop
 #include <string.h> // for strcmp
 #include <bzlib.h>
 #endif
-int main() {
+int main(int argc, const char * argv[]) {
     const char *ver = BZ2_bzlibVersion();
     exit(strcmp(ver, "1.0.6") < 0);
 }
@@ -47457,7 +50770,7 @@ else $as_nop
 #include <lzma.h>
 #endif
 #include <stdlib.h>
-int main() {
+int main(int argc, const char * argv[]) {
     unsigned int ver = lzma_version_number();
     // This is 10000000*major + 10000*minor + 10*revision + [012]
     // I.e. xyyyzzzs and 5.1.2 would be 50010020
@@ -47642,7 +50955,7 @@ else $as_nop
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 #include <stdlib.h>
-int main() {
+int main(int argc, const char * argv[]) {
     int ans;
     int res = pcre2_config(PCRE2_CONFIG_UNICODE, &ans);
     if (res || ans != 1) exit(1); else exit(0);
@@ -47771,7 +51084,7 @@ else $as_nop
 #endif
 #endif
 #include <stdlib.h>
-int main() {
+int main(int argc, const char * argv[]) {
 #ifdef PCRE_MAJOR
 #if PCRE_MAJOR > 8
   exit(1);
@@ -48009,7 +51322,7 @@ else $as_nop
 
 #include <stdlib.h>
 #include <curl/curl.h>
-int main()
+int main(int argc, const char * argv[])
 {
 #ifdef LIBCURL_VERSION_MAJOR
 #if LIBCURL_VERSION_MAJOR > 7
@@ -48060,7 +51373,7 @@ else $as_nop
 #include <stdlib.h> // for exit
 #include <string.h>
 #include <curl/curl.h>
-int main()
+int main(int argc, const char * argv[])
 {
     curl_version_info_data *data = curl_version_info(CURLVERSION_NOW);
     const char * const *p  = data->protocols;
@@ -50699,7 +54012,8 @@ static void
 #ifdef __cplusplus
 sigfpe_handler (int sig)
 #else
-sigfpe_handler (sig) int sig;
+// changed to use a prototype
+sigfpe_handler (int sig);
 #endif
 {
   /* Exit with code 0 if SIGFPE, with code 1 if any other signal.  */
@@ -50709,7 +54023,8 @@ sigfpe_handler (sig) int sig;
 int x = 1;
 int y = 0;
 int z;
-int nan;
+// clang 15 objects here
+int my_nan;
 
 int main ()
 {
@@ -50724,7 +54039,7 @@ int main ()
 #endif
 
   z = x / y;
-  nan = y / y;
+  my_nan = y / y;
   exit (1);
 }
 
@@ -54611,8 +57926,8 @@ double ssum(double *x, int n) {
 #endif
 }
 
-int main() {
-    /* use volatiles to reduce the risk of the
+int main(int argc, const char * argv[]) {
+    /* use 'volatile's to reduce the risk of the
        computation being inlined and constant-folded */
     volatile double xv[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     volatile int n = 8;
@@ -57583,6 +60898,7 @@ r_cxx11_compiler="${CXX11} ${CXX11STD} ${R_XTRA_CXXFLAGS} ${CXX11FLAGS}"
 r_cxx14_compiler="${CXX14} ${CXX14STD} ${R_XTRA_CXXFLAGS} ${CXX14FLAGS}"
 r_cxx17_compiler="${CXX17} ${CXX17STD} ${R_XTRA_CXXFLAGS} ${CXX17FLAGS}"
 r_cxx20_compiler="${CXX20} ${CXX20STD} ${R_XTRA_CXXFLAGS} ${CXX20FLAGS}"
+r_cxx23_compiler="${CXX23} ${CXX23STD} ${R_XTRA_CXXFLAGS} ${CXX23FLAGS}"
 r_f77_compiler="${FC} ${R_XTRA_FFLAGS} ${FFLAGS}"
 r_f95_compiler="${FC} ${R_XTRA_FFLAGS} ${FCFLAGS}"
 r_objc_compiler="${OBJC} ${OBJCFLAGS}"
@@ -57910,6 +61226,7 @@ R is now configured for ${host}
   C++14 compiler:              ${r_cxx14_compiler}
   C++17 compiler:              ${r_cxx17_compiler}
   C++20 compiler:              ${r_cxx20_compiler}
+  C++23 compiler:              ${r_cxx23_compiler}
   Fortran free-form compiler:  ${r_f95_compiler}
   Obj-C compiler:	       ${r_objc_compiler}
 
@@ -57937,6 +61254,7 @@ R is now configured for ${host}
   C++14 compiler:              ${r_cxx14_compiler}
   C++17 compiler:              ${r_cxx17_compiler}
   C++20 compiler:              ${r_cxx20_compiler}
+  C++23 compiler:              ${r_cxx23_compiler}
   Fortran free-form compiler:  ${r_f95_compiler}
   Obj-C compiler:	       ${r_objc_compiler}
 

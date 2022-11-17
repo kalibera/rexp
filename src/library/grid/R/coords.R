@@ -393,7 +393,9 @@ grobPoints.lines <- function(x, closed=FALSE, ..., n=100) {
     } else {
         xx <- convertX(x$x, "in", valueOnly=TRUE)
         yy <- convertY(x$y, "in", valueOnly=TRUE)
-        gridGrobCoords(list("1"=gridCoords(x=xx, y=yy)), x$name)
+        ## Recycle via cbind()
+        lines <- cbind(xx, yy)
+        gridGrobCoords(list("1"=gridCoords(x=lines[,1], y=lines[,2])), x$name)
     }
 }
 
@@ -592,7 +594,7 @@ grobPoints.text <- function(x, closed=TRUE, ...) {
                             x$x, x$y,
                             resolveHJust(x$just, x$hjust),
                             resolveVJust(x$just, x$vjust),
-                            x$rot, 0)
+                            x$rot, as.numeric(NA))
         if (is.null(bounds))
             emptyGrobCoords(x$name)
         else {

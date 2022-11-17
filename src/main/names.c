@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997--2021  The R Core Team
+ *  Copyright (C) 1997--2022  The R Core Team
  *  Copyright (C) 2003--2018  The R Foundation
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
@@ -837,8 +837,9 @@ FUNTAB R_FunTab[] =
 {"as.POSIXlt",	do_asPOSIXlt,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"format.POSIXlt",do_formatPOSIXlt,0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 {"strptime",	do_strptime,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"Date2POSIXlt",do_D2POSIXlt,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"Date2POSIXlt",do_D2POSIXlt,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"POSIXlt2Date",do_POSIXlt2D,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"balancePOSIXlt",do_balancePOSIXlt, 0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"mkCode",     do_mkcode,       0,      11,     2,      {PP_FUNCALL, PREC_FN, 0}},
 {"bcClose",    do_bcclose,      0,      11,     3,      {PP_FUNCALL, PREC_FN, 0}},
@@ -1165,7 +1166,7 @@ static SEXP createDDVALSymbol(int n) {
     return install(buf);
 }
 
-static void initializeDDVALSymbols() {
+static void initializeDDVALSymbols(void) {
     for(int i = 0; i < N_DDVAL_SYMBOLS; i++) {
 	DDVALSymbols[i] = createDDVALSymbol(i);
     }
@@ -1191,7 +1192,7 @@ static SEXP mkSymMarker(SEXP pname)
 }
 
 /* initialize the symbol table */
-void attribute_hidden InitNames()
+void attribute_hidden InitNames(void)
 {
     /* allocate the symbol table */
     if (!(R_SymbolTable = (SEXP *) calloc(HSIZE, sizeof(SEXP))))
