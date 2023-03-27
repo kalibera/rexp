@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998-2001   The R Core Team
+ *  Copyright (C) 1998-2023   The R Core Team
  *
  *  This header file is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License as published by
@@ -30,9 +30,12 @@
 extern "C" {
 #endif
 
-typedef struct {
+typedef union {
+    struct {
 	double r;
 	double i;
+    };
+    double _Complex private_data_c;
 } Rcomplex;
 
 #ifdef  __cplusplus
