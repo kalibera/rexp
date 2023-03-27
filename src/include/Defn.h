@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998--2022  The R Core Team.
+ *  Copyright (C) 1998--2023  The R Core Team.
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -404,7 +404,6 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define RAW(x)		((Rbyte *) DATAPTR(x))
 #define COMPLEX(x)	((Rcomplex *) DATAPTR(x))
 #define REAL(x)		((double *) DATAPTR(x))
-#define VECTOR_ELT(x,i)	((SEXP *) DATAPTR(x))[i]
 #define STRING_PTR(x)	((SEXP *) DATAPTR(x))
 #define VECTOR_PTR(x)	((SEXP *) DATAPTR(x))
 #define LOGICAL_RO(x)	((const int *) DATAPTR_RO(x))
@@ -431,6 +430,7 @@ typedef union { VECTOR_SEXPREC s; double align; } SEXPREC_ALIGN;
 #define CADDR(e)	CAR(CDR(CDR(e)))
 #define CADDDR(e)	CAR(CDR(CDR(CDR(e))))
 #define CAD4R(e)	CAR(CDR(CDR(CDR(CDR(e)))))
+#define CAD5R(e)	CAR(CDR(CDR(CDR(CDR(CDR(e))))))
 #define MISSING_MASK	15 /* reserve 4 bits--only 2 uses now */
 #define MISSING(x)	((x)->sxpinfo.gp & MISSING_MASK)/* for closure calls */
 #define SET_MISSING(x,v) do { \
@@ -538,7 +538,7 @@ typedef union {
 #define IS_GETTER_CALL(call) (CADR(call) == R_TmpvalSymbol)
 
 #ifdef LONG_VECTOR_SUPPORT
-    R_len_t NORET R_BadLongVector(SEXP, const char *, int);
+    NORET R_len_t R_BadLongVector(SEXP, const char *, int);
 #endif
 
 /* checking for mis-use of multi-threading */
@@ -677,6 +677,8 @@ Rcomplex ALTCOMPLEX_ELT(SEXP x, R_xlen_t i);
 void ALTCOMPLEX_SET_ELT(SEXP x, R_xlen_t i, Rcomplex v);
 Rbyte ALTRAW_ELT(SEXP x, R_xlen_t i);
 void ALTRAW_SET_ELT(SEXP x, R_xlen_t i, Rbyte v);
+SEXP ALTLIST_ELT(SEXP, R_xlen_t);
+void ALTLIST_SET_ELT(SEXP, R_xlen_t, SEXP);
 
 /* invoking ALTREP class methods */
 SEXP ALTINTEGER_SUM(SEXP x, Rboolean narm);
@@ -703,9 +705,9 @@ Rboolean Rf_psmatch(const char *, const char *, Rboolean);
 void Rf_printwhere(void);
 void Rf_readS3VarsFromFrame(SEXP, SEXP*, SEXP*, SEXP*, SEXP*, SEXP*, SEXP*);
 
-void NORET R_signal_protect_error(void);
-void NORET R_signal_unprotect_error(void);
-void NORET R_signal_reprotect_error(PROTECT_INDEX i);
+NORET void R_signal_protect_error(void);
+NORET void R_signal_unprotect_error(void);
+NORET void R_signal_reprotect_error(PROTECT_INDEX i);
 
 const char *R_curErrorBuf(void);
 Rboolean R_cycle_detected(SEXP s, SEXP child);
@@ -761,7 +763,7 @@ void SET_SCALAR_BVAL(SEXP x, Rbyte v);
 
 /* macro version of R_CheckStack */
 #define R_CheckStack() do {						\
-	void NORET R_SignalCStackOverflow(intptr_t);				\
+	NORET void R_SignalCStackOverflow(intptr_t);				\
 	int dummy;							\
 	intptr_t usage = R_CStackDir * (R_CStackStart - (uintptr_t)&dummy); \
 	if(R_CStackLimit != (uintptr_t)(-1) && usage > ((intptr_t) R_CStackLimit)) \
@@ -961,17 +963,22 @@ extern char *Rstrdup(const char *s);
 extern int putenv(char *string);
 #endif
 
+/* PATH_MAX has historically been understood to be the maximal length in
+   bytes of an entire path name that may exist.  In current POSIX, when
+   defined, it is the maximum number of bytes that will be stored to a
+   user-supplied buffer by file-system operations which do not allow the
+   caller to provide actual size of the buffer (and such calls are rare). 
+   If the system limited path names to a certain value, it shall not be less
+   than this value, if defined.
 
-/* Maximal length in bytes of an entire path name.
-   POSIX has required this to be at least 255/256, and X/Open at least 1024.
-   Solaris, macOS, *BSD have 1024, Linux glibc has 4192.
-   File names are limited to FILENAME_MAX bytes (usually the same as PATH_MAX)
-   or NAME_MAX (often 255/256).
+   POSIX has required this to be at least 255/256, and X/Open at least 1024. 
+   Solaris, macOS, *BSD have 1024, Linux glibc has 4192 (but glibc does not
+   enforce the limit).  File names are limited to FILENAME_MAX bytes
+   (usually the same as PATH_MAX) or NAME_MAX (often 255/256).
 
-   POSIX requires PATH_MAX to be defined in limits.h (included above)
-   if independent of the file path (file system?).  However, if it can
-   vary by filepath, it is required to be undefined there.
- */
+   POSIX requires PATH_MAX to be defined in limits.h (included above) if
+   independent of the file path (file system).  However, if it can vary by
+   filepath, it is required to be undefined there. */
 #if !defined(PATH_MAX)
 # if defined(HAVE_SYS_PARAM_H)
 #  include <sys/param.h>
@@ -981,12 +988,25 @@ extern int putenv(char *string);
 /* Try BSD name */
 #    define PATH_MAX MAXPATHLEN
 #  elif defined(Win32)
-/* seems this is now defined by MinGW to be 259, whereas FILENAME_MAX
-   and MAX_PATH are 260.  It is not clear that this really is in bytes,
-   but might be chars for the Unicode interfaces.
+/* MinGW-W64 defines PATH_MAX to MAX_PATH, which is 260 in Windows. It used to
+   be the maximal length of an entire path name (depending on the API used,
+   in bytes or in UCS-2 units, including the terminator).  This is no longer
+   the case and like PATH_MAX on Unix, MAX_PATH is only used as the limit in
+   several old API calls for the user buffer when the size cannot be passed
+   by user.  Some additional old components of Windows and old APIs seem not
+   to support longer paths.
 
-   260 is d:\ plus 256 chars plus nul.  Some but not all API calls
-   allow filepaths of the form \\?\D:\very_long_path .
+   But longer paths can and do exist, they can be created using some API,
+   usually UCS-2, sometimes using the extended syntax
+   (\\?\D:\very_long_path) but sometimes using the common syntax. 
+   Applications that haven't opted for "long paths" (and those also have to
+   be enabled system-wide) are shielded from seeing the long paths in some
+   API calls to prevent buffer-overflow and other errors in user code that
+   did not check the lengths.
+
+   Like on Unix, user/library code should not depend on that there is a
+   maximum to the path length.  The actual real maximum on Windows is not
+   even precisely specified.
 */
 #    define PATH_MAX 260
 #  else
@@ -994,6 +1014,18 @@ extern int putenv(char *string);
 #    define PATH_MAX 5000
 #  endif
 # endif
+#endif
+
+/* R_PATH_MAX is an R-defined limit on the length of entire path name,
+   including the terminator.  It may be used in some older code that has not
+   yet been rewritten to support arbitrary path lengths.  Such code still
+   has to detect longer paths, but may not support them, e.g.  may throw an
+   error. R_PATH_MAX shall be at least PATH_MAX, when PATH_MAX is defined. */
+#ifdef Unix
+# define R_PATH_MAX PATH_MAX
+#else
+  /* On Windows, 260 is too limiting */
+# define R_PATH_MAX 5000
 #endif
 
 #ifdef R_USE_SIGNALS
@@ -1296,6 +1328,9 @@ enum {
     CTXT_BUILTIN  = 64, /* used in profiling */
     CTXT_UNWIND   = 128
 };
+
+extern0 RCNTXT *getLexicalContext(SEXP);
+extern0 SEXP getLexicalCall(SEXP);
 
 /*
 TOP   0 0 0 0 0 0  = 0
@@ -1735,6 +1770,7 @@ void R_RestoreHashCount(SEXP rho);
 # define mbtoucs		Rf_mbtoucs
 # define mbcsToUcs2		Rf_mbcsToUcs2
 # define memtrace_report	Rf_memtrace_report
+# define mkCharWUTF8		Rf_mkCharWUTF8
 # define mkCLOSXP		Rf_mkCLOSXP
 # define mkFalse		Rf_mkFalse
 # define mkPROMISE		Rf_mkPROMISE
@@ -1830,6 +1866,7 @@ Rboolean R_HiddenFile(const char *);
 double	R_FileMtime(const char *);
 int	R_GetFDLimit(void);
 int	R_EnsureFDLimit(int);
+Rboolean R_IsDirPath(const char *);
 
 /* environment cell access */
 typedef struct { SEXP cell; } R_varloc_t; /* use struct to prevent casting */
@@ -1889,6 +1926,30 @@ typedef struct {
     SEXP callArgs;
 } R_PrintData;
 
+/* Dirent wrappers/implementation */
+
+struct R_dirent {
+    char *d_name; /* null-terminated filename */
+};
+
+typedef struct R_DIR_INTERNAL R_DIR;
+
+R_DIR *R_opendir(const char *name);
+struct R_dirent *R_readdir(R_DIR *rdir);
+int R_closedir(R_DIR *rdir);
+
+#ifdef Win32
+struct R_wdirent {
+    wchar_t *d_name; /* null-terminated filename */
+};
+
+typedef struct R_WDIR_INTERNAL R_WDIR;
+
+R_WDIR *R_wopendir(const wchar_t *name);
+struct R_wdirent *R_wreaddir(R_WDIR *rdir);
+int R_wclosedir(R_WDIR *rdir);
+#endif
+
 /* Other Internally Used Functions */
 
 SEXP Rf_allocCharsxp(R_len_t);
@@ -1925,7 +1986,7 @@ R_xlen_t any_duplicated3(SEXP, SEXP, Rboolean);
 SEXP evalList(SEXP, SEXP, SEXP, int);
 SEXP evalListKeepMissing(SEXP, SEXP);
 int factorsConform(SEXP, SEXP);
-void NORET findcontext(int, SEXP, SEXP);
+NORET void findcontext(int, SEXP, SEXP);
 SEXP findVar1(SEXP, SEXP, SEXPTYPE, int);
 void FrameClassFix(SEXP);
 SEXP frameSubscript(int, SEXP, SEXP);
@@ -1959,7 +2020,7 @@ void InitS3DefaultTypes(void);
 void internalTypeCheck(SEXP, SEXP, SEXPTYPE);
 Rboolean isMethodsDispatchOn(void);
 int isValidName(const char *);
-void NORET jump_to_toplevel(void);
+NORET void jump_to_toplevel(void);
 void KillAllDevices(void);
 SEXP levelsgets(SEXP, SEXP);
 void mainloop(void);
@@ -1972,6 +2033,7 @@ SEXP matchArgs_NR(SEXP, SEXP, SEXP);
 SEXP matchArgs_RC(SEXP, SEXP, SEXP);
 SEXP matchPar(const char *, SEXP*);
 void memtrace_report(void *, void *);
+SEXP mkCharWUTF8(const wchar_t *);
 SEXP mkCLOSXP(SEXP, SEXP, SEXP);
 SEXP mkFalse(void);
 SEXP mkPRIMSXP (int, int);
@@ -2008,7 +2070,7 @@ SEXP R_data_class(SEXP , Rboolean);
 SEXP R_data_class2(SEXP);
 char *R_LibraryFileName(const char *, char *, size_t);
 SEXP R_LoadFromFile(FILE*, int);
-SEXP R_NewHashedEnv(SEXP, SEXP);
+SEXP R_NewHashedEnv(SEXP, int);
 extern int R_Newhashpjw(const char *);
 FILE* R_OpenLibraryFile(const char *);
 SEXP R_Primitive(const char *);
@@ -2022,6 +2084,7 @@ Rboolean R_seemsOldStyleS4Object(SEXP object);
 int R_SetOptionWarn(int);
 int R_SetOptionWidth(int);
 void R_Suicide(const char *);
+SEXP R_flexiblas_info(void);
 void R_getProcTime(double *data);
 int R_isMissing(SEXP symbol, SEXP rho);
 const char *sexptype2char(SEXPTYPE type);
@@ -2051,7 +2114,7 @@ SEXP dynamicfindVar(SEXP, RCNTXT*);
 void endcontext(RCNTXT*);
 int framedepth(RCNTXT*);
 void R_InsertRestartHandlers(RCNTXT *, const char *);
-void NORET R_JumpToContext(RCNTXT *, int, SEXP);
+NORET void R_JumpToContext(RCNTXT *, int, SEXP);
 SEXP R_syscall(int,RCNTXT*);
 int R_sysparent(int,RCNTXT*);
 SEXP R_sysframe(int,RCNTXT*);
@@ -2060,20 +2123,20 @@ RCNTXT *R_findExecContext(RCNTXT *, SEXP);
 RCNTXT *R_findParentContext(RCNTXT *, int);
 
 void R_run_onexits(RCNTXT *);
-void NORET R_jumpctxt(RCNTXT *, int, SEXP);
+NORET void R_jumpctxt(RCNTXT *, int, SEXP);
 #endif
 
 /* ../main/bind.c */
 SEXP ItemName(SEXP, R_xlen_t);
 
 /* ../main/errors.c : */
-void NORET errorcall_cpy(SEXP, const char *, ...);
-void NORET ErrorMessage(SEXP, int, ...);
+NORET void errorcall_cpy(SEXP, const char *, ...);
+NORET void ErrorMessage(SEXP, int, ...);
 void WarningMessage(SEXP, R_WARNING, ...);
 SEXP R_GetTraceback(int);    // including deparse()ing
 SEXP R_GetTracebackOnly(int);// no        deparse()ing
-void NORET R_signalErrorCondition(SEXP cond, SEXP call);
-void NORET R_signalErrorConditionEx(SEXP cond, SEXP call, int exitOnly);
+NORET void R_signalErrorCondition(SEXP cond, SEXP call);
+NORET void R_signalErrorConditionEx(SEXP cond, SEXP call, int exitOnly);
 SEXP R_vmakeErrorCondition(SEXP call,
 			   const char *classname, const char *subclassname,
 			   int nextra, const char *format, va_list ap);
@@ -2107,6 +2170,10 @@ void R_try_clear_args_refcnt(SEXP);
 /* ../main/devices.c, used in memory.c, gnuwin32/extra.c */
 #define R_MaxDevices 64
 
+/* gnuwin32/extra.c */
+wchar_t *R_getFullPathNameW(const wchar_t *);
+char *R_getFullPathName(const char *);
+
 /* ../../main/printutils.c : */
 typedef enum {
     Rprt_adj_left = 0,
@@ -2137,8 +2204,8 @@ SEXP R_subassign3_dflt(SEXP, SEXP, SEXP, SEXP);
 #include <wchar.h>
 
 /* main/util.c */
-void NORET UNIMPLEMENTED_TYPE(const char *s, SEXP x);
-void NORET UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
+NORET void UNIMPLEMENTED_TYPE(const char *s, SEXP x);
+NORET void UNIMPLEMENTED_TYPEt(const char *s, SEXPTYPE t);
 Rboolean Rf_strIsASCII(const char *str);
 int utf8clen(char c);
 int Rf_AdobeSymbol2ucs2(int n);
@@ -2171,6 +2238,7 @@ char *Rf_strchr(const char *s, int c);
 char *Rf_strrchr(const char *s, int c);
 int Rvsnprintf_mbcs(char *buf, size_t size, const char *format, va_list ap);
 int Rsnprintf_mbcs(char *str, size_t size, const char *format, ...);
+int Rasprintf_malloc(char **str, const char *fmt, ...);
 
 SEXP fixup_NaRm(SEXP args); /* summary.c */
 void invalidate_cached_recodings(void);  /* from sysutils.c */
@@ -2193,6 +2261,8 @@ void R_CleanTempDir(void);
 #ifdef Win32
 void R_fixslash(char *s);
 void R_fixbackslash(char *s);
+void R_wfixbackslash(wchar_t *s);
+void R_wfixslash(wchar_t *s);
 wchar_t *filenameToWchar(const SEXP fn, const Rboolean expand);
 #endif
 

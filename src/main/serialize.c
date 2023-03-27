@@ -349,17 +349,17 @@ static void OutString(R_outpstream_t stream, const char *s, int length)
 	char buf[128];
 	for (i = 0; i < length; i++) {
 	    switch(s[i]) {
-	    case '\n': sprintf(buf, "\\n");  break;
-	    case '\t': sprintf(buf, "\\t");  break;
-	    case '\v': sprintf(buf, "\\v");  break;
-	    case '\b': sprintf(buf, "\\b");  break;
-	    case '\r': sprintf(buf, "\\r");  break;
-	    case '\f': sprintf(buf, "\\f");  break;
-	    case '\a': sprintf(buf, "\\a");  break;
-	    case '\\': sprintf(buf, "\\\\"); break;
-	    case '\?': sprintf(buf, "\\?");  break;
-	    case '\'': sprintf(buf, "\\'");  break;
-	    case '\"': sprintf(buf, "\\\""); break;
+	    case '\n': snprintf(buf, 128, "\\n");  break;
+	    case '\t': snprintf(buf, 128, "\\t");  break;
+	    case '\v': snprintf(buf, 128, "\\v");  break;
+	    case '\b': snprintf(buf, 128, "\\b");  break;
+	    case '\r': snprintf(buf, 128, "\\r");  break;
+	    case '\f': snprintf(buf, 128, "\\f");  break;
+	    case '\a': snprintf(buf, 128, "\\a");  break;
+	    case '\\': snprintf(buf, 128, "\\\\"); break;
+	    case '\?': snprintf(buf, 128, "\\?");  break;
+	    case '\'': snprintf(buf, 128, "\\'");  break;
+	    case '\"': snprintf(buf, 128, "\\\""); break;
 	    default  :
 		/* cannot print char in octal mode -> cast to unsigned
 		   char first */
@@ -367,9 +367,9 @@ static void OutString(R_outpstream_t stream, const char *s, int length)
 		   is handled above, s[i] > 126 can't happen, but
 		   I'm superstitious...  -pd */
 		if (s[i] <= 32 || s[i] > 126)
-		    sprintf(buf, "\\%03o", (unsigned char) s[i]);
+		    snprintf(buf, 128, "\\%03o", (unsigned char) s[i]);
 		else
-		    sprintf(buf, "%c", s[i]);
+		    snprintf(buf, 128, "%c", s[i]);
 	    }
 	    stream->OutBytes(stream, buf, (int)strlen(buf));
 	}
@@ -2516,7 +2516,7 @@ static void con_cleanup(void *data)
 /* Used from saveRDS().
    This became public in R 2.13.0, and that version added support for
    connections internally */
-SEXP attribute_hidden
+attribute_hidden SEXP
 do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* serializeToConn(object, conn, ascii, version, hook) */
@@ -2586,7 +2586,7 @@ do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
 /* unserializeFromConn(conn, hook) used from readRDS().
    It became public in R 2.13.0, and that version added support for
    connections internally */
-SEXP attribute_hidden
+attribute_hidden SEXP
 do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     /* 0 .. unserializeFromConn(conn, hook) */
@@ -2897,7 +2897,7 @@ R_serialize(SEXP object, SEXP icon, SEXP ascii, SEXP Sversion, SEXP fun)
 }
 
 
-SEXP attribute_hidden R_unserialize(SEXP icon, SEXP fun)
+attribute_hidden SEXP R_unserialize(SEXP icon, SEXP fun)
 {
     struct R_inpstream_st in;
     SEXP (*hook)(SEXP, SEXP);
@@ -2986,10 +2986,10 @@ static SEXP appendRawToFile(SEXP file, SEXP bytes)
 
 #define NC 100
 static int used = 0;
-static char names[NC][PATH_MAX];
+static char *names[NC];
 static char *ptr[NC];
 
-SEXP attribute_hidden
+attribute_hidden SEXP
 do_lazyLoadDBflush(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
@@ -2999,8 +2999,9 @@ do_lazyLoadDBflush(SEXP call, SEXP op, SEXP args, SEXP env)
 
     /* fprintf(stderr, "flushing file %s", cfile); */
     for (i = 0; i < used; i++)
-	if(strcmp(cfile, names[i]) == 0) {
-	    strcpy(names[i], "");
+	if(names[i] != NULL && strcmp(cfile, names[i]) == 0) {
+	    free(names[i]);
+	    names[i] = NULL;
 	    free(ptr[i]);
 	    /* fprintf(stderr, " found at pos %d in cache", i); */
 	    break;
@@ -3037,7 +3038,7 @@ static SEXP readRawFromFile(SEXP file, SEXP key)
     val = allocVector(RAWSXP, len);
     /* Do we have this database cached? */
     for (i = 0; i < used; i++)
-	if(strcmp(cfile, names[i]) == 0) {icache = i; break;}
+	if(names[i] != NULL && strcmp(cfile, names[i]) == 0) {icache = i; break;}
     if (icache >= 0) {
 	memcpy(RAW(val), ptr[icache]+offset, len);
 	vmaxset(vmax);
@@ -3046,8 +3047,11 @@ static SEXP readRawFromFile(SEXP file, SEXP key)
 
     /* find a vacant slot? */
     for (i = 0; i < used; i++)
-	if(strcmp("", names[i]) == 0) {icache = i; break;}
-    if(icache < 0 && used < NC) icache = used++;
+	if(names[i] == NULL) {icache = i; break;}
+    if(icache < 0 && used < NC) {
+	icache = used++;
+	names[icache] = NULL;
+    }
 
     if(icache >= 0) {
 	if ((fp = R_fopen(cfile, "rb")) == NULL)
@@ -3058,11 +3062,13 @@ static SEXP readRawFromFile(SEXP file, SEXP key)
 	}
 	filelen = ftell(fp);
 	if (filelen < LEN_LIMIT) {
-	    char *p;
+	    char *p, *n;
 	    /* fprintf(stderr, "adding file '%s' at pos %d in cache, length %d\n",
 	       cfile, icache, filelen); */
 	    p = (char *) malloc(filelen);
-	    if (p) {
+	    n = (char *) malloc(strlen(cfile) + 1);
+	    if (p && n) {
+		names[icache] = n;
 		strcpy(names[icache], cfile);
 		ptr[icache] = p;
 		if (fseek(fp, 0, SEEK_SET) != 0) {
@@ -3074,6 +3080,10 @@ static SEXP readRawFromFile(SEXP file, SEXP key)
 		if (filelen != in) error(_("read failed on %s"), cfile);
 		memcpy(RAW(val), p+offset, len);
 	    } else {
+		if (p)
+		    free(p);
+		if (n)
+		    free(n);
 		if (fseek(fp, offset, SEEK_SET) != 0) {
 		    fclose(fp);
 		    error(_("seek failed on %s"), cfile);
@@ -3193,7 +3203,7 @@ R_lazyLoadDBinsertValue(SEXP value, SEXP file, SEXP ascii,
    from a file, optionally decompresses, and unserializes the bytes.
    If the result is a promise, then the promise is forced. */
 
-SEXP attribute_hidden
+attribute_hidden SEXP
 do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP key, file, compsxp, hook;
@@ -3228,7 +3238,7 @@ do_lazyLoadDBfetch(SEXP call, SEXP op, SEXP args, SEXP env)
     return val;
 }
 
-SEXP attribute_hidden
+attribute_hidden SEXP
 do_getVarsFromFrame(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
@@ -3236,7 +3246,7 @@ do_getVarsFromFrame(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-SEXP attribute_hidden
+attribute_hidden SEXP
 do_lazyLoadDBinsertValue(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
@@ -3249,7 +3259,7 @@ do_lazyLoadDBinsertValue(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_lazyLoadDBinsertValue(value, file, ascii, compsxp, hook);
 }
 
-SEXP attribute_hidden
+attribute_hidden SEXP
 do_serialize(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);

@@ -46,6 +46,8 @@ as.factor(x)
 as.ordered(x)
 
 addNA(x, ifany = FALSE)
+
+.valid.factor(object)
 }
 \arguments{
   \item{x}{a vector of data, usually taking a small number of distinct
@@ -70,6 +72,7 @@ addNA(x, ifany = FALSE)
     \code{ordered} itself.}
   \item{ifany}{only add an \code{NA} level if it is used, i.e.
     if \code{any(is.na(x))}.}
+  \item{object}{an \R object.}
 }
 \value{
   \code{factor} returns an object of class \code{"factor"} which has a
@@ -156,7 +159,7 @@ addNA(x, ifany = FALSE)
   vectors \code{x} it is helpful to supply \code{nmax} as an upper bound
   on the number of unique values.
 
-  Since \R 4.1.0, when using \code{\link{c}} to combine a (possibly
+  When using \code{\link{c}} to combine a (possibly
   ordered) factor with other objects, if all objects are (possibly
   ordered) factors, the result will be a factor with levels the union of
   the level sets of the elements, in the order the levels occur in the

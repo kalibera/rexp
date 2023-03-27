@@ -1,7 +1,7 @@
 #  File src/library/tools/R/sotools.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 2011-2022 The R Core Team
+#  Copyright (C) 2011-2023 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -120,8 +120,12 @@ so_symbol_names_table <-
       "linux, C, gcc, putchar, putchar",
       "linux, C, gcc, stderr, stderr",
       "linux, C, gcc, stdout, stdout",
+      "linux, C, gcc, sprintf, sprintf",
+      "linux, C, gcc, sprintf, __sprintf_chk",
       "linux, C, gcc, vprintf, vprintf",
       "linux, C, gcc, vprintf, __vprintf_chk",
+      "linux, C, gcc, vsprintf, vsprintf",
+      "linux, C, gcc, vsprintf, __vsprintf_chk",
       "linux, C++, gxx, std::cout, _ZSt4cout",
       "linux, C++, gxx, std::cerr, _ZSt4cerr",
       #"linux, C++, gxx, std::terminate, _ZSt9terminatev",
@@ -156,7 +160,7 @@ so_symbol_names_table <-
       "linux, Fortran, flang, stop, f90_stop08",
       "linux, Fortran, flang, rand, rand",
 
-      ## clang identifies itself as gcc, so configure has used that
+      ## Apple clang identifies itself as gcc, so configure has used that
       "macos, C, gcc, abort, _abort",
       "macos, C, gcc, assert, ___assert_rtn",
       "macos, C, gcc, exit, _exit",
@@ -168,7 +172,11 @@ so_symbol_names_table <-
       "macos, C, gcc, putchar, _putchar",
       "macos, C, gcc, stderr, ___stderrp",
       "macos, C, gcc, stdout, ___stdoutp",
+      "macos, C, gcc, sprintf, _sprintf",
+      "macos, C, gcc, sprintf, ___sprintf_chk",
       "macos, C, gcc, vprintf, _vprintf",
+      "macos, C, gcc, vsprintf, _vsprintf",
+      "macos, C, gcc, vsprintf, ___vsprintf_chk",
       "macos, C++, gxx, std::cout, __ZSt4cout",
       "macos, C++, gxx, std::cerr, __ZSt4cerr",
       #"macos, C++, gxx, std::terminate, __ZSt9terminatev",
@@ -202,7 +210,9 @@ so_symbol_names_table <-
       "freebsd, C, gcc, putchar, putchar",
       "freebsd, C, gcc, stderr, __stderrp",
       "freebsd, C, gcc, stdout, __stdoutp",
+      "freebsd, C, gcc, sprintf, sprintf",
       "freebsd, C, gcc, vprintf, vprintf",
+      "freebsd, C, gcc, vsprintf, vsprintf",
       "freebsd, C++, gxx, std::cout, _ZSt4cout",
       "freebsd, C++, gxx, std::cerr, _ZSt4cerr",
       "freebsd, C, gcc, rand, rand",
@@ -229,7 +239,9 @@ so_symbol_names_table <-
       "solaris, C, solcc, printf, printf",
       "solaris, C, solcc, putchar, putchar",
       "solaris, C, solcc, puts, puts",
+      "solaris, C, solcc, sprintf, sprintf",
       "solaris, C, solcc, vprintf, vprintf",
+      "solaris, C, solcc, vsprintf, vsprintf",
       "solaris, C++, solCC, std::cout, __1cDstdEcout_",
       "solaris, C++, solCC, std::cerr, __1cDstdEcerr_",
       #"solaris, C++, solCC, std::terminate, _ZSt9terminatev",
@@ -264,7 +276,9 @@ so_symbol_names_table <-
       "solaris, C, gcc, printf, puts",
       "solaris, C, gcc, puts, puts",
       "solaris, C, gcc, putchar, putchar",
+      "solaris, C, gcc, sprintf, sprintf",
       "solaris, C, gcc, vprintf, vprintf",
+      "solaris, C, gcc, vsprintf, vsprintf",
       "solaris, C, gcc, rand, rand",
       "solaris, C, gcc, random, random",
       "solaris, C, gcc, rand_r, rand_r",
@@ -307,7 +321,9 @@ so_symbol_names_table <-
       "windows, C, gcc, printf, puts",
       "windows, C, gcc, puts, puts",
       "windows, C, gcc, putchar, putchar",
+      "windows, C, gcc, sprintf, sprintf",
       "windows, C, gcc, vprintf, vprintf",
+      "windows, C, gcc, vsprintf, vsprintf",
       ## Windows does not have (s)random
       "windows, C, gcc, rand, rand",
       "windows, C, gcc, rand_r, rand_r",
@@ -420,6 +436,7 @@ nonAPI <- c("chol_", "chol2inv_", "cg_", "ch_", "rg_",
             "max_contour_segments", "mbcsToUcs2", "memtrace_report",
             "parseError", "pythag_", "rs_", "rwarnc_",
             "tql2_", "tqlrat_", "tred1_", "tred2_", "utf8locale", "yylloc",
+            "R_opendir", "R_readdir", "R_closedir",
             # "signrank_free", "wilcox_free" are API only from 4.2.0
 
 ## Rinterface.h, Rembedded.h, R_ext/{RStartup,eventloop}.h
@@ -442,6 +459,7 @@ nonAPI <- c("chol_", "chol2inv_", "cg_", "ch_", "rg_",
             "Rf_KillAllDevices", "Rf_endEmbeddedR", "Rf_initEmbeddedR",
             "Rf_initialize_R", "Rf_jump_to_toplevel", "Rf_mainloop",
             "SaveAction", "addInputHandler", "editorcleanall", "fpu_setup",
+            "freeRUser", "free_R_HOME",
             "getDLLVersion", "getInputHandler", "getRUser", "get_R_HOME",
             "getSelectedHandler", "initStdinHandler",
             "process_site_Renviron", "process_system_Renviron",
@@ -479,7 +497,7 @@ nonAPI <- c("chol_", "chol2inv_", "cg_", "ch_", "rg_",
 
 ## tcltk uses R_Consolefile R_GUIType R_InputHandlers R_Outputfile R_PolledEvents R_checkActivity R_runHandlers R_timeout_handler R_timeout_val R_wait_usec ptr_R_ClearerrConsole ptr_R_FlushConsole ptr_R_ReadConsole ptr_R_ResetConsole ptr_R_WriteConsole
 
-## tools uses RC_fopen R_FileExists R_NewHashedEnv R_ParseContext R_ParseContextLast R_ParseContextLine R_ParseError R_ParseErrorMsg R_SrcfileSymbol R_SrcrefSymbol Rconn_fgetc Rf_begincontext Rf_endcontext Rf_envlength Rf_mbrtowc Rf_strchr extR_HTTPDCreate extR_HTTPDStop getConnection parseError
+## tools uses RC_fopen R_FileExists R_NewHashedEnv R_ParseContext R_ParseContextLast R_ParseContextLine R_ParseError R_ParseErrorMsg R_SrcfileSymbol R_SrcrefSymbol Rconn_fgetc Rf_begincontext Rf_endcontext Rf_envlength Rf_mbrtowc Rf_strchr extR_HTTPDCreate extR_HTTPDStop getConnection parseError R_opendir R_readdir R_closedir
 
 ## utils uses R_ClearerrConsole R_FreeStringBuffer R_GUIType R_moduleCdynload R_print R_strtod4 Rconn_fgetc Rconn_printf Rdownload Rf_EncodeElement Rf_PrintDefaults Rf_begincontext Rf_con_pushback Rf_endcontext Rf_envlength Rf_sortVector Rsockclose Rsockconnect Rsocklisten Rsockopen Rsockread Rsockwrite Runzip UNIMPLEMENTED_TYPE csduplicated do_Rprof do_Rprofmem do_edit getConnection known_to_be_latin1 ptr_R_addhistory ptr_R_loadhistory ptr_R_savehistory ptr_do_dataentry ptr_do_dataviewer ptr_do_selectlist
 

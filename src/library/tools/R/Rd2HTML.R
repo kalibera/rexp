@@ -1,6 +1,6 @@
 #  File src/library/tools/R/Rd2HTML.R
 #
-#  Copyright (C) 1995-2022 The R Core Team
+#  Copyright (C) 1995-2023 The R Core Team
 #  Part of the R package, https://www.R-project.org
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -219,6 +219,20 @@ topic2url <- function(x)
 }
 topic2filename <- function(x)
     gsub("%", "+", utils::URLencode(x, reserved = TRUE))
+## The next 3 are for generating URL fragment ids
+name2id <- function(x)
+    gsub("%", "+", utils::URLencode(x, reserved = TRUE))
+topic2id <- function(x)
+    sprintf("topic+%s", gsub("%", "+", utils::URLencode(x, reserved = TRUE)))
+topic2href <- function(x, destpkg = NULL, FUN = NULL)
+{
+    if (is.null(destpkg)) sprintf("#%s", topic2id(x))
+    else {
+        ## FIXME: Do we want to allow FUN to be user-supplied through options()?
+        if (is.null(FUN)) FUN <- function(id, pkg) sprintf("%s.html#%s", pkg, id)
+        FUN(topic2id(x), destpkg)
+    }
+}
 
 ## Create HTTP redirect files for aliases; called only during package
 ## installation if static help files are enabled. Files are named
@@ -292,6 +306,8 @@ createRedirects <- function(file, Rdobj)
 ##    and missing links (those without an explicit package, and
 ##    those topics not in Links[2]) don't get linked anywhere.
 
+
+
 Rd2HTML <-
     function(Rd, out = "", package = "", defines = .Platform$OS.type,
              Links = NULL, Links2 = NULL,
@@ -299,7 +315,9 @@ Rd2HTML <-
              dynamic = FALSE, no_links = FALSE, fragment=FALSE,
              stylesheet = if (dynamic) "/doc/html/R.css" else "R.css",
              texmath = getOption("help.htmlmath"),
-    	     concordance = FALSE,
+             concordance = FALSE,
+             standalone = TRUE,
+             Rhtml = FALSE, # TODO: guess from 'out' if non-missing
              ...)
 {
     ## Is this package help, as opposed to from Rdconv or similar?
@@ -311,6 +329,10 @@ Rd2HTML <-
         config_val_to_logical(Sys.getenv("_R_HELP_LINKS_TO_TOPICS_", "TRUE"))
     enhancedHTML <-
         config_val_to_logical(Sys.getenv("_R_HELP_ENABLE_ENHANCED_HTML_", "TRUE"))
+    if (!no_links && !linksToTopics && !standalone) {
+        warning("links not supported for 'standalone = FALSE' when _R_HELP_LINKS_TO_TOPICS_=false")
+        no_links <- TRUE
+    }
     version <- ""
     if(!identical(package, "")) {
         if(length(package) > 1L) {
@@ -421,13 +443,13 @@ Rd2HTML <-
 
     enterPara <- function(enter = TRUE) {
 	if (enter && isFALSE(inPara)) {
-            of0("<p>")
+            of1("<p>")
             inPara <<- TRUE
         }
     }
 
     leavePara <- function(newval) {
-    	if (isTRUE(inPara)) of0("</p>\n")
+    	if (isTRUE(inPara)) of1("</p>\n")
     	inPara <<- newval
     }
 
@@ -451,7 +473,9 @@ Rd2HTML <-
 
         s <- trimws(strsplit(paste(s, collapse = ""), ",", fixed = TRUE)[[1]])
         s <- s[nzchar(s)] # unlikely to matter, but just to be safe
-        s <- if (addID) sprintf('<code id="%s">%s</code>', gsub("[[:space:]]+", "-", s), vhtmlify(s))
+        s <- if (addID) sprintf('<code id="%s">%s</code>',
+                                gsub("[[:space:]]+", "-", paste(name2id(name), s, sep = "_:_")),
+                                vhtmlify(s))
              else sprintf('<code>%s</code>', vhtmlify(s))
         s <- paste0(s, collapse = ", ")
         of1(s)
@@ -487,7 +511,6 @@ Rd2HTML <-
             if (!no_links) of1('</a>')
             inPara <<- savePara
         }
-
     	if (is.null(parts$targetfile)) {
             ## ---------------- \link{topic} and \link[=topic]{foo}
             topic <- parts$dest
@@ -503,7 +526,11 @@ Rd2HTML <-
                 ## package, but also those in base+recommended
                 ## packages. We do this branch only if this is a
                 ## within-package link
-                htmlfile <- paste0("../../", urlify(package), "/help/", topic2filename(topic), ".html")
+                htmlfile <-
+                    if (standalone)
+                        paste0("../../", urlify(package), "/help/", topic2filename(topic), ".html")
+                    else
+                        topic2href(topic)
                 writeHref()
                 return()
 
@@ -525,10 +552,15 @@ Rd2HTML <-
                     warnRd(block, Rdfile, "missing link ", sQuote(topic))
                 writeContent(block, tag)
             } else {
-                ## treat links in the same package specially -- was needed for CHM
-                pkg_regexp <- paste0("^../../", urlify(package), "/html/")
-                if (grepl(pkg_regexp, htmlfile)) {
-                    htmlfile <- sub(pkg_regexp, "", htmlfile)
+                if (!standalone) {
+                    htmlfile <- topic2href(topic, destpkg = strsplit(htmlfile, "/", fixed = TRUE)[[1]][[3]])
+                }
+                else {
+                    ## treat links in the same package specially -- was needed for CHM
+                    pkg_regexp <- paste0("^../../", urlify(package), "/html/")
+                    if (grepl(pkg_regexp, htmlfile)) {
+                        htmlfile <- sub(pkg_regexp, "", htmlfile)
+                    }
                 }
                 writeHref()
             }
@@ -569,7 +601,8 @@ Rd2HTML <-
                 if (linksToTopics)
                     htmlfile <-
                         if (dynamic) paste0("../help/", topic2url(parts$targetfile))
-                        else paste0("../help/", topic2filename(parts$targetfile), ".html")
+                        else if (standalone) paste0("../help/", topic2filename(parts$targetfile), ".html")
+                        else topic2href(parts$targetfile)
                 else # use href = "file.html"
                     htmlfile <- paste0(topic2url(parts$targetfile), ".html")
                 writeHref()
@@ -579,8 +612,9 @@ Rd2HTML <-
                     htmlfile <-
                         if (dynamic) paste0("../../", urlify(parts$pkg), "/help/",
                                             topic2url(parts$targetfile))
-                        else paste0("../../", urlify(parts$pkg), "/help/",
-                                    topic2filename(parts$targetfile), ".html")
+                        else if (standalone) paste0("../../", urlify(parts$pkg), "/help/",
+                                                    topic2filename(parts$targetfile), ".html")
+                        else topic2href(parts$targetfile, destpkg = urlify(parts$pkg))
                 else
                     htmlfile <- paste0("../../", urlify(parts$pkg), "/html/",
                                        topic2url(parts$targetfile), ".html") # FIXME Is this always OK ??
@@ -597,14 +631,14 @@ Rd2HTML <-
     }
 
     writeDR <- function(block, tag) {
+        if (Rhtml && length(block) > 1L)
+            of1("\nend.rcode-->\n\n<!--begin.rcode eval=FALSE\n")
+        of1('## Not run: ')
+        writeContent(block, tag)
         if (length(block) > 1L) {
-            of1('## Not run: ')
-            writeContent(block, tag)
             of1('\n## End(Not run)')
-        } else {
-            of1('## Not run: ')
-            writeContent(block, tag)
-       }
+            if (Rhtml) of1("\nend.rcode-->\n\n<!--begin.rcode\n")
+        }
     }
 
     writeBlock <- function(block, tag, blocktag) {
@@ -613,8 +647,9 @@ Rd2HTML <-
         doParas <- (blocktag %notin% c("\\tabular"))
 	switch(tag,
                UNKNOWN =,
-               VERB = of1(vhtmlify(block, inEqn)),
-               RCODE = of1(vhtmlify(block)),
+               VERB = if (Rhtml && blocktag == "\\dontrun") of1(block)
+                      else of1(vhtmlify(block, inEqn)),
+               RCODE = if (Rhtml) of1(block) else of1(vhtmlify(block)),
                TEXT = of1(if(doParas && !inAsIs) addParaBreaks(htmlify(block)) else vhtmlify(block)),
                USERMACRO =,
                "\\newcommand" =,
@@ -715,7 +750,7 @@ Rd2HTML <-
                        else of1('<p style="text-align: center;"><i>')
                        writeContent(block, tag)
                        if (doTexMath) of1('</code>\n')
-                       else of0('</i>')
+                       else of1('</i>')
                        leavePara(FALSE)
                        inEqn <<- FALSE
                    }
@@ -968,11 +1003,15 @@ Rd2HTML <-
     	} else
     	    of1(sectionTitles[tag])
         of1(paste0("</h", sectionLevel+2L, ">\n\n"))
-        if (tag %in% c("\\examples", "\\usage")) {
-            if (dynamic && enhancedHTML && tag == "\\examples" && !is.null(firstAlias))
+        if (tag == "\\usage") {
+            of1("<pre><code class='language-R'>")
+            inPara <<- NA
+            pre <- TRUE
+        } else if (tag == "\\examples") {
+            if (dynamic && enhancedHTML && !Rhtml && !is.null(firstAlias))
                 of1(sprintf("<p><a href='../Example/%s'>Run examples</a></p>",
                             topic2url(firstAlias)))
-            of1("<pre><code class='language-R'>")
+            if (Rhtml) of1("\n\n<!--begin.rcode\n") else of1("<pre><code class='language-R'>")
             inPara <<- NA
             pre <- TRUE
         } else {
@@ -986,11 +1025,14 @@ Rd2HTML <-
 	    writeContent(section, tag)
 	}
 	leavePara(FALSE)
-	if (pre) of0("</code></pre>\n")
+        if (pre) # must be \usage or \examples
+            if (Rhtml && tag == "\\examples") of1("\nend.rcode-->\n\n")
+            else of1("</code></pre>\n")
     	sectionLevel <<- save
     }
 
     ## ----------------------- Continue in main function -----------------------
+    info <- list() # attribute to be returned if standalone = FALSE
     create_redirects <- FALSE
     if (is.character(out)) {
         if (out == "") {
@@ -1088,66 +1130,62 @@ Rd2HTML <-
             trimws(Rd[[ which(sections == "\\alias")[1] ]][[1]])
 	if (concordance)
             conc$saveSrcref(.Rd_get_section(Rd, "title"))
-        of0('<!DOCTYPE html>',
-            "<html>",
-	    '<head><title>')
 	headtitle <- strwrap(.Rd_format_title(.Rd_get_title(Rd)),
 	                     width=65, initial="R: ")
 	if (length(headtitle) > 1) headtitle <- paste0(headtitle[1], "...")
-	of1(htmlify(headtitle))
-	of0('</title>\n',
-	    '<meta http-equiv="Content-Type" content="text/html; charset=',
-	    mime_canonical_encoding(outputEncoding),
-	    '" />\n')
-        of1('<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />\n')
-        ## include CSS from prismjs.com for code highlighting
-        if (enhancedHTML && length(PRISM_CSS) == 1L) of0('<link href="', urlify(PRISM_CSS), '" rel="stylesheet" />\n')
-        if (doTexMath) {
-            if (texmath == "katex") {
-                of0('<link rel="stylesheet" href="', urlify(KATEX_CSS), '">\n',
-                    if (dynamic) paste0('<script type="text/javascript" src="', urlify(KATEX_CONFIG), '"></script>\n')
-                    else paste0('<script type="text/javascript">\n', paste(KATEX_CONFIG, collapse = "\n"), '</script>\n'),
-                    '<script defer src="', urlify(KATEX_JS), '"\n    onload="processMathHTML();"></script>\n')
-            }
-            else if (texmath == "mathjax") {
-                of0('<script type="text/javascript" src="', urlify(MATHJAX_CONFIG), '"></script>\n',
-                    '<script type="text/javascript" async src="', urlify(MATHJAX_JS), '"></script>\n')
-            }
-        }
-	of0('<link rel="stylesheet" type="text/css" href="',
-	    urlify(stylesheet),
-	    '" />\n',
-	    '</head><body><div class="container">\n\n',
-	    '<table style="width: 100%;">',
-            '<tr><td>',
-            name)
-	if (nchar(package))
-	    of0(' {', package, '}')
-	of0('</td><td style="text-align: right;">R Documentation</td></tr></table>\n\n')
 
-	of1("<h2>")
+        ## Create HTML header and footer
+        if (standalone) {
+            hfcomps <- # should we be able to specify static URLs here?
+                HTMLcomponents(title = headtitle, logo = FALSE,
+                               up = NULL,
+                               top = NULL,
+                               css = stylesheet,
+                               outputEncoding = outputEncoding,
+                               dynamic = dynamic, prism = enhancedHTML,
+                               doTexMath = doTexMath, texmath = texmath,
+                               PRISM_CSS_STATIC = NULL, PRISM_JS_STATIC = NULL)
+            of1(paste(hfcomps$header, collapse = "")) # write out header
+            of0('\n\n<table style="width: 100%;">',
+                '<tr><td>',
+                name)
+            if (nchar(package))
+                of0(' {', package, '}')
+            of0('</td><td style="text-align: right;">R Documentation</td></tr></table>\n\n')
+        }
+
+        ## id can identify help page when combined with others, and
+        ## also needed to form argument id-s programmatically
+        of0("<h2 id='", name2id(name), "'>")
 	inPara <- NA
 	title <- Rd[[1L]]
+        info$name <- name
+        info$title <- trimws(paste(as.character(title), collapse = "\n"))
 	if (concordance)
 	    conc$saveSrcref(title)
-	writeContent(title,sections[1])
+	writeContent(title, sections[1])
 	of1("</h2>")
 	inPara <- FALSE
-
+        if (!standalone) {
+            ## create empty spans with aliases as id, so that we can link
+            for (a in trimws(unlist(Rd[ which(sections == "\\alias") ]))) {
+                of0("<span id='", topic2id(a), "'></span>")
+            }
+        }
 	for (i in seq_along(sections)[-(1:2)])
 	    writeSection(Rd[[i]], sections[i])
 
 	if(nzchar(version))
-	    version <- paste0('Package <em>',package,'</em> version ',version,' ')
-	of0('\n')
-	if(nzchar(version))
-	    of0('<hr /><div style="text-align: center;">[', version,
-		if (!no_links) '<a href="00Index.html">Index</a>',
-		']</div>')
-	of0('\n</div>\n')
-        ## include JS from prismjs.com for code highlighting
-        if (enhancedHTML && length(PRISM_JS) == 1L) of0('<script src="', urlify(PRISM_JS), '"></script>\n')
-        of0('</body></html>\n')
+	    version <- paste0('Package <em>', package, '</em> version ', version, ' ')
+	of1('\n')
+        if (standalone) {
+            if(nzchar(version))
+                of0('<hr /><div style="text-align: center;">[', version,
+                    if (!no_links) '<a href="00Index.html">Index</a>',
+                    ']</div>')
+            of1(paste(hfcomps$footer, collapse = "")) # write out footer
+        }
+        else attr(out, "info") <- info
     }
     if (concordance) {
     	conc$srcFile <- Rdfile
@@ -1158,9 +1196,9 @@ Rd2HTML <-
     	#      "/man/".
     	concdata$srcFile <- stripPathTo(concdata$srcFile, "man")
     	attr(out, "concordance") <- concdata
-    	of0(paste0('<!-- ', 
+    	of0('<!-- ',
     	    as.character(concdata),
-    	    ' -->\n'))
+    	    ' -->\n')
     }
     invisible(out)
 } ## Rd2HTML()

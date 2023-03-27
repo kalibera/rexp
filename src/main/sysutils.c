@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997-2022   The R Core Team
+ *  Copyright (C) 1997-2023   The R Core Team
  *  Copyright (C) 1995-1996   Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -23,6 +23,10 @@
 #endif
 
 #include <stdlib.h> /* for putenv */
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h> // for size_t
+#endif
+
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Internal.h>
@@ -229,13 +233,13 @@ char *R_HomeDir(void)
 }
 
 /* This is a primitive (with no arguments) */
-SEXP attribute_hidden do_interactive(SEXP call, SEXP op, SEXP args, SEXP rho)
+attribute_hidden SEXP do_interactive(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
     return ScalarLogical( (R_Interactive) ? 1 : 0 );
 }
 
-SEXP attribute_hidden do_tempdir(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_tempdir(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     Rboolean check = asLogical(CAR(args));
@@ -247,7 +251,7 @@ SEXP attribute_hidden do_tempdir(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
-SEXP attribute_hidden do_tempfile(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_tempfile(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP  ans, pattern, fileext, tempdir;
     const char *tn, *td, *te;
@@ -358,7 +362,7 @@ int R_system(const char *command)
 extern char ** environ;
 #endif
 
-SEXP attribute_hidden do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int i, j;
     SEXP ans;
@@ -441,9 +445,10 @@ static int Rwputenv(const wchar_t *nm, const wchar_t *val)
 static int Rputenv(const char *nm, const char *val)
 {
     char *buf;
-    buf = (char *) malloc((strlen(nm) + strlen(val) + 2) * sizeof(char));
+    size_t sz = (strlen(nm) + strlen(val) + 2) * sizeof(char);
+    buf = (char *) malloc(sz);
     if(!buf) return 1;
-    sprintf(buf, "%s=%s", nm, val);
+    snprintf(buf, sz, "%s=%s", nm, val);
     if(putenv(buf)) return 1;
     /* no free here: storage remains in use */
     return 0;
@@ -451,7 +456,7 @@ static int Rputenv(const char *nm, const char *val)
 #endif
 
 
-SEXP attribute_hidden do_setenv(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_setenv(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 #if defined(HAVE_PUTENV) || defined(HAVE_SETENV)
     int i, n;
@@ -490,7 +495,7 @@ SEXP attribute_hidden do_setenv(SEXP call, SEXP op, SEXP args, SEXP env)
 #endif
 }
 
-SEXP attribute_hidden do_unsetenv(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_unsetenv(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     int i, n;
     SEXP ans, vars;
@@ -577,7 +582,7 @@ write_one (unsigned int namescount, const char * const *names, void *data)
 #include "RBufferUtils.h"
 
 /* iconv(x, from, to, sub, mark) */
-SEXP attribute_hidden do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_iconv(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, x = CAR(args), si;
     void * arg_obj = (iconv_t)-1;
@@ -1641,7 +1646,7 @@ const char *reEnc3(const char *x,
     return p;
 }
 
-void attribute_hidden
+attribute_hidden void
 invalidate_cached_recodings(void)
 {
     if (latin1_obj) {
@@ -1869,94 +1874,119 @@ extern char * mkdtemp (char *template);
 
 void R_reInitTempDir(int die_on_fail)
 {
-    char *tmp, *tm, tmp1[PATH_MAX+11], *p;
-#ifdef Win32
-    char tmp2[PATH_MAX];
-    int hasspace = 0;
-    DWORD res = 0;
-#endif
+    char *tmp = NULL, *tm;
+    size_t len;
 
-#define ERROR_MAYBE_DIE(MSG_)			\
+#define ERROR_MAYBE_DIE(MSG_) do {		\
     if(die_on_fail)				\
 	R_Suicide(MSG_);			\
     else					\
-	errorcall(R_NilValue, MSG_)
+	errorcall(R_NilValue, MSG_);            \
+} while (0)
 
     if(R_TempDir) return; /* someone else set it */
-    tmp = NULL; /* getenv("R_SESSION_TMPDIR");   no longer set in R.sh */
-    if (!tmp) {
-	tm = getenv("TMPDIR");
-	if (!R_isWriteableDir(tm)) {
-	    tm = getenv("TMP");
-	    if (!R_isWriteableDir(tm)) {
-		tm = getenv("TEMP");
-		if (!R_isWriteableDir(tm))
-#ifdef Win32
-		    tm = getenv("R_USER"); /* this one will succeed */
-#else
-		    tm = "/tmp";
-#endif
-	    }
-	}
-#ifdef Win32
-	/* make sure no spaces in path */
-	for (p = tm; *p; p++)
-	    if (isspace(*p)) { hasspace = 1; break; }
-	if (hasspace) {
-	    res = GetShortPathName(tm, tmp2, MAX_PATH);
-	    if (res != 0) 
-	        tm = tmp2;
+    /* getenv("R_SESSION_TMPDIR");   no longer set in R.sh */
 
-	    hasspace = 0;
-	    for (p = tm; *p; p++)
-		if (isspace(*p)) { hasspace = 1; break; }
-	    if (hasspace) {
-		ERROR_MAYBE_DIE(_("'R_TempDir' contains space"));
+    tm = getenv("TMPDIR");
+    if (!R_isWriteableDir(tm)) {
+	tm = getenv("TMP");
+	if (!R_isWriteableDir(tm)) {
+	    tm = getenv("TEMP");
+	    if (!R_isWriteableDir(tm)) {
+#ifdef Win32
+		tm = getenv("R_USER"); /* this one will succeed */
+		if (!tm)
+		    ERROR_MAYBE_DIE(_("'R_USER' not set"));
+#else
+		tm = "/tmp";
+#endif
 	    }
 	}
-	snprintf(tmp1, PATH_MAX+11, "%s\\RtmpXXXXXX", tm);
-#else
-	snprintf(tmp1, PATH_MAX+11, "%s/RtmpXXXXXX", tm);
-#endif
-	tmp = mkdtemp(tmp1);
-	if(!tmp) {
-	    ERROR_MAYBE_DIE(_("cannot create 'R_TempDir'"));
+    }
+
+    /* make sure no spaces in path */
+    int hasspace = 0;
+    char *p;
+    for (p = tm; *p; p++)
+	if (isspace(*p)) { hasspace = 1; break; }
+#ifdef Win32
+    char *suffix = "\\RtmpXXXXXX";
+    if (hasspace) {
+	DWORD res = GetShortPathName(tm, NULL, 0);
+	if (res > 0) {
+	    len = res + strlen(suffix);
+	    tmp = (char *)malloc(len);
+	    if (!tmp)
+		ERROR_MAYBE_DIE(_("cannot allocate 'R_TempDir'"));
+	    DWORD res1 = GetShortPathName(tm, tmp, res);
+	    if (res1 > 0 && res1 < res)
+		strcat(tmp, suffix);
+	    else { /* very unlikely */
+		free(tmp);
+		tmp = NULL;
+	    }
 	}
+	if (tmp) {
+	    /* GetShortPathName may return a long name, so check again */
+	    hasspace = 0;
+	    for (p = tmp; *p; p++)
+		if (isspace(*p)) { hasspace = 1; break; }
+	}
+    }
+#else
+    char *suffix = "/RtmpXXXXXX";
+#endif
+    if (hasspace) {
+	if (tmp)
+	    free(tmp);
+	ERROR_MAYBE_DIE(_("'R_TempDir' contains space"));
+    }
+    if (!tmp) {
+	len = strlen(tm) + strlen(suffix) + 1;
+	tmp = (char *)malloc(len);
+	if (!tmp)
+	    ERROR_MAYBE_DIE(_("cannot allocate 'R_TempDir'"));
+	strcpy(tmp, tm);
+	strcat(tmp, suffix);
+    }
+    if(!mkdtemp(tmp)) {
+	free(tmp);
+	ERROR_MAYBE_DIE(_("cannot create 'R_TempDir'"));
+    }
 #ifndef Win32
 # ifdef HAVE_SETENV
-	if(setenv("R_SESSION_TMPDIR", tmp, 1))
-	    errorcall(R_NilValue, _("unable to set R_SESSION_TMPDIR"));
+    if(setenv("R_SESSION_TMPDIR", tmp, 1)) {
+	free(tmp);
+	errorcall(R_NilValue, _("unable to set R_SESSION_TMPDIR"));
+    }
 # elif defined(HAVE_PUTENV)
-	{
-	    size_t len = strlen(tmp) + 20;
-	    char * buf = (char *) malloc((len) * sizeof(char));
-	    if(buf) {
-		snprintf(buf, len, "R_SESSION_TMPDIR=%s", tmp);
-		if(putenv(buf))
-		    errorcall(R_NilValue, _("unable to set R_SESSION_TMPDIR"));
-		/* no free here: storage remains in use */
-	    } else
+    {
+	len = strlen(tmp) + 20;
+	char * buf = (char *) malloc((len) * sizeof(char));
+	if(buf) {
+	    snprintf(buf, len, "R_SESSION_TMPDIR=%s", tmp);
+	    if(putenv(buf)) {
+		free(tmp);
+		free(buf);
 		errorcall(R_NilValue, _("unable to set R_SESSION_TMPDIR"));
+	    }
+	    /* no free here: storage remains in use */
+	} else {
+	    free(tmp);
+	    errorcall(R_NilValue, _("unable to set R_SESSION_TMPDIR"));
 	}
+    }
 # endif
 #endif
-    }
-
-    size_t len = strlen(tmp) + 1;
-    p = (char *) malloc(len);
-    if(!p)
-	ERROR_MAYBE_DIE(_("cannot allocate 'R_TempDir'"));
-    else {
-	R_TempDir = p;
-	strcpy(R_TempDir, tmp);
-	Sys_TempDir = R_TempDir;
-    }
+    R_TempDir = tmp;
+    Sys_TempDir = tmp;
 }
 
-void attribute_hidden InitTempDir(void) {
+attribute_hidden void InitTempDir(void) {
     R_reInitTempDir(/* die_on_fail = */ TRUE);
 }
 
+/* returns malloc'd result */
 char * R_tmpnam(const char * prefix, const char * tempdir)
 {
     return R_tmpnam2(prefix, tempdir, "");
@@ -1966,10 +1996,10 @@ char * R_tmpnam(const char * prefix, const char * tempdir)
    session directory and run in parallel.
    So as from 2.14.1, we make sure getpid() is part of the process.
 */
+/* returns malloc'd result */
 char * R_tmpnam2(const char *prefix, const char *tempdir, const char *fileext)
 {
-    char tm[PATH_MAX], *res;
-    unsigned int n, done = 0, pid = getpid();
+    unsigned int n, pid = getpid();
 #ifdef Win32
     char filesep[] = "\\";
 #else
@@ -1979,34 +2009,31 @@ char * R_tmpnam2(const char *prefix, const char *tempdir, const char *fileext)
     if(!prefix) prefix = "";	/* NULL */
     if(!fileext) fileext = "";  /*  "   */
 
-#if RAND_MAX > 16777215
-#define RAND_WIDTH 8
-#else
-#define RAND_WIDTH 12
-#endif
-
-    if(strlen(tempdir) + 1 + strlen(prefix) + RAND_WIDTH + strlen(fileext) >= PATH_MAX)
-	error(_("temporary name too long"));
-
     for (n = 0; n < 100; n++) {
 	/* try a random number at the end.  Need at least 6 hex digits */
+	int r1 = rand();
 #if RAND_MAX > 16777215
-	snprintf(tm, PATH_MAX, "%s%s%s%x%x%s", tempdir, filesep, prefix, pid, rand(), fileext);
+# define TMPNAM2_SNPRINTF(BUF, SIZE) \
+	snprintf(BUF, SIZE, "%s%s%s%x%x%s", tempdir, filesep, prefix, pid, r1, fileext)
 #else
-	snprintf(tm, PATH_MAX, "%s%s%s%x%x%x%s", tempdir, filesep, prefix, pid, rand(), rand(), fileext);
+	int r2 = rand();
+# define TMPNAM2_SNPRINTF(BUF, SIZE) \
+	snprintf(BUF, SIZE, "%s%s%s%x%x%x%s", tempdir, filesep, prefix, pid, r1, r2, fileext)
 #endif
-	if(!R_FileExists(tm)) {
-	    done = 1;
-	    break;
-	}
+	size_t needed = TMPNAM2_SNPRINTF(NULL, 0) + 1;
+#ifdef Unix
+	if (needed > R_PATH_MAX)
+	    error(_("temporary name too long"));
+#endif
+	char *res = (char *) malloc(needed);
+	if(!res)
+	    error(_("allocation failed in R_tmpnam2"));
+	TMPNAM2_SNPRINTF(res, needed);
+	if (!R_FileExists(res))
+	    return res;
+	free(res);
     }
-    if(!done)
-	error(_("cannot find unused tempfile name"));
-    res = (char *) malloc((strlen(tm)+1) * sizeof(char));
-    if(!res)
-	error(_("allocation failed in R_tmpnam2"));
-    strcpy(res, tm);
-    return res;
+    error(_("cannot find unused tempfile name"));
 }
 
 void R_free_tmpnam(char *name)
@@ -2014,7 +2041,7 @@ void R_free_tmpnam(char *name)
     if (name) free(name);
 }
 
-SEXP attribute_hidden do_proctime(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_proctime(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP ans, nm;
 
@@ -2033,7 +2060,7 @@ SEXP attribute_hidden do_proctime(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-void attribute_hidden resetTimeLimits(void)
+attribute_hidden void resetTimeLimits(void)
 {
     double data[5];
     R_getProcTime(data);
@@ -2052,7 +2079,7 @@ void attribute_hidden resetTimeLimits(void)
 	cpuLimit = cpuLimit2;
 }
 
-SEXP attribute_hidden
+attribute_hidden SEXP
 do_setTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     double cpu, elapsed, old_cpu = cpuLimitValue,
@@ -2079,7 +2106,7 @@ do_setTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-SEXP attribute_hidden
+attribute_hidden SEXP
 do_setSessionTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     double cpu, elapsed, data[5];
@@ -2103,7 +2130,7 @@ do_setSessionTimeLimit(SEXP call, SEXP op, SEXP args, SEXP rho)
     return R_NilValue;
 }
 
-void attribute_hidden R_CheckTimeLimits(void)
+attribute_hidden void R_CheckTimeLimits(void)
 {
     if (cpuLimit > 0.0 || elapsedLimit > 0.0) {
 
@@ -2169,7 +2196,7 @@ void attribute_hidden R_CheckTimeLimits(void)
 #  define GLOB_QUOTE 0
 # endif
 #endif
-SEXP attribute_hidden do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, ans;
     R_xlen_t i, n;
@@ -2249,70 +2276,35 @@ SEXP attribute_hidden do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
 
 #ifdef Win32
 
-#if _WIN32_WINNT < 0x0600
-/* available from Windows Vista */
-typedef enum _FILE_INFO_BY_HANDLE_CLASS {
-  FileBasicInfo,
-  FileStandardInfo,
-  FileNameInfo,
-  FileRenameInfo,
-  FileDispositionInfo,
-  FileAllocationInfo,
-  FileEndOfFileInfo,
-  FileStreamInfo,
-  FileCompressionInfo,
-  FileAttributeTagInfo,
-  FileIdBothDirectoryInfo,
-  FileIdBothDirectoryRestartInfo,
-  FileIoPriorityHintInfo,
-  FileRemoteProtocolInfo,
-  FileFullDirectoryInfo,
-  FileFullDirectoryRestartInfo,
-  FileStorageInfo,
-  FileAlignmentInfo,
-  FileIdInfo,
-  FileIdExtdDirectoryInfo,
-  FileIdExtdDirectoryRestartInfo,
-  FileDispositionInfoEx,
-  FileRenameInfoEx,
-  MaximumFileInfoByHandleClass,
-  FileCaseSensitiveInfo,
-  FileNormalizedNameInfo
-} FILE_INFO_BY_HANDLE_CLASS, *PFILE_INFO_BY_HANDLE_CLASS;
-
-typedef struct _FILE_NAME_INFO {
-  DWORD FileNameLength;
-  WCHAR FileName[1];
-} FILE_NAME_INFO, *PFILE_NAME_INFO;
-#endif
-
-typedef BOOL (WINAPI *LPFN_GFIBH_EX) (HANDLE, FILE_INFO_BY_HANDLE_CLASS,
-                                      LPVOID, DWORD);
-
 int attribute_hidden R_is_redirection_tty(int fd)
 {
     /* for now detects only msys/cygwin redirection tty */
-    static LPFN_GFIBH_EX gfibh = NULL;
-    static Rboolean initialized = FALSE;
-
-    if (!initialized) {
-	initialized = TRUE;
-	gfibh = (LPFN_GFIBH_EX) GetProcAddress(
-	    GetModuleHandle(TEXT("kernel32")),
-	    "GetFileInformationByHandleEx");
-    }
-    if (gfibh == NULL)
-	return 0;
-
     HANDLE h = (HANDLE) _get_osfhandle(fd);
     if (h == INVALID_HANDLE_VALUE || GetFileType(h) != FILE_TYPE_PIPE)
 	return 0;
     FILE_NAME_INFO *fnInfo;
-    DWORD size = sizeof(FILE_NAME_INFO) + MAX_PATH*sizeof(WCHAR);
+
+    /* find out the required FileNameLength */
+    DWORD size = sizeof(FILE_NAME_INFO);
     if (!(fnInfo = (FILE_NAME_INFO*)malloc(size)))
 	return 0;
+    fnInfo->FileNameLength = 0; /* most likely not needed */
+    BOOL r = GetFileInformationByHandleEx(h, FileNameInfo, fnInfo, size);
+    if (r || GetLastError() != ERROR_MORE_DATA) {
+	free(fnInfo);
+	return 0;
+    }
+    /* use the right length */
+    DWORD fnLength = fnInfo->FileNameLength; /* most likely not needed */
+    size = sizeof(FILE_NAME_INFO) + fnLength;
+    free(fnInfo);
+    if (!(fnInfo = (FILE_NAME_INFO*)malloc(size)))
+	return 0;
+    fnInfo->FileNameLength = fnLength;
+    r = GetFileInformationByHandleEx(h, FileNameInfo, fnInfo, size);
     int res = 0;
-    if (gfibh(h, FileNameInfo, fnInfo, size)) 
+    if (r)
+	/* note that fnInfo->FileName is not null terminated */
 	/* e.g. msys-1888ae32e00d56aa-pty0-from-master,
 	        cygwin-e022582115c10879-pty0-from-master */
 	/* test borrowed from git */

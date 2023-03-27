@@ -33,7 +33,9 @@
 
 #include "parallel.h"
 
-#include <sys/types.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h> // for size_t
+#endif
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
@@ -1156,7 +1158,7 @@ SEXP mc_kill(SEXP sPid, SEXP sSig)
 
 extern int R_ignore_SIGPIPE; /* defined in src/main/main.c on unix */
 
-SEXP NORET mc_exit(SEXP sRes)
+NORET SEXP mc_exit(SEXP sRes)
 {
     int res = asInteger(sRes);
 #ifdef MC_DEBUG

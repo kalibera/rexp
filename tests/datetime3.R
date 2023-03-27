@@ -3,32 +3,22 @@
 
 .pt <- proc.time()
 
-options(warn = 1)
-## as such functionality is missing currently:
-## "parallel" to Sys.timezone(); for now check no validity
-##  (neither does Sys.timezone() in the "TZ" case)
+options(warn = max(1, getOption("warn")))
 
-Sys.setTimezone <- function(tz)
-{
-    stopifnot(is.character(tz), length(tz) == 1L)
-    be <- baseenv()
-    unlockBinding(".sys.timezone", be)
-    assign(".sys.timezone", tz, be)
-    lockBinding(".sys.timezone", be)
-}
-
-## For some inter-platform reproducibility,
-## Simply calling Sys.setenv(TZ = "...") does *NOT* always work
-##  FIXME ?! --> see nzchar(TZenv) much further down
-myTZ <- "Australia/Melbourne"
-(TZenv <- Sys.getenv("TZ"))
-if(nzchar(TZenv)) ## TZ set, rather set it to the known  myTZ:
-    Sys.setenv(TZ = myTZ)
-Sys.getenv("TZ")
-Sys.setTimezone(myTZ)
-.sys.timezone # "Australia/Melbourne" hopefully:
-stopifnot(identical(.sys.timezone, myTZ))
-
+if(!nzchar(Sys.getenv("_R_CHECK_DATETIME3_NO_TZ_"))) withAutoprint({
+  ## For some inter-platform reproducibility, try to set timezone
+  ## even though  Sys.setenv(..) does *NOT* always work
+  myTZ <- "Australia/Melbourne"
+  (TZenvOrig <- Sys.getenv("TZ"))
+  Sys.setenv(TZ = myTZ)
+  Sys.getenv("TZ")
+  TZok <- Sys.getenv("TZ") == myTZ
+  if(!TZok) {
+      print(sessionInfo())
+      warning("'TZ' environment variable could *not* be set on this platform")
+      ## maybe even:  quit("no")
+  }
+})
 
 ## 0-length Date and POSIX[cl]t:  PR#71290
 D <- structure(17337, class = "Date") # Sys.Date() of "now"
@@ -317,6 +307,8 @@ dlt <- .POSIXlt(list(sec = c(-999, 10000 + c(1:10,-Inf, NA)) + pi,
                      min = 45L, hour = c(21L, 3L, NA, 4L),
                      mday = 6L, mon  = c(0:11, NA, 1:2),
                      year = 116L, wday = 2L, yday = 340L, isdst = -1L))
+f1 <- format(dlt[1], "%Y-%m-%d %H:%M:%OS3") # PR#18448
+stopifnot(f1 == "2016-01-06 21:28:24.141")  # gave "... 21:28:-995.858" in R <= 4.2.2
 dct   <- as.POSIXct(dlt)
 dltN  <- as.POSIXlt(dct) # "normalized POSIXlt" (with *lost* accuracy), but *added* tz-info:
 data.frame(unclass(dltN)); str(attributes(dltN)[-1], no.list=TRUE)
@@ -527,11 +519,10 @@ sec <- (0:18)*47^3
 (ctUU <- as.POSIXct(ltU, tz="UCT")) # "good", all UTC, but shifted by 1-2 hours (int <-> non-int)
 table(dUe <- ctUe - ct..) # all 0 for int-tzone,  all 1 otherwise !!
 table(dUU <- ctUU - ct..) # all 11 x '1' and 8 x '2' for int-tzone,  all  '2'  otherwise !
-## FIXME?  The  if( nchar(TZenv) ) test should not be needed:
 stopifnot(exprs = {
-    if(nzchar(TZenv)) all.equal(ct.e, ct.., check.tzone=FALSE) else identical(ct.e, ct..)
+    all.equal(ct.e, ct.., check.tzone=FALSE)
     identical(cte., ct..)
-    if(nzchar(TZenv)) all.equal(ctee, ct.., check.tzone=FALSE) else identical(ctee, ct..)
+    all.equal(ctee, ct.., check.tzone=FALSE)
 })
 (b1 <- balancePOSIXlt(lt., fill.only=TRUE))
 (b2 <- balancePOSIXlt(lt.))

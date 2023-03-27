@@ -84,7 +84,7 @@ Sys.timezone <- function(location = TRUE)
         if(dir.exists(tzdir <- "/usr/share/zoneinfo") ||
            dir.exists(tzdir <- "/share/zoneinfo") ||
            dir.exists(tzdir <- "/usr/share/lib/zoneinfo") ||
-           dir.exists(tzdir <- "/usrlib/zoneinfo") ||
+           dir.exists(tzdir <- "/usr/lib/zoneinfo") ||
            dir.exists(tzdir <- "/usr/local/etc/zoneinfo") ||
            dir.exists(tzdir <- "/etc/zoneinfo") ||
            dir.exists(tzdir <- "/usr/etc/zoneinfo")) {
@@ -475,7 +475,7 @@ summary.POSIXlt <- function(object, digits = 15, ...)
     if(inherits(e2, "POSIXlt")) e2 <- as.POSIXct(e2)
     if (inherits(e1, "difftime")) e1 <- coerceTimeUnit(e1)
     if (inherits(e2, "difftime")) e2 <- coerceTimeUnit(e2)
-    .POSIXct(unclass(e1) + unclass(e2), check_tzones(e1, e2))
+    .POSIXct(unclass(e1) + unclass(e2), .check_tzones(e1, e2))
 }
 
 `-.POSIXt` <- function(e1, e2)
@@ -508,7 +508,7 @@ Ops.POSIXt <- function(e1, e2)
              domain = NA)
     if(inherits(e1, "POSIXlt") || is.character(e1)) e1 <- as.POSIXct(e1)
     if(inherits(e2, "POSIXlt") || is.character(e2)) e2 <- as.POSIXct(e2)
-    check_tzones(e1, e2)
+    .check_tzones(e1, e2)
     NextMethod(.Generic)
 }
 
@@ -518,7 +518,7 @@ Math.POSIXt <- function (x, ...)
          domain = NA)
 }
 
-check_tzones <- function(...)
+.check_tzones <- function(...)
 {
     tzs <- unique(sapply(list(...), function(x) {
         y <- attr(x, "tzone")
@@ -537,7 +537,7 @@ Summary.POSIXct <- function (..., na.rm)
         stop(gettextf("'%s' not defined for \"POSIXt\" objects", .Generic),
              domain = NA)
     args <- list(...)
-    tz <- do.call(check_tzones, args)
+    tz <- do.call(.check_tzones, args)
     .POSIXct(NextMethod(.Generic), tz = tz, cl = oldClass(args[[1L]]))
 }
 
@@ -548,7 +548,7 @@ Summary.POSIXlt <- function (..., na.rm)
         stop(gettextf("'%s' not defined for \"POSIXt\" objects", .Generic),
              domain = NA)
     args <- list(...)
-    tz <- do.call(check_tzones, args)
+    tz <- do.call(.check_tzones, args)
     args <- lapply(args, as.POSIXct)
     val <- do.call(.Generic, c(args, na.rm = na.rm))
     as.POSIXlt(.POSIXct(val, tz))
@@ -1264,16 +1264,16 @@ function(x, units = c("secs", "mins", "hours", "days", "months", "years"))
 
     setBalanced <- function(.) `attr<-`(., "balanced", TRUE)
     if(mi) # but !mj : x[, ".."]
-        setBalanced(balancePOSIXlt(x, TRUE, FALSE)[[j]])
+        setBalanced(unCfillPOSIXlt(x)[[j]])
     else {
         if(is.character(i))
             i <- match(i, names(x),
                        incomparables = c("", NA_character_))
         if(mj) # x[i]
-            .POSIXlt(setBalanced(lapply(balancePOSIXlt(x, TRUE, FALSE), `[`, i, drop = drop)),
+            .POSIXlt(setBalanced(lapply(unCfillPOSIXlt(x), `[`, i, drop = drop)),
                      attr(x, "tzone"), oldClass(x))
         else # x[i,j]
-            balancePOSIXlt(x, TRUE, FALSE)[[j]][i]
+            unCfillPOSIXlt(x)[[j]][i]
     }
 }
 
@@ -1289,7 +1289,7 @@ function(x, units = c("secs", "mins", "hours", "days", "months", "years"))
         return(as.POSIXlt(value)) #  , tz = attr(x,"tzone")  ??
 
     cl <- oldClass(x)
-    x <- balancePOSIXlt(x, TRUE, FALSE) # list
+    x <- unCfillPOSIXlt(x) # list
 
     if(mi) { ## x[, ".."] <- v
         x[[j]] <- value
@@ -1331,7 +1331,7 @@ rep.POSIXct <- function(x, ...)
 
 rep.POSIXlt <- function(x, ...) {
     cl <- oldClass(x)
-    x <- balancePOSIXlt(x, TRUE, FALSE)
+    x <- unCfillPOSIXlt(x)
     ## fails to set class: `attributes<-`(lapply(x, rep, ...), attributes(x))
     r <- lapply(x, rep, ...)
     class(r) <- cl
@@ -1501,7 +1501,7 @@ OlsonNames <- function(tzdir = NULL)
     if(!missing(i) && is.character(i)) {
         i <- match(i, names(x), incomparables = c("", NA_character_))
     }
-    .POSIXlt(lapply(balancePOSIXlt(x, TRUE, FALSE), `[[`, i, drop = drop),
+    .POSIXlt(lapply(unCfillPOSIXlt(x), `[[`, i, drop = drop),
              attr(x, "tzone"), oldClass(x))
 }
 
@@ -1509,7 +1509,7 @@ as.list.POSIXlt <- function(x, ...)
 {
     nms <- names(x)
     names(x) <- NULL
-    y <- lapply(X = do.call(Map, c(list, balancePOSIXlt(x, TRUE, FALSE))),
+    y <- lapply(X = do.call(Map, c(list, unCfillPOSIXlt(x))),
                 FUN = .POSIXlt, attr(x, "tzone"), oldClass(x))
     names(y) <- nms
     y
@@ -1528,7 +1528,7 @@ as.list.POSIXlt <- function(x, ...)
             names(x[[n]]) <- nms
     }
 
-    value <- balancePOSIXlt(as.POSIXlt(value), TRUE, FALSE)
+    value <- unCfillPOSIXlt(as.POSIXlt(value))
     for(n in names(x))
         x[[n]][[i]] <- value[[n]]
 

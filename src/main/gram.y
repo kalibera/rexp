@@ -246,9 +246,9 @@ static SrcRefState ParseState;
 #define CHAR_VALUE 4
 #define UCS_VALUE 5
 
-static void NORET raiseParseError(const char *, SEXP, int, 
+NORET static void raiseParseError(const char *, SEXP, int, 
                                   const void *, YYLTYPE *, const char *);
-static void NORET raiseLexError(const char *, int,
+NORET static void raiseLexError(const char *, int,
                                 const void *, const char *);
 
 /* Memory protection in the parser
@@ -1215,7 +1215,42 @@ static void checkTooManyPlaceholders(SEXP rhs, SEXP args, YYLTYPE *lloc)
     for (SEXP rest = args; rest != R_NilValue; rest = CDR(rest))
 	if (CAR(rest) == R_PlaceholderToken)
 	    raiseParseError("tooManyPlaceholders", rhs, NO_VALUE, NULL, lloc,
-	                    "pipe placeholder may only appear once (%s:%d:%d)");
+	                    _("pipe placeholder may only appear once (%s:%d:%d)"));
+}
+
+static int checkForPlaceholderList(SEXP placeholder, SEXP list)
+{
+    for (; list != R_NilValue; list = CDR(list))
+	if (checkForPlaceholder(placeholder, CAR(list)))
+	    return TRUE;
+    return FALSE;
+}
+
+static SEXP findExtractorChainPHCell(SEXP placeholder, SEXP rhs, SEXP expr,
+				     YYLTYPE *lloc)
+{
+    SEXP fun = CAR(expr);
+    if (fun == R_BracketSymbol ||
+	fun == R_Bracket2Symbol ||
+	fun == R_DollarSymbol ||
+	fun == R_AtsignSymbol) {
+	/* If the RHS is a call to an extractor ([, [[, $), then
+	   recursively follow the chain of extractions to the
+	   expression for the object from which elements are being
+	   extracted. */
+	SEXP arg1 = CADR(expr);
+	SEXP phcell = arg1 == placeholder ?
+	    CDR(expr) :
+	    findExtractorChainPHCell(placeholder, rhs,  arg1, lloc);
+	/* If a placeholder is found, then check on the way back out
+	  that there are no other placeholders. */
+	if (phcell != NULL &&
+	    checkForPlaceholderList(placeholder, CDDR(expr)))
+	    raiseParseError("tooManyPlaceholders", rhs, NO_VALUE, NULL, lloc,
+			    _("pipe placeholder may only appear once (%s:%d:%d)"));
+	return phcell;
+    }
+    else return NULL;
 }
 
 static SEXP xxpipe(SEXP lhs, SEXP rhs, YYLTYPE *lloc_rhs)
@@ -1244,6 +1279,14 @@ static SEXP xxpipe(SEXP lhs, SEXP rhs, YYLTYPE *lloc_rhs)
 	    raiseParseError("placeholderInRHSFn",R_NilValue, 
 	                    NO_VALUE, NULL, lloc_rhs,
 	                    _("pipe placeholder cannot be used in the RHS function (%s:%d:%d)"));
+
+	/* allow for _$a[1]$b and the like */
+	SEXP phcell = findExtractorChainPHCell(R_PlaceholderToken, rhs, rhs,
+					       lloc_rhs);
+	if (phcell != NULL) {
+	    SETCAR(phcell, lhs);
+	    return rhs;
+	}
 
 	/* allow top-level placeholder */
 	for (SEXP a = CDR(rhs); a != R_NilValue; a = CDR(a))
@@ -1701,6 +1744,7 @@ static SEXP R_Parse1(ParseStatus *status)
 	    if (checkForPlaceholder(R_PlaceholderToken, R_CurrentExpr)) {
 	        YYLTYPE lloc;
 	        lloc.first_line = ParseState.xxlineno;
+		lloc.first_column = ParseState.xxcolno;
 	        if (Status == 3) lloc.first_line--;
 		raiseParseError("invalidPlaceholder", R_CurrentExpr,
 		                NO_VALUE, NULL, &lloc,
@@ -1709,6 +1753,7 @@ static SEXP R_Parse1(ParseStatus *status)
 	    if (checkForPipeBind(R_CurrentExpr)) {
 	        YYLTYPE lloc;
 	        lloc.first_line = ParseState.xxlineno;
+		lloc.first_column = ParseState.xxcolno;
 	        if (Status == 3) lloc.first_line--;
 		raiseParseError("invalidPipeBind", R_CurrentExpr, 
 		                NO_VALUE, NULL, &lloc,
@@ -4317,7 +4362,7 @@ static const char* getFilename(void) {
      [value], filename, lineno, colno
    in the sprintf call for the format.
 */
-static void NORET raiseParseError(const char *subclassname,
+NORET static void raiseParseError(const char *subclassname,
                              SEXP call,
                              int valuetype,
                              const void *value,
@@ -4410,7 +4455,7 @@ static void NORET raiseParseError(const char *subclassname,
    from the ParseState, but is otherwise the same as
    raiseParseError.
 */
-static void NORET raiseLexError(const char *subclassname,
+NORET static void raiseLexError(const char *subclassname,
                              int valuetype,
                              const void *value,
                              const char *format)

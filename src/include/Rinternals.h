@@ -284,7 +284,7 @@ void SET_STRING_ELT(SEXP x, R_xlen_t i, SEXP v);
 SEXP SET_VECTOR_ELT(SEXP x, R_xlen_t i, SEXP v);
 SEXP *(STRING_PTR)(SEXP x);
 const SEXP *(STRING_PTR_RO)(SEXP x);
-SEXP * NORET (VECTOR_PTR)(SEXP x);
+NORET SEXP * (VECTOR_PTR)(SEXP x);
 
 R_xlen_t INTEGER_GET_REGION(SEXP sx, R_xlen_t i, R_xlen_t n, int *buf);
 R_xlen_t REAL_GET_REGION(SEXP sx, R_xlen_t i, R_xlen_t n, double *buf);
@@ -317,6 +317,7 @@ SEXP (CDDDR)(SEXP e);
 SEXP (CADDR)(SEXP e);
 SEXP (CADDDR)(SEXP e);
 SEXP (CAD4R)(SEXP e);
+SEXP (CAD5R)(SEXP e);
 int  (MISSING)(SEXP x);
 void SET_TAG(SEXP x, SEXP y);
 SEXP SETCAR(SEXP x, SEXP y);
@@ -650,7 +651,7 @@ SEXP R_tryCatchError(SEXP (*)(void *), void *,        /* body closure*/
 SEXP R_withCallingErrorHandler(SEXP (*)(void *), void *, /* body closure*/
 			       SEXP (*)(SEXP, void *), void *); /* handler closure */
 SEXP R_MakeUnwindCont(void);
-void NORET R_ContinueUnwind(SEXP cont);
+NORET void R_ContinueUnwind(SEXP cont);
 SEXP R_UnwindProtect(SEXP (*fun)(void *data), void *data,
                      void (*cleanfun)(void *data, Rboolean jump),
                      void *cleandata, SEXP cont);
@@ -676,11 +677,7 @@ Rboolean R_HasFancyBindings(SEXP rho);
 
 /* ../main/errors.c : */
 /* needed for R_load/savehistory handling in front ends */
-#if defined(__GNUC__) && __GNUC__ >= 3
-void Rf_errorcall(SEXP, const char *, ...) __attribute__((noreturn));
-#else
-void Rf_errorcall(SEXP, const char *, ...);
-#endif
+NORET void Rf_errorcall(SEXP, const char *, ...);
 void Rf_warningcall(SEXP, const char *, ...);
 void Rf_warningcall_immediate(SEXP, const char *, ...);
 

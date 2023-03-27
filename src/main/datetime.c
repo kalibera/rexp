@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2000-2022  The R Core Team.
+ *  Copyright (C) 2000-2023  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@
   on the platform., but it woll always be present.)  However, if the
   call to strptime() does not specify 'tz', this attribute is omitted.
 
-  Names for the date-times are optional (and rarely supplied): 
+  Names for the date-times are optional (and rarely supplied):
   they are attached to the 'year' element' and used by strptime().
 */
 
@@ -934,7 +934,7 @@ static Rboolean valid_POSIXlt(SEXP x, int nm)
 	    error(_("invalid '%s'"), "attr(x, \"tzone\")");
 	int l = LENGTH(tz);
 	if(l != 1 && l != 3)
-	    error(_("attr(x, \"tzone\") shouls have length 1 or 3"));
+	    error(_("attr(x, \"tzone\") should have length 1 or 3"));
     }
 
     return TRUE;
@@ -957,7 +957,7 @@ static SEXP  /* 'const' globals */
 // We assume time zone names/abbreviations are ASCII, as all known ones are.
 
 // .Internal(as.POSIXlt(x, tz)) -- called only from  as.POSIXlt.POSIXct()
-SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     SEXP x = PROTECT(coerceVector(CAR(args), REALSXP));
@@ -1053,7 +1053,7 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     error(_("zero-length component [[%d]] in non-empty \"POSIXlt\" structure"), (_i_)+1)
 
 // .Internal(as.POSIXct(x, tz)) -- called only from  as.POSIXct.POSIXlt()
-SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
@@ -1150,7 +1150,7 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
 } // as.POSIXct()
 
 // .Internal(format.POSIXlt(x, format, usetz)) aka strftime
-SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     SEXP x = PROTECT(duplicate(CAR(args))); /* maybe coerced in next line */
@@ -1280,9 +1280,10 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 		if(ns > 6) ns = 6;
 		if(ns > 0) {
 		    /* truncate to avoid nuisances such as PR#14579 */
-		    double s = secs, t = Rexp10((double) ns);
+		    double s = tm.tm_sec + (secs - fsecs), t = Rexp10((double) ns);
 		    s = ((int) (s*t))/t;
-		    sprintf(p2, "%0*.*f", ns+3, ns, s);
+		    snprintf(p2, sizeof(buf2) - (p2 - buf2), "%0*.*f",
+			     ns+3, ns, s);
 		    strcat(buf2, p+nused);
 		} else {
 		    strcat(p2, "%S");
@@ -1352,7 +1353,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 	setAttrib(ans, R_NamesSymbol, nm3);
 	UNPROTECT(1);
     }
- 
+
     if(settz) reset_tz(oldtz);
     UNPROTECT(2);
     return ans;
@@ -1360,7 +1361,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 
 
 // .Internal(strptime(as.character(x), format, tz))
-SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
 
@@ -1505,7 +1506,7 @@ SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
 
 // .Internal(Date2POSIXlt(x)) called from as.POSIXlt.Date
 // It always returns a date-time in UTC.
-SEXP attribute_hidden do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     SEXP x = PROTECT(coerceVector(CAR(args), REALSXP));
@@ -1571,7 +1572,7 @@ SEXP attribute_hidden do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 // .Internal(POSIXlt2Date(x)), called from as.Date.POSIXlt(x)
-SEXP attribute_hidden do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
+attribute_hidden SEXP do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
     SEXP x = PROTECT(duplicate(CAR(args)));
@@ -1624,29 +1625,12 @@ SEXP attribute_hidden do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
     return ans;
 }
 
-// .Internal(balancePOSIXlt(x, fill.only, classed)) called from balancePOSIXlt()
-SEXP attribute_hidden do_balancePOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+SEXP balancePOSIXlt(SEXP x, Rboolean fill_only, Rboolean do_class)
 {
-    /*
-       This may be called on objects generated on other versions of R
-       with/without tm_zone/rm_offset, or even different versions of
-       R.  Let alone hand-edited objects, as in datetime3.R, or those
-       created in packages.
-    */
-    checkArity(op, args);
     MAYBE_INIT_balanced
-    SEXP _filled_ = ScalarLogical(NA_LOGICAL);
-    SEXP x = CAR(args),
-	bal = getAttrib(x, lt_balancedSymbol);
+    const SEXP _filled_ = ScalarLogical(NA_LOGICAL);
+    SEXP bal = getAttrib(x, lt_balancedSymbol);
     /*  bal in  (TRUE, NA, NULL) <==> ("balanced", "filled", <unset>) */
-
-    int fill_only = asLogical(CADR(args));
-    if(fill_only == NA_LOGICAL)
-	error(_("invalid '%s' argument"), "fill.only");
-    int do_class = asLogical(CADDR(args));
-    if(do_class == NA_LOGICAL)
-	error(_("invalid '%s' argument"), "classed");
-
     if(bal == _balanced_ || (fill_only && bal == _filled_)) {
 	if(!do_class) {
 	    x = duplicate(x);
@@ -1849,12 +1833,11 @@ SEXP attribute_hidden do_balancePOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     }
     if(set_nm) { // names(.), attached to x[[5]] = x$year:
 	SEXP nmN = PROTECT(allocVector(STRSXP, n));
-	R_xlen_t ni = nlen[5];
+	R_xlen_t ni = XLENGTH(nm); // typically = nlen[5]
 	// names(.) will have to become length n;  $year is already
-	for(R_xlen_t i = 0; i < ni; i++)
+	// fill names, recycling:
+	for(R_xlen_t i = 0; i < n; i++)
 	    SET_STRING_ELT(nmN, i, STRING_ELT(nm, i % ni));
-	for(R_xlen_t i = ni; i < n; i++)
-	    SET_STRING_ELT(nmN, i, NA_STRING);
 	setAttrib(VECTOR_ELT(ans, 5), R_NamesSymbol, nmN);
 	UNPROTECT(2); // nm, nmN
     }
@@ -1862,3 +1845,32 @@ SEXP attribute_hidden do_balancePOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     UNPROTECT(3);
     return ans;
 }
+
+// .Internal(balancePOSIXlt(x, fill.only, classed)) called from R's balancePOSIXlt()
+// or primitive  unCfillPOSIXlt(x)
+attribute_hidden SEXP do_balancePOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
+{
+    /*
+       This may be called on objects generated on other versions of R
+       with/without tm_zone/rm_offset, or even different versions of
+       R.  Let alone hand-edited objects, as in datetime3.R, or those
+       created in packages.
+    */
+    checkArity(op, args);
+    SEXP x = CAR(args);
+
+    int fill_only, do_class;
+    if(PRIMVAL(op) == 1) { // unCfillPOSIXlt(x)
+	fill_only = TRUE;
+	do_class = FALSE;
+    } else { // op == 0 :  .Internal(balancePOSIXlt(x, fill.only, classed))
+	fill_only = asLogical(CADR(args));
+	if(fill_only == NA_LOGICAL)
+	    error(_("invalid '%s' argument"), "fill.only");
+	do_class = asLogical(CADDR(args));
+	if(do_class == NA_LOGICAL)
+	    error(_("invalid '%s' argument"), "classed");
+    }
+    return balancePOSIXlt(x, (Rboolean)fill_only, (Rboolean)do_class);
+}
+

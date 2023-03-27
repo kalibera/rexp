@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998-2022   The R Core Team
+ *  Copyright (C) 1998-2023   The R Core Team
  *  Copyright (C) 2002-2005  The R Foundation
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
@@ -43,7 +43,7 @@
 #include <R_ext/Print.h>
 
 #ifdef ENABLE_NLS
-void attribute_hidden nl_Rdummy(void)
+attribute_hidden void nl_Rdummy(void)
 {
     /* force this in as packages use it */
     dgettext("R", "dummy - do not translate");
@@ -719,22 +719,25 @@ int R_SignalHandlers = 1;  /* Exposed in R_interface.h */
 
 const char* get_workspace_name(void);  /* from startup.c */
 
-void attribute_hidden BindDomain(char *R_Home)
+attribute_hidden void BindDomain(char *R_Home)
 {
 #ifdef ENABLE_NLS
-    char localedir[PATH_MAX+20];
+    char *localedir = NULL;
 # if defined(LC_MESSAGES) && !defined(Win32)
     setlocale(LC_MESSAGES,"");
 # endif
     textdomain(PACKAGE);
     char *p = getenv("R_TRANSLATIONS");
-    if (p) snprintf(localedir, PATH_MAX+20, "%s", p);
-    else snprintf(localedir, PATH_MAX+20, "%s/library/translations", R_Home);
+    if (p) Rasprintf_malloc(&localedir, "%s", p);
+    else Rasprintf_malloc(&localedir, "%s/library/translations", R_Home);
+    if (!localedir)
+	R_Suicide("allocation failure in BindDomain");
     bindtextdomain(PACKAGE, localedir); // PACKAGE = DOMAIN = "R"
     bindtextdomain("R-base", localedir);
 # ifdef _WIN32
     bindtextdomain("RGui", localedir);
 # endif
+    free(localedir);
 #endif
 }
 
@@ -1065,10 +1068,13 @@ void setup_Rmainloop(void)
     }
 
     if (strcmp(R_GUIType, "Tk") == 0) {
-	char buf[PATH_MAX];
+	char *buf = NULL;
 
-	snprintf(buf, PATH_MAX, "%s/library/tcltk/exec/Tk-frontend.R", R_Home);
+	Rasprintf_malloc(&buf, "%s/library/tcltk/exec/Tk-frontend.R", R_Home);
+	if (!buf)
+	    R_Suicide("allocation failure in setup_Rmainloop");
 	R_LoadProfile(R_fopen(buf, "r"), R_GlobalEnv);
+	free(buf);
     }
 
     /* Print a platform and version dependent greeting and a pointer to
@@ -1204,7 +1210,7 @@ void mainloop(void)
 /*this functionality now appears in 3
   places-jump_to_toplevel/profile/here */
 
-void attribute_hidden printwhere(void)
+attribute_hidden void printwhere(void)
 {
   RCNTXT *cptr;
   int lct = 1;
@@ -1308,7 +1314,7 @@ static void PrintCall(SEXP call, SEXP rho)
 
 /* browser(text = "", condition = NULL, expr = TRUE, skipCalls = 0L)
  * ------- but also called from ./eval.c */
-SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
+attribute_hidden SEXP do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     RCNTXT *saveToplevelContext;
     RCNTXT *saveGlobalContext;
@@ -1342,6 +1348,13 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     if( !asLogical(CADDR(argList)) ) {
 	UNPROTECT(1);
 	return R_NilValue;
+    }
+
+    /* trap non-interactive debugger invocation */
+    if(!R_Interactive) {
+        char *p = getenv("_R_CHECK_BROWSER_NONINTERACTIVE_");
+        if (p != NULL && StringTrue(p))
+            error(_("non-interactive browser() -- left over from debugging?"));
     }
 
     /* Save the evaluator state information */
@@ -1432,7 +1445,7 @@ void R_dot_Last(void)
     UNPROTECT(1);
 }
 
-SEXP attribute_hidden do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
+attribute_hidden SEXP do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     const char *tmp;
     SA_TYPE ask=SA_DEFAULT;
@@ -1834,14 +1847,14 @@ R_addTaskCallback(SEXP f, SEXP data, SEXP useData, SEXP name)
 # if defined FC_LEN_T
 # include <stddef.h>
 void F77_SYMBOL(rwarnc)(char *msg, int *nchar, FC_LEN_T msg_len);
-void attribute_hidden dummy54321(void)
+attribute_hidden void dummy54321(void)
 {
     int nc = 5;
     F77_CALL(rwarnc)("dummy", &nc, (FC_LEN_T) 5);
 }
 # else
 void F77_SYMBOL(rwarnc)(char *msg, int *nchar);
-void attribute_hidden dummy54321(void)
+attribute_hidden void dummy54321(void)
 {
     int nc = 5;
     F77_CALL(rwarnc)("dummy", &nc);

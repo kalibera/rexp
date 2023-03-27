@@ -146,6 +146,7 @@ assign("storage.mode<-", function(x, value) NULL, envir = .ArgsEnv)
 assign("substitute", function(expr, env) NULL, envir = .ArgsEnv)
 assign("switch", function(EXPR, ...) NULL, envir = .ArgsEnv)
 assign("tracemem", function(x) NULL, envir = .ArgsEnv)
+assign("unCfillPOSIXlt", function(x) NULL, envir = .ArgsEnv)
 assign("unclass", function(x) NULL, envir = .ArgsEnv)
 assign("untracemem", function(x) NULL, envir = .ArgsEnv)
 
@@ -159,7 +160,9 @@ assign("untracemem", function(x) NULL, envir = .ArgsEnv)
     "c", "dim", "dim<-", "dimnames", "dimnames<-",
     "is.array", "is.finite",
     "is.infinite", "is.matrix", "is.na", "is.nan", "is.numeric",
-    "length", "length<-", "levels<-", "names", "names<-", "rep",
+    "length", "length<-", "levels<-",
+    "log2", "log10",
+    "names", "names<-", "rep",
     "seq.int", "xtfrm")
 
 .GenericArgsEnv <- local({
@@ -404,7 +407,6 @@ matrix(c("!", "hexmode",
          "as.data.frame", "raw",
          "as.data.frame", "table",
          "as.data.frame", "ts",
-         "as.data.frame", "vector",
          "as.double", "POSIXlt",
          "as.double", "difftime",
          "as.expression", "default",
@@ -649,3 +651,29 @@ matrix(c("!", "hexmode",
          "xtfrm", "numeric_version"),
        ncol = 2L, byrow = TRUE,
        dimnames = list(NULL, c("generic", "class")))
+
+## Create .as.data.frame.vector :=  deprecated version  as.data.frame.vector
+## which will be used for the now-deprecated as.data.frame.<foo> methods:
+local({
+    bdy <- body(as.data.frame.vector)
+    bdy <- bdy[c(1:2, seq_along(bdy)[-1L])] # taking [(1,2,2:n)] to insert at [2]:
+    ## deprecation warning only when not called by method dispatch from as.data.frame():
+    bdy[[2L]] <- quote(if((sys.nframe() <= 1L || sys.call(-1L)[[1L]] != quote(as.data.frame)) &&
+                          nzchar(Sys.getenv("_R_CHECK_AS_DATA_FRAME_EXPLICIT_METHOD_")))
+	.Deprecated(
+	    msg = gettextf(
+		"Direct call of '%s()' is deprecated.  Use '%s()' or '%s()' instead",
+		"PLACEHOLDER", "as.data.frame.vector", "as.data.frame")))
+    ii <- c(2L, 3L,2L, 3L)
+    stopifnot(identical(bdy[[ii]], "PLACEHOLDER"))
+    ASDFV <- function(fn) {## = our deprecated AS.Data.Frame.Vector()
+        bdy[[ii]] <- fn  # now basically calling `body(.) <- bdy` :
+        as.function(c(as.list(formals(as.data.frame.vector)), list(bdy)), .BaseNamespaceEnv)
+    }
+    ## now replace all the as.data.frame.<foo> methods which were := as.data.frame.vector :
+    for(f in paste0("as.data.frame.",
+                    c("raw", "logical", "integer", "numeric", "complex",
+                      "factor", "ordered", "Date", "difftime", "POSIXct",
+                      "noquote", "numeric_version")))
+        assign(f, ASDFV(f), .BaseNamespaceEnv)
+})
