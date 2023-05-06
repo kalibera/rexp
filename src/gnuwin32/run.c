@@ -369,6 +369,9 @@ static void pcreate(const char* cmd, cetype_t enc,
 	flags |= CREATE_SUSPENDED; /* assign to job before it runs */
     if (newconsole && (visible == 1))
 	flags |= CREATE_NEW_CONSOLE;
+    else if (newconsole)
+	/* prevent interruption of background processes by Ctrl-C, PR#17764 */
+	flags |= CREATE_NEW_PROCESS_GROUP;
     if (job && breakaway)
 	flags |= CREATE_BREAKAWAY_FROM_JOB;
 
