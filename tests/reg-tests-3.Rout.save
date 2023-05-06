@@ -1,7 +1,7 @@
 
-R Under development (unstable) (2023-03-24 r84039) -- "Unsuffered Consequences"
+R Under development (unstable) (2023-04-13 r84246) -- "Unsuffered Consequences"
 Copyright (C) 2023 The R Foundation for Statistical Computing
-Platform: aarch64-apple-darwin22.3.0 (64-bit)
+Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -757,13 +757,11 @@ x1     a b <NA>
 > ## median should work by default for a suitable S4 class.
 > ## adapted from adaptsmoFMRI
 > if(suppressMessages(require("Matrix"))) {
-+     x <- matrix(c(1,2,3,4))
-+     print(median(x))
-+     print(median(as(x, "dgeMatrix")))
-+     detach("package:Matrix")
++ x <- matrix(c(1,2,3,4))
++ print(m <- median(x))
++ stopifnot(all.equal(m, median(as(x, "denseMatrix"))))
++ detach("package:Matrix")
 + }
-[1] 2.5
-as(<matrix>, "dgeMatrix") is deprecated since Matrix 1.5-0; do as(as(as(., "dMatrix"), "generalMatrix"), "unpackedMatrix") instead
 [1] 2.5
 > 
 > ## Various arguments were not duplicated:  PR#15352 to 15354
@@ -935,7 +933,7 @@ standardGeneric("chol2inv")
 Methods may be defined for arguments: x
 Use  showMethods(chol2inv)  for currently available ones.
 > 
-> ## citation() / bibentry: year will change; even more below (yr, ver., ..), but check is sloppy/may fail
+> ## citation() / bibentry: year will change but check is sloppy
 > options(width=88) # format.bibentry() using strwrap()
 > print(c1 <- citation())
 To cite R in publications use:
@@ -970,8 +968,11 @@ packages.
 > (hasME <- requireNamespace(pkg, quietly=TRUE, lib.loc = .Library))
 [1] TRUE
 > if(hasME) withAutoprint({
-+     cat(sprintf("package '%s' version: '%s'\n", pkg, packageVersion(pkg)))
 +     c2 <- citation(package=pkg)
++     ## avoid spurious diffs:
++     c2$author[[1]]$given[[1]] <- "J."
++     c2$year[[1]] <- "9999"
++     c2$note[[1]] <- sub("3.1-[0-9]*$", "3.1-999", c2$note[[1]])
 +     print(c2)
 +     print(c2, bibtex=FALSE) # no final message
 +     print(c2, bibtex=TRUE)  # w/ two bibTeX
@@ -992,14 +993,15 @@ packages.
 +         startsWith(f2B[ie], f2N[ie])
 +       })
 + })
-> cat(sprintf("package '%s' version: '%s'\n", pkg, packageVersion(pkg)))
-package 'nlme' version: '3.1.162'
 > c2 <- citation(package = pkg)
+> c2$author[[1]]$given[[1]] <- "J."
+> c2$year[[1]] <- "9999"
+> c2$note[[1]] <- sub("3.1-[0-9]*$", "3.1-999", c2$note[[1]])
 > print(c2)
 To cite package 'nlme' in publications use:
 
-  Pinheiro J, Bates D, R Core Team (2023). _nlme: Linear and Nonlinear Mixed
-  Effects Models_. R package version 3.1-162,
+  Pinheiro J, Bates D, R Core Team (9999). _nlme: Linear and Nonlinear Mixed
+  Effects Models_. R package version 3.1-999,
   <https://CRAN.R-project.org/package=nlme>.
 
   Pinheiro JC, Bates DM (2000). _Mixed-Effects Models in S and S-PLUS_.
@@ -1010,8 +1012,8 @@ To see these entries in BibTeX format, use 'print(<citation>, bibtex=TRUE)',
 > print(c2, bibtex = FALSE)
 To cite package 'nlme' in publications use:
 
-  Pinheiro J, Bates D, R Core Team (2023). _nlme: Linear and Nonlinear Mixed
-  Effects Models_. R package version 3.1-162,
+  Pinheiro J, Bates D, R Core Team (9999). _nlme: Linear and Nonlinear Mixed
+  Effects Models_. R package version 3.1-999,
   <https://CRAN.R-project.org/package=nlme>.
 
   Pinheiro JC, Bates DM (2000). _Mixed-Effects Models in S and S-PLUS_.
@@ -1019,17 +1021,17 @@ To cite package 'nlme' in publications use:
 > print(c2, bibtex = TRUE)
 To cite package 'nlme' in publications use:
 
-  Pinheiro J, Bates D, R Core Team (2023). _nlme: Linear and Nonlinear Mixed
-  Effects Models_. R package version 3.1-162,
+  Pinheiro J, Bates D, R Core Team (9999). _nlme: Linear and Nonlinear Mixed
+  Effects Models_. R package version 3.1-999,
   <https://CRAN.R-project.org/package=nlme>.
 
 A BibTeX entry for LaTeX users is
 
   @Manual{,
     title = {nlme: Linear and Nonlinear Mixed Effects Models},
-    author = {Jos'e Pinheiro and Douglas Bates and {R Core Team}},
-    year = {2023},
-    note = {R package version 3.1-162},
+    author = {J. Pinheiro and Douglas Bates and {R Core Team}},
+    year = {9999},
+    note = {R package version 3.1-999},
     url = {https://CRAN.R-project.org/package=nlme},
   }
 
@@ -1065,5 +1067,5 @@ A BibTeX entry for LaTeX users is
 [1] 4
 > 
 > cat('Time elapsed: ', proc.time(),'\n')
-Time elapsed:  1.467 0.085 1.559 0.001 0.003 
+Time elapsed:  2.368 0.234 2.875 0.001 0.002 
 > 

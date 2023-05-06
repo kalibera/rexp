@@ -1,7 +1,7 @@
 #  File src/library/tools/R/utils.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2022 The R Core Team
+#  Copyright (C) 1995-2023 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -817,7 +817,7 @@ function(x, predicate = NULL, recursive = FALSE)
     calls <- list()
 
     if(!is.recursive(x) || isS4(x)) return(calls)
-    
+
     x <- if(is.call(x))
              list(x)
          else {
@@ -984,7 +984,9 @@ function(primitive = TRUE) # primitive means 'include primitives'
     out <-
         ## Get the names of R internal S3 generics (via DispatchOrEval(),
         ## cf. ?InternalMethods).
-        c("[", "[[", "$", "[<-", "[[<-", "$<-", "@<-",
+        c("[", "[[", "$", "[<-", "[[<-", "$<-", "@", "@<-",
+          ## The above are actually primitive but not listed in
+          ## base::.S3PrimitiveGenerics et al: not sure why?
           "as.vector", "cbind", "rbind", "unlist",
           "is.unsorted", "lengths", "nchar", "rep.int", "rep_len",
           .get_S3_primitive_generics()
@@ -1025,7 +1027,7 @@ function(nsInfo)
     ## names of the generic, class and method (as a function).
     S3_methods_db <- nsInfo$S3methods
     if(!length(S3_methods_db))
-        return(matrix(character(), ncol = 3L))
+        return(matrix(character(), ncol = 4L))
     idx <- is.na(S3_methods_db[, 3L])
     S3_methods_db[idx, 3L] <-
         paste(S3_methods_db[idx, 1L],
@@ -1196,7 +1198,7 @@ function(db,
 ### ** .get_S3_generics_in_base
 
 .get_S3_generics_in_base <-
-function() 
+function()
 {
     ## .get_S3_generics_in_env(.BaseNamespaceEnv) gets all UseMethod
     ## generics.
@@ -1220,7 +1222,7 @@ function()
       .get_internal_S3_generics(),
       .get_S3_group_generics())
 }
-    
+
 ### ** .get_S3_generics_in_env
 
 .get_S3_generics_in_env <-
@@ -1238,7 +1240,7 @@ function(env, nms = NULL)
 
 .get_S3_group_generics <-
 function()
-    c("Ops", "Math", "Summary", "Complex")
+    c("Ops", "Math", "Summary", "Complex", "matrixOps")
 
 ### ** .get_S3_primitive_generics
 
@@ -1269,7 +1271,9 @@ function(include_group_generics = TRUE)
           ## Group 'Summary':
           "all", "any", "sum", "prod", "max", "min", "range",
           ## Group 'Complex':
-          "Arg", "Conj", "Im", "Mod", "Re")
+          "Arg", "Conj", "Im", "Mod", "Re",
+          ## Group 'matrixOps'
+          "%*%")
     else
         base::.S3PrimitiveGenerics
 }
@@ -1737,6 +1741,8 @@ function(parent = parent.frame())
            envir = env)
     assign("Ops", function(e1, e2) UseMethod("Ops"),
            envir = env)
+    assign("matrixOps", function(e1, e2) UseMethod("matrixOps"),
+           envir = env)
     assign("Summary", function(..., na.rm = FALSE) UseMethod("Summary"),
            envir = env)
     assign("Complex", function(z) UseMethod("Complex"),
@@ -1784,7 +1790,7 @@ function(parent = parent.frame())
     ctx <- NULL
     function() {
         if(is.null(fun) && requireNamespace("V8", quietly = TRUE)) {
-            dir <- file.path(R.home(), "doc", "html")
+            dir <- file.path(R.home("doc"), "html")
             ctx <<- V8::v8("window")
             ctx$source(file.path(dir, "katex", "katex.js"))
             ## Provides additional macros:
@@ -2486,6 +2492,8 @@ function(fun, args = list(), opts = character(), env = character(),
             tfi)
     cmd <- if(.Platform$OS.type == "windows") {
                if(nzchar(arch))
+                   ## R.home("bin") might be better, but Windows
+                   ## installation is monolithic
                    file.path(R.home(), "bin", arch, "Rterm.exe")
                else
                    file.path(R.home("bin"), "Rterm.exe")

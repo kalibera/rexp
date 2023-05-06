@@ -6,36 +6,106 @@
 \encoding{UTF-8}
 
 \section{\Rlogo CHANGES IN R-devel}{
-  \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
-    \itemize{
-      \item .
-    }
-  }
+  %% \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
+  %%   \itemize{
+  %%     \item .
+  %%   }
+  %% }
 
   \subsection{NEW FEATURES}{
     \itemize{
-      \item .
+      \item The \code{"glm"} method for \code{anova()} computes test
+      statistics and p-values by default, using a chi-squared test or
+      an F test depending on whether the dispersion is fixed or
+      free.  Test statistics can be suppressed by giving argument
+      \code{test} a false logical value.
+    }
+  }
+
+
+  \subsection{INSTALLATION on a UNIX-ALIKE}{
+    \itemize{
+      \item System valgrind headers are required to use
+      \command{configure} option \option{--with-valgrind-instrumentation}
+      with value \code{1} or \code{2}.
+    }
+  }
+
+  %% \subsection{PACKAGE INSTALLATION}{
+  %%   \itemize{
+  %%     \item .
+  %%   }
+  %% }
+
+  %% \subsection{C-LEVEL FACILITIES}{
+  %%   \itemize{
+  %%     \item .
+  %%   }
+  %% }
+
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item Probability distribution functions \code{[dpq]<distrib>(x, *)},
+      but also \code{bessel[IKJY](x, .)} are now consistently preserving
+      \code{attributes(x)} when \code{length(x) == 0}, e.g., for a
+      \eqn{2 \times 0}{2 x 0} matrix, thanks to Karolis Koncevičius'
+      report \PR{18509}.
+
+      \item Group \dQuote{Summary} computations such as
+      \code{sum(1:3, 4, na.rm = 5, NA, 7, na.rm = LL)} now give an error
+      instead of either \code{17} or \code{NN} for \code{LL} true or false,
+      as proposed by Ivan Krylov on the R-devel mailing list.  (This
+      also means it is now an error to specify \code{na.rm} more than once.)
+
+      \item \code{as.complex(x)} now returns \code{NA_complex_} also for
+      \code{NA_real_}, as it does for all other \code{NA}s.
+
+      \item Directories are now omitted in
+      \code{file.copy(,recursive=FALSE)} and in \code{file.append()}
+      (\PR{17337}).
+
+      \item \code{gsub()} and \code{sub()} are now more robust to integer
+      overflow when reporting erros caused by too large input strings
+      (\PR{18346}).
+
+      \item Toplevel handlers are now more robust to attempts to remove a
+      handler while handlers are running (\PR{18508}).
+
+      \item Handling of \code{Alt+F4} in dialogs created on Windows using
+      GraphApp has been fixed (\PR{13870}).
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 4.3.0 patched}{
+  \subsection{C-LEVEL FACILITIES}{
+    \itemize{
+      \item C API \file{Applic.h} version of \R's \code{integrate()},
+      \code{Rdqags()} now returns the correct number of integrand
+      evaluations \code{neval}, fixing \PR{18515} reported and diagnosed by
+      Stephen Wade.
     }
   }
 
   \subsection{INSTALLATION}{
     \itemize{
-      \item .
+      \item Many of the checks of esoteric Internet operations and those
+      using unreliable external sites have been moved to a new target
+      that is not run by default and primarily intended for the core
+      developers.  To run them use
+\preformatted{
+	cd tests; make test-Internet-dev
+}
     }
   }
 
-  \subsection{PACKAGE INSTALLATION}{
-    \itemize{
-      \item .
-    }
-  }
-
-  \subsection{C-LEVEL FACILITIES}{
+  \subsection{BUG FIXES}{
     \itemize{
       \item .
     }
   }
 }
+
 \section{\Rlogo CHANGES IN R 4.3.0}{
   \subsection{SIGNIFICANT USER-VISIBLE CHANGES}{
     \itemize{
@@ -219,19 +289,32 @@
       \item The \code{@} operator is now an S3 generic. Based on
       contributions by Tomasz Kalinowski in \PR{18482}.
 
+      \item New generic \code{chooseOpsMethod()} provides a mechanism
+      for objects to resolve cases where two suitable methods are found
+      for an Ops Group Generic. This supports experimenting with
+      alternative object systems. Based on contributions by Tomasz
+      Kalinowski in \PR{18484}.
+
+      \item \code{inherits(x, what)} now accepts values other than a
+      simple character vector for argument \code{what}. A new generic,
+      \code{nameOfClass()}, is called to resolve the class name from
+      \code{what}. This supports experimenting with alternative object
+      systems. Based on contributions by Tomasz Kalinowski in
+      \PR{18485}.
+
       \item Detection of BLAS/LAPACK in use (\code{sessionInfo()}) with
       FlexiBLAS now reports the current backend.
 
-      \item \code{subset.data.frame()} now warns about extraneous
-      arguments, typically catching the use of \samp{=} instead of
-      \samp{==} in the \code{subset} expression.
+      \item The \code{"data.frame"} method for \code{subset()} now warns
+      about extraneous arguments, typically catching the use of \samp{=}
+      instead of \samp{==} in the \code{subset} expression.
 
       \item Calling \code{a:b} when numeric \code{a} or \code{b} is longer
       than one may now be made into an error by setting environment variable
       \env{_R_CHECK_LENGTH_COLON_} to a true value, along the proposal in
       \PR{18419} by Henrik Bengtsson.
 
-      \item \code{density(x, weights=*)} now warns if automatic bandwidth
+      \item \code{density(x, weights = *)} now warns if automatic bandwidth
       selection happens without using \code{weights}; new optional
       \code{warnWbw} may suppress the warning.  Prompted by Christoph
       Dalitz' \PR{18490} and its discussants.
@@ -243,9 +326,29 @@
       Q-Q plot for GLMs. Instead it plots a half-normal Q-Q plot of the
       absolute value of the standardized deviance residuals.
 
-      \item The \code{print.summary.glm()} function no longer shows summary
-      statistics for the deviance residuals by default. The optional
-      argument \code{show.residuals} can be used to show them if required.
+      \item The \code{print()} method for class \code{"summary.glm"} no
+      longer shows summary statistics for the deviance residuals by
+      default.  Its optional argument \code{show.residuals} can be used
+      to show them if required.
+
+      \item The \code{tapply()} function now accepts a data frame as its
+      \code{X} argument, and allows \code{INDEX} to be a formula in that
+      case. \code{by.data.frame()} similarly allows \code{INDICES} to be
+      a formula.
+
+      \item The performance of \code{df[j] <- value} (including for
+      missing \code{j}) and \code{write.table(df)} has been improved for
+      data frames \code{df} with a large number of columns.  (Thanks to
+      Gabriel Becker's \PR{18500}, \PR{18503} and discussants, prompted
+      by a report from Toby Dylan Hocking on the R-devel mailing list.)
+
+      \item The matrix multiply operator \code{\%*\%} is now an S3 generic,
+      belonging to new group generic \code{matrixOps}.  From Tomasz
+      Kalinowski's contribution in \PR{18483}.
+
+      \item New function \code{array2DF()} to convert arrays to data
+      frames, particularly useful for the list arrays created by
+      \code{tapply()}.
     }
   }
 
@@ -385,6 +488,10 @@
 
       The system headers will be required in a future release of \R
       to build with \command{valgrind} instrumentation.
+
+      \item \code{libcurl} 8.x is now accepted by \command{configure}:
+      despite a change in major version number it changes neither API
+      nor ABI.
     }
   }
 
@@ -513,6 +620,25 @@
 
       \item ALTREP now supports \code{VECSXP} vectors. Contributed by
       Gabor Csardi in \PR{17620}.
+
+      \item The \code{Rcomplex} definition (in header
+      \file{R_ext/Complex.h}) has been extended to prevent possible
+      mis-compilation when interfacing with Fortran (\PR{18430}).  The
+      new definition causes compiler warnings with static initializers
+      such as \code{\{1, 2\}}, which can be changed to \code{\{.r=1,
+	.i=2\}}.
+
+      Using the new definition from C++ depends on compiler extensions
+      supporting C features that have not been incorporated into the C++
+      standards but are available in \command{g++} and
+      \command{clang++}: this may result in C++ compiler warnings but
+      these have been worked around for recent versions of common
+      compilers (GCC, Apple/LLVM clang, Intel).
+
+      It is intended to change the inclusion of header
+      \file{R_ext/Complex.h} by other \R{} headers, so C/C++ code files
+      which make use of \code{Rcomplex} should include that header
+      explicitly.
     }
   }
 
@@ -574,6 +700,12 @@
       \item \code{tools::buildVignettes()} has a new argument \code{skip},
       which is used by \command{R CMD check} to skip (and note)
       vignettes with unavailable \samp{\VignetteDepends} (\PR{18318}).
+
+      \item New generic \code{.AtNames()} added to enable class-specific
+      completions after \code{@}. The formerly internal function
+      \code{findMatches()} is now exported, mainly for use in methods
+      for \code{.DollarNames()} and \code{.AtNames()}.
+
     }
   }
 
@@ -786,6 +918,15 @@
       binary GLMs.  A new method for objects of class \code{"glm"} returns the
       square root of the estimate of the dispersion parameter using the
       same calculation as \code{summary.glm()}.
+
+      \item \code{bs()} and \code{ns()} in the (typical) case of automatic
+      knot construction, when some of the supposedly inner knots coincide
+      with boundary knots, now moves them inside (with a warning), building
+      on \PR{18442} by Ben Bolker.
+
+      \item \command{R CMD} on Windows now skips the site profile with
+      \option{--no-site-file} and \option{--vanilla} even when
+      \env{R_PROFILE} is set (\PR{18512}, from Kevin Ushey).
     }
   }
 }

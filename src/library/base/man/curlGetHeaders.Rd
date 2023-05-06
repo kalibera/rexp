@@ -1,6 +1,6 @@
 % File src/library/base/man/curlGetHeaders.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 2015-2022 R Core Team
+% Copyright 2015-2023 R Core Team
 % Distributed under GPL 2 or later
 
 \name{curlGetHeaders}
@@ -83,6 +83,7 @@ curlGetHeaders(url, redirect = TRUE, verify = TRUE,
 
 \examples{\donttest{## needs Internet access, results vary
 curlGetHeaders("http://bugs.r-project.org")   ## this redirects to https://
-curlGetHeaders("https://httpbin.org/status/404")  ## returns status
-## curlGetHeaders("ftp://cran.r-project.org") ## ftp::// support is vanishing
+## 2023-04: replaces slow and unreliable https://httpbin.org/status/404
+curlGetHeaders("https://developer.R-project.org/inet-tests/not-found")
+## returns status
 }}

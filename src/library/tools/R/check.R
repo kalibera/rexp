@@ -1,7 +1,7 @@
 #  File src/library/tools/R/check.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2022 The R Core Team
+#  Copyright (C) 1995-2023 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -3958,7 +3958,16 @@ add_dummies <- function(dir, Log)
             ##       enc <- ""
             ##       any <- TRUE
             ##   }
-            Ropts <- if (nzchar(arch)) R_opts3 else R_opts
+            cprof <- Sys.getenv("_R_CHECK_EXAMPLES_PROFILE_", "")
+            cprof <- if(!file.exists(cprof)) "" else normalizePath(cprof)
+            Ropts <- if(nzchar(cprof)) {
+                         if(nzchar(arch)) {
+                             ## R_opts3 without --no-init-file
+                             "--no-site-file --no-save --no-restore"
+                         } else
+                             ## R_opts without --no-init-file
+                             "--no-site-file --no-save --no-restore --no-environ"
+                     } else if(nzchar(arch)) R_opts3 else R_opts
             if (use_valgrind) Ropts <- paste(Ropts, "-d valgrind")
             t1 <- proc.time()
             tlim <- get_timeout(Sys.getenv("_R_CHECK_EXAMPLES_ELAPSED_TIMEOUT_",
@@ -3968,7 +3977,9 @@ add_dummies <- function(dir, Log)
             status <- R_runR0(NULL, c(Ropts, enc),
                               c("LANGUAGE=en", "_R_CHECK_INTERNALS2_=1",
                                 if(nzchar(arch)) env0, jitstr,
-                                if(R_cdo_examples) elibs_cdo else elibs),
+                                if(R_cdo_examples) elibs_cdo else elibs,
+                                if(nzchar(cprof))
+                                    paste0("R_PROFILE_USER=", cprof)),
                               stdout = exout, stderr = exout,
                               stdin = exfile, arch = arch, timeout = tlim)
             t2 <- proc.time()
@@ -5624,6 +5635,13 @@ add_dummies <- function(dir, Log)
                 ## and -Wstrict-prototypes in what should be thought of
                 ## as system headers.
                 ex_re <- "^ *(/usr/include|/opt/R/arm64/include).*\\[-Wstrict-prototypes\\]"
+                lines <- filtergrep(ex_re, lines, useBytes = TRUE)
+
+                ## filter out Complex.h warnings from C++ compilers
+                ## (g++ -pedantic,
+                ## clang++ -Wgnu-anonymous-struct, -Wc99-extensions)
+                ## as users can do nothing about these.
+                ex_re <-"/include/R_ext/Complex.h"
                 lines <- filtergrep(ex_re, lines, useBytes = TRUE)
 
                 ## and ODS 12.5 warnings

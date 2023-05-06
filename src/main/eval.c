@@ -992,7 +992,7 @@ SEXP eval(SEXP e, SEXP rho)
 	   stack overflow. LT */
 	R_Expressions = R_Expressions_keep + 500;
 
-	/* condiiton is pre-allocated and protected with R_PreserveObject */
+	/* condition is pre-allocated and protected with R_PreserveObject */
 	SEXP cond = R_getExpressionStackOverflowError();
 
 	R_signalErrorCondition(cond, R_NilValue);
@@ -1020,9 +1020,9 @@ SEXP eval(SEXP e, SEXP rho)
 	else
 	    tmp = findVar(e, rho);
 	if (tmp == R_UnboundValue)
-	    errorcall(getLexicalCall(rho),
-		      _("object '%s' not found"),
-		      EncodeChar(PRINTNAME(e)));
+	    errorcall_cpy(getLexicalCall(rho),
+			  _("object '%s' not found"),
+			  EncodeChar(PRINTNAME(e)));
 	/* if ..d is missing then ddfindVar will signal */
 	else if (tmp == R_MissingArg && !DDVAL(e) ) {
 	    const char *n = CHAR(PRINTNAME(e));
@@ -2327,7 +2327,7 @@ SEXP R_execMethod(SEXP op, SEXP rho)
 	    }
 	}
 #ifdef SWITCH_TO_REFCNT
-	/* re-promise to get referenve counts for references from rho
+	/* re-promise to get reference counts for references from rho
 	   and newrho right. */
 	if (TYPEOF(val) == PROMSXP)
 	    SETCAR(FRAME(newrho), mkPROMISE(val, rho));
@@ -2505,10 +2505,10 @@ attribute_hidden SEXP do_if(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(Cond = eval(CAR(args), rho));
     if (asLogicalNoNA(Cond, call, rho))
-	Stmt = CAR(CDR(args));
+	Stmt = CADR(args);
     else {
 	if (length(args) > 2)
-	    Stmt = CAR(CDR(CDR(args)));
+	    Stmt = CADDR(args);
 	else
 	    vis = 1;
     }
@@ -2844,7 +2844,7 @@ attribute_hidden SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
  *  Assignments for complex LVAL specifications. This is the stuff that
  *  nightmares are made of ...	Note that "evalseq" preprocesses the LHS
  *  of an assignment.  Given an expression, it builds a list of partial
- *  values for the exression.  For example, the assignment x$a[3] <- 10
+ *  values for the expression.  For example, the assignment x$a[3] <- 10
  *  with LHS x$a[3] yields the (improper) list:
  *
  *	 (eval(x$a[3])	eval(x$a)  eval(x)  .  x)
@@ -3336,8 +3336,8 @@ attribute_hidden SEXP evalList(SEXP el, SEXP rho, SEXP call, int n)
 	       symbol, but maybe not as efficiently as eval) and only
 	       serves to change the error message, not always for the
 	       better. Also, the byte code interpreter does not do
-	       this, so dropping this makes compiled and interreted
-	       cod emore consistent. */
+	       this, so dropping this makes compiled and interpreted
+	       code more consistent. */
 	} else if (isSymbol(CAR(el)) && R_isMissing(CAR(el), rho)) {
 	    /* It was missing */
 	    errorcall_cpy(call,
@@ -3843,7 +3843,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	    /* create a promise to pass down to applyClosure  */
 	    if(!argsevald) {
 		argValue = promiseArgs(args, rho);
-		SET_PRVALUE(CAR(argValue), x);
+		IF_PROMSXP_SET_PRVALUE(CAR(argValue), x);
 	    } else argValue = args;
 	    PROTECT(argValue); nprotect++;
 	    /* This means S4 dispatch */
@@ -3899,7 +3899,7 @@ int DispatchOrEval(SEXP call, SEXP op, const char *generic, SEXP args,
 	       Hence here and in the other usemethod() uses below a
 	       new environment rho1 is created and used.  LT */
 	    PROTECT(rho1 = NewEnvironment(R_NilValue, R_NilValue, rho)); nprotect++;
-	    SET_PRVALUE(CAR(pargs), x);
+	    IF_PROMSXP_SET_PRVALUE(CAR(pargs), x);
 	    begincontext(&cntxt, CTXT_RETURN, call, rho1, rho, pargs, op);
 	    if(usemethod(generic, x, call, pargs, rho1, rho, R_BaseEnv, ans))
 	    {
@@ -3991,6 +3991,43 @@ static SEXP classForGroupDispatch(SEXP obj) {
 	    : getAttrib(obj, R_ClassSymbol);
 }
 
+static Rboolean R_chooseOpsMethod(SEXP x, SEXP y, SEXP mx, SEXP my,
+				  SEXP call, Rboolean rev, SEXP rho) {
+    static SEXP expr = NULL;
+    static SEXP xSym = NULL;
+    static SEXP ySym = NULL;
+    static SEXP mxSym = NULL;
+    static SEXP mySym = NULL;
+    static SEXP clSym = NULL;
+    static SEXP revSym = NULL;
+    if (expr == NULL) {
+	xSym = install("x");
+	ySym = install("y");
+	mxSym = install("mx");
+	mySym = install("my");
+	clSym = install("cl");
+	revSym = install("rev");
+	expr = R_ParseString("base::chooseOpsMethod(x, y, mx, my, cl, rev)");
+	R_PreserveObject(expr);
+    }
+    
+    SEXP newrho = PROTECT(R_NewEnv(rho, FALSE, 0));
+    defineVar(xSym, x, newrho); INCREMENT_NAMED(x);
+    defineVar(ySym, y, newrho); INCREMENT_NAMED(y);
+    defineVar(mxSym, mx, newrho); INCREMENT_NAMED(mx);
+    defineVar(mySym, my, newrho); INCREMENT_NAMED(my);
+    defineVar(clSym, call, newrho); INCREMENT_NAMED(cl);
+    defineVar(revSym, ScalarLogical(rev), newrho);
+
+    SEXP ans = eval(expr, newrho);
+#ifdef ADJUST_ENVIR_REFCNTS
+    R_CleanupEnvir(newrho, R_NilValue);
+#endif
+    UNPROTECT(1); /* newrho */
+
+    return ans == R_NilValue ? FALSE : asLogical(ans);
+}
+
 attribute_hidden
 int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 		  SEXP *ans)
@@ -4006,7 +4043,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	return 0;
 
     SEXP s;
-    Rboolean isOps = strcmp(group, "Ops") == 0;
+    Rboolean isOps = strcmp(group, "Ops") == 0 || strcmp(group, "matrixOps") == 0;
 
     /* try for formal method */
     if(length(args) == 1 && !IS_S4_OBJECT(CAR(args))) {
@@ -4086,10 +4123,20 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	         srcref ignored (as per default)
 	    */
 	    else if (!R_compute_identical(lsxp, rsxp, 16 + 1 + 2 + 4)) {
-		warning(_("Incompatible methods (\"%s\", \"%s\") for \"%s\""),
-			lname, rname, generic);
-		UNPROTECT(4);
-		return 0;
+		SEXP x = CAR(args), y = CADR(args);
+		if (R_chooseOpsMethod(x, y, lsxp, rsxp, call, FALSE, rho)) {
+		    rsxp = R_NilValue;
+		}
+		else if (R_chooseOpsMethod(y, x, rsxp, lsxp, call, TRUE, rho)) {
+		    lsxp = R_NilValue;
+		}
+		else {
+		    warning(_("Incompatible methods "
+			      "(\"%s\", \"%s\") for \"%s\""),
+			    lname, rname, generic);
+		    UNPROTECT(4);
+		    return 0;
+		}
 	    }
 	}
 	/* if the right hand side is the one */
@@ -4138,7 +4185,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
     if (length(s) != length(args))
 	error(_("dispatch error in group dispatch"));
     for (m = s ; m != R_NilValue ; m = CDR(m), args = CDR(args) ) {
-	SET_PRVALUE(CAR(m), CAR(args));
+	IF_PROMSXP_SET_PRVALUE(CAR(m), CAR(args));
 	/* ensure positional matching for operators */
 	if(isOps) SET_TAG(m, R_NilValue);
     }
@@ -5157,7 +5204,7 @@ static R_INLINE SEXP getForLoopSeq(int offset, Rboolean *iscompact)
 
 NORET static void nodeStackOverflow(void)
 {
-    /* condiiton is pre-allocated and protected with R_PreserveObject */
+    /* condition is pre-allocated and protected with R_PreserveObject */
     SEXP cond = R_getNodeStackOverflowError();
 
     R_signalErrorCondition(cond, R_CurrentExpression);
@@ -5405,9 +5452,9 @@ NORET static void MISSING_ARGUMENT_ERROR(SEXP symbol, SEXP rho)
 
 NORET static void UNBOUND_VARIABLE_ERROR(SEXP symbol, SEXP rho)
 {
-    errorcall(getLexicalCall(rho),
-	      _("object '%s' not found"),
-	      EncodeChar(PRINTNAME(symbol)));
+    errorcall_cpy(getLexicalCall(rho),
+		  _("object '%s' not found"),
+		  EncodeChar(PRINTNAME(symbol)));
 }
 
 static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
@@ -5626,7 +5673,7 @@ static int tryDispatch(char *generic, SEXP call, SEXP x, SEXP rho, SEXP *pv)
   SEXP op = SYMVALUE(install(generic)); /**** avoid this */
 
   PROTECT(pargs = promiseArgs(CDR(call), rho));
-  SET_PRVALUE(CAR(pargs), x);
+  IF_PROMSXP_SET_PRVALUE(CAR(pargs), x);
 
   /**** Minimal hack to try to handle the S4 case.  If we do the check
 	and do not dispatch then some arguments beyond the first might
@@ -6467,7 +6514,7 @@ static R_INLINE int LOOP_NEXT_OFFSET(int loop_state_size)
     return GETSTACK_IVAL_PTR(R_BCNodeStackTop - 1 - loop_state_size);
 }
 
-/* Check whether a call is to a base function; if not use AST interpeter */
+/* Check whether a call is to a base function; if not use AST interpreter */
 /***** need a faster guard check */
 static R_INLINE SEXP SymbolValue(SEXP sym)
 {
@@ -6639,7 +6686,7 @@ static Rboolean maybePrimitiveCall(SEXP expr)
     return FALSE;
 }
 
-/* Inflate a (single-level) compiler-flattenned assignment call.
+/* Inflate a (single-level) compiler-flattened assignment call.
    For example,
            `[<-`(x, c(-1, 1), value = 2)
    becomes
@@ -7820,7 +7867,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  args = duplicate(CDR(call));
 	  SETSTACK(-2, args);
 	  /* insert evaluated promise for LHS as first argument */
-	  /* promise won't be captured so don't track refrences */
+	  /* promise won't be captured so don't track references */
 	  prom = R_mkEVPROMISE_NR(R_TmpvalSymbol, lhs);
 	  SETCAR(args, prom);
 	  /* make the call */
@@ -7860,7 +7907,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 
 	/* For the typed stack it might be OK just to force boxing at
 	   this point, but for now this code tries to avoid doing
-	   that. The macros make the code a little more reabable. */
+	   that. The macros make the code a little more readable. */
 #define STACKVAL_MAYBE_REFERENCED(idx)				\
 	(IS_STACKVAL_BOXED(idx) &&				\
 	 MAYBE_REFERENCED(GETSTACK_SXPVAL_PTR(R_BCNodeStackTop + (idx))))
@@ -8431,8 +8478,8 @@ char *R_CompiledFileName(char *fname, char *buf, size_t bsize)
 	return buf;
     }
     else if (ext == NULL) {
-	/* if the requested file has no extention, make a name that
-	   has the extenrion added on to the expanded name */
+	/* if the requested file has no extension, make a name that
+	   has the extension added on to the expanded name */
 	if (snprintf(buf, bsize, "%s%s", fname, R_COMPILED_EXTENSION) < 0)
 	    error("R_CompiledFileName: buffer too small");
 	return buf;
@@ -8683,7 +8730,15 @@ SEXP R_ParseEvalString(const char *str, SEXP env)
 	LENGTH(ps) != 1)
 	error("parse error");
 
-    SEXP val = eval(VECTOR_ELT(ps, 0), env);
+    SEXP val = VECTOR_ELT(ps, 0);
+    if (env != NULL)
+	val = eval(val, env);
+
     UNPROTECT(2); /* s, ps */
     return val;
+}
+
+SEXP R_ParseString(const char *str)
+{
+    return R_ParseEvalString(str, NULL);
 }

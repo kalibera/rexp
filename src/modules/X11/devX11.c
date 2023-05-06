@@ -676,7 +676,7 @@ static void FreeX11Colors(void)
 static Rboolean SetupX11Color(void)
 {
     if (depth <= 1) {
-	/* On monchome displays we must use black/white */
+	/* On monochrome displays we must use black/white */
 	model = MONOCHROME;
 	SetupMonochrome();
     }
@@ -1252,7 +1252,9 @@ static int R_X11Err(Display *dsp, XErrorEvent *event)
     if (event->error_code == BadWindow) return 0;
 
     XGetErrorText(dsp, event->error_code, buff, 1000);
-    warning(_("X11 protocol error: %s"), buff);
+    /* Unsafe to use warning() as it can be escalated to error() */
+    REprintf(_("X11 protocol error: %s"), buff);
+    REprintf("\n");
     return 0;
 }
 

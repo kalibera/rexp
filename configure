@@ -5433,6 +5433,12 @@ fi
 done
 test -n "$WHICH" || WHICH="which"
 
+if test "${WHICH}" = which ; then
+  ## needed to build and run R
+  ## ends up hard-coded in the utils package
+  as_fn_error $? "which is required but missing" "$LINENO" 5
+fi
+
 ## Make
 : ${MAKE=make}
 
@@ -27054,7 +27060,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_verb"
-(eval echo $as_me:27059: \"$ac_link\") >&5
+(eval echo $as_me:27065: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -27130,7 +27136,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_cv_prog_c_v"
-(eval echo $as_me:27135: \"$ac_link\") >&5
+(eval echo $as_me:27141: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -27976,9 +27982,12 @@ cat > conftest.c <<EOF
 # define F77_SYMBOL(x)   x
 #endif
 
-typedef struct {
-        double r;
-        double i;
+typedef union {
+    struct {
+	double r;
+	double i;
+    };
+    double _Complex private_data_c;
 } Rcomplex;
 
 extern void F77_SYMBOL(cftest)(Rcomplex *x);
@@ -51680,8 +51689,8 @@ fi
 done
 
 if test "x${have_libcurl}" = "xyes"; then
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if libcurl is version 7 and >= 7.28.0" >&5
-printf %s "checking if libcurl is version 7 and >= 7.28.0... " >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if libcurl is >= 7.28.0" >&5
+printf %s "checking if libcurl is >= 7.28.0... " >&6; }
 if test ${r_cv_have_curl728+y}
 then :
   printf %s "(cached) " >&6
@@ -51699,7 +51708,7 @@ int main(void)
 {
 #ifdef LIBCURL_VERSION_MAJOR
 #if LIBCURL_VERSION_MAJOR > 7
-  exit(1);
+  exit(0);
 #elif LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 28
   exit(0);
 #else
@@ -53272,8 +53281,7 @@ then :
 fi
 
   if test "${ac_cv_header_valgrind_memcheck_h}" != yes; then
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: system valgrind headers not found -- using internal copies" >&5
-printf "%s\n" "$as_me: WARNING: system valgrind headers not found -- using internal copies" >&2;}
+  as_fn_error $? "system valgrind headers not found." "$LINENO" 5
   fi
 fi
 

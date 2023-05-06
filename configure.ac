@@ -2,7 +2,7 @@
 ###
 ### Process this file with autoconf to produce a configure script.
 ###
-### Copyright (C) 1998-2022 R Core Team
+### Copyright (C) 1998-2023 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -680,6 +680,12 @@ AC_PATH_PROGS(SED, sed, /bin/sed, [/usr/xpg4/bin:$PATH])
 ## 'which' is not POSIX, and might be a shell builtin or alias
 ##  (but should not be in 'sh')
 AC_PATH_PROGS(WHICH, which, which)
+if test "${WHICH}" = which ; then
+  ## needed to build and run R
+  ## ends up hard-coded in the utils package
+  AC_MSG_ERROR([[which is required but missing]])
+fi
+
 ## Make
 : ${MAKE=make}
 AC_SUBST(MAKE)
@@ -2611,7 +2617,7 @@ if test ${valgrind_level} -eq 0; then
 else
   AC_CHECK_HEADERS([valgrind/memcheck.h])
   if test "${ac_cv_header_valgrind_memcheck_h}" != yes; then
-  AC_MSG_WARN([system valgrind headers not found -- using internal copies])
+  AC_MSG_ERROR([system valgrind headers not found.])
   fi
 fi
 

@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: R 3.5.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
 "POT-Creation-Date: 2021-06-02 06:08+0100\n"
-"PO-Revision-Date: 2018-04-16 10:36+0200\n"
-"Last-Translator: Detlef Steuer <steuer@hsu-hh.de>\n"
+"PO-Revision-Date: 2023-02-22 13:05+0000\n"
+"Last-Translator: Martin Mächler <maechler@stat.math.ethz.ch>\n"
 "Language-Team: R Core <r-core@r-project.org>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -98,9 +98,11 @@ msgid "'dec' must be a single character"
 msgstr "'dec' muss ein einzelnes Zeichen sein"
 
 #: io.c:1130
-#, fuzzy, c-format
+#, c-format
 msgid "corrupt data frame -- length of column %d does not match nrows"
-msgstr "beschädigter Dataframe -- Länge der Spalte %d entspricht nicht nrows"
+msgstr ""
+"beschädigter Dataframe -- Länge der Spalte %d entspricht nicht der Anzahl "
+"Zeilen"
 
 #: io.c:1161
 #, c-format
@@ -140,7 +142,7 @@ msgstr "ungültige '%s' Spezifikation"
 #: stubs.c:254
 #, c-format
 msgid "'%s' contains missing values"
-msgstr ""
+msgstr "'%s' enthält fehlende Werte"
 
 #: utils.c:68
 #, fuzzy
@@ -148,13 +150,12 @@ msgid "argument 'class' must be a character string"
 msgstr "'text' muss eine Zeichenkette sein"
 
 #: utils.c:78
-#, fuzzy
 msgid "argument 'x' must be a length-1 character vector"
-msgstr "Argument muss Zeichenkettenvektor oder Rawvektor sein"
+msgstr "Argument muss Zeichenkettenvektor der Länge 1 sein"
 
 #: utils.c:81
 msgid "argument 'x' must be UTF-8 encoded (including ASCII)"
-msgstr ""
+msgstr "Argument 'x' muss UTF-8 kodiert werden"
 
 #: utils.c:147
 msgid "'hostname' must be a character vector of length 1"

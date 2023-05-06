@@ -1334,7 +1334,7 @@ attribute_hidden SEXP do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
 attribute_hidden SEXP do_attributesgets(SEXP call, SEXP op, SEXP args, SEXP env)
 {
 /* NOTE: The following code ensures that when an attribute list */
-/* is attached to an object, that the "dim" attibute is always */
+/* is attached to an object, that the "dim" attribute is always */
 /* brought to the front of the list.  This ensures that when both */
 /* "dim" and "dimnames" are set that the "dim" is attached first. */
 
@@ -1876,6 +1876,7 @@ attribute_hidden SEXP do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
 	// could also use in more places, e.g. for @<-
 	PROTECT(args = fixSubset3Args(call, args, env, NULL));
 	SETCAR(args, R_mkEVPROMISE_NR(CAR(args), object));
+	/* DispatchOrEval internal generic: @ */
 	if (DispatchOrEval(call, op, "@", args, env, &ans, 0, 0)) {
 	    UNPROTECT(2); /* object, args */
 	    return ans;

@@ -425,7 +425,8 @@ invisible(lapply(11:120, function(n) showC(n, 1030 %/% n)))
 
 ## download.file() with invalid option -- PR#18455
 op <- options(download.file.method = "no way")
-Edl <- tryCid(download.file("http://httpbin.org/get", "ping.txt"))
+# website does not matter as will not be contacted.
+Edl <- tryCid(download.file("http://cran.r-project.org/", "ping.txt"))
 stopifnot(inherits(Edl, "error"),
           !englishMsgs || grepl("should be one of .auto.,", conditionMessage(Edl)))
 options(op)
@@ -531,6 +532,38 @@ tools::assertWarning(s2 <- 2:a, verbose=TRUE)
 stopifnot(identical(s1, 1L), identical(s2, 2:1))
 Sys.setenv("_R_CHECK_LENGTH_COLON_" = oldV)# reset
 ## always only warned in R <= 4.2.z
+
+
+## keep rm(list=NULL) working (now documentedly) {PR#18422}
+a <- ls() # 'a' is part
+rm() ; rm(list=NULL)
+stopifnot(identical(a, ls()))
+## (for a short time, list=NULL failed)
+
+
+## ns() fails when quantiles end on the boundary {PR#18442}
+if(no.splines <- !("splines" %in% loadedNamespaces())) require("splines")
+tt <- c(55, 251, 380, 289, 210, 385, 361, 669)
+nn <- rep(0:7, tt) # => knots at (0.25,0.5,0.75); quantiles = (2,5,7)
+tools::assertWarning(verbose=TRUE, ns.n4 <- ns(nn,4))
+stopifnot(is.matrix(ns.n4), ncol(ns.n4) == 4, qr(ns.n4)$rank == 4)
+if(no.splines) unloadNamespace("splines")
+## ns() gave  Error in qr.default(t(const)) : NA/NaN/Inf in foreign function call
+
+
+## Krylov's issue with sum(), min(), etc on R-devel: Now errors instead of silently computing:
+mT <- tryCid( sum(3,4,na.rm=5, 6, NA, 8, na.rm=TRUE) )
+mF <- tryCid( min(3,4,na.rm=5, 6, NA, 8, na.rm=FALSE) )
+stopifnot(inherits(mT, "error"),
+          inherits(mF, "error"), all.equal(mT, mF))
+if(englishMsgs)
+    stopifnot(grepl("formal argument \"na.rm\" matched by multiple", conditionMessage(mT)))
+## these gave numeric (or NA) results without any warning in R <= 4.3.0
+
+
+## as.complex(NA_real_) |-> NA_complex_  as for all other NA, NA_*
+stopifnot(identical(as.complex(NA_real_), NA_complex_))
+## gave  complex(real = NA, imaginary=0) from R 3.3.0  to 4.3.x
 
 
 

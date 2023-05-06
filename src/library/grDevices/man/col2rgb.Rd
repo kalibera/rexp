@@ -1,6 +1,6 @@
 % File src/library/grDevices/man/col2rgb.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2019 R Core Team
+% Copyright 1995-2023 R Core Team
 % Distributed under GPL 2 or later
 
 \name{col2rgb}
@@ -71,23 +71,22 @@ crgb <- col2rgb(cc <- colors())
 colnames(crgb) <- cc
 t(crgb)  # The whole table
 
+## How many names are 'aliases' of each other?
 ccodes <- c(256^(2:0) \%*\% crgb)  # = internal codes
-## How many names are 'aliases' of each other:
-table(tcc <- table(ccodes))
-length(uc <- unique(sort(ccodes))) # 502
+cl <- split(cc, ccodes)
+length(cl) # 502 distinct colors
+table(tcc <- lengths(cl))
 ## All the multiply named colors:
-mult <- uc[tcc >= 2]
-cl <- lapply(mult, function(m) cc[ccodes == m])
-names(cl) <- apply(col2rgb(sapply(cl, function(x)x[1])),
-                   2, function(n)paste(n, collapse = ","))
-utils::str(cl)
-\dontrun{
- if(require(xgobi)) { ## Look at the color cube dynamically :
-   tc <- t(crgb[, !duplicated(ccodes)])
-   table(is.gray <- tc[,1] == tc[,2] & tc[,2] == tc[,3])  # (397, 105)
-   xgobi(tc, color = c("gold", "gray")[1 + is.gray])
- }
-}
+clmult <- cl[tcc >= 2]
+names(clmult) <- sapply(clmult, function(x) paste(crgb[,x[1]], collapse = ","))
+utils::str(clmult)
+
+## Look at the color cube:
+tc <- t(crgb[, !duplicated(ccodes)])
+table(is.gray <- tc[,1] == tc[,2] & tc[,2] == tc[,3])  # (397, 105)
+if(requireNamespace("lattice", quietly = TRUE))
+    lattice::cloud(blue ~ red + green, data = as.data.frame(tc),
+                   col = rownames(tc))
 }
 \keyword{color}
 \keyword{dplot}

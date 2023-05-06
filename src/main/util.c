@@ -761,7 +761,7 @@ SEXP static intern_getwd(void)
 	    DWORD res1 = GetCurrentDirectoryW(res, wbuf);
 	    if (res1 <= 0 || res1 >= res)
 		return R_NilValue;
-	    size_t needed = wcstoutf8(NULL, wbuf, INT_MAX);
+	    size_t needed = wcstoutf8(NULL, wbuf, (size_t)INT_MAX + 2);
 	    char *buf = R_alloc(needed + 1, 1);
 	    wcstoutf8(buf, wbuf, needed + 1);
 	    R_UTF8fixslash(buf);
@@ -852,7 +852,7 @@ attribute_hidden SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 		while (p >= buf && *p == L'/') *(p--) = L'\0';
 	    }
 	    if ((p = wcsrchr(buf, L'/'))) p++; else p = buf;
-	    size_t needed = wcstoutf8(NULL, p, INT_MAX);
+	    size_t needed = wcstoutf8(NULL, p, (size_t)INT_MAX + 2);
 	    sp = R_alloc(needed + 1, 1);
 	    wcstoutf8(sp, p, needed + 1);
 	    SET_STRING_ELT(ans, i, mkCharCE(sp, CE_UTF8));
@@ -937,7 +937,7 @@ attribute_hidden SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 			  && (p > buf+2 || *(p-1) != L':')) --p;
 		    p[1] = L'\0';
 		}
-		size_t needed = wcstoutf8(NULL, buf, INT_MAX);
+		size_t needed = wcstoutf8(NULL, buf, (size_t)INT_MAX + 2);
 		sp = R_alloc(needed + 1, 1);
 		wcstoutf8(sp, buf, needed + 1);
 	    }
@@ -2340,8 +2340,8 @@ static const struct {
     { "strength", 999 },
     { "primary ", UCOL_PRIMARY },
     { "secondary ", UCOL_SECONDARY },
-    { "teritary ", UCOL_TERTIARY },
-    { "guaternary ", UCOL_QUATERNARY },
+    { "tertiary ", UCOL_TERTIARY },
+    { "quaternary ", UCOL_QUATERNARY },
     { "identical ", UCOL_IDENTICAL },
     { "french_collation", UCOL_FRENCH_COLLATION },
     { "on", UCOL_ON },
