@@ -3090,6 +3090,7 @@ AC_CONFIG_FILES(
   tests/Embedding/Makefile
   tests/Examples/Makefile
   tools/Makefile
+  SVN-REVISION
 ])
 
 AC_CONFIG_COMMANDS([stamp-h],
