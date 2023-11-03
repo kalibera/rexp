@@ -129,7 +129,8 @@ typedef unsigned int SEXPTYPE;
 #define EXTPTRSXP   22    /* external pointer */
 #define WEAKREFSXP  23    /* weak reference */
 #define RAWSXP      24    /* raw bytes */
-#define S4SXP       25    /* S4, non-vector */
+#define OBJSXP      25    /* object, non-vector  */
+#define S4SXP       25    /* same as OBJSXP, retained for back compatability */
 
 /* used for detecting PROTECT issues in memory.c */
 #define NEWSXP      30    /* fresh node created in new page */
@@ -164,7 +165,7 @@ typedef enum {
     EXTPTRSXP	= 22,	/* external pointer */
     WEAKREFSXP	= 23,	/* weak reference */
     RAWSXP	= 24,	/* raw bytes */
-    S4SXP	= 25,	/* S4 non-vector */
+    OBJSXP	= 25,	/* S4 non-vector */
 
     NEWSXP      = 30,   /* fresh node created in new page */
     FREESXP     = 31,   /* node released by GC */
@@ -487,7 +488,6 @@ SEXP Rf_allocSExp(SEXPTYPE);
 SEXP Rf_allocVector3(SEXPTYPE, R_xlen_t, R_allocator_t*);
 R_xlen_t Rf_any_duplicated(SEXP x, Rboolean from_last);
 R_xlen_t Rf_any_duplicated3(SEXP x, SEXP incomp, Rboolean from_last);
-SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP Rf_classgets(SEXP, SEXP);
 SEXP Rf_cons(SEXP, SEXP);
 void Rf_copyMatrix(SEXP, SEXP, Rboolean);
@@ -528,6 +528,7 @@ SEXP Rf_installTrChar(SEXP);
 Rboolean Rf_isOrdered(SEXP);
 Rboolean Rf_isUnordered(SEXP);
 Rboolean Rf_isUnsorted(SEXP, Rboolean);
+Rboolean R_isTRUE(SEXP);
 SEXP Rf_lengthgets(SEXP, R_len_t);
 SEXP Rf_xlengthgets(SEXP, R_xlen_t);
 SEXP R_lsInternal(SEXP, Rboolean);
@@ -561,6 +562,10 @@ SEXP Rf_topenv(SEXP, SEXP);
 const char * Rf_translateChar(SEXP);
 const char * Rf_translateCharUTF8(SEXP);
 const char * Rf_type2char(SEXPTYPE);
+const char * R_typeToChar(SEXP);
+#ifdef USE_TYPE2CHAR_2
+const char * R_typeToChar2(SEXP, SEXPTYPE);
+#endif
 SEXP Rf_type2rstr(SEXPTYPE);
 SEXP Rf_type2str(SEXPTYPE);
 SEXP Rf_type2str_nowarn(SEXPTYPE);
@@ -997,7 +1002,6 @@ void R_orderVector1(int *indx, int n, SEXP x,       Rboolean nalast, Rboolean de
 #define readS3VarsFromFrame	Rf_readS3VarsFromFrame
 #define reEnc			Rf_reEnc
 #define reEnc3			Rf_reEnc3
-#define rownamesgets		Rf_rownamesgets
 #define S3Class                 Rf_S3Class
 #define ScalarComplex		Rf_ScalarComplex
 #define ScalarInteger		Rf_ScalarInteger

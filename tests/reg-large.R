@@ -139,7 +139,7 @@ if(availableGB > 60) withAutoprint({
     system.time(ii <- ii + 0) #  6.726  17.558  24.450 (slow!, seen faster)
     system.time(i2 <- ii[-n]) # 14.267  23.532  37.918 (slow!, seen slower: el.= 51)
     ##
-    ## NB: keep n, i, i2 for "below"
+    ## NB: keep n, ii, i2 for "below"
 })
 ## In R <= 3.4.1 :
 ## Program received signal SIGSEGV, Segmentation fault.
@@ -160,7 +160,7 @@ if(availableGB > 99) withAutoprint({
 	length(ap1$x) == 50
 	all.equal(ap1$y, sin(pi*ap1$x), tol= 1e-9)
     })
-    rm(ap1) # keep x,y,n,i2
+    rm(ap1) # keep x,y,n,ii,i2
     gc()     # --> max used: 92322 Mb
 })
 
@@ -368,14 +368,44 @@ ca.half <- 0.5+ (eps <- unique(sort(outer(2^-c(16, 21, 26, 30), -1:1))))
 print(eps, digits=3)
 LL[cbind(2, ca.half)]   # should be of length 0, too: ca.half ~= 0.5
 LL[cbind(1, 1+ca.half)] # should be constantly == raw(1L) '01'
-LL[cbind(2+ca.half, 1)] # all 02
-LL[cbind(-ca.half, 1)] # raw(0) --- correct
+LL[cbind(2+ca.half, 1)] # all 02 -- failed in R <= 4.1.x
+LL[cbind(-ca.half, 1)]  # raw(0) --  "      "    "
 stopifnot(exprs = {
     length(LL[cbind(2, ca.half)]) == 0
     LL[cbind(1, 1+ca.half)] == as.raw(1L)
     LL[cbind(2+ca.half, 1)] == as.raw(2L)
     length(LL[cbind( -ca.half, 1)]) == 0
 })
+
+if(availableGB > 10) withAutoprint({ ## PR#18612
+    ##  Summary: integer overflow in matrix(<long vector>, nrow, ncol)
+    ##           due to wrong format specifiers
+    ## Reporter: Mikael Jagan @ McMaster
+    M <- .Machine$integer.max
+    x <- raw(M + 1)
+    y <- raw(2 * M)
+    (m1 <- conditionMessage(tryCatch(matrix(x, M, 1L), warning = identity)))
+    ## was "data length [-2147483648] is not a sub-multiple or multiple ...."
+    (m2 <- conditionMessage(tryCatch(matrix(x, 1L, M), warning = identity)))
+    ## was "data length [-2147483648] is not a sub-multiple or multiple ...."
+    (m3 <- conditionMessage(tryCatch(matrix(y, M, 1L), error = identity)))
+    ## was "data length differs from size of matrix: [-2 != 2147483647 x 1]"
+    (m4 <- conditionMessage(tryCatch(matrix(y, 1L, M), error = identity)))
+    ## "data length differs from size of matrix: [-2 != 1 x 2147483647]"
+    ## triggering those in dimsgets():
+    (m5 <- conditionMessage(tryCatch(dim(y) <- c(1L, M), error = identity)))
+    (m6 <- conditionMessage(tryCatch(dim(x) <- c(M, 1L), error = identity)))
+    stopifnot(exprs = {
+        grepl(paste0("data length [", M+1, "] is not"), c(m1,m2), fixed=TRUE)
+        grepl(paste0("size of matrix: [", 2*M, " != "), c(m3,m4), fixed=TRUE)
+        grepl(paste0("dims [product ", M, "] do not "), c(m5,m6), fixed=TRUE)
+    })
+})
+
+x <- -1:2^31 # (immediate: ALTREP)
+system.time( r <- rank(x) ) ## gave Error about invalid length() -- PR#18617
+## seen 260 sec (!)
+
 
 gc() # NB the "max used"
 proc.time() # total  [ ~ 40 minutes in full case, 2019-04-12]

@@ -55,7 +55,8 @@ As from R 4.1.0 we translate latin1 strings in a non-latin1-locale to UTF-8.
 #endif
 
 /* interval at which to check interrupts */
-#define NINTERRUPT 1000000
+/*   if re-enabling, consider a power of two */
+/* #define NINTERRUPT 1000000 */
 
 /* How many encoding warnings to give */
 #define NWARN 5
@@ -863,7 +864,10 @@ attribute_hidden SEXP do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 					  0, 0, ovector, ovecsize)) >= 0) {
 #endif
 			/* Empty matches get the next char, so move by one. */
-			bufp += MAX(ovector[1], 1);
+			if (ovector[1] > 0)
+			    bufp += ovector[1];
+			else if (*bufp)
+			    bufp += utf8clen(*bufp);
 			ntok++;
 			if (*bufp == '\0')
 			    break;
@@ -894,9 +898,10 @@ attribute_hidden SEXP do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 			bufp += ovector[1];
 		    } else {
 			/* Match was empty. */
-			pt[0] = *bufp;
-			pt[1] = '\0';
-			bufp++;
+			int clen = utf8clen(*bufp);
+			strncpy(pt, bufp, clen);
+			pt[clen] = '\0';
+			bufp += clen;
 		    }
 		    if (useBytes)
 			SET_STRING_ELT(t, j, mkBytesNew(pt, haveBytesInput));
@@ -1001,7 +1006,8 @@ attribute_hidden SEXP do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		vmaxset(vmax2);
 	    }
 	    tre_regfree(&reg);
-	} else { /* ERE in normal chars -- single byte or MBCS */
+	} else { /* ERE in normal chars -- single byte */
+	         /* previously used also with MBCS */
 	    regex_t reg;
 	    regmatch_t regmatch[1];
 	    int rc;
@@ -1062,6 +1068,8 @@ attribute_hidden SEXP do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 		    } else {
 			while(!(rc = tre_regexec(&reg, bufp, 1, regmatch, 0))) {
 			    /* Empty matches get the next char, so move by one. */
+                            /* Not necessarily correct with MBCS, but only used
+			       with single bytes */
 			    bufp += MAX(regmatch[0].rm_eo, 1);
 			    ntok++;
 			    if (*bufp == '\0') break;
@@ -1096,6 +1104,8 @@ attribute_hidden SEXP do_strsplit(SEXP call, SEXP op, SEXP args, SEXP env)
 			/* Match was empty. */
 			pt[0] = *bufp;
 			pt[1] = '\0';
+			/* Not necessarily correct with MBCS, but only used
+			   with single bytes */
 			bufp++;
 		    }
 		    if (useBytes)
@@ -2312,19 +2322,20 @@ attribute_hidden SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef HAVE_PCRE2
 	   if (use_UTF8) eflag |= PCRE2_NO_UTF_CHECK;
 	   /* PCRE2 has also pcre2_substitute */
-	   while ((ncap = pcre2_match(re, (PCRE2_SPTR) s, (PCRE2_SIZE) ns,
-	                              (PCRE2_SIZE) offset, eflag, mdata,
-	                              mcontext)) >= 0 ) {
+	   while ((rc = pcre2_match(re, (PCRE2_SPTR) s, (PCRE2_SIZE) ns,
+				    (PCRE2_SIZE) offset, eflag, mdata,
+				    mcontext)) >= 0 ) {
 
 	       ovector = pcre2_get_ovector_pointer(mdata);
 #else
-	   while ((ncap = pcre_exec(re_pcre, re_pe, s, ns, offset, eflag,
-				   ovector, 30)) >= 0) {
+	   while ((rc = pcre_exec(re_pcre, re_pe, s, ns, offset, eflag,
+				  ovector, 30)) >= 0) {
 #endif
 	       /* printf("%s, %d, %d %d\n", s, offset,
 		  ovector[0], ovector[1]); */
 	       nmatch++;
 	       for (j = offset; j < ovector[0]; j++) *u++ = s[j];
+	       ncap = rc > 0 ? rc : 10;
 	       if (last_end == -1 /* for PCRE2 */ || ovector[1] > last_end) {
 		   u = R_pcre_string_adj(u, s, srep, ovector, use_UTF8, ncap);
 		   last_end = (int) ovector[1];
@@ -2356,7 +2367,7 @@ attribute_hidden SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	       eflag = PCRE_NOTBOL;  /* probably not needed */
 #endif
 	   }
-	   R_pcre_exec_error(ncap, i);
+	   R_pcre_exec_error(rc, i);
 	   if (nmatch == 0)
 	       SET_STRING_ELT(ans, i, markBytesOld(STRING_ELT(text, i),
 		                                   useBytes, haveBytesInput));
@@ -2377,7 +2388,7 @@ attribute_hidden SEXP do_gsub(SEXP call, SEXP op, SEXP args, SEXP env)
 	   }
 	   R_Free(cbuf);
        } else if (!use_WC) {
-	    int maxrep, rc;
+	    int maxrep;
 	    /* extended regexp in bytes */
 
 	    ns = (int) strlen(s);
@@ -3065,7 +3076,8 @@ attribute_hidden SEXP do_regexpr(SEXP call, SEXP op, SEXP args, SEXP env)
 	for(i = 0; i < name_count; i++) {
 	    char *entry = name_table + name_entry_size * i;
 	    PROTECT(thisname = mkChar(entry + 2));
-	    int capture_num = (entry[0]<<8) + entry[1] - 1;
+	    int capture_num = ((unsigned char)entry[0]<<8)
+	                     + (unsigned char)entry[1] - 1;
 	    SET_STRING_ELT(capture_names, capture_num, thisname);
 	    UNPROTECT(1);
 	}

@@ -24,14 +24,15 @@ embedGlyphs(file, glyphInfo, outfile = file, options = character())
 \arguments{
   \item{file}{a character string giving the name of the original file.}
   \item{format}{the format for the new file (with fonts embedded) given as
-    the name of a ghostscript output device.
+    the name of a Ghostscript output device.
     If not specified, it is guessed from the suffix of \code{file}.}
   \item{outfile}{the name of the new file (with fonts embedded).}
   \item{fontpaths}{a character vector giving directories that
     Ghostscript will search for fonts.}
   \item{options}{a character vector containing further options to
     Ghostscript.}
-  \item{glyphInfo}{typeset glyph information produced by \code{glyphInfo()}.}
+  \item{glyphInfo}{typeset glyph information produced by
+    \code{glyphInfo()}, or a list of the same.}
 }
 \details{
   This function is not necessary if you just use the standard
@@ -67,6 +68,10 @@ embedGlyphs(file, glyphInfo, outfile = file, options = character())
   Some other options which can be useful (see your Ghostscript
   documentation) are \option{-dMaxSubsetPct=100},
   \option{-dSubsetFonts=true} and  \option{-dEmbedAllFonts=true}.
+
+  \code{embedGlyphs()} is recommended for \code{pdf()} files
+  that contain typeset glyphs (see \code{\link{glyphInfo}}),
+  but it will only work for TrueType fonts.
 }
 \value{
   The shell command used to invoke Ghostscript is returned

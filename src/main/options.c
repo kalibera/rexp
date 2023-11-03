@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998-2022   The R Core Team.
+ *  Copyright (C) 1998-2023   The R Core Team.
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -35,7 +35,7 @@
  *
  * We have two kind of options:
  *   1) those used exclusively from R code,
- *	typically initialized in Rprofile.
+ *	typically initialized in Rprofile  aka  ../library/profile/Common.R
 
  *	Their names need not appear here, but may, when we want
  *	to make sure that they are assigned `valid' values only.
@@ -44,7 +44,7 @@
  *	Either accessing and/or setting a global C variable,
  *	or just accessed by e.g.  GetOption1(install("pager"))
  *
- * A (complete?!) list of these (2):
+ * A (complete?!) list of these (2) {plus some of 1)}:
  *
  *	"prompt"
  *	"continue"
@@ -72,6 +72,7 @@
  *	"error"
  *	"error.messages"
  *	"show.error.messages"
+ *      "catch.script.errors"
  *	"warn"
  *	"warning.length"
  *	"warning.expression"
@@ -237,6 +238,11 @@ static SEXP SetOption(SEXP tag, SEXP value)
     return old;
 }
 
+attribute_hidden SEXP R_SetOption(SEXP tag, SEXP value)
+{
+    return SetOption(tag, value);
+}
+
 /* Set the width of lines for printing i.e. like options(width=...) */
 /* Returns the previous value for the options. */
 
@@ -273,9 +279,9 @@ attribute_hidden void InitOptions(void)
 
     /* options set here should be included into mandatory[] in do_options */
 #ifdef HAVE_RL_COMPLETION_MATCHES
-    PROTECT(v = val = allocList(31));
-#else
     PROTECT(v = val = allocList(30));
+#else
+    PROTECT(v = val = allocList(29));
 #endif
 
     SET_TAG(v, install("prompt"));
@@ -344,10 +350,6 @@ attribute_hidden void InitOptions(void)
 
     SET_TAG(v, install("OutDec"));
     SETCAR(v, mkString(OutDec));
-    v = CDR(v);
-
-    SET_TAG(v, install("browserNLdisabled"));
-    SETCAR(v, ScalarLogical(FALSE));
     v = CDR(v);
 
     p = getenv("R_C_BOUNDS_CHECK");
@@ -698,6 +700,15 @@ attribute_hidden SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
 		R_ShowErrorMessages = LOGICAL(argi)[0];
 	    }
+	    else if ( streql(CHAR(namei), "catch.script.errors") ) {
+#define CHECK_TRUE_FALSE_(_arg_)					\
+		if (TYPEOF(_arg_) != LGLSXP || LENGTH(_arg_) != 1 ||	\
+		    LOGICAL(_arg_)[0] == NA_LOGICAL)			\
+		    error(_("invalid value for '%s'"), CHAR(namei))
+
+		CHECK_TRUE_FALSE_(argi);
+		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
+	    }
 	    else if (streql(CHAR(namei), "echo")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
@@ -782,13 +793,9 @@ attribute_hidden SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		error(_("\"par.ask.default\" has been replaced by \"device.ask.default\""));
 	    }
 	    else if (streql(CHAR(namei), "browserNLdisabled")) {
-		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		int k = asLogical(argi);
-		if (k == NA_LOGICAL)
-		    error(_("invalid value for '%s'"), CHAR(namei));
-		R_DisableNLinBrowser = k;
-		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+		CHECK_TRUE_FALSE_(argi);
+		R_DisableNLinBrowser = LOGICAL(argi)[0];
+		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
 	    }
 	    else if (streql(CHAR(namei), "CBoundsCheck")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)

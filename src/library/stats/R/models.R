@@ -1,7 +1,7 @@
 #  File src/library/stats/R/models.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2022 The R Core Team
+#  Copyright (C) 1995-2023 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -39,8 +39,8 @@ formula.default <- function (x = NULL, env = parent.frame(), ...)
 formula.formula <- function(x, ...) x
 formula.terms <- function(x, ...) {
     env <- environment(x)
-    attributes(x) <- list(class = "formula") # dropping all other attr.
-    environment(x) <- if(is.null(env)) globalenv() else env
+    attributes(x) <- list(class = "formula") # dropping all attr. incl ".Environment"
+    environment(x) <- env %||% globalenv()
     x
 }
 
@@ -454,7 +454,7 @@ deparse2 <- function(x)
 
 model.frame <- function(formula, ...) UseMethod("model.frame")
 model.frame.default <-
-    function(formula, data = NULL, subset = NULL, na.action = na.fail,
+    function(formula, data = NULL, subset = NULL, na.action,
 	     drop.unused.levels = FALSE, xlev = NULL,...)
 {
     ## first off, establish if we were passed a data frame 'newdata'
@@ -493,10 +493,11 @@ model.frame.default <-
     } else
         formula <- as.formula(formula)
     if(missing(na.action)) {
-	if(!is.null(naa <- attr(data, "na.action")) && mode(naa)!="numeric")
-	    na.action <- naa
-	else if(!is.null(naa <- getOption("na.action")))
-	    na.action <- naa
+	na.action <-
+            if(!is.null(naa <- attr(data, "na.action")) && mode(naa)!="numeric")
+                naa
+            else getOption("na.action") %||% 
+                     na.fail # rarely happens (option historically unset in S, see FAQ 3.3.2)
     }
 
     ## The following logic is quite ancient and should possibly be revised
@@ -809,8 +810,7 @@ get_all_vars <- function(formula, data = NULL, ...)
     names(x) <- nms.x
     if(anyM)
         x[isM] <- lapply(x[isM], function(o) `class<-`(o, class(o)[class(o) != "AsIs"]))
-    attr(x, "row.names") <-
-        if(is.null(rownames)) .set_row_names(max(vapply(x, NROW, integer(1))))
-        else rownames # might be short form
+    attr(x, "row.names") <- rownames %||%  # might be short form
+        .set_row_names(max(vapply(x, NROW, integer(1))))
     x
 }

@@ -132,16 +132,8 @@ function(dir, exts, all.files = FALSE, full.names = TRUE)
 {
     ## Return the paths or names of the files in @code{dir} with
     ## extension in @code{exts}.
-    ## Might be in a zipped dir on Windows.
-    if(file.exists(file.path(dir, "filelist")) &&
-       any(file.exists(file.path(dir, c("Rdata.zip", "Rex.zip", "Rhelp.zip")))))
-    {
-        files <- readLines(file.path(dir, "filelist"))
-        if(!all.files)
-            files <- grep("^[^.]", files, value = TRUE)
-    } else {
-        files <- list.files(dir, all.files = all.files)
-    }
+
+    files <- list.files(dir, all.files = all.files)
     ## does not cope with exts with '.' in.
     ## files <- files[sub(".*\\.", "", files) %in% exts]
     patt <- paste0("\\.(", paste(exts, collapse="|"), ")$")
@@ -185,7 +177,6 @@ function(dir, type, all.files = FALSE, full.names = TRUE,
         }
     }
     ## avoid ranges since they depend on the collation order in the locale.
-    ## in particular, Estonian sorts Z after S.
     if(type %in% c("code", "docs")) { # only certain filenames are valid.
         files <- files[grep("^[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789]", basename(files))]
     }
@@ -215,16 +206,15 @@ function(x)
 showNonASCII <-
 function(x)
 {
-    ## All that is needed here is an 8-bit encoding that includes ASCII.
-    ## The only one we guarantee to exist is 'latin1'.
-    ## The default sub=NA is faster, but on some platforms
-    ## some characters used just to lose their accents, so two tests.
-    asc <- iconv(x, "latin1", "ASCII")
-    ind <- is.na(asc) | asc != x
-    if(any(ind))
+    ind <- .Call(C_nonASCII, x)
+    if(any(ind)) {
         message(paste0(which(ind), ": ",
-                       iconv(x[ind], "latin1", "ASCII", sub = "byte"),
+                       ## iconv will usually substitute,
+                       ## but inplementations including macOS 14
+                       ## may translate to ASCII.
+                       iconv(x[ind], "", "ASCII", sub = "byte"),
                        collapse = "\n"), domain = NA)
+    }
     invisible(x[ind])
 }
 
@@ -569,7 +559,7 @@ function(file, pdf = FALSE, clean = FALSE, quiet = TRUE,
 .ORCID_iD_db_from_package_sources <-
 function(dir)
 {
-    meta <- .read_description(file.path(dir, "DESCRIPTION"))
+    meta <- .get_package_metadata(dir, FALSE)
     ids1 <- ids2 <- character()
     if(!is.na(aar <- meta["Authors@R"])) {
         aar <- tryCatch(utils:::.read_authors_at_R_field(aar),
@@ -686,7 +676,7 @@ function() {
 ### ** config_val_to_logical
 
 config_val_to_logical <-
-function(val) utils:::str2logical(val)
+function(val, na.ok=TRUE) utils:::str2logical(val, na.ok=na.ok)
 
 ### ** .canonicalize_doi
 
@@ -873,7 +863,8 @@ function(dir, predicate = NULL, recursive = FALSE, .worker = NULL,
             .find_calls_in_file(file, encoding, predicate, recursive)
 
     which <- match.arg(which,
-                       c("code", "vignettes", "NAMESPACE", "CITATION"),
+                       c("code", "vignettes", "tests",
+                         "NAMESPACE", "CITATION"),
                        several.ok = TRUE)
     code_files <-
         c(character(),
@@ -881,8 +872,17 @@ function(dir, predicate = NULL, recursive = FALSE, .worker = NULL,
               list_files_with_type(file.path(dir, "R"), "code",
                                    OS_subdirs = c("unix", "windows")),
           if(("vignettes" %in% which) &&
+             dir.exists(file.path(dir, "vignettes")) &&
              dir.exists(fp <- file.path(dir, "inst", "doc")))
               list_files_with_type(fp, "code"),
+          ## cf. .check_packages_used_in_tests() ...
+          if(("tests" %in% which) &&
+             dir.exists(fp <- file.path(dir, "tests")))
+              c(list.files(fp, pattern = "\\.[rR]$",
+                           full.names = TRUE),
+                if(dir.exists(fp <- file.path(fp, "testthat")))
+                    list.files(fp, pattern = "\\.[rR]$",
+                               full.names = TRUE)),
           if(("NAMESPACE" %in% which) &&
              file.exists(fp <- file.path(dir, "NAMESPACE")))
               fp,
@@ -981,21 +981,16 @@ function(con, n = 4L)
 .get_internal_S3_generics <-
 function(primitive = TRUE) # primitive means 'include primitives'
 {
-    out <-
-        ## Get the names of R internal S3 generics (via DispatchOrEval(),
-        ## cf. ?InternalMethods).
-        c("[", "[[", "$", "[<-", "[[<-", "$<-", "@", "@<-",
-          ## The above are actually primitive but not listed in
-          ## base::.S3PrimitiveGenerics et al: not sure why?
-          "as.vector", "cbind", "rbind", "unlist",
-          "is.unsorted", "lengths", "nchar", "rep.int", "rep_len",
-          .get_S3_primitive_generics()
-          ## ^^^^^^^ now contains the members of the group generics from
-          ## groupGeneric.Rd.
-          )
-    if(!primitive)
-        out <- out[!vapply(out, .is_primitive_in_base, NA)]
-    out
+    c(.internalGenerics,
+      if(primitive)
+          c("[", "[[", "$", "[<-", "[[<-", "$<-", "@", "@<-",
+            ## The above are actually primitive but not listed in
+            ## base::.S3PrimitiveGenerics et al: not sure why?
+            .get_S3_primitive_generics()
+            ## ^^^^^^^ now contains the members of the group generics
+            ## from groupGeneric.Rd.
+            )
+      )
 }
 
 ### ** .get_namespace_package_depends
@@ -1291,8 +1286,7 @@ function()
 
 ### ** .get_standard_package_names
 
-## we cannot assume that file.path(R.home("share"), "make", "vars.mk")
-## is installed, as it is not on Windows
+standard_package_names <-
 .get_standard_package_names <-
 local({
     lines <- readLines(file.path(R.home("share"), "make", "vars.mk"))
@@ -1302,6 +1296,7 @@ local({
         tolower(sub("^R_PKGS_([[:upper:]]+) *=.*", "\\1", lines))
     eval(substitute(function() {out}, list(out=out)), envir = topenv())
     })
+
 
 ### ** .get_standard_package_dependencies
 
@@ -1577,7 +1572,7 @@ function(fname)
 {
     ## Determine whether object named 'fname' found in the base
     ## environment is a primitive function.
-    is.primitive(get(fname, envir = baseenv(), inherits = FALSE))
+    is.primitive(baseenv()[[fname]])
 }
 
 ### ** .is_S3_generic
@@ -1723,7 +1718,7 @@ function(type = c("code", "data", "demo", "docs", "vignette"))
                     "csv", "CSV",
                     "csv.gz", "csv.bz2", "csv.xz"),
            demo = c("R", "r"),
-           docs = c("Rd", "rd", "Rd.gz", "rd.gz"),
+           docs = c("Rd", "rd"),
            vignette = c(outer(c("R", "r", "S", "s"), c("nw", "tex"),
                               paste0),
                         "Rmd"))
@@ -1741,7 +1736,7 @@ function(parent = parent.frame())
            envir = env)
     assign("Ops", function(e1, e2) UseMethod("Ops"),
            envir = env)
-    assign("matrixOps", function(e1, e2) UseMethod("matrixOps"),
+    assign("matrixOps", function(x, y) UseMethod("matrixOps"),
            envir = env)
     assign("Summary", function(..., na.rm = FALSE) UseMethod("Summary"),
            envir = env)
@@ -1959,7 +1954,7 @@ function()
 ### ** .package_apply
 
 .package_apply <-
-function(packages = NULL, FUN, ...,
+function(packages = NULL, FUN, ..., pattern = "*", verbose = TRUE,
          Ncpus = getOption("Ncpus", 1L))
 {
     ## Apply FUN and extra '...' args to all given packages.
@@ -1969,12 +1964,20 @@ function(packages = NULL, FUN, ...,
         packages <-
             unique(utils::installed.packages(priority = "high")[ , 1L])
 
-    one <- function(p)
-        tryCatch(FUN(p, ...),
-                 error = function(e)
-                     noquote(paste("Error:",
-                                   conditionMessage(e))))
-    ## (Just don't throw the error ...)
+    ## For consistency with .unpacked_source_repository_apply(), take
+    ## 'pattern' as a wildcard pattern.
+    if(pattern != "*")
+        packages <- packages[grepl(utils::glob2rx(pattern), packages)]
+
+    ## Keep in sync with .unpacked_source_repository_apply().
+    ## <FIXME>
+    ## Should we really catch errors?
+    one <- function(p) {
+        if(verbose)
+            message(sprintf("processing %s", p))
+        tryCatch(FUN(p, ...), error = identity)
+    }
+    ## </FIXME>
 
     ## Would be good to have a common wrapper ...
     if(Ncpus > 1L) {
@@ -2028,21 +2031,6 @@ function(file, encoding = NA, keep.source = getOption("keep.source"))
             parse(file,
                   keep.source = keep.source)
     })
-}
-
-
-### ** .read_Rd_lines_quietly
-
-.read_Rd_lines_quietly <-
-function(con)
-{
-    ## Read lines from a connection to an Rd file, trying to suppress
-    ## "incomplete final line found by readLines" warnings.
-    if(is.character(con)) {
-        con <- if(endsWith(con, ".gz")) gzfile(con, "r") else file(con, "r")
-        on.exit(close(con))
-    }
-    .try_quietly(readLines(con, warn=FALSE))
 }
 
 ### ** .read_additional_repositories_field
@@ -2420,11 +2408,15 @@ function(dir, FUN, ..., pattern = "*", verbose = FALSE,
     dfiles <- Sys.glob(file.path(dir, pattern, "DESCRIPTION"))
     paths <- dirname(dfiles)
 
+    ## Keep in sync with .package_apply().
+    ## <FIXME>
+    ## Should we really catch errors?
     one <- function(p) {
         if(verbose)
             message(sprintf("processing %s", basename(p)))
-        FUN(p, ...)
+        tryCatch(FUN(p, ...), error = identity)
     }
+    ## </FIXME>
 
     ## Would be good to have a common wrapper ...
     if(Ncpus > 1L) {

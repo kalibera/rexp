@@ -31,8 +31,6 @@
 \alias{.POSIXlt}
 \alias{.difftime}
 \alias{.cache_class}
-\alias{.Firstlib_as_onLoad}
-\alias{.methodsNamespace} % created by the methods package ....
 \alias{.popath}
 \alias{.detach}
 \alias{.maskedMsg}
@@ -149,9 +147,9 @@ lazyLoadDBfetch(key, file, compressed, hook)
     }
   }
   \item{file}{\describe{
-      \item{.getRequiredPackages():}{The full path to the
+      \item{for \code{.getRequiredPackages()}:}{the full path to the
 	\file{DESCRIPTION} file of a package.}
-      \item{lazyLoadDBfetch():}{the filepath to a lazyload database.}
+      \item{for \code{lazyLoadDBfetch()}:}{the filepath to a lazyload database.}
     }
   }
   \item{lib.loc}{a character vector describing the location of \R
@@ -162,9 +160,9 @@ lazyLoadDBfetch(key, file, compressed, hook)
     if the package(s) are not found?}
   \item{useImports}{logical.  Should  the \code{Imports} field be processed?}
   \item{quietly}{logical: should message(s) be printed.}
-  \item{pkginfo}{A processed \file{DESCRIPTION} file of class
+  \item{pkgInfo}{a processed \file{DESCRIPTION} file of class
     \code{"packageDescription2"}.}
-  \item{built, run}{platform strings of the form \code{"cpu-vendor-os"}.}
+  %% \item{built, run}{platform strings of the form \code{"cpu-vendor-os"}.}
   \item{name}{name of image file to save or load.}
   \item{type}{integer.  Currently \code{type = 0} returns the internal
     \code{"row.names"} attribute (possibly \code{NULL}), \code{type = 2}
@@ -174,7 +172,7 @@ lazyLoadDBfetch(key, file, compressed, hook)
   \item{info}{character string such as \code{"package:MASS"}.}
   \item{key}{the object name in a lazyload database.}
   \item{compressed}{logical: are the values in the database compressed?}
-  \item{refhook}{a load hook: see \code{\link{unserialize}}.}
+  \item{hook}{a load hook: see \code{\link{unserialize}}.}
   \item{seed}{a length-one integer vector.}
   \item{i, j}{indices.}
   \item{strictly}{logical.}
@@ -184,7 +182,7 @@ lazyLoadDBfetch(key, file, compressed, hook)
   \item{cl}{an optional character vector of classes \emph{containing}
     the default classes.}
   \item{units}{see \code{\link{difftime}}.}
-  \item{\dots}{Arguments passed to non-dot name versions.}
+  \item{\dots}{arguments passed to non-dot name versions.}
   \item{pos}{an integer.}
 
   \item{same}{character vector of \emph{same} objects, masking others.}
@@ -270,8 +268,8 @@ lazyLoadDBfetch(key, file, compressed, hook)
   S3 method dispatch.  With \code{NULL} second argument it returns the
   cached inheritance, for diagnostic use.
 
-  \code{.popath} is a variable created at startup which records where
-  the \pkg{translations} package in use is.
+  \code{.popath} is a character string created at startup which records where
+  the \pkg{translations} package in use is, possibly \code{NA_character_}.
 
   \code{.detach} is a \sQuote{bare-bones} version of \code{\link{detach}} for
   use in other \R packages.
@@ -292,7 +290,7 @@ lazyLoadDBfetch(key, file, compressed, hook)
   \code{.getRequiredPackages} and \code{.getRequiredPackages2}
   return \code{invisible()}.
 
-  \code{testPlatformEquivalence} returns \code{TRUE} or \code{FALSE}.
+  %% \code{testPlatformEquivalence} returns \code{TRUE} or \code{FALSE}.
 
   \code{.formula2varlist} returns a list of variables found in
   \code{formula}, evaluated in \code{data}, following standard

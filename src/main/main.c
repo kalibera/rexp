@@ -335,7 +335,9 @@ static void check_session_exit(void)
 	    R_Suicide(_("error during cleanup\n"));
 	else {
 	    exiting = TRUE;
-	    if (GetOption1(install("error")) != R_NilValue) {
+	    if (GetOption1(install("error")) != R_NilValue ||
+		R_isTRUE(GetOption1(install("catch.script.errors")))
+		) {
 		exiting = FALSE;
 		return;
 	    }
@@ -651,6 +653,12 @@ static void *signal_stack;
 #define R_USAGE 100000 /* Just a guess */
 static void init_signal_handlers(void)
 {
+    /* On Windows, C signal handling functions are replaced by psignal.
+       Initialization of a psignal Ctrl handler happens on the first
+       signal-related call (typically here). Signal handlers for
+       Ctrl signals set using C API before psignal initialization
+       will have no effect. */
+
     /* Do not set the (since 2005 experimental) SEGV handler
        UI if R_NO_SEGV_HANDLER env var is non-empty.
        This is needed to debug crashes in the handler
@@ -678,7 +686,8 @@ static void init_signal_handlers(void)
 #endif
     }
 
-    signal(SIGINT,  handleInterrupt);
+    if (signal(SIGINT, handleInterrupt) == SIG_IGN)
+	signal(SIGINT, SIG_IGN);
     signal(SIGUSR1, onsigusr1);
     signal(SIGUSR2, onsigusr2);
     signal(SIGPIPE, handlePipe);
@@ -687,7 +696,8 @@ static void init_signal_handlers(void)
 #else /* not sigaltstack and sigaction and sigemptyset*/
 static void init_signal_handlers(void)
 {
-    signal(SIGINT,  handleInterrupt);
+    if (signal(SIGINT,  handleInterrupt) == SIG_IGN)
+	signal(SIGINT, SIG_IGN);
     signal(SIGUSR1, onsigusr1);
     signal(SIGUSR2, onsigusr2);
 #ifndef Win32
@@ -903,8 +913,13 @@ void setup_Rmainloop(void)
 
 	/* We set R_ARCH here: Unix does it in the shell front-end */
 	char Rarch[30];
-	strcpy(Rarch, "R_ARCH=/");
-	strcat(Rarch, R_ARCH);
+	strcpy(Rarch, "R_ARCH=");
+# ifdef R_ARCH
+	if (strlen(R_ARCH) > 0) {
+	    strcat(Rarch, "/");
+	    strcat(Rarch, R_ARCH);
+	}
+# endif
 	putenv(Rarch);
     }
 #else /* not Win32 */
@@ -1312,6 +1327,58 @@ static void PrintCall(SEXP call, SEXP rho)
     R_BrowseLines = old_bl;
 }
 
+static int countBrowserContexts(void)
+{
+    /* passing TRUE for the second argument seems to over-count */
+    return countContexts(CTXT_BROWSER, FALSE);
+}
+
+#ifdef USE_BROWSER_HOOK
+struct callBrowserHookData { SEXP hook, cond, rho; };
+
+static SEXP callBrowserHook(void *data)
+{
+    struct callBrowserHookData *bhdata = data;
+    SEXP hook = bhdata-> hook;
+    SEXP cond = bhdata->cond;
+    SEXP rho = bhdata->rho;
+    SEXP args = CONS(hook, CONS(cond, CONS(rho, R_NilValue)));
+    SEXP hcall = LCONS(hook, args);
+    PROTECT(hcall);
+    R_SetOption(install("browser.hook"), R_NilValue);
+    SEXP val = eval(hcall, R_GlobalEnv);
+    UNPROTECT(1); /* hcall */
+    return val;
+}
+
+static void restoreBrowserHookOption(void *data, Rboolean jump)
+{
+    struct callBrowserHookData *bhdata = data;
+    SEXP hook = bhdata-> hook;
+    R_SetOption(install("browser.hook"), hook); // also on jumps
+}
+
+static void R_browserRepl(SEXP rho)
+{
+    /* save some stuff -- shouldn't be needed unless REPL is sloppy */
+    int savestack = R_PPStackTop;
+    SEXP topExp = PROTECT(R_CurrentExpr);
+    RCNTXT *saveToplevelContext = R_ToplevelContext;
+    RCNTXT *saveGlobalContext = R_GlobalContext;
+
+    int browselevel = countBrowserContexts();
+    R_ReplConsole(rho, savestack, browselevel);
+
+    /* restore the saved stuff */
+    R_CurrentExpr = topExp;
+    UNPROTECT(1); /* topExp */
+    R_PPStackTop = savestack;
+    R_CurrentExpr = topExp;
+    R_ToplevelContext = saveToplevelContext;
+    R_GlobalContext = saveGlobalContext;
+}
+#endif
+
 /* browser(text = "", condition = NULL, expr = TRUE, skipCalls = 0L)
  * ------- but also called from ./eval.c */
 attribute_hidden SEXP do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -1331,6 +1398,10 @@ attribute_hidden SEXP do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     SET_TAG(CDR(ap), install("condition"));
     SET_TAG(CDDR(ap), install("expr"));
     SET_TAG(CDDDR(ap), install("skipCalls"));
+#ifdef USE_BROWSER_HOOK
+    SETCDR(CDDDR(ap), CONS(R_NilValue, R_NilValue));
+    SET_TAG(CDR(CDDDR(ap)), install("ignoreHook"));
+#endif
     argList = matchArgs_RC(ap, args, call);
     UNPROTECT(1);
     PROTECT(argList);
@@ -1343,15 +1414,33 @@ attribute_hidden SEXP do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SETCAR(CDDR(argList), ScalarLogical(1));
     if(CADDDR(argList) == R_MissingArg)
 	SETCAR(CDDDR(argList), ScalarInteger(0));
+#ifdef USE_BROWSER_HOOK
+    if(CAR(CDR(CDDDR(argList))) == R_MissingArg)
+	SETCAR(CDR(CDDDR(argList)), ScalarLogical(FALSE));
+#endif
 
     /* return if 'expr' is not TRUE */
-    if( !asLogical(CADDR(argList)) ) {
+    SEXP expr = CADDR(argList);
+    if (! asLogical(expr)) {
 	UNPROTECT(1);
 	return R_NilValue;
     }
 
+#ifdef USE_BROWSER_HOOK
+    /* allow environment to use to be provides as the 'expr' argument */
+    if (TYPEOF(expr) == ENVSXP)
+	rho = expr;
+
+    Rboolean ignoreHook = asLogical(CAR(CDR(CDDDR(argList))));
+    if (ignoreHook) {
+        R_browserRepl(rho);
+        UNPROTECT(1); /* argList */
+        return R_ReturnedValue;
+    }
+#endif
+
     /* trap non-interactive debugger invocation */
-    if(!R_Interactive) {
+    if(! R_Interactive) {
         char *p = getenv("_R_CHECK_BROWSER_NONINTERACTIVE_");
         if (p != NULL && StringTrue(p))
             error(_("non-interactive browser() -- left over from debugging?"));
@@ -1360,7 +1449,7 @@ attribute_hidden SEXP do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     /* Save the evaluator state information */
     /* so that it can be restored on exit. */
 
-    browselevel = countContexts(CTXT_BROWSER, 1);
+    browselevel = countBrowserContexts();
     savestack = R_PPStackTop;
     PROTECT(topExp = R_CurrentExpr);
     saveToplevelContext = R_ToplevelContext;
@@ -1369,6 +1458,13 @@ attribute_hidden SEXP do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!RDEBUG(rho)) {
 	int skipCalls = asInteger(CADDDR(argList));
 	cptr = R_GlobalContext;
+#ifdef USE_BROWSER_HOOK
+	if (! ignoreHook)
+	    /* skip over the hook closure on the stack */
+	    while ((!(cptr->callflag & CTXT_FUNCTION) || cptr->cloenv != rho)
+		   && cptr->callflag )
+	    cptr = cptr->nextcontext;		
+#endif
 	while ( ( !(cptr->callflag & CTXT_FUNCTION) || skipCalls--)
 		&& cptr->callflag )
 	    cptr = cptr->nextcontext;
@@ -1402,7 +1498,23 @@ attribute_hidden SEXP do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
 	R_GlobalContext = &thiscontext;
 	R_InsertRestartHandlers(&thiscontext, "browser");
-	R_ReplConsole(rho, savestack, browselevel+1);
+#ifdef USE_BROWSER_HOOK
+	/* if a browser hook is provided, call it and use the result */
+	SEXP hook = ignoreHook ?
+	    R_NilValue : GetOption1(install("browser.hook"));
+	if (isFunction(hook)) {
+	    struct callBrowserHookData bhdata = {
+	        .hook = hook, .cond = CADR(argList), .rho = rho
+	    };
+	    R_ReturnedValue = R_UnwindProtect(callBrowserHook, &bhdata,
+					      restoreBrowserHookOption, &bhdata,
+					      NULL);
+	}
+	else
+	    R_ReplConsole(rho, savestack, browselevel + 1);
+#else
+	R_ReplConsole(rho, savestack, browselevel + 1);
+#endif
 	endcontext(&thiscontext);
     }
     endcontext(&returncontext);

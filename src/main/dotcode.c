@@ -395,7 +395,7 @@ static SEXP naokfind(SEXP args, int * len, int *naok, DllReference *dll)
 		    dll->dll = (HINSTANCE) R_ExternalPtrAddr(VECTOR_ELT(s, 4));
 		} else
 		    error("incorrect type (%s) of PACKAGE argument\n",
-			  type2char(TYPEOF(CAR(s))));
+			  R_typeToChar(CAR(s)));
 	    }
 	} else {
 	    nargs++;
@@ -542,7 +542,7 @@ static SEXP check_retval(SEXP call, SEXP val)
 
     return val;
 }
-    
+
 attribute_hidden SEXP do_External(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     DL_FUNC ofun = NULL;
@@ -2024,7 +2024,7 @@ attribute_hidden SEXP do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 	    break;
 	case VECSXP:
 	    if (Fort) error(_("invalid mode (%s) to pass to Fortran (arg %d)"),
-			    type2char(t), na + 1);
+			    R_typeToChar(s), na + 1);
 	    /* Used read-only, so this is safe */
 #ifdef USE_RINTERNALS
             if (!ALTREP(s))
@@ -2045,20 +2045,20 @@ attribute_hidden SEXP do_dotCode(SEXP call, SEXP op, SEXP args, SEXP env)
 	case SPECIALSXP:
 	case ENVSXP:
 	    if (Fort) error(_("invalid mode (%s) to pass to Fortran (arg %d)"),
-			    type2char(t), na + 1);
+			    R_typeToChar(s), na + 1);
 	    cargs[na] =  (void*) s;
 	    break;
 	case NILSXP:
 	    error(_("invalid mode (%s) to pass to C or Fortran (arg %d)"),
-		  type2char(t), na + 1);
+		  R_typeToChar(s), na + 1);
 	    cargs[na] =  (void*) s;
 	    break;
 	default:
 	    /* Includes pairlists from R 2.15.0 */
 	    if (Fort) error(_("invalid mode (%s) to pass to Fortran (arg %d)"),
-			    type2char(t), na + 1);
+			    R_typeToChar(s), na + 1);
 	    warning("passing an object of type '%s' to .C (arg %d) is deprecated",
-		    type2char(t), na + 1);
+		    R_typeToChar(s), na + 1);
 	    if (t == LISTSXP)
 		warning(_("pairlists are passed as SEXP as from R 2.15.0"));
 	    cargs[na] =  (void*) s;

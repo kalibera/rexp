@@ -1,13 +1,11 @@
 
-R Under development (unstable) (2023-04-24 r84313) -- "Unsuffered Consequences"
+R Under development (unstable) (2023-10-17 r85341) -- "Unsuffered Consequences"
 Copyright (C) 2023 The R Foundation for Statistical Computing
-Platform: x86_64-pc-linux-gnu (64-bit)
+Platform: x86_64-pc-linux-gnu
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
 Type 'license()' or 'licence()' for distribution details.
-
-  Natural language support but running in an English locale
 
 R is a collaborative project with many contributors.
 Type 'contributors()' for more information and
@@ -517,6 +515,8 @@ s12   0.92099
 [2,] 0.03455368 0.00185109     0
 > all(phyper(x, m, n, k) == cumsum(dhyper(x, m, n, k)))  # FALSE
 [1] FALSE
+> stopifnot(abs(phyper(x, m, n, k) - cumsum(dhyper(x, m, n, k))) < 5e-16)
+> 
 > 
 > 
 > cleanEx()
@@ -1857,6 +1857,21 @@ Variances:
 > plot(function(x) dt(x, df = 3, ncp = 2), -3, 11, ylim = c(0, 0.32),
 +      main = "Non-central t - Density", yaxs = "i")
 > 
+> ## Relation between F_t(.) = pt(x, n) and pbeta():
+> ptBet <- function(t, n) {
++     x <- n/(n + t^2)
++     r <- pb <- pbeta(x, n/2, 1/2) / 2
++     pos <- t > 0
++     r[pos] <- 1 - pb[pos]
++     r
++ }
+> x <- seq(-5, 5, by = 1/8)
+> nu <- 3:10
+> pt. <- outer(x, nu, pt)
+> ptB <- outer(x, nu, ptBet)
+> ## matplot(x, pt., type = "l")
+> stopifnot(all.equal(pt., ptB, tolerance = 1e-15))
+> 
 > 
 > 
 > cleanEx()
@@ -2548,6 +2563,28 @@ x      1  2  3  4  5  6  7 Sum
 14     40-79      30+      9        20
 15    80-119      30+      7         5
 16      120+      30+     10         3
+> 
+> ## "complete cases" vs. "available cases"
+> colSums(is.na(airquality))  # NAs in Ozone but not Temp
+  Ozone Solar.R    Wind    Temp   Month     Day 
+     37       7       0       0       0       0 
+> ## the default is to summarize *complete cases*:
+> aggregate(cbind(Ozone, Temp) ~ Month, data = airquality, FUN = mean)
+  Month    Ozone     Temp
+1     5 23.61538 66.73077
+2     6 29.44444 78.22222
+3     7 59.11538 83.88462
+4     8 59.96154 83.96154
+5     9 31.44828 76.89655
+> ## to handle missing values *per variable*:
+> aggregate(cbind(Ozone, Temp) ~ Month, data = airquality, FUN = mean,
++           na.action = na.pass, na.rm = TRUE)
+  Month    Ozone     Temp
+1     5 23.61538 65.54839
+2     6 29.44444 79.10000
+3     7 59.11538 83.90323
+4     8 59.96154 83.96774
+5     9 31.44828 76.90000
 > 
 > ## Dot notation:
 > aggregate(. ~ Species, data = iris, mean)
@@ -4598,7 +4635,7 @@ X-squared = 4.3, df = 4, p-value = 0.3669
 > 
 > ### Name: confint
 > ### Title: Confidence Intervals for Model Parameters
-> ### Aliases: confint confint.default confint.lm
+> ### Aliases: confint confint.default confint.lm confint.glm confint.nls
 > ### Keywords: models
 > 
 > ### ** Examples
@@ -4615,7 +4652,25 @@ am          -0.614677730 0.926307310
        2.5 %   97.5 %
 wt 0.3800887 1.622518
 > 
-> 
+> ## from example(glm)
+> counts <- c(18,17,15,20,10,20,25,13,12)
+> outcome <- gl(3, 1, 9); treatment <- gl(3, 3)
+> glm.D93 <- glm(counts ~ outcome + treatment, family = poisson())
+> confint(glm.D93) # needs MASS to be installed
+Waiting for profiling to be done...
+                 2.5 %      97.5 %
+(Intercept)  2.6958215  3.36655581
+outcome2    -0.8577018 -0.06255840
+outcome3    -0.6753696  0.08244089
+treatment2  -0.3932548  0.39325483
+treatment3  -0.3932548  0.39325483
+> confint.default(glm.D93)  # based on asymptotic normality
+                 2.5 %      97.5 %
+(Intercept)  2.7095672  3.37947764
+outcome2    -0.8505027 -0.05800787
+outcome3    -0.6707552  0.08478093
+treatment2  -0.3919928  0.39199279
+treatment3  -0.3919928  0.39199279
 > 
 > 
 > cleanEx()
@@ -5056,7 +5111,7 @@ function (V)
     r[cbind(1L:p, 1L:p)] <- 1
     r
 }
-<bytecode: 0x56b73a8>
+<bytecode: 0x561676fcdd38>
 <environment: namespace:stats>
 > stopifnot(all.equal(Cl, cov2cor(cov(longley))),
 +           all.equal(cor(longley, method = "kendall"),
@@ -6194,12 +6249,12 @@ Call:
 Data: faithful$eruptions (272 obs.);	Bandwidth 'bw' = 0.14
 
        x               y            
- Min.   :1.180   Min.   :0.0001834  
- 1st Qu.:2.265   1st Qu.:0.0422638  
- Median :3.350   Median :0.1709243  
- Mean   :3.350   Mean   :0.2301726  
- 3rd Qu.:4.435   3rd Qu.:0.4134348  
- Max.   :5.520   Max.   :0.5945634  
+ Min.   :1.180   Min.   :0.0001814  
+ 1st Qu.:2.265   1st Qu.:0.0421820  
+ Median :3.350   Median :0.1706817  
+ Mean   :3.350   Mean   :0.2299476  
+ 3rd Qu.:4.435   3rd Qu.:0.4130131  
+ Max.   :5.520   Max.   :0.5940669  
 > plot(d)
 > 
 > plot(d, type = "n")
@@ -6217,14 +6272,15 @@ Data: faithful$eruptions (272 obs.);	Bandwidth 'bw' = 0.14
 > ## use 'counts / n' as weights:
 > dw <- density(unique(fe), weights = table(fe)/length(fe), bw = d$bw)
 > utils::str(dw) ## smaller n: only 126, but identical estimate:
-List of 7
- $ x        : num [1:512] 1.18 1.19 1.2 1.21 1.21 ...
- $ y        : num [1:512] 0.000183 0.000223 0.00027 0.000328 0.000397 ...
- $ bw       : num 0.14
- $ n        : int 126
- $ call     : language density.default(x = unique(fe), bw = d$bw, weights = table(fe)/length(fe))
- $ data.name: chr "unique(fe)"
- $ has.na   : logi FALSE
+List of 8
+ $ x         : num [1:512] 1.18 1.19 1.2 1.21 1.21 ...
+ $ y         : num [1:512] 0.000181 0.000221 0.000267 0.000325 0.000393 ...
+ $ bw        : num 0.14
+ $ n         : int 126
+ $ old.coords: logi FALSE
+ $ call      : language density.default(x = unique(fe), bw = d$bw, weights = table(fe)/length(fe))
+ $ data.name : chr "unique(fe)"
+ $ has.na    : logi FALSE
  - attr(*, "class")= chr "density"
 > stopifnot(all.equal(d[1:3], dw[1:3]))
 > 
@@ -6237,6 +6293,7 @@ List of 7
 > lines(density(x.new), col = "blue")
 > 
 > 
+> ## The available kernels:
 > (kernels <- eval(formals(density.default)$kernel))
 [1] "gaussian"     "epanechnikov" "rectangular"  "triangular"   "biweight"    
 [6] "cosine"       "optcosine"   
@@ -6259,6 +6316,28 @@ List of 7
 > 
 > ##-------- Semi-advanced theoretic from here on -------------
 > 
+> ## Explore the old.coords TRUE --> FALSE change:
+> set.seed(7); x <- runif(2^12) # N = 4096
+> den  <- density(x) # -> grid of n = 512 points
+> den0 <- density(x, old.coords = TRUE)
+> summary(den0$y / den$y) # 1.001 ... 1.011
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  1.001   1.001   1.001   1.002   1.001   1.011 
+> summary(    den0$y / den$y - 1) # ~= 1/(2n-2)
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+0.0006768 0.0009353 0.0009784 0.0017606 0.0010349 0.0107757 
+> summary(1/ (den0$y / den$y - 1))# ~=    2n-2 = 1022
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   92.8   966.3  1022.1   918.9  1069.2  1477.6 
+> corr0 <- 1 - 1/(2*512-2) # 1 - 1/(2n-2)
+> all.equal(den$y, den0$y * corr0)# ~ 0.0001
+[1] "Mean relative difference: 9.480177e-05"
+> plot(den$x, (den0$y - den$y)/den$y, type='o', cex=1/4)
+> title("relative error of density(runif(2^12), old.coords=TRUE)")
+> abline(h = 1/1022, v = range(x), lty=2); axis(2, at=1/1022, "1/(2n-2)", las=1)
+> 
+> 
+> ## The R[K] for our kernels:
 > (RKs <- cbind(sapply(kernels,
 +                      function(k) density(kernel = k, give.Rkern = TRUE))))
                   [,1]
@@ -7680,7 +7759,7 @@ attr(,".Environment")
 > environment(as.formula("y ~ x"))
 <environment: R_GlobalEnv>
 > environment(as.formula("y ~ x", env = new.env()))
-<environment: 0x50d8f58>
+<environment: 0x5616794fa910>
 > 
 > 
 > ## Create a formula for a model with a large number of variables:
@@ -8927,7 +9006,7 @@ Clustering vector:
  [75] 3 1 4 4 4 4 3 4 1 3 1 3 4 3 3 3 3 1 3 4 3 3 1 3 4 3
 
 Within cluster sum of squares by cluster:
-[1] 1.0314888 0.7104553 2.5330710 1.2816507 1.5056575
+[1] 1.0314888 1.2816507 1.5056575 0.7104553 2.5330710
  (between_SS / total_SS =  88.4 %)
 
 Available components:
@@ -9001,7 +9080,6 @@ Kruskal-Wallis chi-squared = 29.267, df = 4, p-value = 6.901e-06
 > flush(stderr()); flush(stdout())
 > 
 > ### Encoding: UTF-8
-> 
 > ### Name: ks.test
 > ### Title: Kolmogorov-Smirnov Tests
 > ### Aliases: ks.test ks.test.default ks.test.formula
@@ -10485,6 +10563,16 @@ NA        0    3    0
 > 
 > data.class(model.frame(dist ~ speed, data = cars))
 [1] "data.frame"
+> 
+> ## using a subset and an extra variable
+> model.frame(dist ~ speed, data = cars, subset = speed < 10, z = log(dist))
+  dist speed       (z)
+1    2     4 0.6931472
+2   10     4 2.3025851
+3    4     7 1.3862944
+4   22     7 3.0910425
+5   16     8 2.7725887
+6   10     9 2.3025851
 > 
 > ## get_all_vars(): new var.s are recycled (iff length matches: 50 = 2*25)
 > ncars <- get_all_vars(sqrt(dist) ~ I(speed/2), data = cars, newVar = 2:3)
@@ -12238,6 +12326,35 @@ Warning in xy.coords(x, y, xlabel, ylabel, log) :
 > 
 > graphics::par(get("par.postscript", pos = 'CheckExEnv'))
 > cleanEx()
+> nameEx("plot.profile")
+> ### * plot.profile
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: plot.profile
+> ### Title: Plotting Functions for 'profile' Objects
+> ### Aliases: plot.profile pairs.profile
+> ### Keywords: models hplot
+> 
+> ### ** Examples
+> 
+> ## see ?profile.glm for an example using glm fits.
+> 
+> ## a version of example(profile.nls) from R >= 2.8.0
+> fm1 <- nls(demand ~ SSasympOrig(Time, A, lrc), data = BOD)
+> pr1 <- profile(fm1, alphamax = 0.1)
+> stats:::plot.profile(pr1) ## override dispatch to plot.profile.nls
+> pairs(pr1) # a little odd since the parameters are highly correlated
+> 
+> ## an example from ?nls
+> x <- -(1:100)/10
+> y <- 100 + 10 * exp(x / 2) + rnorm(x)/10
+> nlmod <- nls(y ~  Const + A * exp(B * x), start=list(Const=100, A=10, B=1))
+> pairs(profile(nlmod))
+> 
+> 
+> 
+> cleanEx()
 > nameEx("plot.profile.nls")
 > ### * plot.profile.nls
 > 
@@ -12545,14 +12662,14 @@ attr(,"class")
 $linkfun
 function (mu) 
 mu^lambda
-<bytecode: 0x47a1140>
-<environment: 0x40b9c20>
+<bytecode: 0x561678e87ca8>
+<environment: 0x561678eb1468>
 
 $linkinv
 function (eta) 
 pmax(eta^(1/lambda), .Machine$double.eps)
-<bytecode: 0x47a0ff0>
-<environment: 0x40b9c20>
+<bytecode: 0x561678e87b20>
+<environment: 0x561678eb1468>
 
 > 
 > 
@@ -14085,6 +14202,32 @@ Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’
 > 
 > 
 > 
+> cleanEx()
+> nameEx("profile.glm")
+> ### * profile.glm
+> 
+> flush(stderr()); flush(stdout())
+> 
+> ### Name: profile.glm
+> ### Title: Method for Profiling glm Objects
+> ### Aliases: profile.glm
+> ### Keywords: regression models
+> 
+> ### ** Examples
+> 
+> options(contrasts = c("contr.treatment", "contr.poly"))
+> ldose <- rep(0:5, 2)
+> numdead <- c(1, 4, 9, 13, 18, 20, 0, 2, 6, 10, 12, 16)
+> sex <- factor(rep(c("M", "F"), c(6, 6)))
+> SF <- cbind(numdead, numalive = 20 - numdead)
+> budworm.lg <- glm(SF ~ sex*ldose, family = binomial)
+> pr1 <- profile(budworm.lg)
+> plot(pr1)
+> pairs(pr1)
+> 
+> 
+> 
+> base::options(contrasts = c(unordered = "contr.treatment",ordered = "contr.poly"))
 > cleanEx()
 > nameEx("profile.nls")
 > ### * profile.nls
@@ -16889,8 +17032,8 @@ Step function with continuity 'f'= 0.2 ,  3 knots at
 > unclass(sfun0)
 function (v) 
 .approxfun(x, y, v, method, yleft, yright, f, na.rm)
-<bytecode: 0x3a7eda8>
-<environment: 0x28ee920>
+<bytecode: 0x561676b816f0>
+<environment: 0x561678f33130>
 attr(,"call")
 stepfun(1:3, y0, f = 0)
 > ls(envir = environment(sfun0))
@@ -17555,8 +17698,7 @@ attr(,"legend")
 > 
 > ### ** Examples
 > 
-> require(graphics)
-> 
+> ## Two-sample t-test
 > t.test(1:10, y = c(7:20))      # P = .00001855
 
 	Welch Two Sample t-test
@@ -17584,39 +17726,53 @@ mean of x mean of y
   5.50000  25.93333 
 
 > 
-> ## Classical example: Student's sleep data
-> plot(extra ~ group, data = sleep)
 > ## Traditional interface
-> with(sleep, t.test(extra[group == 1], extra[group == 2]))
+> with(mtcars, t.test(mpg[am == 0], mpg[am == 1]))
 
 	Welch Two Sample t-test
 
-data:  extra[group == 1] and extra[group == 2]
-t = -1.8608, df = 17.776, p-value = 0.07939
+data:  mpg[am == 0] and mpg[am == 1]
+t = -3.7671, df = 18.332, p-value = 0.001374
 alternative hypothesis: true difference in means is not equal to 0
 95 percent confidence interval:
- -3.3654832  0.2054832
+ -11.280194  -3.209684
 sample estimates:
 mean of x mean of y 
-     0.75      2.33 
+ 17.14737  24.39231 
 
 > 
 > ## Formula interface
-> t.test(extra ~ group, data = sleep)
+> t.test(mpg ~ am, data = mtcars)
 
 	Welch Two Sample t-test
 
-data:  extra by group
-t = -1.8608, df = 17.776, p-value = 0.07939
-alternative hypothesis: true difference in means between group 1 and group 2 is not equal to 0
+data:  mpg by am
+t = -3.7671, df = 18.332, p-value = 0.001374
+alternative hypothesis: true difference in means between group 0 and group 1 is not equal to 0
 95 percent confidence interval:
- -3.3654832  0.2054832
+ -11.280194  -3.209684
 sample estimates:
-mean in group 1 mean in group 2 
-           0.75            2.33 
+mean in group 0 mean in group 1 
+       17.14737        24.39231 
 
 > 
-> ## Formula interface to one-sample test
+> ## One-sample t-test
+> ## Traditional interface
+> t.test(sleep$extra)
+
+	One Sample t-test
+
+data:  sleep$extra
+t = 3.413, df = 19, p-value = 0.002918
+alternative hypothesis: true mean is not equal to 0
+95 percent confidence interval:
+ 0.5955845 2.4844155
+sample estimates:
+mean of x 
+     1.54 
+
+> 
+> ## Formula interface
 > t.test(extra ~ 1, data = sleep)
 
 	One Sample t-test
@@ -17631,10 +17787,27 @@ mean of x
      1.54 
 
 > 
-> ## Formula interface to paired test
-> ## The sleep data are actually paired, so could have been in wide format:
-> sleep2 <- reshape(sleep, direction = "wide", 
+> ## Paired t-test
+> ## The sleep data is actually paired, so could have been in wide format:
+> sleep2 <- reshape(sleep, direction = "wide",
 +                   idvar = "ID", timevar = "group")
+> 
+> ## Traditional interface
+> t.test(sleep2$extra.1, sleep2$extra.2, paired = TRUE)
+
+	Paired t-test
+
+data:  sleep2$extra.1 and sleep2$extra.2
+t = -4.0621, df = 9, p-value = 0.002833
+alternative hypothesis: true mean difference is not equal to 0
+95 percent confidence interval:
+ -2.4598858 -0.7001142
+sample estimates:
+mean difference 
+          -1.58 
+
+> 
+> ## Formula interface
 > t.test(Pair(extra.1, extra.2) ~ 1, data = sleep2)
 
 	Paired t-test
@@ -19400,7 +19573,7 @@ Number of Fisher Scoring iterations: 6
 > cleanEx()
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  3.33 0.139 3.478 0 0 
+Time elapsed:  4.897 0.113 5.009 0 0 
 > grDevices::dev.off()
 null device 
           1 

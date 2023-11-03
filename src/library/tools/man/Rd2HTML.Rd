@@ -23,6 +23,7 @@ Rd2HTML(Rd, out = "", package = "", defines = .Platform$OS.type,
         texmath = getOption("help.htmlmath"),
         concordance = FALSE,
         standalone = TRUE,
+        toc = isTRUE(getOption("help.htmltoc")),
         Rhtml = FALSE,
         ...)
 
@@ -73,6 +74,8 @@ Rd2ex(Rd, out = "", defines = .Platform$OS.type,
     standalone HTML file. If \code{FALSE}, the header and footer are
     omitted, so that the output can be combined with other fragments.
   }
+  \item{toc}{logical: whether the HTML output should include a table
+      of contents. Ignored unless \code{standalone = TRUE}. }
   \item{Rhtml}{logical: whether the output is intended to be a Rhtml
       file that can be processed using \CRANpkg{knitr}. If \code{TRUE}, the
       examples section is wrapped inside a \code{rcode} block. }
@@ -170,15 +173,19 @@ Rd2ex(Rd, out = "", defines = .Platform$OS.type,
 }
 
 \value{
-  These functions are executed mainly for the side effect of
-  writing the converted help page.  Their value is the name of the output
-  file (invisibly).  For \code{Rd2latex}, the output name is given an
+  These functions are executed mainly for the side effect of writing the
+  converted help page.  Their value is the name of the output file
+  (invisibly).  For \code{Rd2latex}, the output name is given an
   attribute \code{"latexEncoding"} giving the encoding of the file in a
-  form suitable for use with the LaTeX \samp{inputenc} package.
+  form suitable for use with the LaTeX \samp{inputenc} package. For
+  \code{Rd2HTML} with \code{standalone = FALSE}, an attribute
+  \code{"info"} gives supplementary information such as the contents of
+  the \code{name} and \code{title} fields. This is currently
+  experimental, and the details are subject to change.
   
-For \code{Rd2HTML} and \code{Rd2latex} with \code{concordance = TRUE}, a 
-\code{"concordance"} attribute is added, containing an
-\code{\link{Rconcordance}} object.
+  For \code{Rd2HTML} and \code{Rd2latex} with \code{concordance = TRUE}, a 
+  \code{"concordance"} attribute is added, containing an
+  \code{\link{Rconcordance}} object.
 }
 \author{
   Duncan Murdoch, Brian Ripley

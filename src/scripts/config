@@ -20,7 +20,7 @@
 ## A copy of the GNU General Public License is available at
 ## https://www.R-project.org/Licenses/
 
-revision='$Revision: 83600 $'
+revision='$Revision: 85072 $'
 version=`set - ${revision}; echo ${2}`
 version="R configuration information retrieval script: ${R_VERSION} (r${version})
 
@@ -264,9 +264,9 @@ if test "${personal}" = "yes"; then
   if test "${R_OSTYPE}" = "windows"; then
     if test -f "${R_MAKEVARS_USER}"; then
       makefiles="${makefiles} -f \"${R_MAKEVARS_USER}\""
-    elif test ${R_ARCH} = "/x64" && test -f "${HOME}/.R/Makevars.ucrt"; then
+    elif test -f "${HOME}/.R/Makevars.ucrt"; then
       makefiles="${makefiles} -f \"${HOME}\"/.R/Makevars.ucrt"
-    elif test ${R_ARCH} = "/x64" && test -f "${HOME}/.R/Makevars.win64"; then
+    elif test -f "${HOME}/.R/Makevars.win64"; then
       makefiles="${makefiles} -f \"${HOME}\"/.R/Makevars.win64"
     elif test -f "${HOME}/.R/Makevars.win"; then
       makefiles="${makefiles} -f \"${HOME}\"/.R/Makevars.win"

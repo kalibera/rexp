@@ -1,6 +1,6 @@
 % File src/library/base/man/options.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2022 R Core Team
+% Copyright 1995-2023 R Core Team
 % Distributed under GPL 2 or later
 
 \name{options}
@@ -85,6 +85,14 @@ getOption(x, default = NULL)
     \item{\code{browserNLdisabled}:}{logical: whether newline is
       disabled as a synonym for \code{"n"} in the browser.}
 
+    \item{\code{catch.script.errors}:}{logical, false by default.  If
+      true \emph{and} \code{\link{interactive}()} is false, e.g., when an
+      \R script is run by \code{R CMD \link{BATCH} <script>.R}, then
+      errors do \emph{not} stop execution of the script.  Rather evaluation
+      continues after printing the error (and jumping to top level).
+      Also, \code{\link{traceback}()} would provide info about the error.
+      Do use with care!}
+
     \item{\code{checkPackageLicense}:}{logical, not set by default.  If
       true, \code{\link{loadNamespace}} asks a user to accept any
       non-standard license at first load of the package.
@@ -111,7 +119,7 @@ getOption(x, default = NULL)
 
     %%  default is set in ../../profile/Common.R :
     \item{\code{defaultPackages}:}{the packages that are attached by
-      default when \R starts up.  Initially set from value of the
+      default when \R starts up.  Initially set from the value of the
       environment variable \env{R_DEFAULT_PACKAGES}, or if that is unset
       to \code{c("datasets", "utils", "grDevices", "graphics", "stats",
         "methods")}.  (Set \env{R_DEFAULT_PACKAGES} to \code{NULL} or
@@ -258,9 +266,10 @@ getOption(x, default = NULL)
     \item{\code{OutDec}:}{character string containing a single
       character.  The preferred character to be used as the decimal
       point in output conversions, that is in printing, plotting,
-      \code{\link{format}} and \code{\link{as.character}} but not when
-      deparsing nor by \code{\link{sprintf}} nor \code{\link{formatC}}
-      (which are sometimes used prior to printing.)
+      \code{\link{format}}, \code{\link{formatC}} and
+      \code{\link{as.character}} but not when
+      deparsing nor by \code{\link{sprintf}}
+      (which is sometimes used prior to printing).
     }
 
     \item{\code{pager}:}{the command used for displaying text files by
@@ -623,7 +632,7 @@ getOption(x, default = NULL)
 
     \item{\code{citation.bibtex.max}:}{default 1; the maximal number of
       bibentries (\code{\link{bibentry}}) in a \code{\link{citation}} for
-      which the bibtex version is printed in addition to the text one.}
+      which the BibTeX version is printed in addition to the text one.}
 
     \item{\code{de.cellwidth}:}{integer: the cell widths (number of
       characters) to be used in the data editor \code{\link{dataentry}}.
@@ -666,9 +675,9 @@ getOption(x, default = NULL)
       HTTP(S) requests by \code{\link{download.file}}, \code{\link{url}}
       and \code{\link{curlGetHeaders}}, or \code{NULL} when requests will
       be made without a user agent header.  The default is
-      \code{R (<version> <platform> <arch> <os>)}
+      \code{"R (\var{version} \var{platform} \var{arch} \var{os})"}
       except when \samp{libcurl} is used when it is
-      \code{libcurl/7.<xx>.<y>} for the \samp{libcurl} version in use.}
+      \code{"libcurl/\var{version}"} for the \samp{libcurl} version in use.}
 
     \item{\code{install.lock}:}{logical: should per-directory package
       locking be used by \code{\link{install.packages}}?  Most useful
@@ -708,13 +717,13 @@ getOption(x, default = NULL)
       \code{\link{help.request}}.}
 
     \item{\code{menu.graphics}:}{Logical: should graphical menus be used
-      if available?.  Defaults to \code{TRUE}.  Currently applies to
+      if available?  Defaults to \code{TRUE}.  Currently applies to
       \code{\link{select.list}}, \code{\link{chooseCRANmirror}},
       \code{\link{setRepositories}} and to select from multiple (text)
       help files in \code{\link{help}}.}
 
     \item{\code{Ncpus}:}{an integer \eqn{n \ge 1}{n >= 1}, used in
-      \code{\link{install.packages}} as default for the number of cpus
+      \code{\link{install.packages}} as default for the number of CPUs
       to use in a potentially parallel installation, as
       \code{Ncpus = getOption("Ncpus", 1L)}, i.e., when unset is
       equivalent to a setting of 1.}
@@ -739,10 +748,13 @@ getOption(x, default = NULL)
       installs.
     }
 
-    \item{\code{repos}:}{URLs of the repositories for use by
-      \code{\link{update.packages}}.  Initially set from entries marked as
-      default in the \file{repositories} file, see \link{R_REPOSITORIES}.
-      The \sQuote{factory-fresh} setting from \file{etc/repositories} is
+    \item{\code{repos}:}{character vector of repository URLs for use by
+      \code{\link{available.packages}} and related functions.  Initially
+      set from entries marked as default in the
+      \file{\link[=R_REPOSITORIES]{repositories}} file,
+      whose path is configurable via environment variable \env{R_REPOSITORIES}
+      (set this to \code{NULL} to skip initialization at startup).
+      The \sQuote{factory-fresh} setting from the file in \code{R.home("etc")} is
       \code{c(CRAN="@CRAN@")}, a value that causes some utilities to
       prompt for a CRAN mirror.  To avoid this do set the CRAN mirror,
       by something like \preformatted{
@@ -759,6 +771,12 @@ local({
       R-Forge, RForge.net, \dots) for the current session
       using \code{\link{setRepositories}}.
     }
+
+    \item{\code{str}:}{a list of options controlling the default
+      \code{\link{str}} display. Defaults to \code{\link{strOptions}()}.}
+
+    \item{\code{str.dendrogram.last}:}{see \code{\link{str.dendrogram}}.}
+
     \item{\code{SweaveHooks}, \code{SweaveSyntax}:}{
       see \code{\link{Sweave}}.
     }

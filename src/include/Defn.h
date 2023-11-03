@@ -1565,7 +1565,7 @@ extern0 int R_check_constants INI_as(0);
 extern0 int R_disable_bytecode INI_as(0);
 extern SEXP R_cmpfun1(SEXP); /* unconditional fresh compilation */
 extern void R_init_jit_enabled(void);
-extern void R_initAssignSymbols(void);
+extern void R_initEvalSymbols(void);
 #ifdef R_USE_SIGNALS
 extern SEXP R_findBCInterpreterSrcref(RCNTXT*);
 #endif
@@ -1641,12 +1641,14 @@ int Rf_asLogical2(SEXP x, int checking, SEXP call);
 typedef enum { iSILENT, iWARN, iERROR } warn_type;
 
 /* Other Internally Used Functions, excluding those which are inline-able*/
+SEXP Rf_applyClosure(SEXP, SEXP, SEXP, SEXP, SEXP, Rboolean);
 void Rf_addMissingVarsToNewEnv(SEXP, SEXP);
 SEXP Rf_allocFormalsList2(SEXP sym1, SEXP sym2);
 SEXP Rf_allocFormalsList3(SEXP sym1, SEXP sym2, SEXP sym3);
 SEXP Rf_allocFormalsList4(SEXP sym1, SEXP sym2, SEXP sym3, SEXP sym4);
 SEXP Rf_allocFormalsList5(SEXP sym1, SEXP sym2, SEXP sym3, SEXP sym4, SEXP sym5);
 SEXP Rf_allocFormalsList6(SEXP sym1, SEXP sym2, SEXP sym3, SEXP sym4, SEXP sym5, SEXP sym6);
+SEXP R_allocObject(void);
 SEXP Rf_arraySubscript(int, SEXP, SEXP, SEXP (*)(SEXP,SEXP),
                        SEXP (*)(SEXP, int), SEXP);
 SEXP Rf_fixSubset3Args(SEXP, SEXP, SEXP, SEXP*);
@@ -1825,9 +1827,6 @@ void R_RestoreHashCount(SEXP rho);
 # define usemethod		Rf_usemethod
 # define ucstomb		Rf_ucstomb
 # define ucstoutf8		Rf_ucstoutf8
-#ifdef ADJUST_ENVIR_REFCNTS
-# define unpromiseArgs		Rf_unpromiseArgs
-#endif
 # define utf8toucs		Rf_utf8toucs
 # define utf8towcs		Rf_utf8towcs
 # define vectorIndex		Rf_vectorIndex
@@ -2084,10 +2083,12 @@ void R_SaveToFileV(SEXP, FILE*, int, int);
 Rboolean R_seemsOldStyleS4Object(SEXP object);
 int R_SetOptionWarn(int);
 int R_SetOptionWidth(int);
+SEXP R_SetOption(SEXP, SEXP);
 void R_Suicide(const char *);
 SEXP R_flexiblas_info(void);
 void R_getProcTime(double *data);
-int R_isMissing(SEXP symbol, SEXP rho);
+Rboolean R_isMissing(SEXP symbol, SEXP rho);
+Rboolean R_missing(SEXP symbol, SEXP rho);
 const char *sexptype2char(SEXPTYPE type);
 void sortVector(SEXP, Rboolean);
 void SrcrefPrompt(const char *, SEXP);
@@ -2101,9 +2102,6 @@ SEXP type2symbol(SEXPTYPE);
 void unbindVar(SEXP, SEXP);
 #ifdef ALLOW_OLD_SAVE
 void unmarkPhase(void);
-#endif
-#ifdef ADJUST_ENVIR_REFCNTS
-void unpromiseArgs(SEXP);
 #endif
 SEXP R_LookupMethod(SEXP, SEXP, SEXP, SEXP);
 int usemethod(const char *, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP*);
@@ -2162,6 +2160,7 @@ R_size_t R_GetMaxNSize(void);
 void R_SetMaxNSize(R_size_t);
 R_size_t R_Decode2Long(char *p, int *ierr);
 void R_SetPPSize(R_size_t);
+void R_SetNconn(int);
 
 void R_expand_binding_value(SEXP);
 
@@ -2277,6 +2276,10 @@ double R_atof(const char *str);
 
 /* unix/sys-std.c, main/options.c */
 void set_rl_word_breaks(const char *str);
+
+/* unix/sys-unix.c, main/connections.c */
+FILE *R_popen_pg(const char *cmd, const char *type);
+int R_pclose_pg(FILE *fp);
 
 /* From localecharset.c */
 extern const char *locale2charset(const char *);

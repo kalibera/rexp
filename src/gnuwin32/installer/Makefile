@@ -20,15 +20,7 @@ HelpStyle = 1
 ## Used to set Registry entries
 Producer = R-core
 
-ifeq "$(WIN)" "64"
-ifneq ($(strip $(HOME32)),)
-SUFF = win
-else
 SUFF = win64
-endif
-else
-SUFF = win32
-endif
 
 FULLVERSION=`cat ../../../VERSION`
 RPREFIX = $(shell ../../../bin$(R_ARCH)/Rscript ../fixed/rwver.R)
@@ -47,6 +39,8 @@ SHARE_DIRS = R dictionaries encodings licenses make Rd texmf zoneinfo
 
 all: $(RPREFIX)-win.exe
 msi: $(RPREFIX)-$(SUFF).msi
+
+RTARGET := $(if $(findstring Aarch64,$(shell file "$(R_HOME)/bin/R.exe")),aarch64,x86_64)
 
 imagedir:
 	$(RM) -R $(RPREFIX)
@@ -102,14 +96,15 @@ imagedir:
 # This is odd -- better to clean the copy
 	(cd ..; $(MAKE) --no-print-directory PKGDIR=. pkgclean-windlgs)
 	$(CP) -pR ../windlgs $(RPREFIX)/src/library
-ifeq "$(WIN)" "64" 
-# Edit Makeconf
-	$(SED) -i -e 's!# INSTALLER-BUILD:!!' $(RPREFIX)/etc/x64/Makeconf
-# Edit Rcmd_environ
-	$(SED) -i -e 's!# INSTALLER-BUILD:!!' $(RPREFIX)/etc/Rcmd_environ
-# Edit base package profile
-	$(SED) -i -e 's!# INSTALLER-BUILD:!!' $(RPREFIX)/library/base/R/Rprofile
-endif
+# Edit Makeconf, Rcmd_environ, base package profile
+	$(foreach F, \
+	  $(RPREFIX)/etc$(R_ARCH)/Makeconf \
+	  $(RPREFIX)/etc/Rcmd_environ \
+	  $(RPREFIX)/library/base/R/Rprofile, \
+	      $(SED) -i -e 's!# INSTALLER-BUILD:!!' \
+	                -e 's!# INSTALLER-BUILD-$(RTARGET):!!' \
+	             $(F); \
+	)
 # test dir
 	mkdir $(RPREFIX)/tests
 	$(MAKE) --no-print-directory -C ../../../tests -f Makefile.win \
@@ -118,7 +113,7 @@ endif
 	$(FIND) $(RPREFIX) -name .svn -prune -exec rm -Rf \{\} \;
 	$(FIND) $(RPREFIX) -name \*~ -delete
 
-md5sums:
+md5sums: imagedir fixups extras
 	@echo "adding MD5 checksums"
 	@(cd $(RPREFIX); echo "tools:::.installMD5sums(\".\")" | \
 	  R_DEFAULT_PACKAGES=NULL LC_COLLATE=C R_OSTYPE=windows \
@@ -126,7 +121,7 @@ md5sums:
 
 PDF_FILES = $(wildcard $(RPREFIX)/library/*/doc/*.pdf)
 
-fixups:
+fixups: extras
 	echo "make.packages.html(.Library,temp=FALSE,verbose=FALSE)" | $(RPREFIX)/$(BINDIR)/Rterm.exe --vanilla --no-echo LC_COLLATE=C
 	$(CP) -pRf $(R_HOME)/Tcl $(RPREFIX)
 	$(RM) $(RPREFIX)/Tcl*/lib/*.lib
@@ -137,41 +132,15 @@ ifneq ($(strip $(QPDF)),)
 	done
 endif
 
-32bit:
-ifeq "$(WIN)" "64"
-ifneq ($(strip $(HOME32)),)
-	@echo "------------ including 32-bit files"
-	(cd "$(HOME32)"; zip -qr9X 32bit */i386 library/*/libs/i386 bin/R.exe bin/Rscript.exe)
-	unzip -qo "$(HOME32)/32bit" -d $(RPREFIX)
-	rm "$(HOME32)/32bit.zip"
-	mkdir -p $(RPREFIX)/Tcl
-	$(CP) -pRf "$(HOME32)/Tcl/bin" "$(HOME32)/Tcl/lib" $(RPREFIX)/Tcl
-	for f in $(R_PKGS_RECOMMENDED); do \
-	   sed -e 's/Archs: x64/Archs: i386, x64/' \
-             ../../../library/$${f}/DESCRIPTION \
-             > $(RPREFIX)/library/$${f}/DESCRIPTION; \
-	done
-# Edit Makeconf file to default Rtools location
-	$(SED) -e 's!^BINPREF [?]= .*!BINPREF ?= "$$(RTOOLS40_ROOT)/mingw32/bin/"!' \
-	  $(HOME32)/etc/i386/Makeconf > $(RPREFIX)/etc/i386/Makeconf
-else
-	@echo "------------ not including 32-bit files"
-endif
-endif
-
-extras:
-	for f in $(DLLs32); do \
-	  cp "$$f" $(RPREFIX)/bin/i386; \
-	done
+extras: imagedir
 	for f in $(DLLs64); do \
-	  cp "$$f" $(RPREFIX)/bin/x64; \
+	  cp "$$f" $(RPREFIX)/bin$(R_ARCH); \
 	done
 
 ## for Inno Setup installer
 
-R.iss: JRins.R header1.iss types3264.iss types32.iss types64.iss code.iss \
-   reg.iss reg3264.iss reg64.iss \
-   CustomMsg.iss imagedir fixups 32bit extras md5sums \
+R.iss: JRins.R header1.iss types64.iss code.iss reg64.iss \
+   CustomMsg.iss imagedir fixups extras md5sums \
   ../../../VERSION ../../../SVN-REVISION
 	../../../bin$(R_ARCH)/Rscript JRins.R \
 	  $(RPREFIX) $(RPREFIX) $(MDISDI) \
@@ -190,7 +159,7 @@ uuidgen.exe: uuidgen.o
 uuids: uuidgen.exe
 	./uuidgen 10000 > $@
 
-files.wxs: imagedir fixups 32bit extras md5sums
+files.wxs: imagedir fixups extras md5sums
 	"$(WIX3DIR)/heat" dir $(RPREFIX) -sw5150 -nologo -o $@
 
 R.wxs: WIXins.R uuids files.wxs

@@ -155,6 +155,7 @@ void R_CheckUserInterrupt(void)
 }
 
 static SEXP getInterruptCondition(void);
+static void addInternalRestart(RCNTXT *, const char *);
 
 static void onintrEx(Rboolean resumeOK)
 {
@@ -177,7 +178,7 @@ static void onintrEx(Rboolean resumeOK)
 	    endcontext(&restartcontext);
 	    return;
 	}
-	R_InsertRestartHandlers(&restartcontext, "resume");
+	addInternalRestart(&restartcontext, "resume");
 	signalInterrupt();
 	endcontext(&restartcontext);
     }
@@ -1067,7 +1068,8 @@ static void jump_to_top_ex(Rboolean traceback,
 
     /* only run traceback if we are not going to bail out of a
        non-interactive session */
-    if (R_Interactive || haveHandler) {
+
+    if (R_Interactive || haveHandler || R_isTRUE(GetOption1(install("catch.script.errors")))) {
 	/* write traceback if requested, unless we're already doing it
 	   or there is an inconsistency between inError and oldInError
 	   (which should not happen) */
@@ -2020,11 +2022,9 @@ static void signalInterrupt(void)
     }
 }
 
-attribute_hidden void
-R_InsertRestartHandlers(RCNTXT *cptr, const char *cname)
-{
-    SEXP klass, rho, entry, name;
 
+static void checkRestartStacks(RCNTXT *cptr)
+{
     if ((cptr->handlerstack != R_HandlerStack ||
 	 cptr->restartstack != R_RestartStack)) {
 	if (IS_RESTART_BIT_SET(cptr->callflag))
@@ -2032,13 +2032,13 @@ R_InsertRestartHandlers(RCNTXT *cptr, const char *cname)
 	else
 	    error(_("handler or restart stack mismatch in old restart"));
     }
+}
 
-    /**** need more here to keep recursive errors in browser? */
-    rho = cptr->cloenv;
-    PROTECT(klass = mkChar("error"));
-    entry = mkHandlerEntry(klass, rho, R_RestartToken, rho, R_NilValue, TRUE);
-    R_HandlerStack = CONS(entry, R_HandlerStack);
-    UNPROTECT(1);
+static void addInternalRestart(RCNTXT *cptr, const char *cname)
+{
+    checkRestartStacks(cptr);
+    SEXP entry, name;
+
     PROTECT(name = mkString(cname));
     PROTECT(entry = allocVector(VECSXP, 2));
     SET_VECTOR_ELT(entry, 0, name);
@@ -2046,6 +2046,25 @@ R_InsertRestartHandlers(RCNTXT *cptr, const char *cname)
     setAttrib(entry, R_ClassSymbol, mkString("restart"));
     R_RestartStack = CONS(entry, R_RestartStack);
     UNPROTECT(2);
+}
+
+attribute_hidden void
+R_InsertRestartHandlers(RCNTXT *cptr, const char *cname)
+{
+    SEXP klass, rho, entry;
+
+    checkRestartStacks(cptr);
+
+    /**** need more here to keep recursive errors in browser? */
+    SEXP h = GetOption1(install("browser.error.handler"));
+    if (! isFunction(h)) h = R_RestartToken;
+    rho = cptr->cloenv;
+    PROTECT(klass = mkChar("error"));
+    entry = mkHandlerEntry(klass, rho, h, rho, R_NilValue, TRUE);
+    R_HandlerStack = CONS(entry, R_HandlerStack);
+    UNPROTECT(1);
+
+    addInternalRestart(cptr, cname);
 }
 
 attribute_hidden SEXP do_dfltWarn(SEXP call, SEXP op, SEXP args, SEXP rho)
@@ -2339,7 +2358,7 @@ R_BadValueInRCode(SEXP value, SEXP call, SEXP rho, const char *rawmsg,
 	REprintf(" --- R stacktrace ---\n");
 	printwhere();
 	REprintf(" --- value of length: %d type: %s ---\n",
-		 length(value), type2char(TYPEOF(value)));
+		 length(value), R_typeToChar(value));
 	PrintValue(value);
 	REprintf(" --- function from context --- \n");
 	if (R_GlobalContext->callfun != NULL &&
@@ -2792,7 +2811,7 @@ attribute_hidden
 SEXP R_makeNotSubsettableError(SEXP x, SEXP call)
 {
     SEXP cond = R_makeErrorCondition(call, "notSubsettableError", NULL, 1,
-				     R_MSG_ob_nonsub, type2char(TYPEOF(x)));
+				     R_MSG_ob_nonsub, R_typeToChar(x));
     PROTECT(cond);
     R_setConditionField(cond, 2, "object", x);
     UNPROTECT(1);

@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998-2022   The R Core Team
+ *  Copyright (C) 1998-2023   The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *  Copyright (C) 2004        The R Foundation
  *
@@ -1504,7 +1504,7 @@ attribute_hidden SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP sn = CADR(args);
     R_xlen_t n;
     if (TYPEOF(sn) == REALSXP)  {
-	double d = REAL(x)[0];
+	double d = REAL(sn)[0];
 	if(ISNAN(d)) error(_("vector size cannot be NA/NaN"));
 	if(!R_FINITE(d)) error(_("vector size cannot be infinite"));
 	if(d > R_XLEN_T_MAX) error(_("vector size specified is too large"));
@@ -1599,7 +1599,7 @@ attribute_hidden SEXP do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(fn = findFun(install("xtfrm.default"), rho));
     PROTECT(prargs = promiseArgs(args, R_GlobalEnv));
     IF_PROMSXP_SET_PRVALUE(CAR(prargs), CAR(args));
-    ans = applyClosure(call, fn, prargs, rho, R_NilValue);
+    ans = applyClosure(call, fn, prargs, rho, R_NilValue, TRUE);
     UNPROTECT(2);
     return ans;
 

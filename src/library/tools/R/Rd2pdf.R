@@ -1,7 +1,7 @@
 #  File src/library/tools/R/Rd2pdf.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2022 The R Core Team
+#  Copyright (C) 1995-2023 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -71,6 +71,8 @@
     }
 
     desc <- enc2utf8(.read_description(descfile))
+    ## Drop empty fields: these are usually taken as missing.    
+    desc <- desc[nzchar(desc)]
     if (is.character(outfile)) {
         out <- file(outfile, "a")
         on.exit(close(out))
@@ -171,8 +173,6 @@
                  silent = silent, pkglist = pkglist)
     } else {
         files <- strsplit(files, "[[:space:]]+")[[1L]]
-        latexdir <- tempfile("ltx")
-        dir.create(latexdir)
         if (!silent) message("Converting Rd files to LaTeX ...")
         if (is.character(outfile)) {
             outfile <- file(outfile, if (append) "at" else "wt")
@@ -183,20 +183,18 @@
         macros <- initialRdMacros(pkglist = pkglist)
         for(f in files) {
             if (!silent) cat("  ", basename(f), "\n", sep="")
-            if (!internals) {
-                lines <- readLines(f)
-                if (any(grepl("\\\\keyword\\{\\s*internal\\s*\\}",
-                         lines, perl = TRUE))) next
-            }
-            out <-  file.path(latexdir, sub("\\.[Rr]d$", ".tex", basename(f)))
-            ## people have file names with quotes in them.
-            res <- Rd2latex(f, out, encoding = encoding,
+            rd <- parse_Rd(f, encoding = encoding, macros = macros)
+            if (!internals &&
+                any(.Rd_get_metadata(rd, "keyword") == "internal"))
+                next
+            lines <- character()
+            con <- textConnection("lines", "w", local = TRUE)
+            res <- Rd2latex(rd, con,
                             outputEncoding = outputEncoding,
-                            stages = c("build", "install", "render"),
-                            macros = macros)
+                            stages = c("build", "install", "render"))
+            close(con) # ensure final line is output
             latexEncodings <- c(latexEncodings,
                                 attr(res,"latexEncoding"))
-            lines <- readLines(out)
             if (attr(res, "hasFigures")) {
                 graphicspath <-
                     paste0("\\graphicspath{{\"",
@@ -243,7 +241,7 @@
     latexEncodings <- character() # Record any encodings used in the output
     hasFigures <- FALSE           # and whether graphics is used
 
-    ## First check for a latex dir.
+    ## First check for a latex dir (from R CMD INSTALL --latex).
     ## Second guess is this is a >= 2.10.0 package with stored .rds files.
     ## If it does not exist, guess this is a source package.
     latexdir <- file.path(pkgdir, "latex")
@@ -326,6 +324,19 @@
                 files <- as.list(files)
                 files[pos] <- db[pos > 0L]
             }
+            ## Use a stage23 Rd db if there is one and we were asked to
+            ## use it.
+            built_file <- file.path(pkgdir, "build", "stage23.rdb")
+            if(file_test("-f", built_file)) {
+                use <- Sys.getenv("_RD2PDF_USE_BUILT_STAGE23_RD_DB_IF_AVAILABLE_",
+                                  "FALSE")
+                if(isTRUE(config_val_to_logical(use))) {
+                    db <- readRDS(built_file)
+                    pos <- match(names(db), basename(paths), nomatch = 0L)
+                    files <- as.list(files)
+                    files[pos] <- db[pos > 0L]
+                }
+            }
             latexdir <- tempfile("ltx")
             dir.create(latexdir)
             if (!silent) message("Converting Rd files to LaTeX ",
@@ -359,14 +370,7 @@
             if (!silent) message(domain = NA)
         }
     }
-    ## they might be zipped up
-    if (file.exists(f <- file.path(latexdir, "Rhelp.zip"))) {
-        dir.create(newdir <- tempfile("latex"))
-        utils::unzip(f, exdir = newdir)
-        ## res <- system(paste("unzip -q", f, "-d", newdir))
-        ## if (res) stop("unzipping latex files failed")
-        latexdir <- newdir
-    }
+
     ## There are some restrictions, but the former "[[:alnum:]]+\\.tex$" was
     ## too strict.
     files <- dir(latexdir, pattern = "\\.tex$", full.names = TRUE)
@@ -406,6 +410,10 @@
     }
 
     topics <- topics[nzchar(topics)]
+    ## <FIXME>
+    ## these 'topics' come from Rd \name, not \alias entries, but we should
+    ## (and WRE says) put the page aliased to the pkgname-package *topic* first
+    ## </FIXME>
     summ <- grep("-package$", topics, perl = TRUE)
     topics <- if (length(summ)) c(topics[summ], re(topics[-summ])) else re(topics)
     for (f in names(topics)) writeLines(readLines(f), outcon)
@@ -635,7 +643,7 @@ function(pkgdir, outfile, title, silent = FALSE,
 
     ## Rd2.tex part 2: body
     toc <- if (dir.exists(files_or_dir)) {
-        "\\Rdcontents{\\R{} topics documented:}"
+        "\\Rdcontents{Table of contents:}"
     } else ""
 
     latexEncodings <- if(description) "utf8" else character()

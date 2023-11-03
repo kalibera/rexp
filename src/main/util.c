@@ -189,6 +189,15 @@ Rboolean isOrdered(SEXP s)
 	    && inherits(s, "ordered"));
 }
 
+Rboolean R_isTRUE(SEXP x)
+{
+    if (TYPEOF(x) == LGLSXP && XLENGTH(x) == 1) {
+	int val = LOGICAL(x)[0];
+	return val != NA_LOGICAL && val;
+    }
+    return FALSE;
+}
+
 
 const static struct {
     const char * const str;
@@ -219,6 +228,7 @@ TypeTable[] = {
     { "weakref",	WEAKREFSXP },
     { "raw",		RAWSXP },
     { "S4",		S4SXP },
+    { "object",		OBJSXP }, /* == S4SXP */
     /* aliases : */
     { "numeric",	REALSXP	   },
     { "name",		SYMSXP	   },
@@ -234,6 +244,7 @@ SEXPTYPE str2type(const char *s)
 	if (!strcmp(s, TypeTable[i].str))
 	    return (SEXPTYPE) TypeTable[i].type;
     }
+
     /* SEXPTYPE is an unsigned int, so the compiler warns us w/o the cast. */
     return (SEXPTYPE) -1;
 }
@@ -326,6 +337,22 @@ const char *type2char(SEXPTYPE t) /* returns a char* */
     static char buf[50];
     snprintf(buf, 50, "unknown type #%d", t);
     return buf;
+}
+
+#ifdef USE_TYPE2CHAR_2
+const char *R_typeToChar2(SEXP x, SEXPTYPE t) {
+    return (t != OBJSXP)
+	? type2char(t)
+	: (IS_S4_OBJECT(x) ? "S4" : "object");
+}
+#endif
+
+const char *R_typeToChar(SEXP x) {
+    // = type2char() but distinguishing {S4, object}
+    if(TYPEOF(x) == OBJSXP)
+	return IS_S4_OBJECT(x) ? "S4" : "object";
+    else
+	return type2char(TYPEOF(x));
 }
 
 #ifdef UNUSED
@@ -1286,7 +1313,7 @@ static const unsigned char utf8_table4[] = {
   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
   3,3,3,3,3,3,3,3,4,4,4,4,5,5,5,5 };
 
-int attribute_hidden utf8clen(char c)
+int utf8clen(char c)
 {
     /* This allows through 8-bit chars 10xxxxxx, which are invalid */
     if ((c & 0xc0) != 0xc0) return 1;
@@ -1315,7 +1342,7 @@ utf8toucs32(wchar_t high, const char *s)
 
 /* These return the result in wchar_t.  If wchar_t is 16 bit (e.g. UTF-16LE on Windows)
    only the high surrogate is returned; call utf8toutf16low next. */
-size_t attribute_hidden
+size_t 
 utf8toucs(wchar_t *wc, const char *s)
 {
     unsigned int byte;
@@ -1614,7 +1641,6 @@ char* mbcsTruncateToValid(char *s)
     return s;
 }
 
-attribute_hidden
 Rboolean mbcsValid(const char *str)
 {
     return  ((int)mbstowcs(NULL, str, 0) >= 0);

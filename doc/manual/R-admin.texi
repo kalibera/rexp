@@ -226,9 +226,10 @@ wget -r -l1 --no-parent -A\*.gz -nd -P src/library/Recommended \
 
 @R{} will configure and build under most common Unix and Unix-alike
 platforms including @samp{@var{cpu}-*-linux-gnu} for the
-@cputype{alpha}, @cputype{arm64}, @cputype{hppa}, @cputype{ix86},
-@cputype{m68k}, @cputype{mips}, @cputype{mipsel}#, @cputype{ppc64},
-@cputype{s390x}, @cputype{sparc64}, and @cputype{x86_64} @acronym{CPU}s,
+@cputype{alpha}, @cputype{arm64} (also known as @cputype{aarch64},
+@cputype{ix86}, @cputype{mips}, @cputype{mipsel}#, @cputype{ppc64},
+@cputype{riscv64}, @cputype{s390x}, @cputype{sparc64}, and
+@cputype{x86_64} @acronym{CPU}s,
 @c (see e.g.@:  @uref{https://buildd.debian.org/build.php?&pkg=r-base}),
 @c Actually, see https://packages.debian.org/unstable/math/r-base-core as
 @c the build daemon is not used for all platforms; note also that Debian
@@ -236,10 +237,11 @@ platforms including @samp{@var{cpu}-*-linux-gnu} for the
 @samp{x86_64-@/apple-@/darwin} and
 @samp{aarch64-@/apple-@/darwin}@footnote{aka `Apple Silicon', known to
 some as @samp{arm64-@/apple-@/darwin}.}  as well as perhaps (it is
-tested less frequently on these platforms) @samp{i386-@/sun-@/solaris},
-@samp{i386-@/*-@/freebsd}, @samp{x86_64-@/*-@/freebsd},
-@samp{i386-@/*-@/netbsd}, @samp{x86_64-@/*-@/openbsd} and
-@samp{powerpc-@/ibm-@/aix6*}
+tested less frequently on these platforms) @samp{x86_64-@/*-@/freebsd},
+@samp{x86_64-@/*-@/openbsd} and @samp{powerpc-@/ibm-@/aix6*}
+
+Only 64-bit platforms are tested regularly, and @command{configure}
+will warn if it encounters a 32-bit one.
 
 @cindex Linux
 @cindex macOS
@@ -803,6 +805,10 @@ make prefix=/path/to/here uninstall-libR
 @node Sub-architectures, Other Options, Uninstallation, Installing R under Unix-alikes
 @section Sub-architectures
 
+Now 32-bit builds are unsupported, this section is only of historical
+interest, although in future the mechanisms could be used for different
+CPU types on the same OS (e.g. @cputype{x86_64} and @cputype{aarch64}).
+
 Some platforms can support closely related builds of @R{} which can
 share all but the executables and dynamic objects.  Examples include
 builds under Linux for different @acronym{CPU}s or 32- and 64-bit
@@ -865,7 +871,7 @@ R --arch=@var{name} CMD make check[-devel|all]
 @noindent
 to select a sub-architecture to check.
 
-Sub-architectures are also used on Windows, but by selecting executables
+Sub-architectures were also used on Windows, but by selecting executables
 within the appropriate @file{bin} directory,
 @file{@var{R_HOME}/bin/x64}.  For
 backwards compatibility there are executables
@@ -880,55 +886,6 @@ installation default (which is 32-bit for a combined 32/64 bit @R{}
 installation). @R{} 4.2.0 follows the scheme, but supports and includes
 only 64-bit builds.
 
-@menu
-* Multilib::
-@end menu
-
-@node Multilib,  , Sub-architectures, Sub-architectures
-@subsection Multilib
-
-For some Linux distributions@footnote{mainly on RedHat and Fedora, whose
-layout is described here.}, there is an alternative mechanism for mixing
-32-bit and 64-bit libraries known as @emph{multilib}. If the Linux
-distribution supports multilib, then parallel builds of @R{} may be
-installed in the sub-directories @file{lib} (32-bit) and @file{lib64}
-(64-bit).  The build to be run may then be selected using the
-@command{setarch} command. For example, a 32-bit build may be run by
-
-@example
-setarch i686 R
-@end example
-
-The @command{setarch} command is only operational if both 32-bit and
-64-bit builds are installed. If there is only one installation of @R{},
-then this will always be run regardless of the architecture specified
-by the @command{setarch} command.
-
-There can be problems with installing packages on the non-native
-architecture.  It is a good idea to run e.g.@: @code{setarch i686 R} for
-sessions in which packages are to be installed, even if that is the only
-version of @R{} installed (since this tells the package installation
-code the architecture needed).
-
-There is a potential problem with packages using Java, as the
-post-install for a @cputype{i686} RPM on @cputype{x86_64} Linux
-reconfigures Java and will find the @cputype{x86_64} Java.  If you know
-where a 32-bit Java is installed you may be able to run (as root)
-
-@example
-export JAVA_HOME=<path to jre directory of 32-bit Java>
-setarch i686 R CMD javareconf
-@end example
-
-@noindent
-to get a suitable setting.
-
-When this mechanism is used, the version of @command{Rscript} in
-e.g.@: @file{/usr/bin} will be the last installed, but an
-architecture-specific version will be available in
-e.g.@: @file{/usr/lib64/R/bin}.  Normally all installed architectures
-will run on the platform so the architecture of @command{Rscript} does
-not matter.
 
 @node Other Options, Testing a Unix-alike Installation, Sub-architectures, Installing R under Unix-alikes
 @section Other Options
@@ -1019,10 +976,10 @@ files, so there is negligible difference.
 @subsection OpenMP Support
 
 By default @command{configure} searches for suitable flags@footnote{for
-example, @option{-fopenmp}, @option{-xopenmp} or @option{-qopenmp}.
-This includes for @command{clang} and the Intel and Oracle compilers.}
-for OpenMP support for the C, C++ (default standard) and Fortran
-compilers.
+example, @option{-fopenmp}, @option{-fiopenmp}, @option{-xopenmp} or
+@option{-qopenmp}.  This includes for @command{clang} and the Intel and
+Oracle compilers.}  for OpenMP support for the C, C++ (default standard)
+and Fortran compilers.
 
 Only the C result is currently used for @R{} itself, and only if
 @code{MAIN_LD}/@code{DYLIB_LD} were not specified.  This can be
@@ -1110,8 +1067,8 @@ Intel compilers.  Currently accepted values are (plus some synonyms)
 @example
 g++:     c++11 gnu+11 c++14 gnu++14 c++17 gnu++17 c++2a gnu++2a (from 8)
          c++20 gnu++20 (from 10) c++23 gnu++23 c++2b gnu++2b (from 11)
-Intel:   c++11 c++14 (from 16.0) c++17 (from 17.0) c++20 (from 2021.1)
-         c++23 (from 2022.2)
+Intel:   c++11  gnu+11 c++14 gnu++14 c++17 gnu++17
+         c++20 gnu++20 (from 2021.1) c++2b gnu++2b (from 2022.2)
 @end example
 @noindent
 (Those for LLVM @command{clang++} are documented at
@@ -1143,7 +1100,8 @@ suffice.
 @subsection C standards
 
 Compiling @R{} requires C99 or later: C11 and C17 are minor updates, but
-the substantial update planned for C23 will also be supported.
+the substantial update planned for `C23' (now expected @emph{ca} April
+2024) will also be supported.
 
 As from @R{} 4.3.0 there is support for packages to indicate their
 preferred C version.  Macros @code{CC17}, @code{C17FLAGS}, @code{CC23}
@@ -1156,7 +1114,7 @@ be used as identifiers.  Those for C23 should support new types such as
 Some compilers warn enthusiastically about prototypes.  For most,
 omitting @option{-Wstrict-prototypes} in @code{C17FLAGS} suffices.
 However, versions 15 and later of LLVM @command{clang} and 14.0.3 and
-later on Apple clang warn by default in all modes if @option{-Wall} or
+later of Apple clang warn by default in all modes if @option{-Wall} or
 @option{-pedantic} is used, and may need
 @option{-Wno-strict-prototypes}.
 
@@ -1264,9 +1222,10 @@ confused compiler messages.
 
 LLVM supports another type of LTO called `Thin LTO' as well as a similar
 implementation to GCC, sometimes called `Full LTO'.  (See
-@uref{https://clang.llvm.org/docs/ThinLTO.html}.)  Currently the only
-LLVM compiler relevant to @R{} is @command{clang} for which this can be
-selected by setting macro @samp{LTO=-flto=thin}.  LLVM has
+@uref{https://clang.llvm.org/docs/ThinLTO.html}.)  Currently the LLVM
+compilers relevant to @R{} are @command{clang} and @command{flang} for
+which this can be selected by setting macro @samp{LTO=-flto=thin}.  LLVM
+has
 @example
 AR=llvm-ar
 RANLIB=llvm-ranlib
@@ -1289,6 +1248,17 @@ code compiled with @command{gfortran}.
 It is said to be particularly beneficial to use @option{-O3} for
 @command{clang} in conjunction with LTO.
 
+It seems that @command{flang} may support LTO, but with no documentation
+as yet.
+
+The 2020s versions of Intel's C/C++ compilers are based on LLVM and as
+such support LLVM-style LTO, both `full' and `thin'.  This might use
+something like
+@example
+LTO=-flto=thin -flto-jobs=8
+@end example
+
+
 @node LTO for package checking,  , LTO with LLVM, Link-Time Optimization
 @subsubsection LTO for package checking
 
@@ -1307,17 +1277,17 @@ of writing) Fortran @code{LOGICAL} corresponds to @code{int_least32_t *}
 in C.
 
 @c This worked in 2019 but with Fedora 32 did not export dpotrf from dlapack.o
-On some systems it is possible to build the BLAS, LINPACK and LAPACK
-support as static libraries containing intermediate-level code that LTO
-will compile for all objects linked against these libraries, by
-configuring @R{} with @option{--enable-lto=check}.  This checks the
-consistency of calls to BLAS/LINPACK/LAPACK in any packages installed
-using the build. @strong{NB:} as its name suggests, this option is
-intended only for checking installation of @R{} and packages: it
-includes these library routines (those called directly and all they
-depend on) in each package.  This is unlikely to work in conjunction
-with non-default options for BLAS and LAPACK, and `linking' against
-these libraries may be very slow.
+@c On some systems it is possible to build the BLAS, LINPACK and LAPACK
+@c support as static libraries containing intermediate-level code that LTO
+@c will compile for all objects linked against these libraries, by
+@c configuring @R{} with @option{--enable-lto=check}.  This checks the
+@c consistency of calls to BLAS/LINPACK/LAPACK in any packages installed
+@c using the build. @strong{NB:} as its name suggests, this option is
+@c intended only for checking installation of @R{} and packages: it
+@c includes these library routines (those called directly and all they
+@c depend on) in each package.  This is unlikely to work in conjunction
+@c with non-default options for BLAS and LAPACK, and `linking' against
+@c these libraries may be very slow.
 
 @node Testing a Unix-alike Installation,  , Other Options, Installing R under Unix-alikes
 @section Testing an Installation
@@ -1608,7 +1578,7 @@ OS X' which takes you to a new page. Two files are offered for download,
 @file{R-@value{VERSIONno}-arm64.pkg} and @file{R-@value{VERSIONno}.pkg}.
 Both are for macOS 11 or later (Big Sur, Monterey, Ventura, @dots{}).
 
-The first runs is for `Apple Silicon' (aka `M1' or `M2') Macs, the
+The first runs is for `Apple Silicon' (aka `M1', `M2' or 'M3') Macs, the
 second for older Macs with an @cputype{x86_64} (Intel) CPU.
 
 Package @file{R-@value{VERSIONno}.pkg} also be installed on `Apple
@@ -1835,7 +1805,13 @@ installed version.
 @chapter Running R
 
 How to start @R{} and what command-line options are available is discussed
-in @ref{Invoking R, , Invoking R, R-intro, An Introduction to R}.
+in 
+@ifset UseExternalXrefs
+@ref{Invoking R, , Invoking R, R-intro, An Introduction to R}.
+@end ifset
+@ifclear UseExternalXrefs
+section `Invoking R' in the `An Introduction to R' manual.
+@end ifclear
 
 You should ensure that the shell has set adequate resource limits: @R{}
 expects a stack size of at least 8MB and to be able to open at least 256
@@ -2211,9 +2187,10 @@ Note that most binary packages which include compiled code are tied to a
 particular series (e.g.@: @R{} 4.4.x or 4.3.x) of @R{}.
 
 Installing source packages which do not contain compiled code should
-work with no additional tools. For others you will need the
-`Command Line Tools' for @command{Xcode} and compilers which match those
-used to build @R{}: see @ref{macOS}.
+work with no additional tools. For others you will need the `Command
+Line Tools' for @command{Xcode} and compilers which match those used to
+build @R{}, plus a Fortran compiler for packages which contain Fortran
+code: see @ref{macOS}.
 
 Package @CRANpkg{rJava} and those which depend on it need a Java runtime
 installed and several packages need X11 installed, including those using
@@ -2324,18 +2301,18 @@ differ from the Open Source project.} available @emph{via}
 @uref{https://opensource.apple.com} -- this has been used for
 @code{iodbc}.
 
-Those using Command Line Tools / Xcode 12 or later (as released for
-macOS 11 `Big Sur') probably want to arrange that the flag
+@c Those using Command Line Tools / Xcode 12 or later (as released for
+@c macOS 11 `Big Sur') probably want to arrange that the flag
 
-@example
--Wno-implicit-function-declaration
-@end example
+@c @example
+@c -Wno-implicit-function-declaration
+@c @end example
 
-@noindent
-is part of @code{CFLAGS}.  Apple has changed the default to make
-implicit declarations a compilation error and authors of packages and
-external software have been unaware that this might be done --- most
-issues seen were in @command{configure} scripts.
+@c @noindent
+@c is part of @code{CFLAGS}.  Apple has changed the default to make
+@c implicit declarations a compilation error and authors of packages and
+@c external software have been unaware that this might be done --- most
+@c issues seen were in @command{configure} scripts.
 
 Some care may be needed with selecting compilers when installing external
 software for use with packages.  The `system' compilers as used when
@@ -2353,15 +2330,17 @@ consistency one can use
 @end example
 
 @noindent
-(avoiding @command{autoconf}'s default @option{-g}).  Be careful if you
-put the @file{/usr/local/gfortran/bin} directory on your path as that
-contains (real) @command{gcc} and @command{g++} which may be found
-rather the Apple-provided commands, and may not be able to find the
-headers and libraries@footnote{From Big Sur those libraries are not
-publicly visible: rather the system compilers link to `text-based
-definition' (@file{.tbd}) files.} of the SDK.  As from @R{} 4.3.0,
-@command{R CMD INSTALL} and @code{install.packages()} try to invoke
-@command{configure} with the same compilers and flags used to build @R{}.
+(avoiding @command{autoconf}'s default @option{-g}).
+@c Be careful if you
+@c put the @file{/usr/local/gfortran/bin} directory on your path as that
+@c contains (real) @command{gcc} and @command{g++} which may be found
+@c rather the Apple-provided commands, and may not be able to find the
+@c headers and libraries@footnote{From Big Sur those libraries are not
+@c publicly visible: rather the system compilers link to `text-based
+@c definition' (@file{.tbd}) files.} of the SDK.
+As from @R{} 4.3.0, @command{R CMD INSTALL} and
+@code{install.packages()} try to invoke @command{configure} with the
+same compilers and flags used to build @R{}.
 
 For @cputype{arm64}, not all configure scripts have been updated to
 recognize the platform and so might need the flag
@@ -2942,76 +2921,7 @@ prepare and install translation catalogues.
 @node Choosing between 32- and 64-bit builds, The standalone Rmath library, Internationalization, Top
 @chapter Choosing between 32- and 64-bit builds
 
-Almost all current @acronym{CPU}s have both 32- and 64-bit sets of
-instructions.  Some OSes running on such @acronym{CPU}s offer the choice
-of building a 32-bit or a 64-bit version of @R{} (and details are given
-below under specific OSes).  For most a 64-bit version is the default
-and increasingly only that is supported---for example macOS has been
-64-bit-only since Catalina (released in 2019) and @R{} supports only
-64-bit Windows since @R{} 4.2.0.
-
-All current versions of @R{} use 32-bit integers (this is enforced in
-the build) and @acronym{ISO}/@acronym{IEC}@tie{}60559@footnote{also
-known as @acronym{IEEE}@tie{}754} double-precision reals, and so compute
-to the same precision@footnote{at least when storing quantities: the
-on-FPU precision is allowed to vary} and with the same limits on the
-sizes of numerical quantities.  The principal difference is in the size
-of the pointers.
-
-64-bit builds have both advantages and disadvantages:
-@itemize
-@item
-The total virtual memory space made available to a 32-bit process is
-limited by the pointer size to 4GB, and on most OSes to 3GB (or even
-2GB).  The limits for 64-bit processes are much larger (e.g.@:
-8--128TB).
-
-@R{} allocates memory for large objects as needed, and removes any
-unused ones at garbage collection.  When the sizes of objects become an
-appreciable fraction of the address limit, fragmentation of the address
-space becomes an issue and there may be no hole available that is the
-size requested.  This can cause more frequent garbage collection or the
-inability to allocate large objects.  As a guide, this will become an
-issue for 32-bit builds with objects more than 10% of the size of the
-address space (around 300Mb) or when the total size of objects in use is
-around one third (around 1Gb).
-
-@item
-Only 64-bit builds support `long vectors', those with @math{2^{31}} or
-more elements (which needs at least 16GB of storage for each numeric
-vector).
-
-@item
-Most 32-bit OSes by default limit file sizes to 2GB (and this may also
-apply to 32-bit builds on 64-bit OSes).  This can often be worked
-around: @command{configure} selects suitable defines if this is
-possible.  64-bit builds have much larger limits.
-
-@item
-Because the pointers are larger, @R{}'s basic structures are larger.
-This means that @R{} objects take more space and (usually) more time to
-manipulate.  So 64-bit builds of @R{} will, all other things being
-equal, run slower than 32-bit builds.
-
-@item
-However, `other things' may not be equal.  In the specific case of
-@cputype{x86_64} @emph{vs} @cputype{ix86}, the 64-bit CPU has features
-(such as SSE2 instructions) which are guaranteed to be present but are
-optional on the 32-bit CPU, and also has more general-purpose registers.
-This means that on chips like a desktop Intel i7 the vanilla 64-bit
-version of @R{} has been around 10% faster on both Linux and macOS.
-(Laptop CPUs are usually relatively slower in 64-bit mode.)
-@end itemize
-
-So, for speed you may want to use a 32-bit build (especially on a
-laptop), but to handle large datasets (and perhaps large files) a 64-bit
-build.  You can often build both and install them in the same place:
-@xref{Sub-architectures}.
-
-Even on 64-bit builds of @R{} there are limits on the size of @R{}
-objects (see @code{help("Memory-limits")}), some of which stem from the
-use of 32-bit integers (especially in Fortran code).  For example, each
-dimension of an array is limited to @math{2^{31} - 1}.
+As from @R{} 4.4.0 32-bit builds are unsupported.
 
 @node The standalone Rmath library, Essential and useful other programs under a Unix-alike, Choosing between 32- and 64-bit builds, Top
 @chapter The standalone Rmath library
@@ -3029,7 +2939,7 @@ is the current working directory (in the build directory tree on a
 Unix-alike if that is separate from the sources).
 
 @file{Rmath.h} contains @samp{R_VERSION_STRING}, which is a character
-string containing the current @R{} version, for example @code{"4.0.0"}.
+string containing the current @R{} version, for example @code{"4.4.0"}.
 
 There is full access to @R{}'s handling of @code{NaN}, @code{Inf} and
 @code{-Inf} via special versions of the macros and functions
@@ -3548,6 +3458,9 @@ uses @file{rpc/xdr.h} but that includes @file{netconfig.h} from the top
 @file{tirpc} directory.} need to be on the C include path or under
 @file{/usr/include/tirpc}.
 
+Library @code{libdeflate} (@url{https://github.com/ebiggers/libdeflate})
+is used by @code{memCompress()} and @code{memDecompress()} if available.
+
 Use of the X11 clipboard selection requires the @code{Xmu} headers and
 libraries.  These are normally part of an X11 installation (e.g.@: the
 Debian meta-package @samp{xorg-dev}), but some distributions have split
@@ -3577,12 +3490,12 @@ following packages and their development versions, and this may provide
 a useful checklist for other systems:
 @example
 bzip2 cairo fontconfig freetype fribidi gcc gcc-gfortran gcc-c++ glib2
-glibc harfbuzz libX11 libXext libXt libcurl libicu libjpeg libpng
-libtiff libtirpc libxcrypt ncurses pango pkgconf-pkg-config pcre2
-readline tcl tk xz zlib
+glibc harfbuzz lapack libX11 libXext libXt libcurl libdeflate libicu
+libjpeg libpng libtiff libtirpc libxcrypt ncurses pango
+pkgconf-pkg-config pcre2 readline tcl tk xz zlib
 @end example
 @noindent
-plus, preferably a TeX installation, Java and LAPACK >= 3.10.0.
+plus, preferably a TeX installation and Java.
 
 @menu
 * Tcl/Tk::
@@ -3813,10 +3726,13 @@ is an instruction to link against @samp{-lfoo} to find an external
 @acronym{BLAS} (which needs to be found both at link time and run time).
 
 The configure code checks that the external @acronym{BLAS} is complete
-(it must include all double precision and double complex routines, as
-well as @code{LSAME}), and appears to be usable.  However, an external
-@acronym{BLAS} has to be usable from a shared object (so must contain
-position-independent code), and that is not checked.
+(as of LAPACK 3.9.1: it must include all double precision and double
+complex routines, as well as @code{LSAME}), and appears to be usable.
+However, an external @acronym{BLAS} has to be usable from a shared
+object (so must contain position-independent code), and that is not
+checked.  Also, the BLAS can be switched after configure is run, either
+as a symbolic link or by the mechanisms mentioned below, and this can
+defeat the completeness check.
 
 Some enhanced @acronym{BLAS}es are compiler-system-specific
 (@code{Accelerate} on macOS, @code{sunperf} on Solaris@footnote{Using
@@ -3833,7 +3749,7 @@ to use an enhanced @acronym{BLAS} then packages such as
 @CRANpkg{quantreg} will need to be re-installed.
 
 Debian/Ubuntu systems provide a system-specific way to switch the BLAS
-in use: Build @R{} with @option{-with-blas} to select the OS version of
+in use: Build @R{} with @option{--with-blas} to select the OS version of
 the reference BLAS, and then use @command{update-alternatives} to switch
 between the available BLAS libraries.  See
 @uref{https://wiki.debian.org/DebianScience/LinearAlgebraLibraries}.
@@ -3845,9 +3761,7 @@ rather than overriding @code{libblas}, this requires configuring @R{}
 with option @option{--with-blas=flexiblas}.  `Backend' wrappers are
 available for the reference BLAS, ATLAS and serial, threaded and OpenMP
 builds of OpenBLAS and BLIS.  This can be controlled from a running @R{}
-session by package @CRANpkg{flexiblas}.  Apparently undocumented:
-FlexiBLAS on Fedora provides a complete LAPACK, but not the enhanced
-routines from ATLAS or OpenBLAS.
+session by package @CRANpkg{flexiblas}.
 
 BLAS implementations which use parallel computations can be
 non-deterministic: this is known for ATLAS.
@@ -3938,7 +3852,7 @@ This can be used by configuring @R{} with something like
 See @pxref{Shared BLAS} for an alternative (and in many ways preferable)
 way to use them.
 
-Some platforms provide multiple builds of OpenBLAS: for example Fedora 34
+Some platforms provide multiple builds of OpenBLAS: for example Fedora
 has RPMs@footnote{(and more, e.g.@: for 64-bit ints and static versions).}
 @example
 openblas
@@ -3985,22 +3899,24 @@ in the BLIS libraries.
 @node MKL, Shared BLAS, OpenBLAS and BLIS, BLAS
 @subsubsection Intel MKL
 For Intel processors (and perhaps others) and some distributions of
-Linux, there is Intel's Math Kernel Library@footnote{Sometimes known as
+Linux, there is Intel's Math Kernel Library@footnote{Nowadays known as
 `Intel oneAPI Math Kernel Library' or even `oneMKL'.}.  You are
-encouraged to read the documentation which is installed with the
-library before attempting to link to MKL.  This includes a `link line
-advisor' which will suggest appropriate incantations: its use is
-recommended.  Or see
-@uref{https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-link-line-advisor.html#gs.vpt6qp}.
+encouraged to read the documentation which is installed with the library
+before attempting to link to MKL.  This includes a `link line advisor'
+which will suggest appropriate incantations: its use is recommended.  Or
+see
+@uref{https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-link-line-advisor.html#gs.vpt6qp}
+(which at the time of writing selected the Intel library for linking with
+GCC).
 
 There are also versions of MKL for macOS@footnote{The issue for macOS
 has been the use of double-complex routines.} and Windows, but when
 these have been tried they did not work with the default compilers used
 for @R{} on those platforms.
 
-The MKL interface has changed several times but has been stable in
-recent years: the following examples have been used with versions 10.3
-to 2023.0.0, for GCC compilers on @cputype{x86_64} CPUs.
+The following examples have been used with MKL versions 10.3 to
+2023.2.0, for GCC compilers on @cputype{x86_64} CPUs.  (See also
+@ref{Intel compilers}.)
 
 To use a sequential version of MKL we used
 
@@ -4041,8 +3957,12 @@ from Debian/Ubuntu package @code{r-base} would use it.  It is, however,
 still essential to set @code{MKL_INTERFACE_LAYER} and
 @code{MKL_THREADING_LAYER} before running @R{}, otherwise MKL computations
 will produce incorrect results. @R{} does not have to be rebuilt to use MKL,
-but @code{configure} include tests which may discover some errors such as a
+but @code{configure} includes tests which may discover some errors such as a
 failure to set the correct OpenMP and MKL interface layer.
+
+Note that the Debian/Ubuntu distribution can be quite old (for example
+@code{2020.4} in mid-2023 when @code{2023.1} was current): this can be
+important for the LAPACK version included.
 
 @noindent
 The default number of threads will be chosen by the OpenMP software, but
@@ -4056,6 +3976,15 @@ applications that require some of the FFTW3 functionality unsupported in
 MKL.  Please see the MKL manuals for description of these limitations and
 for instructions on how to create a custom version of MKL which excludes the
 FFTW3 wrappers.
+
+There is Intel documentation for building @R{} with MKL at
+@uref{https://www.intel.com/content/www/us/en/developer/articles/technical/using-onemkl-with-r.html}:
+that includes
+@example
+-Wl,--no-as-needed
+@end example
+@noindent
+which we have not found necessary.
 
 @c https://stat.ethz.ch/pipermail/r-devel/2015-September/071717.html
 @c It was reported in 2015 that
@@ -4149,7 +4078,7 @@ which is used.
 @cindex LAPACK library
 
 If when configuring @R{} a system LAPACK library is found of version
-3.10.0 or later (and not does contain BLAS routines) it will be used
+3.10.0 or later (and does not contain BLAS routines) it will be used
 instead of compiling the LAPACK code in the package sources.  This can
 be prevented by configuring @R{} with @option{--without-lapack}.
 Using a static @file{liblapack.a} is not supported.
@@ -4157,7 +4086,7 @@ Using a static @file{liblapack.a} is not supported.
 It is assumed that @code{-llapack} is the reference LAPACK library but
 on Debian/Ubuntu it can be switched, including after @R{} is installed.
 On such a platform it is better to use @option{--without-lapack} or
-@option{---with-blas--with-lapack} (see below) explicitly.  The known
+@option{--with-blas --with-lapack} (see below) explicitly.  The known
 examples@footnote{ATLAS, OpenBLAS and Accelerate.} of a
 non-reference LAPACK library found at installation all contain BLAS
 routines so are not used by a default @command{configure} run.
@@ -4731,16 +4660,19 @@ Windows: _WIN32, _WIN64
 
 Identifying compilers can be very tricky.  GCC defines @code{__GNUC__},
 but so do other compilers claiming conformance with it, notably (LLVM
-and Apple) @command{clang} and recent Intel compilers.  Further, they
-use the value of @code{__GNUC__} for their version, not the version of
-GCC they claim to be compatible with.  Both LLVM and Apple
-@command{clang} define @code{__clang__} as their major version, but for
-example Apple's 13.x.y is very different from LLVM's 13.x.y.  And
-compilers based on LLVM @command{clang}, for example from IBM, will
-define this.  Some of the included software uses @code{__APPLE_CC__} to
-identify an Apple compiler (which used to include Apple builds of GCC),
-but Apple @command{clang} is better identified by the
-@code{__apple_build_version__} macro.
+and Apple) @command{clang} and Intel compilers.  Further, some use the
+value of @code{__GNUC__} for their version, not the version of GCC they
+claim to be compatible with.@footnote{Most @command{clang}-based
+compilers give @code{4}, but not those distributed by FreeBSD.  Intel's
+@command{icx} reported @code{12} in 2023.}  @command{clang}-based
+compilers define @code{__clang__}.  Both LLVM and Apple @command{clang}
+define @code{__clang_major__} as a string giving their major version,
+but for example Apple's 13.x.y is very different from LLVM's 13.x.y.
+And compilers based on LLVM @command{clang}, for example from Intel and
+IBM, will define these.  Some of the included software uses
+@code{__APPLE_CC__} to identify an Apple compiler (which used to include
+Apple builds of GCC), but Apple @command{clang} is better identified by
+the @code{__apple_build_version__} macro.
 
 @menu
 * X11 issues::
@@ -4900,63 +4832,66 @@ code resulting in plausible but
 incorrect results.  (This was seen in package @CRANpkg{MASS} but has
 been worked around there as from version 3.1-57.)
 
-For platforms with both 64- and 32-bit support, it is likely that
+For comments on @cputype{ix86} builds (including 32-bit builds on
+@cputype{x86_64}) see the version of this manual for @R{} 4.3.x.
 
-@example
-LDFLAGS="-L/usr/local/lib64 -L/usr/local/lib"
-@end example
+@c For platforms with both 64- and 32-bit support, it is likely that
 
-@noindent
-is appropriate since most (but not all) software installs its 64-bit
-libraries in @file{/usr/local/lib64}.  To build a 32-bit version of @R{}
-on @cputype{x86_64} with Fedora 34 we used
+@c @example
+@c LDFLAGS="-L/usr/local/lib64 -L/usr/local/lib"
+@c @end example
 
-@example
-CC="gcc -m32"
-CXX="g++ -m32"
-FC="gfortran -m32"
-OBJC=$@{CC@}
-LDFLAGS="-L/usr/local/lib"
-LIBnn=lib
-@end example
+@c @noindent
+@c is appropriate since most (but not all) software installs its 64-bit
+@c libraries in @file{/usr/local/lib64}.  To build a 32-bit version of @R{}
+@c on @cputype{x86_64} with Fedora 34 we used
 
-@noindent
-Note the use of @samp{LIBnn}: @cputype{x86_64} Fedora installs its
-64-bit software in @file{/usr/lib64} and 32-bit software in
-@file{/usr/lib}.  Linking will skip over inappropriate binaries, but for
-example the 32-bit Tcl/Tk configure scripts are in @file{/usr/lib}.  It
-may also be necessary to set the @command{pkg-config} path, e.g.@: by
+@c @example
+@c CC="gcc -m32"
+@c CXX="g++ -m32"
+@c FC="gfortran -m32"
+@c OBJC=$@{CC@}
+@c LDFLAGS="-L/usr/local/lib"
+@c LIBnn=lib
+@c @end example
 
-@example
-export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/pkgconfig
-@end example
-@noindent
-The 32-bit system @code{libcurl} did not work with the system CA
-certificates: this is worked around in @R{}'s test suite.
+@c @noindent
+@c Note the use of @samp{LIBnn}: @cputype{x86_64} Fedora installs its
+@c 64-bit software in @file{/usr/lib64} and 32-bit software in
+@c @file{/usr/lib}.  Linking will skip over inappropriate binaries, but for
+@c example the 32-bit Tcl/Tk configure scripts are in @file{/usr/lib}.  It
+@c may also be necessary to set the @command{pkg-config} path, e.g.@: by
 
-64-bit versions on Linux are built with support for files > 2Gb, and
-32-bit versions will be if possible unless @option{--disable-largefile}
-is specified.
+@c @example
+@c export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/pkgconfig
+@c @end example
+@c @noindent
+@c The 32-bit system @code{libcurl} did not work with the system CA
+@c certificates: this is worked around in @R{}'s test suite.
 
-Note that some distributions of 32-bit @code{glibc} use a 32-bit
-@code{time_t} type, so to pass all the date-time checks needs @R{} built
-with flag @option{--with-internal-tzcode}.
-@c true even of glibc 2.35 in Fedora 36.
+@c 64-bit versions on Linux are built with support for files > 2Gb, and
+@c 32-bit versions will be if possible unless @option{--disable-largefile}
+@c is specified.
 
-Users of @cputype{ix86} CPUs with SSE2 support@footnote{Likely all since
-2005, including Pentium 4 and all @cputype{x86_64} CPUs with 32-bit
-compilers.} may prefer to use the C/C++/Fortran flags
+@c Note that some distributions of 32-bit @code{glibc} use a 32-bit
+@c @code{time_t} type, so to pass all the date-time checks needs @R{} built
+@c with flag @option{--with-internal-tzcode}.
+@c @c true even of glibc 2.35 in Fedora 36.
 
-@example
--mfpmath=sse -msse2
-@end example
+@c Users of @cputype{ix86} CPUs with SSE2 support@footnote{Likely all since
+@c 2005, including Pentium 4 and all @cputype{x86_64} CPUs with 32-bit
+@c compilers.} may prefer to use the C/C++/Fortran flags
 
-@noindent
-to force floating-point to use the same instructions as @cputype{x86_64}
-builds and hence not make use of 80-bit `extended precision'
-intermediate results.  (NB: this affects more than floating-point
-operations.  For some OSes and versions of @command{gcc} it might be
-necessary to add @option{-mstackrealign}.)
+@c @example
+@c -mfpmath=sse -msse2
+@c @end example
+
+@c @noindent
+@c to force floating-point to use the same instructions as @cputype{x86_64}
+@c builds and hence not make use of 80-bit `extended precision'
+@c intermediate results.  (NB: this affects more than floating-point
+@c operations.  For some OSes and versions of @command{gcc} it might be
+@c necessary to add @option{-mstackrealign}.)
 
 To build a 64-bit version of @R{} on @cputype{ppc64} (also known as
 @cputype{powerpc64}) with @command{gcc}@tie{}4.1.1, Ei-ji Nakama used
@@ -4993,7 +4928,7 @@ Additional compilation flags can be specified for added safety/security
 checks.  For example Fedora adds
 
 @example
--Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS
+-Werror=format-security -Wp,-D_FORTIFY_SOURCE=3 -Wp,-D_GLIBCXX_ASSERTIONS
 -Fexceptions -fstack-protector-strong -fasynchronous-unwind-tables
 -fstack-clash-protection -fcf-protection
 @end example
@@ -5004,15 +4939,15 @@ to all the C, C++ and Fortran compiler flags (even though
 @code{glibc} and none of these are documented for @code{gfortran}).
 Use of @code{_GLIBCXX_ASSERTIONS} will link @code{abort} and
 @code{printf} into almost all C++ code, and @command{R CMD check
---as-cran} will warn.  As from Fedora 38 it will use
-@code{-D_FORTIFY_SOURCE=3}.
+--as-cran} will warn.
 
 @menu
 * Clang::
+* flang::
 * Intel compilers::
 @end menu
 
-@node Clang, Intel compilers, Linux, Linux
+@node Clang, flang, Linux, Linux
 @subsection Clang
 
 @R{} has been built with Linux @cputype{ix86} and @cputype{x86_64} C and
@@ -5035,16 +4970,37 @@ Recent versions have (optional when built) OpenMP support.@footnote{This
 also needs the OpenMP runtime which has sometimes been distributed
 separately.}
 
-There are problems mixing @command{clang} 15.0.0 built as default on
-Linux to produce PIE code and @command{gfortran} 11 or 12, which do not.
-One symptom is that @command{configure} does not detect @code{FC_LEN_T},
-which can be overcome by setting
+There are problems mixing @command{clang} 15.0.0 and later built as
+default on Linux to produce PIE code and @command{gfortran} 11 or later,
+which does not.  One symptom is that @command{configure} does not detect
+@code{FC_LEN_T}, which can be overcome by setting
 @example
 FPIEFLAGS=-fPIE
 @end example
 @noindent
 in @file{config.site}. (As from @R{} 4.2.2 @command{configure} tries
 that value if it is unset.)
+
+@node flang, Intel compilers, Clang, Linux
+@subsection flang
+
+The name @command{flang} has been used for two projects: this is about
+the sub-project of LLVM which builds a Fortran compiler and runtime
+libraries.  The compiler is currently named @command{flang-new} but has been
+announced to be renamed to @command{flang} when more nearly complete (and
+at some earlier point in its development was known as @command{f18}).
+
+The version in LLVM 16 was able to build @R{} on @cputype{x86_64} Linux
+with
+@example
+FC=/path/to/flang-new
+@end example
+@noindent
+with the matching @command{clang} used as the C compiler, and the build
+passed @command{make check-all}.  There is also support for
+@cputype{aarch64} and @cputype{ppc64le} Linux, but these have not been
+tested with @R{}.
+
 
 @c It is recommended to use C flag @option{-Wno-strict-prototypes}
 @c (disabling a C23 feature) if using @code{-pedantic} in @command{clang}
@@ -5081,15 +5037,149 @@ that value if it is unset.)
 @c @cputype{x86}) and @cputype{ppc64le}.
 
 
-@node Intel compilers,  , Clang, Linux
+@node Intel compilers,  , flang, Linux
 @subsection Intel compilers
 
-There have been no recent reports on the use of Intel compilers: this
-section is left in case it provides helpful hints.
+@menu
+* `Classic compilers'::
+@end menu
 
-Intel compilers have been used under @cputype{ix86} and @cputype{x86_64}
-Linux.  Brian Ripley used version 9.0 of the compilers for
-@cputype{x86_64} on Fedora Core 5 with
+In late 2020 Intel revamped their C/C++ compilers (and later their
+Fortran compiler) to use an LLVM back-end (and for the C/C++ compilers,
+a modified version of @command{clang} as the front-end).  Those
+compilers are only for @cputype{x86_64}: the earlier compilers (now
+branded `Classic') also supported @cputype{ix86} and 32-bit builds on
+@cputype{x86_64}.
+
+The compilers are now all under Intel's `oneAPI' brand. The revamped
+ones are @command{icx}, @command{icpx} and @command{ifx}; they are
+identified by the C/C++ macro @code{__INTEL_LLVM_COMPILER} (and do not
+define @code{__INTEL_COMPILER}: they also define @code{__clang__} and
+@code{__clang_major__}@footnote{for @code{2023.2.1} as
+@samp{17.0.0 (2023.2.0 (2023.2.0.20230721)}.}).
+
+The C++ compiler uses the system's @code{lidstdc++} as its runtime
+library rather than LLVM's @code{libc++}.
+
+Standalone installers (which are free-of-charge) are available from
+@uref{https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html}:
+they are also part of the oneAPI Base and HPC (for Fortran) ToolKits.
+
+We tried the LLVM-based compilers in oneAPI 2023.2.1 using
+@example
+IP=/path/to/compilers/bin/intel64
+CC=$IP/icx
+CXX=$IP/icpx
+FC=$IP/ifx
+CFLAGS="-O3 -fp-model precise -Wall -Wstrict-prototypes"
+C17FLAGS="-O3 -fp-model precise -Wall -Wno-strict-prototypes"
+FFLAGS="-O3 -fp-model precise -warn all,noexternals"
+FCFLAGS="-free -O3 -fp-model precise -warn all,noexternals"
+CXXFLAGS="-O3 -fp-model precise -Wall"
+LDFLAGS="-L/path/to/compilers/compiler/lib/intel64_lin -L/usr/local/lib64"
+@end example
+@noindent
+but the build segfaulted in the checks (in complex arithmetic in
+@file{tests/lapack.R}).
+
+Intel document building @R with MKL: for the Intel compilers this needed
+something like
+@example
+MKL_LIB_PATH=/path/to/intel_mkl/mkl/lib/intel64
+export LD_LIBRARY_PATH="$MKL_LIB_PATH"
+MKL="-L$@{MKL_LIB_PATH@} -lmkl_intel_lp64 -lmkl_core -lmkl_sequential"
+./configure --with-blas="$MKL" --with-lapack
+@end example
+@noindent
+and the build passed its checks.  It may also be possible to use
+a compiler option like @option{-qmkl=sequential}.
+
+One quirk is that the Intel Fortran compilers do not accept @file{.f95}
+files, only @file{.f90} for free-format Fortran.  @command{configure}
+adds @option{-Tf} which tells the compiler this is indeed a Fortran file
+(and needs to immediately precede the file name), but @option{-free} is
+needed to say it is free-format.  Hence setting the @code{FCFLAGS}
+macro.
+@c https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-2/file-extensions.html
+
+The compilers have many options, some of which are still under
+development. As the C/C++ and Fortran compilers have different origins
+for their front-ends, there is little consistency in their options.
+@c https://www.intel.com/content/www/us/en/docs/dpcpp-cpp-compiler/developer-guide-reference/2023-2/compiler-options.html
+@c https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-2/compiler-options-001.html
+(The C/C++ compilers support `all' @command{clang} options even if
+undocumented for @command{icx}/@command{icpc}, such as
+@option{-Wno-strict-prototypes} above, However it is unclear for which
+version of @command{clang}: the Intel manual suggests checking
+@command{icx -help}.)  The C/C++ compilers support clang-style
+LTO: it is not clear if the Fortran one does.
+
+@c https://community.intel.com/t5/Intel-C-Compiler/Troubles-with-getrusage-when-using-icx/m-p/1509374#M41116
+For some versions, including 2023.2.0, all CPU times in e.g.@:
+@code{proc.time()} are reported as zero.  If you see this, uncomment the
+@samp{INTEL_ICX_FIX} setting in @file{config.site} and re-build.
+
+@c https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2023-2/stand.html
+The preferred Fortran standard for @command{ifx} can be set by one of
+@option{-std90}, @option{-std95}, @option{-std03}, @option{-std08} or
+@option{-std18} (and variants).  However, this is documented to only
+affect warnings on non-standard features: the default is no such
+warnings.
+
+Warning to package maintainers: the Intel Fortran compilers interpret
+comments intended for Visual Fortran@footnote{as the compiler has been
+known on Windows.} like
+@c from package tseriesentropy 0.6-0
+@example
+!DEC$ ATTRIBUTES DLLEXPORT,C,REFERENCE,ALIAS:'kdenestmlcvb' :: kdenestmlcvb
+@end example
+@noindent
+The @code{DLLEXPORT} gives a warning but the remainder silently
+generates incorrectly named entry points.  Such comment lines need to be
+removed from code for use with @R{} (even if using Intel Fortran on
+Windows).
+
+@node `Classic compilers',  , Intel compilers, Intel compilers
+@subsubsection `Classic' Intel compilers
+
+The classic compilers were @command{icc}, @command{icpc} and
+@command{ifort}.  They are identified by the C/C++ macro
+@code{__INTEL_COMPILER}.
+
+The classic compilers remained available until the second half of 2023.
+Version 2021.10.0 (shipped as part of oneAPI 2023.2.0) was tested in
+July 2023 using
+
+@example
+IP=/path/to/compilers/bin/intel64
+CC=$IP/icc 
+CXX=$IP/icpc
+FC=$IP/ifort
+CFLAGS="-O3 -ip -fp-model precise"
+FFLAGS="-O3 -fp-model precise"
+FCFLAGS="-free -O3 -fp-model precise"
+CXXFLAGS="-O3  -fp-model precise"
+LDFLAGS="-L/path/to/compilers/compiler/lib/intel64_lin -L/usr/local/lib64"
+@end example
+@noindent
+but also segfaulted in the checks unless MKL was used.  (CPU timings
+work with this compiler.)
+
+To suppress endless warnings about deprecation, use
+
+@example
+CC="$IP/icc -diag-disable=10441"
+@end example
+
+@command{icpc} does not support C++23.
+
+@c https://stat.ethz.ch/pipermail/r-devel/2023-June/082679.html
+There has been only one other recent report on the use of these
+compilers: the rest of this section is left in case it provides helpful
+hints for people using them while they are still available.
+
+Brian Ripley used version 9.0 of the compilers for @cputype{x86_64} on
+Fedora Core 5 with
 
 @example
 CC=icc
@@ -5172,22 +5262,23 @@ but are untested there.)
 @node Prerequisites, Fortran compilers, macOS, macOS
 @subsection Prerequisites
 
-The Intel components install into @file{/opt/R/x86_64}, the
-@cputype{arm64} ones into @file{/opt/R/arm64} which may not exist so it
-it is simplest to first create that directory and adjust its ownership
-if desired:
+The Intel components install into @file{/opt/R/x86_64}, the Apple
+silicon ones into @file{/opt/R/arm64}.  This may not exist@footnote{it
+will if @R{} has been installed from @acronym{CRAN} since @R{} 4.3.0.}
+so it is simplest to first create the directory and adjust its ownership
+if desired: for example by
 
 @example
 sudo mkdir -p /opt/R/arm64
 sudo chown -R $USER /opt/R
 @end example
 @noindent
-and add @file{/opt/R/arm64/bin} to your path.
+Also, add @file{/opt/R/x86_64/bin} or @file{/opt/R/arm64/bin} to your path.
 
 Define an appropriate variable in your Terminal:
 @example
-set LOCAL=//opt/R/x86_64 # Intel
-set LOCAL=/opt/R/arm64 # Apple Silicon
+set LOCAL=/opt/R/x86_64 # Intel
+set LOCAL=/opt/R/arm64  # Apple Silicon
 @end example
 @noindent
 to use the code snippets here.
@@ -5321,8 +5412,8 @@ PKG_CONFIG_PATH=$LOCAL/lib/pkgconfig:/usr/lib/pkgconfig
 further flags are desirable in @file{config.site}:
 @example
 CFLAGS="-falign-functions=8 -g -O2"
-FFLAGS="-g -O2 -mmacosx-version-min=11.0"
-FCFLAGS="-g -O2 -mmacosx-version-min=11.0"
+FFLAGS="-g -O2 -mmacos-version-min=11.0"
+FCFLAGS="-g -O2 -mmacos-version-min=11.0"
 @end example
 @noindent
 (the first flag in @code{CFLAGS} is needed to inter-work with the
@@ -5364,7 +5455,7 @@ builds work.  This has been far rarer since macOS 13.
 
 If you are using the macOS 13 SDK@footnote{@command{ls -l `xcrun
 -show-sdk-path`} in a terminal will show you which SDK is selected.},
-you may need to add something like @code{-mmacosx-version-min=12.0} to
+you may need to add something like @code{-mmacos-version-min=12.0} to
 @samp{CFLAGS}.
 
 Linker warnings like
@@ -5387,8 +5478,7 @@ by Apple.  And not just packages, as this has been seen for executables
 contained in tarballs/zipfiles (for example, for @command{pandoc}).
 Usually one can use @samp{Open With} (Control/right/two-finger-click in
 Finder), then select @samp{Installer} and @samp{Open} if you get a
-further warning message.  This sometimes applies also to `nightly
-builds' from @uref{https://mac.R-project.org/}.
+further warning message.
 
 If you run into problems with `quarantine' for tarballs downloaded in a
 browser, consider using @command{curl -OL} to download (as illustrated
@@ -5532,54 +5622,24 @@ last tested@footnote{with @command{gcc} 10.2.} it was not possible to
 use @command{gcc} to build the @code{quartz()} device, so
 @command{configure --without-aqua} may be required.
 
-It usually possible to add some OpenMP support to the Apple
+It is usually possible to add some OpenMP support to the Apple
 @command{clang} compilers: see @uref{https://mac.r-project.org/openmp/}.
 Note that that approach is somewhat fragile as it needs a
 @file{libomp.dylib} library matching the version of the compiler
 used---and for example at the time of writing none was offered for the
-current compilers in Xcode/CLT 14.3.
+current compilers in Xcode/CLT 14.3 nor 15.
 
 @node Other libraries, Tcl/Tk headers and libraries, Other C/C++ compilers, macOS
 @subsection Other libraries
 
+@menu
+* Accelereate::
+* OpenBLAS (macOS)::
+@end menu
+
 Pre-compiled versions of many of the @ref{Useful libraries and programs}
 are available from @uref{https://mac.r-project.org/bin//}.
 
-@cindex BLAS library
-@cindex LAPACK library
-The @code{Accelerate}
-library@footnote{@uref{https://developer.apple.com/documentation/accelerate}.}
-can be used @emph{via} the configuration option
-
-@example
---with-blas="-framework Accelerate"
-@end example
-
-@noindent
-@c LAPACK in Accelerate was still 3.2.1 in macOS 13.3 / CLT 14.3
-to provide potentially higher-performance versions of the @acronym{BLAS}
-and LAPACK routines.@footnote{It has been reported that for some
-non-Apple toolchains @code{CPPFLAGS} needed to contain
-@code{-D__ACCELERATE__}: not needed for @command{clang} from LLVM.}  his
-also includes a full LAPACK which can be used @emph{via}
-@option{--with-lapack}: however, the version of LAPACK it contains has
-@c 3.2.1 even in Ventura 13.3.
-often been seriously old (and is not used unless @option{--with-lapack}
-is specified).  Some @acronym{CRAN} builds of @R{} can be
-switched@footnote{@url{https://cran.r-project.org/bin/macosx/RMacOSX-FAQ.html#Which-BLAS-is-used-and-how-can-it-be-changed_003f}}
-to use Accelerate's BLAS.
-
-@c https://developer.apple.com/documentation/macos-release-notes/macos-13_3-release-notes
-@c https://developer.apple.com/documentation/xcode-release-notes/xcode-14_3-release-notes
-As from macOS 13.3, the BLAS and LAPACK libraries under the Accelerate
-framework are `now inline with reference version
-3.9.1'.@footnote{Released 2021-04-01.} However, this has been done by
-naming new entry points and so only accessible @emph{via} their C headers.
-
-@c https://developer.apple.com/documentation/accelerate/veclib
-Threading in Accelerate is controlled by `Grand Central Dispatch' and is
-said not to need user control.  Test @file{nls.R} in package @pkg{stats}
-has often failed with the Accelerate BLAS on Intel macOS.
 
 Looking at the top of
 @file{/Library/Frameworks/R.framework/Resources/etc/Makeconf}
@@ -5632,6 +5692,70 @@ Parallel installation of packages will make use of the utility
 downloaded from @uref{https://www.stats.ox.ac.uk/pub/bdr/timeout}: make
 it executable (@code{chmod 755 timeout}) and put it somewhere on your
 path.
+
+@node Accelereate, OpenBLAS (macOS), Other libraries, Other libraries
+@subsubsection Accelerate
+
+@cindex BLAS library
+@cindex LAPACK library
+The @code{Accelerate}
+library@footnote{@uref{https://developer.apple.com/documentation/accelerate}.}
+can be used @emph{via} the configuration option
+
+@example
+--with-blas="-framework Accelerate"
+@end example
+
+@noindent
+@c LAPACK in Accelerate was still 3.2.1 in macOS 13.6 and 14
+to provide potentially higher-performance versions of the @acronym{BLAS}
+and LAPACK routines.@footnote{It has been reported that for some
+non-Apple toolchains @code{CPPFLAGS} needed to contain
+@code{-D__ACCELERATE__}: not needed for @command{clang} from LLVM.}
+This includes a full LAPACK which can be used @emph{via}
+@option{--with-lapack}: however, the version of LAPACK it contains has
+often been seriously old (and is not used unless @option{--with-lapack}
+is specified).  Some @acronym{CRAN} builds of @R{} can be
+switched@footnote{@url{https://cran.r-project.org/bin/macosx/RMacOSX-FAQ.html#Which-BLAS-is-used-and-how-can-it-be-changed_003f}}
+to use Accelerate's BLAS.
+
+@c https://developer.apple.com/documentation/macos-release-notes/macos-13_3-release-notes
+@c https://developer.apple.com/documentation/xcode-release-notes/xcode-14_3-release-notes
+As from macOS 13.3, the BLAS and LAPACK libraries under the Accelerate
+framework are `now inline with reference version
+3.9.1'.@footnote{Released 2021-04-01.} However, this has been done by
+naming new entry points and so only accessible @emph{via} their C
+headers.  That version can be used for BLAS calls @emph{via}
+@command{configure} option @option{--with-newAccelerate}: it requires at
+least macOS 13.3 and SDK 13.3 (from Xcode/CLT 14.3).  To use it for both
+BLAS and LAPACK calls, configure with
+@option{--with-newAccelerate=lapack}.  These options cannot be used with
+others such as @option{--with-blas} and @option{--with-lapack}.
+
+@c https://developer.apple.com/documentation/accelerate/veclib
+Threading in Accelerate is controlled by `Grand Central
+Dispatch'@footnote{E.g.,
+@url{https://en.wikipedia.org/wiki/Grand_Central_Dispatch} .} and is
+said not to need user control.  Test @file{nls.R} in package @pkg{stats}
+has often failed with the Accelerate BLAS on Intel macOS.  All versions
+of Accelerate show differences from the reference BLAS (and most others)
+in the use of @code{NA} @emph{vs} @code{NaN} and a substantial number of
+@R{} packages fail their checks.
+
+@node OpenBLAS (macOS),  , Accelereate, Other libraries
+@subsubsection OpenBLAS
+
+@R{} has been built on @cputype{arm64} using OpenBLAS 0.3.24 (sources
+from @uref{https://github.com/OpenMathLib/OpenBLAS/releases}) by
+symlinking @file{/opt/OpenBLAS/lib/libopenblas.dylib} to
+@file{lib/libRblas.dylib} (see @ref{Shared BLAS}).
+
+On macOS, a default build of OpenBLAS uses @code{pthreads} (as macOS
+does not have OpenMP) with the number of threads controlled by
+environment variable @env{OPENBLAS_NUM_THREADS}.  On an M1 Pro this
+defaulted to 10 threads (there are 8 `performance' cores and 2
+`efficiency cores`) and we saw a 9x speedup over the reference BLAS on a
+large SVD (which was slightly faster than Accelerate).
 
 @node Tcl/Tk headers and libraries, Java (macOS), Other libraries, macOS
 @subsection Tcl/Tk headers and libraries
@@ -6194,9 +6318,10 @@ with the @file{README} file in that directory.
 @cindex FreeBSD
 
 There have been few recent reports on FreeBSD: there is a `port' at
-@uref{https://svnweb.freebsd.org/ports/head/math/}.  Recent versions of
-FreeBSD use Clang and the @code{libc++} C++ headers and runtime, but the
-`port' is configured to use GCC.
+@uref{https://svnweb.freebsd.org/ports/head/math/R}, currently last
+updated for @R{} 4.0.4.  Recent versions of FreeBSD use Clang and the
+@code{libc++} C++ headers and runtime, but the `port' has been
+configured to use GCC.
 
 Use of ICU for collation and the @command{configure} option
 @option{--with-internal-tzcode} are desirable workarounds.
@@ -6208,9 +6333,8 @@ Use of ICU for collation and the @command{configure} option
 Ingo Feinerer installed @R{} version 3.2.2 on OpenBSD 5.8 arch
 @cputype{amd64} (their name for @cputype{x86_64}).  Details of the build
 (and patches applied) are at
-@uref{https://cvsweb.openbsd.org/cgi-bin/cvsweb/ports/math/R/}. (Downgrading
-the @code{zlib} requirement to 1.2.3 is against the advice of the @R{}
-developers.)
+@uref{https://cvsweb.openbsd.org/cgi-bin/cvsweb/ports/math/R/},
+currently updated for @R{} 4.2.1.
 
 @node Cygwin, New platforms, OpenBSD, Platform notes
 @section Cygwin
@@ -6284,6 +6408,11 @@ If you are having trouble getting @R{} to work on your platform please
 feel free to use the @samp{R-devel} mailing list to ask questions.  We
 have had a fair amount of practice at porting @R{} to new platforms
 @enddots{}
+
+One thing you might want to add for a new platform is the mapping of
+C/C++/Fortran calls to entry point names used for @command{R CMD check}.
+See @uref{https://svn.r-project.org/R-dev-web/trunk/sotools.txt} for how
+to do so.
 
 @node Function and variable index, Concept index, Platform notes, Top
 @unnumbered Function and variable index

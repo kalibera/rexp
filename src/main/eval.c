@@ -106,6 +106,16 @@ static int R_Profiling = 0;
 # endif
 #endif /* not Win32 */
 
+#if !defined(Win32) && defined(HAVE_PTHREAD)
+// <signal.h> is needed for pthread_kill on most platforms (and by POSIX
+//  but apparently not FreeBSD): it is included above.
+# include <pthread.h>
+# ifdef HAVE_SCHED_H
+#   include <sched.h>
+# endif
+static pthread_t R_profiled_thread;
+#endif
+
 #ifdef Win32
 static FILE *R_ProfileOutfile = NULL;
 #else
@@ -118,13 +128,27 @@ static int R_Line_Profiling = 0;                   /* indicates line profiling, 
 static char **R_Srcfiles;			   /* an array of pointers into the filename buffer */
 static size_t R_Srcfile_bufcount;                  /* how big is the array above? */
 static SEXP R_Srcfiles_buffer = NULL;              /* a big RAWSXP to use as a buffer for filenames and pointers to them */
-static int R_Profiling_Error;		   /* record errors here */
+static int R_Profiling_Error;		           /* record errors here */
 static int R_Filter_Callframes = 0;	      	   /* whether to record only the trailing branch of call trees */
+
+typedef enum { RPE_CPU, RPE_ELAPSED } rpe_type;    /* profiling event, CPU time or elapsed time */
+static rpe_type R_Profiling_Event;
 
 #ifdef Win32
 HANDLE MainThread;
 HANDLE ProfileEvent;
-#endif /* Win32 */
+#else
+# ifdef HAVE_PTHREAD
+typedef struct {
+    pthread_t thread;
+    pthread_mutex_t terminate_mu;
+    pthread_cond_t terminate_cv;
+    int should_terminate;
+    int interval_us;
+} R_profile_thread_info_t;
+static R_profile_thread_info_t R_Profile_Thread_Info;
+# endif
+#endif
 
 /* Careful here!  These functions are called asynchronously, maybe in the
    middle of GC, so don't do any allocations. They get called in a signal
@@ -331,12 +355,6 @@ static void lineprof(profbuf* pb, SEXP srcref)
     }
 }
 
-#if !defined(Win32) && defined(HAVE_PTHREAD)
-// <signal.h> is needed for pthread_kill on most platforms (and by POSIX
-//  but apparently not FreeBSD): it is included above.
-# include <pthread.h>
-static pthread_t R_profiled_thread;
-#endif
 
 #if defined(__APPLE__)
 #include <mach/mach_init.h>
@@ -429,22 +447,26 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 #ifdef Win32
     SuspendThread(MainThread);
 #elif defined(__APPLE__)
-    /* Using Mach thread API to detect whether we are on the main thread,
-       because pthread_self() sometimes crashes R due to a page fault when
-       the signal handler runs just after the new thread is created, but
-       before pthread initialization has been finished. */
-    mach_port_t id = mach_thread_self();
-    mach_port_deallocate(mach_task_self(), id);
-    if (id != R_profiled_thread_id) {
-	pthread_kill(R_profiled_thread, sig);
-	errno = old_errno;
-	return;
+    if (R_Profiling_Event == RPE_CPU) {
+	/* Using Mach thread API to detect whether we are on the main thread,
+	   because pthread_self() sometimes crashes R due to a page fault when
+	   the signal handler runs just after the new thread is created, but
+	   before pthread initialization has been finished. */
+	mach_port_t id = mach_thread_self();
+	mach_port_deallocate(mach_task_self(), id);
+	if (id != R_profiled_thread_id) {
+	    pthread_kill(R_profiled_thread, sig);
+	    errno = old_errno;
+	    return;
+	}
     }
 #elif defined(HAVE_PTHREAD)
-    if (! pthread_equal(pthread_self(), R_profiled_thread)) {
-	pthread_kill(R_profiled_thread, sig);
-	errno = old_errno;
-	return;
+    if (R_Profiling_Event == RPE_CPU) {
+	if (! pthread_equal(pthread_self(), R_profiled_thread)) {
+	    pthread_kill(R_profiled_thread, sig);
+	    errno = old_errno;
+	    return;
+	}
     }
 #endif /* Win32 */
 
@@ -572,7 +594,7 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 /* Profiling thread main function */
 static void __cdecl ProfileThread(void *pwait)
 {
-    int wait = *((int *)pwait);
+    int wait = *((int *)pwait); /* milliseconds */
 
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
     while(WaitForSingleObject(ProfileEvent, wait) != WAIT_OBJECT_0) {
@@ -580,6 +602,35 @@ static void __cdecl ProfileThread(void *pwait)
     }
 }
 #else /* not Win32 */
+/* Profiling thread main function */
+static void *ProfileThread(void *pinfo)
+{
+#ifdef HAVE_PTHREAD
+    R_profile_thread_info_t *nfo = pinfo;
+
+    pthread_mutex_lock(&nfo->terminate_mu);
+    while(!nfo->should_terminate) {
+	struct timespec until;
+	double duntil_s = currentTime() + nfo->interval_us / 1e6;
+
+	until.tv_sec = (time_t) duntil_s;
+	until.tv_nsec = (long) (1e9 * (duntil_s - until.tv_sec));
+
+	for(;;) {
+	    int res = pthread_cond_timedwait(&nfo->terminate_cv,
+					     &nfo->terminate_mu, &until);
+	    if (nfo->should_terminate)
+		break;
+	    if (res == ETIMEDOUT) {
+		pthread_kill(R_profiled_thread, SIGPROF);
+		break;
+	    }
+	}
+    }
+    pthread_mutex_unlock(&nfo->terminate_mu);
+#endif
+    return NULL;
+}
 static void doprof_null(int sig)
 {
     signal(SIGPROF, doprof_null);
@@ -595,13 +646,25 @@ static void R_EndProfiling(void)
     if(R_ProfileOutfile) fclose(R_ProfileOutfile);
     R_ProfileOutfile = NULL;
 #else /* not Win32 */
-    struct itimerval itv;
+    if (R_Profiling_Event == RPE_CPU) {
+	struct itimerval itv;
 
-    itv.it_interval.tv_sec = 0;
-    itv.it_interval.tv_usec = 0;
-    itv.it_value.tv_sec = 0;
-    itv.it_value.tv_usec = 0;
-    setitimer(ITIMER_PROF, &itv, NULL);
+	itv.it_interval.tv_sec = 0;
+	itv.it_interval.tv_usec = 0;
+	itv.it_value.tv_sec = 0;
+	itv.it_value.tv_usec = 0;
+	setitimer(ITIMER_PROF, &itv, NULL);
+    }
+    if (R_Profiling_Event == RPE_ELAPSED) {
+	R_profile_thread_info_t *nfo = &R_Profile_Thread_Info;
+	pthread_mutex_lock(&nfo->terminate_mu);
+	nfo->should_terminate = 1;
+	pthread_cond_signal(&nfo->terminate_cv);
+	pthread_mutex_unlock(&nfo->terminate_mu);
+	pthread_join(nfo->thread, NULL);
+	pthread_cond_destroy(&nfo->terminate_cv);
+	pthread_mutex_destroy(&nfo->terminate_mu);
+    }
     signal(SIGPROF, doprof_null);
     if(R_ProfileOutfile >= 0) close(R_ProfileOutfile);
     R_ProfileOutfile = -1;
@@ -625,10 +688,9 @@ static void R_EndProfiling(void)
 static void R_InitProfiling(SEXP filename, int append, double dinterval,
 			    int mem_profiling, int gc_profiling,
 			    int line_profiling, int filter_callframes,
-			    int numfiles, int bufsize)
+			    int numfiles, int bufsize, rpe_type event)
 {
 #ifndef Win32
-    struct itimerval itv;
     const void *vmax = vmaxget();
 
     if(R_ProfileOutfile >= 0) R_EndProfiling();
@@ -689,6 +751,8 @@ static void R_InitProfiling(SEXP filename, int append, double dinterval,
 	*(R_Srcfiles[0]) = '\0';
     }
 
+    R_Profiling_Event = event;
+
 #ifdef Win32
     /* need to duplicate to make a real handle */
     DuplicateHandle(Proc, GetCurrentThread(), Proc, &MainThread,
@@ -699,39 +763,81 @@ static void R_InitProfiling(SEXP filename, int append, double dinterval,
 	R_Suicide("unable to create profiling thread");
     Sleep(wait/2); /* suspend this thread to ensure that the other one starts */
 #else /* not Win32 */
-#ifdef HAVE_PTHREAD
-    R_profiled_thread = pthread_self();
-#else
-    error("profiling requires 'pthread' support");
-#endif
 
-#if defined(__APPLE__)
-    /* see comment in doprof for why R_profiled_thread is not enough */
-    R_profiled_thread_id = mach_thread_self();
-    mach_port_deallocate(mach_task_self(), R_profiled_thread_id);
-#endif
+# ifdef HAVE_PTHREAD
+    R_profiled_thread = pthread_self();
+# else
+    error("profiling requires 'pthread' support");
+# endif
+
+# if defined(__APPLE__)
+    if (R_Profiling_Event == RPE_CPU) {
+	/* see comment in doprof for why R_profiled_thread is not enough */
+	R_profiled_thread_id = mach_thread_self();
+	mach_port_deallocate(mach_task_self(), R_profiled_thread_id);
+    }
+# endif
 
     signal(SIGPROF, doprof);
 
-    /* The macOS implementation requires normalization here:
+    if (R_Profiling_Event == RPE_ELAPSED) {
+# ifdef HAVE_PTHREAD
+	R_profile_thread_info_t *nfo = &R_Profile_Thread_Info;
 
-       setitimer is obsolescent (POSIX >= 2008), replaced by
-       timer_create / timer_settime, but the supported clocks are
-       implementation-dependent.
+	pthread_mutex_init(&nfo->terminate_mu, NULL);
+	pthread_cond_init(&nfo->terminate_cv, NULL);
+	nfo->should_terminate = 0;
+	nfo->interval_us = interval;
+	sigset_t all, old_set;
+	sigfillset(&all);
+	pthread_sigmask(SIG_BLOCK, &all, &old_set);
+	if (pthread_create(&nfo->thread, NULL, ProfileThread,
+	    nfo))
+	    R_Suicide("unable to create profiling thread");
+	pthread_sigmask(SIG_SETMASK, &old_set, NULL);
 
-       Recent Linux has CLOCK_PROCESS_CPUTIME_ID
-       Solaris has CLOCK_PROF, in -lrt.
-       FreeBSD only supports CLOCK_{REALTIME,MONOTONIC}
-       Seems not to be supported at all on macOS.
-    */ 
-    itv.it_interval.tv_sec = interval / 1000000;
-    itv.it_interval.tv_usec =
-	(suseconds_t)(interval - itv.it_interval.tv_sec * 1000000);
-    itv.it_value.tv_sec = interval / 1000000;
-    itv.it_value.tv_usec =
-	(suseconds_t)(interval - itv.it_value.tv_sec * 1000000);
-    if (setitimer(ITIMER_PROF, &itv, NULL) == -1)
-	R_Suicide("setting profile timer failed");
+#  ifdef HAVE_SCHED_H
+	/* attempt to set FIFO scheduling with maximum priority
+	   at least on Linux it requires special permissions */
+	struct sched_param p;
+	p.sched_priority = sched_get_priority_max(SCHED_FIFO);
+	int res = -1;
+	if (p.sched_priority >= 0)
+	    res = pthread_setschedparam(nfo->thread, SCHED_FIFO, &p);
+	if (res) {
+	    /* attempt to set maximum priority at least with
+	       the current scheduling policy */
+	    int policy;
+	    if (!pthread_getschedparam(nfo->thread, &policy, &p)) {
+		p.sched_priority = sched_get_priority_max(policy);
+		if (p.sched_priority >= 0)
+		    pthread_setschedparam(nfo->thread, policy, &p);
+	    }
+	}
+#  endif
+# endif
+    } else if (R_Profiling_Event == RPE_CPU) {
+	/* The macOS implementation requires normalization here:
+
+	   setitimer is obsolescent (POSIX >= 2008), replaced by
+	   timer_create / timer_settime, but the supported clocks are
+	   implementation-dependent.
+
+	   Recent Linux has CLOCK_PROCESS_CPUTIME_ID
+	   Solaris has CLOCK_PROF, in -lrt.
+	   FreeBSD only supports CLOCK_{REALTIME,MONOTONIC}
+	   Seems not to be supported at all on macOS.
+	*/ 
+	struct itimerval itv;
+	itv.it_interval.tv_sec = interval / 1000000;
+	itv.it_interval.tv_usec =
+	    (suseconds_t)(interval - itv.it_interval.tv_sec * 1000000);
+	itv.it_value.tv_sec = interval / 1000000;
+	itv.it_value.tv_usec =
+	    (suseconds_t)(interval - itv.it_value.tv_sec * 1000000);
+	if (setitimer(ITIMER_PROF, &itv, NULL) == -1)
+	    R_Suicide("setting profile timer failed");
+    }
 #endif /* not Win32 */
     R_Profiling = 1;
 }
@@ -743,6 +849,8 @@ SEXP do_Rprof(SEXP args)
 	filter_callframes;
     double dinterval;
     int numfiles, bufsize;
+    const char *event_arg;
+    rpe_type event;
 
 #ifdef BC_PROFILING
     if (bc_profiling) {
@@ -762,9 +870,28 @@ SEXP do_Rprof(SEXP args)
     numfiles = asInteger(CAR(args));	      args = CDR(args);
     if (numfiles < 0)
 	error(_("invalid '%s' argument"), "numfiles");
-    bufsize = asInteger(CAR(args));
+    bufsize = asInteger(CAR(args));           args = CDR(args);
     if (bufsize < 0)
 	error(_("invalid '%s' argument"), "bufsize");
+    if (!isString(CAR(args)) || length(CAR(args)) != 1
+        || STRING_ELT(CAR(args), 0) == NA_STRING)
+	error(_("invalid '%s' argument"), "event");
+    event_arg = translateChar(STRING_ELT(CAR(args), 0));
+#ifdef Win32
+    if (streql(event_arg, "elapsed") || streql(event_arg, "default"))
+	event = RPE_ELAPSED;
+    else if (streql(event_arg, "cpu"))
+	error("event type '%s' not supported on this platform", event_arg);
+    else
+	error(_("invalid '%s' argument"), "event");
+#else
+    if (streql(event_arg, "cpu") || streql(event_arg, "default"))
+	event = RPE_CPU;
+    else if (streql(event_arg, "elapsed"))
+	event = RPE_ELAPSED;
+    else
+	error(_("invalid '%s' argument"), "event");
+#endif
 
 #if defined(linux) || defined(__linux__)
     if (dinterval < 0.01) {
@@ -782,7 +909,7 @@ SEXP do_Rprof(SEXP args)
     if (LENGTH(filename))
 	R_InitProfiling(filename, append_mode, dinterval, mem_profiling,
 			gc_profiling, line_profiling, filter_callframes,
-			numfiles, bufsize);
+			numfiles, bufsize, event);
     else
 	R_EndProfiling();
     return R_NilValue;
@@ -945,7 +1072,7 @@ SEXP eval(SEXP e, SEXP rho)
     case STRSXP:
     case CPLXSXP:
     case RAWSXP:
-    case S4SXP:
+    case OBJSXP:
     case SPECIALSXP:
     case BUILTINSXP:
     case ENVSXP:
@@ -970,7 +1097,7 @@ SEXP eval(SEXP e, SEXP rho)
 	error("'rho' cannot be C NULL: detected in C-level eval");
     if (!isEnvironment(rho))
 	error("'rho' must be an environment not %s: detected in C-level eval",
-	      type2char(TYPEOF(rho)));
+	      R_typeToChar(rho));
 
     /* Save the current srcref context. */
 
@@ -1005,7 +1132,13 @@ SEXP eval(SEXP e, SEXP rho)
        and resets the precision, rounding and exception modes of a ix86
        fpu.
      */
+# if (defined(__i386) || defined(__x86_64))
     __asm__ ( "fninit" );
+# elif defined(__aarch64__)
+    __asm__ volatile("msr fpcr, %0" : : "r"(0LL));
+# else
+    _fpreset();
+# endif
 #endif
 
     switch (TYPEOF(e)) {
@@ -1137,10 +1270,7 @@ SEXP eval(SEXP e, SEXP rho)
 	else if (TYPEOF(op) == CLOSXP) {
 	    SEXP pargs = promiseArgs(CDR(e), rho);
 	    PROTECT(pargs);
-	    tmp = applyClosure(e, op, pargs, rho, R_NilValue);
-#ifdef ADJUST_ENVIR_REFCNTS
-	    unpromiseArgs(pargs);
-#endif
+	    tmp = applyClosure(e, op, pargs, rho, R_NilValue, TRUE);
 	    UNPROTECT(1);
 	}
 	else
@@ -2020,9 +2150,9 @@ static R_INLINE void R_CleanupEnvir(SEXP rho, SEXP val)
     }
 }
 
-attribute_hidden void unpromiseArgs(SEXP pargs)
+static void unpromiseArgs(SEXP pargs)
 {
-    /* This assumes pargs will no longer be references. We could
+    /* This assumes pargs will no longer be referenced. We could
        double check the refcounts on pargs as a sanity check. */
     for (; pargs != R_NilValue; pargs = CDR(pargs)) {
 	SEXP v = CAR(pargs);
@@ -2031,8 +2161,17 @@ attribute_hidden void unpromiseArgs(SEXP pargs)
 	SETCAR(pargs, R_NilValue);
     }
 }
-#else
-attribute_hidden void unpromiseArgs(SEXP pargs) { }
+#endif
+
+#define SUPPORT_TAILCALL
+#ifdef SUPPORT_TAILCALL
+static SEXP R_exec_token = NULL; /* initialized in R_initEvalSymbols below */
+
+static R_INLINE Rboolean is_exec_continuation(SEXP val)
+{
+    return (TYPEOF(val) == VECSXP && XLENGTH(val) == 4 &&
+	    VECTOR_ELT(val, 0) == R_exec_token);
+}
 #endif
 
 /* Note: GCC will not inline execClosure because it calls setjmp */
@@ -2040,7 +2179,8 @@ static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
                                    SEXP rho, SEXP arglist, SEXP op);
 
 /* Apply SEXP op of type CLOSXP to actuals */
-SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
+static SEXP applyClosure_core(SEXP call, SEXP op, SEXP arglist, SEXP rho,
+			      SEXP suppliedvars, Rboolean unpromise)
 {
     SEXP formals, actuals, savedrho, newrho;
     SEXP f, a;
@@ -2056,7 +2196,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 		  "'rho' cannot be C NULL: detected in C-level applyClosure");
     if (!isEnvironment(rho))
 	errorcall(call, "'rho' must be an environment not %s: detected in C-level applyClosure",
-		  type2char(TYPEOF(rho)));
+		  R_typeToChar(rho));
 
     formals = FORMALS(op);
     savedrho = CLOENV(op);
@@ -2118,9 +2258,47 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     R_CleanupEnvir(newrho, val);
     if (is_getter_call && MAYBE_REFERENCED(val))
     	val = shallow_duplicate(val);
+    if (unpromise)
+	unpromiseArgs(arglist);
 #endif
 
     UNPROTECT(1); /* newrho */
+    return val;
+}
+
+attribute_hidden
+SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
+		  SEXP suppliedvars, Rboolean unpromise)
+{
+    SEXP val = applyClosure_core(call, op, arglist, rho,
+				 suppliedvars, unpromise);
+#ifdef SUPPORT_TAILCALL
+    while (is_exec_continuation(val)) {
+	call = PROTECT(VECTOR_ELT(val, 1));
+	rho = PROTECT(VECTOR_ELT(val, 2));
+	SET_VECTOR_ELT(val, 2, R_NilValue); // to drop REFCNT
+	op = PROTECT(VECTOR_ELT(val, 3));
+
+	if (TYPEOF(op) == CLOSXP) {
+	    arglist = PROTECT(promiseArgs(CDR(call), rho));
+	    suppliedvars = R_NilValue;
+	    val = applyClosure_core(call, op, arglist, rho, suppliedvars, TRUE);
+# ifdef ADJUST_ENVIR_REFCNTS
+	    R_CleanupEnvir(rho, val);
+# endif
+	    UNPROTECT(1); /* arglist */
+	}
+	else {
+	    /* Ideally this should handle BUILTINSXP/SPECIALSXP calls
+	       in the standard way as in eval() or bceval(). For now,
+	       just build a new call and eval. */
+	    SEXP expr = PROTECT(LCONS(op, CDR(call)));
+	    val = eval(expr, rho);
+	    UNPROTECT(1); /* expr */
+	}
+	UNPROTECT(3); /* call, rho, op */
+    }
+#endif
     return val;
 }
 
@@ -2251,10 +2429,7 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	    else error("something weird happened");
 	}
 	SEXP pargs = tmp;
-	tmp = applyClosure(e, fun, pargs, rho, R_NilValue);
-#ifdef ADJUST_ENVIR_REFCNTS
-	unpromiseArgs(pargs);
-#endif
+	tmp = applyClosure(e, fun, pargs, rho, R_NilValue, TRUE);
 	UNPROTECT(1);
     }
     else {
@@ -2365,6 +2540,10 @@ SEXP R_execMethod(SEXP op, SEXP rho)
     R_CleanupEnvir(newrho, val);
 #endif
     UNPROTECT(1);
+#ifdef SUPPORT_TAILCALL
+    if (is_exec_continuation(val))
+	error("'Exec' and 'Tailcall' are not supported in methods yet");
+#endif
     return val;
 }
 
@@ -2408,7 +2587,7 @@ static SEXP EnsureLocal(SEXP symbol, SEXP rho, R_varloc_t *ploc)
 /* to prevent evaluation.  As an example consider */
 /* e <- quote(f(x=1,y=2); names(e) <- c("","a","b") */
 
-static SEXP R_valueSym = NULL; /* initialized in R_initAssignSymbols below */
+static SEXP R_valueSym = NULL; /* initialized in R_initEvalSymbols below */
 
 static SEXP replaceCall(SEXP fun, SEXP val, SEXP args, SEXP rhs)
 {
@@ -2822,6 +3001,128 @@ attribute_hidden NORET SEXP do_return(SEXP call, SEXP op, SEXP args, SEXP rho)
     findcontext(CTXT_BROWSER | CTXT_FUNCTION, rho, v);
 }
 
+static Rboolean checkTailPosition(SEXP call, SEXP code, SEXP rho)
+{
+    /* Could allow for switch() as well.
+
+       Ideally this should check that functions are from base;
+       pretty safe bet for '{' and 'if'.
+
+       Constructed code containing the call in multiple places could
+       produce false positives.
+
+       All this would be best done at compile time. */
+    if (call == code)
+	return TRUE;
+    else if (TYPEOF(code) == LANGSXP) {
+	if (CAR(code) == R_BraceSymbol) {
+	    while (CDR(code) != R_NilValue)
+		code = CDR(code);
+	    return checkTailPosition(call, CAR(code), rho);
+	}
+	else if (CAR(code) == R_IfSymbol)
+	    return checkTailPosition(call, CADDR(code), rho) ||
+		checkTailPosition(call, CADDDR(code), rho);
+	else return FALSE;
+    }
+    else return FALSE;
+}
+
+static void MISSING_ARGUMENT_ERROR(SEXP symbol, SEXP rho);
+attribute_hidden SEXP do_tailcall(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+#ifdef SUPPORT_TAILCALL
+    SEXP expr, env;
+
+    static Rboolean warned = FALSE;
+    if (! warned) {
+	warningcall_immediate(call,
+			      "'Tailcall' and 'Exec' are experimental and "
+			      "may be changed or removed before release");
+	warned = TRUE;
+    }
+
+    if (PRIMVAL(op) == 0) { // exec
+	static SEXP formals = NULL;
+	if (formals == NULL)
+	    formals = allocFormalsList2(install("expr"), install("envir"));
+
+	PROTECT_INDEX api;
+	PROTECT_WITH_INDEX(args = matchArgs_NR(formals, args, call), &api);
+	REPROTECT(args = evalListKeepMissing(args, rho), api);
+	expr = CAR(args);
+        if (expr == R_MissingArg)
+	    MISSING_ARGUMENT_ERROR(install("expr"), rho);
+	if (TYPEOF(expr) == EXPRSXP && XLENGTH(expr) == 1)
+	    expr = VECTOR_ELT(expr, 0);
+	if (TYPEOF(expr) != LANGSXP)
+	    error(_("\"expr\" must be a call expression"));
+	env = CADR(args);
+	if (env == R_MissingArg)
+	    env = rho;
+	UNPROTECT(1); /* args */
+    }
+    else { // tailcall
+	/* could do argument matching here */
+	if (args == R_NilValue || CAR(args) == R_MissingArg)
+	    MISSING_ARGUMENT_ERROR(install("FUN"), rho);
+	expr = LCONS(CAR(args), CDR(args));
+	env = rho;
+    }
+
+    PROTECT(expr);
+    PROTECT(env);
+
+    /* A jump should only be used if there are no on.exit expressions
+       and the call is in tail position. Determining tail position
+       accurately in the AST interprester would be expensive, so this
+       is an approximation for now. The compiler could do a better
+       job, and eventually we may want to only jump from a compiled
+       call.  The JIT could be taught to always compile functions
+       containing Tailcall/Exec calls. */
+    Rboolean jump_OK =
+	(R_GlobalContext->conexit == R_NilValue &&
+	 R_GlobalContext->callflag & CTXT_FUNCTION &&
+	 R_GlobalContext->cloenv == rho &&
+	 TYPEOF(R_GlobalContext->callfun) == CLOSXP &&
+	 checkTailPosition(call, BODY_EXPR(R_GlobalContext->callfun), rho));
+
+    if (jump_OK) {
+	/* computing the function before the jump allows the idiom
+	   Tailcall(sys.function(), ...) to be used */
+	SEXP fun = CAR(expr);
+	if (TYPEOF(fun) == STRSXP && XLENGTH(fun) == 1)
+	    fun = installTrChar(STRING_ELT(fun, 0));
+	if (TYPEOF(fun) == SYMSXP)
+	    /* might need to adjust the call here as in eval() */
+	    fun = findFun3(fun, env, call);
+	else
+	    fun = eval(fun, env);
+
+	/* allocating a vector result could be avoided by passing expr,
+	   env, and fun in some in globals or on the byte code stack */
+	PROTECT(fun);
+	SEXP val = allocVector(VECSXP, 4);
+	UNPROTECT(1); /* fun */
+	SET_VECTOR_ELT(val, 0, R_exec_token);
+	SET_VECTOR_ELT(val, 1, expr);
+	SET_VECTOR_ELT(val, 2, env);
+	SET_VECTOR_ELT(val, 3, fun);
+
+	R_jumpctxt(R_GlobalContext, CTXT_FUNCTION, val);
+    }
+    else {
+	/**** maybe have an optional diagnostic about why no tail call? */
+	SEXP val = eval(expr, rho);
+	UNPROTECT(2); /* expr, rho */
+	return val;
+    }
+#else
+    error("recompile eval.c with -DSUPPORT_TAILCALL "
+	  "to enable Exec and Tailcall");
+#endif
+}
+
 /* Declared with a variable number of args in names.c */
 attribute_hidden SEXP do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
@@ -2924,7 +3225,7 @@ static SEXP R_Subassign2Sym = NULL;
 static SEXP R_DollarGetsSymbol = NULL;
 static SEXP R_AssignSym = NULL;
 
-attribute_hidden void R_initAssignSymbols(void)
+attribute_hidden void R_initEvalSymbols(void)
 {
     for (int i = 0; i < NUM_ASYM; i++)
 	asymSymbol[i] = install(asym[i]);
@@ -2939,6 +3240,11 @@ attribute_hidden void R_initAssignSymbols(void)
     R_DollarGetsSymbol = install("$<-");
     R_valueSym = install("value");
     R_AssignSym = install("<-");
+
+#ifdef SUPPORT_TAILCALL
+    R_exec_token = CONS(install(".__EXEC__."), R_NilValue);
+    R_PreserveObject(R_exec_token);
+#endif
 }
 
 static R_INLINE SEXP lookupAssignFcnSymbol(SEXP fun)
@@ -3550,7 +3856,7 @@ static SEXP VectorToPairListNamed(SEXP x)
     return xnew;
 }
 
-#define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == S4SXP) ? R_getS4DataSlot(arg, ENVSXP) : R_NilValue)
+#define simple_as_environment(arg) (IS_S4_OBJECT(arg) && (TYPEOF(arg) == OBJSXP) ? R_getS4DataSlot(arg, ENVSXP) : R_NilValue)
 
 /* "eval": Evaluate the first argument
    in the environment specified by the second argument. */
@@ -3567,7 +3873,6 @@ attribute_hidden SEXP do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
     expr = CAR(args);
     env = CADR(args);
     encl = CADDR(args);
-    SEXPTYPE tEncl = TYPEOF(encl);
     if (isNull(encl)) {
 	/* This is supposed to be defunct, but has been kept here
 	   (and documented as such) */
@@ -3575,9 +3880,9 @@ attribute_hidden SEXP do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
     } else if ( !isEnvironment(encl) &&
 		!isEnvironment((encl = simple_as_environment(encl))) ) {
 	error(_("invalid '%s' argument of type '%s'"),
-	      "enclos", type2char(tEncl));
+	      "enclos", R_typeToChar(encl));
     }
-    if(IS_S4_OBJECT(env) && (TYPEOF(env) == S4SXP))
+    if(IS_S4_OBJECT(env) && (TYPEOF(env) == OBJSXP))
 	env = R_getS4DataSlot(env, ANYSXP); /* usually an ENVSXP */
     switch(TYPEOF(env)) {
     case NILSXP:
@@ -3606,12 +3911,12 @@ attribute_hidden SEXP do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	frame = asInteger(env);
 	if (frame == NA_INTEGER)
 	    error(_("invalid '%s' argument of type '%s'"),
-		  "envir", type2char(TYPEOF(env)));
+		  "envir", R_typeToChar(env));
 	PROTECT(env = R_sysframe(frame, R_GlobalContext));
 	break;
     default:
 	error(_("invalid '%s' argument of type '%s'"),
-	      "envir", type2char(TYPEOF(env)));
+	      "envir", R_typeToChar(env));
     }
 
     /* isLanguage include NILSXP, and that does not need to be
@@ -3724,7 +4029,7 @@ attribute_hidden SEXP do_recall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(s = eval(CAR(cptr->call), cptr->sysparent));
     if (TYPEOF(s) != CLOSXP)
 	error(_("'Recall' called from outside a closure"));
-    ans = applyClosure(cptr->call, s, args, cptr->sysparent, R_NilValue);
+    ans = applyClosure(cptr->call, s, args, cptr->sysparent, R_NilValue, TRUE);
     UNPROTECT(1);
     return ans;
 }
@@ -3944,7 +4249,7 @@ static R_INLINE void updateObjFromS4Slot(SEXP objSlot, const char *className) {
 	/* This and the similar test below implement the strategy
 	 for S3 methods selected for S4 objects.  See ?Methods */
 	if(NAMED(obj)) ENSURE_NAMEDMAX(obj);
-	obj = R_getS4DataSlot(obj, S4SXP); /* the .S3Class obj. or NULL*/
+	obj = R_getS4DataSlot(obj, OBJSXP); /* the .S3Class obj. or NULL*/
 	if(obj != R_NilValue) /* use the S3Part as the inherited object */
 	    SETCAR(objSlot, obj);
     }
@@ -4016,7 +4321,7 @@ static Rboolean R_chooseOpsMethod(SEXP x, SEXP y, SEXP mx, SEXP my,
     defineVar(ySym, y, newrho); INCREMENT_NAMED(y);
     defineVar(mxSym, mx, newrho); INCREMENT_NAMED(mx);
     defineVar(mySym, my, newrho); INCREMENT_NAMED(my);
-    defineVar(clSym, call, newrho); INCREMENT_NAMED(cl);
+    defineVar(clSym, call, newrho); INCREMENT_NAMED(call);
     defineVar(revSym, ScalarLogical(rev), newrho);
 
     SEXP ans = eval(expr, newrho);
@@ -4190,10 +4495,7 @@ int DispatchGroup(const char* group, SEXP call, SEXP op, SEXP args, SEXP rho,
 	if(isOps) SET_TAG(m, R_NilValue);
     }
 
-    *ans = applyClosure(t, lsxp, s, rho, newvars);
-#ifdef ADJUST_ENVIR_REFCNTS
-    unpromiseArgs(s);
-#endif
+    *ans = applyClosure(t, lsxp, s, rho, newvars, TRUE);
     UNPROTECT(10);
     return 1;
 }
@@ -4782,15 +5084,12 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 #define Relop2(opval,opsym) NewBuiltin2(cmp_relop,opval,opsym,rho)
 
 #define R_MSG_NA	_("NaNs produced")
-#define CMP_ISNAN ISNAN
-//On Linux this is quite a bit faster; not on macOS El Capitan:
-//#define CMP_ISNAN(x) ((x) != (x))
 #define FastMath1(fun, sym) do {					\
 	R_bcstack_t vvx;						\
 	R_bcstack_t *vx = bcStackScalar(R_BCNodeStackTop - 1, &vvx);	\
 	if (vx->tag == REALSXP) {					\
 	    double dval = fun(vx->u.dval);				\
-	    if (CMP_ISNAN(dval)) {					\
+	    if (ISNAN(dval)) {						\
 		SEXP call = VECTOR_ELT(constants, GETOP());		\
 		if (ISNAN(vx->u.dval)) dval = vx->u.dval;		\
 		else warningcall(call, R_MSG_NA);			\
@@ -4801,8 +5100,13 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	    NEXT();							\
 	}								\
 	else if (vx->tag == INTSXP && vx->u.ival != NA_INTEGER) {	\
-	    SKIP_OP();							\
-	    SETSTACK_REAL(-1, fun(vx->u.ival));				\
+	    double dval = fun((double) vx->u.ival);			\
+	    if (ISNAN(dval)) {						\
+		SEXP call = VECTOR_ELT(constants, GETOP());		\
+		warningcall(call, R_MSG_NA);				\
+	    }								\
+	    else SKIP_OP();						\
+	    SETSTACK_REAL(-1, dval);					\
 	    R_Visible = TRUE;						\
 	    NEXT();							\
 	}								\
@@ -4884,24 +5188,12 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 
 #include "arithmetic.h"
 
-/* The current (as of r67808) Windows toolchain compiles explicit sqrt
-   calls in a way that returns a different NaN than NA_real_ when
-   called with NA_real_. Not sure this is a bug in the Windows
-   toolchain or in our expectations, but these defines attempt to work
-   around this. */
-#if (defined(_WIN32) || defined(_WIN64)) && defined(__GNUC__) && \
-    __GNUC__ <= 4
-# define R_sqrt(x) (ISNAN(x) ? x : sqrt(x))
-#else
-# define R_sqrt sqrt
-#endif
-
 #define DO_LOG() do {							\
 	R_bcstack_t vvx;						\
 	R_bcstack_t *vx = bcStackScalarReal(R_BCNodeStackTop - 1, &vvx); \
 	if (vx->tag == REALSXP) {					\
 	    double dval = R_log(vx->u.dval);				\
-	    if (CMP_ISNAN(dval)) {					\
+	    if (ISNAN(dval)) {						\
 		SEXP call = VECTOR_ELT(constants, GETOP());		\
 		if (ISNAN(vx->u.dval)) dval = vx->u.dval;		\
 		else warningcall(call, R_MSG_NA);			\
@@ -7411,10 +7703,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  break;
 	case CLOSXP:
 	  args = CLOSURE_CALL_FRAME_ARGS();
-	  value = applyClosure(call, fun, args, rho, R_NilValue);
-#ifdef ADJUST_ENVIR_REFCNTS
-	  unpromiseArgs(args);
-#endif
+	  value = applyClosure(call, fun, args, rho, R_NilValue, TRUE);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -7494,7 +7783,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
     OP(MUL, 1): FastBinary(R_MUL, TIMESOP, R_MulSym);
     OP(DIV, 1): FastBinary(R_DIV, DIVOP, R_DivSym);
     OP(EXPT, 1): FastBinary(R_POW, POWOP, R_ExptSym);
-    OP(SQRT, 1): FastMath1(R_sqrt, R_SqrtSym);
+    OP(SQRT, 1): FastMath1(sqrt, R_SqrtSym);
     OP(EXP, 1): FastMath1(exp, R_ExpSym);
     OP(EQ, 1): FastRelop2(==, EQOP, R_EqSym);
     OP(NE, 1): FastRelop2(!=, NEOP, R_NeSym);
@@ -7836,10 +8125,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  prom = R_mkEVPROMISE(R_TmpvalSymbol, lhs);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_NilValue);
-#ifdef ADJUST_ENVIR_REFCNTS
-	  unpromiseArgs(args);
-#endif
+	  value = applyClosure(call, fun, args, rho, R_NilValue, TRUE);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -7880,10 +8166,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  prom = R_mkEVPROMISE(R_TmpvalSymbol, lhs);
 	  SETCAR(args, prom);
 	  /* make the call */
-	  value = applyClosure(call, fun, args, rho, R_NilValue);
-#ifdef ADJUST_ENVIR_REFCNTS
-	  unpromiseArgs(args);
-#endif
+	  value = applyClosure(call, fun, args, rho, R_NilValue, TRUE);
 	  break;
 	default: error(_("bad function"));
 	}
@@ -8741,4 +9024,10 @@ SEXP R_ParseEvalString(const char *str, SEXP env)
 SEXP R_ParseString(const char *str)
 {
     return R_ParseEvalString(str, NULL);
+}
+
+/* declare() SPECIALSXP */
+attribute_hidden SEXP do_declare(SEXP call, SEXP op, SEXP args, SEXP rho)
+{
+    return R_NilValue;
 }

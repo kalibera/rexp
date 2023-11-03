@@ -504,7 +504,7 @@ if(FALSE) {
     ## to be run from package source directory
     run_clean <- function()
     {
-        if (dir.exists("src") && length(dir("src", all.files = TRUE) > 2L)) {
+        if (dir.exists("src") && length(dir("src", all.files = TRUE)) > 2L) {
             if (WINDOWS) archs <- c("i386", "x64")
             else {
                 wd2 <- setwd(file.path(R.home("bin"), "exec"))
@@ -1331,10 +1331,12 @@ if(FALSE) {
                         if(one_only && !force_biarch) {
                             if(parse_description_field(desc, "Biarch", FALSE))
                                 force_biarch <- TRUE
-                            else if (has_configure_ucrt)
-                                warning("this package has a non-empty 'configure.ucrt' file,\nso building only the main architecture\n", call. = FALSE, domain = NA)
-                            else
-                                warning("this package has a non-empty 'configure.win' file,\nso building only the main architecture\n", call. = FALSE, domain = NA)
+                            else if (length(archs) > 1L) {
+                                if (has_configure_ucrt)
+                                    warning("this package has a non-empty 'configure.ucrt' file,\nso building only the main architecture\n", call. = FALSE, domain = NA)
+                                else
+                                    warning("this package has a non-empty 'configure.win' file,\nso building only the main architecture\n", call. = FALSE, domain = NA)
+                            }
                         }
                     }
                     if(force_biarch) one_only <- FALSE
@@ -2042,14 +2044,6 @@ if(FALSE) {
             build_latex <- TRUE
         } else if (a == "--example") {
             build_example <- TRUE
-        } else if (a == "--use-zip-data") {
-            warning("use of '--use-zip-data' is defunct",
-                    call. = FALSE, domain = NA)
-            warning("use of '--use-zip-data' is deprecated",
-                    call. = FALSE, domain = NA)
-        } else if (a == "--auto-zip") {
-            warning("'--auto-zip' is defunct",
-                           call. = FALSE, domain = NA)
         } else if (a == "-l") {
             if (length(args) >= 2L) {lib <- args[2L]; args <- args[-1L]}
             else stop("-l option without value", call. = FALSE)
@@ -2835,7 +2829,7 @@ if(FALSE) {
 
 
 ## called for base packages from src/Makefile[.win] and from
-## .install.packages in this file.  Really *help* indices.
+## .install_packages in this file.  Really *help* indices.
 .writePkgIndices <-
     function(dir, outDir, OS = .Platform$OS.type, html = TRUE)
 {
