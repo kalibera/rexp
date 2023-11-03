@@ -1242,7 +1242,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 		}
 	    }
 	    break;
-	case OBJSXP:
+	case S4SXP:
 	  break; /* only attributes (i.e., slots) count */
 	default:
 	    error(_("WriteItem: unknown type %i"), TYPEOF(s));
@@ -2076,8 +2076,8 @@ static SEXP ReadItem_Recursive (int flags, SEXP ref_table, R_inpstream_t stream)
 	    }
 	    }
 	    break;
-	case OBJSXP:
-	    PROTECT(s = R_allocObject());
+	case S4SXP:
+	    PROTECT(s = allocS4Object());
 	    break;
 	default:
 	    s = R_NilValue; /* keep compiler happy */

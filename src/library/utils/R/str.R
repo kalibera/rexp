@@ -471,7 +471,7 @@ str.default <-
 			       )
 	    }
 	} else if(typeof(object) %in%
-		  c("externalptr", "weakref", "environment", "bytecode", "object")) {
+		  c("externalptr", "weakref", "environment", "bytecode")) {
 	    ## Careful here, we don't want to change pointer objects
 	    if(has.class)
                 cat(pClass(cl))

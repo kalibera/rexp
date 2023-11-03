@@ -136,7 +136,7 @@ static R_size_t objectsize(SEXP s)
 	vcnt = BYTE2VEC(xlength(s));
 	isVec = TRUE;
 	break;
-    case OBJSXP:
+    case S4SXP:
 	/* Has TAG and ATRIB but no CAR nor CDR */
 	R_CheckStack();
 	cnt += objectsize(TAG(s));

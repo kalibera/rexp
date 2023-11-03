@@ -358,7 +358,7 @@ R_compute_identical(SEXP x, SEXP y, int flags)
 	UNPROTECT(2); /* sx, sy */
 	return ans;
     }
-    case OBJSXP:
+    case S4SXP:
 	/* attributes already tested, so all slots identical */
 	return TRUE;
     default:

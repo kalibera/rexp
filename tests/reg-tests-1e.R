@@ -762,41 +762,6 @@ stopifnot(identical(d, data.frame(lwr = c(NA, NA, NA, 6, 15, 24, 33),
 ## lower and upper confidence bands were nonsensical in R <= 4.3.1
 
 
-## New <object> type {{partly experimental}}
-mkObj <- function(...) {
-    ob <- asS3(getClass("S4")@prototype, complete=FALSE) # "hack"
-    if(...length()) attributes(ob) <- list(...)
-    ob
-}
-(oo <- mkObj())
-str(oo) # the same: '<object>'
-(x4 <- asS4(oo))
-dput(x4) # same as print(.)
-dput(oo) # <object> again {possibly to be changed}
-(o2 <- mkObj(name = "Obi", age = 67))
-str(o2) # good!
-dput(o2) # <object>  .. to be changed -- once something like mkObj() becomes API
-stopifnot(exprs = {
-    identical(x4, getClass("S4")@prototype)
-    identical(oo, get("oo", mode="object"))
-    identical(x4, get("x4", mode="S4"))
-    identical(attr(o2, "name"), "Obi")
-})
-assertErrV(o2[ 1 ])
-assertErrV(o2[[1]])
-
-stopifnot(isFALSE(inherits(oo, "S4")))
-stopifnot(isTRUE(inherits(oo, "object")))
-stopifnot(isTRUE(inherits(x4, "S4")))
-stopifnot(isFALSE(inherits(x4, "object")))
-assertErrV(get("oo", .GlobalEnv, mode = "S4"))
-stopifnot(identical(get("oo", .GlobalEnv, mode = "object"), oo))
-stopifnot(identical(get("x4", .GlobalEnv, mode = "S4"), x4))
-assertErrV(get("x4", .GlobalEnv, mode = "object"))
-assertErrV(get("oo", mode = "integer"))
-assertErrV(get("x4", .GlobalEnv, mode = "integer"))
-
-
 ## kappa(), rcond() [& norm()] -- new features and several bug fixes, PR#18543:
 (m <- rbind(c(2, 8, 1),
             c(6, 4, 3),
@@ -981,38 +946,6 @@ stopifnot(exprs = {
 ## the first produced "(averigü{é} 2023)" in R < 4.4.0
 stopifnot(roundtrip(r"(\item text)"))
 ## space was lost in R < 4.4.0
-
-
-## PR#18618: match()  incorrect  with POSIXct || POSIXlt || fractional sec
-(dCT <- seq(as.POSIXct("2010-10-31", tz = "Europe/Berlin"), by = "hour", length = 5))
-(dd <- diff(dCT))
-chd <- as.character(dCT)
-vdt <- as.vector   (dCT)
-dLT <- as.POSIXlt  (dCT)
-dat <- as.Date     (dCT)
-dL2 <- dLT[c(1:5,5)]; dL2[6]$sec <- 1/4
-dL. <- dL2          ; dL.[6]$sec <- 1e-9
-stopifnot(exprs = {
-    inherits(dCT, "POSIXct")
-    inherits(dLT, "POSIXlt")
-    !duplicated(dCT)
-    dd == 1
-    units(dd) == "hours"
-    diff(as.integer(dCT)) == 3600L # seconds
-    identical(match(chd, chd), c(1:3, 3L, 5L))
-    identical(match(vdt, vdt), seq_along(vdt))
-    identical(match(dat, dat), c(1L,1L, 3L,3L,3L)) # always ok
-    identical(match(dCT, dCT), seq_along(dCT)) # wrong in 4.3.{0,1,2}
-    identical(match(dLT, dLT), seq_along(dLT)) #  "    "   "
-    identical(match(dL2, dL2), seq_along(dL2)) #  "    "   "
-    identical(match(dL., dL.), seq_along(dL.)) #  "    "  now ok, as indeed,
-  ! identical(dL.[5], dL.[6]) # NB: `==`, diff(), ... all lose precision, from as.POSIXct():
-    inherits(dC. <- as.POSIXct(dL.), "POSIXct")
-    identical(match(dC., dC.), c(1:5, 5L))
-    identical(dC.[5], dC.[6])
-    dC.[5] == dC.[6]
-} )
-## failed (partly) in R versions  4.3.0 -- 4.3.2
 
 
 

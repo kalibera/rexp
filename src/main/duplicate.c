@@ -192,7 +192,7 @@ SEXP lazy_duplicate(SEXP s) {
     case CPLXSXP:
     case RAWSXP:
     case STRSXP:
-    case OBJSXP:
+    case S4SXP:
 	ENSURE_NAMEDMAX(s);
 	break;
     default:
@@ -354,9 +354,9 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
     case PROMSXP:
 	return s;
 	break;
-    case OBJSXP:
+    case S4SXP:
 	PROTECT(s);
-	PROTECT(t = R_allocObject());
+	PROTECT(t = allocS4Object());
 	DUPLICATE_ATTRIB(t, s, deep);
 	UNPROTECT(2);
 	break;

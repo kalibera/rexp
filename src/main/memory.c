@@ -215,7 +215,7 @@ const char *sexptype2char(SEXPTYPE type) {
     case BCODESXP:	return "BCODESXP";
     case EXTPTRSXP:	return "EXTPTRSXP";
     case WEAKREFSXP:	return "WEAKREFSXP";
-    case OBJSXP:	return "OBJSXP"; /* was S4SXP */
+    case S4SXP:		return "S4SXP";
     case RAWSXP:	return "RAWSXP";
     case NEWSXP:	return "NEWSXP"; /* should never happen */
     case FREESXP:	return "FREESXP";
@@ -696,7 +696,7 @@ static R_size_t R_NodesInUse = 0;
   case CPLXSXP: \
   case WEAKREFSXP: \
   case RAWSXP: \
-  case OBJSXP: \
+  case S4SXP: \
     break; \
   case STRSXP: \
     { \
@@ -2947,15 +2947,8 @@ SEXP allocList(int n)
 SEXP allocS4Object(void)
 {
    SEXP s;
-   GC_PROT(s = allocSExpNonCons(OBJSXP));
+   GC_PROT(s = allocSExpNonCons(S4SXP));
    SET_S4_OBJECT(s);
-   return s;
-}
-
-attribute_hidden SEXP R_allocObject(void)
-{
-   SEXP s;
-   GC_PROT(s = allocSExpNonCons(OBJSXP));
    return s;
 }
 
