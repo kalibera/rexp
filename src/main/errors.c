@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2023  The R Core Team.
+ *  Copyright (C) 1995--2024  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -498,9 +498,16 @@ static void vwarningcall_dflt(SEXP call, const char *format, va_list ap)
 	if(dcall[0] == '\0') REprintf(_("Warning:"));
 	else {
 	    REprintf(_("Warning in %s :"), dcall);
+	    // This did not allow for buf containing line breaks
+	    // We can put the first line on the same line as the warning
+	    // if it fits within LONGWARN.
+	    char buf1[BUFSIZE];
+	    strncpy(buf1, buf, BUFSIZE);
+	    char *p = strstr(buf1, "\n");
+	    if(p) *p = '\0';
 	    if(!(noBreakWarning ||
-		 ( mbcslocale && 18 + wd(dcall) + wd(buf) <= LONGWARN) ||
-		 (!mbcslocale && 18 + strlen(dcall) + strlen(buf) <= LONGWARN)))
+		 ( mbcslocale && (18 + wd(dcall) + wd(buf1) <= LONGWARN)) ||
+		 (!mbcslocale && (18 + strlen(dcall) + strlen(buf1) <= LONGWARN))))
 		REprintf("\n ");
 	}
 	REprintf(" %s\n", buf);
@@ -721,9 +728,6 @@ const char *R_curErrorBuf(void) {
     return (const char *)errbuf;
 }
 
-/* temporary hook to allow experimenting with alternate error mechanisms */
-static void (*R_ErrorHook)(SEXP, char *) = NULL;
-
 static void restore_inError(void *data)
 {
     int *poldval = (int *) data;
@@ -913,16 +917,6 @@ NORET void errorcall(SEXP call, const char *format,...)
     vsignalError(call, format, ap);
     va_end(ap);
 
-    if (R_ErrorHook != NULL) {
-	char buf[BUFSIZE];
-	void (*hook)(SEXP, char *) = R_ErrorHook;
-	R_ErrorHook = NULL; /* to avoid recursion */
-	va_start(ap, format);
-	Rvsnprintf_mbcs(buf, min(BUFSIZE, R_WarnLength), format, ap);
-	va_end(ap);
-	hook(call, buf);
-    }
-
     va_start(ap, format);
     verrorcall_dflt(call, format, ap);
     va_end(ap);
@@ -1105,6 +1099,7 @@ NORET void jump_to_toplevel(void)
 # define GETT_PRINT(...) do {} while(0)
 #endif
 
+#ifdef ENABLE_NLS
 /* Called from do_gettext() and do_ngettext() */
 static const char * determine_domain_gettext(SEXP domain_, Rboolean up)
 {
@@ -1182,6 +1177,7 @@ static const char * determine_domain_gettext(SEXP domain_, Rboolean up)
 	return NULL;
     else error(_("invalid '%s' value"), "domain");
 }
+#endif
 
 
 /* gettext(domain, string, trim) */
@@ -1367,7 +1363,7 @@ attribute_hidden NORET SEXP do_stop(SEXP call, SEXP op, SEXP args, SEXP rho)
       errorcall(c_call, "%s", translateChar(STRING_ELT(CAR(args), 0)));
     }
     else
-      errorcall(c_call, "");
+      errorcall(c_call, "%s", "");
     /* never called: */
 }
 
@@ -1400,7 +1396,7 @@ attribute_hidden SEXP do_warning(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    warningcall(c_call, "%s", translateChar(STRING_ELT(CAR(args), 0)));
     }
     else
-	warningcall(c_call, "");
+	warningcall(c_call, "%s", "");
     immediateWarning = 0; /* reset to internal calls */
     noBreakWarning = 0;
 
@@ -1492,55 +1488,6 @@ void WarningMessage(SEXP call, R_WARNING which_warn, ...)
     va_end(ap);
     warningcall(call, "%s", buf);
 }
-
-#ifdef UNUSED
-/* temporary hook to allow experimenting with alternate warning mechanisms */
-static void (*R_WarningHook)(SEXP, char *) = NULL;
-
-void R_SetWarningHook(void (*hook)(SEXP, char *))
-{
-    R_WarningHook = hook;
-}
-
-void R_SetErrorHook(void (*hook)(SEXP, char *))
-{
-    R_ErrorHook = hook;
-}
-
-void R_ReturnOrRestart(SEXP val, SEXP env, Rboolean restart)
-{
-    int mask;
-    RCNTXT *c;
-
-    mask = CTXT_BROWSER | CTXT_FUNCTION;
-
-    for (c = R_GlobalContext; c; c = c->nextcontext) {
-	if (c->callflag & mask && c->cloenv == env)
-	    findcontext(mask, env, val);
-	else if (restart && IS_RESTART_BIT_SET(c->callflag))
-	    findcontext(CTXT_RESTART, c->cloenv, R_RestartToken);
-	else if (c->callflag == CTXT_TOPLEVEL)
-	    error(_("No function to return from, jumping to top level"));
-    }
-}
-
-NORET void R_JumpToToplevel(Rboolean restart)
-{
-    RCNTXT *c;
-
-    /* Find the target for the jump */
-    for (c = R_GlobalContext; c != NULL; c = c->nextcontext) {
-	if (restart && IS_RESTART_BIT_SET(c->callflag))
-	    findcontext(CTXT_RESTART, c->cloenv, R_RestartToken);
-	else if (c->callflag == CTXT_TOPLEVEL)
-	    break;
-    }
-    if (c != R_ToplevelContext)
-	warning(_("top level inconsistency?"));
-
-    R_jumpctxt(R_ToplevelContext, CTXT_TOPLEVEL, NULL);
-}
-#endif
 
 static void R_SetErrmessage(const char *s)
 {

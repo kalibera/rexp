@@ -2,7 +2,7 @@
 ###
 ### Process this file with autoconf to produce a configure script.
 ###
-### Copyright (C) 1998-2023 R Core Team
+### Copyright (C) 1998-2024 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -20,7 +20,7 @@
 ### along with R; if not, a copy is available at
 ### https://www.r-project.org/Licenses/
 
-AC_PREREQ(2.69)
+AC_PREREQ([2.72])
 
 ## We want to get the version number from file 'VERSION' (rather than
 ## specifying the version info in 'configure.ac'.  Hence, we need a bit
@@ -134,6 +134,11 @@ AC_SUBST(R_OSTYPE)
 
 R_CONFIG_ARGS="${ac_configure_args}"
 AC_SUBST(R_CONFIG_ARGS)
+
+## Shortcut for musl which refuses to identify itself at C level
+if test "${host_os}" == "linux-musl"; then
+  AC_DEFINE(OS_MUSL, 1, [Define if running on Linux-musl])
+fi
 
 ### ** Defaults.
 
@@ -738,8 +743,7 @@ AC_ARG_VAR([PKG_CONFIG_PATH], [directories to add to pkg-config's search path])
 AC_ARG_VAR([PKG_CONFIG_LIBDIR], [path overriding pkg-config's default search path])
 
 AC_PROG_CC
-AC_PROG_GCC_TRADITIONAL
-dnl AC_GNU_SOURCE ## see note above
+dnl AC_PROG_GCC_TRADITIONAL
 AC_USE_SYSTEM_EXTENSIONS ## see note above
 
 AC_PROG_CPP
@@ -761,6 +765,7 @@ if test "${FFLAGS+set}" != set; then
   FFLAGS=${FCFLAGS}
 fi
 
+## This looks for a C++11 compiler: Apple clang++ is not by default
 AC_PROG_CXX
 ## check this actually compiles
 R_PROG_CXX
@@ -784,7 +789,8 @@ if test "${OBJC}" = gcc; then
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM(,[id foo;])],,[OBJC=''])
   AC_LANG_POP([Objective C])
 fi
-R_PROG_OBJCXX
+## deferred until C++ standard is chosen.
+dnl R_PROG_OBJCXX
 
 ## This has to be R_DEFS as autoconf overrrides DEFS
 R_DEFS=${DEFS}
@@ -1393,6 +1399,12 @@ if test "${GCC}" = yes; then
   esac
   shlib_ldflags="-shared"
 fi
+## autconf checks for gfortran by compiling a program with
+dnl #ifndef __GNUC__
+dnl       choke me
+dnl #endif
+
+## Use same flang for gfortran as for gcc.
 if test "${ac_cv_fc_compiler_gnu}" = yes; then
   case "${host_cpu}" in
     aarch64*|alpha*|sparc*|ppc64*|powerpc64*|s390*)
@@ -1402,14 +1414,28 @@ if test "${ac_cv_fc_compiler_gnu}" = yes; then
       fpicflags="-fpic"
       ;;
   esac
+else
+## Otherwise check for flang (including classic flang)
+## and treat as for clang (you cannot really use flang without clang).
+## Set fc_is_clang in case needed elsewhere.
+cat > conftestf.F <<EOF
+      program main
+#ifndef __flang__
+       choke me
+#endif
+      end
+EOF
+${FC} ${FFLAGS} -c conftestf.F 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
+if test ${?} = 0; then
+   fc_is_clang=yes
+   fpicflags=${cpicflags}
+else
+   fc_is_clang=no
 fi
-## Assume flang is the same as clang (it is a modified front end)
-## Also flang-new
-case "${FC}" in
-  *flang|*flang-new)
-    fpicflags=${cpicflags}
-    ;;
-esac
+rm -Rf conftestf.* core
+## echo "is this flang? ${fc_is_clang}"
+fi
+
 if test "${GXX}" = yes; then
   case "${host_cpu}" in
     aarch64*|alpha*|sparc*|ppc64*|powerpc64*|s390*)
@@ -1843,6 +1869,8 @@ fi
 : ${INTERNET_LIBS="${internet_libs}"}
 AC_SUBST(INTERNET_LIBS)
 
+dnl Used in appl/Makefile.in; Darwin-specific setting there.
+dnl Also used for support for Apple Accelerate.
 AM_CONDITIONAL(DYLIB_UNDEFINED_ALLOWED, [test "x${dylib_undefined_allowed}" = xyes])
 
 AC_SUBST(MAIN_LD)
@@ -1872,38 +1900,32 @@ AC_SUBST(STATICR2)
 AC_SUBST(R_DYLIB_EXT)
 
 ## Test support for C++ standards
+## AC_PROG_CXX might have added -std=gnu++11 or similar
+save_CXX=${CXX}
+CXX=`echo "${CXX}" | sed -e 's/ *-std=[[^ ]]*//'`
 R_STDCXX([11], [CXX11], [CXX])
 R_STDCXX([14], [CXX14], [CXX11])
 R_STDCXX([17], [CXX17], [CXX14])
 R_STDCXX([20], [CXX20], [CXX17])
 R_STDCXX([23], [CXX23], [CXX20])
+CXX=${save_CXX}
 
-## Set default C++ compiler to C++17 if available, otherwise C++14 or C++11
-## Do not set if none is available.
+## Set default C++ compiler to C++17 if available, otherwise unset
 if test -n "${CXX}" && test -z "${CXXSTD}"; then
   if test -n "${CXX17}"; then
     CXX=${CXX17}
     CXXSTD=${CXX17STD}
     CXXFLAGS=${CXX17FLAGS}
     CXXPICFLAGS=${CXX17PICFLAGS}
-  elif test -n "${CXX11}"; then
-    if test -n "${CXX14}"; then
-      AC_MSG_WARN([C++17 is not available so the default C++ standard is C++14])
-      CXX=${CXX14}
-      CXXSTD=${CXX14STD}
-      CXXFLAGS=${CXX14FLAGS}
-      CXXPICFLAGS=${CXX14PICFLAGS}
-    else
-      AC_MSG_WARN([C++17 is not available so the default C++ standard is C++11])
-      CXX=${CXX11}
-      CXXSTD=${CXX11STD}
-      CXXFLAGS=${CXX11FLAGS}
-      CXXPICFLAGS=${CXX11PICFLAGS}
-    fi
   else
-    AC_MSG_WARN([None of C++17, C++14 nor C++11 is available so no default C++ compiler is set])
+    AC_MSG_WARN([No C++17 compiler is available so no default C++ compiler is set])
   fi
 fi
+
+CXX_SAVE=${CXX}
+CXX="${CXX} ${CXXSTD}"
+R_PROG_OBJCXX
+CXX=${CXX_SAVE}
 
 ## Only now can we look for the OpenMP flag
 AC_LANG_PUSH(C++)
@@ -2218,11 +2240,6 @@ AC_CHECK_DECLS([mkdtemp, strdup, strncasecmp])
 AC_SEARCH_LIBS(connect, [socket])
 # gethostbyname was removed in POSIX 2008 (in favour of getaddrinfo, POSIX 2001)
 AC_SEARCH_LIBS(gethostbyname, [nsl socket])
-## -lnsl is needed on Solaris
-## 2018: Sun RPC is being unbundled from glibc, at least in Fedora 28
-## (https://fedoraproject.org/wiki/Changes/SunRPCRemoval)
-## Use libtirpc instead, which has been a possible source since ca 2007
-AC_SEARCH_LIBS(xdr_string, [nsl tirpc])
 R_FUNC_CALLOC
 if test "${ac_cv_have_decl_isfinite}" = "yes"; then
 R_FUNC_ISFINITE
@@ -2568,18 +2585,9 @@ R_LZMA
 R_LIBDEFLATE
 
 AC_ARG_WITH([libdeflate-compression],
-[AS_HELP_STRING([--with-libdeflate-compression],[use libdeflate (if available) to (de)compress lazy-loaded R objects @<:@no@:>@])],
+[AS_HELP_STRING([--with-libdeflate-compression],[use libdeflate (if available) to (de)compress lazy-loaded R objects @<:@yes@:>@])],
 [use_libdeflate=${withval}],
-[use_libdeflate=unset])
-if test "x$use_libdeflate" = xunset; then
-  if test "x$R_USE_LIBDEFLATE_FOR_LAZYLOAD" = xyes; then
-    use_libdeflate=yes
-  elif test "x$R_USE_LIBDEFLATE_FOR_LAZYLOAD" = xno; then
-    use_libdeflate=no
-  else
-    use_libdeflate=no
-  fi
-fi
+[use_libdeflate=yes])
 if test "x$use_libdeflate" = xyes; then
   AC_DEFINE(USE_LIBDEFLATE, 1, [Define to use libdefault rather than libz for lazy-loaded R objects])
 fi

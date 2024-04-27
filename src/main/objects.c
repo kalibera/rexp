@@ -46,7 +46,8 @@ static SEXP GetObject(RCNTXT *cptr)
 	for (b = cptr->promargs ; b != R_NilValue ; b = CDR(b))
 	    if (TAG(b) != R_NilValue && pmatch(tag, TAG(b), 1)) {
 		if (s != NULL)
-		    error(_("formal argument \"%s\" matched by multiple actual arguments"), tag);
+		    error(_("formal argument \"%s\" matched by multiple actual arguments"),
+		          CHAR(PRINTNAME(tag)));
 		else
 		    s = CAR(b);
 	    }
@@ -56,7 +57,8 @@ static SEXP GetObject(RCNTXT *cptr)
 	    for (b = cptr->promargs ; b != R_NilValue ; b = CDR(b))
 		if (TAG(b) != R_NilValue && pmatch(tag, TAG(b), 0)) {
 		    if ( s != NULL)
-			error(_("formal argument \"%s\" matched by multiple actual arguments"), tag);
+			error(_("formal argument \"%s\" matched by multiple actual arguments"),
+			      CHAR(PRINTNAME(tag)));
 		    else
 			s = CAR(b);
 		}
@@ -78,7 +80,7 @@ static SEXP GetObject(RCNTXT *cptr)
 	s = CAR(cptr->promargs);
 
     if (TYPEOF(s) == PROMSXP) {
-	if (PRVALUE(s) == R_UnboundValue)
+	if (! PROMISE_IS_EVALUATED(s))
 	    s = eval(s, R_BaseEnv);
 	else
 	    s = PRVALUE(s);
@@ -385,10 +387,9 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 #else
 		static int option = -1;
 		if (option == -1) {
+		    option = 2; // none: the default
 		    const char *val = getenv("R_USEMETHOD_FORWARD_LOCALS");
-		    if (val == NULL)
-			option = 0;
-		    else {
+		    if (val != NULL) {
 			if (strcmp(val, "all") == 0)
 			    option = 0;
 			else if (strcmp(val, "S4") == 0)
@@ -397,16 +398,16 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 			    option = 2;
 			else if (strcmp(val, "error") == 0)
 			    option = 3;
-			else {
+			else if (strcmp(val, "warning") == 0)
+			    option = 4;
+			else
 			    warning("bad value for R_USEMETHOD_FORWARD_LOCALS");
-			    option = 0;
-			}
 		    }
 		}
 		SEXP val;
 		char buf[8192];
 		switch(option) {
-		case 0: // forward all, as in the past
+		case 0: // forward all, as in the past before R 4.4.0
 		    UNPROTECT(1); /* newvars */
 		    newvars = PROTECT(CONS(CAR(s), newvars));
 		    SET_TAG(newvars, TAG(s));
@@ -439,7 +440,8 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 #endif
 		    snprintf(buf, sizeof(buf),
 			     "stop(\"getting UseMethod variable '%s' "
-			     "from generic '%s'\")",
+			     "from generic '%s'; "
+			     "this is no longer supported\")",
 			     CHAR(PRINTNAME(TAG(s))),
 			     generic);
 		    val = mkPROMISE(R_ParseString(buf), R_GlobalEnv);
@@ -1778,7 +1780,7 @@ SEXP R_do_new_object(SEXP class_def)
     PROTECT(value = duplicate(R_do_slot(class_def, s_prototype)));
     Rboolean xDataType = TYPEOF(value) == ENVSXP || TYPEOF(value) == SYMSXP ||
 	TYPEOF(value) == EXTPTRSXP;
-    if((TYPEOF(value) == S4SXP || getAttrib(e, R_PackageSymbol) != R_NilValue) &&
+    if((TYPEOF(value) == OBJSXP || getAttrib(e, R_PackageSymbol) != R_NilValue) &&
        !xDataType)
     {
 	setAttrib(value, R_ClassSymbol, e);

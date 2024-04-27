@@ -7,16 +7,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 4.2.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2023-07-31 15:00+0200\n"
-"PO-Revision-Date: 2023-02-05 19:05+0000\n"
-"Last-Translator: Debartha Paul <pauldeep102@gmail.com>\n"
+"POT-Creation-Date: 2023-11-30 16:47+0100\n"
+"PO-Revision-Date: 2024-03-18 21:18+0000\n"
+"Last-Translator: Michael Chirico <michaelchirico4@gmail.com>\n"
 "Language-Team: none\n"
 "Language: hi\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.13.1\n"
+"X-Generator: Weblate 4.16.4\n"
 
 #: src/gnuwin32/console.c:1200 src/gnuwin32/console.c:1242
 msgid "Not enough memory"
@@ -59,7 +59,8 @@ msgstr "स्क्रोलिंग |\n"
 
 #: src/gnuwin32/console.c:2302
 msgid "  Keyboard: PgUp, PgDown, Ctrl+Arrows, Ctrl+Home, Ctrl+End,\n"
-msgstr "  कीबोर्ड: पेज अप, पेज डाउन, कंट्रोल+एरोज , कंट्रोल+होम , कंट्रोल+एन्ड ,\n"
+msgstr ""
+"  कीबोर्ड: पेज अप, पेज डाउन, कंट्रोल+एरोज , कंट्रोल+होम , कंट्रोल+एन्ड ,\n"
 
 #: src/gnuwin32/console.c:2303
 msgid ""
@@ -111,7 +112,9 @@ msgstr "     बैकस्पेस: पिछला कैरेक्टर 
 
 #: src/gnuwin32/console.c:2314
 msgid "     Ctrl+Del or Ctrl+K: delete text from current character to end of line.\n"
-msgstr "     कंट्रोल+डिलीट या कंट्रोल+के: मौजूदा कैरेक्टर से लेकर लाइन के अंत तक का टेक्स्ट डिलीट करें |\n"
+msgstr ""
+"     कंट्रोल+डिलीट या कंट्रोल+के: मौजूदा कैरेक्टर से लेकर लाइन के अंत तक का "
+"टेक्स्ट डिलीट करें |\n"
 
 #: src/gnuwin32/console.c:2315
 msgid "     Ctrl+U: delete all text from current line.\n"
@@ -123,15 +126,21 @@ msgstr "  कॉपी करें और पेस्ट करें |\n"
 
 #: src/gnuwin32/console.c:2317
 msgid "     Use the mouse (with the left button held down) to mark (select) text.\n"
-msgstr "     टेक्स्ट उल्लेखित (चयन) करने हेतु माउस (बायाँ बटन दबाते हुए) का प्रयोग करें |\n"
+msgstr ""
+"     टेक्स्ट उल्लेखित (चयन) करने हेतु माउस (बायाँ बटन दबाते हुए) का प्रयोग "
+"करें |\n"
 
 #: src/gnuwin32/console.c:2318
 msgid "     Use Shift+Del (or Ctrl+C) to copy the marked text to the clipboard and\n"
-msgstr "     उल्लेखित टेक्स्ट क्लिपबोर्ड में कॉपी करने हेतु शिफ्ट+डिलीट (या कंट्रोल+सी) का उपयोग करें एवं\n"
+msgstr ""
+"     उल्लेखित टेक्स्ट क्लिपबोर्ड में कॉपी करने हेतु शिफ्ट+डिलीट (या "
+"कंट्रोल+सी) का उपयोग करें एवं\n"
 
 #: src/gnuwin32/console.c:2319
 msgid "     Shift+Ins (or Ctrl+V or Ctrl+Y) to paste the content of the clipboard (if any)  \n"
-msgstr "     क्लिपबोर्ड के कंटेंट (यदि हो तो) को पेस्ट करने के लिए Shift+Ins (या Ctrl+V या Ctrl+Y) का उपयोग करें  \n"
+msgstr ""
+"     क्लिपबोर्ड के कंटेंट (यदि हो तो) को पेस्ट करने के लिए Shift+Ins (या "
+"Ctrl+V या Ctrl+Y) का उपयोग करें  \n"
 
 #: src/gnuwin32/console.c:2320
 msgid "     to the console, Ctrl+X first copy then paste\n"
@@ -151,7 +160,9 @@ msgstr "     Ctrl +O या INS: टॉगल ओवरराइट मोड: �
 
 #: src/gnuwin32/console.c:2324
 msgid "     Ctrl+T: Interchange current char with one to the left.\n"
-msgstr "     Ctrl+T: मौजूदा कैरेक्टर की बाएँ ओर वाले कैरेक्टर के साथ अदला-बदली कर दें |\n"
+msgstr ""
+"     Ctrl+T: मौजूदा कैरेक्टर की बाएँ ओर वाले कैरेक्टर के साथ अदला-बदली कर दें"
+" |\n"
 
 #: src/gnuwin32/console.c:2325
 msgid ""
@@ -317,7 +328,7 @@ msgid "Print"
 msgstr "प्रिंट"
 
 #: src/gnuwin32/editor.c:800 src/gnuwin32/pager.c:477 src/gnuwin32/rui.c:1210
-#: src/library/utils/src/windows/dataentry.c:1793
+#: src/library/utils/src/windows/dataentry.c:1835
 #: src/library/grDevices/src/devWindows.c:1639
 msgid "File"
 msgstr "फ़ाइल"
@@ -349,7 +360,7 @@ msgid "Close script"
 msgstr "स्क्रिप्ट बंद करें"
 
 #: src/gnuwin32/editor.c:815 src/gnuwin32/pager.c:487 src/gnuwin32/rui.c:1231
-#: src/library/utils/src/windows/dataentry.c:1799
+#: src/library/utils/src/windows/dataentry.c:1841
 msgid "Edit"
 msgstr "एडिट"
 
@@ -374,8 +385,8 @@ msgid "GUI preferences..."
 msgstr "जीयूआई प्राथमिकताएं ..."
 
 #: src/gnuwin32/editor.c:851 src/gnuwin32/rui.c:1274
-#: src/library/utils/src/windows/dataentry.c:1700
-#: src/library/utils/src/windows/dataentry.c:1810
+#: src/library/utils/src/windows/dataentry.c:1742
+#: src/library/utils/src/windows/dataentry.c:1852
 msgid "Help"
 msgstr "मदद"
 
@@ -395,7 +406,7 @@ msgstr "एडिटर विंडो बनाने में असमर�
 msgid "Untitled"
 msgstr "शीर्षकहीन"
 
-#: src/gnuwin32/extra.c:1050
+#: src/gnuwin32/extra.c:1052
 msgid "Select file"
 msgstr "फ़ाइल का चयन करें"
 
@@ -421,14 +432,14 @@ msgid "Paste commands to console"
 msgstr "कंसोल में आदेश पेस्ट करें"
 
 #: src/gnuwin32/pager.c:320 src/gnuwin32/rui.c:946
-#: src/library/utils/src/windows/dataentry.c:1706
+#: src/library/utils/src/windows/dataentry.c:1748
 #: src/library/grDevices/src/devWindows.c:1699
 msgid "Stay on top"
 msgstr "शीर्ष पर रहें"
 
 #: src/gnuwin32/pager.c:322 src/gnuwin32/pager.c:485
-#: src/library/utils/src/windows/dataentry.c:1708
-#: src/library/utils/src/windows/dataentry.c:1795
+#: src/library/utils/src/windows/dataentry.c:1750
+#: src/library/utils/src/windows/dataentry.c:1837
 msgid "Close"
 msgstr "बंद करना"
 
@@ -806,7 +817,7 @@ msgstr "मेनू नहीं मिला"
 msgid "menu or item does not exist"
 msgstr "मेनू या आइटम मौजूद नहीं है"
 
-#: src/gnuwin32/system.c:558
+#: src/gnuwin32/system.c:565
 msgid "Save workspace image?"
 msgstr "कार्यस्थान की इमेज सेव करनी है?"
 
@@ -881,72 +892,73 @@ msgstr "नए प्रिंटर के लिए अपर्याप्�
 msgid "Unable to start the print job"
 msgstr "प्रिंट कार्य प्रारंभ करने में असमर्थ"
 
-#: src/library/utils/src/windows/dataentry.c:225
-#: src/library/utils/src/windows/dataentry.c:1853
-#: src/library/utils/src/windows/dataentry.c:1856
-#: src/library/utils/src/windows/dataentry.c:1887
+#: src/library/utils/src/windows/dataentry.c:251
+#: src/library/utils/src/windows/dataentry.c:1896
+#: src/library/utils/src/windows/dataentry.c:1899
+#: src/library/utils/src/windows/dataentry.c:1930
 msgid "invalid argument"
 msgstr "अमान्य आर्गुमेंट"
 
-#: src/library/utils/src/windows/dataentry.c:272
+#: src/library/utils/src/windows/dataentry.c:298
 msgid "invalid type for value"
 msgstr "मान के लिए अमान्य प्रकार"
 
-#: src/library/utils/src/windows/dataentry.c:283
+#: src/library/utils/src/windows/dataentry.c:309
 msgid "Data Editor"
 msgstr "डेटा एडीटर"
 
-#: src/library/utils/src/windows/dataentry.c:333
+#: src/library/utils/src/windows/dataentry.c:359
+#: src/library/utils/src/windows/dataentry.c:1889
 msgid "dataentry: internal memory problem"
 msgstr "डेटाएंट्री: आंतरिक मेमोरी समस्या"
 
-#: src/library/utils/src/windows/dataentry.c:636
-#: src/library/utils/src/windows/dataentry.c:1224
+#: src/library/utils/src/windows/dataentry.c:662
+#: src/library/utils/src/windows/dataentry.c:1263
 msgid "dataentry: internal memory error"
 msgstr "डेटाएंट्री: आंतरिक मेमोरी त्रुटि"
 
-#: src/library/utils/src/windows/dataentry.c:759
-#: src/library/utils/src/windows/dataentry.c:772
+#: src/library/utils/src/windows/dataentry.c:785
+#: src/library/utils/src/windows/dataentry.c:798
 msgid "internal type error in dataentry"
 msgstr "डेटाएंट्री में आंतरिक प्रकार त्रुटि"
 
-#: src/library/utils/src/windows/dataentry.c:855
+#: src/library/utils/src/windows/dataentry.c:893
 msgid "dataentry: parse error on string"
 msgstr "डेटाएंट्री: string पर पार्स त्रुटि"
 
-#: src/library/utils/src/windows/dataentry.c:998
+#: src/library/utils/src/windows/dataentry.c:1037
 msgid "dataentry: expression too long"
 msgstr "डेटाएंट्री: अभिव्यक्ति बहुत लंबी"
 
-#: src/library/utils/src/windows/dataentry.c:1475
+#: src/library/utils/src/windows/dataentry.c:1516
 msgid "column names cannot be blank"
 msgstr "स्तंभ नाम रिक्त नहीं हो सकते"
 
-#: src/library/utils/src/windows/dataentry.c:1521
+#: src/library/utils/src/windows/dataentry.c:1562
 msgid "Variable editor"
 msgstr "वेरिएबल एडीटर"
 
-#: src/library/utils/src/windows/dataentry.c:1526
+#: src/library/utils/src/windows/dataentry.c:1567
 msgid "variable name"
 msgstr "वेरिएबल का नाम"
 
-#: src/library/utils/src/windows/dataentry.c:1528
+#: src/library/utils/src/windows/dataentry.c:1569
 msgid "type"
 msgstr "प्रकार"
 
-#: src/library/utils/src/windows/dataentry.c:1642
+#: src/library/utils/src/windows/dataentry.c:1684
 msgid "Cell width(s)"
 msgstr "सेल की चौड़ाई(ओं)"
 
-#: src/library/utils/src/windows/dataentry.c:1648
+#: src/library/utils/src/windows/dataentry.c:1690
 msgid "Cell width"
 msgstr "सेल की चौड़ाई"
 
-#: src/library/utils/src/windows/dataentry.c:1651
+#: src/library/utils/src/windows/dataentry.c:1693
 msgid "variable"
 msgstr "वेरिएबल"
 
-#: src/library/utils/src/windows/dataentry.c:1694
+#: src/library/utils/src/windows/dataentry.c:1736
 msgid ""
 "Navigation.\n"
 "  Keyboard: cursor keys move selection\n"
@@ -988,35 +1000,35 @@ msgstr ""
 "  वर्तमान में चयनित स्तंभ को कॉपी करने, पेस्ट करने, स्वत: आकार देने के लिए मेनू पर राइट-क्लिक करें\n"
 "\n"
 
-#: src/library/utils/src/windows/dataentry.c:1702
+#: src/library/utils/src/windows/dataentry.c:1744
 msgid "Copy selected cell"
 msgstr "चयनित सेल कॉपी करें"
 
-#: src/library/utils/src/windows/dataentry.c:1703
+#: src/library/utils/src/windows/dataentry.c:1745
 msgid "Paste to selected cell"
 msgstr "चयनित सेल में पेस्ट करें"
 
-#: src/library/utils/src/windows/dataentry.c:1704
+#: src/library/utils/src/windows/dataentry.c:1746
 msgid "Autosize column"
 msgstr "स्वत: आकार स्तंभ"
 
-#: src/library/utils/src/windows/dataentry.c:1800
+#: src/library/utils/src/windows/dataentry.c:1842
 msgid "Copy  \tCTRL+C"
 msgstr "कॉपी   \tCTRL+C"
 
-#: src/library/utils/src/windows/dataentry.c:1802
+#: src/library/utils/src/windows/dataentry.c:1844
 msgid "Paste \tCTRL+V"
 msgstr "पेस्ट \tCTRL+V"
 
-#: src/library/utils/src/windows/dataentry.c:1804
+#: src/library/utils/src/windows/dataentry.c:1846
 msgid "Delete\tDEL"
 msgstr "डिलीट \tDEL"
 
-#: src/library/utils/src/windows/dataentry.c:1807
+#: src/library/utils/src/windows/dataentry.c:1849
 msgid "Cell widths ..."
 msgstr "सेल की चौड़ाई ..."
 
-#: src/library/utils/src/windows/dataentry.c:1811
+#: src/library/utils/src/windows/dataentry.c:1853
 msgid "Data editor"
 msgstr "डेटा एडीटर"
 

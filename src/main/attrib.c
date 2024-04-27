@@ -609,7 +609,7 @@ attribute_hidden SEXP do_class(SEXP call, SEXP op, SEXP args, SEXP env)
 
 /* character elements corresponding to the syntactic types in the
    grammar */
-static SEXP lang2str(SEXP obj, SEXPTYPE t)
+static SEXP lang2str(SEXP obj)
 {
   SEXP symb = CAR(obj);
   static SEXP if_sym = 0, while_sym, for_sym, eq_sym, gets_sym,
@@ -634,8 +634,7 @@ static SEXP lang2str(SEXP obj, SEXPTYPE t)
   return PRINTNAME(call_sym);
 }
 
-/* the S4-style class: for dispatch required to be a single string;
-   for the new class() function;
+/* R's class(), for S4 dispatch required to be a single string;
    if(!singleString) , keeps S3-style multiple classes.
    Called from the methods package, so exposed.
  */
@@ -676,7 +675,10 @@ SEXP R_data_class(SEXP obj, Rboolean singleString)
 	    klass = mkChar("name");
 	    break;
 	  case LANGSXP:
-	    klass = lang2str(obj, t);
+	    klass = lang2str(obj);
+	    break;
+	  case OBJSXP:
+	    klass = mkChar(IS_S4_OBJECT(obj) ? "S4" : "object");
 	    break;
 	  default:
 	    klass = type2str(t);
@@ -860,7 +862,7 @@ attribute_hidden SEXP R_data_class2 (SEXP obj)
 	if (t != LANGSXP)
 	    error("type must be LANGSXP at this point");
 	if (n == 0) {
-	    return ScalarString(lang2str(obj, t));
+	    return ScalarString(lang2str(obj));
 	}
 	/* Where on earth is this ever needed ??
 	 * __FIXME / TODO__ ??
@@ -875,7 +877,7 @@ attribute_hidden SEXP R_data_class2 (SEXP obj)
 	    part2 = PROTECT(mkChar("matrix")); nprot++;
 	    SET_STRING_ELT(defaultClass, 1, part2);
 	}
-	SET_STRING_ELT(defaultClass, 1+I_mat, lang2str(obj, t));
+	SET_STRING_ELT(defaultClass, 1+I_mat, lang2str(obj));
 	UNPROTECT(nprot);
 	return defaultClass;
     }
@@ -919,7 +921,7 @@ attribute_hidden SEXP do_namesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     if (MAYBE_SHARED(CAR(args)) ||
 	((! IS_ASSIGNMENT_CALL(call)) && MAYBE_REFERENCED(CAR(args))))
 	SETCAR(args, R_shallow_duplicate_attr(CAR(args)));
-    if (TYPEOF(CAR(args)) == S4SXP) {
+    if (TYPEOF(CAR(args)) == OBJSXP) {
 	const char *klass = CHAR(STRING_ELT(R_data_class(CAR(args), FALSE), 0));
 	error(_("invalid to use names()<- on an S4 object of class '%s'"),
 	      klass);
@@ -983,8 +985,7 @@ SEXP namesgets(SEXP vec, SEXP val)
     PROTECT(val);
 
     /* Check that the lengths and types are compatible */
-
-    if (xlength(val) < xlength(vec)) {
+    if (xlength(val) < xlength(vec)) { // recycle
 	val = xlengthgets(val, xlength(vec));
 	UNPROTECT(1);
 	PROTECT(val);
@@ -1021,7 +1022,7 @@ SEXP namesgets(SEXP vec, SEXP val)
     return vec;
 }
 
-#define isS4Environment(x) (TYPEOF(x) == S4SXP &&	\
+#define isS4Environment(x) (TYPEOF(x) == OBJSXP &&	\
 			    isEnvironment(R_getS4DataSlot(x, ENVSXP)))
 
 attribute_hidden SEXP do_names(SEXP call, SEXP op, SEXP args, SEXP env)
@@ -1062,10 +1063,9 @@ attribute_hidden SEXP do_dimnamesgets(SEXP call, SEXP op, SEXP args, SEXP env)
     return CAR(args);
 }
 
-static SEXP dimnamesgets1(SEXP val1)
+// simplistic version of as.character.default()
+static SEXP as_char_simpl(SEXP val1)
 {
-    SEXP this2;
-
     if (LENGTH(val1) == 0) return R_NilValue;
     /* if (isObject(val1)) dispatch on as.character.foo, but we don't
        have the context at this point to do so */
@@ -1074,7 +1074,7 @@ static SEXP dimnamesgets1(SEXP val1)
 	return asCharacterFactor(val1);
 
     if (!isString(val1)) { /* mimic as.character.default */
-	PROTECT(this2 = coerceVector(val1, STRSXP));
+	SEXP this2 = PROTECT(coerceVector(val1, STRSXP));
 	SET_ATTRIB(this2, R_NilValue);
 	SET_OBJECT(this2, 0);
 	UNPROTECT(1);
@@ -1139,7 +1139,7 @@ SEXP dimnamesgets(SEXP vec, SEXP val)
 	    if (INTEGER(dims)[i] != LENGTH(_this) && LENGTH(_this) != 0)
 		error(_("length of 'dimnames' [%d] not equal to array extent"),
 		      i+1);
-	    SET_VECTOR_ELT(val, i, dimnamesgets1(_this));
+	    SET_VECTOR_ELT(val, i, as_char_simpl(_this));
 	}
     }
     installAttrib(vec, R_DimNamesSymbol, val);
@@ -1325,8 +1325,8 @@ attribute_hidden SEXP do_levelsgets(SEXP call, SEXP op, SEXP args, SEXP env)
 	return(ans);
     PROTECT(ans);
     if(!isNull(CADR(args)) && any_duplicated(CADR(args), FALSE))
-	errorcall(call, _("factor level [%d] is duplicated"),
-		  any_duplicated(CADR(args), FALSE));
+	errorcall(call, _("factor level [%lld] is duplicated"),
+		  (long long)any_duplicated(CADR(args), FALSE));
     args = ans;
     if (MAYBE_SHARED(CAR(args)) ||
 	((! IS_ASSIGNMENT_CALL(call)) && MAYBE_REFERENCED(CAR(args))))
@@ -1497,7 +1497,7 @@ attribute_hidden SEXP do_attr(SEXP call, SEXP op, SEXP args, SEXP env)
 		match = FULL;
 		break;
 	    }
-    else if (match == PARTIAL || match == PARTIAL2) {
+	    else if (match == PARTIAL || match == PARTIAL2) {
 		/* this match is partial and we already have a partial match,
 		   so the query is ambiguous and we will return R_NilValue
 		   unless a full match comes up.
@@ -1781,7 +1781,7 @@ int R_has_slot(SEXP obj, SEXP name) {
     if(isString(name)) name = installTrChar(STRING_ELT(name, 0))
 
     R_SLOT_INIT;
-    if(name == s_dot_Data && TYPEOF(obj) != S4SXP)
+    if(name == s_dot_Data && TYPEOF(obj) != OBJSXP)
 	return(1);
     /* else */
     return(getAttrib(obj, name) != R_NilValue);
@@ -1918,13 +1918,13 @@ attribute_hidden SEXP do_AT(SEXP call, SEXP op, SEXP args, SEXP env)
 /* Return a suitable S3 object (OK, the name of the routine comes from
    an earlier version and isn't quite accurate.) If there is a .S3Class
    slot convert to that S3 class.
-   Otherwise, unless type == S4SXP, look for a .Data or .xData slot.  The
-   value of type controls what's wanted.  If it is S4SXP, then ONLY
+   Otherwise, unless type == OBJSXP, look for a .Data or .xData slot.  The
+   value of type controls what's wanted.  If it is OBJSXP, then ONLY
    .S3class is used.  If it is ANYSXP, don't check except that automatic
    conversion from the current type only applies for classes that extend
-   one of the basic types (i.e., not S4SXP).  For all other types, the
+   one of the basic types (i.e., not OBJSXP).  For all other types, the
    recovered data must match the type.
-   Because S3 objects can't have type S4SXP, .S3Class slot is not searched
+   Because S3 objects can't have type OBJSXP, .S3Class slot is not searched
    for in that type object, unless ONLY that class is wanted.
    (Obviously, this is another routine that has accumulated barnacles and
    should at some time be broken into separate parts.)
@@ -1940,9 +1940,9 @@ R_getS4DataSlot(SEXP obj, SEXPTYPE type)
     s_xData = install(".xData");
     s_dotData = install(".Data");
   }
-  if(TYPEOF(obj) != S4SXP || type == S4SXP) {
+  if(TYPEOF(obj) != OBJSXP || type == OBJSXP) {
     SEXP s3class = S3Class(obj);
-    if(s3class == R_NilValue && type == S4SXP) {
+    if(s3class == R_NilValue && type == OBJSXP) {
       UNPROTECT(1); /* obj */
       return R_NilValue;
     }
@@ -1958,7 +1958,7 @@ R_getS4DataSlot(SEXP obj, SEXPTYPE type)
     }
     UNPROTECT(1); /* s3class */
     UNSET_S4_OBJECT(obj);
-    if(type == S4SXP) {
+    if(type == OBJSXP) {
       UNPROTECT(1); /* obj */
       return obj;
     }

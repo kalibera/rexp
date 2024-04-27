@@ -109,8 +109,8 @@
     also \sQuote{Note}.}
 }
 \details{
-  The algorithm is based on Cody's (1988) subroutine MACHAR.  As all
-  current implementations of \R use 32-bit integers and use IEC 60559
+  The algorithm is based on Cody's (1988) subroutine \code{MACHAR}.  As all
+  current implementations of \R use 32-bit integers and use \abbr{IEC} 60559
   floating-point (double precision) arithmetic, the \code{"integer"} and
   \code{"double"} related values are the same for almost all \R builds.
   % differing sizeof.(long|longdouble|pointer)
@@ -135,10 +135,10 @@
 
   \code{sizeof.longdouble} only tells you the amount of storage
   allocated for a long double.  Often what is stored is the 80-bit extended
-  double type of IEC 60559, padded to the double alignment used on the
+  double type of \abbr{IEC} 60559, padded to the double alignment used on the
   platform --- this seems to be the case for the common \R platforms
   using ix86 and x86_64 chips.  There are other implementation of long
-  double, usually in software for example on Sparc Solaris and AIX.
+  double, usually in software for example on \I{Sparc} Solaris and \I{AIX}.
 
   Note that it is legal for a platform to have a \samp{long double} C
   type which is identical to the \samp{double} type --- this happens on

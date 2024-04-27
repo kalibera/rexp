@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2000-2023  The R Core Team.
+ *  Copyright (C) 2000-2024  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1299,7 +1299,10 @@ attribute_hidden SEXP do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 	// This codes assumes a fixed order of components.
 	double secs = REAL(VECTOR_ELT(x, 0))[i%nlen[0]], fsecs = floor(secs);
 	// avoid (int) NAN
-	tm.tm_sec   = R_FINITE(secs) ? (int) fsecs: NA_INTEGER;
+	if (R_FINITE(secs) && fsecs >= INT_MIN && fsecs <= INT_MAX)
+	    tm.tm_sec = (int) fsecs;
+	else
+	    tm.tm_sec = NA_INTEGER;
 	tm.tm_min   = INTEGER(VECTOR_ELT(x, 1))[i%nlen[1]];
 	tm.tm_hour  = INTEGER(VECTOR_ELT(x, 2))[i%nlen[2]];
 	tm.tm_mday  = INTEGER(VECTOR_ELT(x, 3))[i%nlen[3]];
@@ -1399,7 +1402,10 @@ attribute_hidden SEXP do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 #else
 	    res = strftime(buff, 2049, buf2, &tm);
 #endif
-	    if (res == 0) { // overflow for at least internal and glibc
+	    if (res == 0 // overflow for at least internal and glibc
+	        // if not from a format string that may give zero bytes
+	        && strcmp(buf2, "%Z") && strcmp(buf2, "%z")
+	        && strcmp(buf2, "%P") && strcmp(buf2, "%p")) {
 		Rf_error("output string exceeded 2048 bytes");
 	    }
 
@@ -1547,10 +1553,23 @@ attribute_hidden SEXP do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
 		/* we do want to set wday, yday, isdst, but not to
 		   adjust structure at DST boundaries */
 		memcpy(&tm2, &tm, sizeof(stm));
-		mktime0(&tm2, !isUTC); /* set wday, yday, isdst */
-		tm.tm_wday = tm2.tm_wday;
-		tm.tm_yday = tm2.tm_yday;
-		tm.tm_isdst = isUTC ? 0: tm2.tm_isdst;
+		if (isUTC) tm.tm_isdst = 0;
+		/* mktime _may_ result in error e.g. during the spring-forward gap */
+		if (mktime0(&tm2, !isUTC) != -1) {
+		    /* set wday, yday, isdst */
+		    tm.tm_wday = tm2.tm_wday;
+		    tm.tm_yday = tm2.tm_yday;
+		    if (!isUTC && tm.tm_hour == tm2.tm_hour
+		               && tm.tm_min == tm2.tm_min) {
+			/* do not adjust tm_isdst when the hours/minutes have
+			   been adjusted; some mktime implementations adjust
+			   the (non-existent) time in the spring-forward gap to
+			   the time after the gap and they adjust the tm_isdst
+			   value accordingly; taking just one of the two of
+			   these adjustments would be incorrect (PR#18581). */
+			tm.tm_isdst = tm2.tm_isdst;
+		    }
+		}
 	    }
 	    invalid = validate_tm(&tm) != 0;
 	}
@@ -1633,16 +1652,19 @@ attribute_hidden SEXP do_D2POSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 		for ( ; day < 0; --y, day += days_in_year(y) );
 	    // Avoid overflows
 	    double year0 =  y - 1900 + rounds * 400;
-	    if (year0 > INT_MAX || year0 < INT_MIN) valid = FALSE;
-	    y = tm.tm_year = (int)year0;
-	    tm.tm_yday = day;
-	    /* month within year */
-	    for (mon = 0;
-		 day >= (tmp = days_in_month(mon, y));
-		 day -= tmp, mon++);
-	    tm.tm_mon = mon;
-	    tm.tm_mday = day + 1;
-	    tm.tm_isdst = 0; /* no dst in GMT */
+	    if (year0 > INT_MAX || year0 < INT_MIN)
+		valid = FALSE;
+	    else {
+		y = tm.tm_year = (int)year0;
+		tm.tm_yday = day;
+		/* month within year */
+		for (mon = 0;
+		     day >= (tmp = days_in_month(mon, y));
+		     day -= tmp, mon++);
+		tm.tm_mon = mon;
+		tm.tm_mday = day + 1;
+		tm.tm_isdst = 0; /* no dst in GMT */
+	    }
 	}
 	makelt(&tm, ans, i, valid, valid ? 0.0 : x_i);
 	SET_STRING_ELT(VECTOR_ELT(ans, 9), i, mkChar(tz));

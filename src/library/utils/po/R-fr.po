@@ -7,16 +7,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 4.0.4\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2023-07-31 15:00\n"
-"PO-Revision-Date: 2022-08-31 15:04+0000\n"
-"Last-Translator: Marcel Ramos <marcel.ramos@sph.cuny.edu>\n"
+"POT-Creation-Date: 2024-03-27 16:15\n"
+"PO-Revision-Date: 2024-03-19 12:53+0000\n"
+"Last-Translator: Michael Chirico <michaelchirico4@gmail.com>\n"
 "Language-Team: French <R-core@r-project.org>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.13.1\n"
+"X-Generator: Weblate 4.16.4\n"
 
 msgid ""
 "RShowDoc() should be used with a character string argument specifying\n"
@@ -145,6 +145,9 @@ msgstr ""
 msgid "No suitable spell check program found."
 msgstr "Aucun programme de vérification orthographique utilisable n'est trouvé."
 
+msgid "Performing query %s"
+msgstr ""
+
 msgid ""
 "Use <code> %s </code> \n"
 " to list the vignettes in all <strong>available</strong> packages."
@@ -231,9 +234,6 @@ msgstr "'package' doit être une chaîne de caratcères ou NULL"
 
 msgid "data index for package %s is invalid and will be ignored"
 msgstr "l'index de données pour le package %s est incorrect et sera ignoré"
-
-msgid "file 'filelist' is missing for directory %s"
-msgstr "fichier 'filelist' introuvable pour le répertoire %s"
 
 msgid "data set %s not found"
 msgstr "jeu de données %s introuvable"
@@ -1028,7 +1028,8 @@ msgstr "Le nombre de tokens != 'length(proto)'"
 msgid "The number of tokens is not consistent across 'x'"
 msgstr "Le nombre de tokens est incohérent avec 'x’"
 
-msgid "cannot coerce %s to logical"
+#, fuzzy
+msgid "cannot coerce %s to TRUE or FALSE"
 msgstr "impossible de convertir %s en booléen"
 
 msgid "no lines found in %s"
@@ -1291,11 +1292,10 @@ msgid_plural "%d Sweave files for basename %s found"
 msgstr[0] "%d fichier Sweave trouvé pour le nom de base %s"
 msgstr[1] "%d fichiers Sweave trouvés pour le nom de base %s"
 
-#, fuzzy
 msgid "Output/used file:  "
 msgid_plural "Output/used files:  "
-msgstr[0] "Fichier en sortie :"
-msgstr[1] "Fichier en sortie :"
+msgstr[0] "Fichier en sortie :  "
+msgstr[1] "Fichiers en sortie :  "
 
 msgid "%d occurrence in %s"
 msgid_plural "%d occurrences in %s"
@@ -1447,6 +1447,9 @@ msgid_plural "invalid roman numerals: %s"
 msgstr[0] "nombre roman incorrect : %s"
 msgstr[1] "nombres romans incorrects : %s"
 
+#~ msgid "file 'filelist' is missing for directory %s"
+#~ msgstr "fichier 'filelist' introuvable pour le répertoire %s"
+
 #~ msgid "Argument '%s' is deprecated; rather set '%s' instead."
 #~ msgstr "L'argument '%s' est obsolète; utilisez '%s' plutôt."
 
@@ -1527,8 +1530,8 @@ msgstr[1] "nombres romans incorrects : %s"
 #~ msgid "modes argument ignored"
 #~ msgstr "argument modes ignoré"
 
-#~ msgid "too many list items (at most up to number 3899)"
-#~ msgstr "trop d'entrées de liste (3899 maximum)"
+#~ msgid "too many list items (at most up to number 3999)"
+#~ msgstr "trop d'entrées de liste (3999 maximum)"
 
 #~ msgid "Packages {readRDS() sequentially}:"
 #~ msgstr "Packages {readRDS() séquentiellement} :"

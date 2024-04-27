@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2000-2023   The R Core Team.
+ *  Copyright (C) 2000-2024   The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -75,9 +75,10 @@
   which have a quite low default limit (256 on macOS, 1024 on Linux),
   and are needed for other uses including loading DLLs.  (Parallel
   clusters use a file connection per cluster member.)  Windows is said
-  to have a default limit of 512 file handlws per process.
+  to have a default limit of 512 simultaneously open files at stream
+  I/O level.
 
-  As from R 4.4.0 the defailt limit remains 128. but can be overriden
+  As from R 4.4.0 the default limit remains 128, but can be overriden
   by the startup option --max-connections.  This does not allow it to
   be set below 128 but has a limit of 4096 (see CommandLineArgs.c).
   The upper limit is conservative, but as creating a new connection
@@ -86,6 +87,18 @@
 
   Using a dynamic upper limit would not be hard, but not very useful
   because of the non-dynamic fd limit.
+
+  The current implementation of socket connections uses select(). On
+  POSIX systems, only FD_SETSIZE descriptors are supported and they 
+  must have numbers between 0 and FD_SETSIZE-1, inclusive. On Linux and macOS,
+  FD_SETSIZE is normally 1024. On macOS, the limit could be overcome via
+  _DARWIN_UNLIMITED_SELECT (not used by R), but a POSIX solution would
+  be to use poll() instead of select(). On Windows, by default 1024 different
+  descriptors are supported in a single select() call, but these include
+  valid socket file descriptors of arbitrary numbers, much larger
+  than FD_SETSIZE.  On Windows, the limit can be set in the program
+  by setting FD_SETSIZE before including WinSock headers, R sets it to
+  1024 (in sock.h and here in connections.c).
 */
 
 #ifdef HAVE_CONFIG_H
@@ -245,7 +258,7 @@ static void conFinalizer(SEXP ptr)
     R_ClearExternalPtr(ptr); /* not really needed */
 
     if (warn)
-	warning(buf); /* may be turned into error */
+	warning("%s", buf); /* may be turned into error */
 }
 
 
@@ -267,7 +280,7 @@ NORET static void set_iconv_error(Rconnection con, char* from, char* to)
     char buf[100];
     snprintf(buf, 100, _("unsupported conversion from '%s' to '%s'"), from, to);
     con_destroy(ConnIndex(con));
-    error(buf);
+    error("%s", buf);
 }
 
 /* ------------------- buffering --------------------- */
@@ -513,9 +526,11 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 	    errno = 0;
 	    ires = Riconv(con->outconv, &ib, &inb, &ob, &onb);
 	    again = (ires == (size_t)(-1) && errno == E2BIG);
-	    if(ires == (size_t)(-1) && errno != E2BIG)
+	    if(ires == (size_t)(-1) && errno != E2BIG) {
+		Riconv(con->outconv, NULL, NULL, NULL, NULL);
 		/* is this safe? */
 		warning(_("invalid char string in output conversion"));
+	    }
 	    *ob = '\0';
 	    con->write(outbuf, 1, ob - outbuf, con);
 	} while(again && inb > 0);  /* it seems some iconv signal -1 on
@@ -530,34 +545,47 @@ int dummy_vfprintf(Rconnection con, const char *format, va_list ap)
 int dummy_fgetc(Rconnection con)
 {
     if(con->inconv) {
-	Rboolean checkBOM = FALSE, checkBOM8 = FALSE;
-	con->EOF_signalled = FALSE; /* e.g. for a non-blocking connection; PR#18555 */
 	while(con->navail <= 0) {
-	    /* Probably in all cases there will be at most one iteration
-	       of the loop. It could iterate multiple times only if the input
-	       encoding could have \r or \n as a part of a multi-byte coded
-	       character.
-	    */
 	    unsigned int i, inew = 0;
 	    char *p, *ob;
 	    const char *ib;
 	    size_t inb, onb, res;
+	    Rboolean checkBOM = FALSE, checkBOM8 = FALSE;
 
 	    if(con->EOF_signalled) return R_EOF;
-	    if(con->inavail == -2) {
-		con->inavail = 0;
-		checkBOM = TRUE;
-	    }
-	    if(con->inavail == -3) {
-		con->inavail = 0;
-		checkBOM8 = TRUE;
+	    if (con->inavail < 0) {
+		switch(con->inavail) {
+		case -2:
+		    con->inavail = 0;
+		    checkBOM = TRUE;
+		    break;
+		case -3:
+		    con->inavail = 0;
+		    checkBOM8 = TRUE;
+		    break;
+		case -21:
+		    con->inavail = 1;
+		    checkBOM = TRUE;
+		    break;
+		case -31:
+		    con->inavail = 1;
+		    checkBOM8 = TRUE;
+		    break;
+		case -32:
+		    con->inavail = 2;
+		    checkBOM8 = TRUE;
+		    break;
+		}
 	    }
 	    p = con->iconvbuff + con->inavail;
 	    for(i = con->inavail; i < 25; i++) {
 		int c = (con->buff)
 		    ? buff_fgetc(con)
 		    : con->fgetc_internal(con);
-		if(c == R_EOF){ con->EOF_signalled = TRUE; break; }
+		if(c == R_EOF)
+		    /* Do not set EOF_signalled, because subsequent reads from
+		       a non-blocking connections may succeed (PR18555). */
+		    break;
 		*p++ = (char) c;
 		con->inavail++;
 		inew++;
@@ -569,6 +597,36 @@ int dummy_fgetc(Rconnection con)
 		    */
 		    break;
 	    }
+	    if (checkBOM || checkBOM8) {
+		/* Handle the case of partial BOMs, e.g. in non-blocking
+		   connections, when we do not have enough data to tell
+		   whether there is a BOM or not.  Indicate by negative
+		   con->inavail which BOM still needs to be checked and
+		   how many bytes were already checked. */
+		if(con->inavail == 0) {
+		    if (checkBOM)
+			con->inavail = -2;
+		    else if (checkBOM8)
+			con->inavail = -3;
+		    return R_EOF;
+		}
+		if (con->inavail == 1) {
+		    if (checkBOM && (((int)con->iconvbuff[0] & 0xff) == 255)) {
+			con->inavail = -21;
+			return R_EOF;
+		    }
+		    if (checkBOM8 && con->iconvbuff[0] == '\xef') {
+			con->inavail = -31;
+			return R_EOF;
+		    }
+		}
+		if (con->inavail == 2 && checkBOM8 &&
+		    con->iconvbuff[1] == '\xbb') {
+
+		    con->inavail = -32;
+		    return R_EOF;
+		}
+	    }
 	    if(inew == 0) return R_EOF;
 	    if(checkBOM && con->inavail >= 2 &&
 	       ((int)con->iconvbuff[0] & 0xff) == 255 &&
@@ -576,7 +634,6 @@ int dummy_fgetc(Rconnection con)
 		con->inavail -= (short) 2;
 		memmove(con->iconvbuff, con->iconvbuff+2, con->inavail);
 	    }
-	    if(inew == 0) return R_EOF;
 	    if(checkBOM8 && con->inavail >= 3 &&
 	       !memcmp(con->iconvbuff, "\xef\xbb\xbf", 3)) {
 		con->inavail -= (short) 3;
@@ -594,10 +651,13 @@ int dummy_fgetc(Rconnection con)
 		    /* incomplete input char or no space in output buffer */
 		    memmove(con->iconvbuff, ib, inb);
 		} else {/*  EILSEQ invalid input */
+		    Riconv(con->inconv, NULL, NULL, NULL, NULL);
 		    warning(_("invalid input found on input connection '%s'"),
 			    con->description);
 		    con->inavail = 0;
-		    if (con->navail == 0) return R_EOF;
+		    /* Set to prevent reading any more bytes from input,
+		       possibly those following the invalid bytes currently
+		       encountered. */
 		    con->EOF_signalled = TRUE;
 		}
 	    }
@@ -2739,9 +2799,10 @@ static int stdin_fgetc(Rconnection con)
 
 static int stdout_vfprintf(Rconnection con, const char *format, va_list ap)
 {
-    if(R_Outputfile) vfprintf(R_Outputfile, format, ap);
-    else Rcons_vprintf(format, ap);
-    return 0;
+    if(R_Outputfile)
+	return vfprintf(R_Outputfile, format, ap);
+    else
+	return Rcons_vprintf(format, ap);
 }
 
 static int stdout_fflush(Rconnection con)
@@ -2752,8 +2813,7 @@ static int stdout_fflush(Rconnection con)
 
 static int stderr_vfprintf(Rconnection con, const char *format, va_list ap)
 {
-    REvprintf(format, ap);
-    return 0;
+    return REvprintf_internal(format, ap);
 }
 
 static int stderr_fflush(Rconnection con)
@@ -4084,7 +4144,8 @@ attribute_hidden SEXP do_readLines(SEXP call, SEXP op, SEXP args, SEXP env)
 	    !memcmp(buf, "\xef\xbb\xbf", 3)) qbuf = buf + 3;
 	SET_STRING_ELT(ans, nread, mkCharCE(qbuf, oenc));
 	if (warn && strlen(buf) < nbuf)
-	    warning(_("line %d appears to contain an embedded nul"), nread + 1);
+	    warning(_("line %lld appears to contain an embedded nul"),
+	            (long long)nread + 1);
 	if(c == R_EOF) goto no_more_lines;
     }
     if(!wasopen) {endcontext(&cntxt); con->close(con);}
@@ -5958,7 +6019,7 @@ static size_t gzcon_read(void *ptr, size_t size, size_t nitems,
 	    }
 	    if (crc != priv->crc) {
 		priv->z_err = Z_DATA_ERROR;
-		REprintf(_("crc error %x %x\n"), crc, priv->crc);
+		REprintf(_("crc error %lx %lx\n"), crc, priv->crc);
 	    }
 	    /* finally, get (and ignore) length */
 	    for (n = 0; n < 4; n++) gzcon_byte(priv);
@@ -6295,7 +6356,7 @@ SEXP R_decompress2(SEXP in, Rboolean *err)
 	res = uncompress((unsigned char *) buf, &outl,
 			 (Bytef *)(p + 5), inlen - 5);
 	if(res != Z_OK) {
-	    warning("internal error %d in R_decompress1");
+	    warning("internal error %d in R_decompress1", res);
 	    *err = TRUE;
 	    return R_NilValue;
 	}
@@ -6319,6 +6380,13 @@ attribute_hidden SEXP do_sockselect(SEXP call, SEXP op, SEXP args, SEXP rho)
     int nsock, i;
     SEXP insock, write, val, insockfd;
     double timeout;
+    int fdlim;
+
+#ifdef Win32
+    fdlim = 1024; /* keep in step with sock.h */
+#else
+    fdlim = FD_SETSIZE;
+#endif
 
     checkArity(op, args);
 
@@ -6354,8 +6422,16 @@ attribute_hidden SEXP do_sockselect(SEXP call, SEXP op, SEXP args, SEXP rho)
 		warning(_("a server socket connection cannot be writeable"));
 	} else
 	    error(_("not a socket connection"));
+#ifdef Unix
+	if (INTEGER(insockfd)[i] >= fdlim && !immediate)
+	    error(_("file descriptor is too large for select()"));
+#endif
     }
 
+#ifdef Win32
+    if (nsock > fdlim && !immediate)
+	error(_("too many file descriptors for select()"));
+#endif
     if (! immediate)
 	Rsockselect(nsock, INTEGER(insockfd), LOGICAL(val), LOGICAL(write),
 		    timeout);
@@ -6498,7 +6574,7 @@ SEXP R_decompress3(SEXP in, Rboolean *err)
 	init_filters();
 	ret = lzma_raw_decoder(&strm, filters);
 	if (ret != LZMA_OK) {
-	    warning("internal error %d in R_decompress3", ret);
+	    warning("internal error %d in R_decompress3", (int)ret);
 	    *err = TRUE;
 	    return R_NilValue;
 	}
@@ -6508,8 +6584,8 @@ SEXP R_decompress3(SEXP in, Rboolean *err)
 	strm.avail_out = outlen;
 	ret = lzma_code(&strm, LZMA_RUN);
 	if (ret != LZMA_OK && (strm.avail_in > 0)) {
-	    warning("internal error %d in R_decompress3 %d",
-		    ret, strm.avail_in);
+	    warning("internal error %d in R_decompress3 %llu",
+		    (int)ret, (unsigned long long)strm.avail_in);
 	    *err = TRUE;
 	    return R_NilValue;
 	}
@@ -6527,7 +6603,7 @@ SEXP R_decompress3(SEXP in, Rboolean *err)
 	uLong outl; int res;
 	res = uncompress(buf, &outl, (Bytef *)(p + 5), inlen - 5);
 	if(res != Z_OK) {
-	    warning("internal error %d in R_decompress1");
+	    warning("internal error %d in R_decompress1", res);
 	    *err = TRUE;
 	    return R_NilValue;
 	}
@@ -6836,8 +6912,9 @@ do_memDecompress(SEXP call, SEXP op, SEXP args, SEXP env)
 		    outlen *= 2;
 		    continue;
 		} else {
-		    error("internal error %d in memDecompress(%s) at %d",
-			  ret, "type = \"xz\"", strm.avail_in);
+		    error("internal error %d in memDecompress(%s) at %llu",
+			  (int)ret, "type = \"xz\"",
+		          (unsigned long long)strm.avail_in);
 		}
 	    } else {
 		break;

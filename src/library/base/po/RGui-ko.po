@@ -8,15 +8,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R-3.5.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2023-07-31 15:00+0200\n"
-"PO-Revision-Date: 2018-04-09 12:05-0600\n"
-"Last-Translator: Chel Hee Lee <gnustats@gmail.com>\n"
+"POT-Creation-Date: 2023-11-30 16:47+0100\n"
+"PO-Revision-Date: 2024-03-18 21:18+0000\n"
+"Last-Translator: Michael Chirico <michaelchirico4@gmail.com>\n"
 "Language-Team: \n"
 "Language: ko\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 4.16.4\n"
 
 #: src/gnuwin32/console.c:1200 src/gnuwin32/console.c:1242
 msgid "Not enough memory"
@@ -123,15 +124,19 @@ msgstr "  복사하여 붙여넣기.\n"
 
 #: src/gnuwin32/console.c:2317
 msgid "     Use the mouse (with the left button held down) to mark (select) text.\n"
-msgstr "     복사할 텍스트를 선택하기 위해서는 (좌측 버튼을 누른채로) 마우스를 이용하세요. \n"
+msgstr "     복사할 텍스트를 선택하기 위해서는 (좌측 버튼을 누른채로) 마우스를 "
+"이용하세요.\n"
 
 #: src/gnuwin32/console.c:2318
 msgid "     Use Shift+Del (or Ctrl+C) to copy the marked text to the clipboard and\n"
-msgstr "     선택된 텍스트를 클립보드에 복사하기 위해서는 Shift+Del (또는 Ctrl+C)를 사용합니다. \n"
+msgstr "     선택된 텍스트를 클립보드에 복사하기 위해서는 Shift+Del (또는 Ctrl+C)를 "
+"사용합니다.\n"
 
 #: src/gnuwin32/console.c:2319
 msgid "     Shift+Ins (or Ctrl+V or Ctrl+Y) to paste the content of the clipboard (if any)  \n"
-msgstr "     클립보드에 있는 내용을 콘솔에 붙여넣고자 한다면 Shift+Ins (또는 Ctrl+V 혹은 Ctrl+Y)를 사용할 수 있습니다.\n"
+msgstr ""
+"     클립보드에 있는 내용을 콘솔에 붙여넣고자 한다면 Shift+Ins (또는 Ctrl+V "
+"혹은 Ctrl+Y)를 사용할 수 있습니다.  \n"
 
 #: src/gnuwin32/console.c:2320
 msgid "     to the console, Ctrl+X first copy then paste\n"
@@ -317,7 +322,7 @@ msgid "Print"
 msgstr "인쇄하기"
 
 #: src/gnuwin32/editor.c:800 src/gnuwin32/pager.c:477 src/gnuwin32/rui.c:1210
-#: src/library/utils/src/windows/dataentry.c:1793
+#: src/library/utils/src/windows/dataentry.c:1835
 #: src/library/grDevices/src/devWindows.c:1639
 msgid "File"
 msgstr "파일"
@@ -349,7 +354,7 @@ msgid "Close script"
 msgstr "스크립트 닫기"
 
 #: src/gnuwin32/editor.c:815 src/gnuwin32/pager.c:487 src/gnuwin32/rui.c:1231
-#: src/library/utils/src/windows/dataentry.c:1799
+#: src/library/utils/src/windows/dataentry.c:1841
 msgid "Edit"
 msgstr "편집"
 
@@ -376,8 +381,8 @@ msgid "GUI preferences..."
 msgstr "GUI 설정..."
 
 #: src/gnuwin32/editor.c:851 src/gnuwin32/rui.c:1274
-#: src/library/utils/src/windows/dataentry.c:1700
-#: src/library/utils/src/windows/dataentry.c:1810
+#: src/library/utils/src/windows/dataentry.c:1742
+#: src/library/utils/src/windows/dataentry.c:1852
 msgid "Help"
 msgstr "도움말"
 
@@ -397,7 +402,7 @@ msgstr "편집기 윈도우를 생성할 수 없습니다"
 msgid "Untitled"
 msgstr "제목없음"
 
-#: src/gnuwin32/extra.c:1050
+#: src/gnuwin32/extra.c:1052
 msgid "Select file"
 msgstr "파일선택"
 
@@ -423,14 +428,14 @@ msgid "Paste commands to console"
 msgstr "콘솔에 명령어를 붙여넣기"
 
 #: src/gnuwin32/pager.c:320 src/gnuwin32/rui.c:946
-#: src/library/utils/src/windows/dataentry.c:1706
+#: src/library/utils/src/windows/dataentry.c:1748
 #: src/library/grDevices/src/devWindows.c:1699
 msgid "Stay on top"
 msgstr "맨 위에 있도록 합니다"
 
 #: src/gnuwin32/pager.c:322 src/gnuwin32/pager.c:485
-#: src/library/utils/src/windows/dataentry.c:1708
-#: src/library/utils/src/windows/dataentry.c:1795
+#: src/library/utils/src/windows/dataentry.c:1750
+#: src/library/utils/src/windows/dataentry.c:1837
 msgid "Close"
 msgstr "닫기"
 
@@ -809,7 +814,7 @@ msgstr "메뉴를 찾을 수 없습니다"
 msgid "menu or item does not exist"
 msgstr "메뉴 또는 항목이 존재하지 않습니다"
 
-#: src/gnuwin32/system.c:558
+#: src/gnuwin32/system.c:565
 msgid "Save workspace image?"
 msgstr "작업공간 이미지를 저장하시겠습니까?"
 
@@ -824,7 +829,7 @@ msgstr "질문"
 
 #: src/extra/graphapp/dialogs.c:249
 msgid " Change working directory to:"
-msgstr "작업디렉토리를 다음의 위치로 변경:"
+msgstr " 작업디렉토리를 다음의 위치로 변경:"
 
 #: src/extra/graphapp/dialogs.c:251
 #, c-format
@@ -890,72 +895,73 @@ msgstr "내부페이저에 파일을 표시하기 위한 메모리가 부족합�
 msgid "Unable to start the print job"
 msgstr "페이저 윈도우를 생성할 수 없습니다"
 
-#: src/library/utils/src/windows/dataentry.c:225
-#: src/library/utils/src/windows/dataentry.c:1853
-#: src/library/utils/src/windows/dataentry.c:1856
-#: src/library/utils/src/windows/dataentry.c:1887
+#: src/library/utils/src/windows/dataentry.c:251
+#: src/library/utils/src/windows/dataentry.c:1896
+#: src/library/utils/src/windows/dataentry.c:1899
+#: src/library/utils/src/windows/dataentry.c:1930
 msgid "invalid argument"
 msgstr "잘못된 입력인자입니다"
 
-#: src/library/utils/src/windows/dataentry.c:272
+#: src/library/utils/src/windows/dataentry.c:298
 msgid "invalid type for value"
 msgstr "값에 대한 유형이 올바르지 않습니다"
 
-#: src/library/utils/src/windows/dataentry.c:283
+#: src/library/utils/src/windows/dataentry.c:309
 msgid "Data Editor"
 msgstr "데이터 편집기"
 
-#: src/library/utils/src/windows/dataentry.c:333
+#: src/library/utils/src/windows/dataentry.c:359
+#: src/library/utils/src/windows/dataentry.c:1889
 msgid "dataentry: internal memory problem"
 msgstr "데이터입력: 내부 메모리 문제입니다"
 
-#: src/library/utils/src/windows/dataentry.c:636
-#: src/library/utils/src/windows/dataentry.c:1224
+#: src/library/utils/src/windows/dataentry.c:662
+#: src/library/utils/src/windows/dataentry.c:1263
 msgid "dataentry: internal memory error"
 msgstr "데이터입력: 내부 메모리 에러입니다"
 
-#: src/library/utils/src/windows/dataentry.c:759
-#: src/library/utils/src/windows/dataentry.c:772
+#: src/library/utils/src/windows/dataentry.c:785
+#: src/library/utils/src/windows/dataentry.c:798
 msgid "internal type error in dataentry"
 msgstr "데이터입력에 내부 유형의 에러입니다"
 
-#: src/library/utils/src/windows/dataentry.c:855
+#: src/library/utils/src/windows/dataentry.c:893
 msgid "dataentry: parse error on string"
 msgstr "데이터입력: 문자열 분석에 에러입니다"
 
-#: src/library/utils/src/windows/dataentry.c:998
+#: src/library/utils/src/windows/dataentry.c:1037
 msgid "dataentry: expression too long"
 msgstr "데이터입력: 표현식이 너무 깁니다"
 
-#: src/library/utils/src/windows/dataentry.c:1475
+#: src/library/utils/src/windows/dataentry.c:1516
 msgid "column names cannot be blank"
 msgstr "열이름은 공백으로 남겨둘 수 없습니다"
 
-#: src/library/utils/src/windows/dataentry.c:1521
+#: src/library/utils/src/windows/dataentry.c:1562
 msgid "Variable editor"
 msgstr "변수 편집기"
 
-#: src/library/utils/src/windows/dataentry.c:1526
+#: src/library/utils/src/windows/dataentry.c:1567
 msgid "variable name"
 msgstr "변수명"
 
-#: src/library/utils/src/windows/dataentry.c:1528
+#: src/library/utils/src/windows/dataentry.c:1569
 msgid "type"
 msgstr "유형"
 
-#: src/library/utils/src/windows/dataentry.c:1642
+#: src/library/utils/src/windows/dataentry.c:1684
 msgid "Cell width(s)"
 msgstr "셀의 너비(들)"
 
-#: src/library/utils/src/windows/dataentry.c:1648
+#: src/library/utils/src/windows/dataentry.c:1690
 msgid "Cell width"
 msgstr "셀의 너비"
 
-#: src/library/utils/src/windows/dataentry.c:1651
+#: src/library/utils/src/windows/dataentry.c:1693
 msgid "variable"
 msgstr "변수"
 
-#: src/library/utils/src/windows/dataentry.c:1694
+#: src/library/utils/src/windows/dataentry.c:1736
 msgid ""
 "Navigation.\n"
 "  Keyboard: cursor keys move selection\n"
@@ -997,35 +1003,35 @@ msgstr ""
 "  우측 버튼을 누르면 복사, 붙여넣기, 선태된 열에 대한 자동크기 조절을 할 수 있는 메뉴를 보여줍니다\n"
 "\n"
 
-#: src/library/utils/src/windows/dataentry.c:1702
+#: src/library/utils/src/windows/dataentry.c:1744
 msgid "Copy selected cell"
 msgstr "선택된 셀을 복사합니다"
 
-#: src/library/utils/src/windows/dataentry.c:1703
+#: src/library/utils/src/windows/dataentry.c:1745
 msgid "Paste to selected cell"
 msgstr "선택된 셀에 붙여넣습니다"
 
-#: src/library/utils/src/windows/dataentry.c:1704
+#: src/library/utils/src/windows/dataentry.c:1746
 msgid "Autosize column"
 msgstr "열의 크기를 자동조정합니다"
 
-#: src/library/utils/src/windows/dataentry.c:1800
+#: src/library/utils/src/windows/dataentry.c:1842
 msgid "Copy  \tCTRL+C"
 msgstr "복사  \tCTRL+C"
 
-#: src/library/utils/src/windows/dataentry.c:1802
+#: src/library/utils/src/windows/dataentry.c:1844
 msgid "Paste \tCTRL+V"
 msgstr "붙여넣기 \tCTRL+V"
 
-#: src/library/utils/src/windows/dataentry.c:1804
+#: src/library/utils/src/windows/dataentry.c:1846
 msgid "Delete\tDEL"
 msgstr "삭제\tDEL"
 
-#: src/library/utils/src/windows/dataentry.c:1807
+#: src/library/utils/src/windows/dataentry.c:1849
 msgid "Cell widths ..."
 msgstr "셀 너비 ..."
 
-#: src/library/utils/src/windows/dataentry.c:1811
+#: src/library/utils/src/windows/dataentry.c:1853
 msgid "Data editor"
 msgstr "데이터 편집기"
 

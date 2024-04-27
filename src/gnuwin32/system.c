@@ -292,8 +292,9 @@ GuiReadConsole(const char *prompt, unsigned char *buf, int len,
                int addtohistory)
 {
     int res;
+    const void *vmax = vmaxget();
     const char *NormalPrompt =
-	CHAR(STRING_ELT(GetOption1(install("prompt")), 0));
+	translateChar(STRING_ELT(GetOption1(install("prompt")), 0));
 
     if(!R_is_running) {
 	R_is_running = 1;
@@ -302,6 +303,8 @@ GuiReadConsole(const char *prompt, unsigned char *buf, int len,
     ConsoleAcceptCmd = !strcmp(prompt, NormalPrompt);
     res = consolereads(RConsole, prompt, (char *)buf, len, addtohistory);
     ConsoleAcceptCmd = 0;
+    vmaxset(vmax);
+
     return !res;
 }
 
@@ -430,8 +433,12 @@ FileReadConsole(const char *prompt, unsigned char *buf, int len, int addhistory)
 	*ob = '\0';
 	err = (res == (size_t)(-1));
 	/* errors lead to part of the input line being ignored */
-	if(err) printf(_("<ERROR: re-encoding failure from encoding '%s'>\n"),
+	if(err) {
+	    Riconv(cd, NULL, NULL, &ob, &onb);
+	    *ob = '\0';
+	    printf(_("<ERROR: re-encoding failure from encoding '%s'>\n"),
 		       R_StdinEnc);
+	}
 	strncpy((char *)buf, obuf, len);
     }
 
@@ -674,7 +681,7 @@ int R_ShowFiles(int nfile, const char **file, const char **headers,
 			snprintf(buf, 1024,
 				 _("cannot open file '%s': %s"),
 				 file[i], strerror(errno));
-			warning(buf);
+			warning("%s", buf);
 		    }
 		} else {
 		    /* Quote path if not quoted */
@@ -683,13 +690,13 @@ int R_ShowFiles(int nfile, const char **file, const char **headers,
 		    else
 			snprintf(buf, 1024, "%s \"%s\"", pager, file[i]);
 		    ll = runcmd(buf, CE_NATIVE, 0, 1, NULL, NULL, NULL);
-		    if (ll == NOLAUNCH) warning(runerror());
+		    if (ll == NOLAUNCH) warning("%s", runerror());
 		}
 	    } else {
 		snprintf(buf, 1024,
 			 _("file.show(): file '%s' does not exist\n"),
 			 file[i]);
-		warning(buf);
+		warning("%s", buf);
 	    }
 	}
 	return 0;
@@ -730,7 +737,7 @@ int R_EditFiles(int nfile, const char **file, const char **title,
 		else
 		    snprintf(buf, 1024, "%s \"%s\"", editor, file[i]);
 		ll = runcmd(buf, CE_UTF8, 0, 1, NULL, NULL, NULL);
-		if (ll == NOLAUNCH) warning(runerror());
+		if (ll == NOLAUNCH) warning("%s", runerror());
 	    }
 
 	}

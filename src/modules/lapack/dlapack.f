@@ -322,7 +322,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup bbcsd
 *
 *  =====================================================================
       SUBROUTINE DBBCSD( JOBU1, JOBU2, JOBV1T, JOBV2T, TRANS, M, P, Q,
@@ -1123,13 +1123,6 @@
 *> respectively. DBDSDC can be used to compute all singular values,
 *> and optionally, singular vectors or singular vectors in compact form.
 *>
-*> This code makes very mild assumptions about floating point
-*> arithmetic. It will work on machines with a guard digit in
-*> add/subtract, or on those binary machines without guard digits
-*> which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or Cray-2.
-*> It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.  See DLASD3 for details.
-*>
 *> The code currently calls DLASDQ if singular values only are desired.
 *> However, it can be slightly modified to compute singular values
 *> using the divide and conquer method.
@@ -1269,7 +1262,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup bdsdc
 *
 *> \par Contributors:
 *  ==================
@@ -1832,7 +1825,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup bdsqr
 *
 *  =====================================================================
       SUBROUTINE DBDSQR( UPLO, N, NCVT, NRU, NCC, D, E, VT, LDVT, U,
@@ -1877,7 +1870,7 @@
      $                   MAXITDIVN, NM1, NM12, NM13, OLDLL, OLDM
       DOUBLE PRECISION   ABSE, ABSS, COSL, COSR, CS, EPS, F, G, H, MU,
      $                   OLDCS, OLDSN, R, SHIFT, SIGMN, SIGMX, SINL,
-     $                   SINR, SLL, SMAX, SMIN, SMINL, SMINOA,
+     $                   SINR, SLL, SMAX, SMIN, SMINOA,
      $                   SN, THRESH, TOL, TOLMUL, UNFL
 *     ..
 *     .. External Functions ..
@@ -1990,7 +1983,7 @@
       DO 30 I = 1, N - 1
          SMAX = MAX( SMAX, ABS( E( I ) ) )
    30 CONTINUE
-      SMINL = ZERO
+      SMIN = ZERO
       IF( TOL.GE.ZERO ) THEN
 *
 *        Relative accuracy desired
@@ -2050,7 +2043,6 @@
       IF( TOL.LT.ZERO .AND. ABS( D( M ) ).LE.THRESH )
      $   D( M ) = ZERO
       SMAX = ABS( D( M ) )
-      SMIN = SMAX
       DO 70 LLL = 1, M - 1
          LL = M - LLL
          ABSS = ABS( D( LL ) )
@@ -2059,7 +2051,6 @@
      $      D( LL ) = ZERO
          IF( ABSE.LE.THRESH )
      $      GO TO 80
-         SMIN = MIN( SMIN, ABSS )
          SMAX = MAX( SMAX, ABSS, ABSE )
    70 CONTINUE
       LL = 0
@@ -2141,14 +2132,14 @@
 *           apply convergence criterion forward
 *
             MU = ABS( D( LL ) )
-            SMINL = MU
+            SMIN = MU
             DO 100 LLL = LL, M - 1
                IF( ABS( E( LLL ) ).LE.TOL*MU ) THEN
                   E( LLL ) = ZERO
                   GO TO 60
                END IF
                MU = ABS( D( LLL+1 ) )*( MU / ( MU+ABS( E( LLL ) ) ) )
-               SMINL = MIN( SMINL, MU )
+               SMIN = MIN( SMIN, MU )
   100       CONTINUE
          END IF
 *
@@ -2169,14 +2160,14 @@
 *           apply convergence criterion backward
 *
             MU = ABS( D( M ) )
-            SMINL = MU
+            SMIN = MU
             DO 110 LLL = M - 1, LL, -1
                IF( ABS( E( LLL ) ).LE.TOL*MU ) THEN
                   E( LLL ) = ZERO
                   GO TO 60
                END IF
                MU = ABS( D( LLL ) )*( MU / ( MU+ABS( E( LLL ) ) ) )
-               SMINL = MIN( SMINL, MU )
+               SMIN = MIN( SMIN, MU )
   110       CONTINUE
          END IF
       END IF
@@ -2186,7 +2177,7 @@
 *     Compute shift.  First, test if shifting would ruin relative
 *     accuracy, and if so set the shift to zero.
 *
-      IF( TOL.GE.ZERO .AND. N*TOL*( SMINL / SMAX ).LE.
+      IF( TOL.GE.ZERO .AND. N*TOL*( SMIN / SMAX ).LE.
      $    MAX( EPS, HNDRTH*TOL ) ) THEN
 *
 *        Use a zero shift to avoid loss of relative accuracy
@@ -2573,7 +2564,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup disna
 *
 *  =====================================================================
       SUBROUTINE DDISNA( JOB, M, N, D, SEP, INFO )
@@ -2884,7 +2875,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup gbbrd
 *
 *  =====================================================================
       SUBROUTINE DGBBRD( VECT, M, N, NCC, KL, KU, AB, LDAB, D, E, Q,
@@ -3387,7 +3378,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup gbcon
 *
 *  =====================================================================
       SUBROUTINE DGBCON( NORM, N, KL, KU, AB, LDAB, IPIV, ANORM, RCOND,
@@ -3702,7 +3693,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup gbequ
 *
 *  =====================================================================
       SUBROUTINE DGBEQU( M, N, KL, KU, AB, LDAB, R, C, ROWCND, COLCND,
@@ -4030,7 +4021,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup gbequb
 *
 *  =====================================================================
       SUBROUTINE DGBEQUB( M, N, KL, KU, AB, LDAB, R, C, ROWCND, COLCND,
@@ -4411,7 +4402,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup gbrfs
 *
 *  =====================================================================
       SUBROUTINE DGBRFS( TRANS, N, KL, KU, NRHS, AB, LDAB, AFB, LDAFB,
@@ -4809,7 +4800,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBsolve
+*> \ingroup gbsv
 *
 *> \par Further Details:
 *  =====================
@@ -5212,7 +5203,7 @@
 *>
 *> \param[out] WORK
 *> \verbatim
-*>          WORK is DOUBLE PRECISION array, dimension (3*N)
+*>          WORK is DOUBLE PRECISION array, dimension (MAX(1,3*N))
 *>          On exit, WORK(1) contains the reciprocal pivot growth
 *>          factor norm(A)/norm(U). The "max absolute element" norm is
 *>          used. If WORK(1) is much less than 1, then the stability
@@ -5256,7 +5247,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBsolve
+*> \ingroup gbsvx
 *
 *  =====================================================================
       SUBROUTINE DGBSVX( FACT, TRANS, N, KL, KU, NRHS, AB, LDAB, AFB,
@@ -5650,7 +5641,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup gbtf2
 *
 *> \par Further Details:
 *  =====================
@@ -5924,7 +5915,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup gbtrf
 *
 *> \par Further Details:
 *  =====================
@@ -6452,7 +6443,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup gbtrs
 *
 *  =====================================================================
       SUBROUTINE DGBTRS( TRANS, N, KL, KU, NRHS, AB, LDAB, IPIV, B, LDB,
@@ -6710,7 +6701,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gebak
 *
 *  =====================================================================
       SUBROUTINE DGEBAK( JOB, SIDE, N, ILO, IHI, SCALE, M, V, LDV,
@@ -6974,7 +6965,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gebal
 *
 *> \par Further Details:
 *  =====================
@@ -7006,6 +6997,9 @@
 *>
 *>  Modified by Tzu-Yi Chen, Computer Science Division, University of
 *>    California at Berkeley, USA
+*>
+*>  Refactored by Evert Provoost, Department of Computer Science,
+*>    KU Leuven, Belgium
 *> \endverbatim
 *>
 *  =====================================================================
@@ -7034,8 +7028,8 @@
       PARAMETER          ( FACTOR = 0.95D+0 )
 *     ..
 *     .. Local Scalars ..
-      LOGICAL            NOCONV
-      INTEGER            I, ICA, IEXC, IRA, J, K, L, M
+      LOGICAL            NOCONV, CANSWAP
+      INTEGER            I, ICA, IRA, J, K, L
       DOUBLE PRECISION   C, CA, F, G, R, RA, S, SFMAX1, SFMAX2, SFMIN1,
      $                   SFMIN2
 *     ..
@@ -7067,177 +7061,192 @@
          RETURN
       END IF
 *
+*     Quick returns.
+*
+      IF( N.EQ.0 ) THEN
+         ILO = 1
+         IHI = 0
+         RETURN
+      END IF
+*
+      IF( LSAME( JOB, 'N' ) ) THEN
+         DO I = 1, N
+            SCALE( I ) = ONE
+         END DO
+         ILO = 1
+         IHI = N
+         RETURN
+      END IF
+*
+*     Permutation to isolate eigenvalues if possible.
+*
       K = 1
       L = N
 *
-      IF( N.EQ.0 )
-     $   GO TO 210
+      IF( .NOT.LSAME( JOB, 'S' ) ) THEN
 *
-      IF( LSAME( JOB, 'N' ) ) THEN
-         DO 10 I = 1, N
-            SCALE( I ) = ONE
-   10    CONTINUE
-         GO TO 210
+*        Row and column exchange.
+*
+         NOCONV = .TRUE.
+         DO WHILE( NOCONV )
+*
+*           Search for rows isolating an eigenvalue and push them down.
+*
+            NOCONV = .FALSE.
+            DO I = L, 1, -1
+               CANSWAP = .TRUE.
+               DO J = 1, L
+                  IF( I.NE.J .AND. A( I, J ).NE.ZERO ) THEN
+                     CANSWAP = .FALSE.
+                     EXIT
+                  END IF
+               END DO
+*
+               IF( CANSWAP ) THEN
+                  SCALE( L ) = I
+                  IF( I.NE.L ) THEN
+                     CALL DSWAP( L, A( 1, I ), 1, A( 1, L ), 1 )
+                     CALL DSWAP( N-K+1, A( I, K ), LDA, A( L, K ), LDA )
+                  END IF
+                  NOCONV = .TRUE.
+*
+                  IF( L.EQ.1 ) THEN
+                     ILO = 1
+                     IHI = 1
+                     RETURN
+                  END IF
+*
+                  L = L - 1
+               END IF
+            END DO
+*
+         END DO
+
+         NOCONV = .TRUE.
+         DO WHILE( NOCONV )
+*
+*           Search for columns isolating an eigenvalue and push them left.
+*
+            NOCONV = .FALSE.
+            DO J = K, L
+               CANSWAP = .TRUE.
+               DO I = K, L
+                  IF( I.NE.J .AND. A( I, J ).NE.ZERO ) THEN
+                     CANSWAP = .FALSE.
+                     EXIT
+                  END IF
+               END DO
+*
+               IF( CANSWAP ) THEN
+                  SCALE( K ) = J
+                  IF( J.NE.K ) THEN
+                     CALL DSWAP( L, A( 1, J ), 1, A( 1, K ), 1 )
+                     CALL DSWAP( N-K+1, A( J, K ), LDA, A( K, K ), LDA )
+                  END IF
+                  NOCONV = .TRUE.
+*
+                  K = K + 1
+               END IF
+            END DO
+*
+         END DO
+*
       END IF
 *
-      IF( LSAME( JOB, 'S' ) )
-     $   GO TO 120
+*     Initialize SCALE for non-permuted submatrix.
 *
-*     Permutation to isolate eigenvalues if possible
-*
-      GO TO 50
-*
-*     Row and column exchange.
-*
-   20 CONTINUE
-      SCALE( M ) = J
-      IF( J.EQ.M )
-     $   GO TO 30
-*
-      CALL DSWAP( L, A( 1, J ), 1, A( 1, M ), 1 )
-      CALL DSWAP( N-K+1, A( J, K ), LDA, A( M, K ), LDA )
-*
-   30 CONTINUE
-      GO TO ( 40, 80 )IEXC
-*
-*     Search for rows isolating an eigenvalue and push them down.
-*
-   40 CONTINUE
-      IF( L.EQ.1 )
-     $   GO TO 210
-      L = L - 1
-*
-   50 CONTINUE
-      DO 70 J = L, 1, -1
-*
-         DO 60 I = 1, L
-            IF( I.EQ.J )
-     $         GO TO 60
-            IF( A( J, I ).NE.ZERO )
-     $         GO TO 70
-   60    CONTINUE
-*
-         M = L
-         IEXC = 1
-         GO TO 20
-   70 CONTINUE
-*
-      GO TO 90
-*
-*     Search for columns isolating an eigenvalue and push them left.
-*
-   80 CONTINUE
-      K = K + 1
-*
-   90 CONTINUE
-      DO 110 J = K, L
-*
-         DO 100 I = K, L
-            IF( I.EQ.J )
-     $         GO TO 100
-            IF( A( I, J ).NE.ZERO )
-     $         GO TO 110
-  100    CONTINUE
-*
-         M = K
-         IEXC = 2
-         GO TO 20
-  110 CONTINUE
-*
-  120 CONTINUE
-      DO 130 I = K, L
+      DO I = K, L
          SCALE( I ) = ONE
-  130 CONTINUE
+      END DO
 *
-      IF( LSAME( JOB, 'P' ) )
-     $   GO TO 210
+*     If we only had to permute, we are done.
+*
+      IF( LSAME( JOB, 'P' ) ) THEN
+         ILO = K
+         IHI = L
+         RETURN
+      END IF
 *
 *     Balance the submatrix in rows K to L.
 *
-*     Iterative loop for norm reduction
+*     Iterative loop for norm reduction.
 *
       SFMIN1 = DLAMCH( 'S' ) / DLAMCH( 'P' )
       SFMAX1 = ONE / SFMIN1
       SFMIN2 = SFMIN1*SCLFAC
       SFMAX2 = ONE / SFMIN2
 *
-  140 CONTINUE
-      NOCONV = .FALSE.
+      NOCONV = .TRUE.
+      DO WHILE( NOCONV )
+         NOCONV = .FALSE.
 *
-      DO 200 I = K, L
+         DO I = K, L
 *
-         C = DNRM2( L-K+1, A( K, I ), 1 )
-         R = DNRM2( L-K+1, A( I, K ), LDA )
-         ICA = IDAMAX( L, A( 1, I ), 1 )
-         CA = ABS( A( ICA, I ) )
-         IRA = IDAMAX( N-K+1, A( I, K ), LDA )
-         RA = ABS( A( I, IRA+K-1 ) )
+            C = DNRM2( L-K+1, A( K, I ), 1 )
+            R = DNRM2( L-K+1, A( I, K ), LDA )
+            ICA = IDAMAX( L, A( 1, I ), 1 )
+            CA = ABS( A( ICA, I ) )
+            IRA = IDAMAX( N-K+1, A( I, K ), LDA )
+            RA = ABS( A( I, IRA+K-1 ) )
 *
-*        Guard against zero C or R due to underflow.
+*           Guard against zero C or R due to underflow.
 *
-         IF( C.EQ.ZERO .OR. R.EQ.ZERO )
-     $      GO TO 200
-         G = R / SCLFAC
-         F = ONE
-         S = C + R
-  160    CONTINUE
-         IF( C.GE.G .OR. MAX( F, C, CA ).GE.SFMAX2 .OR.
-     $       MIN( R, G, RA ).LE.SFMIN2 )GO TO 170
-            IF( DISNAN( C+F+CA+R+G+RA ) ) THEN
+            IF( C.EQ.ZERO .OR. R.EQ.ZERO ) CYCLE
 *
 *           Exit if NaN to avoid infinite loop
 *
-            INFO = -3
-            CALL XERBLA( 'DGEBAL', -INFO )
-            RETURN
-         END IF
-         F = F*SCLFAC
-         C = C*SCLFAC
-         CA = CA*SCLFAC
-         R = R / SCLFAC
-         G = G / SCLFAC
-         RA = RA / SCLFAC
-         GO TO 160
+            IF( DISNAN( C+CA+R+RA ) ) THEN
+               INFO = -3
+               CALL XERBLA( 'DGEBAL', -INFO )
+               RETURN
+            END IF
 *
-  170    CONTINUE
-         G = C / SCLFAC
-  180    CONTINUE
-         IF( G.LT.R .OR. MAX( R, RA ).GE.SFMAX2 .OR.
-     $       MIN( F, C, G, CA ).LE.SFMIN2 )GO TO 190
-         F = F / SCLFAC
-         C = C / SCLFAC
-         G = G / SCLFAC
-         CA = CA / SCLFAC
-         R = R*SCLFAC
-         RA = RA*SCLFAC
-         GO TO 180
+            G = R / SCLFAC
+            F = ONE
+            S = C + R
 *
-*        Now balance.
+            DO WHILE( C.LT.G .AND. MAX( F, C, CA ).LT.SFMAX2 .AND.
+     $                MIN( R, G, RA ).GT.SFMIN2 )
+               F = F*SCLFAC
+               C = C*SCLFAC
+               CA = CA*SCLFAC
+               R = R / SCLFAC
+               G = G / SCLFAC
+               RA = RA / SCLFAC
+            END DO
 *
-  190    CONTINUE
-         IF( ( C+R ).GE.FACTOR*S )
-     $      GO TO 200
-         IF( F.LT.ONE .AND. SCALE( I ).LT.ONE ) THEN
-            IF( F*SCALE( I ).LE.SFMIN1 )
-     $         GO TO 200
-         END IF
-         IF( F.GT.ONE .AND. SCALE( I ).GT.ONE ) THEN
-            IF( SCALE( I ).GE.SFMAX1 / F )
-     $         GO TO 200
-         END IF
-         G = ONE / F
-         SCALE( I ) = SCALE( I )*F
-         NOCONV = .TRUE.
+            G = C / SCLFAC
 *
-         CALL DSCAL( N-K+1, G, A( I, K ), LDA )
-         CALL DSCAL( L, F, A( 1, I ), 1 )
+            DO WHILE( G.GE.R .AND. MAX( R, RA ).LT.SFMAX2 .AND.
+     $                MIN( F, C, G, CA ).GT.SFMIN2 )
+               F = F / SCLFAC
+               C = C / SCLFAC
+               G = G / SCLFAC
+               CA = CA / SCLFAC
+               R = R*SCLFAC
+               RA = RA*SCLFAC
+            END DO
 *
-  200 CONTINUE
+*           Now balance.
 *
-      IF( NOCONV )
-     $   GO TO 140
+            IF( ( C+R ).GE.FACTOR*S ) CYCLE
+            IF( F.LT.ONE .AND. SCALE( I ).LT.ONE ) THEN
+               IF( F*SCALE( I ).LE.SFMIN1 ) CYCLE
+            END IF
+            IF( F.GT.ONE .AND. SCALE( I ).GT.ONE ) THEN
+               IF( SCALE( I ).GE.SFMAX1 / F ) CYCLE
+            END IF
+            G = ONE / F
+            SCALE( I ) = SCALE( I )*F
+            NOCONV = .TRUE.
 *
-  210 CONTINUE
+            CALL DSCAL( N-K+1, G, A( I, K ), LDA )
+            CALL DSCAL( L, F, A( 1, I ), 1 )
+*
+         END DO
+*
+      END DO
+*
       ILO = K
       IHI = L
 *
@@ -7380,7 +7389,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gebd2
 *
 *> \par Further Details:
 *  =====================
@@ -7712,7 +7721,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gebrd
 *
 *> \par Further Details:
 *  =====================
@@ -8019,7 +8028,15 @@
 *> \verbatim
 *>          INFO is INTEGER
 *>          = 0:  successful exit
-*>          < 0:  if INFO = -i, the i-th argument had an illegal value
+*>          < 0:  if INFO = -i, the i-th argument had an illegal value.
+*>                NaNs are illegal values for ANORM, and they propagate to
+*>                the output parameter RCOND.
+*>                Infinity is illegal for ANORM, and it propagates to the output
+*>                parameter RCOND as 0.
+*>          = 1:  if RCOND = NaN, or
+*>                   RCOND = Inf, or
+*>                   the computed norm of the inverse of A is 0.
+*>                In the latter, RCOND = 0 is returned.
 *> \endverbatim
 *
 *  Authors:
@@ -8030,7 +8047,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gecon
 *
 *  =====================================================================
       SUBROUTINE DGECON( NORM, N, A, LDA, ANORM, RCOND, WORK, IWORK,
@@ -8060,16 +8077,16 @@
       LOGICAL            ONENRM
       CHARACTER          NORMIN
       INTEGER            IX, KASE, KASE1
-      DOUBLE PRECISION   AINVNM, SCALE, SL, SMLNUM, SU
+      DOUBLE PRECISION   AINVNM, SCALE, SL, SMLNUM, SU, HUGEVAL
 *     ..
 *     .. Local Arrays ..
       INTEGER            ISAVE( 3 )
 *     ..
 *     .. External Functions ..
-      LOGICAL            LSAME
+      LOGICAL            LSAME, DISNAN
       INTEGER            IDAMAX
       DOUBLE PRECISION   DLAMCH
-      EXTERNAL           LSAME, IDAMAX, DLAMCH
+      EXTERNAL           LSAME, IDAMAX, DLAMCH, DISNAN
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           DLACN2, DLATRS, DRSCL, XERBLA
@@ -8078,6 +8095,8 @@
       INTRINSIC          ABS, MAX
 *     ..
 *     .. Executable Statements ..
+*
+      HUGEVAL = DLAMCH( 'Overflow' )
 *
 *     Test the input parameters.
 *
@@ -8104,6 +8123,13 @@
          RCOND = ONE
          RETURN
       ELSE IF( ANORM.EQ.ZERO ) THEN
+         RETURN
+      ELSE IF( DISNAN( ANORM ) ) THEN
+         RCOND = ANORM
+         INFO = -5
+         RETURN
+      ELSE IF( ANORM.GT.HUGEVAL ) THEN
+         INFO = -5
          RETURN
       END IF
 *
@@ -8161,8 +8187,17 @@
 *
 *     Compute the estimate of the reciprocal condition number.
 *
-      IF( AINVNM.NE.ZERO )
-     $   RCOND = ( ONE / AINVNM ) / ANORM
+      IF( AINVNM.NE.ZERO ) THEN
+         RCOND = ( ONE / AINVNM ) / ANORM
+      ELSE
+         INFO = 1
+         RETURN
+      END IF
+*
+*     Check for NaNs and Infs
+*
+      IF( DISNAN( RCOND ) .OR. RCOND.GT.HUGEVAL )
+     $   INFO = 1
 *
    20 CONTINUE
       RETURN
@@ -8303,7 +8338,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geequ
 *
 *  =====================================================================
       SUBROUTINE DGEEQU( M, N, A, LDA, R, C, ROWCND, COLCND, AMAX,
@@ -8611,7 +8646,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geequb
 *
 *  =====================================================================
       SUBROUTINE DGEEQUB( M, N, A, LDA, R, C, ROWCND, COLCND, AMAX,
@@ -8999,7 +9034,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEeigen
+*> \ingroup gees
 *
 *  =====================================================================
       SUBROUTINE DGEES( JOBVS, SORT, SELECT, N, A, LDA, SDIM, WR, WI,
@@ -9042,7 +9077,7 @@
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           DCOPY, DGEBAK, DGEBAL, DGEHRD, DHSEQR, DLACPY,
-     $                   DLABAD, DLASCL, DORGHR, DSWAP, DTRSEN, XERBLA
+     $                   DLASCL, DORGHR, DSWAP, DTRSEN, XERBLA
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME
@@ -9129,7 +9164,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
       SMLNUM = SQRT( SMLNUM ) / EPS
       BIGNUM = ONE / SMLNUM
 *
@@ -9595,7 +9629,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEeigen
+*> \ingroup geesx
 *
 *  =====================================================================
       SUBROUTINE DGEESX( JOBVS, SORT, SELECT, SENSE, N, A, LDA, SDIM,
@@ -9647,7 +9681,7 @@
       LOGICAL            LSAME
       INTEGER            ILAENV
       DOUBLE PRECISION   DLAMCH, DLANGE
-      EXTERNAL           LSAME, ILAENV, DLABAD, DLAMCH, DLANGE
+      EXTERNAL           LSAME, ILAENV, DLAMCH, DLANGE
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          MAX, SQRT
@@ -9749,7 +9783,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
       SMLNUM = SQRT( SMLNUM ) / EPS
       BIGNUM = ONE / SMLNUM
 *
@@ -10155,7 +10188,7 @@
 *
 *  @precisions fortran d -> s
 *
-*> \ingroup doubleGEeigen
+*> \ingroup geev
 *
 *  =====================================================================
       SUBROUTINE DGEEV( JOBVL, JOBVR, N, A, LDA, WR, WI, VL, LDVL, VR,
@@ -10194,9 +10227,8 @@
       DOUBLE PRECISION   DUM( 1 )
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGEBAK, DGEBAL, DGEHRD, DHSEQR, DLABAD, DLACPY,
-     $                   DLARTG, DLASCL, DORGHR, DROT, DSCAL, DTREVC3,
-     $                   XERBLA
+      EXTERNAL           DGEBAK, DGEBAL, DGEHRD, DHSEQR, DLACPY, DLARTG,
+     $                   DLASCL, DORGHR, DROT, DSCAL, DTREVC3, XERBLA
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME
@@ -10307,7 +10339,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
       SMLNUM = SQRT( SMLNUM ) / EPS
       BIGNUM = ONE / SMLNUM
 *
@@ -10795,7 +10826,7 @@
 *
 *  @precisions fortran d -> s
 *
-*> \ingroup doubleGEeigen
+*> \ingroup geevx
 *
 *  =====================================================================
       SUBROUTINE DGEEVX( BALANC, JOBVL, JOBVR, SENSE, N, A, LDA, WR, WI,
@@ -10839,9 +10870,9 @@
       DOUBLE PRECISION   DUM( 1 )
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGEBAK, DGEBAL, DGEHRD, DHSEQR, DLABAD, DLACPY,
-     $                   DLARTG, DLASCL, DORGHR, DROT, DSCAL, DTREVC3,
-     $                   DTRSNA, XERBLA
+      EXTERNAL           DGEBAK, DGEBAL, DGEHRD, DHSEQR, DLACPY, DLARTG,
+     $                   DLASCL, DORGHR, DROT, DSCAL, DTREVC3, DTRSNA,
+     $                   XERBLA
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME
@@ -10975,7 +11006,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
       SMLNUM = SQRT( SMLNUM ) / EPS
       BIGNUM = ONE / SMLNUM
 *
@@ -11188,7 +11218,7 @@
 *     End of DGEEVX
 *
       END
-*> \brief <b> DGEEVX computes the eigenvalues and, optionally, the left and/or right eigenvectors for GE matrices</b>
+*> \brief <b> DGEGS computes the eigenvalues, real Schur form, and, optionally, the left and/or right Schur vectors of a real matrix pair (A,B)</b>
 *
 *  =========== DOCUMENTATION ===========
 *
@@ -11726,7 +11756,7 @@
 *     End of DGEGS
 *
       END
-*> \brief <b> DGEEVX computes the eigenvalues and, optionally, the left and/or right eigenvectors for GE matrices</b>
+*> \brief <b> DGEGV computes the eigenvalues and, optionally, the left and/or right eigenvectors of a real matrix pair (A,B).</b>
 *
 *  =========== DOCUMENTATION ===========
 *
@@ -12600,7 +12630,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gehd2
 *
 *> \par Further Details:
 *  =====================
@@ -12836,7 +12866,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gehrd
 *
 *> \par Further Details:
 *  =====================
@@ -13293,7 +13323,7 @@
 *>
 *> \param[out] U
 *> \verbatim
-*>          U is DOUBLE PRECISION array, dimension ( LDU, N )
+*>          U is DOUBLE PRECISION array, dimension ( LDU, N ) or ( LDU, M )
 *>          If JOBU = 'U', then U contains on exit the M-by-N matrix of
 *>                         the left singular vectors.
 *>          If JOBU = 'F', then U contains on exit the M-by-M matrix of
@@ -13322,7 +13352,7 @@
 *>          If JOBV = 'V', 'J' then V contains on exit the N-by-N matrix of
 *>                         the right singular vectors;
 *>          If JOBV = 'W', AND (JOBU = 'U' AND JOBT = 'T' AND M = N),
-*>                         then V is used as workspace if the pprocedure
+*>                         then V is used as workspace if the procedure
 *>                         replaces A with A^t. In that case, [U] is computed
 *>                         in V as right singular vectors of A^t and then
 *>                         copied back to the U array. This 'W' option is just
@@ -13340,7 +13370,7 @@
 *>
 *> \param[out] WORK
 *> \verbatim
-*>          WORK is DOUBLE PRECISION array, dimension (LWORK)
+*>          WORK is DOUBLE PRECISION array, dimension (MAX(7,LWORK))
 *>          On exit, if N > 0 .AND. M > 0 (else not referenced),
 *>          WORK(1) = SCALE = WORK(2) / WORK(1) is the scaling factor such
 *>                    that SCALE*SVA(1:N) are the computed singular values
@@ -13431,7 +13461,7 @@
 *>
 *> \param[out] IWORK
 *> \verbatim
-*>          IWORK is INTEGER array, dimension (M+3*N).
+*>          IWORK is INTEGER array, dimension (MAX(3,M+3*N)).
 *>          On exit,
 *>          IWORK(1) = the numerical rank determined after the initial
 *>                     QR factorization with pivoting. See the descriptions
@@ -13460,7 +13490,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEsing
+*> \ingroup gejsv
 *
 *> \par Further Details:
 *  =====================
@@ -14455,7 +14485,7 @@
                IF ( CONDR2 .GE. COND_OK ) THEN
 *                 .. save the Householder vectors used for Q3
 *                 (this overwrites the copy of R2, as it will not be
-*                 needed in this branch, but it does not overwritte the
+*                 needed in this branch, but it does not overwrite the
 *                 Huseholder vectors of Q2.).
                   CALL DLACPY( 'U', NR, NR, V, LDV, WORK(2*N+1), N )
 *                 .. and the rest of the information on Q3 is in
@@ -14478,7 +14508,7 @@
             END IF
 *
 *        Second preconditioning finished; continue with Jacobi SVD
-*        The input matrix is lower trinagular.
+*        The input matrix is lower triangular.
 *
 *        Recover the right singular vectors as solution of a well
 *        conditioned triangular matrix equation.
@@ -14523,7 +14553,7 @@
 * :)           .. the input matrix A is very likely a relative of
 *              the Kahan matrix :)
 *              The matrix R2 is inverted. The solution of the matrix equation
-*              is Q3^T*V3 = the product of the Jacobi rotations (appplied to
+*              is Q3^T*V3 = the product of the Jacobi rotations (applied to
 *              the lower triangular L3 from the LQ factorization of
 *              R2=L3*Q3), pre-multiplied with the transposed Q3.
                CALL DGESVJ( 'L', 'U', 'N', NR, NR, V, LDV, SVA, NR, U,
@@ -14953,7 +14983,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gelq2
 *
 *> \par Further Details:
 *  =====================
@@ -15164,7 +15194,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gelqf
 *
 *> \par Further Details:
 *  =====================
@@ -15495,7 +15525,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEsolve
+*> \ingroup gels
 *
 *  =====================================================================
       SUBROUTINE DGELS( TRANS, M, N, NRHS, A, LDA, B, LDB, WORK, LWORK,
@@ -15531,7 +15561,7 @@
       LOGICAL            LSAME
       INTEGER            ILAENV
       DOUBLE PRECISION   DLAMCH, DLANGE
-      EXTERNAL           LSAME, ILAENV, DLABAD, DLAMCH, DLANGE
+      EXTERNAL           LSAME, ILAENV, DLAMCH, DLANGE
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           DGELQF, DGEQRF, DLASCL, DLASET, DORMLQ, DORMQR,
@@ -15615,7 +15645,6 @@
 *
       SMLNUM = DLAMCH( 'S' ) / DLAMCH( 'P' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
 *
 *     Scale A, B if max element outside range [SMLNUM,BIGNUM]
 *
@@ -15880,12 +15909,6 @@
 *> singular values which are less than RCOND times the largest singular
 *> value.
 *>
-*> The divide and conquer algorithm makes very mild assumptions about
-*> floating point arithmetic. It will work on machines with a guard
-*> digit in add/subtract, or on those binary machines without guard
-*> digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
-*> Cray-2. It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -16015,7 +16038,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEsolve
+*> \ingroup gelsd
 *
 *> \par Contributors:
 *  ==================
@@ -16055,7 +16078,7 @@
       DOUBLE PRECISION   ANRM, BIGNUM, BNRM, EPS, SFMIN, SMLNUM
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGEBRD, DGELQF, DGEQRF, DLABAD, DLACPY, DLALSD,
+      EXTERNAL           DGEBRD, DGELQF, DGEQRF, DLACPY, DLALSD,
      $                   DLASCL, DLASET, DORMBR, DORMLQ, DORMQR, XERBLA
 *     ..
 *     .. External Functions ..
@@ -16199,7 +16222,6 @@
       SFMIN = DLAMCH( 'S' )
       SMLNUM = SFMIN / EPS
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
 *
 *     Scale A if max entry outside range [SMLNUM,BIGNUM].
 *
@@ -16611,7 +16633,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEsolve
+*> \ingroup gelss
 *
 *  =====================================================================
       SUBROUTINE DGELSS( M, N, NRHS, A, LDA, B, LDB, S, RCOND, RANK,
@@ -16650,7 +16672,7 @@
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           DBDSQR, DCOPY, DGEBRD, DGELQF, DGEMM, DGEMV,
-     $                   DGEQRF, DLABAD, DLACPY, DLASCL, DLASET, DORGBR,
+     $                   DGEQRF, DLACPY, DLASCL, DLASET, DORGBR,
      $                   DORMBR, DORMLQ, DORMQR, DRSCL, XERBLA
 *     ..
 *     .. External Functions ..
@@ -16832,7 +16854,6 @@
       SFMIN = DLAMCH( 'S' )
       SMLNUM = SFMIN / EPS
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
 *
 *     Scale A if max element outside range [SMLNUM,BIGNUM]
 *
@@ -16976,7 +16997,7 @@
      $                     LDB, ZERO, WORK, N )
                CALL DLACPY( 'G', N, BL, WORK, N, B( 1, I ), LDB )
    20       CONTINUE
-         ELSE
+         ELSE IF( NRHS.EQ.1 ) THEN
             CALL DGEMV( 'T', N, N, ONE, A, LDA, B, 1, ZERO, WORK, 1 )
             CALL DCOPY( N, WORK, 1, B, 1 )
          END IF
@@ -17073,7 +17094,7 @@
                CALL DLACPY( 'G', M, BL, WORK( IWORK ), M, B( 1, I ),
      $                      LDB )
    40       CONTINUE
-         ELSE
+         ELSE IF( NRHS.EQ.1 ) THEN
             CALL DGEMV( 'T', M, M, ONE, WORK( IL ), LDWORK, B( 1, 1 ),
      $                  1, ZERO, WORK( IWORK ), 1 )
             CALL DCOPY( M, WORK( IWORK ), 1, B( 1, 1 ), 1 )
@@ -17159,7 +17180,7 @@
      $                     LDB, ZERO, WORK, N )
                CALL DLACPY( 'F', N, BL, WORK, N, B( 1, I ), LDB )
    60       CONTINUE
-         ELSE
+         ELSE IF( NRHS.EQ.1 ) THEN
             CALL DGEMV( 'T', M, N, ONE, A, LDA, B, 1, ZERO, WORK, 1 )
             CALL DCOPY( N, WORK, 1, B, 1 )
          END IF
@@ -17442,7 +17463,6 @@
 *
       SMLNUM = DLAMCH( 'S' ) / DLAMCH( 'P' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
 *
 *     Scale A, B if max elements outside range [SMLNUM,BIGNUM]
 *
@@ -17738,6 +17758,7 @@
 *>          B is DOUBLE PRECISION array, dimension (LDB,NRHS)
 *>          On entry, the M-by-NRHS right hand side matrix B.
 *>          On exit, the N-by-NRHS solution matrix X.
+*>          If M = 0 or N = 0, B is not referenced.
 *> \endverbatim
 *>
 *> \param[in] LDB
@@ -17770,6 +17791,7 @@
 *>          The effective rank of A, i.e., the order of the submatrix
 *>          R11.  This is the same as the order of the submatrix T11
 *>          in the complete orthogonal factorization of A.
+*>          If NRHS = 0, RANK = 0 on output.
 *> \endverbatim
 *>
 *> \param[out] WORK
@@ -17812,7 +17834,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEsolve
+*> \ingroup gelsy
 *
 *> \par Contributors:
 *  ==================
@@ -17859,7 +17881,7 @@
       EXTERNAL           ILAENV, DLAMCH, DLANGE
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DCOPY, DGEQP3, DLABAD, DLAIC1, DLASCL, DLASET,
+      EXTERNAL           DCOPY, DGEQP3, DLAIC1, DLASCL, DLASET,
      $                   DORMQR, DORMRZ, DTRSM, DTZRZF, XERBLA
 *     ..
 *     .. Intrinsic Functions ..
@@ -17928,7 +17950,6 @@
 *
       SMLNUM = DLAMCH( 'S' ) / DLAMCH( 'P' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
 *
 *     Scale A, B if max entries outside range [SMLNUM,BIGNUM]
 *
@@ -18259,7 +18280,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gemqrt
 *
 *  =====================================================================
       SUBROUTINE DGEMQRT( SIDE, TRANS, M, N, K, NB, V, LDV, T, LDT,
@@ -18485,7 +18506,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geql2
 *
 *> \par Further Details:
 *  =====================
@@ -18690,7 +18711,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geqlf
 *
 *> \par Further Details:
 *  =====================
@@ -18981,7 +19002,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geqp3
 *
 *> \par Further Details:
 *  =====================
@@ -19627,7 +19648,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geqr2
 *
 *> \par Further Details:
 *  =====================
@@ -19827,7 +19848,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geqr2p
 *
 *> \par Further Details:
 *  =====================
@@ -20043,7 +20064,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geqrf
 *
 *> \par Further Details:
 *  =====================
@@ -20326,7 +20347,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geqrfp
 *
 *> \par Further Details:
 *  =====================
@@ -20592,7 +20613,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geqrt
 *
 *> \par Further Details:
 *  =====================
@@ -20796,7 +20817,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geqrt2
 *
 *> \par Further Details:
 *  =====================
@@ -21023,7 +21044,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup geqrt3
 *
 *> \par Further Details:
 *  =====================
@@ -21354,7 +21375,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gerfs
 *
 *  =====================================================================
       SUBROUTINE DGERFS( TRANS, N, NRHS, A, LDA, AF, LDAF, IPIV, B, LDB,
@@ -21710,7 +21731,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gerq2
 *
 *> \par Further Details:
 *  =====================
@@ -21916,7 +21937,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gerqf
 *
 *> \par Further Details:
 *  =====================
@@ -22189,7 +22210,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEauxiliary
+*> \ingroup gesc2
 *
 *> \par Contributors:
 *  ==================
@@ -22224,7 +22245,7 @@
       DOUBLE PRECISION   BIGNUM, EPS, SMLNUM, TEMP
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DLASWP, DSCAL, DLABAD
+      EXTERNAL           DLASWP, DSCAL
 *     ..
 *     .. External Functions ..
       INTEGER            IDAMAX
@@ -22241,7 +22262,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' ) / EPS
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
 *
 *     Apply permutations IPIV to RHS
 *
@@ -22341,12 +22361,6 @@
 *>
 *> Note that the routine returns VT = V**T, not V.
 *>
-*> The divide and conquer algorithm makes very mild assumptions about
-*> floating point arithmetic. It will work on machines with a guard
-*> digit in add/subtract, or on those binary machines without guard
-*> digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
-*> Cray-2. It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -22491,7 +22505,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEsing
+*> \ingroup gesdd
 *
 *> \par Contributors:
 *  ==================
@@ -23835,6 +23849,8 @@
 *     End of DGESDD
 *
       END
+*> \addtogroup gesv
+*>
 *> \brief <b> DGESV computes the solution to system of linear equations A * X = B for GE matrices</b>
 *
 *  =========== DOCUMENTATION ===========
@@ -23952,7 +23968,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEsolve
+*> \ingroup gesv
 *
 *  =====================================================================
       SUBROUTINE DGESV( N, NRHS, A, LDA, IPIV, B, LDB, INFO )
@@ -24216,7 +24232,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEsing
+*> \ingroup gesvd
 *
 *  =====================================================================
       SUBROUTINE DGESVD( JOBU, JOBVT, M, N, A, LDA, S, U, LDU,
@@ -27774,7 +27790,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup gesvj
 *
 *> \par Further Details:
 *  =====================
@@ -29422,7 +29438,7 @@
 *>
 *> \param[out] WORK
 *> \verbatim
-*>          WORK is DOUBLE PRECISION array, dimension (4*N)
+*>          WORK is DOUBLE PRECISION array, dimension (MAX(1,4*N))
 *>          On exit, WORK(1) contains the reciprocal pivot growth
 *>          factor norm(A)/norm(U). The "max absolute element" norm is
 *>          used. If WORK(1) is much less than 1, then the stability
@@ -29466,7 +29482,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEsolve
+*> \ingroup gesvx
 *
 *  =====================================================================
       SUBROUTINE DGESVX( FACT, TRANS, N, NRHS, A, LDA, AF, LDAF, IPIV,
@@ -29823,7 +29839,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEauxiliary
+*> \ingroup getc2
 *
 *> \par Contributors:
 *  ==================
@@ -29857,7 +29873,7 @@
       DOUBLE PRECISION   BIGNUM, EPS, SMIN, SMLNUM, XMAX
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGER, DSWAP, DLABAD
+      EXTERNAL           DGER, DSWAP
 *     ..
 *     .. External Functions ..
       DOUBLE PRECISION   DLAMCH
@@ -29880,7 +29896,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' ) / EPS
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
 *
 *     Handle the case N=1 by itself
 *
@@ -30057,7 +30072,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup getf2
 *
 *  =====================================================================
       SUBROUTINE DGETF2( M, N, A, LDA, IPIV, INFO )
@@ -30267,7 +30282,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup getrf
 *
 *  =====================================================================
       SUBROUTINE DGETRF( M, N, A, LDA, IPIV, INFO )
@@ -30494,7 +30509,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup getrf2
 *
 *  =====================================================================
       RECURSIVE SUBROUTINE DGETRF2( M, N, A, LDA, IPIV, INFO )
@@ -30764,7 +30779,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup getri
 *
 *  =====================================================================
       SUBROUTINE DGETRI( N, A, LDA, IPIV, WORK, LWORK, INFO )
@@ -31029,7 +31044,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup getrs
 *
 *  =====================================================================
       SUBROUTINE DGETRS( TRANS, N, NRHS, A, LDA, IPIV, B, LDB, INFO )
@@ -31267,7 +31282,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup ggbak
 *
 *> \par Further Details:
 *  =====================
@@ -31600,7 +31615,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup ggbal
 *
 *> \par Further Details:
 *  =====================
@@ -32271,7 +32286,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEeigen
+*> \ingroup gges
 *
 *  =====================================================================
       SUBROUTINE DGGES( JOBVSL, JOBVSR, SORT, SELCTG, N, A, LDA, B, LDB,
@@ -32317,9 +32332,8 @@
       DOUBLE PRECISION   DIF( 2 )
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGEQRF, DGGBAK, DGGBAL, DGGHRD, DHGEQZ, DLABAD,
-     $                   DLACPY, DLASCL, DLASET, DORGQR, DORMQR, DTGSEN,
-     $                   XERBLA
+      EXTERNAL           DGEQRF, DGGBAK, DGGBAL, DGGHRD, DHGEQZ, DLACPY,
+     $                   DLASCL, DLASET, DORGQR, DORMQR, DTGSEN, XERBLA
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME
@@ -32427,7 +32441,6 @@
       EPS = DLAMCH( 'P' )
       SAFMIN = DLAMCH( 'S' )
       SAFMAX = ONE / SAFMIN
-      CALL DLABAD( SAFMIN, SAFMAX )
       SMLNUM = SQRT( SAFMIN ) / EPS
       BIGNUM = ONE / SMLNUM
 *
@@ -33012,7 +33025,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEeigen
+*> \ingroup ggesx
 *
 *> \par Further Details:
 *  =====================
@@ -33080,9 +33093,8 @@
       DOUBLE PRECISION   DIF( 2 )
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGEQRF, DGGBAK, DGGBAL, DGGHRD, DHGEQZ, DLABAD,
-     $                   DLACPY, DLASCL, DLASET, DORGQR, DORMQR, DTGSEN,
-     $                   XERBLA
+      EXTERNAL           DGEQRF, DGGBAK, DGGBAL, DGGHRD, DHGEQZ, DLACPY,
+     $                   DLASCL, DLASET, DORGQR, DORMQR, DTGSEN, XERBLA
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME
@@ -33219,7 +33231,6 @@
       EPS = DLAMCH( 'P' )
       SAFMIN = DLAMCH( 'S' )
       SAFMAX = ONE / SAFMIN
-      CALL DLABAD( SAFMIN, SAFMAX )
       SMLNUM = SQRT( SAFMIN ) / EPS
       BIGNUM = ONE / SMLNUM
 *
@@ -33710,7 +33721,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEeigen
+*> \ingroup ggev
 *
 *  =====================================================================
       SUBROUTINE DGGEV( JOBVL, JOBVR, N, A, LDA, B, LDB, ALPHAR, ALPHAI,
@@ -33749,9 +33760,8 @@
       LOGICAL            LDUMMA( 1 )
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGEQRF, DGGBAK, DGGBAL, DGGHRD, DHGEQZ, DLABAD,
-     $                   DLACPY,DLASCL, DLASET, DORGQR, DORMQR, DTGEVC,
-     $                   XERBLA
+      EXTERNAL           DGEQRF, DGGBAK, DGGBAL, DGGHRD, DHGEQZ, DLACPY,
+     $                   DLASCL, DLASET, DORGQR, DORMQR, DTGEVC, XERBLA
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME
@@ -33850,7 +33860,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
       SMLNUM = SQRT( SMLNUM ) / EPS
       BIGNUM = ONE / SMLNUM
 *
@@ -34433,7 +34442,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEeigen
+*> \ingroup ggevx
 *
 *> \par Further Details:
 *  =====================
@@ -34508,9 +34517,9 @@
       LOGICAL            LDUMMA( 1 )
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGEQRF, DGGBAK, DGGBAL, DGGHRD, DHGEQZ, DLABAD,
-     $                   DLACPY, DLASCL, DLASET, DORGQR, DORMQR, DTGEVC,
-     $                   DTGSNA, XERBLA
+      EXTERNAL           DGEQRF, DGGBAK, DGGBAL, DGGHRD, DHGEQZ, DLACPY,
+     $                   DLASCL, DLASET, DORGQR, DORMQR, DTGEVC, DTGSNA,
+     $                   XERBLA
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME
@@ -34640,7 +34649,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
       SMLNUM = SQRT( SMLNUM ) / EPS
       BIGNUM = ONE / SMLNUM
 *
@@ -35123,7 +35131,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup ggglm
 *
 *  =====================================================================
       SUBROUTINE DGGGLM( N, M, P, A, LDA, B, LDB, D, X, Y, WORK, LWORK,
@@ -35487,7 +35495,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup gghrd
 *
 *> \par Further Details:
 *  =====================
@@ -35828,7 +35836,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERsolve
+*> \ingroup gglse
 *
 *  =====================================================================
       SUBROUTINE DGGLSE( M, N, P, A, LDA, B, LDB, C, D, X, WORK, LWORK,
@@ -36180,7 +36188,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ggqrf
 *
 *> \par Further Details:
 *  =====================
@@ -36475,7 +36483,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ggrqf
 *
 *> \par Further Details:
 *  =====================
@@ -37631,10 +37639,10 @@
 *>          Specifies whether the output from this procedure is used
 *>          to compute the matrix V:
 *>          = 'V': the product of the Jacobi rotations is accumulated
-*>                 by postmulyiplying the N-by-N array V.
+*>                 by postmultiplying the N-by-N array V.
 *>                (See the description of V.)
 *>          = 'A': the product of the Jacobi rotations is accumulated
-*>                 by postmulyiplying the MV-by-N array V.
+*>                 by postmultiplying the MV-by-N array V.
 *>                (See the descriptions of MV and V.)
 *>          = 'N': the Jacobi rotations are not accumulated.
 *> \endverbatim
@@ -37696,7 +37704,7 @@
 *> \param[in] MV
 *> \verbatim
 *>          MV is INTEGER
-*>          If JOBV = 'A', then MV rows of V are post-multipled by a
+*>          If JOBV = 'A', then MV rows of V are post-multiplied by a
 *>                           sequence of Jacobi rotations.
 *>          If JOBV = 'N',   then MV is not referenced.
 *> \endverbatim
@@ -37704,9 +37712,9 @@
 *> \param[in,out] V
 *> \verbatim
 *>          V is DOUBLE PRECISION array, dimension (LDV,N)
-*>          If JOBV = 'V' then N rows of V are post-multipled by a
+*>          If JOBV = 'V' then N rows of V are post-multiplied by a
 *>                           sequence of Jacobi rotations.
-*>          If JOBV = 'A' then MV rows of V are post-multipled by a
+*>          If JOBV = 'A' then MV rows of V are post-multiplied by a
 *>                           sequence of Jacobi rotations.
 *>          If JOBV = 'N',   then V is not referenced.
 *> \endverbatim
@@ -37772,7 +37780,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup gsvj0
 *
 *> \par Further Details:
 *  =====================
@@ -38730,10 +38738,10 @@
 *>          Specifies whether the output from this procedure is used
 *>          to compute the matrix V:
 *>          = 'V': the product of the Jacobi rotations is accumulated
-*>                 by postmulyiplying the N-by-N array V.
+*>                 by postmultiplying the N-by-N array V.
 *>                (See the description of V.)
 *>          = 'A': the product of the Jacobi rotations is accumulated
-*>                 by postmulyiplying the MV-by-N array V.
+*>                 by postmultiplying the MV-by-N array V.
 *>                (See the descriptions of MV and V.)
 *>          = 'N': the Jacobi rotations are not accumulated.
 *> \endverbatim
@@ -38802,7 +38810,7 @@
 *> \param[in] MV
 *> \verbatim
 *>          MV is INTEGER
-*>          If JOBV = 'A', then MV rows of V are post-multipled by a
+*>          If JOBV = 'A', then MV rows of V are post-multiplied by a
 *>                         sequence of Jacobi rotations.
 *>          If JOBV = 'N', then MV is not referenced.
 *> \endverbatim
@@ -38810,9 +38818,9 @@
 *> \param[in,out] V
 *> \verbatim
 *>          V is DOUBLE PRECISION array, dimension (LDV,N)
-*>          If JOBV = 'V', then N rows of V are post-multipled by a
+*>          If JOBV = 'V', then N rows of V are post-multiplied by a
 *>                         sequence of Jacobi rotations.
-*>          If JOBV = 'A', then MV rows of V are post-multipled by a
+*>          If JOBV = 'A', then MV rows of V are post-multiplied by a
 *>                         sequence of Jacobi rotations.
 *>          If JOBV = 'N', then V is not referenced.
 *> \endverbatim
@@ -38878,7 +38886,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup gsvj1
 *
 *> \par Contributors:
 *  ==================
@@ -39574,7 +39582,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGTcomputational
+*> \ingroup gtcon
 *
 *  =====================================================================
       SUBROUTINE DGTCON( NORM, N, DL, D, DU, DU2, IPIV, ANORM, RCOND,
@@ -39888,7 +39896,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGTcomputational
+*> \ingroup gtrfs
 *
 *  =====================================================================
       SUBROUTINE DGTRFS( TRANS, N, NRHS, DL, D, DU, DLF, DF, DUF, DU2,
@@ -40279,7 +40287,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGTsolve
+*> \ingroup gtsv
 *
 *  =====================================================================
       SUBROUTINE DGTSV( N, NRHS, DL, D, DU, B, LDB, INFO )
@@ -40773,7 +40781,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGTsolve
+*> \ingroup gtsvx
 *
 *  =====================================================================
       SUBROUTINE DGTSVX( FACT, TRANS, N, NRHS, DL, D, DU, DLF, DF, DUF,
@@ -41017,7 +41025,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGTcomputational
+*> \ingroup gttrf
 *
 *  =====================================================================
       SUBROUTINE DGTTRF( N, DL, D, DU, DU2, IPIV, INFO )
@@ -41264,7 +41272,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGTcomputational
+*> \ingroup gttrs
 *
 *  =====================================================================
       SUBROUTINE DGTTRS( TRANS, N, NRHS, DL, D, DU, DU2, IPIV, B, LDB,
@@ -41475,7 +41483,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGTcomputational
+*> \ingroup gtts2
 *
 *  =====================================================================
       SUBROUTINE DGTTS2( ITRANS, N, NRHS, DL, D, DU, DU2, IPIV, B, LDB )
@@ -41907,7 +41915,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup hgeqz
 *
 *> \par Further Details:
 *  =====================
@@ -41962,9 +41970,9 @@
      $                   BTOL, C, C11I, C11R, C12, C21, C22I, C22R, CL,
      $                   CQ, CR, CZ, ESHIFT, S, S1, S1INV, S2, SAFMAX,
      $                   SAFMIN, SCALE, SL, SQI, SQR, SR, SZI, SZR, T1,
-     $                   TAU, TEMP, TEMP2, TEMPI, TEMPR, U1, U12, U12L,
-     $                   U2, ULP, VS, W11, W12, W21, W22, WABS, WI, WR,
-     $                   WR2
+     $                   T2, T3, TAU, TEMP, TEMP2, TEMPI, TEMPR, U1,
+     $                   U12, U12L, U2, ULP, VS, W11, W12, W21, W22,
+     $                   WABS, WI, WR, WR2
 *     ..
 *     .. Local Arrays ..
       DOUBLE PRECISION   V( 3 )
@@ -42752,25 +42760,27 @@
                   H( J+2, J-1 ) = ZERO
                END IF
 *
+               T2 = TAU*V( 2 )
+               T3 = TAU*V( 3 )
                DO 230 JC = J, ILASTM
-                  TEMP = TAU*( H( J, JC )+V( 2 )*H( J+1, JC )+V( 3 )*
-     $                   H( J+2, JC ) )
-                  H( J, JC ) = H( J, JC ) - TEMP
-                  H( J+1, JC ) = H( J+1, JC ) - TEMP*V( 2 )
-                  H( J+2, JC ) = H( J+2, JC ) - TEMP*V( 3 )
-                  TEMP2 = TAU*( T( J, JC )+V( 2 )*T( J+1, JC )+V( 3 )*
-     $                    T( J+2, JC ) )
-                  T( J, JC ) = T( J, JC ) - TEMP2
-                  T( J+1, JC ) = T( J+1, JC ) - TEMP2*V( 2 )
-                  T( J+2, JC ) = T( J+2, JC ) - TEMP2*V( 3 )
+                  TEMP = H( J, JC )+V( 2 )*H( J+1, JC )+V( 3 )*
+     $                   H( J+2, JC )
+                  H( J, JC ) = H( J, JC ) - TEMP*TAU
+                  H( J+1, JC ) = H( J+1, JC ) - TEMP*T2
+                  H( J+2, JC ) = H( J+2, JC ) - TEMP*T3
+                  TEMP2 = T( J, JC )+V( 2 )*T( J+1, JC )+V( 3 )*
+     $                    T( J+2, JC )
+                  T( J, JC ) = T( J, JC ) - TEMP2*TAU
+                  T( J+1, JC ) = T( J+1, JC ) - TEMP2*T2
+                  T( J+2, JC ) = T( J+2, JC ) - TEMP2*T3
   230          CONTINUE
                IF( ILQ ) THEN
                   DO 240 JR = 1, N
-                     TEMP = TAU*( Q( JR, J )+V( 2 )*Q( JR, J+1 )+V( 3 )*
-     $                      Q( JR, J+2 ) )
-                     Q( JR, J ) = Q( JR, J ) - TEMP
-                     Q( JR, J+1 ) = Q( JR, J+1 ) - TEMP*V( 2 )
-                     Q( JR, J+2 ) = Q( JR, J+2 ) - TEMP*V( 3 )
+                     TEMP = Q( JR, J )+V( 2 )*Q( JR, J+1 )+V( 3 )*
+     $                      Q( JR, J+2 )
+                     Q( JR, J ) = Q( JR, J ) - TEMP*TAU
+                     Q( JR, J+1 ) = Q( JR, J+1 ) - TEMP*T2
+                     Q( JR, J+2 ) = Q( JR, J+2 ) - TEMP*T3
   240             CONTINUE
                END IF
 *
@@ -42858,27 +42868,29 @@
 *
 *              Apply transformations from the right.
 *
+               T2 = TAU*V(2)
+               T3 = TAU*V(3)
                DO 260 JR = IFRSTM, MIN( J+3, ILAST )
-                  TEMP = TAU*( H( JR, J )+V( 2 )*H( JR, J+1 )+V( 3 )*
-     $                   H( JR, J+2 ) )
-                  H( JR, J ) = H( JR, J ) - TEMP
-                  H( JR, J+1 ) = H( JR, J+1 ) - TEMP*V( 2 )
-                  H( JR, J+2 ) = H( JR, J+2 ) - TEMP*V( 3 )
+                  TEMP = H( JR, J )+V( 2 )*H( JR, J+1 )+V( 3 )*
+     $                   H( JR, J+2 )
+                  H( JR, J ) = H( JR, J ) - TEMP*TAU
+                  H( JR, J+1 ) = H( JR, J+1 ) - TEMP*T2
+                  H( JR, J+2 ) = H( JR, J+2 ) - TEMP*T3
   260          CONTINUE
                DO 270 JR = IFRSTM, J + 2
-                  TEMP = TAU*( T( JR, J )+V( 2 )*T( JR, J+1 )+V( 3 )*
-     $                   T( JR, J+2 ) )
-                  T( JR, J ) = T( JR, J ) - TEMP
-                  T( JR, J+1 ) = T( JR, J+1 ) - TEMP*V( 2 )
-                  T( JR, J+2 ) = T( JR, J+2 ) - TEMP*V( 3 )
+                  TEMP = T( JR, J )+V( 2 )*T( JR, J+1 )+V( 3 )*
+     $                   T( JR, J+2 )
+                  T( JR, J ) = T( JR, J ) - TEMP*TAU
+                  T( JR, J+1 ) = T( JR, J+1 ) - TEMP*T2
+                  T( JR, J+2 ) = T( JR, J+2 ) - TEMP*T3
   270          CONTINUE
                IF( ILZ ) THEN
                   DO 280 JR = 1, N
-                     TEMP = TAU*( Z( JR, J )+V( 2 )*Z( JR, J+1 )+V( 3 )*
-     $                      Z( JR, J+2 ) )
-                     Z( JR, J ) = Z( JR, J ) - TEMP
-                     Z( JR, J+1 ) = Z( JR, J+1 ) - TEMP*V( 2 )
-                     Z( JR, J+2 ) = Z( JR, J+2 ) - TEMP*V( 3 )
+                     TEMP = Z( JR, J )+V( 2 )*Z( JR, J+1 )+V( 3 )*
+     $                      Z( JR, J+2 )
+                     Z( JR, J ) = Z( JR, J ) - TEMP*TAU
+                     Z( JR, J+1 ) = Z( JR, J+1 ) - TEMP*T2
+                     Z( JR, J+2 ) = Z( JR, J+2 ) - TEMP*T3
   280             CONTINUE
                END IF
                T( J+1, J ) = ZERO
@@ -43237,7 +43249,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hsein
 *
 *> \par Further Details:
 *  =====================
@@ -43753,7 +43765,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hseqr
 *
 *> \par Contributors:
 *  ==================
@@ -44085,7 +44097,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup isnan
 *
 *  =====================================================================
       LOGICAL FUNCTION DISNAN( DIN )
@@ -44140,14 +44152,10 @@
 *>
 *> \verbatim
 *>
-*> DLABAD takes as input the values computed by DLAMCH for underflow and
-*> overflow, and returns the square root of each of these values if the
-*> log of LARGE is sufficiently large.  This subroutine is intended to
-*> identify machines with a large exponent range, such as the Crays, and
-*> redefine the underflow and overflow limits to be the square roots of
-*> the values computed by DLAMCH.  This subroutine is needed because
-*> DLAMCH does not compensate for poor arithmetic in the upper half of
-*> the exponent range, as is found on a Cray.
+*> DLABAD is a no-op and kept for compatibility reasons. It used
+*> to correct the overflow/underflow behavior of machines that
+*> are not IEEE-754 compliant.
+*>
 *> \endverbatim
 *
 *  Arguments:
@@ -44157,16 +44165,14 @@
 *> \verbatim
 *>          SMALL is DOUBLE PRECISION
 *>          On entry, the underflow threshold as computed by DLAMCH.
-*>          On exit, if LOG10(LARGE) is sufficiently large, the square
-*>          root of SMALL, otherwise unchanged.
+*>          On exit, the unchanged value SMALL.
 *> \endverbatim
 *>
 *> \param[in,out] LARGE
 *> \verbatim
 *>          LARGE is DOUBLE PRECISION
 *>          On entry, the overflow threshold as computed by DLAMCH.
-*>          On exit, if LOG10(LARGE) is sufficiently large, the square
-*>          root of LARGE, otherwise unchanged.
+*>          On exit, the unchanged value LARGE.
 *> \endverbatim
 *
 *  Authors:
@@ -44177,7 +44183,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup labad
 *
 *  =====================================================================
       SUBROUTINE DLABAD( SMALL, LARGE )
@@ -44200,10 +44206,10 @@
 *     If it looks like we're on a Cray, take the square root of
 *     SMALL and LARGE to avoid overflow and underflow problems.
 *
-      IF( LOG10( LARGE ).GT.2000.D0 ) THEN
-         SMALL = SQRT( SMALL )
-         LARGE = SQRT( LARGE )
-      END IF
+*      IF( LOG10( LARGE ).GT.2000.D0 ) THEN
+*         SMALL = SQRT( SMALL )
+*         LARGE = SQRT( LARGE )
+*      END IF
 *
       RETURN
 *
@@ -44368,7 +44374,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup labrd
 *
 *> \par Further Details:
 *  =====================
@@ -44691,7 +44697,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lacn2
 *
 *> \par Further Details:
 *  =====================
@@ -44989,7 +44995,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lacon
 *
 *> \par Contributors:
 *  ==================
@@ -45262,7 +45268,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lacpy
 *
 *  =====================================================================
       SUBROUTINE DLACPY( UPLO, M, N, A, LDA, B, LDB )
@@ -45403,7 +45409,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup ladiv
 *
 *  =====================================================================
       SUBROUTINE DLADIV( A, B, C, D, P, Q )
@@ -45489,7 +45495,7 @@
 *
       END
 
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup ladiv
 
 
       SUBROUTINE DLADIV1( A, B, C, D, P, Q )
@@ -45529,7 +45535,7 @@
 *
       END
 
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup ladiv
 
       DOUBLE PRECISION FUNCTION DLADIV2( A, B, C, D, R, T )
 *
@@ -45648,7 +45654,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lae2
 *
 *> \par Further Details:
 *  =====================
@@ -46025,7 +46031,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup laebz
 *
 *> \par Further Details:
 *  =====================
@@ -46556,7 +46562,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed0
 *
 *> \par Contributors:
 *  ==================
@@ -46977,7 +46983,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed1
 *
 *> \par Contributors:
 *  ==================
@@ -47118,7 +47124,7 @@
 *  Definition:
 *  ===========
 *
-*       SUBROUTINE DLAED2( K, N, N1, D, Q, LDQ, INDXQ, RHO, Z, DLAMDA, W,
+*       SUBROUTINE DLAED2( K, N, N1, D, Q, LDQ, INDXQ, RHO, Z, DLAMBDA, W,
 *                          Q2, INDX, INDXC, INDXP, COLTYP, INFO )
 *
 *       .. Scalar Arguments ..
@@ -47128,7 +47134,7 @@
 *       .. Array Arguments ..
 *       INTEGER            COLTYP( * ), INDX( * ), INDXC( * ), INDXP( * ),
 *      $                   INDXQ( * )
-*       DOUBLE PRECISION   D( * ), DLAMDA( * ), Q( LDQ, * ), Q2( * ),
+*       DOUBLE PRECISION   D( * ), DLAMBDA( * ), Q( LDQ, * ), Q2( * ),
 *      $                   W( * ), Z( * )
 *       ..
 *
@@ -47223,9 +47229,9 @@
 *>         process.
 *> \endverbatim
 *>
-*> \param[out] DLAMDA
+*> \param[out] DLAMBDA
 *> \verbatim
-*>          DLAMDA is DOUBLE PRECISION array, dimension (N)
+*>          DLAMBDA is DOUBLE PRECISION array, dimension (N)
 *>         A copy of the first K eigenvalues which will be used by
 *>         DLAED3 to form the secular equation.
 *> \endverbatim
@@ -47248,7 +47254,7 @@
 *> \param[out] INDX
 *> \verbatim
 *>          INDX is INTEGER array, dimension (N)
-*>         The permutation used to sort the contents of DLAMDA into
+*>         The permutation used to sort the contents of DLAMBDA into
 *>         ascending order.
 *> \endverbatim
 *>
@@ -47297,7 +47303,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed2
 *
 *> \par Contributors:
 *  ==================
@@ -47307,7 +47313,7 @@
 *>  Modified by Francoise Tisseur, University of Tennessee
 *>
 *  =====================================================================
-      SUBROUTINE DLAED2( K, N, N1, D, Q, LDQ, INDXQ, RHO, Z, DLAMDA, W,
+      SUBROUTINE DLAED2( K, N, N1, D, Q, LDQ, INDXQ, RHO, Z, DLAMBDA, W,
      $                   Q2, INDX, INDXC, INDXP, COLTYP, INFO )
 *
 *  -- LAPACK computational routine --
@@ -47321,7 +47327,7 @@
 *     .. Array Arguments ..
       INTEGER            COLTYP( * ), INDX( * ), INDXC( * ), INDXP( * ),
      $                   INDXQ( * )
-      DOUBLE PRECISION   D( * ), DLAMDA( * ), Q( LDQ, * ), Q2( * ),
+      DOUBLE PRECISION   D( * ), DLAMBDA( * ), Q( LDQ, * ), Q2( * ),
      $                   W( * ), Z( * )
 *     ..
 *
@@ -47400,9 +47406,9 @@
 *     re-integrate the deflated parts from the last pass
 *
       DO 20 I = 1, N
-         DLAMDA( I ) = D( INDXQ( I ) )
+         DLAMBDA( I ) = D( INDXQ( I ) )
    20 CONTINUE
-      CALL DLAMRG( N1, N2, DLAMDA, 1, 1, INDXC )
+      CALL DLAMRG( N1, N2, DLAMBDA, 1, 1, INDXC )
       DO 30 I = 1, N
          INDX( I ) = INDXQ( INDXC( I ) )
    30 CONTINUE
@@ -47424,11 +47430,11 @@
          DO 40 J = 1, N
             I = INDX( J )
             CALL DCOPY( N, Q( 1, I ), 1, Q2( IQ2 ), 1 )
-            DLAMDA( J ) = D( I )
+            DLAMBDA( J ) = D( I )
             IQ2 = IQ2 + N
    40    CONTINUE
          CALL DLACPY( 'A', N, N, Q2, N, Q, LDQ )
-         CALL DCOPY( N, DLAMDA, 1, D, 1 )
+         CALL DCOPY( N, DLAMBDA, 1, D, 1 )
          GO TO 190
       END IF
 *
@@ -47521,7 +47527,7 @@
             PJ = NJ
          ELSE
             K = K + 1
-            DLAMDA( K ) = D( PJ )
+            DLAMBDA( K ) = D( PJ )
             W( K ) = Z( PJ )
             INDXP( K ) = PJ
             PJ = NJ
@@ -47533,7 +47539,7 @@
 *     Record the last eigenvalue.
 *
       K = K + 1
-      DLAMDA( K ) = D( PJ )
+      DLAMBDA( K ) = D( PJ )
       W( K ) = Z( PJ )
       INDXP( K ) = PJ
 *
@@ -47570,9 +47576,9 @@
          PSM( CT ) = PSM( CT ) + 1
   130 CONTINUE
 *
-*     Sort the eigenvalues and corresponding eigenvectors into DLAMDA
+*     Sort the eigenvalues and corresponding eigenvectors into DLAMBDA
 *     and Q2 respectively.  The eigenvalues/vectors which were not
-*     deflated go into the first K slots of DLAMDA and Q2 respectively,
+*     deflated go into the first K slots of DLAMBDA and Q2 respectively,
 *     while those which were deflated go into the last N - K slots.
 *
       I = 1
@@ -47654,7 +47660,7 @@
 *  Definition:
 *  ===========
 *
-*       SUBROUTINE DLAED3( K, N, N1, D, Q, LDQ, RHO, DLAMDA, Q2, INDX,
+*       SUBROUTINE DLAED3( K, N, N1, D, Q, LDQ, RHO, DLAMBDA, Q2, INDX,
 *                          CTOT, W, S, INFO )
 *
 *       .. Scalar Arguments ..
@@ -47663,7 +47669,7 @@
 *       ..
 *       .. Array Arguments ..
 *       INTEGER            CTOT( * ), INDX( * )
-*       DOUBLE PRECISION   D( * ), DLAMDA( * ), Q( LDQ, * ), Q2( * ),
+*       DOUBLE PRECISION   D( * ), DLAMBDA( * ), Q( LDQ, * ), Q2( * ),
 *      $                   S( * ), W( * )
 *       ..
 *
@@ -47680,12 +47686,6 @@
 *> being combined by the matrix of eigenvectors of the K-by-K system
 *> which is solved here.
 *>
-*> This code makes very mild assumptions about floating point
-*> arithmetic. It will work on machines with a guard digit in
-*> add/subtract, or on those binary machines without guard digits
-*> which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or Cray-2.
-*> It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -47740,14 +47740,12 @@
 *>          RHO >= 0 required.
 *> \endverbatim
 *>
-*> \param[in,out] DLAMDA
+*> \param[in] DLAMBDA
 *> \verbatim
-*>          DLAMDA is DOUBLE PRECISION array, dimension (K)
+*>          DLAMBDA is DOUBLE PRECISION array, dimension (K)
 *>          The first K elements of this array contain the old roots
 *>          of the deflated updating problem.  These are the poles
-*>          of the secular equation. May be changed on output by
-*>          having lowest order bit set to zero on Cray X-MP, Cray Y-MP,
-*>          Cray-2, or Cray C-90, as described above.
+*>          of the secular equation.
 *> \endverbatim
 *>
 *> \param[in] Q2
@@ -47806,7 +47804,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed3
 *
 *> \par Contributors:
 *  ==================
@@ -47816,7 +47814,7 @@
 *>  Modified by Francoise Tisseur, University of Tennessee
 *>
 *  =====================================================================
-      SUBROUTINE DLAED3( K, N, N1, D, Q, LDQ, RHO, DLAMDA, Q2, INDX,
+      SUBROUTINE DLAED3( K, N, N1, D, Q, LDQ, RHO, DLAMBDA, Q2, INDX,
      $                   CTOT, W, S, INFO )
 *
 *  -- LAPACK computational routine --
@@ -47829,7 +47827,7 @@
 *     ..
 *     .. Array Arguments ..
       INTEGER            CTOT( * ), INDX( * )
-      DOUBLE PRECISION   D( * ), DLAMDA( * ), Q( LDQ, * ), Q2( * ),
+      DOUBLE PRECISION   D( * ), DLAMBDA( * ), Q( LDQ, * ), Q2( * ),
      $                   S( * ), W( * )
 *     ..
 *
@@ -47844,8 +47842,8 @@
       DOUBLE PRECISION   TEMP
 *     ..
 *     .. External Functions ..
-      DOUBLE PRECISION   DLAMC3, DNRM2
-      EXTERNAL           DLAMC3, DNRM2
+      DOUBLE PRECISION   DNRM2
+      EXTERNAL           DNRM2
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           DCOPY, DGEMM, DLACPY, DLAED4, DLASET, XERBLA
@@ -47876,29 +47874,9 @@
       IF( K.EQ.0 )
      $   RETURN
 *
-*     Modify values DLAMDA(i) to make sure all DLAMDA(i)-DLAMDA(j) can
-*     be computed with high relative accuracy (barring over/underflow).
-*     This is a problem on machines without a guard digit in
-*     add/subtract (Cray XMP, Cray YMP, Cray C 90 and Cray 2).
-*     The following code replaces DLAMDA(I) by 2*DLAMDA(I)-DLAMDA(I),
-*     which on any of these machines zeros out the bottommost
-*     bit of DLAMDA(I) if it is 1; this makes the subsequent
-*     subtractions DLAMDA(I)-DLAMDA(J) unproblematic when cancellation
-*     occurs. On binary machines with a guard digit (almost all
-*     machines) it does not change DLAMDA(I) at all. On hexadecimal
-*     and decimal machines with a guard digit, it slightly
-*     changes the bottommost bits of DLAMDA(I). It does not account
-*     for hexadecimal or decimal machines without guard digits
-*     (we know of none). We use a subroutine call to compute
-*     2*DLAMBDA(I) to prevent optimizing compilers from eliminating
-*     this code.
-*
-      DO 10 I = 1, K
-         DLAMDA( I ) = DLAMC3( DLAMDA( I ), DLAMDA( I ) ) - DLAMDA( I )
-   10 CONTINUE
 *
       DO 20 J = 1, K
-         CALL DLAED4( K, J, DLAMDA, W, Q( 1, J ), RHO, D( J ), INFO )
+         CALL DLAED4( K, J, DLAMBDA, W, Q( 1, J ), RHO, D( J ), INFO )
 *
 *        If the zero finder fails, the computation is terminated.
 *
@@ -47929,10 +47907,10 @@
       CALL DCOPY( K, Q, LDQ+1, W, 1 )
       DO 60 J = 1, K
          DO 40 I = 1, J - 1
-            W( I ) = W( I )*( Q( I, J ) / ( DLAMDA( I )-DLAMDA( J ) ) )
+            W( I ) = W( I )*( Q( I, J )/( DLAMBDA( I )-DLAMBDA( J ) ) )
    40    CONTINUE
          DO 50 I = J + 1, K
-            W( I ) = W( I )*( Q( I, J ) / ( DLAMDA( I )-DLAMDA( J ) ) )
+            W( I ) = W( I )*( Q( I, J )/( DLAMBDA( I )-DLAMBDA( J ) ) )
    50    CONTINUE
    60 CONTINUE
       DO 70 I = 1, K
@@ -48118,7 +48096,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed4
 *
 *> \par Contributors:
 *  ==================
@@ -48998,7 +48976,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed5
 *
 *> \par Contributors:
 *  ==================
@@ -49204,7 +49182,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed6
 *
 *> \par Further Details:
 *  =====================
@@ -49740,7 +49718,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed7
 *
 *> \par Contributors:
 *  ==================
@@ -49919,7 +49897,7 @@
 *  ===========
 *
 *       SUBROUTINE DLAED8( ICOMPQ, K, N, QSIZ, D, Q, LDQ, INDXQ, RHO,
-*                          CUTPNT, Z, DLAMDA, Q2, LDQ2, W, PERM, GIVPTR,
+*                          CUTPNT, Z, DLAMBDA, Q2, LDQ2, W, PERM, GIVPTR,
 *                          GIVCOL, GIVNUM, INDXP, INDX, INFO )
 *
 *       .. Scalar Arguments ..
@@ -49930,7 +49908,7 @@
 *       .. Array Arguments ..
 *       INTEGER            GIVCOL( 2, * ), INDX( * ), INDXP( * ),
 *      $                   INDXQ( * ), PERM( * )
-*       DOUBLE PRECISION   D( * ), DLAMDA( * ), GIVNUM( 2, * ),
+*       DOUBLE PRECISION   D( * ), DLAMBDA( * ), GIVNUM( 2, * ),
 *      $                   Q( LDQ, * ), Q2( LDQ2, * ), W( * ), Z( * )
 *       ..
 *
@@ -50041,9 +50019,9 @@
 *>         process.
 *> \endverbatim
 *>
-*> \param[out] DLAMDA
+*> \param[out] DLAMBDA
 *> \verbatim
-*>          DLAMDA is DOUBLE PRECISION array, dimension (N)
+*>          DLAMBDA is DOUBLE PRECISION array, dimension (N)
 *>         A copy of the first K eigenvalues which will be used by
 *>         DLAED3 to form the secular equation.
 *> \endverbatim
@@ -50128,7 +50106,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed8
 *
 *> \par Contributors:
 *  ==================
@@ -50138,7 +50116,7 @@
 *
 *  =====================================================================
       SUBROUTINE DLAED8( ICOMPQ, K, N, QSIZ, D, Q, LDQ, INDXQ, RHO,
-     $                   CUTPNT, Z, DLAMDA, Q2, LDQ2, W, PERM, GIVPTR,
+     $                   CUTPNT, Z, DLAMBDA, Q2, LDQ2, W, PERM, GIVPTR,
      $                   GIVCOL, GIVNUM, INDXP, INDX, INFO )
 *
 *  -- LAPACK computational routine --
@@ -50153,7 +50131,7 @@
 *     .. Array Arguments ..
       INTEGER            GIVCOL( 2, * ), INDX( * ), INDXP( * ),
      $                   INDXQ( * ), PERM( * )
-      DOUBLE PRECISION   D( * ), DLAMDA( * ), GIVNUM( 2, * ),
+      DOUBLE PRECISION   D( * ), DLAMBDA( * ), GIVNUM( 2, * ),
      $                   Q( LDQ, * ), Q2( LDQ2, * ), W( * ), Z( * )
 *     ..
 *
@@ -50239,14 +50217,14 @@
          INDXQ( I ) = INDXQ( I ) + CUTPNT
    20 CONTINUE
       DO 30 I = 1, N
-         DLAMDA( I ) = D( INDXQ( I ) )
+         DLAMBDA( I ) = D( INDXQ( I ) )
          W( I ) = Z( INDXQ( I ) )
    30 CONTINUE
       I = 1
       J = CUTPNT + 1
-      CALL DLAMRG( N1, N2, DLAMDA, 1, 1, INDX )
+      CALL DLAMRG( N1, N2, DLAMBDA, 1, 1, INDX )
       DO 40 I = 1, N
-         D( I ) = DLAMDA( INDX( I ) )
+         D( I ) = DLAMBDA( INDX( I ) )
          Z( I ) = W( INDX( I ) )
    40 CONTINUE
 *
@@ -50364,7 +50342,7 @@
          ELSE
             K = K + 1
             W( K ) = Z( JLAM )
-            DLAMDA( K ) = D( JLAM )
+            DLAMBDA( K ) = D( JLAM )
             INDXP( K ) = JLAM
             JLAM = J
          END IF
@@ -50376,26 +50354,26 @@
 *
       K = K + 1
       W( K ) = Z( JLAM )
-      DLAMDA( K ) = D( JLAM )
+      DLAMBDA( K ) = D( JLAM )
       INDXP( K ) = JLAM
 *
   110 CONTINUE
 *
-*     Sort the eigenvalues and corresponding eigenvectors into DLAMDA
+*     Sort the eigenvalues and corresponding eigenvectors into DLAMBDA
 *     and Q2 respectively.  The eigenvalues/vectors which were not
-*     deflated go into the first K slots of DLAMDA and Q2 respectively,
+*     deflated go into the first K slots of DLAMBDA and Q2 respectively,
 *     while those which were deflated go into the last N - K slots.
 *
       IF( ICOMPQ.EQ.0 ) THEN
          DO 120 J = 1, N
             JP = INDXP( J )
-            DLAMDA( J ) = D( JP )
+            DLAMBDA( J ) = D( JP )
             PERM( J ) = INDXQ( INDX( JP ) )
   120    CONTINUE
       ELSE
          DO 130 J = 1, N
             JP = INDXP( J )
-            DLAMDA( J ) = D( JP )
+            DLAMBDA( J ) = D( JP )
             PERM( J ) = INDXQ( INDX( JP ) )
             CALL DCOPY( QSIZ, Q( 1, PERM( J ) ), 1, Q2( 1, J ), 1 )
   130    CONTINUE
@@ -50406,9 +50384,9 @@
 *
       IF( K.LT.N ) THEN
          IF( ICOMPQ.EQ.0 ) THEN
-            CALL DCOPY( N-K, DLAMDA( K+1 ), 1, D( K+1 ), 1 )
+            CALL DCOPY( N-K, DLAMBDA( K+1 ), 1, D( K+1 ), 1 )
          ELSE
-            CALL DCOPY( N-K, DLAMDA( K+1 ), 1, D( K+1 ), 1 )
+            CALL DCOPY( N-K, DLAMBDA( K+1 ), 1, D( K+1 ), 1 )
             CALL DLACPY( 'A', QSIZ, N-K, Q2( 1, K+1 ), LDQ2,
      $                   Q( 1, K+1 ), LDQ )
          END IF
@@ -50439,15 +50417,15 @@
 *  Definition:
 *  ===========
 *
-*       SUBROUTINE DLAED9( K, KSTART, KSTOP, N, D, Q, LDQ, RHO, DLAMDA, W,
-*                          S, LDS, INFO )
+*       SUBROUTINE DLAED9( K, KSTART, KSTOP, N, D, Q, LDQ, RHO, DLAMBDA,
+*                          W, S, LDS, INFO )
 *
 *       .. Scalar Arguments ..
 *       INTEGER            INFO, K, KSTART, KSTOP, LDQ, LDS, N
 *       DOUBLE PRECISION   RHO
 *       ..
 *       .. Array Arguments ..
-*       DOUBLE PRECISION   D( * ), DLAMDA( * ), Q( LDQ, * ), S( LDS, * ),
+*       DOUBLE PRECISION   D( * ), DLAMBDA( * ), Q( LDQ, * ), S( LDS, * ),
 *      $                   W( * )
 *       ..
 *
@@ -50517,9 +50495,9 @@
 *>          RHO >= 0 required.
 *> \endverbatim
 *>
-*> \param[in] DLAMDA
+*> \param[in] DLAMBDA
 *> \verbatim
-*>          DLAMDA is DOUBLE PRECISION array, dimension (K)
+*>          DLAMBDA is DOUBLE PRECISION array, dimension (K)
 *>          The first K elements of this array contain the old roots
 *>          of the deflated updating problem.  These are the poles
 *>          of the secular equation.
@@ -50563,7 +50541,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laed9
 *
 *> \par Contributors:
 *  ==================
@@ -50572,8 +50550,8 @@
 *> at Berkeley, USA
 *
 *  =====================================================================
-      SUBROUTINE DLAED9( K, KSTART, KSTOP, N, D, Q, LDQ, RHO, DLAMDA, W,
-     $                   S, LDS, INFO )
+      SUBROUTINE DLAED9( K, KSTART, KSTOP, N, D, Q, LDQ, RHO, DLAMBDA,
+     $                   W, S, LDS, INFO )
 *
 *  -- LAPACK computational routine --
 *  -- LAPACK is a software package provided by Univ. of Tennessee,    --
@@ -50584,7 +50562,7 @@
       DOUBLE PRECISION   RHO
 *     ..
 *     .. Array Arguments ..
-      DOUBLE PRECISION   D( * ), DLAMDA( * ), Q( LDQ, * ), S( LDS, * ),
+      DOUBLE PRECISION   D( * ), DLAMBDA( * ), Q( LDQ, * ), S( LDS, * ),
      $                   W( * )
 *     ..
 *
@@ -50595,8 +50573,8 @@
       DOUBLE PRECISION   TEMP
 *     ..
 *     .. External Functions ..
-      DOUBLE PRECISION   DLAMC3, DNRM2
-      EXTERNAL           DLAMC3, DNRM2
+      DOUBLE PRECISION   DNRM2
+      EXTERNAL           DNRM2
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           DCOPY, DLAED4, XERBLA
@@ -50634,29 +50612,8 @@
       IF( K.EQ.0 )
      $   RETURN
 *
-*     Modify values DLAMDA(i) to make sure all DLAMDA(i)-DLAMDA(j) can
-*     be computed with high relative accuracy (barring over/underflow).
-*     This is a problem on machines without a guard digit in
-*     add/subtract (Cray XMP, Cray YMP, Cray C 90 and Cray 2).
-*     The following code replaces DLAMDA(I) by 2*DLAMDA(I)-DLAMDA(I),
-*     which on any of these machines zeros out the bottommost
-*     bit of DLAMDA(I) if it is 1; this makes the subsequent
-*     subtractions DLAMDA(I)-DLAMDA(J) unproblematic when cancellation
-*     occurs. On binary machines with a guard digit (almost all
-*     machines) it does not change DLAMDA(I) at all. On hexadecimal
-*     and decimal machines with a guard digit, it slightly
-*     changes the bottommost bits of DLAMDA(I). It does not account
-*     for hexadecimal or decimal machines without guard digits
-*     (we know of none). We use a subroutine call to compute
-*     2*DLAMBDA(I) to prevent optimizing compilers from eliminating
-*     this code.
-*
-      DO 10 I = 1, N
-         DLAMDA( I ) = DLAMC3( DLAMDA( I ), DLAMDA( I ) ) - DLAMDA( I )
-   10 CONTINUE
-*
       DO 20 J = KSTART, KSTOP
-         CALL DLAED4( K, J, DLAMDA, W, Q( 1, J ), RHO, D( J ), INFO )
+         CALL DLAED4( K, J, DLAMBDA, W, Q( 1, J ), RHO, D( J ), INFO )
 *
 *        If the zero finder fails, the computation is terminated.
 *
@@ -50682,10 +50639,10 @@
       CALL DCOPY( K, Q, LDQ+1, W, 1 )
       DO 70 J = 1, K
          DO 50 I = 1, J - 1
-            W( I ) = W( I )*( Q( I, J ) / ( DLAMDA( I )-DLAMDA( J ) ) )
+            W( I ) = W( I )*( Q( I, J )/( DLAMBDA( I )-DLAMBDA( J ) ) )
    50    CONTINUE
          DO 60 I = J + 1, K
-            W( I ) = W( I )*( Q( I, J ) / ( DLAMDA( I )-DLAMDA( J ) ) )
+            W( I ) = W( I )*( Q( I, J )/( DLAMBDA( I )-DLAMBDA( J ) ) )
    60    CONTINUE
    70 CONTINUE
       DO 80 I = 1, K
@@ -50864,7 +50821,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup laeda
 *
 *> \par Contributors:
 *  ==================
@@ -51181,7 +51138,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laein
 *
 *  =====================================================================
       SUBROUTINE DLAEIN( RIGHTV, NOINIT, N, H, LDH, WR, WI, VR, VI, B,
@@ -51740,7 +51697,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup laev2
 *
 *> \par Further Details:
 *  =====================
@@ -52011,7 +51968,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laexc
 *
 *  =====================================================================
       SUBROUTINE DLAEXC( WANTQ, N, T, LDT, Q, LDQ, J1, N1, N2, WORK,
@@ -52462,7 +52419,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lag2
 *
 *  =====================================================================
       SUBROUTINE DLAG2( A, LDA, B, LDB, SAFMIN, SCALE1, SCALE2, WR1,
@@ -52834,7 +52791,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lags2
 *
 *  =====================================================================
       SUBROUTINE DLAGS2( UPPER, A1, A2, A3, B1, B2, B3, CSU, SNU, CSV,
@@ -53198,7 +53155,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lagtf
 *
 *  =====================================================================
       SUBROUTINE DLAGTF( N, A, LAMBDA, B, C, TOL, D, IN, INFO )
@@ -53349,7 +53306,7 @@
 *>
 *> \verbatim
 *>
-*> DLAGTM performs a matrix-vector product of the form
+*> DLAGTM performs a matrix-matrix product of the form
 *>
 *>    B := alpha * A * X + beta * B
 *>
@@ -53449,7 +53406,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lagtm
 *
 *  =====================================================================
       SUBROUTINE DLAGTM( TRANS, N, NRHS, ALPHA, DL, D, DU, X, LDX, BETA,
@@ -53585,7 +53542,9 @@
 *     End of DLAGTM
 *
       END
-*> \brief \b DLAGTS solves the system of equations (T-λI)x = y or (T-λI)Tx = y,where T is a general tridiagonal matrix and λ a scalar, using the LU factorization computed by slagtf.
+*> \brief \b DLAGTS solves the system of equations (T-λI)x = y
+*> or (T-λI)^Tx = y, where T is a general tridiagonal matrix
+*> and λ a scalar, using the LU factorization computed by slagtf.
 *
 *  =========== DOCUMENTATION ===========
 *
@@ -53741,7 +53700,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lagts
 *
 *  =====================================================================
       SUBROUTINE DLAGTS( JOB, N, A, B, C, D, IN, Y, TOL, INFO )
@@ -54111,7 +54070,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lagv2
 *
 *> \par Contributors:
 *  ==================
@@ -54521,7 +54480,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lahqr
 *
 *> \par Further Details:
 *  =====================
@@ -54582,7 +54541,7 @@
       EXTERNAL           DLAMCH
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DCOPY, DLABAD, DLANV2, DLARFG, DROT
+      EXTERNAL           DCOPY, DLANV2, DLARFG, DROT
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, DBLE, MAX, MIN, SQRT
@@ -54616,7 +54575,6 @@
 *
       SAFMIN = DLAMCH( 'SAFE MINIMUM' )
       SAFMAX = ONE / SAFMIN
-      CALL DLABAD( SAFMIN, SAFMAX )
       ULP = DLAMCH( 'PRECISION' )
       SMLNUM = SAFMIN*( DBLE( NH ) / ULP )
 *
@@ -55082,7 +55040,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lahr2
 *
 *> \par Further Details:
 *  =====================
@@ -55404,7 +55362,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lahrd
 *
 *> \par Further Details:
 *  =====================
@@ -55692,7 +55650,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laic1
 *
 *  =====================================================================
       SUBROUTINE DLAIC1( JOB, J, X, SEST, W, GAMMA, SESTPR, S, C )
@@ -55996,7 +55954,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup laisnan
 *
 *  =====================================================================
       LOGICAL FUNCTION DLAISNAN( DIN1, DIN2 )
@@ -56227,7 +56185,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laln2
 *
 *  =====================================================================
       SUBROUTINE DLALN2( LTRANS, NA, NW, SMIN, CA, A, LDA, D1, D2, B,
@@ -56877,7 +56835,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup lals0
 *
 *> \par Contributors:
 *  ==================
@@ -57014,6 +56972,11 @@
      $                ( POLES( I, 2 ).EQ.ZERO ) ) THEN
                      WORK( I ) = ZERO
                   ELSE
+*
+*                    Use calls to the subroutine DLAMC3 to enforce the
+*                    parentheses (x+y)+z. The goal is to prevent
+*                    optimizing compilers from doing x+(y+z).
+*
                      WORK( I ) = POLES( I, 2 )*Z( I ) /
      $                           ( DLAMC3( POLES( I, 2 ), DSIGJ )-
      $                           DIFLJ ) / ( POLES( I, 2 )+DJ )
@@ -57065,6 +57028,11 @@
                   IF( Z( J ).EQ.ZERO ) THEN
                      WORK( I ) = ZERO
                   ELSE
+*
+*                    Use calls to the subroutine DLAMC3 to enforce the
+*                    parentheses (x+y)+z. The goal is to prevent
+*                    optimizing compilers from doing x+(y+z).
+*
                      WORK( I ) = Z( J ) / ( DLAMC3( DSIGJ, -POLES( I+1,
      $                           2 ) )-DIFR( I, 1 ) ) /
      $                           ( DSIGJ+POLES( I, 1 ) ) / DIFR( I, 2 )
@@ -57164,9 +57132,9 @@
 *>
 *> \verbatim
 *>
-*> DLALSA is an itermediate step in solving the least squares problem
+*> DLALSA is an intermediate step in solving the least squares problem
 *> by computing the SVD of the coefficient matrix in compact form (The
-*> singular vectors are computed as products of simple orthorgonal
+*> singular vectors are computed as products of simple orthogonal
 *> matrices.).
 *>
 *> If ICOMPQ = 0, DLALSA applies the inverse of the left singular vector
@@ -57371,7 +57339,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup lalsa
 *
 *> \par Contributors:
 *  ==================
@@ -57658,12 +57626,6 @@
 *> problem; in this case a minimum norm solution is returned.
 *> The actual singular values are returned in D in ascending order.
 *>
-*> This code makes very mild assumptions about floating point
-*> arithmetic. It will work on machines with a guard digit in
-*> add/subtract, or on those binary machines without guard digits
-*> which subtract like the Cray XMP, Cray YMP, Cray C 90, or Cray 2.
-*> It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -57775,7 +57737,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup lalsd
 *
 *> \par Contributors:
 *  ==================
@@ -58223,7 +58185,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lamrg
 *
 *  =====================================================================
       SUBROUTINE DLAMRG( N1, N2, A, DTRD1, DTRD2, INDEX )
@@ -58403,7 +58365,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup laneg
 *
 *> \par Contributors:
 *  ==================
@@ -58639,7 +58601,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBauxiliary
+*> \ingroup langb
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANGB( NORM, N, KL, KU, AB, LDAB,
@@ -58852,7 +58814,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEauxiliary
+*> \ingroup lange
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANGE( NORM, M, N, A, LDA, WORK )
@@ -59052,7 +59014,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup langt
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANGT( NORM, N, DL, D, DU )
@@ -59259,7 +59221,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lanhs
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANHS( NORM, N, A, LDA, WORK )
@@ -59481,7 +59443,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lanhb
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANSB( NORM, UPLO, N, K, AB, LDAB,
@@ -59730,7 +59692,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup lanhf
 *
 *> \par Further Details:
 *  =====================
@@ -60682,7 +60644,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lanhp
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANSP( NORM, UPLO, N, AP, WORK )
@@ -60926,7 +60888,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lanht
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANST( NORM, N, D, E )
@@ -61131,7 +61093,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYauxiliary
+*> \ingroup lanhe
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANSY( NORM, UPLO, N, A, LDA, WORK )
@@ -61386,7 +61348,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lantb
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANTB( NORM, UPLO, DIAG, N, K, AB,
@@ -61729,7 +61691,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lantp
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANTP( NORM, UPLO, DIAG, N, AP, WORK )
@@ -62097,7 +62059,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lantr
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLANTR( NORM, UPLO, DIAG, M, N, A, LDA,
@@ -62423,7 +62385,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lanv2
 *
 *> \par Further Details:
 *  =====================
@@ -62717,7 +62679,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lapll
 *
 *  =====================================================================
       SUBROUTINE DLAPLL( N, X, INCX, Y, INCY, SSMIN )
@@ -62881,7 +62843,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lapmr
 *
 *  =====================================================================
       SUBROUTINE DLAPMR( FORWRD, M, N, X, LDX, K )
@@ -63082,7 +63044,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lapmt
 *
 *  =====================================================================
       SUBROUTINE DLAPMT( FORWRD, M, N, X, LDX, K )
@@ -63241,7 +63203,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lapy2
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLAPY2( X, Y )
@@ -63363,7 +63325,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lapy3
 *
 *  =====================================================================
       DOUBLE PRECISION FUNCTION DLAPY3( X, Y, Z )
@@ -63565,7 +63527,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBauxiliary
+*> \ingroup laqgb
 *
 *  =====================================================================
       SUBROUTINE DLAQGB( M, N, KL, KU, AB, LDAB, R, C, ROWCND, COLCND,
@@ -63801,7 +63763,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEauxiliary
+*> \ingroup laqge
 *
 *  =====================================================================
       SUBROUTINE DLAQGE( M, N, A, LDA, R, C, ROWCND, COLCND, AMAX,
@@ -64022,7 +63984,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqp2
 *
 *> \par Contributors:
 *  ==================
@@ -64309,7 +64271,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqps
 *
 *> \par Contributors:
 *  ==================
@@ -64762,7 +64724,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqr0
 *
 *  =====================================================================
       SUBROUTINE DLAQR0( WANTT, WANTZ, N, ILO, IHI, H, LDH, WR, WI,
@@ -65359,7 +65321,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqr1
 *
 *> \par Contributors:
 *  ==================
@@ -65697,7 +65659,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqr2
 *
 *> \par Contributors:
 *  ==================
@@ -65743,7 +65705,7 @@
       EXTERNAL           DLAMCH
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DCOPY, DGEHRD, DGEMM, DLABAD, DLACPY, DLAHQR,
+      EXTERNAL           DCOPY, DGEHRD, DGEMM, DLACPY, DLAHQR,
      $                   DLANV2, DLARF, DLARFG, DLASET, DORMHR, DTREXC
 *     ..
 *     .. Intrinsic Functions ..
@@ -65796,7 +65758,6 @@
 *
       SAFMIN = DLAMCH( 'SAFE MINIMUM' )
       SAFMAX = ONE / SAFMIN
-      CALL DLABAD( SAFMIN, SAFMAX )
       ULP = DLAMCH( 'PRECISION' )
       SMLNUM = SAFMIN*( DBLE( N ) / ULP )
 *
@@ -66375,7 +66336,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqr3
 *
 *> \par Contributors:
 *  ==================
@@ -66422,9 +66383,8 @@
       EXTERNAL           DLAMCH, ILAENV
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DCOPY, DGEHRD, DGEMM, DLABAD, DLACPY, DLAHQR,
-     $                   DLANV2, DLAQR4, DLARF, DLARFG, DLASET, DORMHR,
-     $                   DTREXC
+      EXTERNAL           DCOPY, DGEHRD, DGEMM, DLACPY, DLAHQR, DLANV2,
+     $                   DLAQR4, DLARF, DLARFG, DLASET, DORMHR, DTREXC
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, DBLE, INT, MAX, MIN, SQRT
@@ -66482,7 +66442,6 @@
 *
       SAFMIN = DLAMCH( 'SAFE MINIMUM' )
       SAFMAX = ONE / SAFMIN
-      CALL DLABAD( SAFMIN, SAFMAX )
       ULP = DLAMCH( 'PRECISION' )
       SMLNUM = SAFMIN*( DBLE( N ) / ULP )
 *
@@ -67044,7 +67003,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqr4
 *
 *> \par Contributors:
 *  ==================
@@ -67776,7 +67735,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqr5
 *
 *> \par Contributors:
 *  ==================
@@ -67849,8 +67808,7 @@
       DOUBLE PRECISION   VT( 3 )
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGEMM, DLABAD, DLACPY, DLAQR1, DLARFG, DLASET,
-     $                   DTRMM
+      EXTERNAL           DGEMM, DLACPY, DLAQR1, DLARFG, DLASET, DTRMM
 *     ..
 *     .. Executable Statements ..
 *
@@ -67896,7 +67854,6 @@
 *
       SAFMIN = DLAMCH( 'SAFE MINIMUM' )
       SAFMAX = ONE / SAFMIN
-      CALL DLABAD( SAFMIN, SAFMAX )
       ULP = DLAMCH( 'PRECISION' )
       SMLNUM = SAFMIN*( DBLE( N ) / ULP )
 *
@@ -68101,10 +68058,13 @@
 *                 .    Mth bulge. Exploit fact that first two elements
 *                 .    of row are actually zero. ====
 *
-                  REFSUM = V( 1, M )*V( 3, M )*H( K+3, K+2 )
-                  H( K+3, K   ) = -REFSUM
-                  H( K+3, K+1 ) = -REFSUM*V( 2, M )
-                  H( K+3, K+2 ) = H( K+3, K+2 ) - REFSUM*V( 3, M )
+                  T1 = V( 1, M )
+                  T2 = T1*V( 2, M )
+                  T3 = T1*V( 3, M )
+                  REFSUM = V( 3, M )*H( K+3, K+2 )
+                  H( K+3, K   ) = -REFSUM*T1
+                  H( K+3, K+1 ) = -REFSUM*T2
+                  H( K+3, K+2 ) = H( K+3, K+2 ) - REFSUM*T3
 *
 *                 ==== Calculate reflection to move
 *                 .    Mth bulge one step. ====
@@ -68140,11 +68100,13 @@
      $                            VT )
                      ALPHA = VT( 1 )
                      CALL DLARFG( 3, ALPHA, VT( 2 ), 1, VT( 1 ) )
-                     REFSUM = VT( 1 )*( H( K+1, K )+VT( 2 )*
-     $                        H( K+2, K ) )
+                     T1 = VT( 1 )
+                     T2 = T1*VT( 2 )
+                     T3 = T1*VT( 3 )
+                     REFSUM = H( K+1, K ) + VT( 2 )*H( K+2, K )
 *
-                     IF( ABS( H( K+2, K )-REFSUM*VT( 2 ) )+
-     $                   ABS( REFSUM*VT( 3 ) ).GT.ULP*
+                     IF( ABS( H( K+2, K )-REFSUM*T2 )+
+     $                   ABS( REFSUM*T3 ).GT.ULP*
      $                   ( ABS( H( K, K ) )+ABS( H( K+1,
      $                   K+1 ) )+ABS( H( K+2, K+2 ) ) ) ) THEN
 *
@@ -68162,7 +68124,7 @@
 *                       .    Replace the old reflector with
 *                       .    the new one. ====
 *
-                        H( K+1, K ) = H( K+1, K ) - REFSUM
+                        H( K+1, K ) = H( K+1, K ) - REFSUM*T1
                         H( K+2, K ) = ZERO
                         H( K+3, K ) = ZERO
                         V( 1, M ) = VT( 1 )
@@ -68508,7 +68470,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqhb
 *
 *  =====================================================================
       SUBROUTINE DLAQSB( UPLO, N, KD, AB, LDAB, S, SCOND, AMAX, EQUED )
@@ -68716,7 +68678,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqhp
 *
 *  =====================================================================
       SUBROUTINE DLAQSP( UPLO, N, AP, S, SCOND, AMAX, EQUED )
@@ -68933,7 +68895,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYauxiliary
+*> \ingroup laqhe
 *
 *  =====================================================================
       SUBROUTINE DLAQSY( UPLO, N, A, LDA, S, SCOND, AMAX, EQUED )
@@ -69177,7 +69139,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laqtr
 *
 *  =====================================================================
       SUBROUTINE DLAQTR( LTRAN, LREAL, N, T, LDT, B, W, SCALE, X, WORK,
@@ -69977,7 +69939,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lar1v
 *
 *> \par Contributors:
 *  ==================
@@ -70351,7 +70313,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lar2v
 *
 *  =====================================================================
       SUBROUTINE DLAR2V( N, X, Y, Z, INCX, C, S, INCC )
@@ -70519,7 +70481,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup larf
 *
 *  =====================================================================
       SUBROUTINE DLARF( SIDE, M, N, V, INCV, TAU, C, LDC, WORK )
@@ -70787,7 +70749,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup larfb
 *
 *> \par Further Details:
 *  =====================
@@ -71434,7 +71396,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup larfg
 *
 *  =====================================================================
       SUBROUTINE DLARFG( N, ALPHA, X, INCX, TAU )
@@ -71625,7 +71587,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup larfgp
 *
 *  =====================================================================
       SUBROUTINE DLARFGP( N, ALPHA, X, INCX, TAU )
@@ -71650,7 +71612,7 @@
 *     ..
 *     .. Local Scalars ..
       INTEGER            J, KNT
-      DOUBLE PRECISION   BETA, BIGNUM, SAVEALPHA, SMLNUM, XNORM
+      DOUBLE PRECISION   BETA, BIGNUM, EPS, SAVEALPHA, SMLNUM, XNORM
 *     ..
 *     .. External Functions ..
       DOUBLE PRECISION   DLAMCH, DLAPY2, DNRM2
@@ -71669,11 +71631,12 @@
          RETURN
       END IF
 *
+      EPS = DLAMCH( 'Precision' )
       XNORM = DNRM2( N-1, X, INCX )
 *
-      IF( XNORM.EQ.ZERO ) THEN
+      IF( XNORM.LE.EPS*ABS(ALPHA) ) THEN
 *
-*        H  =  [+/-1, 0; I], sign chosen so ALPHA >= 0
+*        H  =  [+/-1, 0; I], sign chosen so ALPHA >= 0.
 *
          IF( ALPHA.GE.ZERO ) THEN
 *           When TAU.eq.ZERO, the vector is special-cased to be
@@ -71897,7 +71860,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup larft
 *
 *> \par Further Details:
 *  =====================
@@ -72203,7 +72166,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup larfx
 *
 *  =====================================================================
       SUBROUTINE DLARFX( SIDE, M, N, V, TAU, C, LDC, WORK )
@@ -72881,7 +72844,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup largv
 *
 *  =====================================================================
       SUBROUTINE DLARGV( N, X, INCX, Y, INCY, C, INCC )
@@ -73027,7 +72990,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larnv
 *
 *> \par Further Details:
 *  =====================
@@ -73242,7 +73205,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larra
 *
 *> \par Contributors:
 *  ==================
@@ -73287,6 +73250,7 @@
 *     .. Executable Statements ..
 *
       INFO = 0
+      NSPLIT = 1
 *
 *     Quick return if possible
 *
@@ -73295,7 +73259,6 @@
       END IF
 *
 *     Compute splitting points
-      NSPLIT = 1
       IF(SPLTOL.LT.ZERO) THEN
 *        Criterion based on absolute off-diagonal value
          TMP1 = ABS(SPLTOL)* TNRM
@@ -73508,7 +73471,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larrb
 *
 *> \par Contributors:
 *  ==================
@@ -73854,7 +73817,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larrc
 *
 *> \par Contributors:
 *  ==================
@@ -73901,6 +73864,9 @@
 *     .. Executable Statements ..
 *
       INFO = 0
+      LCNT = 0
+      RCNT = 0
+      EIGCNT = 0
 *
 *     Quick return if possible
 *
@@ -73908,9 +73874,6 @@
          RETURN
       END IF
 *
-      LCNT = 0
-      RCNT = 0
-      EIGCNT = 0
       MATT = LSAME( JOBT, 'T' )
 
 
@@ -74301,7 +74264,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larrd
 *
 *  =====================================================================
       SUBROUTINE DLARRD( RANGE, ORDER, N, VL, VU, IL, IU, GERS,
@@ -74363,6 +74326,7 @@
 *     .. Executable Statements ..
 *
       INFO = 0
+      M = 0
 *
 *     Quick return if possible
 *
@@ -74406,13 +74370,8 @@
       END IF
 
 *     Initialize error flags
-      INFO = 0
       NCNVRG = .FALSE.
       TOOFEW = .FALSE.
-
-*     Quick return if possible
-      M = 0
-      IF( N.EQ.0 ) RETURN
 
 *     Simplification:
       IF( IRANGE.EQ.INDRNG .AND. IL.EQ.1 .AND. IU.EQ.N ) IRANGE = 1
@@ -74899,7 +74858,7 @@
 *> DSTEMR to compute the eigenvectors of T.
 *> The accuracy varies depending on whether bisection is used to
 *> find a few eigenvalues or the dqds algorithm (subroutine DLASQ2) to
-*> conpute all and then discard any unwanted one.
+*> compute all and then discard any unwanted one.
 *> As an added benefit, DLARRE also outputs the n
 *> Gerschgorin intervals for the matrices L_i D_i L_i^T.
 *> \endverbatim
@@ -75124,7 +75083,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larre
 *
 *> \par Further Details:
 *  =====================
@@ -75215,6 +75174,8 @@
 *
 
       INFO = 0
+      NSPLIT = 0
+      M = 0
 *
 *     Quick return if possible
 *
@@ -75231,8 +75192,6 @@
       ELSE IF( LSAME( RANGE, 'I' ) ) THEN
          IRANGE = INDRNG
       END IF
-
-      M = 0
 
 *     Get machine constants
       SAFMIN = DLAMCH( 'S' )
@@ -75923,7 +75882,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larrf
 *
 *> \par Contributors:
 *  ==================
@@ -76391,7 +76350,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larrj
 *
 *> \par Contributors:
 *  ==================
@@ -76754,7 +76713,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larrk
 *
 *  =====================================================================
       SUBROUTINE DLARRK( N, IW, GL, GU,
@@ -76948,7 +76907,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup larrr
 *
 *> \par Contributors:
 *  ==================
@@ -77350,7 +77309,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup larrv
 *
 *> \par Contributors:
 *  ==================
@@ -78203,7 +78162,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup larscl2
 *
 *  =====================================================================
       SUBROUTINE DLARSCL2 ( M, N, D, X, LDX )
@@ -78324,7 +78283,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lartgp
 *
 *  =====================================================================
       SUBROUTINE DLARTGP( F, G, CS, SN, R )
@@ -78518,7 +78477,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lartgs
 *
 *  =====================================================================
       SUBROUTINE DLARTGS( X, Y, SIGMA, CS, SN )
@@ -78694,7 +78653,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lartv
 *
 *  =====================================================================
       SUBROUTINE DLARTV( N, X, INCX, Y, INCY, C, S, INCC )
@@ -78809,7 +78768,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup laruv
 *
 *> \par Further Details:
 *  =====================
@@ -79120,6 +79079,11 @@
 *     ..
 *     .. Executable Statements ..
 *
+*     Quick return for N < 1
+      IF ( N < 1 ) THEN
+         RETURN
+      END IF
+*
       I1 = ISEED( 1 )
       I2 = ISEED( 2 )
       I3 = ISEED( 3 )
@@ -79307,7 +79271,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup larz
 *
 *> \par Contributors:
 *  ==================
@@ -79577,7 +79541,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup larzb
 *
 *> \par Contributors:
 *  ==================
@@ -79866,7 +79830,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup larzt
 *
 *> \par Contributors:
 *  ==================
@@ -80072,7 +80036,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup las2
 *
 *> \par Further Details:
 *  =====================
@@ -80087,9 +80051,7 @@
 *>  infinite.
 *>
 *>  Overflow will not occur unless the largest singular value itself
-*>  overflows, or is within a few ulps of overflow. (On machines with
-*>  partial overflow, like the Cray, overflow may occur if the largest
-*>  singular value is within a factor of 2 of overflow.)
+*>  overflows, or is within a few ulps of overflow.
 *>
 *>  Underflow is harmless if underflow is gradual. Otherwise, results
 *>  may correspond to a matrix modified by perturbations of size near
@@ -80310,7 +80272,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lascl
 *
 *  =====================================================================
       SUBROUTINE DLASCL( TYPE, KL, KU, CFROM, CTO, M, N, A, LDA, INFO )
@@ -80624,7 +80586,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup lascl2
 *
 *  =====================================================================
       SUBROUTINE DLASCL2 ( M, N, D, X, LDX )
@@ -80736,10 +80698,11 @@
 *>         On exit, E has been destroyed.
 *> \endverbatim
 *>
-*> \param[out] U
+*> \param[in,out] U
 *> \verbatim
 *>          U is DOUBLE PRECISION array, dimension (LDU, N)
-*>         On exit, U contains the left singular vectors.
+*>         On exit, U contains the left singular vectors, 
+*>          if U passed in as (N, N) Identity.
 *> \endverbatim
 *>
 *> \param[in] LDU
@@ -80748,10 +80711,11 @@
 *>         On entry, leading dimension of U.
 *> \endverbatim
 *>
-*> \param[out] VT
+*> \param[in,out] VT
 *> \verbatim
 *>          VT is DOUBLE PRECISION array, dimension (LDVT, M)
-*>         On exit, VT**T contains the right singular vectors.
+*>         On exit, VT**T contains the right singular vectors,
+*>          if VT passed in as (M, M) Identity.
 *> \endverbatim
 *>
 *> \param[in] LDVT
@@ -80793,7 +80757,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasd0
 *
 *> \par Contributors:
 *  ==================
@@ -81160,7 +81124,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasd1
 *
 *> \par Contributors:
 *  ==================
@@ -81547,7 +81511,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasd2
 *
 *> \par Contributors:
 *  ==================
@@ -81968,13 +81932,6 @@
 *> appropriate calls to DLASD4 and then updates the singular
 *> vectors by matrix multiplication.
 *>
-*> This code makes very mild assumptions about floating point
-*> arithmetic. It will work on machines with a guard digit in
-*> add/subtract, or on those binary machines without guard digits
-*> which subtract like the Cray XMP, Cray YMP, Cray C 90, or Cray 2.
-*> It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
-*>
 *> DLASD3 is called from DLASD1.
 *> \endverbatim
 *
@@ -82027,7 +81984,7 @@
 *>         The leading dimension of the array Q.  LDQ >= K.
 *> \endverbatim
 *>
-*> \param[in,out] DSIGMA
+*> \param[in] DSIGMA
 *> \verbatim
 *>          DSIGMA is DOUBLE PRECISION array, dimension(K)
 *>         The first K elements of this array contain the old roots
@@ -82133,7 +82090,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasd3
 *
 *> \par Contributors:
 *  ==================
@@ -82173,8 +82130,8 @@
       DOUBLE PRECISION   RHO, TEMP
 *     ..
 *     .. External Functions ..
-      DOUBLE PRECISION   DLAMC3, DNRM2
-      EXTERNAL           DLAMC3, DNRM2
+      DOUBLE PRECISION   DNRM2
+      EXTERNAL           DNRM2
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           DCOPY, DGEMM, DLACPY, DLASCL, DLASD4, XERBLA
@@ -82233,27 +82190,6 @@
          END IF
          RETURN
       END IF
-*
-*     Modify values DSIGMA(i) to make sure all DSIGMA(i)-DSIGMA(j) can
-*     be computed with high relative accuracy (barring over/underflow).
-*     This is a problem on machines without a guard digit in
-*     add/subtract (Cray XMP, Cray YMP, Cray C 90 and Cray 2).
-*     The following code replaces DSIGMA(I) by 2*DSIGMA(I)-DSIGMA(I),
-*     which on any of these machines zeros out the bottommost
-*     bit of DSIGMA(I) if it is 1; this makes the subsequent
-*     subtractions DSIGMA(I)-DSIGMA(J) unproblematic when cancellation
-*     occurs. On binary machines with a guard digit (almost all
-*     machines) it does not change DSIGMA(I) at all. On hexadecimal
-*     and decimal machines with a guard digit, it slightly
-*     changes the bottommost bits of DSIGMA(I). It does not account
-*     for hexadecimal or decimal machines without guard digits
-*     (we know of none). We use a subroutine call to compute
-*     2*DSIGMA(I) to prevent optimizing compilers from eliminating
-*     this code.
-*
-      DO 20 I = 1, K
-         DSIGMA( I ) = DLAMC3( DSIGMA( I ), DSIGMA( I ) ) - DSIGMA( I )
-   20 CONTINUE
 *
 *     Keep a copy of Z.
 *
@@ -82530,7 +82466,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasd4
 *
 *> \par Contributors:
 *  ==================
@@ -83551,7 +83487,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasd5
 *
 *> \par Contributors:
 *  ==================
@@ -83973,7 +83909,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasd6
 *
 *> \par Contributors:
 *  ==================
@@ -84380,7 +84316,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasd7
 *
 *> \par Contributors:
 *  ==================
@@ -84814,14 +84750,12 @@
 *>          The leading dimension of DIFR, must be at least K.
 *> \endverbatim
 *>
-*> \param[in,out] DSIGMA
+*> \param[in] DSIGMA
 *> \verbatim
 *>          DSIGMA is DOUBLE PRECISION array, dimension ( K )
 *>          On entry, the first K elements of this array contain the old
 *>          roots of the deflated updating problem.  These are the poles
 *>          of the secular equation.
-*>          On exit, the elements of DSIGMA may be very slightly altered
-*>          in value.
 *> \endverbatim
 *>
 *> \param[out] WORK
@@ -84845,7 +84779,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasd8
 *
 *> \par Contributors:
 *  ==================
@@ -84920,27 +84854,6 @@
          RETURN
       END IF
 *
-*     Modify values DSIGMA(i) to make sure all DSIGMA(i)-DSIGMA(j) can
-*     be computed with high relative accuracy (barring over/underflow).
-*     This is a problem on machines without a guard digit in
-*     add/subtract (Cray XMP, Cray YMP, Cray C 90 and Cray 2).
-*     The following code replaces DSIGMA(I) by 2*DSIGMA(I)-DSIGMA(I),
-*     which on any of these machines zeros out the bottommost
-*     bit of DSIGMA(I) if it is 1; this makes the subsequent
-*     subtractions DSIGMA(I)-DSIGMA(J) unproblematic when cancellation
-*     occurs. On binary machines with a guard digit (almost all
-*     machines) it does not change DSIGMA(I) at all. On hexadecimal
-*     and decimal machines with a guard digit, it slightly
-*     changes the bottommost bits of DSIGMA(I). It does not account
-*     for hexadecimal or decimal machines without guard digits
-*     (we know of none). We use a subroutine call to compute
-*     2*DLAMBDA(I) to prevent optimizing compilers from eliminating
-*     this code.
-*
-      DO 10 I = 1, K
-         DSIGMA( I ) = DLAMC3( DSIGMA( I ), DSIGMA( I ) ) - DSIGMA( I )
-   10 CONTINUE
-*
 *     Book keeping.
 *
       IWK1 = 1
@@ -85005,6 +84918,11 @@
             DSIGJP = -DSIGMA( J+1 )
          END IF
          WORK( J ) = -Z( J ) / DIFLJ / ( DSIGMA( J )+DJ )
+*
+*        Use calls to the subroutine DLAMC3 to enforce the parentheses
+*        (x+y)+z. The goal is to prevent optimizing compilers
+*        from doing x+(y+z).
+*
          DO 60 I = 1, J - 1
             WORK( I ) = Z( I ) / ( DLAMC3( DSIGMA( I ), DSIGJ )-DIFLJ )
      $                   / ( DSIGMA( I )+DJ )
@@ -85290,7 +85208,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasda
 *
 *> \par Contributors:
 *  ==================
@@ -85740,7 +85658,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasdq
 *
 *> \par Contributors:
 *  ==================
@@ -86045,7 +85963,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasdt
 *
 *> \par Contributors:
 *  ==================
@@ -86225,7 +86143,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup laset
 *
 *  =====================================================================
       SUBROUTINE DLASET( UPLO, M, N, ALPHA, BETA, A, LDA )
@@ -86404,7 +86322,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lasq1
 *
 *  =====================================================================
       SUBROUTINE DLASQ1( N, D, E, WORK, INFO )
@@ -86619,7 +86537,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lasq2
 *
 *> \par Further Details:
 *  =====================
@@ -87283,7 +87201,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lasq3
 *
 *  =====================================================================
       SUBROUTINE DLASQ3( I0, N0, Z, PP, DMIN, SIGMA, DESIG, QMAX, NFAIL,
@@ -87663,7 +87581,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lasq4
 *
 *> \par Further Details:
 *  =====================
@@ -88085,7 +88003,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lasq5
 *
 *  =====================================================================
       SUBROUTINE DLASQ5( I0, N0, Z, PP, TAU, SIGMA, DMIN, DMIN1, DMIN2,
@@ -88467,7 +88385,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lasq6
 *
 *  =====================================================================
       SUBROUTINE DLASQ6( I0, N0, Z, PP, DMIN, DMIN1, DMIN2, DN,
@@ -88799,7 +88717,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasr
 *
 *  =====================================================================
       SUBROUTINE DLASR( SIDE, PIVOT, DIRECT, M, N, C, S, A, LDA )
@@ -89121,7 +89039,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup lasrt
 *
 *  =====================================================================
       SUBROUTINE DLASRT( ID, N, D, INFO )
@@ -89447,7 +89365,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup lasv2
 *
 *> \par Further Details:
 *  =====================
@@ -89464,9 +89382,7 @@
 *>  infinite.
 *>
 *>  Overflow will not occur unless the largest singular value itself
-*>  overflows or is within a few ulps of overflow. (On machines with
-*>  partial overflow, like the Cray, overflow may occur if the largest
-*>  singular value is within a factor of 2 of overflow.)
+*>  overflows or is within a few ulps of overflow.
 *>
 *>  Underflow is harmless if underflow is gradual. Otherwise, results
 *>  may correspond to a matrix modified by perturbations of size near
@@ -89761,7 +89677,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup laswp
 *
 *> \par Further Details:
 *  =====================
@@ -90018,7 +89934,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYauxiliary
+*> \ingroup lasy2
 *
 *  =====================================================================
       SUBROUTINE DLASY2( LTRANL, LTRANR, ISGN, N1, N2, TL, LDTL, TR,
@@ -90490,7 +90406,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup lahef
 *
 *> \par Contributors:
 *  ==================
@@ -91312,7 +91228,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup latbs
 *
 *> \par Further Details:
 *  =====================
@@ -92092,7 +92008,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup latdf
 *
 *> \par Further Details:
 *  =====================
@@ -92428,7 +92344,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup latps
 *
 *> \par Further Details:
 *  =====================
@@ -93210,7 +93126,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup latrd
 *
 *> \par Further Details:
 *  =====================
@@ -93562,7 +93478,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup latrs
 *
 *> \par Further Details:
 *  =====================
@@ -93663,7 +93579,10 @@
       LOGICAL            NOTRAN, NOUNIT, UPPER
       INTEGER            I, IMAX, J, JFIRST, JINC, JLAST
       DOUBLE PRECISION   BIGNUM, GROW, REC, SMLNUM, SUMJ, TJJ, TJJS,
-     $                   TMAX, TSCAL, USCAL, XBND, XJ, XMAX, WK(1)
+     $                   TMAX, TSCAL, USCAL, XBND, XJ, XMAX
+*     ..
+*     .. Local Arrays ..
+      DOUBLE PRECISION   WORK(1)
 *     ..
 *     .. External Functions ..
       LOGICAL            LSAME
@@ -93765,19 +93684,17 @@
 *
 *              A is upper triangular.
 *
-*     R change: SUMJ -> WK to avoid rank mismatch.
                DO J = 2, N
-                  TMAX = MAX( DLANGE( 'M', J-1, 1, A( 1, J ), 1, WK ),
+                  TMAX = MAX( DLANGE( 'M', J-1, 1, A( 1, J ), 1, WORK ),
      $                        TMAX )
                END DO
             ELSE
 *
 *              A is lower triangular.
 *
-*     R change: SUMJ -> WK to avoid rank mismatch.
                DO J = 1, N - 1
                   TMAX = MAX( DLANGE( 'M', N-J, 1, A( J+1, J ), 1,
-     $                        WK ), TMAX )
+     $                        WORK ), TMAX )
                END DO
             END IF
 *
@@ -94346,7 +94263,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup latrz
 *
 *> \par Contributors:
 *  ==================
@@ -94759,7 +94676,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lauu2
 *
 *  =====================================================================
       SUBROUTINE DLAUU2( UPLO, N, A, LDA, INFO )
@@ -94954,7 +94871,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup lauum
 *
 *  =====================================================================
       SUBROUTINE DLAUUM( UPLO, N, A, LDA, INFO )
@@ -95181,7 +95098,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup upgtr
 *
 *  =====================================================================
       SUBROUTINE DOPGTR( UPLO, N, AP, TAU, Q, LDQ, WORK, INFO )
@@ -95445,7 +95362,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup upmtr
 *
 *  =====================================================================
       SUBROUTINE DOPMTR( SIDE, UPLO, TRANS, M, N, AP, TAU, C, LDC, WORK,
@@ -95894,7 +95811,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unbdb
 *
 *> \par Further Details:
 *  =====================
@@ -96612,7 +96529,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup uncsd
 *
 *  =====================================================================
       RECURSIVE SUBROUTINE DORCSD( JOBU1, JOBU2, JOBV1T, JOBV2T, TRANS,
@@ -97043,7 +96960,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ung2l
 *
 *  =====================================================================
       SUBROUTINE DORG2L( M, N, K, A, LDA, TAU, WORK, INFO )
@@ -97238,7 +97155,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ung2r
 *
 *  =====================================================================
       SUBROUTINE DORG2R( M, N, K, A, LDA, TAU, WORK, INFO )
@@ -97478,7 +97395,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGBcomputational
+*> \ingroup ungbr
 *
 *  =====================================================================
       SUBROUTINE DORGBR( VECT, M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
@@ -97781,7 +97698,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unghr
 *
 *  =====================================================================
       SUBROUTINE DORGHR( N, ILO, IHI, A, LDA, TAU, WORK, LWORK, INFO )
@@ -98005,7 +97922,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ungl2
 *
 *  =====================================================================
       SUBROUTINE DORGL2( M, N, K, A, LDA, TAU, WORK, INFO )
@@ -98220,7 +98137,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unglq
 *
 *  =====================================================================
       SUBROUTINE DORGLQ( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
@@ -98507,7 +98424,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ungql
 *
 *  =====================================================================
       SUBROUTINE DORGQL( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
@@ -98800,7 +98717,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ungqr
 *
 *  =====================================================================
       SUBROUTINE DORGQR( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
@@ -99073,7 +98990,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ungr2
 *
 *  =====================================================================
       SUBROUTINE DORGR2( M, N, K, A, LDA, TAU, WORK, INFO )
@@ -99286,7 +99203,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ungrq
 *
 *  =====================================================================
       SUBROUTINE DORGRQ( M, N, K, A, LDA, TAU, WORK, LWORK, INFO )
@@ -99574,7 +99491,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ungtr
 *
 *  =====================================================================
       SUBROUTINE DORGTR( UPLO, N, A, LDA, TAU, WORK, LWORK, INFO )
@@ -99861,7 +99778,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unm2l
 *
 *  =====================================================================
       SUBROUTINE DORM2L( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
@@ -100136,7 +100053,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unm2r
 *
 *  =====================================================================
       SUBROUTINE DORM2R( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
@@ -100451,7 +100368,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmbr
 *
 *  =====================================================================
       SUBROUTINE DORMBR( VECT, SIDE, TRANS, M, N, K, A, LDA, TAU, C,
@@ -100803,7 +100720,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmhr
 *
 *  =====================================================================
       SUBROUTINE DORMHR( SIDE, TRANS, M, N, ILO, IHI, A, LDA, TAU, C,
@@ -101075,7 +100992,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unml2
 *
 *  =====================================================================
       SUBROUTINE DORML2( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
@@ -101362,7 +101279,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmlq
 *
 *  =====================================================================
       SUBROUTINE DORMLQ( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
@@ -101706,7 +101623,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmql
 *
 *  =====================================================================
       SUBROUTINE DORMQL( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
@@ -102042,7 +101959,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmqr
 *
 *  =====================================================================
       SUBROUTINE DORMQR( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
@@ -102371,7 +102288,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmr2
 *
 *  =====================================================================
       SUBROUTINE DORMR2( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
@@ -102654,7 +102571,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmr3
 *
 *> \par Contributors:
 *  ==================
@@ -102950,7 +102867,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmrq
 *
 *  =====================================================================
       SUBROUTINE DORMRQ( SIDE, TRANS, M, N, K, A, LDA, TAU, C, LDC,
@@ -103302,7 +103219,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmrz
 *
 *> \par Contributors:
 *  ==================
@@ -103674,7 +103591,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup unmtr
 *
 *  =====================================================================
       SUBROUTINE DORMTR( SIDE, UPLO, TRANS, M, N, A, LDA, TAU, C, LDC,
@@ -103942,7 +103859,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pbcon
 *
 *  =====================================================================
       SUBROUTINE DPBCON( UPLO, N, KD, AB, LDAB, ANORM, RCOND, WORK,
@@ -104208,7 +104125,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pbequ
 *
 *  =====================================================================
       SUBROUTINE DPBEQU( UPLO, N, KD, AB, LDAB, S, SCOND, AMAX, INFO )
@@ -104506,7 +104423,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pbrfs
 *
 *  =====================================================================
       SUBROUTINE DPBRFS( UPLO, N, KD, NRHS, AB, LDAB, AFB, LDAFB, B,
@@ -104875,7 +104792,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pbstf
 *
 *> \par Further Details:
 *  =====================
@@ -105200,9 +105117,9 @@
 *>          INFO is INTEGER
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
-*>          > 0:  if INFO = i, the leading minor of order i of A is not
-*>                positive definite, so the factorization could not be
-*>                completed, and the solution has not been computed.
+*>          > 0:  if INFO = i, the leading principal minor of order i
+*>                of A is not positive, so the factorization could not
+*>                be completed, and the solution has not been computed.
 *> \endverbatim
 *
 *  Authors:
@@ -105213,7 +105130,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERsolve
+*> \ingroup pbsv
 *
 *> \par Further Details:
 *  =====================
@@ -105378,7 +105295,7 @@
 *>    where U is an upper triangular band matrix, and L is a lower
 *>    triangular band matrix.
 *>
-*> 3. If the leading i-by-i principal minor is not positive definite,
+*> 3. If the leading principal minor of order i is not positive,
 *>    then the routine returns with INFO = i. Otherwise, the factored
 *>    form of A is used to estimate the condition number of the matrix
 *>    A.  If the reciprocal of the condition number is less than machine
@@ -105588,10 +105505,10 @@
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
 *>          > 0:  if INFO = i, and i is
-*>                <= N:  the leading minor of order i of A is
-*>                       not positive definite, so the factorization
-*>                       could not be completed, and the solution has not
-*>                       been computed. RCOND = 0 is returned.
+*>                <= N:  the leading principal minor of order i of A
+*>                       is not positive, so the factorization could not
+*>                       be completed, and the solution has not been
+*>                       computed. RCOND = 0 is returned.
 *>                = N+1: U is nonsingular, but RCOND is less than machine
 *>                       precision, meaning that the matrix is singular
 *>                       to working precision.  Nevertheless, the
@@ -105609,7 +105526,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERsolve
+*> \ingroup pbsvx
 *
 *> \par Further Details:
 *  =====================
@@ -105946,8 +105863,8 @@
 *>          INFO is INTEGER
 *>          = 0: successful exit
 *>          < 0: if INFO = -k, the k-th argument had an illegal value
-*>          > 0: if INFO = k, the leading minor of order k is not
-*>               positive definite, and the factorization could not be
+*>          > 0: if INFO = k, the leading principal minor of order k
+*>               is not positive, and the factorization could not be
 *>               completed.
 *> \endverbatim
 *
@@ -105959,7 +105876,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pbtf2
 *
 *> \par Further Details:
 *  =====================
@@ -106201,8 +106118,8 @@
 *>          INFO is INTEGER
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
-*>          > 0:  if INFO = i, the leading minor of order i is not
-*>                positive definite, and the factorization could not be
+*>          > 0:  if INFO = i, the leading principal minor of order i
+*>                is not positive, and the factorization could not be
 *>                completed.
 *> \endverbatim
 *
@@ -106214,7 +106131,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pbtrf
 *
 *> \par Further Details:
 *  =====================
@@ -106655,7 +106572,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pbtrs
 *
 *  =====================================================================
       SUBROUTINE DPBTRS( UPLO, N, KD, NRHS, AB, LDAB, B, LDB, INFO )
@@ -106849,8 +106766,8 @@
 *>          INFO is INTEGER
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
-*>          > 0:  if INFO = i, the leading minor of order i is not
-*>                positive definite, and the factorization could not be
+*>          > 0:  if INFO = i, the leading principal minor of order i
+*>                is not positive, and the factorization could not be
 *>                completed.
 *> \endverbatim
 *
@@ -106862,7 +106779,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pftrf
 *
 *> \par Further Details:
 *  =====================
@@ -107309,7 +107226,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pftri
 *
 *> \par Further Details:
 *  =====================
@@ -107737,7 +107654,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pftrs
 *
 *> \par Further Details:
 *  =====================
@@ -108022,7 +107939,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOcomputational
+*> \ingroup pocon
 *
 *  =====================================================================
       SUBROUTINE DPOCON( UPLO, N, A, LDA, ANORM, RCOND, WORK, IWORK,
@@ -108264,7 +108181,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOcomputational
+*> \ingroup poequ
 *
 *  =====================================================================
       SUBROUTINE DPOEQU( N, A, LDA, S, SCOND, AMAX, INFO )
@@ -108472,7 +108389,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOcomputational
+*> \ingroup poequb
 *
 *  =====================================================================
       SUBROUTINE DPOEQUB( N, A, LDA, S, SCOND, AMAX, INFO )
@@ -108754,7 +108671,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOcomputational
+*> \ingroup porfs
 *
 *  =====================================================================
       SUBROUTINE DPORFS( UPLO, N, NRHS, A, LDA, AF, LDAF, B, LDB, X,
@@ -109116,9 +109033,9 @@
 *>          INFO is INTEGER
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
-*>          > 0:  if INFO = i, the leading minor of order i of A is not
-*>                positive definite, so the factorization could not be
-*>                completed, and the solution has not been computed.
+*>          > 0:  if INFO = i, the leading principal minor of order i
+*>                of A is not positive, so the factorization could not
+*>                be completed, and the solution has not been computed.
 *> \endverbatim
 *
 *  Authors:
@@ -109129,7 +109046,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOsolve
+*> \ingroup posv
 *
 *  =====================================================================
       SUBROUTINE DPOSV( UPLO, N, NRHS, A, LDA, B, LDB, INFO )
@@ -109267,7 +109184,7 @@
 *>    where U is an upper triangular matrix and L is a lower triangular
 *>    matrix.
 *>
-*> 3. If the leading i-by-i principal minor is not positive definite,
+*> 3. If the leading principal minor of order i is not positive,
 *>    then the routine returns with INFO = i. Otherwise, the factored
 *>    form of A is used to estimate the condition number of the matrix
 *>    A.  If the reciprocal of the condition number is less than machine
@@ -109473,10 +109390,10 @@
 *>          = 0: successful exit
 *>          < 0: if INFO = -i, the i-th argument had an illegal value
 *>          > 0: if INFO = i, and i is
-*>                <= N:  the leading minor of order i of A is
-*>                       not positive definite, so the factorization
-*>                       could not be completed, and the solution has not
-*>                       been computed. RCOND = 0 is returned.
+*>                <= N:  the leading principal minor of order i of A
+*>                       is not positive, so the factorization could not
+*>                       be completed, and the solution has not been
+*>                       computed. RCOND = 0 is returned.
 *>                = N+1: U is nonsingular, but RCOND is less than machine
 *>                       precision, meaning that the matrix is singular
 *>                       to working precision.  Nevertheless, the
@@ -109494,7 +109411,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOsolve
+*> \ingroup posvx
 *
 *  =====================================================================
       SUBROUTINE DPOSVX( FACT, UPLO, N, NRHS, A, LDA, AF, LDAF, EQUED,
@@ -109776,8 +109693,8 @@
 *>          INFO is INTEGER
 *>          = 0: successful exit
 *>          < 0: if INFO = -k, the k-th argument had an illegal value
-*>          > 0: if INFO = k, the leading minor of order k is not
-*>               positive definite, and the factorization could not be
+*>          > 0: if INFO = k, the leading principal minor of order k
+*>               is not positive, and the factorization could not be
 *>               completed.
 *> \endverbatim
 *
@@ -109789,7 +109706,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOcomputational
+*> \ingroup potf2
 *
 *  =====================================================================
       SUBROUTINE DPOTF2( UPLO, N, A, LDA, INFO )
@@ -110001,8 +109918,8 @@
 *>          INFO is INTEGER
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
-*>          > 0:  if INFO = i, the leading minor of order i is not
-*>                positive definite, and the factorization could not be
+*>          > 0:  if INFO = i, the leading principal minor of order i
+*>                is not positive, and the factorization could not be
 *>                completed.
 *> \endverbatim
 *
@@ -110014,7 +109931,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOcomputational
+*> \ingroup potrf
 *
 *  =====================================================================
       SUBROUTINE DPOTRF( UPLO, N, A, LDA, INFO )
@@ -110243,8 +110160,8 @@
 *>          INFO is INTEGER
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
-*>          > 0:  if INFO = i, the leading minor of order i is not
-*>                positive definite, and the factorization could not be
+*>          > 0:  if INFO = i, the leading principal minor of order i
+*>                is not positive, and the factorization could not be
 *>                completed.
 *> \endverbatim
 *
@@ -110256,7 +110173,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOcomputational
+*> \ingroup potrf2
 *
 *  =====================================================================
       RECURSIVE SUBROUTINE DPOTRF2( UPLO, N, A, LDA, INFO )
@@ -110479,7 +110396,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOcomputational
+*> \ingroup potri
 *
 *  =====================================================================
       SUBROUTINE DPOTRI( UPLO, N, A, LDA, INFO )
@@ -110650,7 +110567,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePOcomputational
+*> \ingroup potrs
 *
 *  =====================================================================
       SUBROUTINE DPOTRS( UPLO, N, NRHS, A, LDA, B, LDB, INFO )
@@ -110859,7 +110776,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ppcon
 *
 *  =====================================================================
       SUBROUTINE DPPCON( UPLO, N, AP, ANORM, RCOND, WORK, IWORK, INFO )
@@ -111102,7 +111019,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup ppequ
 *
 *  =====================================================================
       SUBROUTINE DPPEQU( UPLO, N, AP, S, SCOND, AMAX, INFO )
@@ -111391,7 +111308,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pprfs
 *
 *  =====================================================================
       SUBROUTINE DPPRFS( UPLO, N, NRHS, AP, AFP, B, LDB, X, LDX, FERR,
@@ -111750,9 +111667,9 @@
 *>          INFO is INTEGER
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
-*>          > 0:  if INFO = i, the leading minor of order i of A is not
-*>                positive definite, so the factorization could not be
-*>                completed, and the solution has not been computed.
+*>          > 0:  if INFO = i, the leading principal minor of order i
+*>                of A is not positive, so the factorization could not
+*>                be completed, and the solution has not been computed.
 *> \endverbatim
 *
 *  Authors:
@@ -111763,7 +111680,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERsolve
+*> \ingroup ppsv
 *
 *> \par Further Details:
 *  =====================
@@ -111917,7 +111834,7 @@
 *>    where U is an upper triangular matrix and L is a lower triangular
 *>    matrix.
 *>
-*> 3. If the leading i-by-i principal minor is not positive definite,
+*> 3. If the leading principal minor of order i is not positive,
 *>    then the routine returns with INFO = i. Otherwise, the factored
 *>    form of A is used to estimate the condition number of the matrix
 *>    A.  If the reciprocal of the condition number is less than machine
@@ -112110,10 +112027,10 @@
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
 *>          > 0:  if INFO = i, and i is
-*>                <= N:  the leading minor of order i of A is
-*>                       not positive definite, so the factorization
-*>                       could not be completed, and the solution has not
-*>                       been computed. RCOND = 0 is returned.
+*>                <= N:  the leading principal minor of order i of A
+*>                       is not positive, so the factorization could not
+*>                       be completed, and the solution has not been
+*>                       computed. RCOND = 0 is returned.
 *>                = N+1: U is nonsingular, but RCOND is less than machine
 *>                       precision, meaning that the matrix is singular
 *>                       to working precision.  Nevertheless, the
@@ -112131,7 +112048,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERsolve
+*> \ingroup ppsvx
 *
 *> \par Further Details:
 *  =====================
@@ -112417,8 +112334,8 @@
 *>          INFO is INTEGER
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
-*>          > 0:  if INFO = i, the leading minor of order i is not
-*>                positive definite, and the factorization could not be
+*>          > 0:  if INFO = i, the leading principal minor of order i
+*>                is not positive, and the factorization could not be
 *>                completed.
 *> \endverbatim
 *
@@ -112430,7 +112347,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pptrf
 *
 *> \par Further Details:
 *  =====================
@@ -112661,7 +112578,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pptri
 *
 *  =====================================================================
       SUBROUTINE DPPTRI( UPLO, N, AP, INFO )
@@ -112861,7 +112778,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pptrs
 *
 *  =====================================================================
       SUBROUTINE DPPTRS( UPLO, N, NRHS, AP, B, LDB, INFO )
@@ -113094,7 +113011,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pstf2
 *
 *  =====================================================================
       SUBROUTINE DPSTF2( UPLO, N, A, LDA, PIV, RANK, TOL, WORK, INFO )
@@ -113478,7 +113395,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup pstrf
 *
 *  =====================================================================
       SUBROUTINE DPSTRF( UPLO, N, A, LDA, PIV, RANK, TOL, WORK, INFO )
@@ -113886,7 +113803,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePTcomputational
+*> \ingroup ptcon
 *
 *> \par Further Details:
 *  =====================
@@ -114126,8 +114043,8 @@
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value.
 *>          > 0:  if INFO = i, and i is:
 *>                <= N  the Cholesky factorization of the matrix could
-*>                      not be performed because the i-th principal minor
-*>                      was not positive definite.
+*>                      not be performed because the leading principal
+*>                      minor of order i was not positive.
 *>                > N   the SVD algorithm failed to converge;
 *>                      if INFO = N+i, i off-diagonal elements of the
 *>                      bidiagonal factor did not converge to zero.
@@ -114141,7 +114058,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePTcomputational
+*> \ingroup pteqr
 *
 *  =====================================================================
       SUBROUTINE DPTEQR( COMPZ, N, D, E, Z, LDZ, WORK, INFO )
@@ -114416,7 +114333,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePTcomputational
+*> \ingroup ptrfs
 *
 *  =====================================================================
       SUBROUTINE DPTRFS( N, NRHS, D, E, DF, EF, B, LDB, X, LDX, FERR,
@@ -114746,8 +114663,8 @@
 *>          INFO is INTEGER
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
-*>          > 0:  if INFO = i, the leading minor of order i is not
-*>                positive definite, and the solution has not been
+*>          > 0:  if INFO = i, the leading principal minor of order i
+*>                is not positive, and the solution has not been
 *>                computed.  The factorization has not been completed
 *>                unless i = N.
 *> \endverbatim
@@ -114760,7 +114677,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePTsolve
+*> \ingroup ptsv
 *
 *  =====================================================================
       SUBROUTINE DPTSV( N, NRHS, D, E, B, LDB, INFO )
@@ -114876,7 +114793,7 @@
 *>    factorization can also be regarded as having the form
 *>    A = U**T*D*U.
 *>
-*> 2. If the leading i-by-i principal minor is not positive definite,
+*> 2. If the leading principal minor of order i is not positive,
 *>    then the routine returns with INFO = i. Otherwise, the factored
 *>    form of A is used to estimate the condition number of the matrix
 *>    A.  If the reciprocal of the condition number is less than machine
@@ -115016,10 +114933,10 @@
 *>          = 0:  successful exit
 *>          < 0:  if INFO = -i, the i-th argument had an illegal value
 *>          > 0:  if INFO = i, and i is
-*>                <= N:  the leading minor of order i of A is
-*>                       not positive definite, so the factorization
-*>                       could not be completed, and the solution has not
-*>                       been computed. RCOND = 0 is returned.
+*>                <= N:  the leading principal minor of order i of A
+*>                       is not positive, so the factorization could not
+*>                       be completed, and the solution has not been
+*>                       computed. RCOND = 0 is returned.
 *>                = N+1: U is nonsingular, but RCOND is less than machine
 *>                       precision, meaning that the matrix is singular
 *>                       to working precision.  Nevertheless, the
@@ -115037,7 +114954,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePTsolve
+*> \ingroup ptsvx
 *
 *  =====================================================================
       SUBROUTINE DPTSVX( FACT, N, NRHS, D, E, DF, EF, B, LDB, X, LDX,
@@ -115220,8 +115137,8 @@
 *>          INFO is INTEGER
 *>          = 0: successful exit
 *>          < 0: if INFO = -k, the k-th argument had an illegal value
-*>          > 0: if INFO = k, the leading minor of order k is not
-*>               positive definite; if k < N, the factorization could not
+*>          > 0: if INFO = k, the leading principal minor of order k
+*>               is not positive; if k < N, the factorization could not
 *>               be completed, while if k = N, the factorization was
 *>               completed, but D(N) <= 0.
 *> \endverbatim
@@ -115234,7 +115151,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePTcomputational
+*> \ingroup pttrf
 *
 *  =====================================================================
       SUBROUTINE DPTTRF( N, D, E, INFO )
@@ -115460,7 +115377,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePTcomputational
+*> \ingroup pttrs
 *
 *  =====================================================================
       SUBROUTINE DPTTRS( N, NRHS, D, E, B, LDB, INFO )
@@ -115632,7 +115549,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doublePTcomputational
+*> \ingroup ptts2
 *
 *  =====================================================================
       SUBROUTINE DPTTS2( N, NRHS, D, E, B, LDB )
@@ -115769,7 +115686,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup rscl
 *
 *  =====================================================================
       SUBROUTINE DRSCL( N, SA, SX, INCX )
@@ -115801,7 +115718,7 @@
       EXTERNAL           DLAMCH
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DSCAL, DLABAD
+      EXTERNAL           DSCAL
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS
@@ -115817,7 +115734,6 @@
 *
       SMLNUM = DLAMCH( 'S' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
 *
 *     Initialize the denominator to SA and the numerator to 1.
 *
@@ -116001,7 +115917,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hbev
 *
 *  =====================================================================
       SUBROUTINE DSBEV( JOBZ, UPLO, N, KD, AB, LDAB, W, Z, LDZ, WORK,
@@ -116187,12 +116103,6 @@
 *> a real symmetric band matrix A. If eigenvectors are desired, it uses
 *> a divide and conquer algorithm.
 *>
-*> The divide and conquer algorithm makes very mild assumptions about
-*> floating point arithmetic. It will work on machines with a guard
-*> digit in add/subtract, or on those binary machines without guard
-*> digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
-*> Cray-2. It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -116332,7 +116242,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hbevd
 *
 *  =====================================================================
       SUBROUTINE DSBEVD( JOBZ, UPLO, N, KD, AB, LDAB, W, Z, LDZ, WORK,
@@ -116760,7 +116670,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hbevx
 *
 *  =====================================================================
       SUBROUTINE DSBEVX( JOBZ, RANGE, UPLO, N, KD, AB, LDAB, Q, LDQ, VL,
@@ -117195,7 +117105,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hbgst
 *
 *  =====================================================================
       SUBROUTINE DSBGST( VECT, UPLO, N, KA, KB, AB, LDAB, BB, LDBB, X,
@@ -118644,7 +118554,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hbgv
 *
 *  =====================================================================
       SUBROUTINE DSBGV( JOBZ, UPLO, N, KA, KB, AB, LDAB, BB, LDBB, W, Z,
@@ -118703,7 +118613,7 @@
          INFO = -12
       END IF
       IF( INFO.NE.0 ) THEN
-         CALL XERBLA( 'DSBGV ', -INFO )
+         CALL XERBLA( 'DSBGV', -INFO )
          RETURN
       END IF
 *
@@ -118795,12 +118705,6 @@
 *> banded, and B is also positive definite.  If eigenvectors are
 *> desired, it uses a divide and conquer algorithm.
 *>
-*> The divide and conquer algorithm makes very mild assumptions about
-*> floating point arithmetic. It will work on machines with a guard
-*> digit in add/subtract, or on those binary machines without guard
-*> digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
-*> Cray-2. It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -118966,7 +118870,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hbgvd
 *
 *> \par Contributors:
 *  ==================
@@ -119388,7 +119292,7 @@
 *>                  Their indices are stored in IFAIL.
 *>          > N:  DPBSTF returned an error code; i.e.,
 *>                if INFO = N + i, for 1 <= i <= N, then the leading
-*>                minor of order i of B is not positive definite.
+*>                principal minor of order i of B is not positive.
 *>                The factorization of B could not be completed and
 *>                no eigenvalues or eigenvectors were computed.
 *> \endverbatim
@@ -119401,7 +119305,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hbgvx
 *
 *> \par Contributors:
 *  ==================
@@ -119438,7 +119342,7 @@
 *     .. Local Scalars ..
       LOGICAL            ALLEIG, INDEIG, TEST, UPPER, VALEIG, WANTZ
       CHARACTER          ORDER, VECT
-      INTEGER            I, IINFO, INDD, INDE, INDEE, INDIBL, INDISP,
+      INTEGER            I, IINFO, INDD, INDE, INDEE, INDISP,
      $                   INDIWO, INDWRK, ITMP1, J, JJ, NSPLIT
       DOUBLE PRECISION   TMP1
 *     ..
@@ -119578,17 +119482,16 @@
       ELSE
          ORDER = 'E'
       END IF
-      INDIBL = 1
-      INDISP = INDIBL + N
+      INDISP = 1 + N
       INDIWO = INDISP + N
       CALL DSTEBZ( RANGE, ORDER, N, VL, VU, IL, IU, ABSTOL,
      $             WORK( INDD ), WORK( INDE ), M, NSPLIT, W,
-     $             IWORK( INDIBL ), IWORK( INDISP ), WORK( INDWRK ),
+     $             IWORK( 1 ), IWORK( INDISP ), WORK( INDWRK ),
      $             IWORK( INDIWO ), INFO )
 *
       IF( WANTZ ) THEN
          CALL DSTEIN( N, WORK( INDD ), WORK( INDE ), M, W,
-     $                IWORK( INDIBL ), IWORK( INDISP ), Z, LDZ,
+     $                IWORK( 1 ), IWORK( INDISP ), Z, LDZ,
      $                WORK( INDWRK ), IWORK( INDIWO ), IFAIL, INFO )
 *
 *        Apply transformation matrix used in reduction to tridiagonal
@@ -119618,11 +119521,11 @@
    40       CONTINUE
 *
             IF( I.NE.0 ) THEN
-               ITMP1 = IWORK( INDIBL+I-1 )
+               ITMP1 = IWORK( 1 + I-1 )
                W( I ) = W( J )
-               IWORK( INDIBL+I-1 ) = IWORK( INDIBL+J-1 )
+               IWORK( 1 + I-1 ) = IWORK( 1 + J-1 )
                W( J ) = TMP1
-               IWORK( INDIBL+J-1 ) = ITMP1
+               IWORK( 1 + J-1 ) = ITMP1
                CALL DSWAP( N, Z( 1, I ), 1, Z( 1, J ), 1 )
                IF( INFO.NE.0 ) THEN
                   ITMP1 = IFAIL( I )
@@ -119787,7 +119690,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hbtrd
 *
 *> \par Further Details:
 *  =====================
@@ -120436,7 +120339,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hfrk
 *
 *  =====================================================================
       SUBROUTINE DSFRK( TRANSR, UPLO, TRANS, N, K, ALPHA, A, LDA, BETA,
@@ -120936,7 +120839,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hpcon
 *
 *  =====================================================================
       SUBROUTINE DSPCON( UPLO, N, AP, IPIV, ANORM, RCOND, WORK, IWORK,
@@ -121177,7 +121080,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hpev
 *
 *  =====================================================================
       SUBROUTINE DSPEV( JOBZ, UPLO, N, AP, W, Z, LDZ, WORK, INFO )
@@ -121353,12 +121256,6 @@
 *> of a real symmetric matrix A in packed storage. If eigenvectors are
 *> desired, it uses a divide and conquer algorithm.
 *>
-*> The divide and conquer algorithm makes very mild assumptions about
-*> floating point arithmetic. It will work on machines with a guard
-*> digit in add/subtract, or on those binary machines without guard
-*> digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
-*> Cray-2. It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -121483,7 +121380,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hpevd
 *
 *  =====================================================================
       SUBROUTINE DSPEVD( JOBZ, UPLO, N, AP, W, Z, LDZ, WORK, LWORK,
@@ -121872,7 +121769,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hpevx
 *
 *  =====================================================================
       SUBROUTINE DSPEVX( JOBZ, RANGE, UPLO, N, AP, VL, VU, IL, IU,
@@ -121902,7 +121799,7 @@
 *     .. Local Scalars ..
       LOGICAL            ALLEIG, INDEIG, TEST, VALEIG, WANTZ
       CHARACTER          ORDER
-      INTEGER            I, IINFO, IMAX, INDD, INDE, INDEE, INDIBL,
+      INTEGER            I, IINFO, IMAX, INDD, INDE, INDEE,
      $                   INDISP, INDIWO, INDTAU, INDWRK, ISCALE, ITMP1,
      $                   J, JJ, NSPLIT
       DOUBLE PRECISION   ABSTLL, ANRM, BIGNUM, EPS, RMAX, RMIN, SAFMIN,
@@ -122071,17 +121968,16 @@
       ELSE
          ORDER = 'E'
       END IF
-      INDIBL = 1
-      INDISP = INDIBL + N
+      INDISP = 1 + N
       INDIWO = INDISP + N
       CALL DSTEBZ( RANGE, ORDER, N, VLL, VUU, IL, IU, ABSTLL,
      $             WORK( INDD ), WORK( INDE ), M, NSPLIT, W,
-     $             IWORK( INDIBL ), IWORK( INDISP ), WORK( INDWRK ),
+     $             IWORK( 1 ), IWORK( INDISP ), WORK( INDWRK ),
      $             IWORK( INDIWO ), INFO )
 *
       IF( WANTZ ) THEN
          CALL DSTEIN( N, WORK( INDD ), WORK( INDE ), M, W,
-     $                IWORK( INDIBL ), IWORK( INDISP ), Z, LDZ,
+     $                IWORK( 1 ), IWORK( INDISP ), Z, LDZ,
      $                WORK( INDWRK ), IWORK( INDIWO ), IFAIL, INFO )
 *
 *        Apply orthogonal matrix used in reduction to tridiagonal
@@ -122118,11 +122014,11 @@
    30       CONTINUE
 *
             IF( I.NE.0 ) THEN
-               ITMP1 = IWORK( INDIBL+I-1 )
+               ITMP1 = IWORK( 1 + I-1 )
                W( I ) = W( J )
-               IWORK( INDIBL+I-1 ) = IWORK( INDIBL+J-1 )
+               IWORK( 1 + I-1 ) = IWORK( 1 + J-1 )
                W( J ) = TMP1
-               IWORK( INDIBL+J-1 ) = ITMP1
+               IWORK( 1 + J-1 ) = ITMP1
                CALL DSWAP( N, Z( 1, I ), 1, Z( 1, J ), 1 )
                IF( INFO.NE.0 ) THEN
                   ITMP1 = IFAIL( I )
@@ -122246,7 +122142,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hpgst
 *
 *  =====================================================================
       SUBROUTINE DSPGST( ITYPE, UPLO, N, AP, BP, INFO )
@@ -122550,7 +122446,7 @@
 *>                    i off-diagonal elements of an intermediate
 *>                    tridiagonal form did not converge to zero.
 *>             > N:   if INFO = n + i, for 1 <= i <= n, then the leading
-*>                    minor of order i of B is not positive definite.
+*>                    principal minor of order i of B is not positive.
 *>                    The factorization of B could not be completed and
 *>                    no eigenvalues or eigenvectors were computed.
 *> \endverbatim
@@ -122563,7 +122459,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hpgv
 *
 *  =====================================================================
       SUBROUTINE DSPGV( ITYPE, JOBZ, UPLO, N, AP, BP, W, Z, LDZ, WORK,
@@ -122729,12 +122625,6 @@
 *> positive definite.
 *> If eigenvectors are desired, it uses a divide and conquer algorithm.
 *>
-*> The divide and conquer algorithm makes very mild assumptions about
-*> floating point arithmetic. It will work on machines with a guard
-*> digit in add/subtract, or on those binary machines without guard
-*> digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
-*> Cray-2. It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -122869,7 +122759,7 @@
 *>                    i off-diagonal elements of an intermediate
 *>                    tridiagonal form did not converge to zero;
 *>             > N:   if INFO = N + i, for 1 <= i <= N, then the leading
-*>                    minor of order i of B is not positive definite.
+*>                    principal minor of order i of B is not positive.
 *>                    The factorization of B could not be completed and
 *>                    no eigenvalues or eigenvectors were computed.
 *> \endverbatim
@@ -122882,7 +122772,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hpgvd
 *
 *> \par Contributors:
 *  ==================
@@ -123291,7 +123181,7 @@
 *>                    i eigenvectors failed to converge.  Their indices
 *>                    are stored in array IFAIL.
 *>             > N:   if INFO = N + i, for 1 <= i <= N, then the leading
-*>                    minor of order i of B is not positive definite.
+*>                    principal minor of order i of B is not positive.
 *>                    The factorization of B could not be completed and
 *>                    no eigenvalues or eigenvectors were computed.
 *> \endverbatim
@@ -123304,7 +123194,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup hpgvx
 *
 *> \par Contributors:
 *  ==================
@@ -123631,7 +123521,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hprfs
 *
 *  =====================================================================
       SUBROUTINE DSPRFS( UPLO, N, NRHS, AP, AFP, IPIV, B, LDB, X, LDX,
@@ -124023,7 +123913,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERsolve
+*> \ingroup hpsv
 *
 *> \par Further Details:
 *  =====================
@@ -124357,7 +124247,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERsolve
+*> \ingroup hpsvx
 *
 *> \par Further Details:
 *  =====================
@@ -124602,7 +124492,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hptrd
 *
 *> \par Further Details:
 *  =====================
@@ -124895,7 +124785,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hptrf
 *
 *> \par Further Details:
 *  =====================
@@ -125503,7 +125393,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hptri
 *
 *  =====================================================================
       SUBROUTINE DSPTRI( UPLO, N, AP, IPIV, WORK, INFO )
@@ -125907,7 +125797,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup hptrs
 *
 *  =====================================================================
       SUBROUTINE DSPTRS( UPLO, N, NRHS, AP, IPIV, B, LDB, INFO )
@@ -126510,7 +126400,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup stebz
 *
 *  =====================================================================
       SUBROUTINE DSTEBZ( RANGE, ORDER, N, VL, VU, IL, IU, ABSTOL, D, E,
@@ -127056,12 +126946,6 @@
 *> found if DSYTRD or DSPTRD or DSBTRD has been used to reduce this
 *> matrix to tridiagonal form.
 *>
-*> This code makes very mild assumptions about floating point
-*> arithmetic. It will work on machines with a guard digit in
-*> add/subtract, or on those binary machines without guard digits
-*> which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or Cray-2.
-*> It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.  See DLAED3 for details.
 *> \endverbatim
 *
 *  Arguments:
@@ -127187,7 +127071,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup stedc
 *
 *> \par Contributors:
 *  ==================
@@ -127549,7 +127433,7 @@
 *>
 *> Note : DSTEGR and DSTEMR work only on machines which follow
 *> IEEE-754 floating-point standard in their handling of infinities and
-*> NaNs.  Normal execution may create these exceptiona values and hence
+*> NaNs.  Normal execution may create these exceptional values and hence
 *> may abort due to a floating point exception in environments which
 *> do not conform to the IEEE-754 standard.
 *> \endverbatim
@@ -127742,7 +127626,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup stegr
 *
 *> \par Contributors:
 *  ==================
@@ -127958,7 +127842,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup stein
 *
 *  =====================================================================
       SUBROUTINE DSTEIN( N, D, E, M, W, IBLOCK, ISPLIT, Z, LDZ, WORK,
@@ -128545,7 +128429,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup stemr
 *
 *> \par Contributors:
 *  ==================
@@ -128554,7 +128438,8 @@
 *> Jim Demmel, University of California, Berkeley, USA \n
 *> Inderjit Dhillon, University of Texas, Austin, USA \n
 *> Osni Marques, LBNL/NERSC, USA \n
-*> Christof Voemel, University of California, Berkeley, USA
+*> Christof Voemel, University of California, Berkeley, USA \n
+*> Aravindh Krishnamoorthy, FAU, Erlangen, Germany \n
 *
 *  =====================================================================
       SUBROUTINE DSTEMR( JOBZ, RANGE, N, D, E, VL, VU, IL, IU,
@@ -128586,7 +128471,8 @@
      $                     MINRGP = 1.0D-3 )
 *     ..
 *     .. Local Scalars ..
-      LOGICAL            ALLEIG, INDEIG, LQUERY, VALEIG, WANTZ, ZQUERY
+      LOGICAL            ALLEIG, INDEIG, LQUERY, VALEIG, WANTZ, ZQUERY,
+     $                   LAESWAP
       INTEGER            I, IBEGIN, IEND, IFIRST, IIL, IINDBL, IINDW,
      $                   IINDWK, IINFO, IINSPL, IIU, ILAST, IN, INDD,
      $                   INDE2, INDERR, INDGP, INDGRS, INDWRK, ITMP,
@@ -128622,6 +128508,7 @@
 *
       LQUERY = ( ( LWORK.EQ.-1 ).OR.( LIWORK.EQ.-1 ) )
       ZQUERY = ( NZC.EQ.-1 )
+      LAESWAP = .FALSE.
 
 *     DSTEMR needs WORK of size 6*N, IWORK of size 3*N.
 *     In addition, DLARRE needs WORK of size 6*N, IWORK of size 5*N.
@@ -128744,6 +128631,15 @@
          ELSE IF( WANTZ.AND.(.NOT.ZQUERY) ) THEN
             CALL DLAEV2( D(1), E(1), D(2), R1, R2, CS, SN )
          END IF
+*        D/S/LAE2 and D/S/LAEV2 outputs satisfy |R1| >= |R2|. However,
+*        the following code requires R1 >= R2. Hence, we correct
+*        the order of R1, R2, CS, SN if R1 < R2 before further processing.
+         IF( R1.LT.R2 ) THEN
+            E(2) = R1
+            R1 = R2
+            R2 = E(2)
+            LAESWAP = .TRUE.
+         ENDIF
          IF( ALLEIG.OR.
      $      (VALEIG.AND.(R2.GT.WL).AND.
      $                  (R2.LE.WU)).OR.
@@ -128751,8 +128647,13 @@
             M = M+1
             W( M ) = R2
             IF( WANTZ.AND.(.NOT.ZQUERY) ) THEN
-               Z( 1, M ) = -SN
-               Z( 2, M ) = CS
+               IF( LAESWAP ) THEN
+                  Z( 1, M ) = CS
+                  Z( 2, M ) = SN
+               ELSE
+                  Z( 1, M ) = -SN
+                  Z( 2, M ) = CS
+               ENDIF
 *              Note: At most one of SN and CS can be zero.
                IF (SN.NE.ZERO) THEN
                   IF (CS.NE.ZERO) THEN
@@ -128775,8 +128676,13 @@
             M = M+1
             W( M ) = R1
             IF( WANTZ.AND.(.NOT.ZQUERY) ) THEN
-               Z( 1, M ) = CS
-               Z( 2, M ) = SN
+               IF( LAESWAP ) THEN
+                  Z( 1, M ) = -SN
+                  Z( 2, M ) = CS
+               ELSE
+                  Z( 1, M ) = CS
+                  Z( 2, M ) = SN
+               ENDIF
 *              Note: At most one of SN and CS can be zero.
                IF (SN.NE.ZERO) THEN
                   IF (CS.NE.ZERO) THEN
@@ -129140,7 +129046,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup steqr
 *
 *  =====================================================================
       SUBROUTINE DSTEQR( COMPZ, N, D, E, Z, LDZ, WORK, INFO )
@@ -129664,7 +129570,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup sterf
 *
 *  =====================================================================
       SUBROUTINE DSTERF( N, D, E, INFO )
@@ -130117,7 +130023,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup stev
 *
 *  =====================================================================
       SUBROUTINE DSTEV( JOBZ, N, D, E, Z, LDZ, WORK, INFO )
@@ -130280,12 +130186,6 @@
 *> real symmetric tridiagonal matrix. If eigenvectors are desired, it
 *> uses a divide and conquer algorithm.
 *>
-*> The divide and conquer algorithm makes very mild assumptions about
-*> floating point arithmetic. It will work on machines with a guard
-*> digit in add/subtract, or on those binary machines without guard
-*> digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
-*> Cray-2. It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -130395,7 +130295,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup stevd
 *
 *  =====================================================================
       SUBROUTINE DSTEVD( JOBZ, N, D, E, Z, LDZ, WORK, LWORK, IWORK,
@@ -130826,7 +130726,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup stevr
 *
 *> \par Contributors:
 *  ==================
@@ -131339,7 +131239,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHEReigen
+*> \ingroup stevx
 *
 *  =====================================================================
       SUBROUTINE DSTEVX( JOBZ, RANGE, N, D, E, VL, VU, IL, IU, ABSTOL,
@@ -131368,7 +131268,7 @@
 *     .. Local Scalars ..
       LOGICAL            ALLEIG, INDEIG, TEST, VALEIG, WANTZ
       CHARACTER          ORDER
-      INTEGER            I, IMAX, INDIBL, INDISP, INDIWO, INDWRK,
+      INTEGER            I, IMAX, INDISP, INDIWO, INDWRK,
      $                   ISCALE, ITMP1, J, JJ, NSPLIT
       DOUBLE PRECISION   BIGNUM, EPS, RMAX, RMIN, SAFMIN, SIGMA, SMLNUM,
      $                   TMP1, TNRM, VLL, VUU
@@ -131519,15 +131419,14 @@
          ORDER = 'E'
       END IF
       INDWRK = 1
-      INDIBL = 1
-      INDISP = INDIBL + N
+      INDISP = 1 + N
       INDIWO = INDISP + N
       CALL DSTEBZ( RANGE, ORDER, N, VLL, VUU, IL, IU, ABSTOL, D, E, M,
-     $             NSPLIT, W, IWORK( INDIBL ), IWORK( INDISP ),
+     $             NSPLIT, W, IWORK( 1 ), IWORK( INDISP ),
      $             WORK( INDWRK ), IWORK( INDIWO ), INFO )
 *
       IF( WANTZ ) THEN
-         CALL DSTEIN( N, D, E, M, W, IWORK( INDIBL ), IWORK( INDISP ),
+         CALL DSTEIN( N, D, E, M, W, IWORK( 1 ), IWORK( INDISP ),
      $                Z, LDZ, WORK( INDWRK ), IWORK( INDIWO ), IFAIL,
      $                INFO )
       END IF
@@ -131559,11 +131458,11 @@
    30       CONTINUE
 *
             IF( I.NE.0 ) THEN
-               ITMP1 = IWORK( INDIBL+I-1 )
+               ITMP1 = IWORK( 1 + I-1 )
                W( I ) = W( J )
-               IWORK( INDIBL+I-1 ) = IWORK( INDIBL+J-1 )
+               IWORK( 1 + I-1 ) = IWORK( 1 + J-1 )
                W( J ) = TMP1
-               IWORK( INDIBL+J-1 ) = ITMP1
+               IWORK( 1 + J-1 ) = ITMP1
                CALL DSWAP( N, Z( 1, I ), 1, Z( 1, J ), 1 )
                IF( INFO.NE.0 ) THEN
                   ITMP1 = IFAIL( I )
@@ -131703,7 +131602,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hecon
 *
 *  =====================================================================
       SUBROUTINE DSYCON( UPLO, N, A, LDA, IPIV, ANORM, RCOND, WORK,
@@ -131929,7 +131828,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup syconv
 *
 *  =====================================================================
       SUBROUTINE DSYCONV( UPLO, WAY, N, A, LDA, IPIV, E, INFO )
@@ -132301,7 +132200,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup heequb
 *
 *> \par References:
 *  ================
@@ -132641,7 +132540,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYeigen
+*> \ingroup heev
 *
 *  =====================================================================
       SUBROUTINE DSYEV( JOBZ, UPLO, N, A, LDA, W, WORK, LWORK, INFO )
@@ -132839,13 +132738,6 @@
 *> real symmetric matrix A. If eigenvectors are desired, it uses a
 *> divide and conquer algorithm.
 *>
-*> The divide and conquer algorithm makes very mild assumptions about
-*> floating point arithmetic. It will work on machines with a guard
-*> digit in add/subtract, or on those binary machines without guard
-*> digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
-*> Cray-2. It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
-*>
 *> Because of large use of BLAS of level 3, DSYEVD needs N**2 more
 *> workspace than DSYEVX.
 *> \endverbatim
@@ -132966,7 +132858,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYeigen
+*> \ingroup heevd
 *
 *> \par Contributors:
 *  ==================
@@ -133468,7 +133360,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYeigen
+*> \ingroup heevr
 *
 *> \par Contributors:
 *  ==================
@@ -134075,7 +133967,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYeigen
+*> \ingroup heevx
 *
 *  =====================================================================
       SUBROUTINE DSYEVX( JOBZ, RANGE, UPLO, N, A, LDA, VL, VU, IL, IU,
@@ -134502,7 +134394,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hegs2
 *
 *  =====================================================================
       SUBROUTINE DSYGS2( ITYPE, UPLO, N, A, LDA, B, LDB, INFO )
@@ -134782,7 +134674,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hegst
 *
 *  =====================================================================
       SUBROUTINE DSYGST( ITYPE, UPLO, N, A, LDA, B, LDB, INFO )
@@ -135134,7 +135026,7 @@
 *>                    i off-diagonal elements of an intermediate
 *>                    tridiagonal form did not converge to zero;
 *>             > N:   if INFO = N + i, for 1 <= i <= N, then the leading
-*>                    minor of order i of B is not positive definite.
+*>                    principal minor of order i of B is not positive.
 *>                    The factorization of B could not be completed and
 *>                    no eigenvalues or eigenvectors were computed.
 *> \endverbatim
@@ -135147,7 +135039,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYeigen
+*> \ingroup hegv
 *
 *  =====================================================================
       SUBROUTINE DSYGV( ITYPE, JOBZ, UPLO, N, A, LDA, B, LDB, W, WORK,
@@ -135333,12 +135225,6 @@
 *> B are assumed to be symmetric and B is also positive definite.
 *> If eigenvectors are desired, it uses a divide and conquer algorithm.
 *>
-*> The divide and conquer algorithm makes very mild assumptions about
-*> floating point arithmetic. It will work on machines with a guard
-*> digit in add/subtract, or on those binary machines without guard
-*> digits which subtract like the Cray X-MP, Cray Y-MP, Cray C-90, or
-*> Cray-2. It could conceivably fail on hexadecimal or decimal machines
-*> without guard digits, but we know of none.
 *> \endverbatim
 *
 *  Arguments:
@@ -135481,7 +135367,7 @@
 *>                    the submatrix lying in rows and columns INFO/(N+1)
 *>                    through mod(INFO,N+1);
 *>             > N:   if INFO = N + i, for 1 <= i <= N, then the leading
-*>                    minor of order i of B is not positive definite.
+*>                    principal minor of order i of B is not positive.
 *>                    The factorization of B could not be completed and
 *>                    no eigenvalues or eigenvectors were computed.
 *> \endverbatim
@@ -135494,7 +135380,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYeigen
+*> \ingroup hegvd
 *
 *> \par Further Details:
 *  =====================
@@ -135938,7 +135824,7 @@
 *>                    i eigenvectors failed to converge.  Their indices
 *>                    are stored in array IFAIL.
 *>             > N:   if INFO = N + i, for 1 <= i <= N, then the leading
-*>                    minor of order i of B is not positive definite.
+*>                    principal minor of order i of B is not positive.
 *>                    The factorization of B could not be completed and
 *>                    no eigenvalues or eigenvectors were computed.
 *> \endverbatim
@@ -135951,7 +135837,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYeigen
+*> \ingroup hegvx
 *
 *> \par Contributors:
 *  ==================
@@ -136313,7 +136199,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup herfs
 *
 *  =====================================================================
       SUBROUTINE DSYRFS( UPLO, N, NRHS, A, LDA, AF, LDAF, IPIV, B, LDB,
@@ -136731,7 +136617,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYsolve
+*> \ingroup hesv
 *
 *  =====================================================================
       SUBROUTINE DSYSV( UPLO, N, NRHS, A, LDA, IPIV, B, LDB, WORK,
@@ -137110,7 +136996,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYsolve
+*> \ingroup hesvx
 *
 *  =====================================================================
       SUBROUTINE DSYSVX( FACT, UPLO, N, NRHS, A, LDA, AF, LDAF, IPIV, B,
@@ -137341,7 +137227,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYauxiliary
+*> \ingroup heswapr
 *
 *  =====================================================================
       SUBROUTINE DSYSWAPR( UPLO, N, A, LDA, I1, I2)
@@ -137541,7 +137427,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hetd2
 *
 *> \par Further Details:
 *  =====================
@@ -137868,7 +137754,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hetf2
 *
 *> \par Further Details:
 *  =====================
@@ -138487,7 +138373,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hetrd
 *
 *> \par Further Details:
 *  =====================
@@ -138856,7 +138742,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hetrf
 *
 *> \par Further Details:
 *  =====================
@@ -138953,7 +138839,7 @@
 *        Determine the block size
 *
          NB = ILAENV( 1, 'DSYTRF', UPLO, N, -1, -1, -1 )
-         LWKOPT = N*NB
+         LWKOPT = MAX( 1, N*NB )
          WORK( 1 ) = LWKOPT
       END IF
 *
@@ -139188,7 +139074,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hetri
 *
 *  =====================================================================
       SUBROUTINE DSYTRI( UPLO, N, A, LDA, IPIV, WORK, INFO )
@@ -139580,7 +139466,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hetri2
 *
 *  =====================================================================
       SUBROUTINE DSYTRI2( UPLO, N, A, LDA, IPIV, WORK, LWORK, INFO )
@@ -139775,7 +139661,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hetri2x
 *
 *  =====================================================================
       SUBROUTINE DSYTRI2X( UPLO, N, A, LDA, IPIV, WORK, NB, INFO )
@@ -140363,7 +140249,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hetrs
 *
 *  =====================================================================
       SUBROUTINE DSYTRS( UPLO, N, NRHS, A, LDA, IPIV, B, LDB, INFO )
@@ -140816,7 +140702,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup hetrs2
 *
 *  =====================================================================
       SUBROUTINE DSYTRS2( UPLO, N, NRHS, A, LDA, IPIV, B, LDB,
@@ -141185,7 +141071,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tbcon
 *
 *  =====================================================================
       SUBROUTINE DTBCON( NORM, UPLO, DIAG, N, KD, AB, LDAB, RCOND, WORK,
@@ -141511,7 +141397,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tbrfs
 *
 *  =====================================================================
       SUBROUTINE DTBRFS( UPLO, TRANS, DIAG, N, KD, NRHS, AB, LDAB, B,
@@ -141951,7 +141837,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tbtrs
 *
 *  =====================================================================
       SUBROUTINE DTBTRS( UPLO, TRANS, DIAG, N, KD, NRHS, AB, LDAB, B,
@@ -142236,7 +142122,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tfsm
 *
 *> \par Further Details:
 *  =====================
@@ -143164,7 +143050,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tftri
 *
 *> \par Further Details:
 *  =====================
@@ -143619,7 +143505,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tfttp
 *
 *> \par Further Details:
 *  =====================
@@ -144142,7 +144028,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tfttr
 *
 *> \par Further Details:
 *  =====================
@@ -144584,7 +144470,7 @@
 *>
 *>    S*x = w*P*x,  (y**H)*S = w*(y**H)*P,
 *>
-*> where y**H denotes the conjugate tranpose of y.
+*> where y**H denotes the conjugate transpose of y.
 *> The eigenvalues are not input to this routine, but are computed
 *> directly from the diagonal blocks of S and P.
 *>
@@ -144760,7 +144646,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup tgevc
 *
 *> \par Further Details:
 *  =====================
@@ -144869,7 +144755,7 @@
       EXTERNAL           LSAME, DLAMCH
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DGEMV, DLABAD, DLACPY, DLAG2, DLALN2, XERBLA
+      EXTERNAL           DGEMV, DLACPY, DLAG2, DLALN2, XERBLA
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, MAX, MIN
@@ -144995,7 +144881,6 @@
 *
       SAFMIN = DLAMCH( 'Safe minimum' )
       BIG = ONE / SAFMIN
-      CALL DLABAD( SAFMIN, BIG )
       ULP = DLAMCH( 'Epsilon' )*DLAMCH( 'Base' )
       SMALL = SAFMIN*N / ULP
       BIG = ONE / SMALL
@@ -145921,7 +145806,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEauxiliary
+*> \ingroup tgex2
 *
 *> \par Further Details:
 *  =====================
@@ -145994,7 +145879,7 @@
      $                   THRESHA, THRESHB
 *     ..
 *     .. Local Arrays ..
-      INTEGER            IWORK( LDST )
+      INTEGER            IWORK( LDST + 2 )
       DOUBLE PRECISION   AI( 2 ), AR( 2 ), BE( 2 ), IR( LDST, LDST ),
      $                   IRCOP( LDST, LDST ), LI( LDST, LDST ),
      $                   LICOP( LDST, LDST ), S( LDST, LDST ),
@@ -146646,7 +146531,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleGEcomputational
+*> \ingroup tgexc
 *
 *> \par Contributors:
 *  ==================
@@ -147296,7 +147181,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tgsen
 *
 *> \par Further Details:
 *  =====================
@@ -148204,7 +148089,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tgsja
 *
 *> \par Further Details:
 *  =====================
@@ -148737,7 +148622,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tgsna
 *
 *> \par Further Details:
 *  =====================
@@ -149139,8 +149024,8 @@
                C1 = TWO*( ALPHAR*ALPHAR+ALPHAI*ALPHAI+BETA*BETA )
                C2 = FOUR*BETA*BETA*ALPHAI*ALPHAI
                ROOT1 = C1 + SQRT( C1*C1-4.0D0*C2 )
-               ROOT2 = C2 / ROOT1
                ROOT1 = ROOT1 / TWO
+               ROOT2 = C2 / ROOT1
                COND = MIN( SQRT( ROOT1 ), SQRT( ROOT2 ) )
             END IF
 *
@@ -149463,7 +149348,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYauxiliary
+*> \ingroup tgsy2
 *
 *> \par Contributors:
 *  ==================
@@ -150537,7 +150422,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup tgsyl
 *
 *> \par Contributors:
 *  ==================
@@ -151077,7 +150962,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tpcon
 *
 *  =====================================================================
       SUBROUTINE DTPCON( NORM, UPLO, DIAG, N, AP, RCOND, WORK, IWORK,
@@ -151394,7 +151279,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tpmqrt
 *
 *> \par Further Details:
 *  =====================
@@ -151716,7 +151601,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tpqrt
 *
 *> \par Further Details:
 *  =====================
@@ -151970,7 +151855,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tpqrt2
 *
 *> \par Further Details:
 *  =====================
@@ -152344,7 +152229,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERauxiliary
+*> \ingroup tprfb
 *
 *> \par Further Details:
 *  =====================
@@ -153125,7 +153010,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tprfs
 *
 *  =====================================================================
       SUBROUTINE DTPRFS( UPLO, TRANS, DIAG, N, NRHS, AP, B, LDB, X, LDX,
@@ -153519,7 +153404,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tptri
 *
 *> \par Further Details:
 *  =====================
@@ -153789,7 +153674,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tptrs
 *
 *  =====================================================================
       SUBROUTINE DTPTRS( UPLO, TRANS, DIAG, N, NRHS, AP, B, LDB, INFO )
@@ -153983,7 +153868,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tpttf
 *
 *> \par Further Details:
 *  =====================
@@ -154487,7 +154372,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tpttr
 *
 *  =====================================================================
       SUBROUTINE DTPTTR( UPLO, N, AP, A, LDA, INFO )
@@ -154692,7 +154577,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trcon
 *
 *  =====================================================================
       SUBROUTINE DTRCON( NORM, UPLO, DIAG, N, A, LDA, RCOND, WORK,
@@ -155036,7 +154921,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trevc
 *
 *> \par Further Details:
 *  =====================
@@ -155090,8 +154975,7 @@
       EXTERNAL           LSAME, IDAMAX, DDOT, DLAMCH
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DLABAD, DAXPY, DCOPY, DGEMV, DLALN2, DSCAL,
-     $                   XERBLA
+      EXTERNAL           DAXPY, DCOPY, DGEMV, DLALN2, DSCAL, XERBLA
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, MAX, SQRT
@@ -155177,7 +155061,6 @@
 *
       UNFL = DLAMCH( 'Safe minimum' )
       OVFL = ONE / UNFL
-      CALL DLABAD( UNFL, OVFL )
       ULP = DLAMCH( 'Precision' )
       SMLNUM = UNFL*( N / ULP )
       BIGNUM = ( ONE-ULP ) / SMLNUM
@@ -156125,7 +156008,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trevc3
 *
 *> \par Further Details:
 *  =====================
@@ -156185,7 +156068,7 @@
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           DAXPY, DCOPY, DGEMV, DLALN2, DSCAL, XERBLA,
-     $                   DGEMM, DLASET, DLABAD, DLACPY
+     $                   DGEMM, DLASET, DLACPY
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, MAX, SQRT
@@ -156208,7 +156091,7 @@
 *
       INFO = 0
       NB = ILAENV( 1, 'DTREVC', SIDE // HOWMNY, N, -1, -1, -1 )
-      MAXWRK = N + 2*N*NB
+      MAXWRK = MAX( 1, N + 2*N*NB )
       WORK(1) = MAXWRK
       LQUERY = ( LWORK.EQ.-1 )
       IF( .NOT.RIGHTV .AND. .NOT.LEFTV ) THEN
@@ -156291,7 +156174,6 @@
 *
       UNFL = DLAMCH( 'Safe minimum' )
       OVFL = ONE / UNFL
-      CALL DLABAD( UNFL, OVFL )
       ULP = DLAMCH( 'Precision' )
       SMLNUM = UNFL*( N / ULP )
       BIGNUM = ( ONE-ULP ) / SMLNUM
@@ -157349,7 +157231,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trexc
 *
 *  =====================================================================
       SUBROUTINE DTREXC( COMPQ, N, T, LDT, Q, LDQ, IFST, ILST, WORK,
@@ -157808,7 +157690,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trrfs
 *
 *  =====================================================================
       SUBROUTINE DTRRFS( UPLO, TRANS, DIAG, N, NRHS, A, LDA, B, LDB, X,
@@ -158333,7 +158215,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trsen
 *
 *> \par Further Details:
 *  =====================
@@ -158883,7 +158765,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trsna
 *
 *> \par Further Details:
 *  =====================
@@ -158970,7 +158852,7 @@
       EXTERNAL           LSAME, DDOT, DLAMCH, DLAPY2, DNRM2
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DLABAD, DLACN2, DLACPY, DLAQTR, DTREXC, XERBLA
+      EXTERNAL           DLACN2, DLACPY, DLAQTR, DTREXC, XERBLA
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, MAX, SQRT
@@ -159062,7 +158944,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' ) / EPS
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
 *
       KS = 0
       PAIR = .FALSE.
@@ -159426,7 +159307,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleSYcomputational
+*> \ingroup trsyl
 *
 *  =====================================================================
       SUBROUTINE DTRSYL( TRANA, TRANB, ISGN, M, N, A, LDA, B, LDB, C,
@@ -159466,7 +159347,7 @@
       EXTERNAL           LSAME, DDOT, DLAMCH, DLANGE
 *     ..
 *     .. External Subroutines ..
-      EXTERNAL           DLABAD, DLALN2, DLASY2, DSCAL, XERBLA
+      EXTERNAL           DLALN2, DLASY2, DSCAL, XERBLA
 *     ..
 *     .. Intrinsic Functions ..
       INTRINSIC          ABS, DBLE, MAX, MIN
@@ -159514,7 +159395,6 @@
       EPS = DLAMCH( 'P' )
       SMLNUM = DLAMCH( 'S' )
       BIGNUM = ONE / SMLNUM
-      CALL DLABAD( SMLNUM, BIGNUM )
       SMLNUM = SMLNUM*DBLE( M*N ) / EPS
       BIGNUM = ONE / SMLNUM
 *
@@ -160372,7 +160252,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trti2
 *
 *  =====================================================================
       SUBROUTINE DTRTI2( UPLO, DIAG, N, A, LDA, INFO )
@@ -160580,7 +160460,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trtri
 *
 *  =====================================================================
       SUBROUTINE DTRTRI( UPLO, DIAG, N, A, LDA, INFO )
@@ -160849,7 +160729,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trtrs
 *
 *  =====================================================================
       SUBROUTINE DTRTRS( UPLO, TRANS, DIAG, N, NRHS, A, LDA, B, LDB,
@@ -161040,7 +160920,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trttf
 *
 *> \par Further Details:
 *  =====================
@@ -161526,7 +161406,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup trttp
 *
 *  =====================================================================
       SUBROUTINE DTRTTP( UPLO, N, A, LDA, AP, INFO )
@@ -161947,7 +161827,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup doubleOTHERcomputational
+*> \ingroup tzrzf
 *
 *> \par Contributors:
 *  ==================
@@ -162216,7 +162096,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup ieeeck
 *
 *  =====================================================================
       INTEGER          FUNCTION IEEECK( ISPEC, ZERO, ONE )
@@ -162412,7 +162292,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup ilalc
 *
 *  =====================================================================
       INTEGER FUNCTION ILADLC( M, N, A, LDA )
@@ -162527,7 +162407,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup ilalr
 *
 *  =====================================================================
       INTEGER FUNCTION ILADLR( M, N, A, LDA )
@@ -162706,7 +162586,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup ilaenv
 *
 *> \par Further Details:
 *  =====================
@@ -162929,6 +162809,12 @@
             ELSE
                NB = 64
             END IF
+         ELSE IF( SUBNAM( 4: 7 ).EQ.'QP3RK' ) THEN
+            IF( SNAME ) THEN
+               NB = 32
+            ELSE
+               NB = 32
+            END IF
          END IF
       ELSE IF( C2.EQ.'PO' ) THEN
          IF( C3.EQ.'TRF' ) THEN
@@ -163115,7 +163001,14 @@
             ELSE
                NBMIN = 2
             END IF
+         ELSE IF( SUBNAM( 4: 7 ).EQ.'QP3RK' ) THEN
+            IF( SNAME ) THEN
+               NBMIN = 2
+            ELSE
+               NBMIN = 2
+            END IF
          END IF
+
       ELSE IF( C2.EQ.'SY' ) THEN
          IF( C3.EQ.'TRF' ) THEN
             IF( SNAME ) THEN
@@ -163187,6 +163080,12 @@
                NX = 128
             END IF
          ELSE IF( C3.EQ.'BRD' ) THEN
+            IF( SNAME ) THEN
+               NX = 128
+            ELSE
+               NX = 128
+            END IF
+         ELSE IF( SUBNAM( 4: 7 ).EQ.'QP3RK' ) THEN
             IF( SNAME ) THEN
                NX = 128
             ELSE
@@ -163355,7 +163254,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup ilaprec
 *
 *  =====================================================================
       INTEGER FUNCTION ILAPREC( PREC )
@@ -163450,7 +163349,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERcomputational
+*> \ingroup ilatrans
 *
 *  =====================================================================
       INTEGER FUNCTION ILATRANS( TRANS )
@@ -163535,7 +163434,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup auxOTHERauxiliary
+*> \ingroup ilaver
 *
 *  =====================================================================
       SUBROUTINE ILAVER( VERS_MAJOR, VERS_MINOR, VERS_PATCH )
@@ -163549,7 +163448,7 @@
       INTEGER VERS_MAJOR, VERS_MINOR, VERS_PATCH
 *  =====================================================================
       VERS_MAJOR = 3
-      VERS_MINOR = 11
+      VERS_MINOR = 12
       VERS_PATCH = 0
 *  =====================================================================
 *
@@ -163558,7 +163457,7 @@
 # 1 "SRC/iparam2stage.F"
 # 1 "<built-in>" 1
 # 1 "<built-in>" 3
-# 399 "<built-in>" 3
+# 417 "<built-in>" 3
 # 1 "<command line>" 1
 # 1 "<built-in>" 2
 # 1 "SRC/iparam2stage.F" 2
@@ -163566,23 +163465,23 @@
 *
 *  =========== DOCUMENTATION ===========
 *
-* Online html documentation available at 
-*            http://www.netlib.org/lapack/explore-html/ 
+* Online html documentation available at
+*            http://www.netlib.org/lapack/explore-html/
 *
 *> \htmlonly
-*> Download IPARAM2STAGE + dependencies 
-*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.tgz?format=tgz&filename=/lapack/lapack_routine/iparam2stage.F"> 
-*> [TGZ]</a> 
-*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.zip?format=zip&filename=/lapack/lapack_routine/iparam2stage.F"> 
+*> Download IPARAM2STAGE + dependencies
+*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.tgz?format=tgz&filename=/lapack/lapack_routine/iparam2stage.F">
+*> [TGZ]</a>
+*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.zip?format=zip&filename=/lapack/lapack_routine/iparam2stage.F">
 *> [ZIP]</a>
-*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.txt?format=txt&filename=/lapack/lapack_routine/iparam2stage.F"> 
+*> <a href="http://www.netlib.org/cgi-bin/netlibfiles.txt?format=txt&filename=/lapack/lapack_routine/iparam2stage.F">
 *> [TXT]</a>
-*> \endhtmlonly 
+*> \endhtmlonly
 *
 *  Definition:
 *  ===========
 *
-*       INTEGER FUNCTION IPARAM2STAGE( ISPEC, NAME, OPTS, 
+*       INTEGER FUNCTION IPARAM2STAGE( ISPEC, NAME, OPTS,
 *                                    NI, NBI, IBI, NXI )
 *       #if defined(_OPENMP)
 *           use omp_lib
@@ -163600,8 +163499,8 @@
 *>
 *>      This program sets problem and machine dependent parameters
 *>      useful for xHETRD_2STAGE, xHETRD_HE2HB, xHETRD_HB2ST,
-*>      xGEBRD_2STAGE, xGEBRD_GE2GB, xGEBRD_GB2BD 
-*>      and related subroutines for eigenvalue problems. 
+*>      xGEBRD_2STAGE, xGEBRD_GE2GB, xGEBRD_GB2BD
+*>      and related subroutines for eigenvalue problems.
 *>      It is called whenever ILAENV is called with 17 <= ISPEC <= 21.
 *>      It is called whenever ILAENV2STAGE is called with 1 <= ISPEC <= 5
 *>      with a direct conversion ISPEC + 16.
@@ -163622,8 +163521,8 @@
 *>              ISPEC=18: the optimal blocksize ib for the eigenvectors
 *>                        singular vectors update routine
 *>
-*>              ISPEC=19: The length of the array that store the Housholder 
-*>                        representation for the second stage 
+*>              ISPEC=19: The length of the array that store the Housholder
+*>                        representation for the second stage
 *>                        Band to Tridiagonal or Bidiagonal
 *>
 *>              ISPEC=20: The workspace needed for the routine in input.
@@ -163653,14 +163552,14 @@
 *>
 *> \param[in] NBI
 *> \verbatim
-*>          NBI is INTEGER which is the used in the reduciton, 
+*>          NBI is INTEGER which is the used in the reduction,
 *>          (e.g., the size of the band), needed to compute workspace
 *>          and LHOUS2.
 *> \endverbatim
 *>
 *> \param[in] IBI
 *> \verbatim
-*>          IBI is INTEGER which represent the IB of the reduciton,
+*>          IBI is INTEGER which represent the IB of the reduction,
 *>          needed to compute workspace and LHOUS2.
 *> \endverbatim
 *>
@@ -163672,12 +163571,12 @@
 *  Authors:
 *  ========
 *
-*> \author Univ. of Tennessee 
-*> \author Univ. of California Berkeley 
-*> \author Univ. of Colorado Denver 
-*> \author NAG Ltd. 
+*> \author Univ. of Tennessee
+*> \author Univ. of California Berkeley
+*> \author Univ. of Colorado Denver
+*> \author NAG Ltd.
 *
-*> \ingroup auxOTHERauxiliary
+*> \ingroup iparam2stage
 *
 *> \par Further Details:
 *  =====================
@@ -163697,7 +163596,7 @@
 *>  http://doi.acm.org/10.1145/2063384.2063394
 *>
 *>  A. Haidar, J. Kurzak, P. Luszczek, 2013.
-*>  An improved parallel singular value algorithm and its implementation 
+*>  An improved parallel singular value algorithm and its implementation
 *>  for multicore hardware, In Proceedings of 2013 International Conference
 *>  for High Performance Computing, Networking, Storage and Analysis (SC '13).
 *>  Denver, Colorado, USA, 2013.
@@ -163705,16 +163604,16 @@
 *>  http://doi.acm.org/10.1145/2503210.2503292
 *>
 *>  A. Haidar, R. Solca, S. Tomov, T. Schulthess and J. Dongarra.
-*>  A novel hybrid CPU-GPU generalized eigensolver for electronic structure 
+*>  A novel hybrid CPU-GPU generalized eigensolver for electronic structure
 *>  calculations based on fine-grained memory aware tasks.
 *>  International Journal of High Performance Computing Applications.
 *>  Volume 28 Issue 2, Pages 196-209, May 2014.
-*>  http://hpc.sagepub.com/content/28/2/196 
+*>  http://hpc.sagepub.com/content/28/2/196
 *>
 *> \endverbatim
 *>
 *  =====================================================================
-      INTEGER FUNCTION IPARAM2STAGE( ISPEC, NAME, OPTS, 
+      INTEGER FUNCTION IPARAM2STAGE( ISPEC, NAME, OPTS,
      $                              NI, NBI, IBI, NXI )
 
 
@@ -163742,7 +163641,8 @@
 *     ..
 *     .. External Functions ..
       INTEGER            ILAENV
-      EXTERNAL           ILAENV
+      LOGICAL            LSAME
+      EXTERNAL           ILAENV, LSAME
 *     ..
 *     .. Executable Statements ..
 *
@@ -163754,7 +163654,7 @@
       ENDIF
 *
 *     Get the number of threads
-*      
+*
       NTHREADS = 1
 
 
@@ -163822,7 +163722,7 @@
          CPREC = PREC.EQ.'C' .OR. PREC.EQ.'Z'
 *
 *        Invalid value for PRECISION
-*      
+*
          IF( .NOT.( RPREC .OR. CPREC ) ) THEN
              IPARAM2STAGE = -1
              RETURN
@@ -163830,9 +163730,9 @@
       ENDIF
 *      WRITE(*,*),'RPREC,CPREC ',RPREC,CPREC,
 *     $           '   ALGO ',ALGO,'    STAGE ',STAG
-*      
 *
-      IF (( ISPEC .EQ. 17 ) .OR. ( ISPEC .EQ. 18 )) THEN 
+*
+      IF (( ISPEC .EQ. 17 ) .OR. ( ISPEC .EQ. 18 )) THEN
 *
 *     ISPEC = 17, 18:  block size KD, IB
 *     Could be also dependent from N but for now it
@@ -163868,13 +163768,13 @@
 *
       ELSE IF ( ISPEC .EQ. 19 ) THEN
 *
-*     ISPEC = 19:  
+*     ISPEC = 19:
 *     LHOUS length of the Houselholder representation
 *     matrix (V,T) of the second stage. should be >= 1.
 *
 *     Will add the VECT OPTION HERE next release
          VECT  = OPTS(1:1)
-         IF( VECT.EQ.'N' ) THEN
+         IF( LSAME( VECT, 'N' ) ) THEN
             LHOUS = MAX( 1, 4*NI )
          ELSE
 *           This is not correct, it need to call the ALGO and the stage2
@@ -163888,18 +163788,18 @@
 *
       ELSE IF ( ISPEC .EQ. 20 ) THEN
 *
-*     ISPEC = 20: (21 for future use)  
-*     LWORK length of the workspace for 
+*     ISPEC = 20: (21 for future use)
+*     LWORK length of the workspace for
 *     either or both stages for TRD and BRD. should be >= 1.
 *     TRD:
 *     TRD_stage 1: = LT + LW + LS1 + LS2
-*                  = LDT*KD + N*KD + N*MAX(KD,FACTOPTNB) + LDS2*KD 
+*                  = LDT*KD + N*KD + N*MAX(KD,FACTOPTNB) + LDS2*KD
 *                    where LDT=LDS2=KD
 *                  = N*KD + N*max(KD,FACTOPTNB) + 2*KD*KD
 *     TRD_stage 2: = (2NB+1)*N + KD*NTHREADS
 *     TRD_both   : = max(stage1,stage2) + AB ( AB=(KD+1)*N )
-*                  = N*KD + N*max(KD+1,FACTOPTNB) 
-*                    + max(2*KD*KD, KD*NTHREADS) 
+*                  = N*KD + N*max(KD+1,FACTOPTNB)
+*                    + max(2*KD*KD, KD*NTHREADS)
 *                    + (KD+1)*N
          LWORK        = -1
          SUBNAM(1:1)  = PREC
@@ -163911,8 +163811,8 @@
          FACTOPTNB    = MAX(QROPTNB, LQOPTNB)
          IF( ALGO.EQ.'TRD' ) THEN
             IF( STAG.EQ.'2STAG' ) THEN
-               LWORK = NI*NBI + NI*MAX(NBI+1,FACTOPTNB) 
-     $              + MAX(2*NBI*NBI, NBI*NTHREADS) 
+               LWORK = NI*NBI + NI*MAX(NBI+1,FACTOPTNB)
+     $              + MAX(2*NBI*NBI, NBI*NTHREADS)
      $              + (NBI+1)*NI
             ELSE IF( (STAG.EQ.'HE2HB').OR.(STAG.EQ.'SY2SB') ) THEN
                LWORK = NI*NBI + NI*MAX(NBI,FACTOPTNB) + 2*NBI*NBI
@@ -163921,8 +163821,8 @@
             ENDIF
          ELSE IF( ALGO.EQ.'BRD' ) THEN
             IF( STAG.EQ.'2STAG' ) THEN
-               LWORK = 2*NI*NBI + NI*MAX(NBI+1,FACTOPTNB) 
-     $              + MAX(2*NBI*NBI, NBI*NTHREADS) 
+               LWORK = 2*NI*NBI + NI*MAX(NBI+1,FACTOPTNB)
+     $              + MAX(2*NBI*NBI, NBI*NTHREADS)
      $              + (NBI+1)*NI
             ELSE IF( STAG.EQ.'GE2GB' ) THEN
                LWORK = NI*NBI + NI*MAX(NBI,FACTOPTNB) + 2*NBI*NBI
@@ -163940,7 +163840,7 @@
 *
       ELSE IF ( ISPEC .EQ. 21 ) THEN
 *
-*     ISPEC = 21 for future use 
+*     ISPEC = 21 for future use
          IPARAM2STAGE = NXI
       ENDIF
 *
@@ -164101,7 +164001,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup OTHERauxiliary
+*> \ingroup iparmq
 *
 *> \par Further Details:
 *  =====================
@@ -164400,7 +164300,7 @@
 *
 *> \author Weslley Pereira, University of Colorado Denver, USA
 *
-*> \ingroup auxOTHERauxiliary
+*> \ingroup roundup_lwork
 *
 *> \par Further Details:
 *  =====================

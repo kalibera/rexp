@@ -496,6 +496,8 @@ static unsigned char ConsoleBuf[CONSOLE_BUFFER_SIZE];
 
 static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 {
+    /* ensure R terminates if the handler segfaults (PR#18551) */
+    signal(signum, SIG_DFL);
     char *s;
 
     /* First check for stack overflow if we know the stack position.
@@ -635,7 +637,6 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 	REprintf("An irrecoverable exception occurred. R is aborting now ...\n");
     R_CleanTempDir();
     /* now do normal behaviour, e.g. core dump */
-    signal(signum, SIG_DFL);
     raise(signum);
 }
 
@@ -678,7 +679,7 @@ static void init_signal_handlers(void)
 	    warning("failed to allocate alternate signal stack");
 	sa.sa_sigaction = sigactionSegv;
 	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_ONSTACK | SA_SIGINFO;
+	sa.sa_flags = SA_ONSTACK | SA_SIGINFO | SA_NODEFER;
 	sigaction(SIGSEGV, &sa, NULL);
 	sigaction(SIGILL, &sa, NULL);
 #ifdef SIGBUS
@@ -832,7 +833,7 @@ void setup_Rmainloop(void)
 
 #ifdef DEBUG_STACK_DETECTION 
     /* testing stack base and size detection */
-    printf("stack limit %ld, start %lx dir %d \n",
+    printf("stack limit %lu, start %lu dir %d \n",
 	(unsigned long) R_CStackLimit,
         (unsigned long) R_CStackStart,
 	R_CStackDir);
@@ -1010,7 +1011,7 @@ void setup_Rmainloop(void)
     R_Toplevel.restartstack = R_RestartStack;
     R_Toplevel.srcref = R_NilValue;
     R_Toplevel.prstack = NULL;
-    R_Toplevel.returnValue = NULL;
+    R_Toplevel.returnValue = SEXP_TO_STACKVAL(NULL);
     R_Toplevel.evaldepth = 0;
     R_Toplevel.browserfinish = 0;
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
@@ -1170,7 +1171,7 @@ void setup_Rmainloop(void)
     {
 	int i;
 	for(i = 0 ; i < ndeferred_warnings; i++)
-	    warning(deferred_warnings[i]);
+	    warning("%s", deferred_warnings[i]);
     }
     if (R_CollectWarnings) {
 	REprintf(_("During startup - "));

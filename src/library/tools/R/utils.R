@@ -186,6 +186,31 @@ function(dir, type, all.files = FALSE, full.names = TRUE,
     files
 }
 
+### ** list_code_files_in_package
+
+list_code_files_in_package <-
+function(dir) {
+    dir <- normalizePath(dir)
+    code_dir <- file.path(dir, "R")
+    code_files <- list_files_with_type(code_dir, "code")
+    if(!length(code_files)) return(code_files)
+    meta <- .get_package_metadata(dir)
+    collate_fields <- c(paste0("Collate.", .OStype()), "Collate")
+    if(any(i <- (collate_fields %in% names(meta)))) {
+        collate <-
+            file.path(code_dir,
+                      .read_collate_field(meta[collate_fields[i][1L]]))
+        ## Note that matching code files and collate spec really only is
+        ## appropriate after having run configure as part of installing,
+        ## as this can create code files (e.g., from a .R.in code file).
+        ## Note also that using set ops is not appropriate here, as
+        ## these re-sort according to the current locale.
+        code_files <- collate[collate %in% code_files]
+    }
+    code_files
+}
+
+
 ### ** reQuote
 
 ## <FIXME>
@@ -784,6 +809,25 @@ function(file1, file2)
     .Call(C_codeFilesAppend, file1, file2)
 }
 
+### ** .file_path_to_LaTeX_graphicspath
+
+.file_path_to_LaTeX_graphicspath <-
+function(x)
+{
+    x <- normalizePath(x, "/")
+    ## Older versions of (PDF)LaTeX need double quotes in case of spaces
+    ## etc.  Newer versions of XeLaTeX and LuaLaTeX cannot handle these.
+    ## Argh ...
+    sprintf(paste(c("\\makeatletter",
+                    "\\ifthenelse",
+                    "{\\boolean{Rd@graphicspath@needs@quotes}}",
+                    "{\\graphicspath{{\"%s/\"}}}",
+                    "{\\graphicspath{{%s/}}}",
+                    "\\makeatother"),
+                  collapse = ""),
+            x, x)
+}     
+
 ### ** .file_path_relative_to_dir
 
 .file_path_relative_to_dir <-
@@ -922,6 +966,31 @@ function(v, env, last = NA, default = NA) {
             env <- parent.env(env)
     default
 }
+
+### ** .find_tidy_cmd
+
+.find_tidy_cmd <-
+function(Tidy = Sys.getenv("R_TIDYCMD", "tidy"))
+{
+    ## require HTML Tidy, and not macOS's ancient version.
+    msg <- ""
+    OK <- nzchar(Sys.which(Tidy))
+    if(OK) {
+        ver <- system2(Tidy, "--version", stdout = TRUE)
+        OK <- startsWith(ver, "HTML Tidy")
+        if(OK) {
+            OK <- !grepl('Apple Inc. build 2649', ver)
+            if(!OK) msg <- "'tidy' is Apple's too old build"
+            ## Maybe we should also check version,
+            ## but e.g. Ubuntu 16.04 does not show one.
+        } else msg <- "'tidy' is not HTML Tidy"
+    } else msg <- "no command 'tidy' found"
+    if(nzchar(msg)) {
+        Tidy <- ""
+        attr(Tidy, "msg") <- msg
+    }
+    Tidy
+}   
 
 ### ** .get_BibTeX_errors_from_blg_file
 
@@ -1997,6 +2066,23 @@ function(packages = NULL, FUN, ..., pattern = "*", verbose = TRUE,
     out
 }
 
+### ** .package_vignettes_via_call_to_R
+
+.package_vignettes_via_call_to_R <-
+function(dir, ..., libpaths = .libPaths()) {
+    ## pkgVignettes() needs to load the namespaces of the vignette
+    ## builders in order to find the vignette engines, and cannot unload
+    ## again, which may be undesirable (e.g., when calling from the
+    ## master check process *before* installing the package checked.
+    ## pkgVignettes() has a lib.loc argument but that is not passed
+    ## through to loadVignetteBuilder(), so we use .libPaths() instead.
+    fun <- function(dir, ..., libpaths) {
+        .libPaths(libpaths)
+        pkgVignettes(dir = dir, ...)
+    }
+    R(fun, list(dir, ..., libpaths = libpaths), "--vanilla")
+}
+
 ### ** .pandoc_md_for_CRAN
 
 .pandoc_md_for_CRAN <-
@@ -2460,8 +2546,8 @@ function(args, msg)
 ### ** R
 
 R <-
-function(fun, args = list(), opts = character(), env = character(),
-         arch = "", drop = TRUE, timeout = 0)
+function(fun, args = list(), opts = "--no-save --no-restore",
+         env = character(), arch = "", drop = TRUE, timeout = 0)
 {
     .safe_repositories <- function() {
         x <- getOption("repos")
@@ -2472,8 +2558,10 @@ function(fun, args = list(), opts = character(), env = character(),
         c(x, y[match(names(y), names(x), 0L) == 0L])
     }
 
-    tfi <- tempfile("runri")
-    tfo <- tempfile("runro")
+    ## escape issue if we use backslashes in paths, hence convert to "/"
+    tfi <- normalizePath(tempfile("runri"), winslash="/", mustWork=FALSE)
+    tfo <- normalizePath(tempfile("runro"), winslash="/", mustWork=FALSE)
+    
     wrk <- c(sprintf("x <- readRDS(\"%s\")", tfi),
              "options(repos = x$repos)",
              ## need quote = TRUE in case some of args are not self-evaluating

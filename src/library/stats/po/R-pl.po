@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: R 3.5.0\n"
 "Report-Msgid-Bugs-To: bugs.r-project.org\n"
-"POT-Creation-Date: 2023-07-31 14:59\n"
+"POT-Creation-Date: 2024-04-01 09:29\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
 "Language-Team: Łukasz Daniel <lukasz.daniel@gmail.com>\n"
@@ -590,7 +590,8 @@ msgstr "nie można obsłużyć 'pairwise.complete.obs'"
 msgid "'V' is not a square numeric matrix"
 msgstr "'V' nie jest kwadratową macierzą liczbową"
 
-msgid "diag(.) had 0 or NA entries; non-finite result is doubtful"
+#, fuzzy
+msgid "diag(V) had non-positive or NA entries; the non-finite result may be dubious"
 msgstr "'diag(.)' miał 0 lub wpisy NA; nieskończony rezultat jest wątpliwy"
 
 msgid "'x' must be a numeric vector"
@@ -1589,6 +1590,9 @@ msgstr ""
 msgid "'termobj' must be a object of class %s"
 msgstr "argument 'termobj' musi być obiektem klasy %s"
 
+msgid "setting '%s' in terms.formula() is deprecated"
+msgstr ""
+
 msgid "variable '%s' was fitted with type \"%s\" but type \"%s\" was supplied"
 msgstr "zmienna '%s' została dopasowana z typem '%s', ale dostarczono typ '%s'"
 
@@ -2052,9 +2056,6 @@ msgstr "próba wygładzenia wartości NA"
 msgid "invalid 'endrule' argument"
 msgstr "niepoprawny argument 'endrule'"
 
-msgid ".nknots.smspl() is now exported; use it instead of n.knots()"
-msgstr "funkcja '.nknots.smspl()' jest już eksportowana,; użyj jej zamiast funkcji 'n.knots()'"
-
 msgid "invalid 'control.spar'"
 msgstr "niepoprawna wartość 'control.spar'"
 
@@ -2247,6 +2248,10 @@ msgstr "brakuje 'y' do sparowanego testu"
 msgid "data are essentially constant"
 msgstr "dane są w zasadzie stałe"
 
+#, fuzzy
+msgid "cannot use 'paired' in formula method"
+msgstr "nie można używać kropek w formule z zadanymi danymi"
+
 msgid "'main' must be TRUE, FALSE, NULL or character (vector)."
 msgstr "'main' musi być TRUE, FALSE, NULL lub być tekstem (wektor)."
 
@@ -2411,7 +2416,7 @@ msgid "cannot fit an asymptotic regression model to these data"
 msgstr "nie można dopasować modelu regresji asymptotycznej do tych danych"
 
 msgid "too few observations to fit an asymptotic regression model"
-msgstr "zbyt mało obserwacji aby dopasować model regresji asymptotycznej "
+msgstr "zbyt mało obserwacji aby dopasować model regresji asymptotycznej"
 
 msgid "too few distinct input values to fit the 'asympOff' model"
 msgstr "zbyt mało różnych wartości wejściowych aby dopasować model 'asympOff'"
@@ -2476,8 +2481,9 @@ msgstr[0] "nieznana nazwa %s w liście 'split'"
 msgstr[1] "nieznane nazwy %s w liście 'split'"
 msgstr[2] "nieznane nazwy %s w liście 'split'"
 
+#, fuzzy
 msgid "extra argument %s is not of class \"%s\""
-msgid_plural "extra arguments %s are not of class \"%s\"s"
+msgid_plural "extra arguments %s are not of class \"%s\""
 msgstr[0] "dodatkowy argument %s nie jest obiektem klasy \"%s\""
 msgstr[1] "dodatkowe argumenty %s nie są obiektami klasy \"%s\""
 msgstr[2] "dodatkowe argumenty %s nie są obiektami klasy \"%s\""
@@ -2613,6 +2619,9 @@ msgid_plural "'start.innov' is too short: need %d points"
 msgstr[0] "argument 'start.innov' jest zbyt krótki: potrzeba %d punktu"
 msgstr[1] "argument 'start.innov' jest zbyt krótki: potrzeba %d punktów"
 msgstr[2] "argument 'start.innov' jest zbyt krótki: potrzeba %d punktów"
+
+#~ msgid ".nknots.smspl() is now exported; use it instead of n.knots()"
+#~ msgstr "funkcja '.nknots.smspl()' jest już eksportowana,; użyj jej zamiast funkcji 'n.knots()'"
 
 #~ msgid "package 'MASS' must be installed"
 #~ msgstr "pakiet 'MASS' musi być zainstalowany"

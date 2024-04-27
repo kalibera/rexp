@@ -35,7 +35,7 @@ is.character(x)
 
   \code{as.character} represents real and complex numbers to 15 significant
   digits (technically the compiler's setting of the ISO C constant
-  \code{DBL_DIG}, which will be 15 on machines supporting IEC60559
+  \code{DBL_DIG}, which will be 15 on machines supporting \abbr{IEC} 60559
   arithmetic according to the C99 standard).  This ensures that all the
   digits in the result will be reliable (and not the result of
   representation error), but does mean that conversion to character and
@@ -68,7 +68,7 @@ is.character(x)
 
   \code{\link{paste}}, \code{\link{substr}} and \code{\link{strsplit}}
   for character concatenation and splitting,
-  \code{\link{chartr}} for character translation and casefolding (e.g.,
+  \code{\link{chartr}} for character translation and case folding (e.g.,
   upper to lower case) and \code{\link{sub}}, \code{\link{grep}} etc for
   string matching and substitutions.  Note that
   \code{help.search(keyword = "character")} gives even more links.

@@ -332,18 +332,46 @@ static stm  tm;
 static int_fast32_t
 detzcode(const char *const codep)
 {
-    int_fast32_t result = (codep[0] & 0x80) ? -1 : 0;
-    for (int i = 0; i < 4; ++i)
+    register int_fast32_t	result;
+    register int		i;
+    int_fast32_t one = 1;
+    int_fast32_t halfmaxval = one << (32 - 2);
+    int_fast32_t maxval = halfmaxval - 1 + halfmaxval;
+    int_fast32_t minval = -1 - maxval;
+
+    result = codep[0] & 0x7f;
+    for (i = 1; i < 4; ++i)
 	result = (result << 8) | (codep[i] & 0xff);
+
+    if (codep[0] & 0x80) {
+	/* Do two's-complement negation even on non-two's-complement machines.
+	   If the result would be minval - 1, return minval.  */
+	result -= !TWOS_COMPLEMENT(int_fast32_t) && result != 0;
+	result += minval;
+    }
     return result;
 }
 
 static int_fast64_t
 detzcode64(const char *const codep)
 {
-    int_fast64_t result = (codep[0] & 0x80) ? -1 : 0;
-    for (int i = 0; i < 8; ++i)
+    register int_fast64_t result;
+    register int	i;
+    int_fast64_t one = 1;
+    int_fast64_t halfmaxval = one << (64 - 2);
+    int_fast64_t maxval = halfmaxval - 1 + halfmaxval;
+    int_fast64_t minval = -TWOS_COMPLEMENT(int_fast64_t) - maxval;
+
+    result = codep[0] & 0x7f;
+    for (i = 1; i < 8; ++i)
 	result = (result << 8) | (codep[i] & 0xff);
+
+    if (codep[0] & 0x80) {
+	/* Do two's-complement negation even on non-two's-complement machines.
+	   If the result would be minval - 1, return minval.  */
+	result -= !TWOS_COMPLEMENT(int_fast64_t) && result != 0;
+	result += minval;
+    }
     return result;
 }
 
@@ -1275,10 +1303,15 @@ tzset(void)
 	lclptr->leapcnt = 0;		/* so, we're off a little */
 	lclptr->timecnt = 0;
 	lclptr->typecnt = 0;
+	lclptr->charcnt = 0;
+	lclptr->goback = lclptr->goahead = FALSE;
 	lclptr->ttis[0].tt_isdst = 0;
 	lclptr->ttis[0].tt_gmtoff = 0;
 	lclptr->ttis[0].tt_abbrind = 0;
+	lclptr->ttis[0].tt_ttisstd = FALSE;
+	lclptr->ttis[0].tt_ttisgmt = FALSE;
 	(void) strcpy(lclptr->chars, gmt);
+	lclptr->defaulttype = 0;
     } else if (tzload(name, lclptr, TRUE) != 0)
 	if (name[0] == ':' || tzparse(name, lclptr, FALSE) != 0)
 	    (void) gmtload(lclptr);

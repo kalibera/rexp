@@ -23,7 +23,8 @@
 ## DESCRIPTION.in
 ## encodings are tricky: this may be done in a foreign encoding
 ## (e.g., Latin-1 in UTF-8)
-.DESCRIPTION_to_latex <- function(descfile, outfile, version = "Unknown")
+.DESCRIPTION_to_latex <- function(descfile, outfile, version = "Unknown",
+                                  writeEncoding = TRUE)
 {
     mytrfm <- .gsub_with_transformed_matches
     mygsub <- function(pattern, replacement, x)
@@ -79,8 +80,7 @@
     } else out <- outfile
     fields <- names(desc)
     fields <- fields %w/o% c("Package", "Packaged", "Built")
-    enc <- desc["Encoding"]
-    if(!is.na(enc)) {
+    if(writeEncoding && !is.na(desc["Encoding"])) {
         cat("\\inputencoding{utf8}\n", file = out)
     }
     ## Also try adding PDF title and author metadata.
@@ -148,8 +148,8 @@
                            list(identity, texify),
                            c(3L, 3L))
             ## Fancy escaping should not be needed for arXiv ids.
-            text <- mygsub("<(arXiv:|arxiv:)([[:alnum:]/.-]+)([[:space:]]*\\[[^]]+\\])?>",
-                           "<}\\\\Rhref{https://arxiv.org/abs/\\2}{\\1\\2}\\\\AsIs{\\3>",
+            text <- mygsub("<(arXiv|arxiv):([[:alnum:]/.-]+)([[:space:]]*\\[[^]]+\\])?>",
+                           "<}\\\\Rhref{https://doi.org/10.48550/arXiv.\\2}{doi:10.48550/arXiv.\\2}\\\\AsIs{>",
                            text)
         }
         text <- paste0("\\AsIs{", text, "}")
@@ -178,8 +178,7 @@
             outfile <- file(outfile, if (append) "at" else "wt")
             on.exit(close(outfile))
         }
-        latexEncodings <- character() # Record any encodings used in the output
-        hasFigures <- FALSE           # and whether graphics is used
+        hasFigures <- FALSE
         macros <- initialRdMacros(pkglist = pkglist)
         for(f in files) {
             if (!silent) cat("  ", basename(f), "\n", sep="")
@@ -191,24 +190,18 @@
             con <- textConnection("lines", "w", local = TRUE)
             res <- Rd2latex(rd, con,
                             outputEncoding = outputEncoding,
+                            writeEncoding = FALSE,
                             stages = c("build", "install", "render"))
             close(con) # ensure final line is output
-            latexEncodings <- c(latexEncodings,
-                                attr(res,"latexEncoding"))
             if (attr(res, "hasFigures")) {
-                graphicspath <-
-                    paste0("\\graphicspath{{\"",
-                           normalizePath(file.path(dirname(f),
-                                                   "figures"),
-                                         "/"),
-                           "/\"}}")
-            	lines <- c(graphicspath, lines)
+                graphicspath <- file.path(dirname(f), "figures")
+                lines <- c(.file_path_to_LaTeX_graphicspath(graphicspath),
+                           lines)
             	hasFigures <- TRUE
             }
             writeLines(lines, outfile)
         }
-        list(latexEncodings = unique(latexEncodings[!is.na(latexEncodings)]),
-             hasFigures = hasFigures)
+        list(hasFigures = hasFigures)
     }
 }
 
@@ -238,8 +231,7 @@
     if (missing(outfile))
         outfile <- paste0(basename(pkgdir), "-pkg.tex")
 
-    latexEncodings <- character() # Record any encodings used in the output
-    hasFigures <- FALSE           # and whether graphics is used
+    hasFigures <- FALSE
 
     ## First check for a latex dir (from R CMD INSTALL --latex).
     ## Second guess is this is a >= 2.10.0 package with stored .rds files.
@@ -268,19 +260,14 @@
                 res <- Rd2latex(Rd[[f]],
 				  outfilename,
 				  outputEncoding = outputEncoding,
-				  defines = NULL,
-				  writeEncoding = !asChapter)
-                latexEncodings <- c(latexEncodings,
-                                    attr(res, "latexEncoding"))
+				  defines = NULL, # already processed
+				  writeEncoding = FALSE)
                 if (attr(res, "hasFigures")) {
                     lines <- readLines(outfilename)
-                    graphicspath <-
-                        paste0("\\graphicspath{{\"",
-                               normalizePath(file.path(pkgdir, "help",
-                                                       "figures"),
-                                             "/"),
-                               "/\"}}")
-                    writeLines(c(graphicspath, lines), outfilename)
+                    graphicspath <- file.path(pkgdir, "help", "figures")
+                    writeLines(c(.file_path_to_LaTeX_graphicspath(graphicspath),
+                                 lines),
+                               outfilename)
                     hasFigures <- TRUE
                 }
             }
@@ -352,18 +339,14 @@
                                 stages = c("build", "install", "render"),
                                 encoding = encoding,
                                 outputEncoding = outputEncoding,
+                                writeEncoding = FALSE,
                                 macros = macros)
-                latexEncodings <-
-                    c(latexEncodings, attr(res, "latexEncoding"))
                 if (attr(res, "hasFigures")) {
                     lines <- readLines(outfilename)
-                    graphicspath <-
-                        paste0("\\graphicspath{{\"",
-                               normalizePath(file.path(dirname(paths[i]),
-                                                       "figures"),
-                                             "/"),
-                               "/\"}}")
-                    writeLines(c(graphicspath, lines), outfilename)
+                    graphicspath <- file.path(dirname(paths[i]), "figures")
+                    writeLines(c(.file_path_to_LaTeX_graphicspath(graphicspath),
+                                 lines),
+                               outfilename)
                     hasFigures <- TRUE
                 }
             }
@@ -387,7 +370,6 @@
         cat("\n\\chapter{The \\texttt{", basename(pkgdir), "} package}\n",
             sep = "", file = outcon)
     topics <- rep.int("", length(files)); names(topics) <- files
-    scanForEncoding <- !length(latexEncodings)
     for (f in files) {
         lines <- readLines(f)  # This reads as "unknown", no re-encoding done
         hd <- grep("^\\\\HeaderA", lines, value = TRUE,
@@ -399,13 +381,8 @@
         }
         this <- sub("\\\\HeaderA\\{\\s*([^}]*)\\}.*", "\\1", hd[1L], perl = TRUE)
         if (!internals &&
-           any(grepl("\\\\keyword\\{\\s*internal\\s*\\}", lines, perl = TRUE)))
+           any(startsWith(lines, "\\keyword{internal}")))
             next
-        if (scanForEncoding) {
-	    enc <- lines[grepl('^\\\\inputencoding', lines, perl = TRUE)]
-	    latexEncodings <- c(latexEncodings,
-	                        sub("^\\\\inputencoding\\{(.*)\\}", "\\1", enc))
-	}
         topics[f] <- this
     }
 
@@ -421,7 +398,7 @@
     if (asChapter)
         cat("\\clearpage\n", file = outcon)
 
-    invisible(list(latexEncodings = latexEncodings, hasFigures = hasFigures))
+    invisible(list(hasFigures = hasFigures))
 }
 
 
@@ -593,19 +570,30 @@ function(pkgdir, outfile, title, silent = FALSE,
     ## this needs to be canonical, e.g. 'utf8'
     ## trailer is for detection if we want to edit it later.
     latex_outputEncoding <- latex_canonical_encoding(outputEncoding)
+    asUTF8 <- latex_outputEncoding == "utf8"
     setEncoding <-
+        if (asUTF8 && inputenc == "inputenc") {
+            paste0("\\makeatletter\\@ifl@t@r\\fmtversion{2018/04/01}{}{",
+                   "\\usepackage[utf8]{inputenc}}",
+                   "\\makeatother")
+        } else
         paste0("\\usepackage[",
-               latex_outputEncoding, "]{",
-               inputenc, "} % @SET ENCODING@")
+               if (asUTF8) "utf8"
+               else paste0(c(if (description) "utf8", latex_outputEncoding), collapse=","),
+               "]{", inputenc, "} % @SET ENCODING@")
     useGraphicx <- "% \\usepackage{graphicx} % @USE GRAPHICX@"
-    writeLines(c(setEncoding,
-                 if (inputenc == "inputenx" &&
-                     latex_outputEncoding == "utf8") {
-                     "\\IfFileExists{ix-utf8enc.dfu}{\\input{ix-utf8enc.dfu}}{}"
-                 },
-    		 useGraphicx,
-                 if (index) "\\makeindex{}",
-                 "\\begin{document}"), out)
+    writeLines(c(
+        setEncoding,
+        if (inputenc == "inputenx" && asUTF8) {
+            "\\IfFileExists{ix-utf8enc.dfu}{\\input{ix-utf8enc.dfu}}{}"
+        },
+        if (nzchar(Sys.getenv("_R_CYRILLIC_TEX_")) && asUTF8) {
+            "\\IfFileExists{t2aenc.def}{\\usepackage[T2A]{fontenc}}{}"
+        },
+        useGraphicx,
+        if (index) "\\makeindex{}",
+        "\\begin{document}"
+    ), out)
     if (!nzchar(title)) {
         if (is.character(desc))
             title <- paste0("Package `", desc["Package"], "'")
@@ -631,22 +619,17 @@ function(pkgdir, outfile, title, silent = FALSE,
         "\\end{center}\n", sep = "", file = out)
     if(description) {
         if(file.exists(f <- file.path(pkgdir, "DESCRIPTION")))
-            .DESCRIPTION_to_latex(f, out)
+            .DESCRIPTION_to_latex(f, out, writeEncoding = !asUTF8)
         else if(file.exists(f <- file.path(pkgdir, "DESCRIPTION.in"))) {
             ## running on the sources of a base package will have
             ## DESCRIPTION.in, only.
             version <- readLines(file.path(pkgdir, "../../../VERSION"))
             .DESCRIPTION_to_latex(file.path(pkgdir, "DESCRIPTION.in"),
-                                  out, version)
+                                  out, version, writeEncoding = !asUTF8)
         }
     }
 
     ## Rd2.tex part 2: body
-    toc <- if (dir.exists(files_or_dir)) {
-        "\\Rdcontents{Table of contents:}"
-    } else ""
-
-    latexEncodings <- if(description) "utf8" else character()
     hasFigures <- FALSE
     ## if this looks like a package with no man pages, skip body
     if (file.exists(file.path(pkgdir, "DESCRIPTION")) &&
@@ -654,14 +637,17 @@ function(pkgdir, outfile, title, silent = FALSE,
           dir.exists(file.path(pkgdir, "help")) ||
           dir.exists(file.path(pkgdir, "latex")))) only_meta <- TRUE
     if (!only_meta) {
-        if (nzchar(toc)) writeLines(toc, out)
+        if (dir.exists(files_or_dir))
+            writeLines(c(
+                "\\Rdcontents{Contents}",
+                if (!asUTF8) paste0("\\inputencoding{", latex_outputEncoding, "}")
+            ), out)
         res <- .Rdfiles2tex(files_or_dir, out, encoding = enc,
                             outputEncoding = outputEncoding,
                             append = TRUE, extraDirs = OSdir, 
                             internals = internals, silent = silent,
                             pkglist = pkglist)
         if(length(res)) {
-            latexEncodings <- c(latexEncodings, res$latexEncodings)
             hasFigures <- res$hasFigures
         }
     }
@@ -671,33 +657,11 @@ function(pkgdir, outfile, title, silent = FALSE,
     writeLines("\\end{document}", out)
     close(out)
 
-    ## Fix up encodings
-    ## FIXME cyrillic probably only works with times, not ae.
-    latexEncodings <- unique(latexEncodings)
-    latexEncodings <- latexEncodings[!is.na(latexEncodings)]
-    cyrillic <- if (nzchar(Sys.getenv("_R_CYRILLIC_TEX_"))) "utf8" %in% latexEncodings else FALSE
-    encs <- latexEncodings[latexEncodings != latex_outputEncoding]
-    if (length(encs) || hasFigures || cyrillic) {
+    ## enable graphicx only if needed
+    if (hasFigures) {
         lines <- readLines(outfile)
-        moreUnicode <- inputenc == "inputenx" && "utf8" %in% encs
-	encs <- paste(encs, latex_outputEncoding, collapse=",", sep=",")
-
-	if (!cyrillic) {
-	    setEncoding2 <-
-		paste0("\\usepackage[", encs, "]{", inputenc, "}")
-	} else {
-	    setEncoding2 <-
-		paste0("\\usepackage[", encs, "]{", inputenc, "}\n",
-                       "\\IfFileExists{t2aenc.def}{\\usepackage[T2A]{fontenc}}{}")
-	}
-	if (moreUnicode) {
-	    setEncoding2 <-
-		paste0(setEncoding2,
-                       "\n\\IfFileExists{ix-utf8enc.dfu}{\\input{ix-utf8enc.dfu}}{}")
-        }
-        lines[lines == setEncoding] <- setEncoding2
-	if (hasFigures)
-	    lines[lines == useGraphicx] <- "\\usepackage{graphicx}\\setkeys{Gin}{width=0.7\\textwidth}"
+        lines[lines == useGraphicx] <-
+            "\\usepackage{graphicx}\\setkeys{Gin}{width=0.7\\textwidth}"
 	writeLines(lines, outfile)
     }
 
@@ -916,6 +880,7 @@ function(pkgdir, outfile, title, silent = FALSE,
             dir <- if(dir.exists(d <- file.path(files[1L], "man"))) d else files[1L]
         }
     } else {
+        description <- FALSE
         if(length(files) == 1L && !nzchar(output))
             output <- paste(sub("[.][Rr]d$", "", basename(files)), out_ext, sep = ".")
     }

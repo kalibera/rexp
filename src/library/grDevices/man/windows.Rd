@@ -58,8 +58,8 @@ win.print(width = 7, height = 7, pointsize = 12, printer = "",
     when the background color is transparent.  Should be a solid color
     (and any alpha value will be ignored).  Default \code{"white"}.}
   \item{gamma}{gamma correction fudge factor.
-    Colours in R are sRGB;  if your monitor does not conform to
-    sRGB, you might be able to improve things by tweaking this
+    Colours in R are \abbr{sRGB};  if your monitor does not conform to
+    \abbr{sRGB}, you might be able to improve things by tweaking this
     parameter to apply additional gamma correction to the RGB channels.
     By default 1 (no additional gamma correction).}
   \item{xpos, ypos}{integer.  Position of the top left of the window, in
@@ -167,7 +167,7 @@ win.print(width = 7, height = 7, pointsize = 12, printer = "",
 
   There is support for semi-transparent colours of lines, fills and text
   on the screen devices.  These work for saving (from the \sQuote{File}
-  menu) to PDF, PNG, BMP, JPEG and TIFF, but will be ignored if saving
+  menu) to PDF, PNG, \abbr{BMP}, JPEG and TIFF, but will be ignored if saving
   to Metafile and PostScript.  Limitations in the underlying Windows API
   mean that a semi-transparent object must be contained strictly within
   the device region (allowing for line widths and joins).
@@ -212,7 +212,7 @@ win.print(width = 7, height = 7, pointsize = 12, printer = "",
 
   How the fonts look depends on the antialiasing settings, both through
   the \code{antialias} argument and the machine settings.  These are
-  hints to Windows GDI that may not be able to be followed, but
+  hints to Windows \abbr{GDI} that may not be able to be followed, but
   \code{antialias = "none"} should ensure that no antialiasing is used.
   For a screen device the default depends on the machine settings: it
   will be \code{"cleartype"} if that has been enabled.  Note that the
@@ -223,7 +223,7 @@ win.print(width = 7, height = 7, pointsize = 12, printer = "",
   Desktop settings \emph{and} the user's local account settings are
   relevant to whether antialiasing is used.
 
-  Some fonts are intended only to be used with ClearType antialiasing,
+  Some fonts are intended only to be used with \I{ClearType} antialiasing,
   for example the \code{Meiryo} Japanese font.
 }
 % http://blogs.msdn.com/b/rds/archive/2006/09/08/747023.aspx
@@ -243,7 +243,7 @@ win.print(width = 7, height = 7, pointsize = 12, printer = "",
     \item \code{pch = "."} with \code{cex = 1} corresponds to a rectangle of sides
     the larger of one pixel and 0.01 inch.
     \item Colours are interpreted via the unprofiled colour mapping of
-    the graphics card -- this is \emph{assumed} to conform to sRGB.
+    the graphics card -- this is \emph{assumed} to conform to \abbr{sRGB}.
   }
 }
 

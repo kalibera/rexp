@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1995--2023  The R Core Team
+ *  Copyright (C) 1995--2024  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1242,7 +1242,7 @@ static void WriteItem (SEXP s, SEXP ref_table, R_outpstream_t stream)
 		}
 	    }
 	    break;
-	case S4SXP:
+	case OBJSXP:
 	  break; /* only attributes (i.e., slots) count */
 	default:
 	    error(_("WriteItem: unknown type %i"), TYPEOF(s));
@@ -1985,6 +1985,7 @@ static SEXP ReadItem_Recursive (int flags, SEXP ref_table, R_inpstream_t stream)
 	    {
 		/* These are all short strings */
 		length = InInteger(stream);
+		R_CheckStack2(length+1);
 		char cbuf[length+1];
 		InString(stream, cbuf, length);
 		cbuf[length] = '\0';
@@ -2041,7 +2042,8 @@ static SEXP ReadItem_Recursive (int flags, SEXP ref_table, R_inpstream_t stream)
 	    R_ReadItemDepth++;
 	    for (count = 0; count < len; ++count) {
 		if (R_ReadItemDepth <= 0)
-		    Rprintf("%*s[%d]\n", 2*(R_ReadItemDepth - R_InitReadItemDepth), "", count+1);
+		    Rprintf("%*s[%lld]\n", 2*(R_ReadItemDepth - R_InitReadItemDepth),
+		            "", (long long)count+1);
 		SET_VECTOR_ELT(s, count, ReadItem(ref_table, stream));
 	    }
 	    R_ReadItemDepth--;
@@ -2076,8 +2078,8 @@ static SEXP ReadItem_Recursive (int flags, SEXP ref_table, R_inpstream_t stream)
 	    }
 	    }
 	    break;
-	case S4SXP:
-	    PROTECT(s = allocS4Object());
+	case OBJSXP:
+	    PROTECT(s = R_allocObject());
 	    break;
 	default:
 	    s = R_NilValue; /* keep compiler happy */
@@ -2648,6 +2650,13 @@ do_serializeToConn(SEXP call, SEXP op, SEXP args, SEXP env)
     return R_NilValue;
 }
 
+static SEXP checkNotPromise(SEXP val)
+{
+    if (TYPEOF(val) == PROMSXP)
+	error(_("cannot return a promise (PROMSXP) object"));
+    return val;
+}
+
 /* unserializeFromConn(conn, hook) used from readRDS().
    It became public in R 2.13.0, and that version added support for
    connections internally */
@@ -2697,7 +2706,7 @@ do_unserializeFromConn(SEXP call, SEXP op, SEXP args, SEXP env)
 	con->close(con);
 	UNPROTECT(1);
     }
-    return ans;
+    return checkNotPromise(ans);
 }
 
 /*
@@ -3328,8 +3337,8 @@ attribute_hidden SEXP
 do_serialize(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
-    if (PRIMVAL(op) == 2) return R_unserialize(CAR(args), CADR(args));
-
+    if (PRIMVAL(op) == 2) //return R_unserialize(CAR(args), CADR(args));
+	return checkNotPromise(R_unserialize(CAR(args), CADR(args)));
     SEXP object, icon, type, ver, fun;
     object = CAR(args); args = CDR(args);
     icon = CAR(args); args = CDR(args);

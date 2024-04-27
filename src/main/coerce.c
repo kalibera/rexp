@@ -285,20 +285,21 @@ ComplexFromReal(double x, int *warn)
 Rcomplex attribute_hidden
 ComplexFromString(SEXP x, int *warn)
 {
-    double xr, xi;
-    Rcomplex z;
     const char *xx = CHAR(x); /* ASCII */
     char *endp;
-
-    z.r = z.i = NA_REAL;
+    Rcomplex z = { .r = NA_REAL, .i = NA_REAL };
     if (x != R_NaString && !isBlankString(xx)) {
-	xr = R_strtod(xx, &endp);
+	double xr = R_strtod(xx, &endp);
 	if (isBlankString(endp)) {
 	    z.r = xr;
 	    z.i = 0.0;
 	}
-	else if (*endp == '+' || *endp == '-') {
-	    xi = R_strtod(endp, &endp);
+	else if (*endp++ == 'i' && isBlankString(endp)) {
+	    z.r = 0.;
+	    z.i = xr;
+	}
+	else if (*--endp == '+' || *endp == '-') {
+	    double xi = R_strtod(endp, &endp);
 	    if (*endp++ == 'i' && isBlankString(endp)) {
 		z.r = xr;
 		z.i = xi;
@@ -1200,7 +1201,7 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
     }
 
     /* code to allow classes to extend ENVSXP, SYMSXP, etc */
-    if(IS_S4_OBJECT(v) && TYPEOF(v) == S4SXP) {
+    if(IS_S4_OBJECT(v) && TYPEOF(v) == OBJSXP) {
 	SEXP vv = R_getS4DataSlot(v, ANYSXP);
 	if(vv == R_NilValue)
 	  error(_("no method for coercing this S4 class to a vector"));
@@ -1570,7 +1571,7 @@ attribute_hidden SEXP do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 	}
     }
 
-    if(IS_S4_OBJECT(x) && TYPEOF(x) == S4SXP) {
+    if(IS_S4_OBJECT(x) && TYPEOF(x) == OBJSXP) {
 	SEXP v = R_getS4DataSlot(x, ANYSXP);
 	if(v == R_NilValue)
 	    error(_("no method for coercing this S4 class to a vector"));
@@ -1612,31 +1613,28 @@ attribute_hidden SEXP do_asvector(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 attribute_hidden SEXP do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
-    SEXP arglist, envir, names, pargs, body;
-    int i, n;
-
     checkArity(op, args);
 
     /* Check the arguments; we need a list and environment. */
 
-    arglist = CAR(args);
+    SEXP arglist = CAR(args);
     if (!isNewList(arglist))
 	error(_("list argument expected"));
 
-    envir = CADR(args);
+    SEXP envir = CADR(args);
     if (isNull(envir)) {
 	error(_("use of NULL environment is defunct"));
 	envir = R_BaseEnv;
-    } else
-    if (!isEnvironment(envir))
+    } else if (!isEnvironment(envir))
 	error(_("invalid environment"));
 
-    n = length(arglist);
+    int n = length(arglist);
     if (n < 1)
 	error(_("argument must have length at least 1"));
-    PROTECT(names = getAttrib(arglist, R_NamesSymbol));
-    PROTECT(pargs = args = allocList(n - 1));
-    for (i = 0; i < n - 1; i++) {
+    SEXP
+	names = PROTECT(getAttrib(arglist, R_NamesSymbol)),
+	pargs = PROTECT(args = allocList(n - 1));
+    for (int i = 0; i < n - 1; i++) {
 	SETCAR(pargs, VECTOR_ELT(arglist, i));
 	if (names != R_NilValue && *CHAR(STRING_ELT(names, i)) != '\0') /* ASCII */
 	    SET_TAG(pargs, installTrChar(STRING_ELT(names, i)));
@@ -1644,8 +1642,8 @@ attribute_hidden SEXP do_asfunction(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    SET_TAG(pargs, R_NilValue);
 	pargs = CDR(pargs);
     }
-    CheckFormals(args);
-    PROTECT(body = VECTOR_ELT(arglist, n-1));
+    CheckFormals(args, "as.function");
+    SEXP body = PROTECT(VECTOR_ELT(arglist, n-1));
     /* the main (only?) thing to rule out is body being
        a function already. If we test here then
        mkCLOSXP can continue to overreact when its
@@ -1832,6 +1830,8 @@ int asInteger(SEXP x)
 
     if (isVectorAtomic(x) && XLENGTH(x) >= 1) {
 	switch (TYPEOF(x)) {
+        case RAWSXP:
+            return (int) RAW_ELT(x, 0);
 	case LGLSXP:
 	    return IntegerFromLogical(LOGICAL_ELT(x, 0), &warn);
 	case INTSXP:
@@ -1970,7 +1970,10 @@ Rcomplex asComplex(SEXP x)
 attribute_hidden SEXP do_typeof(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    return type2rstr(TYPEOF(CAR(args)));
+    if(TYPEOF(CAR(args)) == OBJSXP && ! IS_S4_OBJECT(CAR(args)))
+	return mkString("object");
+    else
+	return type2rstr(TYPEOF(CAR(args)));
 }
 
 /* Define many of the <primitive> "is.xxx" functions :
@@ -2024,7 +2027,7 @@ attribute_hidden SEXP do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	LOGICAL0(ans)[0] = (TYPEOF(CAR(args)) == STRSXP);
 	break;
     case SYMSXP:	/* is.symbol === is.name */
-	if(IS_S4_OBJECT(CAR(args)) && (TYPEOF(CAR(args)) == S4SXP)) {
+	if(IS_S4_OBJECT(CAR(args)) && (TYPEOF(CAR(args)) == OBJSXP)) {
 	    SEXP dot_xData = R_getS4DataSlot(CAR(args), SYMSXP);
 	    LOGICAL0(ans)[0] = (TYPEOF(dot_xData) == SYMSXP);
 	}
@@ -2032,7 +2035,7 @@ attribute_hidden SEXP do_is(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    LOGICAL0(ans)[0] = (TYPEOF(CAR(args)) == SYMSXP);
 	break;
     case ENVSXP:	/* is.environment */
-	if(IS_S4_OBJECT(CAR(args)) && (TYPEOF(CAR(args)) == S4SXP)) {
+	if(IS_S4_OBJECT(CAR(args)) && (TYPEOF(CAR(args)) == OBJSXP)) {
 	    SEXP dot_xData = R_getS4DataSlot(CAR(args), ENVSXP);
 	    LOGICAL0(ans)[0] = (TYPEOF(dot_xData) == ENVSXP);
 	}

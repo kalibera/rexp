@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1997--2023  The R Core Team
+ *  Copyright (C) 1997--2024  The R Core Team
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -228,6 +228,7 @@ TypeTable[] = {
     { "weakref",	WEAKREFSXP },
     { "raw",		RAWSXP },
     { "S4",		S4SXP },
+    { "object",		OBJSXP }, /* == S4SXP */
     /* aliases : */
     { "numeric",	REALSXP	   },
     { "name",		SYMSXP	   },
@@ -243,6 +244,7 @@ SEXPTYPE str2type(const char *s)
 	if (!strcmp(s, TypeTable[i].str))
 	    return (SEXPTYPE) TypeTable[i].type;
     }
+
     /* SEXPTYPE is an unsigned int, so the compiler warns us w/o the cast. */
     return (SEXPTYPE) -1;
 }
@@ -337,8 +339,20 @@ const char *type2char(SEXPTYPE t) /* returns a char* */
     return buf;
 }
 
+#ifdef USE_TYPE2CHAR_2
+const char *R_typeToChar2(SEXP x, SEXPTYPE t) {
+    return (t != OBJSXP)
+	? type2char(t)
+	: (IS_S4_OBJECT(x) ? "S4" : "object");
+}
+#endif
+
 const char *R_typeToChar(SEXP x) {
-    return type2char(TYPEOF(x));
+    // = type2char() but distinguishing {S4, object}
+    if(TYPEOF(x) == OBJSXP)
+	return IS_S4_OBJECT(x) ? "S4" : "object";
+    else
+	return type2char(TYPEOF(x));
 }
 
 #ifdef UNUSED
@@ -574,25 +588,36 @@ attribute_hidden SEXP do_nargs(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 
-/* formerly used in subscript.c, in Utils.h */
+/* formerly used in subscript.c, in Utils.h
+      Does not know about long vectors ....
+      Commented out 2024-02
 attribute_hidden void setIVector(int * vec, int len, int val)
 {
     for (int i = 0; i < len; i++) vec[i] = val;
 }
+*/
 
 
 /* unused in R, in Utils.h, may have been used in Rcpp at some point,
-      but not any more (as per Nov. 2018)  */
+      but not any more (as per Nov. 2018).
+      Does not know about long vectors ....
+      RcppClassic has its own version.
+      Commented out 2024-02
 attribute_hidden void setRVector(double * vec, int len, double val)
 {
     for (int i = 0; i < len; i++) vec[i] = val;
 }
+*/
 
-/* unused in R, in Rinternals.h */
+/* unused in R, in Defn.h, formerly remapped in Rinternals.h
+      Unused in R.
+      Does not know about long vectors ....
+      Commented out 2024-02
 void setSVector(SEXP * vec, int len, SEXP val)
 {
     for (int i = 0; i < len; i++) vec[i] = val;
 }
+*/
 
 
 Rboolean isFree(SEXP val)
@@ -840,9 +865,7 @@ attribute_hidden SEXP do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 attribute_hidden SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s = R_NilValue;	/* -Wall */
-    char *sp;
-    wchar_t  *buf, *p;
-    const wchar_t *pp;
+    const char *pp;
     int i, n;
 
     checkArity(op, args);
@@ -853,22 +876,14 @@ attribute_hidden SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (STRING_ELT(s, i) == NA_STRING)
 	    SET_STRING_ELT(ans, i, NA_STRING);
 	else {
-	    pp = filenameToWchar(STRING_ELT(s, i), TRUE);
-	    buf = (wchar_t *)R_alloc(wcslen(pp) + 1, sizeof(wchar_t));
-	    wcscpy(buf, pp);
-	    R_wfixslash(buf);
-	    /* remove trailing file separator(s) */
-	    if (*buf) {
-		p = buf + wcslen(buf) - 1;
-		/* turns D:/ to D: */
-		/* FIXME: basename of D:/ is D:, is that a good behavior? */
-		while (p >= buf && *p == L'/') *(p--) = L'\0';
-	    }
-	    if ((p = wcsrchr(buf, L'/'))) p++; else p = buf;
-	    size_t needed = wcstoutf8(NULL, p, (size_t)INT_MAX + 2);
-	    sp = R_alloc(needed + 1, 1);
-	    wcstoutf8(sp, p, needed + 1);
-	    SET_STRING_ELT(ans, i, mkCharCE(sp, CE_UTF8));
+	    pp = R_ExpandFileNameUTF8(trCharUTF8(STRING_ELT(s, i)));
+            size_t ll = strlen(pp);
+            /* remove trailing file separator(s) */
+            while(ll && (pp[ll-1] == '\\' || pp[ll-1] == '/')) ll--;
+            size_t ff = ll;
+            /* find start of file part */
+            while(ff && (pp[ff-1] != '\\' && pp[ff-1] != '/')) ff--;
+            SET_STRING_ELT(ans, i, mkCharLenCE(pp+ff, ll-ff, CE_UTF8));
 	}
     }
     UNPROTECT(1);
@@ -878,7 +893,7 @@ attribute_hidden SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 attribute_hidden SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s = R_NilValue;	/* -Wall */
-    char  buf[R_PATH_MAX], *p, fsp = FILESEP[0];
+    const char fsp = FILESEP[0];
     const char *pp;
     int i, n;
 
@@ -891,18 +906,15 @@ attribute_hidden SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    SET_STRING_ELT(ans, i, NA_STRING);
 	else {
 	    pp = R_ExpandFileName(translateCharFP(STRING_ELT(s, i)));
-	    if (strlen(pp) > R_PATH_MAX - 1)
+	    size_t ll = strlen(pp);
+	    if (ll > R_PATH_MAX - 1)
 		error(_("path too long"));
-	    strcpy (buf, pp);
-	    if (*buf) {
-		p = buf + strlen(buf) - 1;
-		while (p >= buf && *p == fsp) *(p--) = '\0';
-	    }
-	    if ((p = Rf_strrchr(buf, fsp)))
-		p++;
-	    else
-		p = buf;
-	    SET_STRING_ELT(ans, i, mkChar(p));
+	    /* remove trailing file separator(s) */
+	    while(ll && pp[ll-1] == fsp) ll--;
+	    size_t ff = ll;
+	    /* find start of file part */
+	    while(ff && pp[ff-1] != fsp) ff--;
+	    SET_STRING_ELT(ans, i, mkCharLenCE(pp+ff, (int)(ll-ff), CE_NATIVE));
 	}
     }
     UNPROTECT(1);
@@ -915,12 +927,21 @@ attribute_hidden SEXP do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
    */
 
 #ifdef Win32
+static SEXP root_dir_on_drive(char d)
+{
+    char buf[3];
+
+    buf[0] = d;
+    buf[1] = ':';
+    buf[2] = '/';
+    return mkCharLenCE(buf, 3, CE_UTF8); 
+}
+
 attribute_hidden SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s = R_NilValue;	/* -Wall */
-    wchar_t *buf, *p;
-    const wchar_t *pp;
-    char *sp;
+    char *buf;
+    const char *pp;
     int i, n;
 
     checkArity(op, args);
@@ -931,30 +952,46 @@ attribute_hidden SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 	if (STRING_ELT(s, i) == NA_STRING)
 	    SET_STRING_ELT(ans, i, NA_STRING);
 	else {
-	    sp = "";
-	    pp = filenameToWchar(STRING_ELT(s, i), TRUE);
-	    if (wcslen(pp)) {
-		buf = (wchar_t*)R_alloc(wcslen(pp) + 1, sizeof(wchar_t));
-		wcscpy (buf, pp);
-		R_wfixslash(buf);
-		/* remove trailing file separator(s), preserve D:/, / */
-		p = buf + wcslen(buf) - 1;
-		while (p > buf && *p == L'/'
-		       && (p > buf+2 || *(p-1) != L':')) *p-- = L'\0';
-		p = wcsrchr(buf, L'/');
-		/* FIXME: dirname of D: is ., is this a good behavior? */
-		if(p == NULL) wcscpy(buf, L".");
-		else {
-		    while(p > buf && *p == L'/'
-			  /* this covers both drives and network shares */
-			  && (p > buf+2 || *(p-1) != L':')) --p;
-		    p[1] = L'\0';
+	    pp = R_ExpandFileNameUTF8(trCharUTF8(STRING_ELT(s, i)));
+	    size_t ll = strlen(pp);
+	    if (ll) {
+		buf = (char *)R_alloc(ll + 1, sizeof(char));
+		memcpy(buf, pp, ll + 1);
+		R_UTF8fixslash(buf);
+		/* remove trailing file separator(s) */
+		while (ll && buf[ll-1] == '/') ll--;
+		if (ll == 2 && buf[1] == ':' && buf[2]) { 
+		    SET_STRING_ELT(ans, i, root_dir_on_drive(buf[0]));
+		    continue;
 		}
-		size_t needed = wcstoutf8(NULL, buf, (size_t)INT_MAX + 2);
-		sp = R_alloc(needed + 1, 1);
-		wcstoutf8(sp, buf, needed + 1);
-	    }
-	    SET_STRING_ELT(ans, i, mkCharCE(sp, CE_UTF8));
+		if (!ll) { /* only separators, not share */
+		    SET_STRING_ELT(ans, i, mkCharLenCE("/", 1, CE_UTF8));
+		    continue;
+		}
+		/* remove file part */
+		while(ll && buf[ll-1] != '\\' && buf[ll-1] != '/') ll--;
+		if (!ll) { /* only file part, not share */
+		    /* FIXME: dirname of D: is ., is this good behavior? */
+		    SET_STRING_ELT(ans, i, mkChar("."));
+		    continue;
+		}
+		/* remove separator(s) after directory part */
+		while(ll && buf[ll-1] == '/') ll--;
+		if (ll == 2 && buf[1] == ':' && buf[2]) {
+		    SET_STRING_ELT(ans, i, root_dir_on_drive(buf[0]));
+		    continue;
+		}
+		if (!ll) /* only single part, not share */
+		    SET_STRING_ELT(ans, i, mkCharLenCE("/", 1, CE_UTF8));
+		else if (ll == 2 && buf[0] == '\\' && buf[1] == '\\'
+		                 && buf[2] == '/') {
+		    /* network share with extra slashes */
+		    SET_STRING_ELT(ans, i, mkCharLenCE("/", 1, CE_UTF8));
+		} else
+		    SET_STRING_ELT(ans, i, mkCharLenCE(buf, ll, CE_UTF8));
+	    } else
+		/* empty pathname is invalid, but returned */
+		SET_STRING_ELT(ans, i, mkChar(""));
 	}
     }
     UNPROTECT(1);
@@ -964,7 +1001,7 @@ attribute_hidden SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 attribute_hidden SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s = R_NilValue;	/* -Wall */
-    char buf[R_PATH_MAX], *p, fsp = FILESEP[0];
+    const char fsp = FILESEP[0];
     const char *pp;
     int i, n;
 
@@ -977,22 +1014,32 @@ attribute_hidden SEXP do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    SET_STRING_ELT(ans, i, NA_STRING);
 	else {
 	    pp = R_ExpandFileName(translateCharFP(STRING_ELT(s, i)));
-	    if (strlen(pp) > R_PATH_MAX - 1)
-		error(_("path too long"));
 	    size_t ll = strlen(pp);
+	    if (ll > R_PATH_MAX - 1)
+		error(_("path too long"));
 	    if (ll) { // svMisc calls this with ""
-		strcpy (buf, pp);
 		/* remove trailing file separator(s) */
-		while ( *(p = buf + ll - 1) == fsp  && p > buf) *p = '\0';
-		p = Rf_strrchr(buf, fsp);
-		if(p == NULL)
-		    strcpy(buf, ".");
-		else {
-		    while(p > buf && *p == fsp) --p;
-		    p[1] = '\0';
+		while(ll && pp[ll-1] == fsp) ll--;
+		if (!ll) { /* only separators */
+		    SET_STRING_ELT(ans, i, mkCharLenCE(&fsp, 1, CE_NATIVE));
+		    continue;
 		}
-	    } else buf[0] = '\0';
-	    SET_STRING_ELT(ans, i, mkChar(buf));
+		/* remove file part */
+		while(ll && pp[ll-1] != fsp) ll--;
+		if (!ll) { /* only file part */
+		    SET_STRING_ELT(ans, i, mkChar("."));
+		    continue;
+		}
+		/* remove separator(s) after directory part */
+		while(ll && pp[ll-1] == fsp) ll--;
+		if (!ll) { /* only single part */
+		    SET_STRING_ELT(ans, i, mkCharLenCE(&fsp, 1, CE_NATIVE));
+		    continue;
+		}
+		SET_STRING_ELT(ans, i, mkCharLenCE(pp, (int)ll, CE_NATIVE));
+	    } else
+		/* empty pathname is invalid, but returned */
+		SET_STRING_ELT(ans, i, mkChar(""));
 	}
     }
     UNPROTECT(1);
@@ -1519,7 +1566,7 @@ size_t wcstoutf8(char *s, const wchar_t *wc, size_t n)
 	    p++;
 	} else {
 	    if (IS_HIGH_SURROGATE(*p) || IS_LOW_SURROGATE(*p))
-		warning("unpaired surrogate Unicode point %x", *p);
+		warning("unpaired surrogate Unicode point %x", (unsigned int)*p);
 	    m = Rwcrtomb32(t, (R_wchar_t)(*p), n - res);
 	}
 	if (!m) break;
@@ -2027,6 +2074,27 @@ int attribute_hidden Rf_AdobeSymbol2ucs2(int n)
     else return 0;
 }
 
+/* Introduced on 2008-03-21 with comment
+
+       use our own strtod/atof to mitigate effects of setting LC_NUMERIC
+
+   Also allows complete control of which non-numeric strings are
+   accepted; e.g. glibc allows NANxxxx, macOS NAN(s), this accepts "NA".
+
+   Exported and in Utils.h (but not in R-exts).
+
+   Variants:
+   R_strtod4 is used by scan(), allows the decimal point (byte) to be
+   specified and whether "NA" is accepted.
+
+   R_strtod5 is used by type_convert(numerals=) (utils/src/io.c)
+
+   The parser uses R_atof (and handles non-numeric strings itself).
+   That is the same as R_strtod but ignores endptr. 
+   Also used by gnuwin32/windlgs/src/ttest.c, 
+   exported and in Utils.h (but not in R-exts).
+*/
+
 double R_strtod5(const char *str, char **endptr, char dec,
 		 Rboolean NA, int exact)
 {
@@ -2099,10 +2167,16 @@ double R_strtod5(const char *str, char **endptr, char dec,
 	    case '+': p++;
 	    default: ;
 	    }
-	    /* The test for n is in response to PR#16358; it's not right if the exponent is
-	       very large, but the overflow or underflow below will handle it. */
 #define MAX_EXPONENT_PREFIX 9999
-	    for (n = 0; *p >= '0' && *p <= '9'; p++) n = (n < MAX_EXPONENT_PREFIX) ? n * 10 + (*p - '0') : n;
+	    /* exponents beyond ca +1024/-1076 over/underflow */
+	    int ndig = 0;
+	    for (n = 0; *p >= '0' && *p <= '9'; p++, ndig++)
+		n = (n < MAX_EXPONENT_PREFIX) ? n * 10 + (*p - '0') : n;
+	    if (ndig == 0) {
+		ans = NA_REAL;
+		p = str; /* back out */
+		goto done;
+	    }
 	    if (ans != 0.0) { /* PR#15976:  allow big exponents on 0 */
 		LDOUBLE fac = 1.0;
 		expn += expsign * n;
@@ -2143,13 +2217,29 @@ double R_strtod5(const char *str, char **endptr, char dec,
     strtod_EXACT_CLAUSE;
 
     if (*p == 'e' || *p == 'E') {
+	int ndigits = 0;
 	int expsign = 1;
 	switch(*++p) {
 	case '-': expsign = -1;
 	case '+': p++;
 	default: ;
 	}
-	for (n = 0; *p >= '0' && *p <= '9'; p++) n = (n < MAX_EXPONENT_PREFIX) ? n * 10 + (*p - '0') : n;
+	/* The test for n is in response to PR#16358; which was
+	   parsing 1e999999999999.
+	   It's not right if the exponent is very large, but the
+	   overflow or underflow below will handle it.
+	   1e308 is already Inf, but negative exponents can go down to -323
+	   before undeflowing to zero.  And people could do perverse things 
+	   like 0.00000001e312.
+	*/
+	// C17 §6.4.4.2 requires a non-empty 'digit sequence'
+	for (n = 0; *p >= '0' && *p <= '9'; p++, ndigits++)
+	    n = (n < MAX_EXPONENT_PREFIX) ? n * 10 + (*p - '0') : n;
+	if (ndigits == 0) {
+	    ans = NA_REAL;
+	    p = str; /* back out */
+	    goto done;
+	}
 	expn += expsign * n;
     }
 

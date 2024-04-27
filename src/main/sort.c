@@ -796,7 +796,7 @@ attribute_hidden SEXP do_psort(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    if (!R_FINITE(rl[i])) error(_("NA or infinite index"));
 	    l[i] = (R_xlen_t) rl[i];
 	    if (l[i] < 1 || l[i] > n)
-		error(_("index %ld outside bounds"), l[i]);
+		error(_("index %lld outside bounds"), (long long)l[i]);
 	}
     } else {
 	int *il = INTEGER(p);
@@ -1570,7 +1570,7 @@ attribute_hidden SEXP do_rank(SEXP call, SEXP op, SEXP args, SEXP rho)
 		switch(ties_kind) {
 		case AVERAGE:
 		    for (k = i; k <= j; k++)
-			rk[in[k]] = (i + j + 2) / 2.;
+			rk[in[k]] = ((double)i + j + 2) / 2.;
 		    break;
 		case MAX:
 		    for (k = i; k <= j; k++) ik[in[k]] = j+1;
