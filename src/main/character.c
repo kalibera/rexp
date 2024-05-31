@@ -439,6 +439,9 @@ do_substr(SEXP call, SEXP op, SEXP args, SEXP env)
 	if (!isInteger(sa) || !isInteger(so) || k == 0 || l == 0)
 	    error(_("invalid substring arguments"));
 
+	if (k > len || l > len)
+	    *(int *)0 = 1;
+
 	for (R_xlen_t i = 0; i < len; i++) {
 	    int start = INTEGER(sa)[i % k],
 		stop  = INTEGER(so)[i % l];
