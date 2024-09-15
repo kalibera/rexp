@@ -64,10 +64,18 @@ extern void R_chk_free(void *);
 #define R_Free(p)      (R_chk_free( (void *)(p) ), (p) = NULL)
 
 /* Nowadays API: undocumented until 4.1.2: widely used. */
-#define Memcpy(p,q,n)  memcpy( p, q, (R_SIZE_T)(n) * sizeof(*p) )
+#define Memcpy(p,q,n)  do {                            \
+    R_SIZE_T __n__ = (R_SIZE_T)(n)* sizeof(*p);        \
+    if (__n__)                                         \
+	memcpy( (p), (q), __n__);                      \
+} while(0)
 
 /* Nowadays API: added for 3.0.0 but undocumented until 4.1.2. */
-#define Memzero(p,n)  memset(p, 0, (R_SIZE_T)(n) * sizeof(*p))
+#define Memzero(p,n)  do {                             \
+    R_SIZE_T __n__ = (R_SIZE_T)(n) * sizeof(*p);       \
+    if (__n__)                                         \
+	memset((p), 0, __n__);                         \
+} while(0)
 
 /* API: Added in R 2.6.0 */
 #define CallocCharBuf(n) (char *) R_chk_calloc(((R_SIZE_T)(n))+1, sizeof(char))

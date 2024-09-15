@@ -2388,10 +2388,11 @@ char *S_realloc(char *p, long new, long old, int size)
     size_t nold;
     char *q;
     /* shrinking is a no-op */
-    if(new <= old) return p; // so nnew > 0 below
+    if(new <= old) return p; // so new > 0 below
     q = R_alloc((size_t)new, size);
     nold = (size_t)old * size;
-    memcpy(q, p, nold);
+    if (nold > 0)
+	memcpy(q, p, nold);
     memset(q + nold, 0, (size_t)new*size - nold);
     return q;
 }

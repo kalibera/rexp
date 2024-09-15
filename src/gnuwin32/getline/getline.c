@@ -447,9 +447,10 @@ gl_realloc(void *ptr, int olditems, int newitems, size_t itemsize)
     void *res;
     if (!(res = realloc(ptr, newitems * itemsize)))
 	gl_error("\n*** Error: getline(): not enough memory.\n");
-    memset(((char *)res) + olditems * itemsize,
-           0,
-           (newitems - olditems) * itemsize);
+    if (newitems > olditems)
+	memset(((char *)res) + olditems * itemsize,
+	       0,
+	       (newitems - olditems) * itemsize);
     return res;
 }
 
@@ -1560,7 +1561,8 @@ hist_save(const char *p)
 
     if (nl) {
         if ((s = (char *) malloc(len)) != 0) {
-            memcpy(s, p, len-1);
+            if (len-1 > 0)
+		memcpy(s, p, len-1);
 	    s[len-1] = 0;
 	}
     } else {
