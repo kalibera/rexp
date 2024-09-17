@@ -36,7 +36,7 @@
 # define R_SIZE_T size_t
 #endif
 
-#include <Rconfig.h>		/* for F77_APPEND_UNDERSCORE */
+#include <Rconfig.h>		/* for HAVE_F77_UNDERSCORE */
 
 #ifdef  __cplusplus
 extern "C" {
@@ -48,6 +48,8 @@ extern "C" {
 extern void *R_chk_calloc(R_SIZE_T, R_SIZE_T);
 extern void *R_chk_realloc(void *, R_SIZE_T);
 extern void R_chk_free(void *);
+extern void *R_chk_memcpy(void *, const void *, R_SIZE_T);
+extern void *R_chk_memset(void *, int, R_SIZE_T);
 
 #ifndef STRICT_R_HEADERS
 /* S-PLUS 3.x but not 5.x NULLed the pointer in Free.
@@ -64,25 +66,42 @@ extern void R_chk_free(void *);
 #define R_Free(p)      (R_chk_free( (void *)(p) ), (p) = NULL)
 
 /* Nowadays API: undocumented until 4.1.2: widely used. */
-#define Memcpy(p,q,n)  do {                            \
-    R_SIZE_T __n__ = (R_SIZE_T)(n)* sizeof(*p);        \
-    if (__n__)                                         \
-	memcpy( (p), (q), __n__);                      \
-} while(0)
+#define Memcpy(p,q,n)  R_chk_memcpy( p, q, (R_SIZE_T)(n) * sizeof(*p) )
 
 /* Nowadays API: added for 3.0.0 but undocumented until 4.1.2. */
-#define Memzero(p,n)  do {                             \
-    R_SIZE_T __n__ = (R_SIZE_T)(n) * sizeof(*p);       \
-    if (__n__)                                         \
-	memset((p), 0, __n__);                         \
-} while(0)
+#define Memzero(p,n)  R_chk_memset(p, 0, (R_SIZE_T)(n) * sizeof(*p))
 
 /* API: Added in R 2.6.0 */
 #define CallocCharBuf(n) (char *) R_chk_calloc(((R_SIZE_T)(n))+1, sizeof(char))
 
 /* S Like Fortran Interface */
 /* These may not be adequate everywhere. Convex had _ prepending common
-   blocks, and some compilers may need to specify Fortran linkage */
+   blocks, and some compilers may need to specify Fortran linkage.
+
+   HP-UX did not add a trailing underscore.  (It still existed in
+   2024, but R poiorts had not been seen for many years.)
+
+   Note that this is an F77 interface, intended only for valid F77
+   names of <= 6 ASCII characters (and no underscores) and there is an
+   implicit assumption that the Fortran compiler maps names to
+   lower-case (and 'x' is lower-case when called).
+
+   The configure code has
+
+   HAVE_F77_EXTRA_UNDERSCORE
+   Define if your Fortran compiler appends an extra_underscore to
+   external names containing an underscore.
+
+   but that is not used here (and none of gfortran, flang-new nor
+   x86_64 ifx do so: earlier Intel x86 compilere might have).  It is
+   used in Rdynload.c to support .Fortran.
+
+   These macros have always been the same in R.  Their documented uses are
+
+   F77_SUB to define a function in C to be called from Fortran 
+   F77_NAME to declare a Fortran routine in C before use 
+   F77_CALL to call a Fortran routine from C
+ */
 
 #ifdef HAVE_F77_UNDERSCORE
 # define F77_CALL(x)	x ## _
@@ -91,9 +110,11 @@ extern void R_chk_free(void *);
 #endif
 #define F77_NAME(x)    F77_CALL(x)
 #define F77_SUB(x)     F77_CALL(x)
+/* Last two were historical from S, not used in R, deprecated in 4.4.2, removed in 4.5.0
 #define F77_COM(x)     F77_CALL(x)
 #define F77_COMDECL(x) F77_CALL(x)
-
+*/
+ 
 /* call_R was deprecated in R 2.15.0, removed in R 4.2.0 */
 
 #ifdef  __cplusplus
