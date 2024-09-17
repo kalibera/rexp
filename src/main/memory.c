@@ -159,7 +159,7 @@ static R_INLINE SEXP CHK(SEXP x)
     /* **** NULL check because of R_CurrentExpr */
     if (x != NULL && TYPEOF(x) == FREESXP)
 	error("unprotected object (%p) encountered (was %s)",
-	      x, sexptype2char(OLDTYPE(x)));
+	      (void *)x, sexptype2char(OLDTYPE(x)));
     return x;
 }
 #else
@@ -3566,6 +3566,16 @@ void R_chk_free(void *ptr)
     /* if(!ptr) warning("attempt to free NULL pointer by Free"); */
     if(ptr) free(ptr); /* ANSI C says free has no effect on NULL, but
 			  better to be safe here */
+}
+
+void *R_chk_memcpy(void *dest, const void *src, size_t n)
+{
+    return n ? memcpy(dest, src, n) : dest;
+}
+
+void *R_chk_memset(void *s, int c, size_t n)
+{
+    return n ? memset(s, c, n) : s;
 }
 
 /* This code keeps a list of objects which are not assigned to variables
