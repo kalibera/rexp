@@ -1181,12 +1181,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    /* the error signaled here for a missing ..d matches the one
 	       signaled in getvar() for byte compiled code, but ...elt()
 	       signals a slightly different error (see PR18661) */
-	    const char *n = CHAR(PRINTNAME(e));
-	    if(*n) errorcall(getLexicalCall(rho),
-			     _("argument \"%s\" is missing, with no default"),
-			     CHAR(PRINTNAME(e)));
-	    else errorcall(getLexicalCall(rho),
-			   _("argument is missing, with no default"));
+	    R_MissingArgError(e, getLexicalCall(rho), "evalError");
 	}
 	else if (TYPEOF(tmp) == PROMSXP) {
 	    ENSURE_PROMISE_IS_EVALUATED(tmp);
@@ -2492,8 +2487,7 @@ attribute_hidden SEXP do_forceAndCall(SEXP call, SEXP op, SEXP args, SEXP rho)
 /* called from methods_list_dispatch.c */
 SEXP R_execMethod(SEXP op, SEXP rho)
 {
-    SEXP call, arglist, callerenv, newrho, next, val;
-    RCNTXT *cptr;
+    SEXP newrho, next, val;
 
     /* create a new environment frame enclosed by the lexical
        environment of the method */
@@ -2507,13 +2501,11 @@ SEXP R_execMethod(SEXP op, SEXP rho)
        it can be done more efficiently. */
     for (next = FORMALS(op); next != R_NilValue; next = CDR(next)) {
 	SEXP symbol =  TAG(next);
-	R_varloc_t loc;
-	int missing;
-	loc = R_findVarLocInFrame(rho,symbol);
+	R_varloc_t loc = R_findVarLocInFrame(rho,symbol);
 	if(R_VARLOC_IS_NULL(loc))
 	    error(_("could not find symbol \"%s\" in environment of the generic function"),
 		  CHAR(PRINTNAME(symbol)));
-	missing = R_GetVarLocMISSING(loc);
+	int missing = R_GetVarLocMISSING(loc);
 	val = R_GetVarLocValue(loc);
 	SET_FRAME(newrho, CONS(val, FRAME(newrho)));
 	SET_TAG(FRAME(newrho), symbol);
@@ -2555,19 +2547,18 @@ SEXP R_execMethod(SEXP op, SEXP rho)
 
     /* Find the calling context.  Should be R_GlobalContext unless
        profiling has inserted a CTXT_BUILTIN frame. */
-    cptr = R_GlobalContext;
+    RCNTXT *cptr = R_GlobalContext;
     if (cptr->callflag & CTXT_BUILTIN)
 	cptr = cptr->nextcontext;
 
     /* The calling environment should either be the environment of the
        generic, rho, or the environment of the caller of the generic,
        the current sysparent. */
-    callerenv = cptr->sysparent; /* or rho? */
-
+    SEXP callerenv = cptr->sysparent, /* or rho? */
     /* get the rest of the stuff we need from the current context,
        execute the method, and return the result */
-    call = cptr->call;
-    arglist = cptr->promargs;
+	call    = cptr->call,
+	arglist = cptr->promargs;
     val = R_execClosure(call, newrho, callerenv, callerenv, arglist, op);
 #ifdef ADJUST_ENVIR_REFCNTS
     R_CleanupEnvir(newrho, val);
@@ -3060,7 +3051,6 @@ static Rboolean checkTailPosition(SEXP call, SEXP code, SEXP rho)
     else return FALSE;
 }
 
-static void MISSING_ARGUMENT_ERROR(SEXP symbol, SEXP rho);
 attribute_hidden SEXP do_tailcall(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
 #ifdef SUPPORT_TAILCALL
@@ -3076,7 +3066,7 @@ attribute_hidden SEXP do_tailcall(SEXP call, SEXP op, SEXP args, SEXP rho)
 	REPROTECT(args = evalListKeepMissing(args, rho), api);
 	expr = CAR(args);
         if (expr == R_MissingArg)
-	    MISSING_ARGUMENT_ERROR(install("expr"), rho);
+	    R_MissingArgError(install("expr"), getLexicalCall(rho), "tailcallError");
 	if (TYPEOF(expr) == EXPRSXP && XLENGTH(expr) == 1)
 	    expr = VECTOR_ELT(expr, 0);
 	if (TYPEOF(expr) != LANGSXP)
@@ -3089,7 +3079,7 @@ attribute_hidden SEXP do_tailcall(SEXP call, SEXP op, SEXP args, SEXP rho)
     else { // tailcall
 	/* could do argument matching here */
 	if (args == R_NilValue || CAR(args) == R_MissingArg)
-	    MISSING_ARGUMENT_ERROR(install("FUN"), rho);
+	    R_MissingArgError(install("FUN"), getLexicalCall(rho), "tailcallRecError");
 	expr = LCONS(CAR(args), CDR(args));
 	env = rho;
     }
@@ -5521,8 +5511,9 @@ NORET static void nodeStackOverflow(void)
 {
     /* condition is pre-allocated and protected with R_PreserveObject */
     SEXP cond = R_getNodeStackOverflowError();
-
+    PROTECT(cond);
     R_signalErrorCondition(cond, R_CurrentExpression);
+    UNPROTECT(1); /* not reached */
 }
 
 #define NELEMS_FOR_SIZE(size) \
@@ -5777,18 +5768,6 @@ static R_INLINE SEXP GET_BINDING_CELL_CACHE(SEXP symbol, SEXP rho,
     }
 }
 
-NORET static void MISSING_ARGUMENT_ERROR(SEXP symbol, SEXP rho)
-{
-    const char *n = CHAR(PRINTNAME(symbol));
-    if(*n) errorcall(getLexicalCall(rho),
-		     _("argument \"%s\" is missing, with no default"), n);
-    else errorcall(getLexicalCall(rho),
-		   _("argument is missing, with no default"));
-}
-
-#define MAYBE_MISSING_ARGUMENT_ERROR(symbol, keepmiss, rho) \
-    do { if (! keepmiss) MISSING_ARGUMENT_ERROR(symbol, rho); } while (0)
-
 NORET static void UNBOUND_VARIABLE_ERROR(SEXP symbol, SEXP rho)
 {
     errorcall_cpy(getLexicalCall(rho),
@@ -5842,7 +5821,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
     if (value == R_UnboundValue)
 	UNBOUND_VARIABLE_ERROR(symbol, rho);
     else if (value == R_MissingArg) {
-	MAYBE_MISSING_ARGUMENT_ERROR(symbol, keepmiss, rho);
+	if (!keepmiss) R_MissingArgError(symbol, getLexicalCall(rho), "getvarError");
 	return R_MissingArg;
     }
     else if (TYPEOF(value) == PROMSXP) {
@@ -7484,11 +7463,11 @@ static R_INLINE void finish_force_promise(void)
     POP_PENDING_PROMISE(BCFRAME_PRSTACK());
     SEXP prom = BCFRAME_PROMISE();
     R_bcstack_t ubval = POP_BCFRAME(FALSE);
+    BCNPUSH_STACKVAL(ubval); /* push early to protect */
     SET_PROMISE_VALUE_FROM_STACKVAL(prom, ubval);
     SET_PRSEEN(prom, 0);
     SET_PRENV(prom, R_NilValue);
     UNPROTECT(1); /* prom */
-    BCNPUSH_STACKVAL(ubval);
 }
 
 #define DO_GETVAR_FORCE_PROMISE_RETURN() do {			\
@@ -8737,6 +8716,8 @@ attribute_hidden SEXP R_bcEncode(SEXP bytes)
     m = (sizeof(BCODE) + sizeof(int) - 1) / sizeof(int);
 
     n = LENGTH(bytes);
+    if (n == 0)
+	return R_NilValue;
     ipc = INTEGER(bytes);
 
     v = ipc[0];

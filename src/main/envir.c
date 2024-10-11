@@ -1591,9 +1591,8 @@ SEXP findFun3(SEXP symbol, SEXP rho, SEXP call)
 		TYPEOF(vl) == SPECIALSXP)
 		return (vl);
 	    if (vl == R_MissingArg)
-		errorcall(call,
-		      _("argument \"%s\" is missing, with no default"),
-		      CHAR(PRINTNAME(symbol)));
+	        R_MissingArgError(symbol, call, "getMissingError");
+
 	}
 	rho = ENCLOS(rho);
     }
@@ -2138,9 +2137,9 @@ attribute_hidden SEXP do_get(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     /* Search for the object */
     rval = findVar1mode(t1, genv, gmode, wants_S4, ginherits, PRIMVAL(op));
-    if (rval == R_MissingArg)
-	error(_("argument \"%s\" is missing, with no default"),
-	      CHAR(PRINTNAME(t1)));
+    if (rval == R_MissingArg) { // signal a *classed* error:
+	R_MissingArgError(t1, call, "getMissingError");
+    }
 
     switch (PRIMVAL(op) ) {
     case 0: // exists(.) :
@@ -2289,17 +2288,15 @@ SEXP R_getVarEx(SEXP sym, SEXP rho, Rboolean inherits, SEXP ifnotfound)
 
     SEXP val = inherits ? R_findVar(sym, rho) : R_findVarInFrame(rho, sym);
     if (val == R_MissingArg)
-	error(_("argument \"%s\" is missing, with no default"),
-	      EncodeChar(PRINTNAME(sym)));
+	R_MissingArgError_c(EncodeChar(PRINTNAME(sym)), getLexicalCall(rho), "getVarExError");
     else if (val == R_UnboundValue)
 	return ifnotfound;
     else if (TYPEOF(val) == PROMSXP) {
 	PROTECT(val);
 	val = eval(val, rho);
 	UNPROTECT(1);
-	return val;
     }
-    else return val;
+    return val;
 }
 
 SEXP R_getVar(SEXP sym, SEXP rho, Rboolean inherits)
@@ -4321,7 +4318,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
 	   representing this string, and EncodeString() is the most
 	   comprehensive */
 	c = allocCharsxp(len);
-	memcpy(CHAR_RW(c), name, len);
+	if (len) memcpy(CHAR_RW(c), name, len);
 	switch(enc) {
 	case CE_UTF8: SET_UTF8(c); break;
 	case CE_LATIN1: SET_LATIN1(c); break;
@@ -4359,7 +4356,7 @@ SEXP mkCharLenCE(const char *name, int len, cetype_t enc)
     if (cval == R_NilValue) {
 	/* no cached value; need to allocate one and add to the cache */
 	PROTECT(cval = allocCharsxp(len));
-	memcpy(CHAR_RW(cval), name, len);
+	if (len) memcpy(CHAR_RW(cval), name, len);
 	switch(enc) {
 	case CE_NATIVE:
 	    break;          /* don't set encoding */

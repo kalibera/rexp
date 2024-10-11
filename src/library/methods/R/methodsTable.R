@@ -173,7 +173,7 @@
     if(is.environment(current)) {
         if(is.environment(obj))
             list2env(as.list(obj, all.names=TRUE), current)
-        else if(is(obj, "MethdodDefinition")) {
+        else if(is(obj, "MethodDefinition")) {
             var <- .pkgMethodLabel(obj)
             if(nzchar(var)) assign(var, obj, envir = current)
         }
@@ -454,8 +454,8 @@
              where = environment(fdef))
 {
     ## to avoid infinite recursion, and somewhat for speed, turn off S4 methods for primitives
-    primMethods <- .allowPrimitiveMethods(FALSE)
-    on.exit(.allowPrimitiveMethods(primMethods))
+    if(.allowPrimitiveMethods(FALSE)) # if it was true, revert on exit
+        on.exit(.allowPrimitiveMethods(TRUE))
     ## classes is a list of the class(x) for each arg in generic
     ## signature, with "missing" for missing args
     if(!is.environment(table)) {
@@ -1159,12 +1159,14 @@ useMTable <- function(onOff = NA)
                              check = TRUE, inherited = FALSE)
 {
     name <- if(inherited) ".AllMTable" else ".MTable"
-    if(check && !exists(name, envir = env, inherits = FALSE)) {
-	.setupMethodsTables(fdef, initialize = TRUE)
-	if(!exists(name, envir = env, inherits = FALSE))
-	    stop("invalid methods table request")
+    if(check) {
+        get0(name, envir = env, inherits = FALSE) %||% {
+            .setupMethodsTables(fdef, initialize = TRUE)
+            get0(name, envir = env, inherits = FALSE) %||% stop("invalid methods table request") 
+        }
     }
-    get(name, envir = env)
+    else
+        get(name, envir = env)
 }
 
 .getGenericSigLength <- function(fdef, env = environment(fdef), check = TRUE) {

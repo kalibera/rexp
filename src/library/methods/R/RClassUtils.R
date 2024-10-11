@@ -1,7 +1,7 @@
 #  File src/library/methods/R/RClassUtils.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2022 The R Core Team
+#  Copyright (C) 1995-2024 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -1833,10 +1833,14 @@ substituteFunctionArgs <-
     if(!is.null(pkgN <- get0(".packageName", topEnv, inherits=TRUE)) &&
        .identC(package, pkgN))
         return(topEnv) # kludge for source'ing package code
+    ## If called from .findInheritedMethods which disables S4 primitive dispatch,
+    ## allow it here, as namespace loading hooks may need it:
+    if(!.allowPrimitiveMethods(TRUE))
+        on.exit(.allowPrimitiveMethods(FALSE))
     if(nzchar(package) && require(package, character.only = TRUE)) {}
     else {
         if(mustFind)
-          stop(gettextf("unable to find required package %s",
+          stop(gettextf("unable to load required package %s",
                         sQuote(package)),
                domain = NA)
         else

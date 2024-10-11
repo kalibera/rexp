@@ -1455,7 +1455,7 @@ function(dir)
         if(a) {
             ## URL regexp as in .DESCRIPTION_to_latex().  CRAN uses
             ##   &lt;(URL: *)?((https?|ftp)://[^[:space:]]+)[[:space:]]*&gt;
-            ##   ([^>\"?])((https?|ftp)://[[:alnum:]/.:@+\\_~%#?=&;,-]+[[:alnum:]/])
+            ##   ([[:space:]])((https?|ftp)://[[:alnum:]/.:@+\\_~%#?=&;,-]+[[:alnum:]/])
             ## (also used in toRd.citation().
             x <- trfm("&lt;(http://|ftp://|https://)([^[:space:],>]+)&gt;",
                       "<a href=\"\\1%s\">\\1\\2</a>",
@@ -1708,7 +1708,7 @@ function(dir)
             gsub(sprintf("&lt;https://replace.me.by.orcid.org/(%s)&gt;",
                          .ORCID_iD_regexp),
                  paste0("<a href=\"https://orcid.org/\\1\">",
-                        "<img alt=\"ORCID iD\"",
+                        "<img alt=\"ORCID iD\" ",
                         if(dynamic)
                             "src=\"/doc/html/orcid.svg\" "
                         else

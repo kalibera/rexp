@@ -491,6 +491,31 @@ getGeneric <-
     value
 }
 
+##' Is `name` from package `pkg` *exported* from the package namespace ?
+.isExported <- function(name, pkg)
+    pkg == ".GlobalEnv" || isBaseNamespace(ns <- asNamespace(pkg)) ||
+        name %in% names(.getNamespaceInfo(ns, "exports"))
+
+##' is `name` "visually exported", i.e., exported from pkg in search()
+.isExportedVis <- function(name, pkg)
+    (pkg == ".GlobalEnv" || paste0("package:", pkg) %in% search()[-1L]) &&
+     (isBaseNamespace(ns <- asNamespace(pkg)) ||
+      name %in% names(.getNamespaceInfo(ns, "exports")))
+
+##' "Minimal" valid name when `name` is from `pkg` (which can be ".GlobalEnv")
+##' @param name string
+##' @param pkg  string
+##' @param qName logical(-alike)
+##' @return string
+.minimalName <- function(name, pkg, qName = FALSE, chkXport = TRUE) {
+    nm <- if(qName) deparse1(as.name(name), backtick = TRUE) else name
+    if(chkXport && .isExported(name, pkg)) {
+        if(pkg == ".GlobalEnv" || paste0("package:", pkg) %in% search()[-1L])
+            nm
+        else paste(pkg, nm, sep="::")
+    } else   paste(pkg, nm, sep=":::")
+}
+
 ## cache and retrieve generic functions.  If the same generic name
 ## appears for multiple packages, a named list of the generics is cached.
 .genericTable <- new.env(TRUE, baseenv())
@@ -740,9 +765,9 @@ getGenerics <- function(where, searchForm = FALSE)
         ## all the packages cached ==? all packages with methods
         ## globally visible.  Assertion based on cacheMetaData + setMethod
         fdefs <- as.list(.genericTable, all.names=TRUE, sorted=TRUE)
-        fnames <- mapply(function(nm, obj) {
-            if (is.list(obj)) names(obj) else nm
-        }, names(fdefs), fdefs, SIMPLIFY=FALSE)
+        fnames <- mapply(function(nm, obj) if(is.list(obj)) names(obj) else nm,
+                         names(fdefs), fdefs, SIMPLIFY=FALSE)
+### FIXME: at least *optionally*  we want to filter (aka "drop") *non*-exported S4 generics
         packages <- lapply(fdefs, .packageForGeneric)
         new("ObjectsWithPackage", unlist(fnames), package=unlist(packages))
     }
