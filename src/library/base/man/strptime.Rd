@@ -39,9 +39,13 @@ strptime(x, format, tz = "")
     methods is
     \code{"\%Y-\%m-\%d \%H:\%M:\%S"} if any element has a time
     component which is not midnight, and \code{"\%Y-\%m-\%d"}
-    otherwise.  If \code{\link{options}("digits.secs")} is set, up to
-    the specified number of digits will be printed for seconds.}
-  \item{\dots}{further arguments to be passed from or to other methods.}
+    otherwise.  In the first case and if \code{digits} is not \code{NULL},
+    i.e., by default when \code{\link{options}("digits.secs")} is set, up to
+    the specified number of digits will be printed for seconds, using
+    \code{"\%OS<n>"} instead of \code{"\%S"} in the format, see also
+    \sQuote{Details}.}
+  \item{\dots}{further arguments to be passed from or to other methods; for
+    \code{strftime()}, notably \code{digits}, passed to \code{format(<POSIXlt>)}.}
   \item{usetz}{logical.  Should the time zone abbreviation be appended
     to the output?  This is used in printing times, and more reliable
     than using \code{"\%Z"}.}
@@ -234,12 +238,20 @@ strptime(x, format, tz = "")
   the standard interpretation.
 
   Specific to \R is \code{\%OSn}, which for output gives the seconds
-  truncated to \code{0 <= n <= 6} decimal places (and if \code{\%OS} is
-  not followed by a digit, it uses the setting of
-  \code{\link{getOption}("digits.secs")}, or if that is unset, \code{n =
-  0}).  Further, for \code{strptime} \code{\%OS} will input seconds
-  including fractional seconds.  Note that \code{\%S} does not read
-  fractional parts on output.
+  truncated to exactly \code{0 <= n <= 6} decimal places.  If \code{\%OS} is
+  not followed by a digit, it uses up to \code{digits} decimals (only as
+  many as necessary, i.e., not producing extra trailing zeros.
+  The default \code{digits = NULL} corresponds to \code{digits = 0}.
+
+  Note that the precedence is \code{format=".. \%OSn .."} \eqn{\ll}{>>}
+  \code{digits = n}, the latter initialized by default from
+  \code{getOption("digits.secs")}.
+  Currently, for output (\code{strftime()} and \code{format(<POSIX.t>)}),
+  only \emph{one} "\%OS" occurence is handled (per format string).
+  \cr
+  Further, for \code{strptime} \code{\%OS} will input seconds including
+  fractional seconds (to full precison).  Note that \code{\%S} does not
+  read or write fractional parts.
 
   The behaviour of other conversion specifications (and even if other
   character sequences commencing with \code{\%} \emph{are} conversion
@@ -307,7 +319,7 @@ strptime(x, format, tz = "")
   year.  (On some platforms this works better after conversion to
   \code{"POSIXct"}.  Some platforms only recognize hour or half-hour
   offsets for output.)%% strftime in macOS 13.
-  
+
   Using \code{\%z} for input makes most sense with \code{tz = "UTC"}.
 }
 
@@ -424,13 +436,17 @@ z2 <- strptime(x, "\%m/\%d/\%y \%H:\%M:\%S")
 ## *here* (but not in general), the same as format():
 stopifnot(identical(format(z2), as.character(z2)))
 
-## time with fractional seconds
-z3 <- strptime("20/2/06 11:16:16.683", "\%d/\%m/\%y \%H:\%M:\%OS") \donttest{
-z3 # prints without fractional seconds by default, digits.sec = NULL ("= 0")}
-op <- options(digits.secs = 3)
-\donttest{z3 # shows the 3 extra digits}
-as.character(z3) # ditto
+## time with fractional seconds (setting `tz = ..` for reproducible output)
+z3 <- strptime("20/2/06 11:16:16.683", "\%d/\%m/\%y \%H:\%M:\%OS", tz = "UTC")
+z3 # prints without fractional seconds by default, digits.sec = NULL ("= 0")
+format(z3, digits = 3) # shows extra digits
+format(z3, digits = 6) # still 3 digits: *not* showing trailing zeros
+format(z3, format = "\%Y-\%m-\%d \%H:\%M:\%OS6") #  *does* keep trailing zeros
+op <- options(digits.secs = 3) # global option, the default for `digits`
+z3 # shows the 3 extra digits
 options(op)
+as.character(z3) # ditto
+
 
 ## time zone names are not portable, but 'EST5EDT' comes pretty close.
 ## (but its interpretation may not be universal: see ?timezones)

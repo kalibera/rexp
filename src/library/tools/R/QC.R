@@ -1442,7 +1442,7 @@ function(package, dir, lib.loc = NULL, chkInternal = NULL)
         ## try to deal with data set documentation.
         ind <- vapply(exprs,
                       function(e)
-                          length(e) > 1L && !is_data_for_dataset(e),
+                          is.call(e) && !is_data_for_dataset(e),
                       NA, USE.NAMES=FALSE)
         exprs <- exprs[ind]
         ## Split out replacement function usages.
@@ -1526,15 +1526,12 @@ function(package, dir, lib.loc = NULL, chkInternal = NULL)
         }
 
         ## Also test whether the objects we found from the \usage all
-        ## have aliases, provided that there is no alias which ends in
-        ## '-deprecated' (see e.g. base-deprecated.Rd).
-        ## <FIXME>
-        ## Why are we making the '-deprecated' exception?
-        ## Surely there should be aliases for such functions, and the
-        ## deprecated-Rd files in the base packages even say
-        ##   %------ PLEASE: put \alias{.} here for EACH !
+        ## have aliases, provided not all aliases end in '-deprecated'.
+        ## This exception allows packages to keep the original help page of a
+        ## deprecated function at help("<fun>-deprecated") (see ?deprecated)
+        ## and alias <fun> to help("<pkg>-deprecated").
         functions_not_in_aliases <-
-            if(!any(endsWith(aliases, "-deprecated"))) {
+            if(!all(endsWith(aliases, "-deprecated"))) {
                 ## Argh.  There are good reasons for keeping \S4method{}{}
                 ## as is, but of course this is not what the aliases use ...
                 ## <FIXME>
@@ -1549,7 +1546,6 @@ function(package, dir, lib.loc = NULL, chkInternal = NULL)
                 setdiff(functions, aliases)
             }
             else character()
-        ## </FIXME>
 
         if((length(arg_names_in_usage_missing_in_arg_list))
            || anyDuplicated(arg_names_in_arg_list)
@@ -4696,7 +4692,7 @@ function(package, dir, lib.loc = NULL)
 
     ## and then check the anchored ones if we can.
     have_colon <- grepl(":", anchor, fixed = TRUE)
-    unknown <- character()
+    unknown <- undeclared <- unavailable <- character()
     thispkg <- anchor
     thisfile <- db[, 1L]
     thispkg [have_colon] <- sub("([^:]*):(.*)", "\\1", anchor[have_colon])
@@ -4729,12 +4725,6 @@ function(package, dir, lib.loc = NULL)
                 undeclared <- setdiff(undeclared, enh)
             }
         }
-        if(length(undeclared))
-            message(sprintf(ngettext(length(undeclared),
-                                     "Undeclared package %s in Rd xrefs",
-                                     "Undeclared packages %s in Rd xrefs"),
-                            paste(sQuote(undeclared), collapse = ", ")),
-                    domain = NA)
     }
 
     mind_suspects <-
@@ -4744,20 +4734,22 @@ function(package, dir, lib.loc = NULL)
         db <- cbind(db, suspect = FALSE)
     }
 
-    for (pkg in anchors) {
+    for(pkg in anchors) {
         ## we can't do this on the current uninstalled package!
         if (missing(package) && pkg == pkgname) next
         this <- have_anchor & (thispkg %in% pkg)
         top <- system.file(package = pkg, lib.loc = lib.loc)
         if(nzchar(top)) {
-            RdDB <- file.path(top, "help", "paths.rds")
-            nm <- sub("\\.[Rr]d", "", basename(readRDS(RdDB)))
-            good <- thisfile[this] %in% nm
+            aliases1 <- if(pkg %in% names(aliases))
+                            aliases[[pkg]]
+                        else
+                            Rd_aliases(pkg, lib.loc = lib.loc)
+            good <- thisfile[this] %in% aliases1
             suspect <- if(any(!good)) {
-                aliases1 <- if (pkg %in% names(aliases)) aliases[[pkg]]
-                else Rd_aliases(pkg, lib.loc = lib.loc)
-                !good & (thisfile[this] %in% aliases1)
-            } else FALSE
+                           RdDB <- file.path(top, "help", "paths.rds")
+                           nm <- sub("\\.[Rr]d", "", basename(readRDS(RdDB)))
+                           !good & (thisfile[this] %in% nm)
+                       } else FALSE
             db[this, "bad"] <- !good & !suspect
             if(mind_suspects)
                 db[this, "suspect"] <- suspect
@@ -4784,14 +4776,14 @@ function(package, dir, lib.loc = NULL)
                 next
             }
             ## message(sprintf("Using aliases db for package %s", pkg))
-            nm <- sub("\\.[Rr]d", "", basename(names(aliases)))
-            good <- thisfile[this] %in% nm
+            aliases1 <- unique(as.character(unlist(aliases,
+                                                   use.names = FALSE)))
+            good <- thisfile[this] %in% aliases1
             suspect <- if(any(!good)) {
-                aliases1 <- unique(as.character(unlist(aliases,
-                                                       use.names =
-                                                       FALSE)))
-                !good & (thisfile[this] %in% aliases1)
-            } else FALSE
+                           nm <- sub("\\.[Rr]d", "",
+                                     basename(names(aliases)))
+                           !good & (thisfile[this] %in% nm)
+                       } else FALSE
             db[this, "bad"] <- !good & !suspect
             if(mind_suspects)
                 db[this, "suspect"] <- suspect
@@ -4801,7 +4793,7 @@ function(package, dir, lib.loc = NULL)
     }
 
     unknown <- unique(unknown)
-    if (length(unknown)) {
+    if(length(unknown)) {
         ## respect _R_CHECK_XREFS_REPOSITORIES_ for this use
         repos <- .get_standard_repository_URLs(ForXrefs = TRUE)
         ## Also allow for additionally specified repositories.
@@ -4815,26 +4807,22 @@ function(package, dir, lib.loc = NULL)
         miss <- if(inherits(known, "try-error")) TRUE
         else unknown %in% c(known, c("GLMMGibbs", "survnnet", "yags"))
         ## from CRANextras
-        if(any(miss))
-            message(sprintf(ngettext(sum(miss),
-                                     "Package unavailable to check Rd xrefs: %s",
-                                     "Packages unavailable to check Rd xrefs: %s"),
-                             paste(sQuote(unknown[miss]), collapse = ", ")),
-                    domain = NA)
-        if(any(!miss))
-            message(sprintf(ngettext(sum(!miss),
-                                     "Unknown package %s in Rd xrefs",
-                                     "Unknown packages %s in Rd xrefs"),
-                             paste(sQuote(unknown[!miss]), collapse = ", ")),
-                    domain = NA)
+        unavailable <- unknown[miss]
+        unknown <- unknown[!miss]
     }
+        
     ## The bad ones:
     bad <- db[, "bad"] == "TRUE"
+
     out <- list(bad = split(db[bad, "report"], db[bad, "File"]))
     if(mind_suspects && any(ind <- db[, "suspect"] == "TRUE")) {
         out <- c(out, list(suspect = split(db[ind, "report"],
                                            db[ind, "File"])))
     }
+    out <- c(out, Filter(length,
+                         list(unknown = unknown,
+                              undeclared = undeclared,
+                              unavailable = unavailable)))
     structure(out, class = "check_Rd_xrefs")
 }
 
@@ -4843,23 +4831,39 @@ function(x, ...)
 {
     xb <- x$bad
     xs <- x$suspect
-    if(length(xb) || length(xs)) {
+    if(any(lengths(x)) > 0L) {
         .fmtb <- function(i) {
-            c(gettextf("Missing link or links in Rd file '%s':",
+            c(gettextf("Missing link(s) in Rd file '%s':",
                        names(xb)[i]),
               ## NB, link might be empty, and was in mvbutils
               .pretty_format(unique(xb[[i]])),
               "")
         }
         .fmts <- function(i) {
-            c(gettextf("Non-file package-anchored link(s) in Rd file '%s':",
+            c(gettextf("Non-topic package-anchored link(s) in Rd file '%s':",
                        names(xs)[i]),
               .pretty_format(unique(xs[[i]])),
               "")
         }
-        c(unlist(lapply(seq_along(xb), .fmtb)),
+        c(if(length(y <- x$undeclared))
+              sprintf(ngettext(length(y),
+                               "Undeclared package %s in Rd xrefs",
+                               "Undeclared packages %s in Rd xrefs"),
+                      paste(sQuote(y), collapse = ", ")),
+          if(length(y <- x$unavailable))
+              sprintf(ngettext(length(y),
+                               "Package unavailable to check Rd xrefs: %s",
+                               "Packages unavailable to check Rd xrefs: %s"),
+                      paste(sQuote(y), collapse = ", ")),
+          if(length(y <- x$unknown))
+              sprintf(ngettext(length(y),
+                               "Unknown package %s in Rd xrefs",
+                               "Unknown packages %s in Rd xrefs"),
+                      paste(sQuote(y), collapse = ", ")),
+          unlist(lapply(seq_along(xb), .fmtb)),
           unlist(lapply(seq_along(xs), .fmts)),
-          strwrap(gettextf("See section 'Cross-references' in the 'Writing R Extensions' manual."))
+          if(length(xb) || length(xs))
+              strwrap(gettextf("See section 'Cross-references' in the 'Writing R Extensions' manual."))
           )
     } else {
         character()
@@ -4969,26 +4973,32 @@ function(x, ...)
 
     suppress_notes <-
         config_val_to_logical(Sys.getenv("_R_CHECK_PACKAGE_DATASETS_SUPPRESS_NOTES_",
-                                         "FALSE"))
+                                         "TRUE"))
 
     c(character(),
       if((n <- x$latin1) && !suppress_notes) {
-          sprintf(
-                  ngettext(n,
-                   "Note: found %d marked Latin-1 string",
-                   "Note: found %d marked Latin-1 strings"), n)
+          sprintf(ngettext(n,
+                           "Note: found %d marked Latin-1 string",
+                           "Note: found %d marked Latin-1 strings"),
+                  n)
       },
       if((n <- x$utf8) && !suppress_notes) {
-          sprintf(
-                  ngettext(n,
+          sprintf(ngettext(n,
                            "Note: found %d marked UTF-8 string",
-                           "Note: found %d marked UTF-8 strings"), n)
+                           "Note: found %d marked UTF-8 strings"),
+                  n)
       },
+      ## if(n <- x$bytes) { ## elevated to a Warning in 4.5.0
+      ##     sprintf(
+      ##             ngettext(n,
+      ##                      "Warning: found %d string marked as \"bytes\"",
+      ##                      "Warning: found %d strings marked as \"bytes\""), n)
+      ## },
       if((n <- x$bytes) && !suppress_notes) {
-          sprintf(
-                  ngettext(n,
+          sprintf(ngettext(n,
                            "Note: found %d string marked as \"bytes\"",
-                           "Note: found %d strings marked as \"bytes\""), n)
+                           "Note: found %d strings marked as \"bytes\""),
+                  n)
       },
       if(nr <- nrow(x$unknown)) {
           msg <- ngettext(nr,
@@ -7952,7 +7962,7 @@ function(dir, localOnly = FALSE, pkgSize = NA)
                       collapse = "\n")
         }
     }
-    
+
     skip_dates <-
         config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_SKIP_DATES_",
                                          "FALSE"))
@@ -10342,7 +10352,7 @@ function(x, ...)
 
 ### ** .bad_DESCRIPTION_URL_field_parts
 
-.bad_DESCRIPTION_URL_field_parts <- 
+.bad_DESCRIPTION_URL_field_parts <-
 function(s)
 {
     if(is.na(s)) return(character())
@@ -10356,7 +10366,7 @@ function(s)
         z[!grepl("^<?(svn://|doi:)", z)]
     }
 }
-        
+
 
 ### Local variables: ***
 ### mode: outline-minor ***

@@ -71,7 +71,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2022  The R Core Team
+ *  Copyright (C) 1997--2024  The R Core Team
  *  Copyright (C) 2010 Duncan Murdoch
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -96,9 +96,6 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Parse.h>
-#ifndef STRICT_R_HEADERS
-# define STRICT_R_HEADERS
-#endif
 #include <R_ext/RS.h>           /* for R_chk_* allocation */
 #include <ctype.h>
 #include <R_ext/Print.h>
@@ -749,9 +746,9 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   186,   186,   187,   188,   191,   192,   193,   194,   195,
-     196,   198,   199,   201,   202,   203,   204,   205,   206,   207,
-     209,   209,   213,   215,   217,   218
+       0,   183,   183,   184,   185,   188,   189,   190,   191,   192,
+     193,   195,   196,   198,   199,   200,   201,   202,   203,   204,
+     206,   206,   210,   212,   214,   215
 };
 #endif
 

@@ -528,7 +528,7 @@ add_dummies <- function(dir, Log)
                     as.POSIXct(gsub(".*\"datetime\":\"([^Z]*).*", "\\1", foo),
                                "UTC", "%Y-%m-%dT%H:%M:%S")
                 }, error = function(e) NA)
-                if(identical(NA, now)) {
+                if(identical(NA, now)) { # try http (no 's')
                     now <- tryCatch({
                         foo <- suppressWarnings(readLines("http://worldtimeapi.org/api/timezone/etc/UTC",
                                                           warn = FALSE))
@@ -1194,6 +1194,19 @@ add_dummies <- function(dir, Log)
            }
         }
 
+        if(!is.na(lang <- db["Language"])) {
+            s <- unlist(strsplit(lang, ", *"), use.names = FALSE)
+            s <- s[!grepl(re_anchor(.make_RFC4646_langtag_regexp()), s)]
+            if(length(s)) {
+                if(!any) noteLog(Log)
+                any <- TRUE
+                printLog(Log,
+                         paste(c("Language field contains the following invalid language tags:",
+                                 paste0("  ", s)),
+                               collapse = "\n"),
+                         "\n")
+            }
+        }
 
         out <- format(.check_package_description2(dfile))
         if (length(out)) {
@@ -2430,7 +2443,7 @@ add_dummies <- function(dir, Log)
             out <- R_runR0(Rcmd, R_opts2, "R_DEFAULT_PACKAGES=NULL")
             if (length(out)) {
                 ## <FIXME>
-                ## We should really use R() instead if R_runR0() to get
+                ## We should really use R() instead of R_runR0() to get
                 ## the computed check results object itself.
                 ## Change eventually ...
                 ## </FIXME>
@@ -2487,10 +2500,18 @@ add_dummies <- function(dir, Log)
                           sprintf("tools:::.check_Rd_xrefs(dir = \"%s\")\n", pkgdir))
             any <- FALSE
             out <- R_runR0(Rcmd, R_opts2, "R_DEFAULT_PACKAGES=NULL")
+            ## <FIXME>
+            ## tools:::.check_Rd_xrefs() has localized messages, so
+            ## grepping on its output is not a good idea.
+            ## We should really use R() instead of R_runR0() to get
+            ## the computed check results object itself.
+            ## </FIXME>
             if(length(out) &&
-               !all(grepl("(Package[s]? unavailable to check|Unknown package.*in Rd xrefs|Undeclared package.*in Rd xrefs)",
-                          out))) {
-                warningLog(Log)
+               any((indb <- startsWith(out,
+                                       "Missing link(s) in Rd file")) |
+                   (inds <- startsWith(out,
+                                       "Non-topic package-anchored link(s) in Rd file")))) {
+                if(any(indb)) warningLog(Log) else noteLog(Log)
                 any <- TRUE
                 printLog0(Log, paste(c(out, ""), collapse = "\n"))
                 out <- NULL
@@ -2533,7 +2554,9 @@ add_dummies <- function(dir, Log)
 
             if(length(out)) {
                 if(!any) {
-                    if(R_check_use_install_log)
+                    if(R_check_use_log_info &&
+                       !length(grep("Unknown package.*in Rd xrefs",
+                                    out)))
                         infoLog(Log)
                     else
                         noteLog(Log)
@@ -7232,7 +7255,7 @@ add_dummies <- function(dir, Log)
 
     R_check_use_log_info <-
         config_val_to_logical(Sys.getenv("_R_CHECK_LOG_USE_INFO_",
-                                         "FALSE"))
+                                         "TRUE"))
 
     if (as_cran) {
         if (extra_arch) {
@@ -7286,8 +7309,9 @@ add_dummies <- function(dir, Log)
         Sys.setenv("_R_CHECK_RD_NOTE_LOST_BRACES_" = "TRUE")
         Sys.setenv("_R_CHECK_MBCS_CONVERSION_FAILURE_" = "TRUE")
         Sys.setenv("_R_CHECK_VALIDATE_UTF8_" = "TRUE")
-        Sys.setenv("_R_CXX_USE_NO_REMAP_" = "TRUE")
-        Sys.setenv("_R_USE_STRICT_R_HEADERS_" = "TRUE")
+## next two are the defailt as from R 4.5.0
+##        Sys.setenv("_R_CXX_USE_NO_REMAP_" = "TRUE")
+##        Sys.setenv("_R_USE_STRICT_R_HEADERS_" = "TRUE")
         Sys.setenv("_R_CHECK_S3_METHODS_SHOW_POSSIBLE_ISSUES_" = "TRUE")
         Sys.setenv("_R_CHECK_XREFS_NOTE_MISSING_PACKAGE_ANCHORS_" = "TRUE")
         R_check_vc_dirs <- TRUE

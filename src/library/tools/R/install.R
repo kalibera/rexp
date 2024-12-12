@@ -21,8 +21,6 @@
 #### R based engine for  R CMD INSTALL SHLIB Rprof
 ####
 
-##' @param args
-
 ## R developers can use this to debug the function by running it
 ## directly as tools:::.install_packages(args), where the args should
 ## be what commandArgs(TRUE) would return, that is a character vector
@@ -49,7 +47,6 @@ if(FALSE) {
 
 
 
-##' @return ...
 .install_packages <- function(args = NULL, no.q = interactive(), warnOption = 1)
 {
     ## calls system() on Windows for
@@ -1008,12 +1005,13 @@ if(FALSE) {
                                    paste(sQuote(miss), collapse = ", ")),
                            pkg_name,
 			   sprintf("\nPerhaps try a variation of:\ninstall.packages(c(%s))",
-				   paste(shQuote(miss), collapse = ", ")))
+				   paste(sQuote(miss, FALSE), collapse = ", ")))
             else if (length(miss))
                 pkgerrmsg(sprintf("dependency %s is not available",
-                                  sQuote(miss)), pkg_name,
+                                  sQuote(miss)),
+                          pkg_name,
                           sprintf("\nPerhaps try a variation of:\ninstall.packages(%s)",
-                                  shQuote(miss)))
+                                  sQuote(miss, FALSE)))
          }
 
         starsmsg(stars, "installing *source* package ",
@@ -1603,7 +1601,7 @@ if(FALSE) {
 	    file.remove(Sys.glob(file.path(instdir, "demo", "*")))
 	    res <- try(.install_package_demos(".", instdir))
 	    if (inherits(res, "try-error"))
-		pkgerrmsg("ERROR: installing demos failed")
+		pkgerrmsg("installing demos failed", pkg_name)
 	    Sys.chmod(Sys.glob(file.path(instdir, "demo", "*")), fmode)
 	}
 
@@ -2764,10 +2762,10 @@ if(FALSE) {
                         paste0("LTO_FC=", shQuote("$(LTO_FC_OPT)")))
                   else if(isFALSE(use_lto)) c("LTO=", "LTO_FC=")
                   )
-    if(config_val_to_logical(Sys.getenv("_R_CXX_USE_NO_REMAP_", "FALSE")))
+    if(config_val_to_logical(Sys.getenv("_R_CXX_USE_NO_REMAP_", "TRUE")))
          makeargs <- c(makeargs, "CXX_DEFS=-DR_NO_REMAP")
-    if(config_val_to_logical(Sys.getenv("_R_USE_STRICT_R_HEADERS_", "FALSE")))
-         makeargs <- c(makeargs, "XDEFS=-DSTRICT_R_HEADERS=1")
+##    if(config_val_to_logical(Sys.getenv("_R_USE_STRICT_R_HEADERS_", "FALSE")))
+##         makeargs <- c(makeargs, "XDEFS=-DSTRICT_R_HEADERS=1")
 
     cmd <- paste(MAKE, p1(paste("-f", shQuote(makefiles))), p1(makeargs),
                  p1(makeobjs))
@@ -2847,7 +2845,7 @@ if(FALSE) {
         order(xx, toupper(x), x)
     }
 
-    html_header <- function(pkg, title, version, conn)
+    html_header <- function(pkg, title, version, encoding, conn)
     {
         cat(paste(HTMLheader(title, Rhome="../../..",
                              up="../../../doc/html/packages.html",
@@ -2856,16 +2854,25 @@ if(FALSE) {
            '<h2>Documentation for package &lsquo;', pkg, '&rsquo; version ',
             version, '</h2>\n\n', sep = "", file = conn)
 
-	cat('<ul><li><a href="../DESCRIPTION">DESCRIPTION file</a>.</li>\n', file=conn)
+	cat('<ul><li><a href="../DESCRIPTION" type="text/plain',
+            ## These days we should really always have UTF-8 ...
+            if(!is.na(encoding) && (encoding == "UTF-8"))
+                "; charset=utf-8",
+            '">DESCRIPTION file</a>.</li>\n',
+            sep = "", file=conn)
 	if (file.exists(file.path(outDir, "doc")))
-	    cat('<li><a href="../doc/index.html">User guides, package vignettes and other documentation.</a></li>\n', file=conn)
+	    cat('<li><a href="../doc/index.html">User guides, package vignettes and other documentation.</a></li>\n',
+                file=conn)
 	if (file.exists(file.path(outDir, "demo")))
 	    cat('<li><a href="../demo">Code demos</a>.  Use <a href="../../utils/help/demo">demo()</a> to run them.</li>\n',
-		 sep = "", file=conn)
-	if (any(file.exists(file.path(outDir,
-                                      c("NEWS", "NEWS.Rd", "NEWS.md")))))
-	    cat('<li><a href="../NEWS">Package NEWS</a>.</li>\n',
-		 sep = "", file=conn)
+                sep = "", file=conn)
+        for(nfile in c("NEWS", "NEWS.Rd", "NEWS.md")) {
+            if(file.exists(file.path(outDir, nfile))) {
+                cat('<li><a href="../', nfile, '">Package NEWS</a>.</li>\n',
+                    sep = "", file=conn)
+                break
+            }
+        }
 
         cat('</ul>\n\n<h2>Help Pages</h2>\n\n\n',
             sep ="", file = conn)
@@ -2983,7 +2990,7 @@ if(FALSE) {
     ## No need to handle encodings: everything is in UTF-8
 
     html_header(desc["Package"], htmlize(desc["Title"], TRUE),
-                desc["Version"], outcon)
+                desc["Version"], desc["Encoding"], outcon)
 
     use_alpha <- (nrow(M) > 100)
     if (use_alpha) {

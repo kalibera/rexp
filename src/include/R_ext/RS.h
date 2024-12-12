@@ -38,6 +38,12 @@
 
 #include <Rconfig.h>		/* for HAVE_F77_UNDERSCORE */
 
+/* Temprorary fix for a package that assumes this is set. */
+
+#ifndef STRICT_R_HEADERS
+# define STRICT_R_HEADERS
+#endif
+
 #ifdef  __cplusplus
 extern "C" {
 #endif
@@ -50,15 +56,6 @@ extern void *R_chk_realloc(void *, R_SIZE_T);
 extern void R_chk_free(void *);
 extern void *R_chk_memcpy(void *, const void *, R_SIZE_T);
 extern void *R_chk_memset(void *, int, R_SIZE_T);
-
-#ifndef STRICT_R_HEADERS
-/* S-PLUS 3.x but not 5.x NULLed the pointer in Free.
-   Not API.
-*/
-#define Calloc(n, t)   (t *) R_chk_calloc( (R_SIZE_T) (n), sizeof(t) )
-#define Realloc(p,n,t) (t *) R_chk_realloc( (void *)(p), (R_SIZE_T)((n) * sizeof(t)) )
-#define Free(p)        (R_chk_free( (void *)(p) ), (p) = NULL)
-#endif
 
 /* API */
 #define R_Calloc(n, t)   (t *) R_chk_calloc( (R_SIZE_T) (n), sizeof(t) )

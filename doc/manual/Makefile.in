@@ -211,7 +211,9 @@ version.texi: Makefile $(top_srcdir)/VERSION $(SVN_REV)
 	  v="$${vv} (`sed -e 1d -e 's/^Last Changed Date: //' $(SVN_REV)`)"; \
 	  $(ECHO) "@set VERSION $${v}" >> $@; \
 	  rwv=`$(R_EXE) -f $(top_srcdir)/src/gnuwin32/fixed/rwver.R`; \
-	  $(ECHO) "@set RWVERSION $${rwv}" >> $@ )
+	  $(ECHO) "@set RWVERSION $${rwv}" >> $@; \
+	  rwtv=`$(ECHO) $${rwv} | sed -e 's/\.[^.]\+$$//'` >> $@; \
+	  $(ECHO) "@set RWTVERSION $${rwtv}" >> $@ )
 	@if test "$(R_PAPERSIZE)" = "a4"; then \
 	  $(ECHO) "@afourpaper" >> $@ ; \
 	fi
@@ -436,10 +438,12 @@ distdir: $(DISTFILES)
 	  exit 1; \
 	fi
 #	$(distdir)/doc/html has already been created
+#	NB: the pre-built R-admin.html is referenced from INSTALL and configure
 	@$(TEXI2HTML) --no-headers --number-sections \
 	  $(srcdir)/R-admin.texi -I$(srcdir) \
 	  -o $(distdir)/../html/R-admin.html
 
+## referenced from the top-level README
 front-matter: ${top_builddir}/doc/RESOURCES ${top_builddir}/doc/FAQ
 
 ${top_builddir}/doc/RESOURCES: $(srcdir)/resources.texi

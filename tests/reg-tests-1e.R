@@ -1531,6 +1531,145 @@ stopifnot(exprs = {
 ## all these classed errors are new in R >= 4.5.0
 
 
+## colSums / rowSums(*, dims = <not scalar>) - PR#18811
+A <- array(1:120, dim=2:5)
+ch1 <- tryCmsg(colSums (A, dims=1:2))
+ch2 <- tryCmsg(rowMeans(A, dims=1:2))
+stopifnot(identical(ch1, ch2),
+          identical(ch1, "invalid 'dims'"))
+## error msg was  "'length = 2' in coercion to 'logical(1)'"
+
+
+## kappa(*, exact=TRUE)  for exactly singular cases - PR#18817
+for(x in list(x3 = {n <- 3L; x <- diag(n); x[n,n] <- 0; x},
+              z2 = rbind(1:2, 0),
+              D0 = diag(0, nrow = 3))) { print(x)
+  stopifnot(exprs = {
+    identical(Inf,      kappa(x, exact = TRUE))
+    identical(Inf,      kappa(x, exact = TRUE, norm = "2"))
+    identical(Inf, .kappa_tri(x, exact = TRUE, norm = "2"))
+  })
+}
+## kappa(..)  returned 1 or {0 with a warning} in R <= 4.4.2
+
+
+## hexadecimal contants with and without exponent.
+0x1.234p0
+0x1.234p7
+0x1.234p-7
+0x1.234
+## last was a (deliberate) parse error in R <= 4.4.2, but not as documented.
+
+
+## PR#18822 -- debug("<S4-generic>")
+m0 <- selectMethod("Ops", signature = (SIG <- c("array", "array")))
+stopifnot(is.function(m0), inherits(m0, "PossibleMethod"))
+debug    ("Ops", signature = SIG) # gave Error
+(m1 <- selectMethod("Ops", SIG))
+untrace("Ops", signature=SIG) ; m2 <- selectMethod("Ops", SIG)
+debugonce("Ops", signature = SIG) # Error ..
+m3 <- selectMethod("Ops", SIG)
+untrace("Ops", signature=SIG) ; m4 <- selectMethod("Ops", SIG)
+stopifnot(exprs = {
+    is(m0, "MethodDefinition")
+    identical(m0, m2)
+    identical(m0, m4)
+    is(m1, "MethodDefinitionWithTrace")
+    is(m3, "MethodDefinitionWithTrace") # but not the same
+})
+## both debug(..) and debugonce(..) failed
+
+
+## debugonce(<simple>) error when called twice --  PR#18824
+setGeneric("zzz", function(x) standardGeneric("zzz"))
+setMethod("zzz", c(x = "NULL"), function(x) NULL)
+m0 <- selectMethod(zzz, signature = "NULL")
+debugonce(zzz, signature = "NULL")
+m1 <- selectMethod(zzz, signature = "NULL")
+debugonce(zzz, signature = "NULL") # gave error "cannot use 'at' argument unless ..."
+m2 <- selectMethod(zzz, signature = "NULL")
+untrace(zzz, signature = "NULL")
+m3 <- selectMethod(zzz, signature = "NULL")
+stopifnot(exprs = {
+    is(m0, "MethodDefinition")
+    is(m1, "MethodDefinitionWithTrace")
+    identical(m0, m3)
+    identical(m1, m2)
+})
+## 2nd debugonce() call failed in R <= 4.4.2
+
+
+## options(scipen = <invalid>)
+scipenO <- getOption("scipen")
+assertErrV(options(scipen = NULL))# would work (but ..) in R <= 4.4.2
+assertErrV(options(scipen = 1:2)) # would just work
+assertErrV(options(scipen = 1e99))# would "work" w/ 2 warnings and invalid setting
+stopifnot(identical(getOption("scipen"), scipenO))# unchanged
+tools::assertWarning(verbose=TRUE, options(scipen = -100  ))# warns and sets to min = -9
+stopifnot(identical(getOption("scipen"), -9L))
+tools::assertWarning(verbose=TRUE, options(scipen = 100000))# warns and sets to max = 9999
+stopifnot(identical(getOption("scipen"), 9999L))
+## setting to NULL  would invalidate as.character(Sys.time())
+
+
+## PR#18369 (patch by Mikael Jagan)
+stopifnot(!isGeneric(fdef = print), !isGeneric(fdef = c), isGeneric(fdef = show))
+## gave Error  argument "f" is missing ... in R <= 4.4.2
+
+
+## [cr]bind invoilving raw vectors -- follow up to r57065
+x <- as.raw(1:6)
+stopifnot(
+    identical(cbind(x, c(TRUE,FALSE)), cbind(x=rep(TRUE,6), c(TRUE,FALSE))),
+    identical(cbind(x, 1:6), cbind(x=1:6, 1:6)),
+    identical(cbind(x, pi), cbind(x=1:6, pi)),
+    identical(cbind(x, pi+1i), cbind(x=1:6, pi+1i)),
+
+    # first three were wrong before R 4.4.3
+    identical(rbind(x, c(TRUE,FALSE)), rbind(x=rep(TRUE,6), c(TRUE,FALSE))),
+    identical(rbind(x, 1:6), rbind(x=1:6, 1:6)),
+    identical(rbind(x, pi), rbind(x=1:6, pi)),
+    identical(rbind(x, pi+1i), rbind(x=1:6, pi+1i))
+)
+
+
+## [cr]bind had segfaults when R was bui;t for LTO and C99 inlining sematics
+## The semantics (inherited from S) are that zero-length inputs
+## (including NULL) are ignored unless all inputs are zero-length.
+## next four segafaulted
+cbind(NULL, logical(0))
+cbind(NULL, integer(0))
+rbind(NULL, integer(0))
+rbind(NULL, logical(0))
+## and these could have
+cbind(NULL, double(0))
+cbind(NULL, complex(0))
+rbind(NULL, double(0))
+rbind(NULL, complex(0))
+## and check some other edge cases
+(X <- matrix(integer(0),2,0))
+stopifnot(
+    is.null(cbind(NULL)),
+    is.null(rbind(NULL)),
+    is.null(cbind(NULL, NULL)),
+    is.null(rbind(NULL, NULL)),
+    dim(cbind(NULL, pi)) == c(1L, 1L),
+    dim(rbind(NULL, pi)) == c(1L, 1L),
+    # zero-length inputs are ignored except for zero-length result
+    identical(cbind(X, X), X),
+    identical(cbind(X, 1:2), matrix(1:2))
+)
+
+
+## isGeneric(., getName = TRUE, ..) w/ or w/o fdef -- PR#18829
+setClass("zzz")
+setMethod("+", c(e1 = "zzz", e2 = "missing"), function(e1, e2) e1)
+(gen <- isGeneric("+", fdef = `+`, getName = TRUE)) # wrongly returned just TRUE
+stopifnot(identical(gen, isGeneric("+", getName = TRUE)), # the latter always worked
+          identical(gen, structure("+", package = "base")),
+          isGeneric("+"), isGeneric("+", fdef = `+`))
+
+
 
 ## keep at end
 rbind(last =  proc.time() - .pt,

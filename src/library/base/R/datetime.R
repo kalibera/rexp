@@ -382,23 +382,35 @@ format.POSIXlt <- function(x, format = "", usetz = FALSE,
                            digits = getOption("digits.secs"), ...)
 {
     if(!inherits(x, "POSIXlt")) stop("wrong class")
-    if(any(f0 <- format == "")) {
-        ## need list [ method here.
-    times <- unlist(unclass(x)[1L:3L])[f0]
-    secs <- x$sec[f0]; secs <- secs[is.finite(secs)]
-        np <- if(is.null(digits)) 0L else min(6L, digits)
-        if(np >= 1L) # no unnecessary trailing '0' :
+    nf <- length(format)
+    useDig <- function(secs, digits) {
+        secs <- secs[is.finite(secs)]
+        np <- min(6L, digits)
+        if(np >= 1L) # no unnecessary trailing '0'; use trunc() as .Internal() code:
             for (i in seq_len(np)- 1L)
-                if(all( abs(secs - round(secs, i)) < 1e-6 )) {
+                if(all( abs(secs - trunc(secs*(ti <- 10^i))/ti) < 1e-6 )) {
                     np <- i
                     break
                 }
-    format[f0] <-
-        if(all(times[is.finite(times)] == 0)) "%Y-%m-%d"
-        else if(np == 0L) "%Y-%m-%d %H:%M:%S"
-        else paste0("%Y-%m-%d %H:%M:%OS", np)
+        np
     }
-    .Internal(format.POSIXlt(x, format, usetz))
+    if(any(f0 <- format == "")) {
+        x_ <- if(nf == 1L) x else x[f0]  # any(f0) & nf = 1  ==>  x[f0] = x
+        np <- if(!is.null(digits)) useDig(x_$sec, digits) else 0L
+        ## need list `[` method here to get 1:3 ~ {sec, min, hour} :
+        times <- unlist(unclass(x_)[1L:3L], use.names = FALSE)
+        format[f0] <-
+            if(all(times[is.finite(times)] == 0)) "%Y-%m-%d"
+            else if(np == 0L) "%Y-%m-%d %H:%M:%S"
+            else paste0("%Y-%m-%d %H:%M:%OS", np)
+    }
+    if(!missing(digits) && !is.null(digits) && digits != getOption("digits.secs", 0L) &&
+       any(OS. <- grepl("%OS($|[^0-9])", format))) {
+        x_ <- if(nf == 1L) x else x[OS.]
+        digits <- useDig(x_$sec, digits)
+    }
+    ## C code in do_formatPOSIXlt()  *does*  recycle  {x, format}  as needed:
+    .Internal(format.POSIXlt(x, format, usetz, digits))
 }
 
 ## prior to 2.9.0 the same as format.POSIXlt.
@@ -424,12 +436,13 @@ format.POSIXct <- function(x, format = "", tz = "", usetz = FALSE, ...)
 
 ## keep in sync with  print.Date()  in ./dates.R
 print.POSIXct <-
-print.POSIXlt <- function(x, tz = "", usetz = TRUE, max = NULL, ...)
+print.POSIXlt <- function(x, tz = "", usetz = TRUE, max = NULL,
+                          digits = getOption("digits.secs"), ...)
 {
     if(is.null(max)) max <- getOption("max.print", 9999L)
     FORM <- if(missing(tz))
-         function(z) format(z,          usetz = usetz)
-        else function(z) format(z, tz = tz, usetz = usetz)
+             function(z) format(z,        usetz=usetz, digits=digits)
+        else function(z) format(z, tz=tz, usetz=usetz, digits=digits)
     if(max < length(x)) {
     print(FORM(x[seq_len(max)]), max=max+1, ...)
     cat(" [ reached 'max' / getOption(\"max.print\") -- omitted",

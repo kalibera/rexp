@@ -95,6 +95,51 @@
       \item Added function \code{sha256sum()} in package \pkg{tools}
       analogous to \code{md5sum()} implementing the \abbr{SHA}-256 hashing
       algorithm.
+
+      \item The \code{xtfrm()} method for class \code{"AsIs"} is now
+      considerably faster thanks to a patch provided by \I{Ivan Krylov}.
+
+      \item The \code{merge()} method for data frames will no longer
+      convert row names used for indexing using \code{I()}, which will
+      lead to faster execution in cases where \code{sort = TRUE} and
+      \code{all.x} and/or \code{all.y} are set to \code{TRUE}.
+
+      \item \pkg{methods} package internal \code{.requirePackage()} now
+      calls \code{requireNamespace(p)} instead of \code{require(p)}, hence
+      no longer adding packages to the \code{search()} path in cases
+      methods or class definitions are needed.  Consequently, previous
+      workflows relying on the old behaviour will have to be amended by
+      adding corresponding \code{library(p)} calls.
+
+      \item More R level messages use a common format containing
+      \code{"character string"} for more consistency and less translation
+      work.
+
+      \item \code{available.packages()} and \code{install.packages()} get
+      an optional switch \code{cache_user_dir}, somewhat experimentally.
+
+      \item The \code{sunspot.month} data have been updated to Oct 2024;
+      because of recalibration also historical numbers are changed, and we
+      keep the previous data as \code{sunspot.m2014} for
+      reproducibility.
+
+      \item The `quartz()` device now supports alpha masks.
+      Thanks to \I{George Stagg}, \I{Heather Turner}, and
+      \I{Tomek Gieorgijewski}.
+
+      \item The \code{print()} method for date-time objects (\code{POSIX.t})
+      gets an optional \code{digits} argument for \emph{fractional}
+      seconds, passed to improved \code{format.POSIXlt()}; consequently,
+      \code{print(<date.time>, digits = n)} allows to print fractions of
+      seconds.
+
+      \item \code{install.packages()} and \code{download.packages()}
+      download packages simultaneously using \code{libcurl}, significantly
+      reducing download times when installing or downloading multiple
+      packages.
+
+      \item Status reporting in \code{download.file()} has been extended to
+      report the outcome for individual files in simultaneous download.
     }
   }
 
@@ -127,6 +172,8 @@
       \code{SignatureMethod} were made defunct, as were the
       \code{"MethodsList"} branches of functions \code{assignMethodsMetaData},
       \code{finalDefaultMethod}, and \code{MethodAddCoerce}.
+
+      \item \code{getMethods(*, table=TRUE)} is also deprecated.
     }
   }
 
@@ -152,18 +199,56 @@
       now signals an error if the new parent is not an environment or if
       the change would create a cycle in the parent chain.
 
-      \item The \sQuote{Writing R Extensions} \I{Texinfo} source now
+      \item \code{SET_TYPEOF} now signals an error unless the old and
+      new types have compatible memory structure and content. Use of
+      \code{SET_TYPE} in package C code should be avoided and may be
+      deprecated in the near future. It is better to allocate an object
+      of the desired type in the first place.
+
+      \item The set of LAPACK (double and complex) routines in headers
+      \file{R_ext/Lapack.h} and \file{R_ext/Applic.h} has been extended,
+      mostly to routines actually in use by packages.
+
+      \item Memory allocation messages now use the (non-SI notation)
+      \code{"Mb"}, \code{"Gb"} , \dots, and \code{"Mbytes"} strings as
+      \emph{arguments} instead of as part of the (translatable format)
+      string.  This is one step for \PR{18297}; from \I{Henrik Bengtsson}.
+
+      \item Header \file{R_ext/Constants.h} (included by \file{R.h}) now
+      always includes header \file{float.h} or \file{cfloat} for
+      constants such as \code{DBL_MAX}.
+
+      \item Strict R headers are now the default.  This removes the
+      legacy definitions of \code{PI}, \code{Calloc}, \code{Realloc} and
+      \code{Free}: use \code{M_PI}, \code{R_Calloc}, \code{R_Realloc} or
+      \code{R_Free} instead.
+
+      \emph{\I{Pro tem}} \code{STRICT_R_HEADERS} is defined in header
+      \file{R_ext/RS.h} if not already defined.  This is not used in \R
+      itself and will be removed before release.
+
+      \item The deprecated and seemingly never-used S-compatibility
+      macros \code{F77_COM} and \code{F77_COMDECL} have been removed
+      from header \file{R_ext/RS.h}.
+    }
+  }
+
+  \subsection{C-LEVEL API}{
+    \itemize{
+      \item The \sQuote{Writing R Extensions} \I{TexInfo} source now
       contains very experimental annotations for more clearly
       identifying the API status of C entry points. These annotations
       are used to produce indices for API, experimental API, and
       embedded API entry points in the rendered versions.  This is very
       preliminary and may be dropped if a better approach emerges.
 
-      \item \code{SET_TYPEOF} now signals an error unless the old and
-      new types have compatible memory structure and content. Use of
-      \code{SET_TYPE} in package C code should be avoided and may be
-      deprecated in the near future. It is better to allocate an object
-      of the proper type in the first place.
+      Also now for Fortran-callable entry points which are part of the API.
+
+      \item \sQuote{Writing R Extensions} has a new section
+      \sQuote{Moving into C API compliance} to help package authors move
+      away from using non-API endpoints. This section will continue to
+      be updated as work on clarifying and tightening the C API
+      continues.
 
       \item New API function \code{R_mkClosure}. This checks that its
       arguments are valid and should be used instead of
@@ -175,9 +260,10 @@
       closure components.  The existing functions \code{R_ClosureExpr}
       and \code{R_BytecodeExpr} have also been added to the API.
 
-      \item New API function \code{R_ParentEnv}.
+      \item New API function \code{R_ParentEnv} corresponding to \R's
+      \code{parent.env()}.
 
-      \item Some non-API entry points have been added to those reported
+      \item Further non-API entry points have been added to those reported
       by \command{R CMD check}: \code{COMPLEX0}, \code{ddfind},
       \code{DDVAL}, \code{ENSURE_NAMEDMAX}, \code{ENVFLAGS},
       \code{FRAME}, \code{HASHTAB}, \code{INTERNAL}, \code{IS_ASCII},
@@ -189,70 +275,58 @@
       in public header files will be removed in the near future, and
       they will be hidden where possible.
 
-      \item \sQuote{Writing R Extensions} has a new section
-      \sQuote{Moving into C API compliance} to help package authors move
-      away from using non-API endpoints. This section will continue to
-      be updated as work on clarifying and tightening the C API
-      continues.
+      \item Some \command{R CMD check} \samp{NOTE}s on the use of
+      non-API entry points have been upgraded to \samp{WARNING}s in
+      preparation for removing declarations and, where possible, hiding
+      these entry points.
 
-      \item Some \samp{NOTE}s for use of non-API entry points have been
-      upgraded to \samp{WARNING}s in preparation for removing
-      declarations and, where possible, hiding these entry points.
-
-      \item The set of LAPACK (double and complex) routines in API headers
-      \file{R_ext/Lapack.h} and \file{R_ext/Applic.h} has been extended,
-      mostly to routines actually in use from packages.
-
-      \item Additional non-API entry points added to those reported by
-      \command{R CMD check}: \code{IS_LONG_VEC}, \code{PRCODE},
-      \code{PRENV}, \code{PRVALUE}, \code{R_nchar},
+      \item Additional non-API entry points have been added to those
+      reported by \command{R CMD check}: \code{IS_LONG_VEC},
+      \code{PRCODE}, \code{PRENV}, \code{PRVALUE}, \code{R_nchar},
       \code{Rf_NonNullStringMatch}, \code{R_shallow_duplicate_attr},
-      \code{Rf_StringBlank},
-      \code{SET_TYPEOF}, \code{TRUELENGTH}, \code{XLENGTH_EX},
-      and \code{XTRUELENGTH}.
-
-      \item Memory allocation messages now use the (non-standard notation)
-      \code{"Mb"}, \code{"Gb"} , \dots, and \code{"Mbytes"} strings as
-      \emph{arguments} instead of as part of the (translatable format)
-      string.  This is one step for \PR{18297}; from \I{Henrik Bengtsson}.
-
-      \item Header \file{R_ext/Constants.h} (included by \file{R.h}) now
-      includes header \file{float.h} or \file{cfloat} for constants such
-      as \code{DBL_MAX} even if \file{STRICT_R_HEADERS} is defined.
-
-      \item It is intended that \file{STRICT_R_HEADERS} will become the
-      default prior to release.  This will remove the legacy definitions
-      of \code{PI}, \code{Calloc}, \code{Realloc} and \code{Free}: use
-      \code{M_PI}, \code{R_Calloc}, \code{R_Realloc} or \code{R_Free}
-      instead.
-
-      \item The deprecated S-compatibility macros \code{F77_COM} and
-      \code{F77_COMDECL} have been removed from header \file{R_ext/RS.h}.
+      \code{Rf_StringBlank}, \code{SET_TYPEOF}, \code{TRUELENGTH},
+      \code{XLENGTH_EX}, and \code{XTRUELENGTH}.
     }
   }
 
   \subsection{UTILITIES}{
     \itemize{
-      \item \command{R CMD check --as-cran} will compile C++ code with
-      \code{-DR_NO_REMAP}.
+      \item \command{R CMD INSTALL} (and hence \command{check}) now by
+      default compile C++ code with \code{-DR_NO_REMAP}.  For the time
+      being this can be reverted by setting environment
+      variable\env{_R_CXX_USE_NO_REMAP_} to a false value (but that will
+      be removed in the near future).
+
+      `Writing R Extensions' has been revised to describe the remapped
+      entry points, for with the \code{Rf_} prefix remains optional when
+      used from C code (but is recommended for new C code).
 
       \item \command{R CMD check --as-cran} notes bad parts in the
       \file{DESCRIPTION} file's URL fields.
 
-      \item Installation will define \code{STRICT_R_HEADERS} if
-      environment variable \env{_R_USE_STRICT_R_HEADERS_} is set to a
-      true value: this is done by \command{R CMD check --as-cran}.
-
       \item \command{R CMD check} now reports more warnings on
-      long-deprecated/obsolete Fortran features from
+      long-deprecated/obsolete Fortran features reported by
       \command{gfortran -Wall}.  For hints on how to modernize these,
       see
       \url{https://fortranwiki.org/fortran/show/Modernizing+Old+Fortran}.
+
+      \item Since almost all supported \R versions now use UTF-8,
+      \command{R CMD check} no longer by default reports on marked
+      UTF-8 or Latin-1 strings in character data.  Set environment
+      variable \env{_R_CHECK_PACKAGE_DATASETS_SUPPRESS_NOTES_} to a
+      false value for the previous behaviour.
+
+      \item \code{tools::checkDocFiles()} notes more cases of
+      usage documentation without corresponding \verb{\alias}.
     }
   }
 
   \subsection{BUG FIXES}{
     \itemize{
+      \item \code{update_pkg_po()} now copies \file{.mo} files to the
+      \pkg{translation} package even if a \file{DESCRIPTION} file
+      exists, thanks to \I{Michael Chirico} fixing \PR{18694}.
+
       \item Auto-generated \code{citation()} entries no longer include
       (additional) URLs in the \samp{note} field (\PR{18547}).
 
@@ -300,15 +374,109 @@
       now correctly mention \code{max} in addition to
       \code{getOption("max.print")}.
 
-      \item \pkg{methods}' internal \code{.requirePackage()} now re-enables
-      primitive method dispatch when needed; thanks to \I{Ivan Krylov}
-      for demystifying CRAN package check failures on the R*devel mailing
-      lists.
+      \item \code{rowSums(A, dims = dd)}, \code{colMeans(..)}, etc, give a
+      more helpful error message when \code{dd} is not of length one,
+      thanks to \I{Michael Chirico}'s \PR{18811}.
+
+      \item \code{seq.Date()} no longer explicitly coerces results from
+      integer to double, analogously with \code{seq.default()},
+      \code{seq.int()} and \code{seq.POSIXt()}, resolving a \emph{modified}
+      \PR{18782}.
+
+      \item \code{axisTicks(usr, ...)} documentation clarification for
+      \code{log=TRUE}, fixing bug \PR{18821} thanks to \I{Duncan Murdoch}.
+
+      \item \code{debug()} and \code{debugonce(fun)} now also accept a
+      string \code{fun} when it names an S4 generic, fixing \PR{18822}
+      thanks to \I{Mikael Jagan}.
+
+      \item \code{debugonce(<S4-simple-body>, signature=*)} now works
+      correctly when \dQuote{called twice}, fixing \PR{18824} thanks to
+      \I{Mikael Jagan}.
+
+      \item \code{format(dtime, digits=* / format=*)} is more consistent
+      when the \code{POSIXt} date-time object \code{dtime} has fractional
+      (non integer) seconds.  Fixes \PR{17350}, thanks to new contributions
+      by \I{LatinR}'s \sQuote{\I{R Dev Day}} participants, \I{Heather
+      Turner} and \I{Dirk Eddelbuettel}; also fixes more cases, notably
+      when \code{format} contains "%OS<nodigit>".
+
+      \item \code{options(scipen = NULL)} and other invalid values now
+      signal an error instead of invalidating ops relying on a finite
+      integer value.  Newly values outside the range -9 .. 9999 are warned
+      about and set to a respective boundary or to the default \code{0},
+      e.g., in case of an \code{NA}.
+
+      \item \code{cbind()} could segfault with \code{NULL} inputs.
+      (Seen when \R was built with \command{gcc14}, \abbr{LTO} and C99 inlining
+      semantics.)
+
+      \item Fix segfault on \code{quartz()} from \code{grid.glyph()}
+      call with \code{glyphInfo()} that describes non-existent font
+      (\PR{18784}).  Thanks to \I{Tomek Gieorgijewski}.
+
+      \item \code{format()} etc, using \code{decimal.mark = s}, by default
+      getting \code{s <- getOption("OutDec")}, signals a warning to become
+      an error in the future, when \code{s} is not a string with exactly
+      one character.
     }
   }
 }
 
-\section{\Rlogo CHANGES IN R 4.4.1 patched}{
+\section{\Rlogo CHANGES IN R 4.4.2 patched}{
+  \subsection{INSTALLATION}{
+    \itemize{
+      \item \R can be installed using C23 (for example with
+      \option{-std=gnu23} or \option{-std=gnu2x}) with recent compilers
+      including \command{gcc} 14, Apple \command{clang} 16 and \I{LLVM}
+      \command{clang} 17--19.  (\I{LLVM} \command{clang} 18 and 19 objected
+      to apparently valid code using attributes accepted by all the
+      other compilers.)
+    }
+  }
+
+  \subsection{C-LEVEL FACILITIES}{
+    \itemize{
+      \item The functions \code{R_strtod} and \code{R_atof} now allow
+      hexadecimal constants without an exponent, for compatibility with
+      their C99 versions (\PR{18805}).
+    }
+  }
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item \code{kappa(A, exact=TRUE)} for singular \code{A} returns
+      \code{Inf} more generally, fixing \PR{18817} reported by
+      \I{Mikael Jagan}.
+
+      \item Fixed URLs of the sun spots (\code{sunspot.month} etc) data
+      sets and mention future changes due to recalibration.
+
+      \item The parser now accepts hexadecimal constants with a decimal
+      point without an exponent (taken as \code{p0}) as documented in
+      \code{?NumericConstants} (\PR{18819}).
+
+      \item \code{rbind()} now works correctly when inputs include a raw
+      vector and a logical, integer or double vector -- previously the
+      inclusion of the latter was garbled.
+
+      \item \code{smooth.spline()} checks validity of its arguments
+      \code{df.offset} and \code{penalty}: it could segfault if they
+      were \code{NULL}.
+
+      \item \code{isGeneric(<primitive>, fdef=*, getName=TRUE)} now also
+      returns the name instead of just \code{TRUE}, fixing \PR{18829}
+      reported by \I{Mikael Jagan}.
+
+      \item \code{isGeneric(fdef = print)} now works, fixing \PR{18369}
+      thanks to \I{Mikael Jagan}.
+
+      \item \code{sort(x, method = "qsort")} made illegal accesses when
+      \code{x} has length 0.
+    }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 4.4.2}{
   \subsection{C-LEVEL FACILITIES}{
     \itemize{
       \item The S-compatibility macros \code{F77_COM} and
@@ -330,6 +498,16 @@
       \item The Quartz device could segfault in cases where paths with
       spaces are used in the new glyph drawing API.
       Thanks to \I{Tomek Gieorgijewski} (\PR{18758}).
+
+      \item On macOS in R CRAN builds, it is again possible to read
+      little-endian UTF-16 text with a \abbr{BOM} from a connection using
+      \code{encoding="UTF-16"}.  Users building R from source should avoid
+      using the system \code{libiconv} in macOS 14.1 and later.
+
+      \item \pkg{methods}' internal \code{.requirePackage()} now re-enables
+      primitive method dispatch when needed; thanks to \I{Ivan Krylov}
+      for demystifying CRAN package check failures on the R-devel mailing
+      list.
     }
   }
 }

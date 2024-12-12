@@ -366,7 +366,13 @@ getOption(x, default = NULL)
       when deciding to print numeric values in fixed or exponential
       notation.  Positive values bias towards fixed and negative towards
       scientific notation: fixed notation will be preferred unless it is
-      more than \code{scipen} digits wider.}
+      more than \code{scipen} digits wider.  The default is \code{0}.
+      Valid values are between -9 and 9999 where \dQuote{relevant} values
+      (for double precision accuracy) are in \code{-6:319}.
+      Some invalid values currently signal a \code{\link{warning}} and are set
+      to legal boundaries if finite.  These may signal an error in a future
+      version of \R.
+    }
 
     \item{\code{setWidthOnResize}:}{a logical. If set and \code{TRUE}, \R
       run in a terminal using a recent \code{readline} library will set
@@ -748,11 +754,10 @@ getOption(x, default = NULL)
 	  \code{"win.binary"}, \code{"source"} and
 	  \code{"both"} (the default).}
 	\item{on Unix-alikes}{\code{"source"} (the default except under a
-	  CRAN macOS build), \code{"mac.binary"} and
+	  CRAN macOS build), build-specific variants of
+	  \code{"mac.binary"} (e.g., \code{"mac.binary.big-sur-arm64"}) or
 	  \code{"both"} (the default for CRAN macOS builds).
-	  (\code{"mac.binary.el-capitan"},
-	  \code{"mac.binary.mavericks"}, \code{"mac.binary.leopard"}
-	  and \code{"mac.binary.universal"} are no longer in use.)}
+	}
       }
       Value \code{"binary"} is a synonym for the native binary type (if
       there is one); \code{"both"} is used by
