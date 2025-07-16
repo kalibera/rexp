@@ -642,7 +642,7 @@ normalCompletions <-
                         dot_internals = TRUE)
         if (.CompletionEnv$settings[["func"]] && check.mode && !is.null(add.fun))
         {
-            which.function <- sapply(comps, function(s) exists(s, mode = "function"))
+            which.function <- vapply(comps, exists, NA, mode = "function")
             if (any(which.function))
                 comps[which.function] <-
                     sprintf("%s%s", comps[which.function], add.fun)
@@ -1044,7 +1044,7 @@ fileCompletions <- function(token)
             ## re-use that here.  The problem is that for other
             ## backends a token may already have been determined, and
             ## that's what we will need to use.  We can still fake it
-            ## by using the correct token but substracting the extra
+            ## by using the correct token but subtracting the extra
             ## part when providing completions, but that will need
             ## some work.
 
@@ -1376,7 +1376,7 @@ fileCompletions <- function(token)
         "internet.info", "locatorBell", "mailer", "menu.graphics",
         "na.action", "pkgType", "repos", "show.coef.Pvalues",
         "show.signif.stars", "str", "str.dendrogram.last",
-        "ts.eps", "ts.S.compat", "unzip", "windowsTimeout",
+        "ts.eps", "ts.S.compat", "unzip", "windowsTimeouts",
         ## + options unset by default (or OS-specific)
         "mc.cores", "dvipscmd", "warn.FPU",
         "askYesNo", "BioC_mirror", "ccaddress", "checkPackageLicense",

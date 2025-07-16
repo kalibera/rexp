@@ -29,29 +29,34 @@ get_link <- function(arg, tag, Rdfile) {
     ## \link[pkg:bar]{foo} means show foo and link to topic/file bar in package pkg.
     ## As from 2.10.0, look for topic 'bar' if file not found.
     ## As from 4.1.0, prefer topic 'bar' over file 'bar' (in which case 'targetfile' is a misnomer)
+    ## As from 4.5.0, allow markup in link text for variants 2 and 4.
 
-    if (!all(RdTags(arg) == "TEXT"))
-    	stopRd(arg, Rdfile, "Bad \\link text")
-
+    isTEXT <- all(RdTags(arg) == "TEXT")
     option <- attr(arg, "Rd_option")
 
     topic <- dest <- paste(unlist(arg), collapse = "")
+    if (tag == "\\linkS4class") dest <- paste0(dest, "-class")
+
     targetfile <- NULL
     pkg <- NULL
     if (!is.null(option)) {
         if (!identical(attr(option, "Rd_tag"), "TEXT"))
     	    stopRd(option, Rdfile, "Bad \\link option -- must be text")
-    	if (grepl("^=", option, perl = TRUE, useBytes = TRUE))
+        option <- as.character(option)
+        if (startsWith(option, "="))
     	    dest <- psub1("^=", "", option)
-    	else if (grepl(":", option, perl = TRUE, useBytes = TRUE)) {
+        else if (grepl(":", option, fixed = TRUE)) {
     	    targetfile <- psub1("^[^:]*:", "", option)
     	    pkg <- psub1(":.*", "", option)
     	} else {
+            if (!isTEXT)
+                stopRd(arg, Rdfile, "Bad \\link[pkg]{topic} -- argument must be text")
             targetfile <- dest
-    	    pkg <- as.character(option)
+            pkg <- option
     	}
-    }
-    if (tag == "\\linkS4class") dest <- paste0(dest, "-class")
+    } else if (!isTEXT)
+        stopRd(arg, Rdfile, "Bad \\link topic -- must be text")
+
     list(topic = topic, dest = dest, pkg = pkg, targetfile = targetfile)
 }
 
@@ -1007,8 +1012,8 @@ Rd2HTML <-
     	    	leavePara(FALSE)
     	    	if (!inlist) {
     	    	    switch(blocktag,
-                           "\\value" =  of1('<table>\n'),
-                           "\\arguments" = of1('<table>\n'),
+                           "\\value" =  of1('<table role = "presentation">\n'),
+                           "\\arguments" = of1('<table role = "presentation">\n'),
                            "\\itemize" = of1("<ul>\n"),
                            "\\enumerate" = of1("<ol>\n"),
                            "\\describe" = of1("<dl>\n"))
@@ -1226,40 +1231,6 @@ Rd2HTML <-
     doTexMath <- enhancedHTML && !uses_mathjaxr(Rd) &&
         texmath %in% c("katex", "mathjax")
 
-    ## KaTeX / Mathjax resources (if they are used)
-    if (doTexMath && texmath == "katex") {
-        KATEX_JS <-
-            if (dynamic) "/doc/html/katex/katex.js"
-            else "https://cdn.jsdelivr.net/npm/katex@0.15.3/dist/katex.min.js"
-        KATEX_CSS <- if (dynamic) "/doc/html/katex/katex.css"
-                     else "https://cdn.jsdelivr.net/npm/katex@0.15.3/dist/katex.min.css"
-        KATEX_CONFIG <-
-            if (dynamic) "/doc/html/katex-config.js"
-            else c("const macros = { \"\\\\R\": \"\\\\textsf{R}\", \"\\\\code\": \"\\\\texttt\"};", 
-                   "function processMathHTML() {",
-                   "    var l = document.getElementsByClassName('reqn');", 
-                   "    for (let e of l) { katex.render(e.textContent, e, { throwOnError: false, macros }); }", 
-                   "    return;",
-                   "}")
-    }
-    if (doTexMath && texmath == "mathjax") {
-        MATHJAX_JS <-
-            if (dynamic && requireNamespace("mathjaxr", quietly = TRUE))
-                "/library/mathjaxr/doc/mathjax/es5/tex-chtml-full.js"
-            else
-                "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
-        MATHJAX_CONFIG <-
-            if (dynamic) "/doc/html/mathjax-config.js"
-            else "../../../doc/html/mathjax-config.js"
-    }
-    if (enhancedHTML) {
-        PRISM_JS <- 
-            if (dynamic) "/doc/html/prism.js"
-            else NULL # "../../../doc/html/prism.js"
-        PRISM_CSS <- 
-            if (dynamic) "/doc/html/prism.css"
-            else NULL # "../../../doc/html/prism.css"
-    }
     Rdfile <- attr(Rd, "Rdfile")
     sections <- RdTags(Rd)
     if (fragment) {
@@ -1621,24 +1592,33 @@ function(dir)
     ## achieve this by adding the canonicalized ORCID id (URL) to the
     ## 'family' element and simultaneously dropping the ORCID id from
     ## the 'comment' element, and then re-format.
-    .format_authors_at_R_field_with_expanded_ORCID_identifier <- function(a) {
+    ## See <https://ror.readme.io/docs/display> for ROR display
+    ## guidelines.
+    .format_authors_at_R_field_with_expanded_identifiers <- function(a) {
         x <- utils:::.read_authors_at_R_field(a)
         format_person1 <- function(e) {
-            comment <- e$comment
-            pos <- which((names(comment) == "ORCID") &
-                         grepl(.ORCID_iD_variants_regexp, comment))
-            if((len <- length(pos)) > 0L) {
+            cmt <- e$comment
+            pos <- which((names(cmt) == "ORCID") &
+                         grepl(.ORCID_iD_variants_regexp, cmt))
+            if(length(pos) == 1L) {
                 e$family <-
                     c(e$family,
-                      paste0("<",
-                             paste0("https://replace.me.by.orcid.org/",
-                                    .ORCID_iD_canonicalize(comment[pos])),
-                             ">"))
-                e$comment <- if(len < length(comment))
-                                 comment[-pos]
-                             else
-                                 NULL
+                      sprintf("<https://replace.me.by.orcid.org/%s>",
+                              .ORCID_iD_canonicalize(cmt[pos])))
+                cmt <- cmt[-pos]
             }
+            ## Of course, a person should not have both ORCID and ROR
+            ## identifiers: could check for that.
+            pos <- which((names(cmt) == "ROR") &
+                         grepl(.ROR_ID_variants_regexp, cmt))
+            if(length(pos) == 1L) {
+                e$family <-
+                    c(e$family,
+                      sprintf("<https://replace.me.by.ror.org/%s>",
+                              .ROR_ID_canonicalize(cmt[pos])))
+                cmt <- cmt[-pos]
+            }
+            e$comment <- if(length(cmt)) cmt else NULL
             e
         }
         x <- lapply(unclass(x), format_person1)
@@ -1671,7 +1651,7 @@ function(dir)
 
     if(!is.na(aatr))
         desc["Author"] <-
-            .format_authors_at_R_field_with_expanded_ORCID_identifier(aatr)
+            .format_authors_at_R_field_with_expanded_identifiers(aatr)
 
     ## Take only Title and Description as *text* fields.
     desc["Title"] <- htmlify_text(desc["Title"])
@@ -1713,10 +1693,22 @@ function(dir)
                  paste0("<a href=\"https://orcid.org/\\1\">",
                         "<img alt=\"ORCID iD\" ",
                         if(dynamic)
-                            "src=\"/doc/html/orcid.svg\" "
+                            " src=\"/doc/html/orcid.svg\" "
                         else
-                            "src=\"https://cloud.R-project.org/web/orcid.svg\" ",
+                            " src=\"https://cloud.R-project.org/web/orcid.svg\" ",
                         "style=\"width:16px; height:16px; margin-left:4px; margin-right:4px; vertical-align:middle\"",
+                        " /></a>"),
+                 desc["Author"])
+        desc["Author"] <-
+            gsub(sprintf("&lt;https://replace.me.by.ror.org/(%s)&gt;",
+                         .ROR_ID_regexp),
+                 paste0("<a href=\"https://ror.org/\\1\">",
+                        "<img alt=\"ROR ID\" ",
+                        if(dynamic)
+                            " src=\"/doc/html/ror.svg\" "
+                        else
+                            " src=\"https://cloud.R-project.org/web/ror.svg\" ",
+                        "style=\"width:20px; height:20px; margin-left:4px; margin-right:4px; vertical-align:middle\"",
                         " /></a>"),
                  desc["Author"])
     }
@@ -1732,7 +1724,7 @@ function(dir)
     ##   AUTHORS COPYRIGHTS
     ## </TODO>
 
-    c("<table>",
+    c("<table role='presentation'>",
       sprintf("<tr>\n<td>%s:</td>\n<td>%s</td>\n</tr>",
               names(desc), desc),
       "</table>")

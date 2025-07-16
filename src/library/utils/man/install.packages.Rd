@@ -1,6 +1,6 @@
 % File src/library/utils/man/install.packages.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2024 R Core Team
+% Copyright 1995-2025 R Core Team
 % Distributed under GPL 2 or later
 
 \name{install.packages}
@@ -161,7 +161,8 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   \item{INSTALL_opts}{
     an optional character vector of additional option(s) to be passed to
     \command{R CMD INSTALL} for a source package install.  E.g.,
-    \code{c("--html", "--no-multiarch", "--no-test-load")}.
+    \code{c("--html", "--no-multiarch", "--no-test-load")} or, for
+    macOS, \code{"--dsym"}.
 
     Can also be a named list of character vectors to be used as
     additional options, with names the respective package names.
@@ -347,7 +348,7 @@ install.packages(pkgs, lib, repos = getOption("repos"),
   For non-parallel installs this is implemented \emph{via} the
   \code{timeout} argument of \code{\link{system2}}: for parallel
   installs \emph{via} the OS's \command{timeout} command.  (The one
-  tested is from GNU \pkg{coreutils}, commonly available on Linux but
+  tested is from GNU \I{coreutils}, commonly available on Linux but
   not other Unix-alikes.  If no such command is available the timeout
   request is ignored, with a warning. On Windows, one needs to specify
   a suitable \command{timeout} command via environment variable

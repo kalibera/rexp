@@ -84,6 +84,7 @@ dialogs
 didactical
 differencing
 dimensioned
+dimorphism
 dispatchable
 dispersions
 dotplots
@@ -262,6 +263,7 @@ sortable
 spectrophotometer
 sphericity
 spooler
+standardizable
 stateful
 stderr
 stdout

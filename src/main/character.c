@@ -157,6 +157,7 @@ attribute_hidden SEXP do_nzchar(SEXP call, SEXP op, SEXP args, SEXP env)
        -2 ... the quantity is not computable (bytes encoding)
      semi-internal buffer cbuff is never freed, should be freed by caller
 */
+// in Rinternals.h
 int R_nchar(SEXP string, nchar_type type_,
 	    Rboolean allowNA, Rboolean keepNA, const char* msg_name)
 {
@@ -339,7 +340,9 @@ attribute_hidden SEXP do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
     int *s_ = INTEGER(s);
     for (R_xlen_t i = 0; i < len; i++) {
 	SEXP sxi = STRING_ELT(x, i);
-	int res = R_nchar(sxi, type_, allowNA, keepNA, NULL);
+	// NA_LOGICAL has now been excluded
+	int res = R_nchar(sxi, type_,
+			  (Rboolean) allowNA, (Rboolean) keepNA, NULL);
 	switch(res) {
 	case -1:
 	    error(_("invalid multibyte string, element %ld"), (long)i+1);

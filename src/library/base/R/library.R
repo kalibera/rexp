@@ -1,7 +1,7 @@
 #  File src/library/base/R/library.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2024 The R Core Team
+#  Copyright (C) 1995-2025 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -281,7 +281,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
 	if(!character.only)
 	    package <- as.character(substitute(package))
         if(length(package) != 1L)
-            stop("'package' must be of length 1")
+            stop(gettextf("'%s' must be of length 1", "package"), domain=NA)
         if(is.na(package) || (package == ""))
             stop("invalid package name")
 
@@ -401,7 +401,7 @@ function(package, help, pos = 2, lib.loc = NULL, character.only = FALSE,
                         !.isMethodsDispatchOn() || checkNoGenerics(env, package)
                     if (isFALSE(conf.ctrl$generics.ok) ||
                         (stopOnConflict && ! isTRUE(conf.ctrl$generics.ok)))
-                        nogenerics <- TRUE ## no silent masking for genrics
+                        nogenerics <- TRUE ## no silent masking for generics
                     if(stopOnConflict ||
                        (warn.conflicts && # never will with a namespace
                         !exists(".conflicts.OK", envir = env,

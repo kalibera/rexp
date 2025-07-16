@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 1998-2024   The R Core Team.
+ *  Copyright (C) 1998-2025   The R Core Team.
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -52,6 +52,7 @@
  *	"width"
  *	"digits"
  *	"echo"
+ *	"quiet"
  *	"verbose"
  *	"keep.source"
  *	"keep.source.pkgs"
@@ -275,7 +276,7 @@ attribute_hidden SEXP R_SetOption(SEXP tag, SEXP value)
 /* Set the width of lines for printing i.e. like options(width=...) */
 /* Returns the previous value for the options. */
 
-int attribute_hidden R_SetOptionWidth(int w)
+attribute_hidden int R_SetOptionWidth(int w)
 {
     SEXP t, v;
     if (w < R_MIN_WIDTH_OPT) w = R_MIN_WIDTH_OPT;
@@ -287,7 +288,7 @@ int attribute_hidden R_SetOptionWidth(int w)
     return INTEGER(v)[0];
 }
 
-int attribute_hidden R_SetOptionWarn(int w)
+attribute_hidden int R_SetOptionWarn(int w)
 {
     SEXP t, v;
 
@@ -308,9 +309,9 @@ attribute_hidden void InitOptions(void)
 
     /* options set here should be included into mandatory[] in do_options */
 #ifdef HAVE_RL_COMPLETION_MATCHES
-    PROTECT(v = val = allocList(30));
+    PROTECT(v = val = allocList(31));
 #else
-    PROTECT(v = val = allocList(29));
+    PROTECT(v = val = allocList(30));
 #endif
 
     SET_TAG(v, install("prompt"));
@@ -339,6 +340,10 @@ attribute_hidden void InitOptions(void)
 
     SET_TAG(v, install("echo"));
     SETCAR(v, ScalarLogical(!R_NoEcho));
+    v = CDR(v);
+
+    SET_TAG(v, install("quiet"));
+    SETCAR(v, ScalarLogical(R_Quiet));
     v = CDR(v);
 
     SET_TAG(v, install("verbose"));
@@ -514,7 +519,7 @@ attribute_hidden SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SEXP sind = PROTECT(allocVector(INTSXP, n));
 	int *indx = INTEGER(sind);
 	for (int i = 0; i < n; i++) indx[i] = i;
-	orderVector1(indx, n, names, TRUE, FALSE, R_NilValue);
+	orderVector1(indx, n, names, true, false, R_NilValue);
 	SEXP value2 = PROTECT(allocVector(VECSXP, n));
 	SEXP names2 = PROTECT(allocVector(STRSXP, n));
 	for(int i = 0; i < n; i++) {
@@ -587,7 +592,7 @@ attribute_hidden SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		   at startup, because otherwise one could not reliably restore
 		   previously saved options (see also PR#18372).*/
 		const char *mandatory[] = {"prompt", "continue", "expressions",
-		  "width", "deparse.cutoff", "digits", "echo", "verbose",
+		  "width", "deparse.cutoff", "digits", "echo", "quiet", "verbose",
 		  "check.bounds", "keep.source", "keep.source.pkgs",
 		  "keep.parse.data", "keep.parse.data.pkgs", "warning.length",
 		  "nwarnings", "OutDec", "CBoundsCheck",
@@ -635,7 +640,7 @@ attribute_hidden SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    else if (streql(CHAR(namei), "keep.source")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
-		int k = asLogical(argi);
+		Rboolean k = asRbool(argi, call);
 		R_KeepSource = k;
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }
@@ -782,27 +787,27 @@ attribute_hidden SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	    else if (streql(CHAR(namei), "warnPartialMatchDollar")) {
 		check_TRUE_FALSE(argi, CHAR(namei));
-		R_warn_partial_match_dollar = LOGICAL(argi)[0];
+		R_warn_partial_match_dollar = asRbool(argi, call);
 		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
 	    }
 	    else if (streql(CHAR(namei), "warnPartialMatchArgs")) {
 		check_TRUE_FALSE(argi, CHAR(namei));
-		R_warn_partial_match_args = LOGICAL(argi)[0];
+		R_warn_partial_match_args = asRbool(argi, call);
 		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
 	    }
 	    else if (streql(CHAR(namei), "warnPartialMatchAttr")) {
 		check_TRUE_FALSE(argi, CHAR(namei));
-		R_warn_partial_match_attr = LOGICAL(argi)[0];
+		R_warn_partial_match_attr = asRbool(argi, call);
 		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
 	    }
 	    else if (streql(CHAR(namei), "showWarnCalls")) {
 		check_TRUE_FALSE(argi, CHAR(namei));
-		R_ShowWarnCalls = LOGICAL(argi)[0];
+		R_ShowWarnCalls = asRbool(argi, call);
 		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
 	    }
 	    else if (streql(CHAR(namei), "showErrorCalls")) {
 		check_TRUE_FALSE(argi, CHAR(namei));
-		R_ShowErrorCalls = LOGICAL(argi)[0];
+		R_ShowErrorCalls = asRbool(argi, call);
 		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
 	    }
 	    else if (streql(CHAR(namei), "showNCalls")) {
@@ -817,12 +822,12 @@ attribute_hidden SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    }
 	    else if (streql(CHAR(namei), "browserNLdisabled")) {
 		check_TRUE_FALSE(argi, CHAR(namei));
-		R_DisableNLinBrowser = LOGICAL(argi)[0];
+		R_DisableNLinBrowser = asRbool(argi, call);
 		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
 	    }
 	    else if (streql(CHAR(namei), "CBoundsCheck")) {
 		check_TRUE_FALSE(argi, CHAR(namei));
-		R_CBoundsCheck = LOGICAL(argi)[0];
+		R_CBoundsCheck = asRbool(argi, call);
 		SET_VECTOR_ELT(value, i, SetOption(tag, argi));
 	    }
 	    else if (streql(CHAR(namei), "matprod")) {
@@ -891,10 +896,25 @@ attribute_hidden SEXP do_options(SEXP call, SEXP op, SEXP args, SEXP rho)
 		SET_VECTOR_ELT(value, i,
 			       SetOption(tag, ScalarLogical(strings_as_fact)));
 	    }
+	    else if (streql(CHAR(namei), "quiet")) {
+		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
+		    error(_("invalid value for '%s'"), CHAR(namei));
+		Rboolean k = asRbool(argi, call);
+#ifdef NO_QUIET_AND_VERBOSE 
+		if(k && R_Verbose)
+		    error(_("cannot set both options 'quiet' and 'verbose' to TRUE"));
+#endif
+		R_Quiet = k;
+		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
+	    }
 	    else if (streql(CHAR(namei), "verbose")) {
 		if (TYPEOF(argi) != LGLSXP || LENGTH(argi) != 1)
 		    error(_("invalid value for '%s'"), CHAR(namei));
-		int k = asLogical(argi);
+		Rboolean k = asRbool(argi, call);
+#ifdef NO_QUIET_AND_VERBOSE 
+		if(k && R_Quiet)
+		    error(_("cannot set both options 'quiet' and 'verbose' to TRUE"));
+#endif
 		R_Verbose = k;
 		SET_VECTOR_ELT(value, i, SetOption(tag, ScalarLogical(k)));
 	    }

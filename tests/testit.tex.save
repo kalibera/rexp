@@ -1,4 +1,3 @@
-\inputencoding{utf8}
 \HeaderA{testit}{An Rd Regression Test}{testit}
 \aliasB{\{}{testit}{.Rlbrace.}
 %
@@ -30,7 +29,8 @@ Escaped backslash \code{\bsl{}x}.
 \code{\%\{\}}
 
 \LinkA{a link}{a link} and some to known destinations:
-\LinkA{weighted.mean}{weighted.mean}, \code{\LinkA{\{}{Paren}}
+\code{\LinkA{weighted.mean}{weighted.mean}}, \LinkA{dito}{dito},
+\code{\LinkA{\{}{Paren}}, \LinkB{\env{R\_HOME}}{R.Rul.HOME}.
 
 var in \var{text}.
 

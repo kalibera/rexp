@@ -134,7 +134,7 @@ if (UTF8) {
     ## not work with call set, and multibyte characters could be mangled by
     ## the `...`.
     ##
-    ## We assume getttext strings are not translated (or are translated
+    ## We assume gettext strings are not translated (or are translated
     ## to the same byte-length as the ones in source).
 
     ## We cannot use `tryCatch` as we're testing the C-level error construction
@@ -193,7 +193,7 @@ if (UTF8) {
         long_error(utf8.test, overflow=0)
 
         overflow <- c(
-             -6,   # Buffer unambiguosly unfilled for MB_CUR_MAX=6
+             -6,   # Buffer unambiguously unfilled for MB_CUR_MAX=6
              -5,   # Buffer maybe filled for MB_CUR_MAX=6
              -4,   # Buffer full with '...\n\0'
              -3,   # Lose 4 byte UTF-8 char
@@ -372,3 +372,14 @@ r16[7] <- as.raw(0x00)  # invalid (unpaired surrogate)
 r16[8] <- as.raw(0xd8)
 stopifnot(identical(iconv(list(r16), "UTF-16", "UTF-8", sub="byte"),
           "He<00><d8>lo world"))
+
+
+## Using a __unicode__ decimal mark is fine :
+op <- options(OutDec = "·", scipen = 1)
+x <- pi* 10^(-6:5)
+fx <- sapply(x, format)
+print(fx, width=88, quote=FALSE) # 3·141593e-06 0·00003141593 0·0003141593 ....
+options(OutDec = ".") # back to normal
+stopifnot(grepl("·", fx, fixed=TRUE),
+          identical(sub("·", ".", fx), sapply(x, format)))
+options(op)

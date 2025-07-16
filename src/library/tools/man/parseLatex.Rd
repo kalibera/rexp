@@ -16,11 +16,15 @@
   characters.
 }
 \usage{
-parseLatex(text, filename = deparse1(substitute(text)),
+parseLatex(text, filename = "text",
            verbose = FALSE,
            verbatim = c("verbatim", "verbatim*",
                         "Sinput", "Soutput"),
-           verb = "\\\\Sexpr")
+           verb = "\\\\Sexpr",
+           defcmd = c("\\\\newcommand", "\\\\renewcommand",
+                      "\\\\providecommand", "\\\\def", "\\\\let"),
+           defenv = c("\\\\newenvironment",
+                      "\\\\renewenvironment"))
 deparseLatex(x, dropBraces = FALSE)
 latexToUtf8(x)
 }
@@ -29,7 +33,7 @@ latexToUtf8(x)
 A character vector containing LaTeX source code.
 }
   \item{filename}{
-A filename to use in syntax error messages.
+No longer used.
 }
   \item{verbose}{
 If \code{TRUE}, print debug error messages.
@@ -40,6 +44,10 @@ A character vector containing the names of LaTeX environments holding verbatim t
   \item{verb}{
 A character vector containing LaTeX macros that should be 
 assumed to hold verbatim text.
+}
+  \item{defcmd, defenv}{
+Character vectors containing LaTeX macros that should be assumed
+to define macros or environments respectively.
   }
   \item{x}{
 A \code{"LaTeX"} object.

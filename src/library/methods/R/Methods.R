@@ -1,7 +1,7 @@
 #  File src/library/methods/R/Methods.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2024 The R Core Team
+#  Copyright (C) 1995-2025 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -774,6 +774,12 @@ selectMethod <-
             cat("* mlist environment with", length(mlist),"potential methods\n")
         if(length(signature) < nsig)
             signature[(length(signature)+1):nsig] <- "ANY"
+        inGroups <- length(fdef@group) > 0L # " I belong to a group "
+        maybeGrp <- function(meth) { # meth: a function, possibly primitive, or method
+            if(inGroups && isS4(meth) && meth@generic != fdef@generic)
+                attr(meth@generic, "orig") <- fdef@generic
+            meth
+        }
         if(identical(fdef@signature, "...")) {
             method <- .selectDotsMethod(signature, mlist,
                  if(useInherited) getMethodsForDispatch(fdef, inherited = TRUE))
@@ -781,7 +787,7 @@ selectMethod <-
               stop(gettextf("no method for %s matches class %s",
                             sQuote("..."), dQuote(signature)),
                    domain = NA)
-            return(method)
+            return(maybeGrp(method))
         }
         method <- .findMethodInTable(signature, mlist, fdef)
 	if(is.null(method)) {
@@ -805,7 +811,7 @@ selectMethod <-
 		## else list() : just look in the direct table
 
 	    if(length(methods))
-		return(methods[[1L]])
+		return(maybeGrp(methods[[1L]]))
 	    else if(optional)
 		return(NULL)
 	    else stop(gettextf("no method found for signature %s",
@@ -1056,9 +1062,11 @@ showMethods <-
     geom <- vapply(signatures, Negate(is.null), logical(1))
     packages <- packages[geom]
     methods <- methods[geom]
-    signatures <- sapply(signatures[geom], function(elt) {
-        paste0(as.vector(elt), collapse=",")
-    })
+    signatures <- vapply(signatures[geom],
+                         function(elt) {
+                             paste0(as.vector(elt), collapse=",")
+                         },
+                         "")
 
     .methods_info(generic=rep(generic.function, length(packages)), from=packages,
                   signature=signatures)
@@ -1337,7 +1345,7 @@ implicitGeneric <- function(...) NULL
 ### Add the named function to the table of implicit generics in environment where.
 ###
 ### If there is a generic function of this name, it is saved to the
-### table.  This is the reccomended approach and is required if you
+### table.  This is the recommended approach and is required if you
 ### want the saved generic to include any non-default methods.
 ###
   {

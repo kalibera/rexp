@@ -1,6 +1,6 @@
 % File src/library/base/man/strptime.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2024 R Core Team
+% Copyright 1995-2025 R Core Team
 % Distributed under GPL 2 or later
 
 \name{strptime}
@@ -105,14 +105,18 @@ strptime(x, format, tz = "")
   \describe{
     \item{\code{\%a}}{Abbreviated weekday name in the current
       locale on this platform.  (Also matches full name on input:
-      in some locales there are no abbreviations of names.)}
+      in some locales there are no abbreviations of names.)
+      Case-insensitive on input.}
     \item{\code{\%A}}{Full weekday name in the current locale.  (Also
-      matches abbreviated name on input.)}
+      matches abbreviated name on input.)
+      Case-insensitive on input.}
     \item{\code{\%b}}{Abbreviated month name in the current locale on
       this platform.  (Also matches full name on input: in
-      some locales there are no abbreviations of names.)}
+      some locales there are no abbreviations of names.)
+    Case-insensitive on input.}
     \item{\code{\%B}}{Full month name in the current locale.  (Also
-      matches abbreviated name on input.)}
+      matches abbreviated name on input.)
+      Case-insensitive on input.}
     \item{\code{\%c}}{Date and time.   Locale-specific on output,
       \code{"\%a \%b \%e \%H:\%M:\%S \%Y"} on input.}
     \item{\code{\%C}}{Century (00--99): the integer part of the year
@@ -144,6 +148,10 @@ strptime(x, format, tz = "")
       empty string in some locales (for example on some OSes,
       non-English European locales including Russia). The behaviour is
       undefined if used for input in such a locale.
+
+      For input the match is case-insensitive.  Note that
+      English locales do not necessarily use \code{AM/PM}: for example,
+      \code{a.m./p.m.} has been encountered.
 
       Some platforms accept \code{\%P} for output, which uses a lower-case
       version (\code{\%p} may also use lower case): others will output
@@ -195,7 +203,7 @@ strptime(x, format, tz = "")
       \code{-0800} is 8 hours behind UTC.  (Standard only for output.  For
       input \R currently supports it on all platforms -- values from
       \code{-1400} to \code{+1400} are accepted.)}
-    %% Nowehere currently uses less than -1200 nor more than 1400.
+    %% Nowhere currently uses less than -1200 nor more than 1400.
     \item{\code{\%Z}}{(Output only.)  Time zone abbreviation as a
       character string (empty if not available).  This may not be reliable
       when a time zone has changed abbreviations over the years.}
@@ -247,10 +255,10 @@ strptime(x, format, tz = "")
   \code{digits = n}, the latter initialized by default from
   \code{getOption("digits.secs")}.
   Currently, for output (\code{strftime()} and \code{format(<POSIX.t>)}),
-  only \emph{one} "\%OS" occurence is handled (per format string).
+  only \emph{one} "\%OS" occurrence is handled (per format string).
   \cr
   Further, for \code{strptime} \code{\%OS} will input seconds including
-  fractional seconds (to full precison).  Note that \code{\%S} does not
+  fractional seconds (to full precision).  Note that \code{\%S} does not
   read or write fractional parts.
 
   The behaviour of other conversion specifications (and even if other
@@ -413,8 +421,9 @@ format(Sys.time(), "\%a \%b \%d \%X \%Y \%Z")
 format(Sys.time(), "\%H:\%M:\%OS3")
 }% \dont.. %
 ## read in date info in format 'ddmmmyyyy'
-## This will give NA(s) in some non-English locales; setting the C locale
-## as in the commented lines will overcome this on most systems.
+## This will give NA(s) in some locales (especially non-English ones);
+## setting the C locale as in the commented lines will overcome this on
+## most systems.
 ## lct <- Sys.getlocale("LC_TIME"); Sys.setlocale("LC_TIME", "C")
 x <- c("1jan1960", "2jan1960", "31mar1960", "30jul1960")
 z <- strptime(x, "\%d\%b\%Y")

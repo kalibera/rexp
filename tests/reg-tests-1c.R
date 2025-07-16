@@ -14,7 +14,7 @@ stopifnot(z == c(101, 204, 309, 104, 210, 318))
 ## reported as a bug (which it was not) by H. Pages in
 ## https://stat.ethz.ch/pipermail/r-devel/2012-November/065229.html
 
-## recyling in split()
+## recycling in split()
 ## https://stat.ethz.ch/pipermail/r-devel/2013-January/065700.html
 x <- 1:6
 y <- split(x, 1:2)
@@ -134,7 +134,7 @@ stopifnot(is.integer(+x))
 ## +x was logical in R <= 3.0.1
 
 
-## Attritbutes of value of unary operators
+## Attributes of value of unary operators
 # +x, -x were ts, !x was not in 3.0.2
 x <- ts(c(a=TRUE, b=FALSE, c=NA, d=TRUE), frequency = 4, start = 2000)
 x; +x; -x; !x
@@ -1467,8 +1467,9 @@ stopifnot(
 ## and length 1 or 2 instead of about 6 in R 3.2.4
 (p2 <- chkPretty(as.POSIXct("2002-02-02 02:02", tz = "GMT-1"), n = 5, min.n = 5))
 stopifnot(length(p2) >= 5+1,
-	  identical(p2, structure(1012611717 + (0:5), class = c("POSIXct", "POSIXt"),
-				  tzone = "GMT-1", labels = time2d(57 + (0:5)), format = "%S")))
+	  identical(p2, structure(1012611717L + (0:5), class = c("POSIXct", "POSIXt"),
+				  tzone = "GMT-1", labels = time2d(57 + (0:5)), format = "%S"))
+          )
 ## failed in R 3.2.4
 (T3 <- structure(1460019857.25, class = c("POSIXct", "POSIXt")))# typical Sys.date()
 chkPretty(T3, 1) # error in svn 70438

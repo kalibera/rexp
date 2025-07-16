@@ -431,7 +431,7 @@ loadNamespace <- function (package, lib.loc = NULL,
         ## moved from library() in R 3.4.0
         checkLicense <- function(pkg, pkgInfo, pkgPath)
         {
-            L <- tools:::analyze_license(pkgInfo$DESCRIPTION["License"])
+            L <- tools::analyze_license(pkgInfo$DESCRIPTION["License"])
             if(!L$is_empty && !L$is_verified) {
                 site_file <-
                     path.expand(file.path(R.home("etc"), "licensed.site"))
@@ -1056,7 +1056,7 @@ namespaceImportFrom <- function(self, ns, vars, generics, packages,
                 ## and is in order of adding.
                 current <- getNamespaceInfo(self, "imports")
                 poss <- lapply(rev(current), `[`, n)
-                poss <- poss[!sapply(poss, is.na)]
+                poss <- poss[!vapply(poss, is.na, NA)]
                 if(length(poss) >= 1L) {
                     prev <- names(poss)[1L]
                     warning(sprintf(gettext("replacing previous import %s by %s when loading %s"),

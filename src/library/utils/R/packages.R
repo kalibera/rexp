@@ -1,7 +1,7 @@
 #  File src/library/utils/R/packages.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2024 The R Core Team
+#  Copyright (C) 1995-2025 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -44,6 +44,29 @@ function(contriburl = contrib.url(repos, type), method,
     res <- matrix(NA_character_, 0L, length(fields) + 1L,
 		  dimnames = list(NULL, c(fields, "Repository")))
 
+    url_to_cache_name <- function(url)
+    {
+          # from rfc 3986
+          re <- "^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?"
+          p <- unlist(regmatches(url, regexec(re, url)))[c(2,4,6,7,9)]
+          names(p) <- c("scheme", "authority", "path", "query", "fragment")
+
+          if (grepl("@", p["authority"], fixed=TRUE)) {
+              rea <- "//([^@]*)@(.*)"
+              pa <- unlist(regmatches(p["authority"],
+                                      regexec(rea, p["authority"])))[c(2,3)]
+              names(pa) <- c("userinfo", "hostport")
+              if (nzchar(pa["userinfo"])) {
+                  # replace user info by a hash
+                  sha <- tools::sha256sum(bytes=charToRaw(pa["userinfo"]))
+                  url <- paste0(p["scheme"], "//",
+                                substr(sha, 49, 64), "@", pa["hostport"],
+                                p["path"], p["query"], p["fragment"])
+              }
+          }
+          URLencode(url, TRUE)
+    }
+
     for(repos in unique(contriburl)) {
         localcran <- startsWith(repos, "file:")
         if(localcran) {
@@ -70,7 +93,8 @@ function(contriburl = contrib.url(repos, type), method,
             } else {
                 dest <- file.path(if(cache_user_dir) tools::R_user_dir("base", "cache")
                                   else tempdir(),
-                                  paste0("repos_", URLencode(repos, TRUE), ".rds"))
+                                  paste0("repos_", url_to_cache_name(repos),
+                                         ".rds"))
                 if(file.exists(dest)) {
                     age <- difftime(timestamp, file.mtime(dest), units = "secs")
                     if(isTRUE(age < max_repo_cache_age)) {
@@ -229,7 +253,7 @@ function(db)
     end <- 3L + (substring(x, 4L, 4L) == "=")
     ## Extract ops.
     ops <- substring(x, 3L, end)
-    ## Split target versions accordings to ops.
+    ## Split target versions according to ops.
     v_t <- split(substring(x, end + 1L, nchar(x) - 1L), ops)
     ## Current R version.
     v_c <- getRversion()
@@ -1269,7 +1293,7 @@ function(repos, file = stdout(), ...)
 }
 
 ## default is included in setRepositories.Rd (via \Sexpr)
-.BioC_version_associated_with_R_version_default <- "3.20"
+.BioC_version_associated_with_R_version_default <- "3.21"
 .BioC_version_associated_with_R_version <- function ()
     numeric_version(Sys.getenv("R_BIOC_VERSION",
                                .BioC_version_associated_with_R_version_default))
