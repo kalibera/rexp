@@ -6218,6 +6218,7 @@ static void gzcon_check_header(Rgzconn priv)
 	priv->z_err = Z_DATA_ERROR;
 	return;
     }
+
     /* Discard time, xflags and OS code: */
     for (len = 0; len < 6; len++) (void) gzcon_byte(priv);
 
@@ -6236,7 +6237,7 @@ static void gzcon_check_header(Rgzconn priv)
     if ((flags & HEAD_CRC) != 0) {  /* skip the header crc */
 	for (len = 0; len < 2; len++) (void) gzcon_byte(priv);
     }
-    priv->z_err = priv->z_eof ? Z_DATA_ERROR : Z_OK;    
+    priv->z_err = priv->z_eof ? Z_DATA_ERROR : Z_OK;
 }
 
 static Rboolean gzcon_open(Rconnection con)
@@ -6361,7 +6362,7 @@ static size_t gzcon_read(void *ptr, size_t size, size_t nitems,
     /* wrapped connection only needs to handle INT_MAX */
     if ((double) size * (double) nitems > INT_MAX)
 	error(_("too large a block specified"));
-    
+
     len = (uInt)(size*nitems);
     priv->s.next_out = (Bytef*) ptr;
     priv->s.avail_out = len;
@@ -6380,7 +6381,8 @@ static size_t gzcon_read(void *ptr, size_t size, size_t nitems,
 		priv->s.avail_in  -= n;
 	    }
 	    if (priv->s.avail_out > 0) {
-		priv->s.avail_out -= (uInt) icon->read(ptr, 1,
+		priv->s.avail_out -= (uInt) icon->read(priv->s.next_out,
+		                                       1,
 		                                       priv->s.avail_out,
 		                                       icon);
 		if ((int)priv->s.avail_out < 0)
