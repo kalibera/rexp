@@ -28,7 +28,9 @@ body <- function(fun = sys.function(sys.parent())) {
     .Internal(body(fun))
 }
 
-alist <- function (...) as.list(sys.call())[-1L]
+#alist <- function (...) as.list(sys.call())[-1L]
+alist <- function(...) as.list(substitute(list(...))[-1])
+
 
 `body<-` <- function (fun, envir = environment(fun), value) {
     if(!is.function(fun)) warning("'fun' is not a function") # TODO[2017]: stop()
